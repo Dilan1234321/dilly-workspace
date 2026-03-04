@@ -1,0 +1,17 @@
+{
+  "Pre-Health": {
+    "Smart": { "tier_1": 85, "recommendations": [{ "title": "Research Depth", "action": "Apply to a wet-lab research assistantship to increase academic rigor." }] },
+    "Grit": { "tier_1": 80, "recommendations": [{ "title": "Clinical Hours", "action": "Increase clinical exposure via EMT certification or scribing." }] },
+    "Build": { "tier_1": 70, "recommendations": [{ "title": "Community Service", "action": "Volunteer 50+ hours in an underserved health clinic." }] }
+  },
+  "Pre-Law": {
+    "Smart": { "tier_1": 90, "recommendations": [{ "title": "Analytical Writing", "action": "Submit a paper to a law-related undergraduate journal." }] },
+    "Grit": { "tier_1": 85, "recommendations": [{ "title": "Advocacy", "action": "Join a mock trial or debate team to build public speaking grit." }] },
+    "Build": { "tier_1": 75, "recommendations": [{ "title": "Legal Internship", "action": "Seek a summer internship at a local law firm or courthouse." }] }
+  },
+  "Builder": {
+    "Smart": { "tier_1": 80, "recommendations": [{ "title": "Algorithm Mastery", "action": "Complete 50+ LeetCode problems or equivalent technical challenges." }] },
+    "Grit": { "tier_1": 90, "recommendations": [{ "title": "Project Velocity", "action": "Increase weekly commit frequency to at least 3-5 commits." }] },
+    "Build": { "tier_1": 85, "recommendations": [{ "title": "Full-Stack Deployment", "action": "Deploy a full-stack SaaS application with user authentication." }] }
+  }
+}

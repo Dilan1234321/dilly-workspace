@@ -1,0 +1,7 @@
+[
+  {
+    "id": "meridian-optimizer",
+    "schedule": "*/10 * * * *",
+    "command": "/bin/bash /Users/dilankochhar/.openclaw/workspace/meridian_background_optimizer.sh"
+  }
+]

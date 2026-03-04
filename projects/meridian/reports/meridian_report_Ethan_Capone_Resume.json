@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "Ethan_Capone Resume.pdf",
+        "major": "Unknown",
+        "track": "Pre-Health",
+        "gpa": 3.5
+    },
+    "scores": {
+        "smart": 67.0,
+        "grit": 15,
+        "build": 0,
+        "final": 27.2
+    },
+    "pillars": {
+        "research": 1,
+        "clinical": 0,
+        "shadowing": 0,
+        "leadership": 1
+    }
+}

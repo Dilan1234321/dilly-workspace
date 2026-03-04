@@ -1,0 +1,1 @@
+*/10 * * * * /Users/dilankochhar/.openclaw/workspace/meridian_background_optimizer.sh >> /Users/dilankochhar/.openclaw/workspace/projects/meridian/meridian_cron.log 2>&1

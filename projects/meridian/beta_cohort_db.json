@@ -1,0 +1,228 @@
+{
+    "candidates": [
+        {
+            "metadata": {
+                "candidate": "Unknown",
+                "grad_year": "Unknown",
+                "college": "Unknown",
+                "major": "Unknown",
+                "track": "Builder",
+                "filename": "Gabriel Pereira.pdf"
+            },
+            "metrics": {
+                "smart_score": 70.0,
+                "grit_score": 0,
+                "build_score": 0
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "HUNTUR",
+                "grad_year": "2028",
+                "college": "University of Tampa",
+                "major": "International Business",
+                "track": "Builder",
+                "filename": "Huntur Brock Resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 90.4,
+                "grit_score": 10,
+                "build_score": 14
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "EDUCATION",
+                "grad_year": "2024",
+                "college": "University of Tampa",
+                "major": "Biochemistry",
+                "track": "Pre-Health",
+                "filename": "Vir_Shah_Resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 70.0,
+                "grit_score": 10,
+                "build_score": 7
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "Ethan Capone",
+                "grad_year": "2025",
+                "college": "Unknown",
+                "major": "Unknown",
+                "track": "Builder",
+                "filename": "Ethan_Capone Resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 70.0,
+                "grit_score": 10,
+                "build_score": 13
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "Dilan  Kochhar  New  York,  NY",
+                "grad_year": "2027",
+                "college": "University of Tampa",
+                "major": "Mathematics",
+                "track": "Builder",
+                "filename": "resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 80.0,
+                "grit_score": 95,
+                "build_score": 66
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "Dilan  Kochhar  New  York,  NY",
+                "grad_year": "2027",
+                "college": "University of Tampa",
+                "major": "Mathematics",
+                "track": "Builder",
+                "filename": "Dilan Kochhar R\u00e9sum\u00e9.docx.pdf"
+            },
+            "metrics": {
+                "smart_score": 80.0,
+                "grit_score": 95,
+                "build_score": 60
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "DENG AGUER BUL",
+                "grad_year": "2029",
+                "college": "University of Tampa",
+                "major": "Data Science",
+                "track": "Builder",
+                "filename": "Deng_Resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 90.0,
+                "grit_score": 30,
+                "build_score": 39
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "GABRIEL  MFUGALE  (  813)  323-5158",
+                "grad_year": "2024",
+                "college": "University of Tampa",
+                "major": "Computer Science",
+                "track": "Pre-Law",
+                "filename": "Gabriel mfugale resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 72.6,
+                "grit_score": 40,
+                "build_score": 26
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "Cole Poirier",
+                "grad_year": "2025",
+                "college": "University of Tampa",
+                "major": "Data Science",
+                "track": "Pre-Health",
+                "filename": "Cole Poirier 2025 resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 90.0,
+                "grit_score": 0,
+                "build_score": 35
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "Matthew  Rivers  (904)-315-3898",
+                "grad_year": "2028",
+                "college": "University of Tampa",
+                "major": "Data Science",
+                "track": "Builder",
+                "filename": "mattriversresume5.pdf"
+            },
+            "metrics": {
+                "smart_score": 70.0,
+                "grit_score": 10,
+                "build_score": 46
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "THOMAS ROSENBLUM",
+                "grad_year": "Unknown",
+                "college": "University of Tampa",
+                "major": "Psychology",
+                "track": "Pre-Health",
+                "filename": "THOMAS_ROSENBLUM_Resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 80.0,
+                "grit_score": 0,
+                "build_score": 7
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "Shreya  Mehta   1827  Spring  Creek  Drive,  Carver,  MN  55315   952-686-4710  \u2022  shreya_mehta@icloud.com  \u2022  LinkedIn",
+                "grad_year": "2028",
+                "college": "University of Tampa",
+                "major": "Biology",
+                "track": "Pre-Health",
+                "filename": "Shreya Mehta resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 78.2,
+                "grit_score": 20,
+                "build_score": 7
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "Michael  Zeltser  Forest  Hills,  NY   347-703-1126   zeltsermike@gmail.com  www.linkedin.com/in/michael-zeltser-215872327/   EDUCATION   Bachelor  of  Science  in  Data  Science                                                                                                            Tampa,  FL  University  of  Tampa                                                                                                                                         May  2027                                 Relevant  coursework  Introduction  to  Data  Science,  Data  Structures  and  Algorithm  Analysis,  Database  Management  Systems,  Introduction",
+                "grad_year": "2027",
+                "college": "University of Tampa",
+                "major": "Unknown",
+                "track": "Builder",
+                "filename": "Michael_Zeltser_Resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 80.0,
+                "grit_score": 0,
+                "build_score": 65
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        },
+        {
+            "metadata": {
+                "candidate": "BRIDGET  E.  KLAUS",
+                "grad_year": "2024",
+                "college": "University of Tampa",
+                "major": "Biochemistry",
+                "track": "Pre-Health",
+                "filename": "BridgetKlaus2026Resume.pdf"
+            },
+            "metrics": {
+                "smart_score": 90.0,
+                "grit_score": 20,
+                "build_score": 19
+            },
+            "last_audit": "2026-03-03 13:15:00"
+        }
+    ]
+}

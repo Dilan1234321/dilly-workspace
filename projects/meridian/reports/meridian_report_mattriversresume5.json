@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "mattriversresume5.pdf",
+        "major": "Computer Science",
+        "track": "Builder",
+        "gpa": 3.5
+    },
+    "scores": {
+        "smart": 85.0,
+        "grit": 12,
+        "build": 84,
+        "final": 51.9
+    },
+    "pillars": {
+        "research": 5,
+        "clinical": 0,
+        "shadowing": 0,
+        "leadership": 1
+    }
+}

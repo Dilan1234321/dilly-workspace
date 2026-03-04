@@ -1,0 +1,8 @@
+# Dependencies for build_training_data.py (install in venv)
+# Required for PDF + DOCX:
+pypdf
+python-docx
+
+# Optional: for image-based or blurry PDFs (OCR fallback when pypdf returns little text)
+# pdf2image   # also needs system: poppler (e.g. brew install poppler)
+# pytesseract # also needs system: tesseract (e.g. brew install tesseract)

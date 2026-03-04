@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+pypdf
+python-multipart
+reportlab
+requests
+scikit-learn
+openai
+python-dotenv

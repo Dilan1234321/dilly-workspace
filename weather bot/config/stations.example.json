@@ -1,0 +1,31 @@
+{
+  "comment": "Map Kalshi weather series to NWS/METAR station and resolution source. Copy to stations.json.",
+  "stations": [
+    {
+      "series_ticker": "KXHIGHNY",
+      "name": "NYC High Temp",
+      "nws_station": "KNYC",
+      "nws_office": "OKX",
+      "resolution_source": "NWS CLI (OKX/NYC)",
+      "metar_station": "KNYC",
+      "timezone": "America/New_York",
+      "notes": "Central Park (Belvedere Castle), not an airport. METAR-style 24h high ~04:51 UTC."
+    },
+    {
+      "series_ticker": "KXHIGHCHI",
+      "name": "Chicago High Temp",
+      "nws_station": "KORD",
+      "nws_office": "LOT",
+      "resolution_source": "NWS CLI (O'Hare)",
+      "metar_station": "KORD",
+      "timezone": "America/Chicago",
+      "notes": "O'Hare; METAR is same location as official station."
+    }
+  ],
+  "data_sources": {
+    "aviation_metar_base": "https://aviationweather.gov/api/data",
+    "aviation_metar_cache": "https://aviationweather.gov/data/cache/metars.cache.csv.gz",
+    "nws_api_base": "https://api.weather.gov",
+    "nws_timeseries_base": "https://www.weather.gov/wrh/timeseries"
+  }
+}

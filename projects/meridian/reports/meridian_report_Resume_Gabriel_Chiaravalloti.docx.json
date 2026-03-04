@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "Resume_Gabriel Chiaravalloti.docx",
+        "major": "Computer Science",
+        "track": "Builder",
+        "gpa": 4.2
+    },
+    "scores": {
+        "smart": 87.0,
+        "grit": 24,
+        "build": 8,
+        "final": 38.9
+    },
+    "pillars": {
+        "research": 1,
+        "clinical": 0,
+        "shadowing": 0,
+        "leadership": 2
+    }
+}

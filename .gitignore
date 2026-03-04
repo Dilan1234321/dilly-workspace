@@ -1,0 +1,36 @@
+# Local env (do not commit real API keys)
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+meridian_venv/
+*.egg-info/
+.eggs/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.npm
+
+# IDE / OS
+.DS_Store
+.cursor/
+.Trash/
+
+# Logs and temp
+*.log
+*.tmp
+.cache/
+
+# Optional: uncomment to exclude resume PDFs (large)
+# assets/resumes/*.pdf
+# projects/meridian/reports/

@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "Huntur Brock Resume.pdf",
+        "major": "Unknown",
+        "track": "Pre-Health",
+        "gpa": 4.7
+    },
+    "scores": {
+        "smart": 100,
+        "grit": 100,
+        "build": 12,
+        "final": 64.8
+    },
+    "pillars": {
+        "research": 5,
+        "clinical": 1,
+        "shadowing": 0,
+        "leadership": 4
+    }
+}

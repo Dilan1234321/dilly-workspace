@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "Vir_Shah_Resume.pdf",
+        "major": "Biochemistry",
+        "track": "Pre-Health",
+        "gpa": 3.5
+    },
+    "scores": {
+        "smart": 92.2,
+        "grit": 40,
+        "build": 34,
+        "final": 55.87
+    },
+    "pillars": {
+        "research": 1,
+        "clinical": 2,
+        "shadowing": 1,
+        "leadership": 0
+    }
+}

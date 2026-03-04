@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "Shreya Mehta resume.pdf",
+        "major": "Biology",
+        "track": "Pre-Health",
+        "gpa": 3.91
+    },
+    "scores": {
+        "smart": 80.94,
+        "grit": 38,
+        "build": 70,
+        "final": 65.83
+    },
+    "pillars": {
+        "research": 0,
+        "clinical": 5,
+        "shadowing": 1,
+        "leadership": 2
+    }
+}
