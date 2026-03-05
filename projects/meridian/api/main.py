@@ -1,7 +1,16 @@
 import json
 import os
 import shutil
+import sys
+import tempfile
 import uuid
+
+# Allow "projects.meridian.*" imports when run from projects/meridian/api (uvicorn main:app)
+_API_DIR = os.path.dirname(os.path.abspath(__file__))
+_WORKSPACE_ROOT = os.path.normpath(os.path.join(_API_DIR, "..", "..", ".."))
+if _WORKSPACE_ROOT not in sys.path:
+    sys.path.insert(0, _WORKSPACE_ROOT)
+os.chdir(_WORKSPACE_ROOT)  # so paths like projects/meridian/... resolve
 
 # Load .env from workspace root when present (e.g. MERIDIAN_USE_LLM, OPENAI_API_KEY)
 try:
@@ -54,80 +63,66 @@ def detect_track(text: str) -> str:
     # Priority 3: Builder (Default for Tech/Biz)
     return "Builder"
 
-def get_cohort_percentile(track: str, category: str, score: float) -> float:
-    try:
-        with open("projects/meridian/beta_cohort_db.json", "r") as f:
-            db = json.load(f)
-        
-        cohort_scores = [c["metrics"]["grit_score"] for c in db["candidates"]]
-        
-        if not cohort_scores:
-            return 50.0
-            
-        # Calculate rank relative to the 100-person cohort
-        count_below = sum(1 for s in cohort_scores if s < score)
-        percentile = (count_below / len(cohort_scores)) * 100
-        
-        # Ensure we don't return exactly 0 or 100 for a more realistic distribution
-        return round(max(5.0, min(98.0, percentile)), 1)
-    except Exception:
-        return 50.0
+def _allowed_resume_file(filename: str) -> bool:
+    if not filename:
+        return False
+    return filename.lower().endswith((".pdf", ".docx"))
+
+
+def _temp_extension(filename: str) -> str:
+    return ".pdf" if (filename or "").lower().endswith(".pdf") else ".docx"
+
 
 @app.post("/audit", response_model=AuditResponse)
 async def audit_resume(file: UploadFile = File(...)):
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    if not _allowed_resume_file(file.filename):
+        raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported.")
 
-    temp_path = f"/tmp/{uuid.uuid4()}.pdf"
+    ext = _temp_extension(file.filename)
+    temp_dir = tempfile.gettempdir()
+    temp_path = os.path.join(temp_dir, f"meridian_audit_{uuid.uuid4().hex}{ext}")
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     try:
         auditor = MeridianResumeAuditor(temp_path)
         if not auditor.extract_text():
-            raise HTTPException(status_code=500, detail="Failed to extract text from PDF.")
+            raise HTTPException(status_code=500, detail="Failed to extract text from file.")
         
         auditor.analyze_content()
         text = auditor.raw_text
-        major = auditor.analysis["metadata"]["major"]
-        track = detect_track(text + " " + major)
+        from meridian_core.resume_parser import parse_resume
+        from meridian_core.auditor import name_from_filename
+        parsed = parse_resume(text, filename=file.filename)
+        candidate_name = parsed.name
+        if not candidate_name or candidate_name == "Unknown" or ("prediction" in candidate_name.lower() or "well-educated" in candidate_name.lower()):
+            candidate_name = name_from_filename(file.filename) if file.filename else (candidate_name or "Unknown")
+        major = parsed.major
+        text_for_track = parsed.normalized_text or text
+        track = detect_track(text_for_track + " " + major)
         
-        # Absolute scores from the improved auditor
+        # Absolute scores from the improved auditor (no cohort; AI uses LLM few-shot examples only)
         smart_raw = auditor.analysis["metrics"]["smart_score"]
         grit_raw = auditor.analysis["metrics"]["grit_score"]
         build_raw = auditor.analysis["metrics"]["build_score"]
 
-        # Calculate percentile rankings relative to the Beta Cohort
-        # This provides the "Score against each other" logic
-        smart_p = get_cohort_percentile(track, "smart", smart_raw)
-        grit_p = get_cohort_percentile(track, "grit", grit_raw)
-        build_p = get_cohort_percentile(track, "build", build_raw)
-
         scores = {
-            "smart": smart_p,
-            "grit": grit_p,
-            "build": build_p
+            "smart": round(smart_raw, 1),
+            "grit": round(grit_raw, 1),
+            "build": round(build_raw, 1),
         }
 
-        # 3. Explainability Engine (Track & Peer Relative)
         evidence = {
-            "smart": f"Ranked in the top {100-smart_p}% of {track} peers based on academic signals and academic rigor.",
-            "grit": f"Leadership and impact markers exceed {grit_p}% of the current cohort.",
-            "build": f"Technical depth and project execution rank at the {build_p} percentile for {track} tracks."
-        }
-
-        # 3. Explainability Engine (Peer-Relative)
-        evidence = {
-            "smart": f"Ranked in the top {100-smart_p}% of the {track} cohort for institutional and academic signals.",
-            "grit": f"Performance exceeds {grit_p}% of peers in leadership and quantifiable impact markers.",
-            "build": f"Technical breadth is stronger than {build_p}% of candidates in the {track} track."
+            "smart": f"Academic and institutional signals scored for {track}. Use /audit/v2 for evidence from rule engine + few-shot.",
+            "grit": f"Leadership and impact markers evaluated. Use /audit/v2 for full evidence.",
+            "build": f"Technical depth and project execution scored for {track}. Use /audit/v2 for full evidence.",
         }
 
         # 4. Benchmarking & Recommendations
         recs = benchmarks.get_recommendations(track, scores)
 
         return AuditResponse(
-            candidate_name=auditor.analysis["metadata"]["candidate"],
+            candidate_name=candidate_name,
             detected_track=track,
             scores=scores,
             evidence=evidence,
@@ -143,45 +138,52 @@ async def audit_resume(file: UploadFile = File(...)):
 @app.post("/audit/v2", response_model=AuditResponseV2)
 async def audit_resume_v2(file: UploadFile = File(...)):
     """Meridian Auditor V2: Ground Truth V6.5 scoring + Vantage Alpha tracks. Evidence-based audit_findings only."""
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    if not _allowed_resume_file(file.filename):
+        raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported.")
 
-    temp_path = f"/tmp/{uuid.uuid4()}.pdf"
+    ext = _temp_extension(file.filename)
+    temp_dir = tempfile.gettempdir()
+    temp_path = os.path.join(temp_dir, f"meridian_audit_{uuid.uuid4().hex}{ext}")
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     try:
         auditor = MeridianResumeAuditor(temp_path)
         if not auditor.extract_text():
-            raise HTTPException(status_code=500, detail="Failed to extract text from PDF.")
+            raise HTTPException(status_code=500, detail="Failed to extract text from file.")
         text = auditor.raw_text
-        meta = auditor.analysis.get("metadata", {}) if auditor.analysis else {}
-        candidate_name = meta.get("candidate", "Unknown")
-        major = meta.get("major", "Unknown")
         if not auditor.analysis:
             auditor.analyze_content()
-            meta = auditor.analysis.get("metadata", {})
-            candidate_name = meta.get("candidate", "Unknown")
-            major = meta.get("major", "Unknown")
+        # Unified parser: layout-agnostic name/major/GPA and normalized text for scoring
+        from meridian_core.resume_parser import parse_resume
+        from meridian_core.auditor import name_from_filename
+        parsed = parse_resume(text, filename=file.filename)
+        candidate_name = parsed.name
+        # If parser returned Unknown or body text as "name" (e.g. "prediction on"), use filename
+        if not candidate_name or candidate_name == "Unknown" or ("prediction" in candidate_name.lower() or "well-educated" in candidate_name.lower()):
+            candidate_name = name_from_filename(file.filename) if file.filename else (candidate_name or "Unknown")
+        major = parsed.major
+        gpa = parsed.gpa
+        text_for_audit = parsed.normalized_text or text
 
         use_llm = os.environ.get("MERIDIAN_USE_LLM", "").strip().lower() in ("1", "true", "yes")
         if use_llm and os.environ.get("OPENAI_API_KEY"):
             from meridian_core.llm_auditor import run_audit_llm
             result = run_audit_llm(
-                text,
+                text_for_audit,
                 candidate_name=candidate_name,
                 major=major,
-                gpa=None,
+                gpa=gpa,
                 fallback_to_rules=True,
                 filename=file.filename,
             )
         else:
             from meridian_core.auditor import run_audit
             result = run_audit(
-                text,
+                text_for_audit,
                 candidate_name=candidate_name,
                 major=major,
-                gpa=None,
+                gpa=gpa,
                 filename=file.filename,
             )
         scores = {

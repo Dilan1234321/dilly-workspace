@@ -154,42 +154,44 @@ def _merge_split_name_lines(lines: List[str]) -> List[str]:
 
 def extract_candidate_name(raw_text: str, filename: Optional[str] = None) -> str:
     """
-    Extract candidate name from resume text (multi-line scan) with optional filename fallback.
-    Never returns "Unknown" if filename is provided and can be parsed.
-    All names are returned in standardized Title Case.
+    Extract candidate name from resume text. Uses unified parser (layout-agnostic, multi-strategy).
     """
-    if raw_text and raw_text.strip():
-        raw_lines = [ln.strip() for ln in raw_text.strip().split("\n") if ln.strip()][:8]
-        lines = _merge_split_name_lines(raw_lines)
-        # Single line that looks like a name
-        for line in lines[:5]:
-            cleaned = _clean_line_for_name(line)
-            if _looks_like_name(cleaned):
-                return standardize_name(cleaned[:50].rstrip(" |\u2022\u00b7,-"))
-        # First line single word (first name) + second line (last name), e.g. "HUNTUR" + "BROCKENBROUGH"
-        if len(lines) >= 2:
-            first = _clean_line_for_name(lines[0])
-            second = _clean_line_for_name(lines[1])
-            if first and second and " " not in first and first.isalpha() and 2 <= len(first) <= 20:
-                if second.isalpha() and 2 <= len(second) <= 25:
-                    combined = f"{first} {second}"
-                    if _looks_like_name(combined):
-                        return standardize_name(combined)
-    if filename:
-        return name_from_filename(filename)
-    return "Unknown"
+    from meridian_core.resume_parser import parse_resume
+    parsed = parse_resume(raw_text, filename=filename)
+    return parsed.name if parsed.name != "Unknown" else (name_from_filename(filename) if filename else "Unknown")
+
+
+def extract_major_from_text(raw_text: str) -> str:
+    """
+    Extract major/degree from resume text. Uses unified parser (education block + keyword scan).
+    """
+    from meridian_core.resume_parser import parse_resume
+    parsed = parse_resume(raw_text, filename=None)
+    return parsed.major
 
 
 def get_track_from_major_and_text(major: str, raw_text: str) -> str:
     """Pre-Health / Pre-Law / Builder from major + text signals. Text used when major is Unknown (e.g. pre-med keywords)."""
     m = major.lower()
     t = (raw_text or "").lower()
-    if any(x in m for x in ["biology", "biochemistry", "chemistry", "health", "nursing", "psychology", "biomedical", "allied"]):
+    # Explicit track label in text (e.g. placeholder "Track: Pre-Health") wins
+    if "track: pre-health" in t or "track: pre-health" in t[:600]:
         return "Pre-Health"
+    if "track: pre-law" in t or "track: pre-law" in t[:600]:
+        return "Pre-Law"
+    if "track: builder" in t or "track: builder" in t[:600]:
+        return "Builder"
+    # Pre-Law: history + international studies (double major) → Pre-Law
     if any(x in m for x in ["political science", "criminology", "philosophy", "history", "international studies", "law"]):
         return "Pre-Law"
-    # When major is Unknown, infer from resume text (critical for pre-med resumes)
+    # Pre-Health majors: only if resume has pre-health signals (avoids Biology/Marine Science → Builder when no med intent)
     pre_health_kw = ["pre-med", "pre-medicine", "premed", "medical", "clinical", "shadowing", "osteopathic", "lecom", "bs/do", "mcat", "patient care", "emt", "scribe", "medical assistant", "hospital", "physician", "amat", "amsa"]
+    if any(x in m for x in ["biology", "biochemistry", "chemistry", "health", "nursing", "psychology", "biomedical", "allied"]):
+        if any(k in t for k in pre_health_kw):
+            return "Pre-Health"
+        # Biology/Marine Science with no pre-health keywords → Builder
+        return "Builder"
+    # When major is Unknown, infer from resume text
     if any(k in t for k in pre_health_kw):
         return "Pre-Health"
     if any(k in t for k in ["pre-law", "paralegal", "legal", "moot court", "mock trial", "juris"]):
@@ -209,9 +211,12 @@ def run_audit(
     Run full Meridian audit from raw resume text.
     Returns scores and audit_findings (evidence-based only).
     If candidate_name is not provided, extracts from text (multi-line) with filename fallback so we avoid "Unknown".
+    If major is Unknown, attempts extract_major_from_text so scoring uses the right multiplier.
     """
     if candidate_name == "Unknown":
         candidate_name = extract_candidate_name(raw_text, filename=filename)
+    if major == "Unknown":
+        major = extract_major_from_text(raw_text)
     track = get_track_from_major_and_text(major, raw_text)
     signals = extract_scoring_signals(raw_text, gpa=gpa, major=major)
     # Override major if we had one

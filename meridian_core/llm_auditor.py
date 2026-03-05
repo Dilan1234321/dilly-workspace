@@ -37,10 +37,10 @@ RULES (non-negotiable):
    - If Builder and weak tech proof: "Name 2–3 concrete tools or projects (e.g. 'Built X using Python and SQL') so technical depth is visible."
    Do NOT give generic advice like 'increase project velocity' or 'do a full-stack deployment' unless it clearly fits this resume. Every recommendation must be something they can do to improve their score based on what you see.
 
-Output valid JSON only, no markdown or extra text. Use this exact structure:
+Output valid JSON only, no markdown or extra text. candidate_name must be the person's real name (from the resume header/top), never a phrase from the body (e.g. not "prediction on", "well-educated", or text from bullet points). major must be from THIS resume only, not copied from the examples. Use this exact structure:
 {
-  "candidate_name": "string from resume or Unknown",
-  "major": "exact major/degree from resume (e.g. Data Science, Biochemistry); only Unknown if not stated",
+  "candidate_name": "person's name from this resume header only, or Unknown",
+  "major": "exact major/degree from this resume only (e.g. Data Science, Biochemistry); only Unknown if not stated",
   "track": "Pre-Health | Pre-Law | Builder",
   "smart_score": number 0-100,
   "grit_score": number 0-100,

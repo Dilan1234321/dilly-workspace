@@ -59,3 +59,33 @@ Optional:
 | 3 | Set `MERIDIAN_USE_LLM=1` and `OPENAI_API_KEY`; restart API. |
 
 The LLM will then be “trained” on your resumes via few-shot examples. To retrain after adding or changing resumes, run step 2 again.
+
+---
+
+## Parsing accuracy (95% target)
+
+The resumes in `training_data.json` are **ground truth** for **name**, **major**, and **track**. The system should learn from them and improve extraction until parsing accuracy is at least 95%.
+
+### Measure accuracy
+
+From the **workspace root**:
+
+```bash
+python -m projects.meridian.scripts.parsing_accuracy
+```
+
+- Compares **rule-based** parser output (name, major, track) to ground truth for every example.
+- Reports **name %**, **major %**, **track %**, and **all-three %**, and lists **failures** (filename, wrong field, ground truth vs extracted).
+
+To also evaluate **LLM** parsing (zero-shot, no few-shot during eval):
+
+```bash
+MERIDIAN_USE_LLM=1 OPENAI_API_KEY=your_key python -m projects.meridian.scripts.parsing_accuracy
+```
+
+### Improve until 95%+
+
+1. Run the script; note which fields fail and for which files.
+2. **Rule-based:** Fix `meridian_core/resume_parser.py` (e.g. `REJECT_WORDS_IN_NAME`, major keywords, name-extraction logic).
+3. **LLM:** Tighten the system prompt in `meridian_core/llm_auditor.py` or add better few-shot examples.
+4. Re-run until **all-three** accuracy is ≥ 95%.

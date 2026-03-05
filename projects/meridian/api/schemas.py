@@ -1,4 +1,5 @@
 import json
+import os
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
@@ -32,7 +33,10 @@ class AuditResponseV2(BaseModel):
     raw_logs: List[str]
 
 class Benchmarks:
-    def __init__(self, path: str = "projects/meridian/api/benchmarks.json"):
+    def __init__(self, path: str = None):
+        if path is None:
+            _dir = os.path.dirname(os.path.abspath(__file__))
+            path = os.path.join(_dir, "benchmarks.json")
         with open(path, "r") as f:
             self.data = json.load(f)
 

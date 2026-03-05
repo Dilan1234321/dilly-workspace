@@ -31,8 +31,10 @@ MAJOR_MULTIPLIERS = {
     "Marketing": 0.90,
     "International Business": 0.90,
     "Management": 0.85,
+    "Business Management": 0.85,
     "Communication": 0.85,
     "Marine Science": 1.15,
+    "Environmental Science": 1.15,
     "Secondary Education": 1.00,
     "Unknown": 1.00,
 }

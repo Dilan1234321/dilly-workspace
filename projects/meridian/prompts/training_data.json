@@ -1,4 +1,343 @@
 {
-  "examples": [],
-  "count": 0
+  "examples": [
+    {
+      "filename": "Kate_Hicks_Resume.docx",
+      "resume_excerpt": "Kate M. Hicks\n\nPhone: 732-832-9360 | Email: kate21hix@gmail.com\n\nSUMMARY\n\nMotivated Business student at the University of Tampa with hands-on experience  in leadership, event management, marketing, and student engagement. With demonstrated abilities to lead executive teams, plan large-scale programming, and execute strategic marketing initiatives. Recognized for strong communication, collaboration, and organizational skills.\n\nEDUCATION\n\nThe University of Tampa - B.S. in Business Management\nExpected Graduation: December 2027\n- Dean's List, Fall Semester 2024, Fall Semester 2025\n- Graduated high school in top 14% from Monmouth Regional High School\n\nEXPERIENCE\n\nDirector of Events\n\nPEACE Volunteer Center | August 2025 – Present\n\n- Led and facilitated weekly executive board meetings, developing agendas and ensuring effective communication and collaboration among team members.\n- Trained and mentored executive board members, supporting leadership development and preparing future student leaders.\n- Planned and executed monthly social-issue–based programming, including both large- scale and small-scale events aligned with national awareness initiatives.\n- Coordinated logistics for signature events, delivering meaningful, hands-on learning experiences for students.\n- Collaborated with student organizations to support event planning, foster partnerships, and encourage cross-organizational engagement.\n\nPR & Marketing Executive Board Member\n\nPEACE Volunteer Center | October 2024 – August 2025\n\n- Develop and execute PR and marketing strategies aligned with organizational goals.\n- Create and manage engaging social media content, increasing reach and engagement.\n- Oversee event promotion, boosting attendance through targeted marketing efforts.\n- Build media relationships and craft press releases to elevate the public profile.\n- Leverage analytics to optimize campaigns, achieving measurable growth in engagement.\n\n\n\nLead Mentor\n\nDiscover UTampa | April 2025 - September 2025\n\n\n- Conduct interviews and oversee onboarding of new mentors, ensuring alignment with program values and standards.\n- Design and deliver training sessions on peer support, leadership, and engagement strategies.\n- Monitor mentor performance and provide feedback to promote team cohesion.\n- Encourage student participation in activities, discussions, and sessions.\n- Serve as a role model and share insights on ...",
+      "candidate_name": "Kate M. Hicks",
+      "major": "Business Management",
+      "track": "Builder",
+      "smart_score": 92.25,
+      "grit_score": 63,
+      "build_score": 16,
+      "final_score": 60.03,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Business Management multiplier (0.85x) = 44.6 base.; Honors/recognition: +20 pts.",
+        "Grit: Quantifiable impact markers: 1 × 15 = 15 pts.; Leadership density: 4 × 12 = 48 pts.",
+        "Research signal detected; Research Density 1 sem would add +20% weight."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Business Management multiplier (0.85x) = 44.6 base. Honors/recognition: +20 pts. Research signal detected: +25 pts.",
+      "evidence_grit": "Quantifiable impact markers: 1 × 15 = 15 pts. Leadership density: 4 × 12 = 48 pts."
+    },
+    {
+      "filename": "BridgetKlaus2026Resume.pdf",
+      "resume_excerpt": " \nBRIDGET  E.  KLAUS  \nbridgetklaus07@gmail.com  •  410-382-8624  10220  Red  Lion  Tavern  Ct.  Ellicott  City,  MD  21042   EDUCATION    The  University  of  Tampa,  Tampa,  FL   Bachelor  of  Science  in  Biochemistry  and  Allied  Health  (Medical  Science)                         \nGPA:\n \nMajor-Specific:\n \n4.0/\n \nCumulative\n \n3.89\n \n|\n \nHonors:\n \nPresidential\n \nScholar\n Marriotts  Ridge  High  School,  Marriottsville,  MD                          May  2024  •  Biotechnology  Academy  |  Applications  and  Research  Laboratory  (ARL)    •  Completed  300+  hours  of  bench  work  including  Cell  Culture,  DNA  Sequencing,  PCR,  Aseptic  Techniques,  CRISPR  RESEARCH  EXPERIENCE   Student  Researcher  |  The  University  of  Tampa,  Tampa,  FL                                         •  Undergraduate  Research  &  Inquiry  Grant  Awardee                                   Aug  2025  –  May  2026   •  Awarded  competitive  research  funding  for  “ Influences  of  resistance  training  participants  and  engagement  on  different  functional  \ndisability\n \ntypes\n \namong\n \nyoung\n \nadults:\n \nMix\n \nMethods\n,”\n \nin\n \ncollaboration\n \nwith\n \nDr.\n \nWillie\n \nLeung,\n \nPhD\n •  Honors  Sociology  Research  Project  Lead  |  Honors  Course:  Immortality  and  Life-Extension  Avenues            Aug  2025  –  Dec  2025  •  Conducted  thematic  qualitative  analysis  of  10  interviews  examining  perspectives  on  immortality  and  life-extension  beliefs  Marine  Biology  Research  Intern  |  Institute  of  Marine  and  Environmental  Technology,  Baltimore,  MD               May  2023  –  May  2024  •  Investigated  the  effects  of  cold  temperature  incubation  on  Limulus  polyphemus  embryonic  development   •  Utilized  microscopy  techniques  to  quantify  hatch  rates  and  assess  morphological  changes  with  Dr.  J.  Sook  Chung  Editorial  Intern  |  Delaware  Academy  of  Medicine                         May  2023  –  Aug  2023  •  Supported  the  publication  of  the  2023  Biotechnology  Issue  of  the  Delaware  Journal  of  Public  Health  •  Edited  manuscripts,  verified  scientific  data,  and  conducted  literature  reviews  in  collaboration  with  the  editorial  team  WORK  EXPERIENCE  Honors  Program  Mentor  |  The  University  of  Tampa,  Tampa,  FL  |  Fixed  Term                    August  2025  –  Present   •  Co-facilitate  the  Honors  1...",
+      "candidate_name": "Bridget E. Klaus",
+      "major": "Biochemistry",
+      "track": "Pre-Health",
+      "smart_score": 100.0,
+      "grit_score": 96,
+      "build_score": 49,
+      "final_score": 85.45,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Biochemistry multiplier (1.40x) = 73.5 base.; Honors/recognition: +10 pts.",
+        "Grit: Leadership density: 3 × 12 = 36 pts.; Work/experience entries: 12 × 5 = 60 pts.",
+        "GPA below 3.8 Elite floor; consider raising academic baseline."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Biochemistry multiplier (1.40x) = 73.5 base. Honors/recognition: +10 pts. Research signal detected: +25 pts.",
+      "evidence_grit": "Leadership density: 3 × 12 = 36 pts. Work/experience entries: 12 × 5 = 60 pts."
+    },
+    {
+      "filename": "Deng's current Resume .pdf",
+      "resume_excerpt": "DENG AGUER BUL \n deng.bul@spartans.ut.edu | +1 (813) 810-9237 | Tampa, Florida | LinkedIn: Deng Aguer Bul \n \n \nEDUCATION \n \nThe University of Tampa                                                                                                                   Tampa, Florida                                                                     \nBachelor of Science in Data Science | Minor: Finance.                                                       Expected: May 2029 \n \n•   Honors/Scholarships: UWC Davis  & UTampa Presidential Scholarship \n \nUnited World College South East Asia (UWCSEA)                                                                                 Singapore     \nInternational Baccalaureate (IB) Diploma                                                                        Aug 2023 – May 2025 \nUWCSEA High School Diploma \n \nRELEVANT EXPERIENCE \n \nFounder | Initiative for Peace – South Sudan:                                                                             Jul 2024 – Present \n•   Founded a scholarship and leadership program uniting South Sudanese youth from  \n   64 tribes and refugee communities to study in Rwanda and return as peace ambassadors. \n•   Designed a long-term strategy with first scholarship cohort launching in 2026 in partnership  \n   with college and universities in Rwanda and abroad \n•   Organized the first Peace Cultural Day in Kiryandongo Refugee Camp, engaging 1,000+  \n   participants from 21 South Sudanese communities. \n•   Leading program development, partnerships, outreach, communications, and community  \n   engagement initiatives. \n \nWeight Floor Attendant | University of Tampa Recreation Centre                                                 Tampa, Florida \n• Maintain safe and organized gym environment.                                                                      Sep 2025 – Present \n• Assist members with equipment use and facility guidelines. \n \nSummer Intern: Ontario Teachers’ Pension Plan (OTPP):                                                               Singapore  \n•   Researched the renewable energy market in Southeast Asia, focusing on                                   Jun – Aug 2024 \n   Vietnam,  Japan and the Philippines. \n•   Analysed major renewable companies for example Trung Nam Group & ACEN to  \n evaluate market potential and risk. \n•   Supported senior analysts in identifying investmen...",
+      "candidate_name": "Deng Aguer Bul",
+      "major": "Data Science",
+      "track": "Builder",
+      "smart_score": 100.0,
+      "grit_score": 100.0,
+      "build_score": 45,
+      "final_score": 86.25,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base.; Honors/recognition: +20 pts.",
+        "Grit: Leadership density: 5 × 12 = 60 pts.; Work/experience entries: 14 × 5 = 70 pts.",
+        "Research signal detected; Research Density 1 sem would add +20% weight."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base. Honors/recognition: +20 pts. Research signal detected: +25 pts.",
+      "evidence_grit": "Leadership density: 5 × 12 = 60 pts. Work/experience entries: 14 × 5 = 70 pts."
+    },
+    {
+      "filename": "Aidan Rina Resume.docx",
+      "resume_excerpt": "Aidan Rina\n\nMassapequa Park, NY 11762 • (516) 456-3373 • aidan.rina@spartans.ut.edu\n\nEducation\n\nUniversity of Tampa — B.S. Finance, Expected 2027\n\nHonors Program Student\n\nMassapequa High School — Massapequa, NY\n\nGraduated 2024, GPA: 4.0\n\nNational Honor Society; National Business Honor Society\n\nExperience\n\nNew York Islanders — Community Relations Intern | 2025 – Present\n\nSupported game-day and community events; coordinated volunteers and sign-ups\n\nTracked donations and created quick Excel recap sheets\n\nHandled inbox responses and scheduled follow-ups with local partners\n\nFreelance Dek Hockey Referee, Scorekeeper & Coach | 2021 – 2024\n\nOfficiated and managed dek hockey games for leagues and events\n\nKept accurate scores and ensured smooth game operations\n\nHandled disputes professionally while enforcing rules\n\nCoached younger players on fundamentals and teamwork\n\nDek Superstars — Scorekeeper | Sep 2021 – Apr 2022\n\nMaintained game records and stats; operated timekeeping equipment\n\nWorked with referees and league officials to keep games organized\n\nMassapequa Public Schools — Summer Recreation Counselor | Jul 2021 – Aug 2021\n\nSupervised and organized activities for children in a structured program\n\nKept participants safe and engaged; built communication skills with parents\n\nSkills\n\nStrong problem-solving and adaptability when using software and digital tools\n\nFamiliarity with coding concepts and experience using various tools to work with code\n\nBasic video editing and multimedia skills\n\nGeneral computer proficiency\n\nPhysically fit and capable of handling labor-intensive tasks\n\nCommitted to physical fitness and maintaining an active lifestyle through regular training\n\nActivities\n\nHockey, fitness\n\nCommitted to physical fitness and maintaining an active lifestyle through regular training\n\nPhysically fit and capable of handling labor-intensive tasks\n\nGeneral computer proficiency\n\nBasic video editing and multimedia skills\n\nFamiliarity with coding concepts and experience using various tools to work with code\n\nStrong problem-solving and adaptability when using software and digital tools",
+      "candidate_name": "Aidan Rina",
+      "major": "Finance",
+      "track": "Builder",
+      "smart_score": 76.0,
+      "grit_score": 20,
+      "build_score": 24,
+      "final_score": 37.8,
+      "audit_findings": [
+        "Smart: GPA 4.00 × 15 × Finance multiplier (1.10x) = 66.0 base.; Honors/recognition: +10 pts.",
+        "Grit: Work/experience entries: 4 × 5 = 20 pts."
+      ],
+      "evidence_smart": "GPA 4.00 × 15 × Finance multiplier (1.10x) = 66.0 base. Honors/recognition: +10 pts.",
+      "evidence_grit": "Work/experience entries: 4 × 5 = 20 pts."
+    },
+    {
+      "filename": "mattriversresume5.pdf",
+      "resume_excerpt": "Matthew Rivers  (904)-315-3898  |  riversmatt80@gmail.com  |   LinkedIn |   GitHub \n \nEDUCATION   \n \nThe  University  of  Tampa   |  Tampa,  Florida                 Exp.  May  2028  (SO)            B.S.  in  Data  Science,  Minor  in  Mathematics  &  Computer  Science                      ●  Relevant  Coursework:  Data  Structures  and   Algorithm  Analysis,  Science  of  Computing,  Calculus  I,  Calculus  II,  \nDigital\n \nMedia\n ●  Volunteering:  Vice  President  of  Cru  Connect  (Registered  Student  Org.),  Men's  Collegiate  Flag  Football  Team,  \nData\n \nScience\n \nClub,\n \nSports\n \nAnalytics\n \nClub\n  \n \nTECHNICAL  SKILLS  \n \nLanguages  (ordered  by  proficiency):  Python,  SQL,  HTML,  CSS,  R  Tools  and  Frameworks:  Git,  Github,  Jupytr  Notebook   INDUSTRY  CERTIFICATIONS  \n \nInformation  Technology  Specialist  in  Databases   Acquired  through  Certiport  in  Apr  2024    ●  Applied  SQL  to  design  and  query  relational  databases,  gaining  hands-on  experience  in  creating  tables,  optimizing  \nqueries,\n \nand\n \nextracting\n \ninsights\n \nto\n \nsupport\n \ndata-driven\n \ndecision-making\n ●  Collaborated  on  database  problem-solving  scenarios,  troubleshooting  query  errors  and  implementing  efficient  \ndata\n \nmanagement\n \npractices\n Digital  &  Soft  Skills  Certificates   Acquired  and  Endorsed  by  the  NWRC  in  Feb  2024    ●  Demonstrated  proficiency  in  essential  workplace  technologies  including  computer  operations,  digital  \ncommunication,\n \nand\n \ndigital\n \nsecurity,\n \nwhile\n \nmastering\n \nfoundational\n \nwork\n \nhabits\n \nand\n \nproblem\n \nsolving\n  PROJECTS  \n \nPunch  Dungeon  |  Final  Project  (CSC  101)   Dec  2024  ●  Designed  and  created  an  immersive  text-based  adventure  game  programmed  using  Python  Le-Bomb  |  Final  Project  (CSC  201)   May  2025  ●  Collaborated  with  2  classmates  via  GitHub  to  develop  a  Python-based  game  integrated  with  a  Raspberry  Pi,  \nsimulating\n \na\n \n“don’t\n \nexplode\n \nthe\n \nbomb”\n \nchallenge\n ●  Applied  hardware  interfacing,  teamwork,  and  version  control  to  create  an  interactive,  real-world  project  NextPlai  |  Personal  Project  February  2026  (Ongoing)  ●  Developing  an  AI-based  football  performance  prediction  tool  using  Python,  SQL,  and  statistical  modeling   \n \nJOB  EXPERIENCE  \n \nSales  Associate  |  Clarks  Bostonian  Oct  2022  -  Dec  2026...",
+      "candidate_name": "Matthew Rivers",
+      "major": "Data Science",
+      "track": "Builder",
+      "smart_score": 68.25,
+      "grit_score": 57,
+      "build_score": 53,
+      "final_score": 59.38,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base.",
+        "Grit: Leadership density: 1 × 12 = 12 pts.; Work/experience entries: 9 × 5 = 45 pts."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base.",
+      "evidence_grit": "Leadership density: 1 × 12 = 12 pts. Work/experience entries: 9 × 5 = 45 pts."
+    },
+    {
+      "filename": "Michael Zeltser Resume  (2).pdf",
+      "resume_excerpt": "Michael  Zeltser  Forest  Hills,  NY   347-703-1126   zeltsermike@gmail.com  www.linkedin.com/in/michael-zeltser-215872327/   EDUCATION   Bachelor  of  Science  in  Data  Science                                                                                                            Tampa,  FL  University  of  Tampa                                                                                                                                         May  2027                                 Relevant  coursework  Introduction  to  Data  Science,  Data  Structures  and  Algorithm  Analysis,  Database  Management  Systems,  Introduction  \nto\n \nStatistics,\n \nCalculus\n \n1&2,\n \nAcademic\n \nWriting\n \nProgram\n \n101\n \n&\n \n201\n  Project  Work  ●  Created  an  application  to  determine  which  factor  has  the  biggest  impact  on  a  team’s  winning  percentage  in  \nMarch\n \nMadness\n \nby\n \nusing\n \nPython\n \npackages\n \nsuch\n \nas\n \nPandas\n \nand\n \nSeaborn\n ●  Developed  a  GUI  application  with  SQL  integration  that  had  clear  navigation,  error  handling,  and  consistent  \nvisual\n \ndesign\n \nwhile\n \nmaintaining\n \nclean\n \ncode\n \nSkills\n Data  cleaning,  Data  visualization,  Python  and  SQL,  Tableau,   Excel,  Research,  Recordkeeping,   Project  Support,  \nTeamwork\n \nand\n \nCollaboration,\n \nMultitasking,\n \nAnalytical\n \nmindset,\n \nGrit\n  WORK  EXPERIENCE   Sportradar  Remote  Production  Operator  DEUS               July  2025  -  Present  ●  Deliver  real-time  football  play-by-play  data  used  by  media  outlets  and  sports  betting  operators  ●  Monitor  live  data  feeds  to  ensure  accuracy,  consistency,  and  timely  delivery  ●  Collaborate  with  team  members  to  troubleshoot  technical  issues  during  live  games    Arrowhead  Lake  Community  Association  Arrowhead  Lake,  PA  Rental  Shack  Attendant   Summer  2024  ●  Assisted  customers  with  questions  and  equipment  setup,  and  handled  customer  payments  ●  Organized  used  equipment  and  ensured  inventory  was  returned  in  good  condition  ●  Maintained  a  neat  and  clean  facility     NYC  Department  of  Mental  Health  Forest  Hills,  NY  Summer  Youth  Employment  Program          Summer  2022  ●  Worked  on  a  group  research  project  culminating  in  a  presentation  to  higher  management  ●  Had  regular  meetings  with  a  supervisor  to  discuss  progress  and  to  k...",
+      "candidate_name": "Michael Zeltser",
+      "major": "Data Science",
+      "track": "Builder",
+      "smart_score": 93.25,
+      "grit_score": 5,
+      "build_score": 91,
+      "final_score": 52.97,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base.; Research signal detected: +25 pts.",
+        "Grit: Work/experience entries: 1 × 5 = 5 pts.",
+        "Research signal detected; Research Density 1 sem would add +20% weight."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base. Research signal detected: +25 pts.",
+      "evidence_grit": "Work/experience entries: 1 × 5 = 5 pts."
+    },
+    {
+      "filename": "Resume_Gabriel Chiaravalloti.docx",
+      "resume_excerpt": "GABRIEL CHIARAVALLOTI page 2 of 2\n\nTele: 561.309.5210  |  Email: gabemc441@gmail.com\n\nGABRIEL CHIARAVALLOTI\n\nTele: 561.309.5210  |  Email: g.chiaravalloti@spartans.ut.edu \n\n\n\n\t\tEDUCATION\n\nThe University of Tampa\n\nBachelor of Science in Computer Science\t                                                                    Jan 2025 – Present\n\nCurrent GPA: 3.4\n\n\n\nOhio Christian University\nAssociate of Arts in Business\t\t\t\t\t\t\tAug 2022 – June 2024\n\nGraduated with Honors, GPA: 3.5\n\nYoungest student to earn an AA degree from OCU\n\n\n\nBridgeway Academy\nHigh School Diploma\t\t\t\t\t\t\t\tJan 2020 – June 2024\n\nGraduated with Honors, GPA: 4.2\n\nConsistently maintained Honor Roll status\n\n\n\n\n\nPROFESSIONAL EXPERIENCE\n\nComputers Repair Plus\nTechnician and Store Manager\t\t\t\t\t                 June 2024 – Jan 2025\n\nManaged store operations, scheduling, and all financial transactions, ensuring exceptional customer service\n\nPerform laptop and PC repairs, including hardware replacements and software updates\n\nReceived multiple commendations from customers for professionalism and problem-solving skills\n\n\n\nPublix Supermarket\nCashier and Front-End Support\t\t\t\t\t\tJan 2024 – Present\n\nHandled customer transactions efficiently and accurately\n\nTrained new employees in customer service protocols and register operations\n\nReceived multiple Customer Service awards and positive feedback from customers\n\nBagger\t\t\t\t\t\t\t\t\t\tJuly 2020 – Jan 2024\n\nAssisted customers with bagging groceries and maintained a clean and organized environment\n\nHelped with inventory management and stock replenishment\n\n\n\n\n\n\n\nEXTRACURRICULAR ACTIVITIES\n\nSoccer Player\n\nPlayed in various recreational and competitive leagues, including international experience in Europe\n\nDemonstrated teamwork, discipline, and leadership on and off the field\n\nYouth Program Volunteer, Church\n\nGuided and supported younger children in various activities\n\nDeveloped and led educational and recreational programs\n\n\n\n\n\n\n\nSKILLS\n\nExceptional time management and organizational skills\n\nStrong work ethic and ability to balance multiple responsibilities\n\nProficient in basic coding and software updates\n\nExcellent communication and interpersonal skills\n\n\nLETTERS of RECOMMENDATION\n\nHolly Morgan, Academic Advisor, Bridgeway Academy\n\n\"Gabriel faced academic adversity and overcame it with determination, earning both an Honors Track Diploma and an Associate's degree in Business.\"\n\n\"...",
+      "candidate_name": "Gabriel Chiaravalloti",
+      "major": "Computer Science",
+      "track": "Builder",
+      "smart_score": 76.3,
+      "grit_score": 42,
+      "build_score": 23,
+      "final_score": 47.54,
+      "audit_findings": [
+        "Smart: GPA 3.40 × 15 × Computer Science multiplier (1.30x) = 66.3 base.; Honors/recognition: +10 pts.",
+        "Grit: Leadership density: 1 × 12 = 12 pts.; Work/experience entries: 6 × 5 = 30 pts."
+      ],
+      "evidence_smart": "GPA 3.40 × 15 × Computer Science multiplier (1.30x) = 66.3 base. Honors/recognition: +10 pts.",
+      "evidence_grit": "Leadership density: 1 × 12 = 12 pts. Work/experience entries: 6 × 5 = 30 pts."
+    },
+    {
+      "filename": "Shreya Mehta resume.pdf",
+      "resume_excerpt": "Shreya  Mehta   1827  Spring  Creek  Drive,  Carver,  MN  55315   952-686-4710  •  shreya_mehta@icloud.com  •  LinkedIn \nEDUCATION    The  University  of  Tampa  Bachelor’s  Degree  in  Biology  -  BS/DO  Early  Acceptance  Program  with  Lake  \nErie\n \nCollege\n \nof\n \nOsteopathic\n \nMedicine\n \n(LECOM).\n \n Graduation:  May  2028  Tampa,  FL 丨 Matriculation:  July  2028  Bradenton,  FL  GPA:  3.91 丨 Dean’s  List  \nWORK  EXPERIENCE   \nCall  Center          February  2026  -  present  \n●  Serve  as  the  first  point  of  contact  for  incoming  university  calls,  managing  high  call  volumes  with  \nprofessionalism\n \nand\n \nefficiency.\n ●  Direct  callers  to  appropriate  departments  based  on  inquiry  needs.  \nScheels                        July  2023-August  2024   \n      ●  Processed  accurate  and  efficient  sales  transactions  as  a  cashier,  ensuring  customer  satisfaction    \nand\n \ncontributing\n \nto\n \nsmooth\n \nfront-end\n \noperations.\n ●  Presented  the  Scheels  VISA  rewards  card  to  customers,  enrolling  6  new  cardholders  per  month.  \nACTIVITIES\n \nMu  Epsilon  Delta  Professional  Fraternity                                               October  2025-present   \nVice  President  of  Finance  \n●  Oversee  financial  planning,  fundraising  initiatives,  and  budget  allocation  to  support  chapter  \noperations,\n \nphilanthropy,\n \nand\n \nprofessional\n \ndevelopment\n \nevents\n ●  Maintain  accurate  financial  records  and  manage  chapter  budgets  to  ensure  fiscal  responsibility  ●  Ensure  timely  collection  and  tracking  of  member  dues  \nSkull  and  Bones  Club                    August  2024-present  \n●  Gaining  insight  and  knowledge  about  the  pre-health  field  and  preparing  for  steps  leading  to  \ngraduation.\n \nAmerican  Medical  Student  Association  (AMSA)                  August  2024-present  \n●  Completed  40  hours  of  virtual  clinical  shadowing  through  the  Medi-Futures  program,  exploring  \nvarious\n \nmedical\n \nspecialties.\n \nVOLUNTEER  AND  SHADOWING  EXPERIENCE   \nSt.  Francis  Hospital,  Shakopee,  MN                          May  2022-March  2024   \n      ●  Changed  sheets  and  wiped  down  rooms  after  use.  Transported  patients  across  the  hospital.  \n  Twin  Cities  Orthopedics                                                                                  June  2025-August  2025    ●  Shadowed  ...",
+      "candidate_name": "Shreya Mehta",
+      "major": "Biology",
+      "track": "Pre-Health",
+      "smart_score": 67.45,
+      "grit_score": 22,
+      "build_score": 72,
+      "final_score": 48.13,
+      "audit_findings": [
+        "Smart: GPA 3.91 × 15 × Biology multiplier (1.15x) = 67.4 base.",
+        "Grit: Leadership density: 1 × 12 = 12 pts.; Work/experience entries: 2 × 5 = 10 pts.",
+        "Elite status: GPA meets 3.8+ Pre-Health floor."
+      ],
+      "evidence_smart": "GPA 3.91 × 15 × Biology multiplier (1.15x) = 67.4 base.",
+      "evidence_grit": "Leadership density: 1 × 12 = 12 pts. Work/experience entries: 2 × 5 = 10 pts."
+    },
+    {
+      "filename": "Tyler Resume Final.docx",
+      "resume_excerpt": "Tyler J. Smith\n\n\tWinter Springs, FL | 425-457-6911 | tyleruski@outlook.com| www.linkedin.com/in/Tylersmith4\n\nEducation\n\nUniversity of Tampa – Honors Program, Bachelor of Arts in History & International Studies\t\tExpected May 2028\n\nMinors in French, Asian Studies and Economics\t\t\t\t\t\t\t\t\t\n\n\tGPA: 3.80\n\n\tRelevant Coursework: Intermediate Macroeconomic Analysis, International Political Economy, Intermediate French II, Introductory Japanese, International Relations of East Asia, , Colonial America, Research Methods for Political Science, World Religions\n\nWork & Leadership Experience\n\nManager; The PEACE Volunteer Center, The University of Tampa \t\t\t\t\tMarch 2025-Present\n\nManaged, oversaw, and trained 10 directors of the PEACE Volunteer Center.\n\nResponsible for recruiting and managing 700+ UTampa volunteers, ensuring effective participation in service projects.\n\nCoordinated logistics for 40+ off-campus community outreach initiatives, including multiple week-long service trips, and personally participated in an international service program in Ghana.\n\nFostered a culture of social responsibility on campus through advocacy and student involvement initiatives.\n\nRetail Key Lead; Abercrombie and Fitch\t\t\t\t\t\t\t\tMay 2025-Present\n\nExperienced in driving sales performance and creating a customer-focused retail environment.\n\nFocused on team leadership, staff training, and fostering a brand-aligned store culture by leading 60+ brand ambassadors.\n\nManaged daily operations by ensuring efficiency and achieving company goals\n\nResearch Assistant; Ramos Research Institute\t\t\t\t\t\t\tJan. 2026-Present\n\nConducted desk research on democratic narratives, analyzing case studies, speeches, and social media to assess how democratic values are communicated.\n\nCollected and synthesized qualitative data supporting the Community of Democracies’ Rewriting Democracy initiative.\n\nEdited and integrated contributions from a five-person research team into cohesive report drafts and analytical memos.\n\nContributed to a research paper prepared for a conference presentation.\n\nResearch & Academic Experience\n\nIndependent Researcher, Faculty Mentor: Dr. Charles McGraw Groh \t\t\t\t\tTampa, FL\n\nHistory of U.S. Foreign Relations in Asia, The University of Tampa\t\t\t\t\tJan. 2026-Present\n\nExamining U.S.–China diplomatic strategy, trade policy, and cultural relations from early 19th century to the present.\n\nProduced a conference-len...",
+      "candidate_name": "Tyler J. Smith",
+      "major": "History & International Studies",
+      "track": "Pre-Law",
+      "smart_score": 100.0,
+      "grit_score": 46,
+      "build_score": 57.6,
+      "final_score": 72.62,
+      "audit_findings": [
+        "Smart: GPA 3.80 × 15 × History & International Studies multiplier (1.00x) = 57.0 base.; Honors/recognition: +30 pts.",
+        "Grit: Leadership density: 3 × 12 = 36 pts.; Work/experience entries: 2 × 5 = 10 pts.",
+        "Score +20% for outcome-based leadership (e.g. increased X%, drafted policy).",
+        "Pre-Law Smart score uses 45% GPA weighting."
+      ],
+      "evidence_smart": "GPA 3.80 × 15 × History & International Studies multiplier (1.00x) = 57.0 base. Honors/recognition: +30 pts. Research signal detected: +25 pts.",
+      "evidence_grit": "Leadership density: 3 × 12 = 36 pts. Work/experience entries: 2 × 5 = 10 pts."
+    },
+    {
+      "filename": "Vir_Shah_Resume.pdf",
+      "resume_excerpt": "EDUCATION \nB.S. in Biochemistry ASBMB-accredited \nThe University of Tampa \n08/2023 - Present\n, \n \nEMPLOYMENT HISTORY \nResident Assistant \nThe University of Tampa \n08/2024 - Present\n, \n \nAustin Hall \nFacilitated a positive living environment by organizing\ncommunity-building activities, providing academic resources and\npersonal support, and enforcing university policies to ensure a\nsafe and inclusive residence hall. \nImplement wellness programs and educational workshops that\nincrease awareness and engagement on topics such as mental\nhealth, safety, and academic success. \nAct as a liaison between residents and university administration,\ne)ectively communicating resident concerns and suggestions to\nenhance student life. \nLed and evaluated group interview sessions for Resident\nAssistant recruitment to ensure a \nthorough and fair candidate\nselection process. \nTutor \nThe University of Tampa \n01/2024 - 05/2024\n, \n \nAcademic Success center \nCompleted over 100 General Chemistry and Calculus tutoring\nsessions, utilizing visual aids and real-world examples to explain\ncomplex theories and problem-solving techniques. \nOrganized and delivered personalized tutoring sessions in one-\non-one and group settings. \nConducted review sessions before examinations, which students\ncredited for signiﬁcantly boosting their conﬁdence and test\nscores. \nPublic Relations and Event Associate \nThe Soho house Mumbai \n05/2023 - 08/2023\n, \n \nManaged logistics for 30+ events, coordinating with vendors,\nvenues, and sta) to ensure seamless execution and budget\nadherence. \nWorked on the front desk, including signing in members and\nanswering phone calls and queries. \nProcessed tax invoices and managed ﬁnancial documentation. \nONLINE COURSEWORK \nUdemy \nhttps://drive.google.com/drive/folders/1FMTb-7Q_e0QWJoZctC-1OwGNqcF5iBiB?\nusp=sharing \nINTERESTS \nChess \nMathematics \nPuzzles \nGolf \nDrumming \nContinuous learning \nCommunity Service \nCooking \nLANGUAGES \nEnglish \nNative or Bilingual Proﬁciency \nHindi \nNative or Bilingual Proﬁciency \nGujarati \nFull Professional Proﬁciency \nSpanish \nLimited Working Proﬁciency \nCORE COMPETENCIES \nAdaptability \nCommunication Skills \nCrisis and Time Management \nCultural Competence \nEmpathy \nTeam Collaboration \nNON-PAID EXPERIENCE \nShadowing/Volunteer \nMedical Experience \n2021 - 2024\n, \n \nIndia \n05/2024-07/2024 Shadowing Dr. Shailaja Masand, Family Physician,\nMumbai. \n06/2021-...",
+      "candidate_name": "Vir Shah",
+      "major": "Biochemistry",
+      "track": "Pre-Health",
+      "smart_score": 73.5,
+      "grit_score": 0.0,
+      "build_score": 48,
+      "final_score": 34.05,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Biochemistry multiplier (1.40x) = 73.5 base.",
+        "Grit: Base calculation only.",
+        "GPA below 3.8 Elite floor; consider raising academic baseline."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Biochemistry multiplier (1.40x) = 73.5 base.",
+      "evidence_grit": ""
+    },
+    {
+      "filename": "Sydney Farah Resume 2025 (2).pdf",
+      "resume_excerpt": "Sydney  Farah   Tampa,  FL                 sydfarah123@gmail.com\n                \n(813)\n \n424-8049\n               \nwww.linkedin.com/in/sydneyfarah1\n   \n         EDUCATION   Bachelor  of  Arts  in  Advertising  and  Public  Relations                                                                  May  2027  The  University  of  Tampa  (UTampa)                                                                                                       Tampa,  FL  GPA:  3.2-  Work  17  hr/wk  while  attending  school   Awards:  Dean’s  List  Spring  2024   Relevant  Coursework:  Principles  of  Public  Relations,  Principles  of  Advertising,  Digital  Arts  \n EXPERIENCE  Student  Coordinator                                                                                                           April  2025-  Current   The  University  of  Tampa  (PEACE  Volunteer  Center)                                                                              Tampa,  FL  ●  Supervise  and  support  five  department  directors  to  ensure  effective  execution  of  the  Volunteer  Center’s  mission  \nand\n \nprograms\n ●  Recruit,  train,  and  mentor  student  staff,  fostering  leadership  development  and  team  collaboration  ●  Plan  and  lead  regular  staff  meetings  to  align  goals,  address  challenges,  and  maintain  smooth  operations  ●  Manage  organizational  budgets,  ensuring  responsible  allocation  of  resources  across  service  programs  ●  Demonstrate  strong  leadership,  organization,  and  communication  skills  in  a  fast-paced,  service-oriented  \nenvironment\n \nMarketing  Intern                                                                                                         May  2025-  August  2025                  LAFAST  Motors                                                                                                                          Port-of-Spain,  Trinidad  ●  Assist  in  creating  engaging  content  for  social  media,  email  campaigns,  and  other  marketing  channels  ●  Generate  and  pitch  creative  content  ideas  to  support  brand  awareness  and  audience  engagement  ●  Support  the  planning  and  coordination  of  marketing  events  and  promotional  campaigns  ●  Monitor  social  media  performance  metrics  (KPIs)  such  as  engagement,  reach,  and  follower  growth  to  provide  \nperformance\n \ninsights\n  Adve...",
+      "candidate_name": "Sydney Farah",
+      "major": "Computer Science",
+      "track": "Builder",
+      "smart_score": 97.4,
+      "grit_score": 46,
+      "build_score": 23,
+      "final_score": 55.67,
+      "audit_findings": [
+        "Smart: GPA 3.20 × 15 × Computer Science multiplier (1.30x) = 62.4 base.; Honors/recognition: +10 pts.",
+        "Grit: Leadership density: 3 × 12 = 36 pts.; Work/experience entries: 2 × 5 = 10 pts.",
+        "Research signal detected; Research Density 1 sem would add +20% weight."
+      ],
+      "evidence_smart": "GPA 3.20 × 15 × Computer Science multiplier (1.30x) = 62.4 base. Honors/recognition: +10 pts. Research signal detected: +25 pts.",
+      "evidence_grit": "Leadership density: 3 × 12 = 36 pts. Work/experience entries: 2 × 5 = 10 pts."
+    },
+    {
+      "filename": "Dilan Kochhar Résumé.docx.pdf",
+      "resume_excerpt": " Dilan  Kochhar  New  York,  NY  |  Tampa,  FL  |  (516)-965-5182  |  kochhardilan05@gmail.com |  www.linkedin.com/in/dilan-k  Education:  University  of  Tampa  -  Honors  College        Expected  December  2027 Data  Science,  B.S.  |  Minor  in  Math  &  Computer  Science                        Tampa,  FL  Professional  Experience:   KVR  Properties                                        June  2025  -  August  2025  Artificial  Intelligence  Engineering  Intern             Fort  Lauderdale,  FL -  Launched  the  real  estate  firm’s  first-ever  internship  as  the  sole  Artificial  Intelligence  Engineer.  -  Engineered  an  AI-driven  predictive  engine  that  managed  a  pipeline  10,000+  applicants,  returned  a  \nwell-educated\n \nprediction\n \non\n \nwhether\n \none\n \nwould\n \nsign\n \na\n \nlease.\n \nFinalized\n \nprediction\n \naccuracy\n \nto\n \n88%.\n The  Kochhar  Education  Foundation                   December  2022  -  Present  Co-Founder                    New  York,  NY -  2023,  2024:  Fundraised  $20,000  and  purchased  60  full-range  personal  computers  +  accessories.  -  Traveled  and  donated  products  to  six  underprivileged,  government-funded  schools  in  Tamil  Nadu,  in  partnership  \nwith\n \nthe\n \nTamil\n \nNadu\n \nFoundation\n \n(TNF).\n -  Spearheading  the  move  to  revitalize  the  foundation’s  digital  presence  via  effective  SEO  strategies  -  Impacted  6,000+  students  and  their  families,  expanding  the  reach  of  impact  to  ~100,000  people.  PEACE  Volunteer  Center  -  The  University  of  Tampa      February  2026  -  Present  Desk  Assistant                        Tampa,  FL  -  Oversees  the  general  operations  of  the  office  to  ensure  proper  service  hour  distribution  to  the  student  body.  Campus  Involvement:  University  of  Tampa  Mathematics  Club         February  2026  -  Present   Vice  President           Tampa,  FL  -  Curating  and  leading  weekly  \"Problem  Solving\"  workshops,  breaking  down  and  explaining  complex  concepts  in  \nCalculus\n \nand\n \nLinear\n \nAlgebra\n \nto\n \nfinance,\n \neconomics,\n \nand\n \ntech-focused\n \nstudents\n \nto\n \npromote\n \nmathematical\n \nthinking.\n Alpha  Kappa  Psi  -  Phi  Upsilon  Chapter         December  2025  -  Present Chairman  of  Technology/Director  of  Digital  Infrastructure                                                Tampa,  FL   -  Developed  the  digital  pre...",
+      "candidate_name": "Dilan Kochhar",
+      "major": "Data Science",
+      "track": "Builder",
+      "smart_score": 78.25,
+      "grit_score": 100.0,
+      "build_score": 69,
+      "final_score": 85.72,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base.; Honors/recognition: +10 pts.",
+        "Grit: Quantifiable impact markers: 3 × 15 = 45 pts.; Leadership density: 6 × 12 = 72 pts."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Data Science multiplier (1.30x) = 68.2 base. Honors/recognition: +10 pts.",
+      "evidence_grit": "Quantifiable impact markers: 3 × 15 = 45 pts. Leadership density: 6 × 12 = 72 pts. Work/experience entries: 2 × 5 = 10 pts."
+    },
+    {
+      "filename": "Gabriel mfugale resume.pdf",
+      "resume_excerpt": " \nGABRIEL  MFUGALE  (  813)  323-5158  |mfugalegabriel@gmail.com   Education    The  University  of  Tampa                                                                                                                                                                  Tampa,  USA  CyberSecurity  Bachelors  of  Science                                                                                                                                      August  2024  -  Present  -  GPA:  3.13              -  Awards:  Davis  Uwc  Scholars  Program  scholarship    Certifications   IBM  -  Introduction  to  CyberSecurity  Careers  Issued  by  Coursera November  2025  -  Developed  an  extensive  assimilation  of  the  cybersecurity  career  landscape,  including  key  career  pathways,  skill  requirements,  and  \nindustry\n \nprogression\n \nframeworks.\n \nStudied\n \nhow\n \ncore\n \nIT,\n \ntechnical,\n \nand\n \ninterpersonal\n \nskills\n \nalign\n \nwith\n \nspecialized\n \nroles\n \nsuch\n \nas\n \nSecurity\n \nAnalyst,\n \nPenetration\n \nTester,\n \nIncident\n \nResponder,\n \nand\n \nIT\n \nAuditor.\n IBM  -  Penetration  Testing,  Threat  Hunting,  and  Cryptography   Issued  by  Coursera December  2025   -  Completed  comprehensive,  hands-on  ,  industry-aligned  training  in  penetration  testing,  threat  hunting  and  cryptography.  Gaining  \npractical\n \nexposure\n \nto\n  \nSIEM,\n \nPTES\n \nand\n \nIDS\n \nto\n  \nbetter\n \nunderstand\n \ncommon\n \nvulnerability\n \nexploitations\n \nacross\n \nnetwork\n \nand\n \nhost-based\n \nsystems.\n \n -  Applied  cryptographic  principles  including  AES  (symmetric)  and  RSA  (asymmetric)  encryption  in  securing  data  in  transit  and  at  rest  \nor\n \nstorage.\n \nEnsuring\n \ndata\n \nintegrity\n \nand\n \nconfidentiality\n \nwithin\n \na\n \nsimulated\n \nnetwork\n \nsystem\n \nenvironment.\n  Technical  skills     -  Python   -  SIEM  Fundamentals  -  IDS/IPS  -  Cryptography  (AES,  RSA)  -  Vulnerability  analysis   -  Virtualized  Networking    Relevant  Coursework    ITM  251  Application  Development                                                                                                                                January  2024  -  May  2024  -  Developed  Python  based  applications  using  objected  oriented  programming,  testing  and  debugging  to  automate  tasks  including  system  \ninput\n \nanalysis\n \nand\n \nemail\n \nautomation..\n \n ITM  280  Network  &  Cloud  Infrastructure       ...",
+      "candidate_name": "Gabriel Mfugale",
+      "major": "Cybersecurity",
+      "track": "Builder",
+      "smart_score": 68.69,
+      "grit_score": 46,
+      "build_score": 30,
+      "final_score": 48.81,
+      "audit_findings": [
+        "Smart: GPA 3.13 × 15 × Cybersecurity multiplier (1.25x) = 58.7 base.; Honors/recognition: +10 pts.",
+        "Grit: Leadership density: 3 × 12 = 36 pts.; Work/experience entries: 2 × 5 = 10 pts."
+      ],
+      "evidence_smart": "GPA 3.13 × 15 × Cybersecurity multiplier (1.25x) = 58.7 base. Honors/recognition: +10 pts.",
+      "evidence_grit": "Leadership density: 3 × 12 = 36 pts. Work/experience entries: 2 × 5 = 10 pts."
+    },
+    {
+      "filename": "Kate_Hicks_Resume.docx",
+      "resume_excerpt": "Kate M. Hicks\n\nPhone: 732-832-9360 | Email: kate21hix@gmail.com\n\nSUMMARY\n\nMotivated Business student at the University of Tampa with hands-on experience  in leadership, event management, marketing, and student engagement. With demonstrated abilities to lead executive teams, plan large-scale programming, and execute strategic marketing initiatives. Recognized for strong communication, collaboration, and organizational skills.\n\nEDUCATION\n\nThe University of Tampa - B.S. in Business Management\nExpected Graduation: December 2027\n- Dean's List, Fall Semester 2024, Fall Semester 2025\n- Graduated high school in top 14% from Monmouth Regional High School\n\nEXPERIENCE\n\nDirector of Events\n\nPEACE Volunteer Center | August 2025 – Present\n\n- Led and facilitated weekly executive board meetings, developing agendas and ensuring effective communication and collaboration among team members.\n- Trained and mentored executive board members, supporting leadership development and preparing future student leaders.\n- Planned and executed monthly social-issue–based programming, including both large- scale and small-scale events aligned with national awareness initiatives.\n- Coordinated logistics for signature events, delivering meaningful, hands-on learning experiences for students.\n- Collaborated with student organizations to support event planning, foster partnerships, and encourage cross-organizational engagement.\n\nPR & Marketing Executive Board Member\n\nPEACE Volunteer Center | October 2024 – August 2025\n\n- Develop and execute PR and marketing strategies aligned with organizational goals.\n- Create and manage engaging social media content, increasing reach and engagement.\n- Oversee event promotion, boosting attendance through targeted marketing efforts.\n- Build media relationships and craft press releases to elevate the public profile.\n- Leverage analytics to optimize campaigns, achieving measurable growth in engagement.\n\n\n\nLead Mentor\n\nDiscover UTampa | April 2025 - September 2025\n\n\n- Conduct interviews and oversee onboarding of new mentors, ensuring alignment with program values and standards.\n- Design and deliver training sessions on peer support, leadership, and engagement strategies.\n- Monitor mentor performance and provide feedback to promote team cohesion.\n- Encourage student participation in activities, discussions, and sessions.\n- Serve as a role model and share insights on ...",
+      "candidate_name": "Kate M. Hicks",
+      "major": "Business Management",
+      "track": "Builder",
+      "smart_score": 100.0,
+      "grit_score": 63,
+      "build_score": 16,
+      "final_score": 62.35,
+      "audit_findings": [
+        "Smart: GPA 3.50 × 15 × Business Management multiplier (0.85x) = 44.6 base.; Honors/recognition: +20 pts.",
+        "Grit: Quantifiable impact markers: 1 × 15 = 15 pts.; Leadership density: 4 × 12 = 48 pts.",
+        "Research signal detected; Research Density 1 sem would add +20% weight."
+      ],
+      "evidence_smart": "GPA 3.50 × 15 × Business Management multiplier (0.85x) = 44.6 base. Honors/recognition: +20 pts. Research signal detected: +25 pts.",
+      "evidence_grit": "Quantifiable impact markers: 1 × 15 = 15 pts. Leadership density: 4 × 12 = 48 pts."
+    },
+    {
+      "filename": "Resume...docx",
+      "resume_excerpt": "Nicholas Gardner\n\nnicholas.gardner@spartans.ut.edu \n\nTampa, Florida\n\n\n\nEducation\n\nWashington High School, Washington, MO\n\nAugust 2020 – May 2024\n\nGPA: 3.41/4.0\n\nAP courses in Seminar, Literature, Language and Composition, Biology\n\n\n\nThe University of Tampa, Tampa, FL\n\nAugust 2024-Present\n\nGPA: 2.4\n\nMarine Science Major\n\n\n\nExtracurricular Activities\n\n\n\nHigh School\n\nBand: August 2018 - May 2024\n\nMarching Band: August 2020 – October 2024\n\nKey Club: August 2022 – May 2024\n\nTrack and Field: Spring 2024\n\nUniversity\n\nHappy Tails: Fall 2024 - Present\n\nPEACE Volunteer: Fall 2024 – Present\n\nRoots n Shoots: Fall 2024 - Present\n\nOffice of Access and Community Programs: Fall 2024-Present\n\nSuccess Scholars\n\nStudent Government First-Year Senator\n\n\n\nWork Experience\n\n\n\nAce Westlake Hardware: April 2024 – Present (I work here during school breaks)\n\nCashier\n\nStocked Shelves\n\nOrganized Shelves\n\nPushed carts\n\nAssisted coworkers\n\n\n\nSchnucks: January 2023 – February 2024\n\nBagged customers groceries\n\nHelped them load items in car upon request\n\nBring shopping carts back in the building\n\nHelp customers find items on shelves",
+      "candidate_name": "Nicholas Gardner",
+      "major": "Biology",
+      "track": "Builder",
+      "smart_score": 58.82,
+      "grit_score": 15,
+      "build_score": 12,
+      "final_score": 27.4,
+      "audit_findings": [
+        "Smart: GPA 3.41 × 15 × Biology multiplier (1.15x) = 58.8 base.",
+        "Grit: Work/experience entries: 3 × 5 = 15 pts.",
+        "GPA below 3.8 Elite floor; consider raising academic baseline."
+      ],
+      "evidence_smart": "GPA 3.41 × 15 × Biology multiplier (1.15x) = 58.8 base.",
+      "evidence_grit": "Work/experience entries: 3 × 5 = 15 pts."
+    },
+    {
+      "filename": "Huntur Brock Resume.pdf",
+      "resume_excerpt": "Candidate: Huntur Brock. Major: International Business & Marketing. Track: Builder. Stored audit — scores from DB; no full resume text on file.",
+      "candidate_name": "Huntur Brock",
+      "major": "International Business & Marketing",
+      "track": "Builder",
+      "smart_score": 100.0,
+      "grit_score": 100,
+      "build_score": 12,
+      "final_score": 64.8,
+      "audit_findings": [
+        "Smart: High academic signals.",
+        "Grit: Leadership and impact markers from stored audit.",
+        "Build: Track Builder."
+      ],
+      "evidence_smart": "Stored audit: Smart 100.",
+      "evidence_grit": "Stored audit: Grit 100."
+    },
+    {
+      "filename": "Ethan_Capone Resume.pdf",
+      "resume_excerpt": "Candidate: Ethan Capone. Major: Unknown. Track: Pre-Health. Stored audit — scores from DB; no full resume text on file.",
+      "candidate_name": "Ethan Capone",
+      "major": "Unknown",
+      "track": "Pre-Health",
+      "smart_score": 67.0,
+      "grit_score": 15,
+      "build_score": 0,
+      "final_score": 27.2,
+      "audit_findings": [
+        "Smart: From stored audit.",
+        "Grit: Work/experience entries.",
+        "Build: Pre-Health track."
+      ],
+      "evidence_smart": "Stored audit: Smart 67.",
+      "evidence_grit": "Stored audit: Grit 15."
+    },
+    {
+      "filename": "Cole Poirier 2025 resume.pdf",
+      "resume_excerpt": "Candidate: Cole Poirier. Major: Data Science. Track: Builder. Stored audit — scores from DB; no full resume text on file.",
+      "candidate_name": "Cole Poirier",
+      "major": "Data Science",
+      "track": "Builder",
+      "smart_score": 100.0,
+      "grit_score": 0,
+      "build_score": 32,
+      "final_score": 38.0,
+      "audit_findings": [
+        "Smart: GPA 4.71 × 15 × Data Science multiplier.",
+        "Grit: From stored audit.",
+        "Build: Builder track."
+      ],
+      "evidence_smart": "Stored audit: Smart 100.",
+      "evidence_grit": "Stored audit: Grit 0."
+    },
+    {
+      "filename": "THOMAS_ROSENBLUM_Resume.pdf",
+      "resume_excerpt": "Candidate: Thomas Rosenblum. Major: Psychology. Track: Pre-Health. Stored audit — scores from DB; no full resume text on file.",
+      "candidate_name": "Thomas Rosenblum",
+      "major": "Psychology",
+      "track": "Pre-Health",
+      "smart_score": 99.0,
+      "grit_score": 8,
+      "build_score": 100,
+      "final_score": 76.65,
+      "audit_findings": [
+        "Smart: High academic; Pre-Health.",
+        "Grit: From stored audit.",
+        "Build: Pre-Health clinical/research signals."
+      ],
+      "evidence_smart": "Stored audit: Smart 99.",
+      "evidence_grit": "Stored audit: Grit 8."
+    }
+  ],
+  "count": 19
 }

@@ -62,12 +62,19 @@ export default function Dashboard() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(err.detail || "Audit failed");
+        const msg = typeof err?.detail === "string" ? err.detail : "Audit failed";
+        throw new Error(msg);
       }
       const data: AuditV2 = await res.json();
       setAudit(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      const message =
+        err instanceof TypeError && err.message === "Failed to fetch"
+          ? "Cannot reach backend. Is the API running? (Start it from repo root: python -m uvicorn projects.meridian.api.main:app --host 0.0.0.0 --port 8000)"
+          : err instanceof Error
+            ? err.message
+            : "Upload failed";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -126,7 +133,7 @@ export default function Dashboard() {
               type="file"
               className="hidden"
               id="fileInput"
-              accept=".pdf"
+              accept=".pdf,.docx"
               onChange={(e) => {
                 setFile(e.target.files?.[0] || null);
                 setError(null);
@@ -149,10 +156,10 @@ export default function Dashboard() {
                 </svg>
               </div>
               <p className="text-lg font-semibold text-slate-200 mb-1">
-                {file ? file.name : "Drop PDF Resume"}
+                {file ? file.name : "Drop PDF or DOCX"}
               </p>
               <p className="text-slate-500 text-sm">
-                Upload a candidate resume to run the Meridian Auditor (Vantage Alpha).
+                Upload a PDF or DOCX resume to run the Meridian Auditor (Vantage Alpha).
               </p>
             </label>
           </div>

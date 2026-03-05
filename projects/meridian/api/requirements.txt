@@ -2,6 +2,7 @@ fastapi
 uvicorn
 pydantic
 pypdf
+docx2txt
 python-multipart
 reportlab
 requests

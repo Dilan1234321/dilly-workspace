@@ -10,16 +10,27 @@ import pypdf
 import re
 
 class MeridianResumeAuditor:
-    def __init__(self, pdf_path):
-        self.pdf_path = pdf_path
+    def __init__(self, file_path):
+        """Accept a path to a PDF or DOCX resume."""
+        self.pdf_path = file_path  # kept for backward compatibility
+        self.file_path = file_path
         self.raw_text = ""
         self.analysis = {}
 
     def extract_text(self):
+        path_lower = (self.file_path or "").lower()
+        if path_lower.endswith(".docx"):
+            try:
+                import docx2txt
+                self.raw_text = (docx2txt.process(self.file_path) or "").strip()
+                return bool(self.raw_text)
+            except Exception as e:
+                print(f"Error reading DOCX: {e}")
+                return False
         try:
-            reader = pypdf.PdfReader(self.pdf_path)
-            self.raw_text = "\n".join([p.extract_text() for p in reader.pages])
-            return True
+            reader = pypdf.PdfReader(self.file_path)
+            self.raw_text = "\n".join([p.extract_text() or "" for p in reader.pages])
+            return bool(self.raw_text.strip())
         except Exception as e:
             print(f"Error reading PDF: {e}")
             return False

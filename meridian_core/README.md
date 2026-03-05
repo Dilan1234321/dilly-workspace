@@ -4,9 +4,10 @@ Canonical scoring and track logic for the Meridian Auditor. **Zero hallucination
 
 ## Layout
 
+- **`resume_parser.py`** — **Unified resume parser:** layout-agnostic extraction for all formats. Normalizes PDF text, detects sections, extracts name (multi-strategy + filename fallback), major (education block + keyword scan), and GPA. Use `parse_resume(raw_text, filename?)` → `ParsedResume`. Handles messy layouts (e.g. Vir Shah, Resume.pdf).
 - **`scoring.py`** — Rule-based: major multipliers, Smart/Grit/Build formulas, International multiplier, signal extraction.
 - **`tracks.py`** — Vantage Alpha rules: Pre-Health, Pre-Law, Builder.
-- **`auditor.py`** — Rule-based pipeline: `run_audit(...)` → `AuditorResult`.
+- **`auditor.py`** — Rule-based pipeline: `run_audit(...)` → `AuditorResult`. Name/major use parser when not provided.
 - **`llm_auditor.py`** — **LLM-based pipeline:** `run_audit_llm(...)` → same `AuditorResult`. Uses OpenAI-compatible API; MTS enforced via prompt (evidence-only). Set `MERIDIAN_USE_LLM=1` and `OPENAI_API_KEY` to use.
 
 ## Usage (rule-based)
@@ -38,7 +39,7 @@ result = run_audit_llm(
 
 ## API
 
-- **POST /audit/v2** — PDF upload → audit → `AuditResponseV2`. If `MERIDIAN_USE_LLM=1` and `OPENAI_API_KEY` is set, uses LLM; else rule-based.
+- **POST /audit/v2** — PDF or DOCX upload → audit → `AuditResponseV2`. If `MERIDIAN_USE_LLM=1` and `OPENAI_API_KEY` is set, uses LLM; else rule-based.
 
 ## Dashboard
 
