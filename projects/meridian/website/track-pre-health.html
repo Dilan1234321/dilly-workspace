@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Health Track | Meridian — Pass the Adcom Screen</title>
+  <meta name="description" content="Meridian for pre-health. Med school, PA, dental, vet. 100+ clinical, 40+ shadowing. We score like adcoms—so you fix every gap before you apply.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ph-bg: #0a0a0b;
+      --ph-surface: #131316;
+      --ph-surface-2: #1a1a1e;
+      --ph-text: #e4e4e7;
+      --ph-muted: #71717a;
+      --ph-accent: #0d9488;
+      --ph-accent-dim: rgba(13, 148, 136, 0.15);
+      --ph-border: rgba(113, 113, 122, 0.2);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--ph-bg);
+      color: var(--ph-text);
+      font-family: 'Instrument Sans', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--ph-border);
+      background: rgba(10, 10, 11, 0.95);
+      backdrop-filter: blur(12px);
+    }
+    .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 0.875rem; color: var(--ph-muted); text-decoration: none; }
+    .nav-links a:hover, .nav-links a.nav-active { color: var(--ph-text); }
+    .btn-primary {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      background: var(--ph-accent);
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { background: #0f766e; }
+    .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Hero - clean, aspirational */
+    .ph-hero {
+      padding-top: 9rem;
+      padding-bottom: 4rem;
+      background: linear-gradient(180deg, var(--ph-accent-dim) 0%, transparent 60%);
+    }
+    .ph-hero .back { display: inline-block; margin-bottom: 1.5rem; color: var(--ph-accent); text-decoration: none; font-size: 0.875rem; }
+    .ph-hero .back:hover { text-decoration: underline; }
+    .ph-hero .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      background: var(--ph-accent-dim);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ph-accent);
+      margin-bottom: 1rem;
+    }
+    .ph-hero h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 0.75rem; line-height: 1.2; }
+    @media (min-width: 768px) { .ph-hero h1 { font-size: 3.25rem; } }
+    .ph-hero h1 .accent { color: var(--ph-accent); }
+    .ph-hero .sub { color: var(--ph-muted); font-size: 1.125rem; max-width: 36rem; margin-bottom: 2rem; }
+    .ph-hero .cta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+    /* Requirements checklist - clinical, first */
+    .ph-requirements {
+      padding: 5rem 0;
+      background: var(--ph-surface);
+      border-top: 1px solid var(--ph-border);
+    }
+    .ph-requirements h2 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.5rem; }
+    .ph-requirements .sub { color: var(--ph-muted); margin-bottom: 2rem; }
+    .checklist {
+      display: grid;
+      gap: 0;
+      max-width: 36rem;
+    }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--ph-border);
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-item .icon {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background: var(--ph-accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .check-item.missing .icon { background: var(--ph-muted); }
+    .check-item .content h3 { font-size: 1rem; margin: 0 0 0.25rem; }
+    .check-item .content p { font-size: 0.875rem; color: var(--ph-muted); margin: 0; line-height: 1.5; }
+
+    /* Schools - prominent */
+    .ph-schools {
+      padding: 5rem 0;
+    }
+    .ph-schools h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .ph-schools .sub { color: var(--ph-muted); margin-bottom: 2rem; }
+    .school-tier { margin-bottom: 1.5rem; }
+    .school-tier h4 { font-size: 0.75rem; font-weight: 600; color: var(--ph-accent); margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .school-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .school-pill {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      background: var(--ph-surface);
+      border: 1px solid var(--ph-border);
+      font-size: 0.8125rem;
+    }
+
+    /* Dimensions - clean cards */
+    .ph-dims {
+      padding: 5rem 0;
+      background: var(--ph-surface-2);
+    }
+    .ph-dims h2 { font-size: 1.5rem; margin: 0 0 2rem; }
+    .dim-grid { display: grid; gap: 1.5rem; }
+    @media (min-width: 768px) { .dim-grid { grid-template-columns: repeat(3, 1fr); } }
+    .dim-card {
+      padding: 1.5rem;
+      background: var(--ph-surface);
+      border-radius: 0.75rem;
+      border: 1px solid var(--ph-border);
+    }
+    .dim-card .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ph-accent); margin-bottom: 0.5rem; }
+    .dim-card h3 { font-size: 1.125rem; margin: 0 0 0.5rem; }
+    .dim-card p { font-size: 0.875rem; color: var(--ph-muted); margin: 0; line-height: 1.5; }
+
+    /* Gaps - clinical severity */
+    .ph-gaps {
+      padding: 5rem 0;
+    }
+    .ph-gaps h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .ph-gaps .sub { color: var(--ph-muted); margin-bottom: 2rem; }
+    .gap-item {
+      padding: 1rem 1.25rem;
+      border-radius: 0.5rem;
+      background: var(--ph-surface);
+      border-left: 4px solid var(--ph-accent);
+      margin-bottom: 0.75rem;
+      border: 1px solid var(--ph-border);
+      border-left: 4px solid var(--ph-accent);
+    }
+    .gap-item .problem { font-weight: 600; display: block; margin-bottom: 0.25rem; }
+    .gap-item .fix { font-size: 0.875rem; color: var(--ph-muted); margin: 0; line-height: 1.5; }
+    .gap-item .badge { font-size: 0.6875rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; background: var(--ph-accent-dim); color: var(--ph-accent); font-weight: 600; text-transform: uppercase; margin-left: 0.5rem; }
+
+    /* CTA */
+    .ph-cta {
+      padding: 6rem 0;
+      text-align: center;
+      background: var(--ph-surface);
+      border-top: 1px solid var(--ph-border);
+    }
+    .ph-cta h2 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+    .ph-cta p { color: var(--ph-muted); margin-bottom: 1.5rem; }
+    footer { border-top: 1px solid var(--ph-border); padding: 2rem; text-align: center; font-size: 0.75rem; color: var(--ph-muted); }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: inherit; text-decoration: none; }
+    .nav-logo img { height: 40px; width: auto; display: block; }
+    .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .footer-logo img { height: 32px; width: auto; display: block; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="tracks.html" class="nav-active">Tracks</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="ph-hero">
+    <div class="container">
+      <a href="tracks.html" class="back">← All tracks</a>
+      <span class="badge">Pre-Health</span>
+      <h1>Pass the <span class="accent">adcom</span> screen</h1>
+      <p class="sub">Med school, PA, dental, vet, PT, OT, pharmacy. Admissions committees spend minutes on your application. We score it exactly how they do—so you fix every gap before you submit.</p>
+      <div class="cta">
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Run Your Audit</a>
+        <a href="#requirements" class="btn-primary" style="background: transparent; border: 1px solid var(--ph-accent); color: var(--ph-accent);">View Requirements</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="ph-requirements" id="requirements">
+    <div class="container">
+      <h2>Requirements we check</h2>
+      <p class="sub">Adcoms screen for these. We tell you exactly where you stand.</p>
+      <div class="checklist">
+        <div class="check-item">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>100+ clinical hours</h3>
+            <p>EMT, scribe, hospital volunteer. Competitive applicants have 200+.</p>
+          </div>
+        </div>
+        <div class="check-item">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>40+ shadowing hours</h3>
+            <p>Across 2–3 specialties. Evidence you know what you're signing up for.</p>
+          </div>
+        </div>
+        <div class="check-item">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>BCPM GPA</h3>
+            <p>Science GPA weighted. We parse coursework and flag weak spots.</p>
+          </div>
+        </div>
+        <div class="check-item">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>MCAT / GRE / DAT</h3>
+            <p>Score or prep signal. 510+ MD, 505+ DO. We recommend retake strategy.</p>
+          </div>
+        </div>
+        <div class="check-item">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>Sustained commitment</h3>
+            <p>Long-term volunteer, leadership, teaching. Not one-off stints.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ph-schools">
+    <div class="container">
+      <h2>Schools we benchmark against</h2>
+      <p class="sub">Our logic is calibrated to what adcoms at these tiers look for.</p>
+      <div class="school-tier">
+        <h4>Research powerhouses</h4>
+        <div class="school-list">
+          <span class="school-pill">Johns Hopkins</span>
+          <span class="school-pill">Harvard Medical</span>
+          <span class="school-pill">UCSF</span>
+          <span class="school-pill">WashU</span>
+          <span class="school-pill">Columbia</span>
+          <span class="school-pill">Duke</span>
+          <span class="school-pill">UPenn</span>
+          <span class="school-pill">Mayo</span>
+          <span class="school-pill">Stanford</span>
+          <span class="school-pill">Yale</span>
+        </div>
+      </div>
+      <div class="school-tier">
+        <h4>Balanced MD</h4>
+        <div class="school-list">
+          <span class="school-pill">Emory</span>
+          <span class="school-pill">Vanderbilt</span>
+          <span class="school-pill">Georgetown</span>
+          <span class="school-pill">Case Western</span>
+          <span class="school-pill">Boston University</span>
+          <span class="school-pill">Tufts</span>
+        </div>
+      </div>
+      <div class="school-tier">
+        <h4>State flagship & DO</h4>
+        <div class="school-list">
+          <span class="school-pill">UCLA</span>
+          <span class="school-pill">UC Davis</span>
+          <span class="school-pill">Ohio State</span>
+          <span class="school-pill">Michigan</span>
+          <span class="school-pill">PCOM</span>
+          <span class="school-pill">AZCOM</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ph-dims">
+    <div class="container">
+      <h2>What we score</h2>
+      <div class="dim-grid">
+        <div class="dim-card">
+          <div class="label">Smart</div>
+          <h3>Academic Rigor</h3>
+          <p>BCPM, MCAT, Orgo/Biochem/Physics. We reward difficulty—a 3.5 in Orgo means more than a 4.0 in Gen Ed.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Grit</div>
+          <h3>Sustained Commitment</h3>
+          <p>Long-term volunteer, leadership, teaching. Owned outcomes and follow-through—not one-off stints.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Build</div>
+          <h3>Healthcare Profile</h3>
+          <p>Clinical, shadowing, research, community service. We parse for proof and tell you what's missing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ph-gaps" id="gaps">
+    <div class="container">
+      <h2>Gaps we fix</h2>
+      <p class="sub">These kill applications. We catch them and tell you exactly how to fix them.</p>
+      <div class="gap-item">
+        <span class="problem">No MCAT score or prep signal <span class="badge">Critical</span></span>
+        <span class="fix">Aim 510+ MD, 505+ DO. We flag it and recommend retake strategy.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">Fewer than 100 clinical hours <span class="badge">Critical</span></span>
+        <span class="fix">EMT, scribe, hospital volunteer. We tell you exactly what to add.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">No shadowing experience <span class="badge">Critical</span></span>
+        <span class="fix">40+ hours across 2–3 specialties before you apply.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">Vague clinical bullets <span class="badge">Moderate</span></span>
+        <span class="fix">Quantify scope, name the setting, show impact. We give copy-paste rewrites.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="ph-cta">
+    <div class="container">
+      <h2>Run the gauntlet before adcoms do</h2>
+      <p>One application cycle. One shot. Don't blow it on fixable gaps.</p>
+      <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Pre-Health Audit</a>
+    </div>
+  </section>
+
+  <footer style="border-top: 1px solid var(--ph-border); padding: 2rem 1.5rem;">
+    <div style="max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <span class="footer-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></span>
+      <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; flex-wrap: wrap; justify-content: center;">
+        <a href="index.html" style="color: var(--ph-muted); text-decoration: none;">Home</a>
+        <a href="features.html" style="color: var(--ph-muted); text-decoration: none;">Features</a>
+        <a href="how-it-works.html" style="color: var(--ph-muted); text-decoration: none;">How It Works</a>
+        <a href="tracks.html" style="color: var(--ph-muted); text-decoration: none;">Tracks</a>
+        <a href="pricing.html" style="color: var(--ph-muted); text-decoration: none;">Pricing</a>
+        <a href="about.html" style="color: var(--ph-muted); text-decoration: none;">About</a>
+      </div>
+    </div>
+    <p style="font-size: 0.75rem; color: var(--ph-muted); margin-top: 1.5rem; text-align: center;">© <span id="year"></span> Meridian. The career center in your pocket.</p>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

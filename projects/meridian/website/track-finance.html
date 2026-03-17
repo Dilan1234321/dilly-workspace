@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance Track | Meridian — Be Ready When Recruiting Hits</title>
+  <meta name="description" content="Meridian for finance. Goldman, Morgan Stanley, Big Four. IB recruiting starts sophomore year. DCF, LBO, investment club. We score like recruiters.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --fin-bg: #0a0a0b;
+      --fin-surface: #131316;
+      --fin-surface-2: #1a1a1e;
+      --fin-text: #e4e4e7;
+      --fin-muted: #71717a;
+      --fin-accent: #22c55e;
+      --fin-accent-dim: rgba(34, 197, 94, 0.15);
+      --fin-border: rgba(113, 113, 122, 0.2);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--fin-bg); color: var(--fin-text); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.6; }
+    .fin-mono { font-family: 'JetBrains Mono', monospace; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; border-bottom: 1px solid var(--fin-border); background: rgba(10, 10, 11, 0.95); backdrop-filter: blur(12px); }
+    .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 0.875rem; color: var(--fin-muted); text-decoration: none; }
+    .nav-links a:hover, .nav-links a.nav-active { color: var(--fin-text); }
+    .btn-primary { display: inline-block; padding: 0.5rem 1rem; border-radius: 0.375rem; background: var(--fin-accent); color: #0a0a0b; font-size: 0.875rem; font-weight: 600; font-family: 'JetBrains Mono', monospace; text-decoration: none; transition: all 0.2s; }
+    .btn-primary:hover { background: #4ade80; }
+    .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+    .fin-hero { padding-top: 9rem; padding-bottom: 4rem; }
+    .fin-hero .back { display: inline-block; margin-bottom: 1.5rem; color: var(--fin-accent); text-decoration: none; font-size: 0.8125rem; font-family: 'JetBrains Mono', monospace; }
+    .fin-hero .back:hover { text-decoration: underline; }
+    .fin-hero h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 0.75rem; letter-spacing: -0.03em; }
+    @media (min-width: 768px) { .fin-hero h1 { font-size: 3.25rem; } }
+    .fin-hero h1 .accent { color: var(--fin-accent); }
+    .fin-hero .sub { color: var(--fin-muted); font-size: 1.125rem; max-width: 36rem; margin-bottom: 2rem; }
+    .fin-hero .cta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .fin-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 3rem; }
+    @media (min-width: 640px) { .fin-metrics { grid-template-columns: repeat(4, 1fr); } }
+    .fin-metric { padding: 1.25rem; border-radius: 0.5rem; background: var(--fin-surface); border: 1px solid var(--fin-border); }
+    .fin-metric .val { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 600; color: var(--fin-accent); }
+    .fin-metric .label { font-size: 0.75rem; color: var(--fin-muted); margin-top: 0.25rem; }
+    .fin-firms { padding: 5rem 0; border-top: 1px solid var(--fin-border); }
+    .fin-firms h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .fin-firms .sub { color: var(--fin-muted); margin-bottom: 2rem; }
+    .firm-tier { margin-bottom: 1.5rem; }
+    .firm-tier h4 { font-size: 0.75rem; font-weight: 600; color: var(--fin-accent); margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .firm-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .firm-pill { padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--fin-surface); border: 1px solid var(--fin-border); font-size: 0.8125rem; }
+    .firm-pill.tier-1 { border-color: rgba(34, 197, 94, 0.3); }
+    .fin-dims { padding: 5rem 0; background: var(--fin-surface); }
+    .fin-dims h2 { font-size: 1.5rem; margin: 0 0 2rem; }
+    .dim-grid { display: grid; gap: 1.5rem; }
+    @media (min-width: 768px) { .dim-grid { grid-template-columns: repeat(3, 1fr); } }
+    .dim-card { padding: 1.5rem; background: var(--fin-surface-2); border-radius: 0.75rem; border: 1px solid var(--fin-border); }
+    .dim-card .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fin-accent); margin-bottom: 0.5rem; }
+    .dim-card h3 { font-size: 1.125rem; margin: 0 0 0.5rem; }
+    .dim-card p { font-size: 0.875rem; color: var(--fin-muted); margin: 0; line-height: 1.5; }
+    .fin-gaps { padding: 5rem 0; }
+    .fin-gaps h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .fin-gaps .sub { color: var(--fin-muted); margin-bottom: 2rem; }
+    .gap-item { padding: 1rem 1.25rem; border-radius: 0.5rem; background: var(--fin-surface); border-left: 4px solid var(--fin-accent); margin-bottom: 0.75rem; border: 1px solid var(--fin-border); border-left: 4px solid var(--fin-accent); }
+    .gap-item .problem { font-weight: 600; display: block; margin-bottom: 0.25rem; }
+    .gap-item .fix { font-size: 0.875rem; color: var(--fin-muted); margin: 0; line-height: 1.5; }
+    .gap-item .badge { font-size: 0.6875rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; background: var(--fin-accent-dim); color: var(--fin-accent); font-weight: 600; text-transform: uppercase; margin-left: 0.5rem; }
+    .fin-cta { padding: 6rem 0; text-align: center; border-top: 1px solid var(--fin-border); }
+    .fin-cta h2 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+    .fin-cta p { color: var(--fin-muted); margin-bottom: 1.5rem; }
+    footer { border-top: 1px solid var(--fin-border); padding: 2rem; text-align: center; font-size: 0.75rem; color: var(--fin-muted); }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: inherit; text-decoration: none; }
+    .nav-logo img { height: 40px; width: auto; display: block; }
+    .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .footer-logo img { height: 32px; width: auto; display: block; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="tracks.html" class="nav-active">Tracks</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="fin-hero">
+    <div class="container">
+      <a href="tracks.html" class="back">← cd ..</a>
+      <h1>Be ready when <span class="accent">recruiting</span> hits</h1>
+      <p class="sub">Big Four, bulge bracket, elite boutiques. IB recruiting happens in sophomore year. We score your resume exactly how Goldman and Morgan Stanley recruiters do—so you're ready when it matters.</p>
+      <div class="cta">
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Run Audit</a>
+        <a href="#gaps" class="btn-primary" style="background: transparent; border: 1px solid var(--fin-border); color: var(--fin-text);">View Gaps</a>
+      </div>
+      <div class="fin-metrics">
+        <div class="fin-metric"><div class="val">3.7</div><div class="label">GPA floor for BB</div></div>
+        <div class="fin-metric"><div class="val">Soph</div><div class="label">When IB recruiting starts</div></div>
+        <div class="fin-metric"><div class="val">DCF, LBO</div><div class="label">Modeling proof</div></div>
+        <div class="fin-metric"><div class="val">Inv club</div><div class="label">Primary Build signal</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-firms">
+    <div class="container">
+      <h2>Firms we benchmark against</h2>
+      <p class="sub">Our logic is calibrated to what recruiters at these firms look for.</p>
+      <div class="firm-tier">
+        <h4>Bulge bracket</h4>
+        <div class="firm-list">
+          <span class="firm-pill tier-1">Goldman Sachs</span><span class="firm-pill tier-1">Morgan Stanley</span><span class="firm-pill tier-1">JP Morgan</span>
+        </div>
+      </div>
+      <div class="firm-tier">
+        <h4>Elite boutiques</h4>
+        <div class="firm-list">
+          <span class="firm-pill">Lazard</span><span class="firm-pill">Evercore</span><span class="firm-pill">Centerview</span>
+        </div>
+      </div>
+      <div class="firm-tier">
+        <h4>PE & Big Four</h4>
+        <div class="firm-list">
+          <span class="firm-pill">Blackstone</span><span class="firm-pill">KKR</span><span class="firm-pill">Deloitte</span><span class="firm-pill">PwC</span><span class="firm-pill">EY</span><span class="firm-pill">KPMG</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-dims">
+    <div class="container">
+      <h2>What we score</h2>
+      <div class="dim-grid">
+        <div class="dim-card">
+          <div class="label">Smart</div>
+          <h3>Academic Rigor</h3>
+          <p>Finance, Economics, or Accounting major. High GPA (3.7+ for BB). Financial modeling coursework, CFA Level I prep, quant coursework.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Grit</div>
+          <h3>Deal Exposure & Leadership</h3>
+          <p>Finance internships (IB, ER, PE, AM), deal exposure, sustained leadership in investment club or consulting club.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Build</div>
+          <h3>Modeling & Deal Proof</h3>
+          <p>DCF, LBO, merger model. Investment thesis or stock pitch. Bloomberg, Capital IQ. Deal experience or tombstones.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-gaps" id="gaps">
+    <div class="container">
+      <h2>Gaps we fix</h2>
+      <p class="sub">These kill finance applications. We catch them and tell you exactly how to fix them.</p>
+      <div class="gap-item">
+        <span class="problem">No financial modeling proof on resume <span class="badge">Critical</span></span>
+        <span class="fix">Complete Wall Street Prep or BIWS modeling course. Mention DCF/LBO in project descriptions. We flag it and tell you exactly what to add.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">GPA below 3.5 without compensating signal <span class="badge">Critical</span></span>
+        <span class="fix">At BB banks, 3.5 is the GPA screen floor. We recommend boutique banks or regional shops as alternative entry points.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">No finance internship before junior year recruiting <span class="badge">Critical</span></span>
+        <span class="fix">IB recruiting happens in SOPHOMORE year for junior summer. You must start building your pipeline in freshman year.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">No investment club or finance org involvement <span class="badge">Moderate</span></span>
+        <span class="fix">Join an investment club and pitch a stock. A real stock pitch adds Build signal that no course can replicate.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-cta">
+    <div class="container">
+      <h2>Sophomore year. One shot. Don't scramble.</h2>
+      <p>Build early. Modeling. Investment club. First internship.</p>
+      <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Finance Audit</a>
+    </div>
+  </section>
+
+  <footer style="border-top: 1px solid var(--fin-border); padding: 2rem 1.5rem;">
+    <div style="max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <span class="footer-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></span>
+      <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; flex-wrap: wrap; justify-content: center;">
+        <a href="index.html" style="color: var(--fin-muted); text-decoration: none;">Home</a>
+        <a href="features.html" style="color: var(--fin-muted); text-decoration: none;">Features</a>
+        <a href="how-it-works.html" style="color: var(--fin-muted); text-decoration: none;">How It Works</a>
+        <a href="tracks.html" style="color: var(--fin-muted); text-decoration: none;">Tracks</a>
+        <a href="pricing.html" style="color: var(--fin-muted); text-decoration: none;">Pricing</a>
+        <a href="about.html" style="color: var(--fin-muted); text-decoration: none;">About</a>
+      </div>
+    </div>
+    <p style="font-size: 0.75rem; color: var(--fin-muted); margin-top: 1.5rem; text-align: center;">© <span id="year"></span> Meridian. The career center in your pocket.</p>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
