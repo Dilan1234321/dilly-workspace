@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arts Track | Meridian — Where Your Work Speaks First</title>
+  <meta name="description" content="Meridian for artists, designers, filmmakers, musicians. Portfolio-led. We score like creative directors—so your work gets seen before you do.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --arts-bg: #0d0c0b;
+      --arts-surface: #1a1816;
+      --arts-cream: #f5f0e8;
+      --arts-muted: #9c9185;
+      --arts-accent: #d4a574;
+      --arts-accent-2: #c4956a;
+      --arts-border: rgba(212, 165, 116, 0.2);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--arts-bg);
+      color: var(--arts-cream);
+      font-family: 'Instrument Sans', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.65;
+    }
+    .arts-font { font-family: 'DM Serif Display', serif; }
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--arts-border);
+      background: rgba(13, 12, 11, 0.92);
+      backdrop-filter: blur(12px);
+    }
+    .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 0.875rem; color: var(--arts-muted); text-decoration: none; }
+    .nav-links a:hover, .nav-links a.nav-active { color: var(--arts-cream); }
+    .btn-primary {
+      display: inline-block;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      background: var(--arts-accent);
+      color: #0d0c0b;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s;
+    }
+    .btn-primary:hover { background: var(--arts-accent-2); transform: translateY(-1px); }
+    .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Hero: Portfolio-first, editorial */
+    .arts-hero {
+      padding-top: 9rem;
+      padding-bottom: 6rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .arts-hero::before {
+      content: "";
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 50%;
+      height: 80%;
+      background: radial-gradient(ellipse, rgba(212,165,116,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .arts-hero .back { display: inline-block; margin-bottom: 2rem; color: var(--arts-accent); text-decoration: none; font-size: 0.8125rem; letter-spacing: 0.1em; }
+    .arts-hero .back:hover { text-decoration: underline; }
+    .arts-hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 3rem;
+      font-weight: 400;
+      font-style: italic;
+      margin: 0 0 1rem;
+      line-height: 1.15;
+      max-width: 20ch;
+    }
+    @media (min-width: 768px) { .arts-hero h1 { font-size: 4rem; } }
+    .arts-hero .tagline { font-size: 1.125rem; color: var(--arts-muted); max-width: 28rem; margin-bottom: 2rem; }
+    .arts-hero .cta { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+    /* Portfolio showcase block - visual anchor */
+    .portfolio-showcase {
+      margin-top: 4rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      max-width: 36rem;
+    }
+    .portfolio-tile {
+      aspect-ratio: 1;
+      border-radius: 0.5rem;
+      background: var(--arts-surface);
+      border: 1px solid var(--arts-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: var(--arts-accent);
+      opacity: 0.7;
+    }
+    .portfolio-tile:nth-child(1) { background: linear-gradient(135deg, rgba(212,165,116,0.15) 0%, transparent 100%); }
+    .portfolio-tile:nth-child(2) { background: linear-gradient(135deg, transparent 0%, rgba(212,165,116,0.08) 100%); }
+    .portfolio-tile:nth-child(3) { background: linear-gradient(135deg, rgba(212,165,116,0.08) 0%, transparent 100%); }
+
+    /* What we score - asymmetric */
+    .arts-score-section {
+      padding: 5rem 0;
+      border-top: 1px solid var(--arts-border);
+    }
+    .arts-score-section h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      font-weight: 400;
+      font-style: italic;
+      margin: 0 0 0.5rem;
+    }
+    .arts-dims {
+      display: grid;
+      gap: 1.5rem;
+      margin-top: 2.5rem;
+    }
+    @media (min-width: 768px) { .arts-dims { grid-template-columns: 1fr 1fr 1.2fr; } }
+    .arts-dim {
+      padding: 1.75rem;
+      border-radius: 0.5rem;
+      background: var(--arts-surface);
+      border-left: 3px solid var(--arts-accent);
+    }
+    .arts-dim .icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .arts-dim h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem; }
+    .arts-dim p { font-size: 0.875rem; color: var(--arts-muted); margin: 0; line-height: 1.6; }
+
+    /* Gaps - creative cards */
+    .arts-gaps {
+      padding: 5rem 0;
+      background: var(--arts-surface);
+    }
+    .arts-gaps h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      font-style: italic;
+      margin: 0 0 2rem;
+    }
+    .gap-card {
+      padding: 1.5rem 1.75rem;
+      border-radius: 0.5rem;
+      background: var(--arts-bg);
+      border: 1px solid var(--arts-border);
+      margin-bottom: 1rem;
+    }
+    .gap-card .problem { font-weight: 600; color: var(--arts-cream); margin-bottom: 0.5rem; }
+    .gap-card .fix { font-size: 0.875rem; color: var(--arts-muted); line-height: 1.6; }
+
+    /* Employers - compact */
+    .arts-employers { padding: 5rem 0; }
+    .arts-employers h2 { font-family: 'DM Serif Display', serif; font-size: 1.75rem; font-style: italic; margin: 0 0 1.5rem; }
+    .employer-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .employer-pill {
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      background: var(--arts-surface);
+      border: 1px solid var(--arts-border);
+      font-size: 0.8125rem;
+    }
+
+    /* CTA */
+    .arts-cta {
+      padding: 6rem 0;
+      text-align: center;
+      border-top: 1px solid var(--arts-border);
+    }
+    .arts-cta h2 { font-family: 'DM Serif Display', serif; font-size: 2rem; font-style: italic; margin: 0 0 0.5rem; }
+    .arts-cta p { color: var(--arts-muted); margin-bottom: 1.5rem; }
+    footer { border-top: 1px solid var(--arts-border); padding: 2rem; text-align: center; font-size: 0.75rem; color: var(--arts-muted); }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: inherit; text-decoration: none; }
+    .nav-logo img { height: 40px; width: auto; display: block; }
+    .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .footer-logo img { height: 32px; width: auto; display: block; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="tracks.html" class="nav-active">Tracks</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="arts-hero">
+    <div class="container">
+      <a href="tracks.html" class="back">← All tracks</a>
+      <h1>Your portfolio. Your proof.</h1>
+      <p class="tagline">Art, film, music, theatre, design. Creative directors don't read resumes—they look at work. Meridian scores yours the way they do, so you lead with proof, not promises.</p>
+      <div class="cta">
+        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Run Your Arts Audit</a>
+        <a href="#gaps" class="btn-primary" style="background: transparent; border: 1px solid var(--arts-border); color: var(--arts-cream);">See What We Fix</a>
+      </div>
+
+      <div class="portfolio-showcase">
+        <div class="portfolio-tile">🎨</div>
+        <div class="portfolio-tile">🎬</div>
+        <div class="portfolio-tile">🎭</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="arts-score-section">
+    <div class="container">
+      <h2>What we score for arts</h2>
+      <p style="color: var(--arts-muted); margin-bottom: 0;">Smart, Grit, Build—calibrated to creative hiring.</p>
+      <div class="arts-dims">
+        <div class="arts-dim">
+          <div class="icon">✨</div>
+          <h3>Smart — Craft & Rigor</h3>
+          <p>Major, coursework, technique. Honors, awards, scholarships. We reward depth—a portfolio review distinction means more than a 4.0 in unrelated electives.</p>
+        </div>
+        <div class="arts-dim">
+          <div class="icon">🔥</div>
+          <h3>Grit — Productions & Ownership</h3>
+          <p>Exhibitions, performances, screenings. Client work. Leadership in productions. We look for sustained commitment and owned outcomes—audience size, awards, feedback.</p>
+        </div>
+        <div class="arts-dim">
+          <div class="icon">📁</div>
+          <h3>Build — Portfolio Proof</h3>
+          <p>Portfolio link. Projects with context, role, and outcome. Tools and mediums. We parse for evidence recruiters can see—and tell you exactly what's missing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="arts-gaps" id="gaps">
+    <div class="container">
+      <h2>Gaps we fix</h2>
+      <p style="color: var(--arts-muted); margin-bottom: 2rem;">These kill creative applications. We catch them.</p>
+      <div class="gap-card">
+        <div class="problem">No portfolio link</div>
+        <div class="fix">Behance, Cargo, Squarespace—create a site. Add 5–8 strongest projects with context, role, and outcome. Recruiters expect a link. We tell you exactly how to format it.</div>
+      </div>
+      <div class="gap-card">
+        <div class="problem">Projects lack context or outcome</div>
+        <div class="fix">Every project needs: what it was, your role, who it was for, and the outcome (audience, award, client feedback). We give you copy-paste rewrites.</div>
+      </div>
+      <div class="gap-card">
+        <div class="problem">No exhibitions, performances, or productions</div>
+        <div class="fix">Student shows, recitals, screenings, theatre credits. Even class exhibitions or open mics count. We help you surface evidence recruiters can verify.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="arts-employers">
+    <div class="container">
+      <h2>Who we benchmark against</h2>
+      <p style="color: var(--arts-muted); margin-bottom: 1.5rem;">Design studios, production houses, agencies, galleries.</p>
+      <div class="employer-pills">
+        <span class="employer-pill">IDEO</span>
+        <span class="employer-pill">Pentagram</span>
+        <span class="employer-pill">Production companies</span>
+        <span class="employer-pill">Post houses</span>
+        <span class="employer-pill">Regional theatre</span>
+        <span class="employer-pill">Music labels</span>
+        <span class="employer-pill">Museums & galleries</span>
+        <span class="employer-pill">In-house design</span>
+      </div>
+      <p style="margin-top: 2rem; color: var(--arts-muted); font-size: 0.875rem;">Art · Animation · Design · Film · Music · Theatre · Visual Arts</p>
+    </div>
+  </section>
+
+  <section class="arts-cta">
+    <div class="container">
+      <h2>Let your work speak first</h2>
+      <p>Portfolio. Productions. Proof. Don't get filtered before the interview.</p>
+      <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Arts Audit</a>
+    </div>
+  </section>
+
+  <footer style="border-top: 1px solid var(--arts-border); padding: 2rem 1.5rem;">
+    <div style="max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <span class="footer-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></span>
+      <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; flex-wrap: wrap; justify-content: center;">
+        <a href="index.html" style="color: var(--arts-muted); text-decoration: none;">Home</a>
+        <a href="features.html" style="color: var(--arts-muted); text-decoration: none;">Features</a>
+        <a href="how-it-works.html" style="color: var(--arts-muted); text-decoration: none;">How It Works</a>
+        <a href="tracks.html" style="color: var(--arts-muted); text-decoration: none;">Tracks</a>
+        <a href="pricing.html" style="color: var(--arts-muted); text-decoration: none;">Pricing</a>
+        <a href="about.html" style="color: var(--arts-muted); text-decoration: none;">About</a>
+      </div>
+    </div>
+    <p style="font-size: 0.75rem; color: var(--arts-muted); margin-top: 1.5rem; text-align: center;">© <span id="year"></span> Meridian. The career center in your pocket.</p>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
