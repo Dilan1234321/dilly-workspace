@@ -1,4 +1,4 @@
-# 🧠 Specialized Admissions Strategy: Meridian Model Enhancement
+# 🧠 Specialized Admissions Strategy: Dilly Model Enhancement
 # Date: 2026-03-02
 
 ## 1. Medical School (MD/DO) Valuation Criteria
@@ -13,7 +13,7 @@
 *   **Academic Consistency:** High-prestige majors with rigorous course loads.
 *   **Professionalism:** Attention to detail in formatting; "professional polish" is a soft requirement.
 
-## 3. Meridian Model Implementation (Retraining Blueprint)
+## 3. Dilly Model Implementation (Retraining Blueprint)
 *   **New Attribute: "Admissions_Track"**
     *   `pre_med`: Weight high on *Clinical_Grit* and *Service_Density*.
     *   `pre_law`: Weight high on *Advocacy_Signal* and *Writing_Complexity*.
@@ -22,5 +22,5 @@
     *   Apply a `Commitment_Density` bonus for 3+ years in a single organization (demonstrates endurance).
 
 ## 4. Retraining Action (Autonomous)
-Retraining script `projects/meridian/retrain_brains.py` updated to include `track_specific_weights`.
+Retraining script `projects/dilly/retrain_brains.py` updated to include `track_specific_weights`.
 Log: Retraining triggered. Cycle completion expected in 10 minutes.

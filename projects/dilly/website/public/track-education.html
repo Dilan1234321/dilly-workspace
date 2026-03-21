@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Education Track | Dilly — Ready for the Classroom</title>
+  <meta name="description" content="Dilly for education. Teaching, K-12, curriculum. Student teaching, certification, tutoring. We score like district recruiters.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --edu-bg: #0a0a0b;
+      --edu-surface: #131316;
+      --edu-surface-2: #1a1a1e;
+      --edu-text: #e4e4e7;
+      --edu-muted: #71717a;
+      --edu-accent: #14b8a6;
+      --edu-accent-dim: rgba(20, 184, 166, 0.15);
+      --edu-border: rgba(113, 113, 122, 0.2);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--edu-bg); color: var(--edu-text); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.6; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; border-bottom: 1px solid var(--edu-border); background: rgba(10, 10, 11, 0.95); backdrop-filter: blur(12px); }
+    .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 0.875rem; color: var(--edu-muted); text-decoration: none; }
+    .nav-links a:hover, .nav-links a.nav-active { color: var(--edu-text); }
+    .btn-primary { display: inline-block; padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--edu-accent); color: #0a0a0b; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+    .btn-primary:hover { background: #2dd4bf; }
+    .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+    .edu-hero { padding-top: 9rem; padding-bottom: 4rem; }
+    .edu-hero .back { display: inline-block; margin-bottom: 1.5rem; color: var(--edu-accent); text-decoration: none; font-size: 0.875rem; }
+    .edu-hero .back:hover { text-decoration: underline; }
+    .edu-hero .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; background: var(--edu-accent-dim); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--edu-accent); margin-bottom: 1rem; }
+    .edu-hero h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 0.75rem; }
+    @media (min-width: 768px) { .edu-hero h1 { font-size: 3.25rem; } }
+    .edu-hero h1 .accent { color: var(--edu-accent); }
+    .edu-hero .sub { color: var(--edu-muted); font-size: 1.125rem; max-width: 36rem; margin-bottom: 2rem; }
+    .edu-hero .cta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .edu-checklist { display: grid; gap: 0; max-width: 36rem; margin-top: 3rem; }
+    .edu-check { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--edu-border); }
+    .edu-check:last-child { border-bottom: none; }
+    .edu-check .icon { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--edu-accent); color: #0a0a0b; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+    .edu-check .content h3 { font-size: 1rem; margin: 0 0 0.25rem; }
+    .edu-check .content p { font-size: 0.875rem; color: var(--edu-muted); margin: 0; line-height: 1.5; }
+    .edu-employers { padding: 5rem 0; border-top: 1px solid var(--edu-border); }
+    .edu-employers h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .edu-employers .sub { color: var(--edu-muted); margin-bottom: 2rem; }
+    .employer-tier { margin-bottom: 1.5rem; }
+    .employer-tier h4 { font-size: 0.75rem; font-weight: 600; color: var(--edu-accent); margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .employer-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .employer-pill { padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--edu-surface); border: 1px solid var(--edu-border); font-size: 0.8125rem; }
+    .edu-dims { padding: 5rem 0; background: var(--edu-surface); }
+    .edu-dims h2 { font-size: 1.5rem; margin: 0 0 2rem; }
+    .dim-grid { display: grid; gap: 1.5rem; }
+    @media (min-width: 768px) { .dim-grid { grid-template-columns: repeat(3, 1fr); } }
+    .dim-card { padding: 1.5rem; background: var(--edu-surface-2); border-radius: 0.75rem; border: 1px solid var(--edu-border); }
+    .dim-card .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--edu-accent); margin-bottom: 0.5rem; }
+    .dim-card h3 { font-size: 1.125rem; margin: 0 0 0.5rem; }
+    .dim-card p { font-size: 0.875rem; color: var(--edu-muted); margin: 0; line-height: 1.5; }
+    .edu-gaps { padding: 5rem 0; }
+    .edu-gaps h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .edu-gaps .sub { color: var(--edu-muted); margin-bottom: 2rem; }
+    .gap-item { padding: 1rem 1.25rem; border-radius: 0.5rem; background: var(--edu-surface); border-left: 4px solid var(--edu-accent); margin-bottom: 0.75rem; border: 1px solid var(--edu-border); border-left: 4px solid var(--edu-accent); }
+    .gap-item .problem { font-weight: 600; display: block; margin-bottom: 0.25rem; }
+    .gap-item .fix { font-size: 0.875rem; color: var(--edu-muted); margin: 0; line-height: 1.5; }
+    .gap-item .badge { font-size: 0.6875rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; background: var(--edu-accent-dim); color: var(--edu-accent); font-weight: 600; text-transform: uppercase; margin-left: 0.5rem; }
+    .edu-cta { padding: 6rem 0; text-align: center; border-top: 1px solid var(--edu-border); }
+    .edu-cta h2 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+    .edu-cta p { color: var(--edu-muted); margin-bottom: 1.5rem; }
+    footer { border-top: 1px solid var(--edu-border); padding: 2rem; text-align: center; font-size: 0.75rem; color: var(--edu-muted); }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: inherit; text-decoration: none; }
+    .nav-logo img { height: 40px; width: auto; display: block; }
+    .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .footer-logo img { height: 32px; width: auto; display: block; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><img src="dilly-logo.png" alt="Dilly"><span>Dilly</span></a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="tracks.html" class="nav-active">Tracks</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
+        <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="edu-hero">
+    <div class="container">
+      <a href="tracks.html" class="back">← All tracks</a>
+      <span class="badge">Education</span>
+      <h1>Ready for the <span class="accent">classroom</span></h1>
+      <p class="sub">Teaching, K-12, curriculum. School districts and education recruiters want student teaching, certification, and tutoring. We score your resume exactly how they do—so you're ready when districts hire.</p>
+      <div class="cta">
+        <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Run Your Audit</a>
+        <a href="#gaps" class="btn-primary" style="background: transparent; border: 1px solid var(--edu-accent); color: var(--edu-accent);">See What We Fix</a>
+      </div>
+      <div class="edu-checklist">
+        <div class="edu-check">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>Student teaching</h3>
+            <p>Primary Build signal for K-12. Grade level and subject. Plan early.</p>
+          </div>
+        </div>
+        <div class="edu-check">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>Certification</h3>
+            <p>State, subject-area. List explicitly: "Florida Professional Educator Certificate (in progress)."</p>
+          </div>
+        </div>
+        <div class="edu-check">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>Tutoring</h3>
+            <p>Students served, hours, subject, outcomes. Even volunteer counts.</p>
+          </div>
+        </div>
+        <div class="edu-check">
+          <span class="icon">✓</span>
+          <div class="content">
+            <h3>Student impact</h3>
+            <p>Quantified outcomes. Grade improvement. Programs led.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="edu-employers">
+    <div class="container">
+      <h2>Employers we benchmark against</h2>
+      <p class="sub">Our logic is calibrated to what school districts and education recruiters look for.</p>
+      <div class="employer-tier">
+        <h4>Public school districts</h4>
+        <div class="employer-list">
+          <span class="employer-pill">Hillsborough County</span><span class="employer-pill">Pinellas County</span><span class="employer-pill">Florida districts</span>
+        </div>
+      </div>
+      <div class="employer-tier">
+        <h4>Charter & private</h4>
+        <div class="employer-list">
+          <span class="employer-pill">Charter schools</span><span class="employer-pill">Private & independent schools</span>
+        </div>
+      </div>
+      <div class="employer-tier">
+        <h4>Programs</h4>
+        <div class="employer-list">
+          <span class="employer-pill">Teach For America</span><span class="employer-pill">Tutoring centers</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="edu-dims">
+    <div class="container">
+      <h2>What we score</h2>
+      <div class="dim-grid">
+        <div class="dim-card">
+          <div class="label">Smart</div>
+          <h3>Academic & Pedagogy Rigor</h3>
+          <p>Education major, GPA, pedagogy coursework, subject-area depth. State certification or certification-in-progress.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Grit</div>
+          <h3>Sustained Commitment</h3>
+          <p>Long-term tutoring, practicum hours, student teaching. Leadership in education orgs. Owned outcomes—students served, hours taught.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Build</div>
+          <h3>Teaching Profile</h3>
+          <p>Student teaching with grade level and subject. Tutoring with quantified impact. Certification status clear. Lesson planning or curriculum work.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="edu-gaps" id="gaps">
+    <div class="container">
+      <h2>Gaps we fix</h2>
+      <p class="sub">These kill education applications. We catch them and tell you exactly how to fix them.</p>
+      <div class="gap-item">
+        <span class="problem">No student teaching experience <span class="badge">Critical</span></span>
+        <span class="fix">Student teaching is the primary Build signal for K-12. We tell you the timeline and how to frame practicum or observation hours. Plan early.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">No teaching experience at all <span class="badge">Critical</span></span>
+        <span class="fix">Add tutoring—even volunteer. Quantify: students served, hours, subject, outcomes. Tutoring centers, after-school programs, peer tutoring all count.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">Certification status not clear <span class="badge">Moderate</span></span>
+        <span class="fix">List certification explicitly: "Florida Professional Educator Certificate (in progress)" or "Certified K-6, ESOL endorsement." Districts screen for this.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="edu-cta">
+    <div class="container">
+      <h2>Show districts you're ready for the classroom</h2>
+      <p>Student teaching. Certification. Tutoring. Don't get filtered before the interview.</p>
+      <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Education Audit</a>
+    </div>
+  </section>
+
+  <footer style="border-top: 1px solid var(--edu-border); padding: 2rem 1.5rem;">
+    <div style="max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly"><span>Dilly</span></span>
+      <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; flex-wrap: wrap; justify-content: center;">
+        <a href="index.html" style="color: var(--edu-muted); text-decoration: none;">Home</a>
+        <a href="features.html" style="color: var(--edu-muted); text-decoration: none;">Features</a>
+        <a href="how-it-works.html" style="color: var(--edu-muted); text-decoration: none;">How It Works</a>
+        <a href="tracks.html" style="color: var(--edu-muted); text-decoration: none;">Tracks</a>
+        <a href="pricing.html" style="color: var(--edu-muted); text-decoration: none;">Pricing</a>
+        <a href="about.html" style="color: var(--edu-muted); text-decoration: none;">About</a>
+      </div>
+    </div>
+    <p style="font-size: 0.75rem; color: var(--edu-muted); margin-top: 1.5rem; text-align: center;">© <span id="year"></span> Dilly. The career center in your pocket.</p>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

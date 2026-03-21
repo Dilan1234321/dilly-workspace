@@ -8,15 +8,15 @@
 
 ## Context
 
-Dilan is building a $1M roadmap focused on **Meridian**, a high-velocity talent infrastructure platform. He values truth, efficiency, and high-output results.
+Dilan is building a $1M roadmap focused on **Dilly**, a high-velocity talent infrastructure platform. He values truth, efficiency, and high-output results.
 
 ### Current Projects:
-1. **Meridian:** AI-powered candidate matching engine. Uses a "Dual-Track Audit" (Campus vs. Pro) and the "Meridian Truth Standard" (MTS) to score candidate grit and technical veracity.
+1. **Dilly:** AI-powered candidate matching engine. Uses a "Dual-Track Audit" (Campus vs. Pro) and the "Dilly Truth Standard" (MTS) to score candidate grit and technical veracity.
 2. **Web Dev Agency:** Professional client work including `utampaakpsi.com`, Mu Epsilon Delta, and Erickson Flooring.
 3. **LeaseLogic:** A proptech-focused predictive model for lease conversion (88% accuracy).
 
 ### Goals:
-- Scale Meridian into the "Credit Score for Talent."
+- Scale Dilly into the "Credit Score for Talent."
 - Reach $1M net worth by senior year (2028).
 - Maintain a "Zero-Hallucination" policy in all AI-generated optimizations.
 

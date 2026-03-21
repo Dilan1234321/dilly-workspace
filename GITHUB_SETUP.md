@@ -1,6 +1,6 @@
 # Push this workspace to GitHub
 
-This folder is a **standalone git repo** containing your Meridian + OpenClaw workspace. To put it on your personal computer and sync with GitHub:
+This folder is a **standalone git repo** containing your Dilly + OpenClaw workspace. To put it on your personal computer and sync with GitHub:
 
 ## 1. On this machine (before you go)
 
@@ -12,7 +12,7 @@ Already done for you:
 ## 2. Create the repo on GitHub
 
 1. Go to [github.com/new](https://github.com/new).
-2. Choose a name (e.g. `meridian-workspace` or `openclaw-meridian`).
+2. Choose a name (e.g. `dilly-workspace` or `openclaw-dilly`).
 3. **Do not** add a README, .gitignore, or license (this repo already has them).
 4. Click **Create repository**.
 
@@ -21,7 +21,7 @@ Already done for you:
 After you **copy this whole workspace** to your personal computer (e.g. clone from GitHub once it’s pushed, or copy the folder via USB/cloud):
 
 ```bash
-cd /path/to/workspace   # the folder that contains meridian_core/, projects/, SOUL.md, etc.
+cd /path/to/workspace   # the folder that contains dilly_core/, projects/, SOUL.md, etc.
 
 # If you haven’t pushed from this machine yet, add GitHub as remote and push:
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
@@ -43,19 +43,19 @@ git add -A && git commit -m "your message" && git push
 
 ## Work on your personal machine (same level as now)
 
-Clone and run the API + dashboard so you can keep developing Meridian the same way.
+Clone and run the API + dashboard so you can keep developing Dilly the same way.
 
 ### 1. Clone
 
 ```bash
 cd ~   # or wherever you keep projects
-git clone https://github.com/Dilan1234321/meridian-workspace.git
-cd meridian-workspace
+git clone https://github.com/Dilan1234321/dilly-workspace.git
+cd dilly-workspace
 ```
 
-### 2. Python (API + Meridian core)
+### 2. Python (API + Dilly core)
 
-From the **repo root** (`meridian-workspace/`):
+From the **repo root** (`dilly-workspace/`):
 
 ```bash
 python3 -m venv .venv
@@ -65,7 +65,7 @@ pip install python-docx      # optional: for .docx in build_training_data
 pip install openai          # optional: for LLM auditor
 ```
 
-For the API to find `meridian_core`, run commands from the repo root (or add it to `PYTHONPATH`).
+For the API to find `dilly_core`, run commands from the repo root (or add it to `PYTHONPATH`).
 
 ### 3. Env (API keys, LLM)
 
@@ -73,10 +73,10 @@ Create a `.env` in the repo root (not committed). Copy from your other machine o
 
 ```bash
 # Optional: use LLM for audits
-MERIDIAN_USE_LLM=1
+DILLY_USE_LLM=1
 OPENAI_API_KEY=sk-...
 # Optional: custom model
-# MERIDIAN_LLM_MODEL=gpt-4o
+# DILLY_LLM_MODEL=gpt-4o
 ```
 
 ### 4. Run API (backend)
@@ -85,17 +85,17 @@ From repo root:
 
 ```bash
 source .venv/bin/activate
-uvicorn projects.meridian.api.main:app --host 0.0.0.0 --port 8000
+uvicorn projects.dilly.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-Or: `./run_meridian_api.sh` (if `.venv` is in repo root).
+Or: `./run_dilly_api.sh` (if `.venv` is in repo root).
 
 ### 5. Run dashboard (frontend)
 
 In a **second terminal**, from repo root:
 
 ```bash
-cd projects/meridian/dashboard
+cd projects/dilly/dashboard
 npm install
 npm run dev
 ```
@@ -107,13 +107,13 @@ Open **http://localhost:3000**. It talks to the API at `http://localhost:8000` b
 - **SOUL.md**, **USER.md**, **AGENTS.md** — in the repo; read them each session.
 - **memory/** — daily notes; in the repo.
 - **MEMORY.md** — create in repo root for long-term memory (main session only); add to `.gitignore` if you don’t want it on GitHub.
-- **Rubrics** — `projects/meridian/prompts/rubric_pre_health.md`, `rubric_builder.md` (in repo).
-- **Training data** — `projects/meridian/prompts/training_data.json` (in repo; may be empty; regenerate with `python3 -m projects.meridian.scripts.build_training_data` after `pip install python-docx` if you have resumes in `assets/resumes/`).
+- **Rubrics** — `projects/dilly/prompts/rubric_pre_health.md`, `rubric_builder.md` (in repo).
+- **Training data** — `projects/dilly/prompts/training_data.json` (in repo; may be empty; regenerate with `python3 -m projects.dilly.scripts.build_training_data` after `pip install python-docx` if you have resumes in `assets/resumes/`).
 
 ### 7. Quick test
 
 1. Start API (port 8000), then dashboard (port 3000).
-2. Open http://localhost:3000, upload a PDF — you should get an audit (rule-based or LLM if `MERIDIAN_USE_LLM=1` and `OPENAI_API_KEY` set).
+2. Open http://localhost:3000, upload a PDF — you should get an audit (rule-based or LLM if `DILLY_USE_LLM=1` and `OPENAI_API_KEY` set).
 
 ---
 

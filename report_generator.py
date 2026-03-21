@@ -6,12 +6,12 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
-class MeridianCohortReport:
+class DillyCohortReport:
     def __init__(self, df, cohort_name="University of Tampa - Alpha Cohort"):
         self.df = df
         self.cohort_name = cohort_name
         self.timestamp = datetime.datetime.now().strftime("%Y-%m-%d")
-        self.filename = f"meridian_cohort_audit_{self.timestamp}.pdf"
+        self.filename = f"dilly_cohort_audit_{self.timestamp}.pdf"
 
     def generate(self):
         doc = SimpleDocTemplate(self.filename, pagesize=letter)
@@ -19,11 +19,11 @@ class MeridianCohortReport:
         story = []
 
         # Title
-        story.append(Paragraph(f"<font size=24 color='#2E5BFF'>MERIDIAN COHORT AUDIT</font>", styles['Title']))
+        story.append(Paragraph(f"<font size=24 color='#2E5BFF'>DILLY COHORT AUDIT</font>", styles['Title']))
         story.append(Paragraph(f"<font size=14>{self.cohort_name}</font>", styles['Subtitle']))
         story.append(Spacer(1, 12))
         story.append(Paragraph(f"<b>Date:</b> {self.timestamp}", styles['Normal']))
-        story.append(Paragraph(f"<b>Audit Standard:</b> Meridian Meritocracy v3 (Zero-Bias)", styles['Normal']))
+        story.append(Paragraph(f"<b>Audit Standard:</b> Dilly Meritocracy v3 (Zero-Bias)", styles['Normal']))
         story.append(Spacer(1, 24))
 
         # Executive Summary
@@ -32,7 +32,7 @@ class MeridianCohortReport:
         story.append(Spacer(1, 12))
 
         # The Leaderboard Table
-        data = [["Candidate", "GPA", "Smart", "Grit", "Build", "Meridian Score"]]
+        data = [["Candidate", "GPA", "Smart", "Grit", "Build", "Dilly Score"]]
         for _, row in self.df.iterrows():
             gpa_display = f"{row['gpa']:.2f} ({'HS' if row['is_hs'] else 'Univ'})"
             data.append([
@@ -41,7 +41,7 @@ class MeridianCohortReport:
                 f"{row['smart_raw_score']:.1f}",
                 f"{row['grit_raw_score']:.1f}",
                 f"{row['build_raw_score']:.1f}",
-                f"{row['Meridian_Score']:.2f}"
+                f"{row['Dilly_Score']:.2f}"
             ])
 
         t = Table(data, colWidths=[120, 80, 60, 60, 60, 100])
@@ -70,7 +70,7 @@ class MeridianCohortReport:
         story.append(Spacer(1, 24))
 
         # Footer
-        story.append(Paragraph("<i>Confidential Meridian Audit Report - For Internal Strategic Use Only.</i>", styles['Italic']))
+        story.append(Paragraph("<i>Confidential Dilly Audit Report - For Internal Strategic Use Only.</i>", styles['Italic']))
 
         doc.build(story)
         print(f"Cohort report generated: {self.filename}")

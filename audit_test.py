@@ -1,7 +1,7 @@
 import sys
 import json
 import os
-from projects.meridian.meridian_v7_2 import MeridianV7_2_Med
+from projects.dilly.dilly_v7_2 import DillyV7_2_Med
 
 def run_test():
     if len(sys.argv) < 2:
@@ -13,12 +13,12 @@ def run_test():
         print(f"Error: File {file_path} not found.")
         return
 
-    engine = MeridianV7_2_Med(file_path)
+    engine = DillyV7_2_Med(file_path)
     if engine.extract_text():
         result = engine.audit()
         
         print("\n" + "="*40)
-        print(f" MERIDIAN MTS AUDIT: {result['metadata']['name']}")
+        print(f" DILLY MTS AUDIT: {result['metadata']['name']}")
         print("="*40)
         print(f"TRACK: {result['metadata']['track']}")
         print(f"FINAL SCORE: {result['scores']['final']}/100")

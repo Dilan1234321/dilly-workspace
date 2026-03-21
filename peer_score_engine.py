@@ -57,15 +57,15 @@ for col in ["impact_raw", "leadership_raw", "tech_raw", "velocity_raw", "total_r
         df[f"{col}_score"] = 0
 
 # Final Peer Score = Average of normalized signals
-df["Meridian_Peer_Score"] = df[["impact_raw_score", "leadership_raw_score", "tech_raw_score", "velocity_raw_score"]].mean(axis=1)
+df["Dilly_Peer_Score"] = df[["impact_raw_score", "leadership_raw_score", "tech_raw_score", "velocity_raw_score"]].mean(axis=1)
 
 # Sort by Peer Score
-df = df.sort_values(by="Meridian_Peer_Score", ascending=False)
+df = df.sort_values(by="Dilly_Peer_Score", ascending=False)
 
 print(f"{'NAME':<20} | {'IMPACT':<7} | {'LEADERSHIP':<10} | {'TECH':<7} | {'VELOCITY':<8} | {'PEER SCORE'}")
 print("-" * 80)
 for _, row in df.iterrows():
-    print(f"{row['name'][:20]:<20} | {row['impact_raw_score']:<7.1f} | {row['leadership_raw_score']:<10.1f} | {row['tech_raw_score']:<7.1f} | {row['velocity_raw_score']:<8.1f} | {row['Meridian_Peer_Score']:.2f}")
+    print(f"{row['name'][:20]:<20} | {row['impact_raw_score']:<7.1f} | {row['leadership_raw_score']:<10.1f} | {row['tech_raw_score']:<7.1f} | {row['velocity_raw_score']:<8.1f} | {row['Dilly_Peer_Score']:.2f}")
 
 # Save the baseline
 df.to_csv("assets/utampa_peer_baseline.csv", index=False)

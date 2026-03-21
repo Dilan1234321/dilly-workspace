@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Humanities Track | Dilly — Argument. Evidence. Impact.</title>
+  <meta name="description" content="Dilly for humanities. English, history, philosophy, languages. Publications, thesis, analytical writing. We score like recruiters in publishing and research.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --hum-bg: #0a0a0b;
+      --hum-surface: #131316;
+      --hum-surface-2: #1a1a1e;
+      --hum-text: #e4e4e7;
+      --hum-muted: #71717a;
+      --hum-accent: #b45309;
+      --hum-accent-dim: rgba(180, 83, 9, 0.15);
+      --hum-border: rgba(113, 113, 122, 0.2);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--hum-bg); color: var(--hum-text); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.6; }
+    .hum-serif { font-family: 'Cormorant Garamond', serif; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; border-bottom: 1px solid var(--hum-border); background: rgba(10, 10, 11, 0.95); backdrop-filter: blur(12px); }
+    .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 0.875rem; color: var(--hum-muted); text-decoration: none; }
+    .nav-links a:hover, .nav-links a.nav-active { color: var(--hum-text); }
+    .btn-primary { display: inline-block; padding: 0.5rem 1rem; border-radius: 0.375rem; background: var(--hum-accent); color: #0a0a0b; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+    .btn-primary:hover { background: #d97706; }
+    .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+    .hum-hero { padding-top: 9rem; padding-bottom: 4rem; }
+    .hum-hero .back { display: inline-block; margin-bottom: 1.5rem; color: var(--hum-accent); text-decoration: none; font-size: 0.875rem; }
+    .hum-hero .back:hover { text-decoration: underline; }
+    .hum-hero .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; background: var(--hum-accent-dim); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--hum-accent); margin-bottom: 1rem; }
+    .hum-hero h1 { font-family: 'Cormorant Garamond', serif; font-size: 2.5rem; font-weight: 600; margin: 0 0 0.75rem; }
+    @media (min-width: 768px) { .hum-hero h1 { font-size: 3.25rem; } }
+    .hum-hero h1 .accent { color: var(--hum-accent); }
+    .hum-hero .sub { color: var(--hum-muted); font-size: 1.125rem; max-width: 36rem; margin-bottom: 2rem; }
+    .hum-hero .cta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .hum-stats { display: flex; flex-wrap: wrap; gap: 2rem 3rem; padding: 2rem 0; border-bottom: 1px solid var(--hum-border); }
+    .hum-stat .val { font-size: 1.25rem; font-weight: 600; color: var(--hum-accent); }
+    .hum-stat .label { font-size: 0.75rem; color: var(--hum-muted); margin-top: 0.25rem; }
+    .hum-employers { padding: 5rem 0; border-top: 1px solid var(--hum-border); }
+    .hum-employers h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .hum-employers .sub { color: var(--hum-muted); margin-bottom: 2rem; }
+    .employer-tier { margin-bottom: 1.5rem; }
+    .employer-tier h4 { font-size: 0.75rem; font-weight: 600; color: var(--hum-accent); margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .employer-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .employer-pill { padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--hum-surface); border: 1px solid var(--hum-border); font-size: 0.8125rem; }
+    .hum-dims { padding: 5rem 0; background: var(--hum-surface); }
+    .hum-dims h2 { font-size: 1.5rem; margin: 0 0 2rem; }
+    .dim-grid { display: grid; gap: 1.5rem; }
+    @media (min-width: 768px) { .dim-grid { grid-template-columns: repeat(3, 1fr); } }
+    .dim-card { padding: 1.5rem; background: var(--hum-surface-2); border-radius: 0.75rem; border: 1px solid var(--hum-border); }
+    .dim-card .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--hum-accent); margin-bottom: 0.5rem; }
+    .dim-card h3 { font-size: 1.125rem; margin: 0 0 0.5rem; }
+    .dim-card p { font-size: 0.875rem; color: var(--hum-muted); margin: 0; line-height: 1.5; }
+    .hum-gaps { padding: 5rem 0; }
+    .hum-gaps h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .hum-gaps .sub { color: var(--hum-muted); margin-bottom: 2rem; }
+    .gap-item { padding: 1rem 1.25rem; border-radius: 0.5rem; background: var(--hum-surface); border-left: 4px solid var(--hum-accent); margin-bottom: 0.75rem; border: 1px solid var(--hum-border); border-left: 4px solid var(--hum-accent); }
+    .gap-item .problem { font-weight: 600; display: block; margin-bottom: 0.25rem; }
+    .gap-item .fix { font-size: 0.875rem; color: var(--hum-muted); margin: 0; line-height: 1.5; }
+    .gap-item .badge { font-size: 0.6875rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; background: var(--hum-accent-dim); color: var(--hum-accent); font-weight: 600; text-transform: uppercase; margin-left: 0.5rem; }
+    .hum-cta { padding: 6rem 0; text-align: center; border-top: 1px solid var(--hum-border); }
+    .hum-cta h2 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+    .hum-cta p { color: var(--hum-muted); margin-bottom: 1.5rem; }
+    footer { border-top: 1px solid var(--hum-border); padding: 2rem; text-align: center; font-size: 0.75rem; color: var(--hum-muted); }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: inherit; text-decoration: none; }
+    .nav-logo img { height: 40px; width: auto; display: block; }
+    .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+    .footer-logo img { height: 32px; width: auto; display: block; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><img src="dilly-logo.png" alt="Dilly"><span>Dilly</span></a>
+      <div class="nav-links">
+        <a href="features.html">Features</a>
+        <a href="tracks.html" class="nav-active">Tracks</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
+        <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hum-hero">
+    <div class="container">
+      <a href="tracks.html" class="back">← All tracks</a>
+      <span class="badge">Humanities</span>
+      <h1>Argument. <span class="accent">Evidence.</span> Impact.</h1>
+      <p class="sub">English, history, philosophy, languages. Recruiters in publishing, research, and policy want publications, thesis, and analytical writing. We score your resume exactly how they do—so you land beyond the professoriate.</p>
+      <div class="cta">
+        <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Run Your Audit</a>
+        <a href="#gaps" class="btn-primary" style="background: transparent; border: 1px solid var(--hum-accent); color: var(--hum-accent);">See What We Fix</a>
+      </div>
+      <div class="hum-stats">
+        <div class="hum-stat"><div class="val">Publications</div><div class="label">Papers, essays, journals</div></div>
+        <div class="hum-stat"><div class="val">Thesis</div><div class="label">Honors, capstone</div></div>
+        <div class="hum-stat"><div class="val">Analytical writing</div><div class="label">Evidence of rigor</div></div>
+        <div class="hum-stat"><div class="val">Teaching / editorial</div><div class="label">Tutoring, editing</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="hum-employers">
+    <div class="container">
+      <h2>Employers we benchmark against</h2>
+      <p class="sub">Our logic is calibrated to what recruiters in these sectors look for.</p>
+      <div class="employer-tier">
+        <h4>Publishing & editorial</h4>
+        <div class="employer-list">
+          <span class="employer-pill">Penguin Random House</span><span class="employer-pill">Macmillan</span><span class="employer-pill">Literary agencies</span><span class="employer-pill">Magazines</span>
+        </div>
+      </div>
+      <div class="employer-tier">
+        <h4>Academic & research</h4>
+        <div class="employer-list">
+          <span class="employer-pill">Graduate programs</span><span class="employer-pill">Research institutions</span><span class="employer-pill">Think tanks</span>
+        </div>
+      </div>
+      <div class="employer-tier">
+        <h4>Policy & non-profits</h4>
+        <div class="employer-list">
+          <span class="employer-pill">Policy orgs</span><span class="employer-pill">Museums & cultural institutions</span><span class="employer-pill">Law-adjacent (paralegal)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="hum-dims">
+    <div class="container">
+      <h2>What we score</h2>
+      <div class="dim-grid">
+        <div class="dim-card">
+          <div class="label">Smart</div>
+          <h3>Academic Rigor</h3>
+          <p>Humanities major (English, History, Philosophy, etc.), GPA, honors thesis, rigorous coursework. We reward analytical depth and writing quality.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Grit</div>
+          <h3>Sustained Commitment</h3>
+          <p>Long-term research, teaching/tutoring, editorial work. Leadership in humanities orgs. Owned outcomes—publications, programs led, students served.</p>
+        </div>
+        <div class="dim-card">
+          <div class="label">Build</div>
+          <h3>Writing & Research Profile</h3>
+          <p>Publications, thesis, conference presentations. Writing samples or portfolio. Teaching, tutoring, or editorial experience. Research evidence with methods or scope.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="hum-gaps" id="gaps">
+    <div class="container">
+      <h2>Gaps we fix</h2>
+      <p class="sub">These kill humanities applications. We catch them and tell you exactly how to fix them.</p>
+      <div class="gap-item">
+        <span class="problem">No publication or writing sample <span class="badge">Critical</span></span>
+        <span class="fix">Submit to undergrad journals, literary magazines, or campus publications. Even a strong thesis chapter or seminar paper can serve as a writing sample.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">No research evidence <span class="badge">Critical</span></span>
+        <span class="fix">Add thesis, conference presentation, or research assistant work. Describe methods and scope. Even "conducted archival research for honors thesis" helps.</span>
+      </div>
+      <div class="gap-item">
+        <span class="problem">No teaching or editorial experience <span class="badge">Moderate</span></span>
+        <span class="fix">Add tutoring, writing center work, or editorial for student publications. Quantify: students served, hours, pieces edited.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="hum-cta">
+    <div class="container">
+      <h2>Show recruiters you can analyze and write</h2>
+      <p>Publications. Thesis. Teaching. Editorial. Don't get filtered before the interview.</p>
+      <a href="https://app.dilly-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Humanities Audit</a>
+    </div>
+  </section>
+
+  <footer style="border-top: 1px solid var(--hum-border); padding: 2rem 1.5rem;">
+    <div style="max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly"><span>Dilly</span></span>
+      <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; flex-wrap: wrap; justify-content: center;">
+        <a href="index.html" style="color: var(--hum-muted); text-decoration: none;">Home</a>
+        <a href="features.html" style="color: var(--hum-muted); text-decoration: none;">Features</a>
+        <a href="how-it-works.html" style="color: var(--hum-muted); text-decoration: none;">How It Works</a>
+        <a href="tracks.html" style="color: var(--hum-muted); text-decoration: none;">Tracks</a>
+        <a href="pricing.html" style="color: var(--hum-muted); text-decoration: none;">Pricing</a>
+        <a href="about.html" style="color: var(--hum-muted); text-decoration: none;">About</a>
+      </div>
+    </div>
+    <p style="font-size: 0.75rem; color: var(--hum-muted); margin-top: 1.5rem; text-align: center;">© <span id="year"></span> Dilly. The career center in your pocket.</p>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

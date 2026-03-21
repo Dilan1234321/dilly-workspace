@@ -68,13 +68,13 @@ for col in ["smart_raw", "grit_raw", "build_raw"]:
     else:
         df[f"{col}_score"] = 0
 
-# Final Meridian Score: Weighted Average
+# Final Dilly Score: Weighted Average
 # We weight Grit and Build more heavily than Smart for "high-velocity" alignment
-df["Meridian_Score"] = (df["smart_raw_score"] * 0.2) + (df["grit_raw_score"] * 0.4) + (df["build_raw_score"] * 0.4)
+df["Dilly_Score"] = (df["smart_raw_score"] * 0.2) + (df["grit_raw_score"] * 0.4) + (df["build_raw_score"] * 0.4)
 
-df = df.sort_values(by="Meridian_Score", ascending=False)
+df = df.sort_values(by="Dilly_Score", ascending=False)
 
 print(f"{'NAME':<20} | {'GPA':<5} | {'SMART':<7} | {'GRIT':<7} | {'BUILD':<7} | {'FINAL SCORE'}")
 print("-" * 80)
 for _, row in df.iterrows():
-    print(f"{row['name'][:20]:<20} | {row['gpa']:<5.2f} | {row['smart_raw_score']:<7.1f} | {row['grit_raw_score']:<7.1f} | {row['build_raw_score']:<7.1f} | {row['Meridian_Score']:.2f}")
+    print(f"{row['name'][:20]:<20} | {row['gpa']:<5.2f} | {row['smart_raw_score']:<7.1f} | {row['grit_raw_score']:<7.1f} | {row['build_raw_score']:<7.1f} | {row['Dilly_Score']:.2f}")

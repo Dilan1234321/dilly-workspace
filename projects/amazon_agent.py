@@ -10,7 +10,7 @@ import datetime
 class AmazonTrendAgent:
     def __init__(self):
         self.trends = []
-        self.report_path = "/Users/dilankochhar/Desktop/Meridian_Updates/Amazon_Trend_Report.md"
+        self.report_path = "/Users/dilankochhar/Desktop/Dilly_Updates/Amazon_Trend_Report.md"
 
     def fetch_tiktok_trends(self):
         # Simulated logic for TikTok 'Amazon Finds' scraping

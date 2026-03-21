@@ -1,12 +1,12 @@
-# Meridian Scoring Logic (Ground Truth V6.5)
+# Dilly Scoring Logic (Ground Truth V6.5)
 
-Canonical source: `meridian_core/scoring.py`, `meridian_core/tracks.py`, `meridian_core/auditor.py`.
+Canonical source: `dilly_core/scoring.py`, `dilly_core/tracks.py`, `dilly_core/auditor.py`.
 
 ---
 
 ## 1. Track assignment
 
-**From:** `get_track_from_major_and_text(major, raw_text)` in `meridian_core/auditor.py`.
+**From:** `get_track_from_major_and_text(major, raw_text)` in `dilly_core/auditor.py`.
 
 - **Pre-Health:** Major contains biology, biochemistry, chemistry, health, nursing, psychology, biomedical, allied; **or** (when major is Unknown) text contains pre-med, medical, clinical, shadowing, osteopathic, LECOM, BS/DO, MCAT, patient care, EMT, scribe, medical assistant, hospital, physician, AMAT, AMSA.
 - **Pre-Law:** Major contains political science, criminology, philosophy, history, international studies, law; **or** text contains pre-law, paralegal, legal, moot court, mock trial, juris.
@@ -94,4 +94,4 @@ Canonical source: `meridian_core/scoring.py`, `meridian_core/tracks.py`, `meridi
 
 ## 7. Signal extraction (from raw text)
 
-Implemented in `extract_scoring_signals()` in `meridian_core/scoring.py`: GPA (regex), BCPM (regex), honors (keyword count), has_research (keyword), quantifiable_impact (regex `\d+%`/`$\d+`), leadership_density (keywords), work_entry_count (month YYYY regex), international_markers, longitudinal_clinical_years, outcome_leadership_count, research_longevity_years. No hallucination: only detected values; defaults (e.g. GPA 3.5) when missing.
+Implemented in `extract_scoring_signals()` in `dilly_core/scoring.py`: GPA (regex), BCPM (regex), honors (keyword count), has_research (keyword), quantifiable_impact (regex `\d+%`/`$\d+`), leadership_density (keywords), work_entry_count (month YYYY regex), international_markers, longitudinal_clinical_years, outcome_leadership_count, research_longevity_years. No hallucination: only detected values; defaults (e.g. GPA 3.5) when missing.
