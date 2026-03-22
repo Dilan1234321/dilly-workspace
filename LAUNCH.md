@@ -1,4 +1,4 @@
-# Launch Meridian marketing site (GoDaddy domain)
+# Launch Dilly marketing site (GoDaddy domain)
 
 You have the domain on GoDaddy. Next: **host the files** and **point the domain** to that host.
 
@@ -10,10 +10,10 @@ You have the domain on GoDaddy. Next: **host the files** and **point the domain*
 2. **Go to [vercel.com](https://vercel.com)** → Sign in with GitHub.
 3. **New Project** → Import your repo.
 4. **Configure:**
-   - **Root Directory:** `projects/meridian/website` (or the folder that contains `index.html`, `styles.css`, etc.)
+   - **Root Directory:** `projects/dilly/website` (or the folder that contains `index.html`, `styles.css`, etc.)
    - **Framework Preset:** Other (static)
    - Deploy.
-5. **Add your domain:** Project → Settings → Domains → Add `meridian-careers.com` and `www.meridian-careers.com`.
+5. **Add your domain:** Project → Settings → Domains → Add `trydilly.com` and `www.trydilly.com`.
 6. **In GoDaddy (DNS):**
    - Go to [GoDaddy Domain Manager](https://dcc.godaddy.com/) → your domain → DNS or Manage DNS.
    - Either:
@@ -22,7 +22,7 @@ You have the domain on GoDaddy. Next: **host the files** and **point the domain*
        - Type **A**, Name **@**, Value **76.76.21.21**
        - Type **CNAME**, Name **www**, Value **cname.vercel-dns.com**
    - Save. DNS can take a few minutes up to 48 hours.
-7. Vercel will issue a free SSL certificate; your site will be `https://meridian-careers.com`.
+7. Vercel will issue a free SSL certificate; your site will be `https://trydilly.com`.
 
 ---
 
@@ -30,9 +30,9 @@ You have the domain on GoDaddy. Next: **host the files** and **point the domain*
 
 1. **Go to [netlify.com](https://netlify.com)** → Sign in (e.g. with GitHub).
 2. **Add new site** → Import from Git (or “Deploy manually” and drag the `website` folder).
-3. If from Git: set **Base directory** to `projects/meridian/website`, **Publish directory** to `.` (or leave default).
+3. If from Git: set **Base directory** to `projects/dilly/website`, **Publish directory** to `.` (or leave default).
 4. Deploy.
-5. **Domain:** Site settings → Domain management → Add custom domain → `meridian-careers.com` and `www.meridian-careers.com`.
+5. **Domain:** Site settings → Domain management → Add custom domain → `trydilly.com` and `www.trydilly.com`.
 6. **In GoDaddy DNS:** Netlify will show what to add. Usually:
    - **A** record: Name **@**, Value **75.2.60.5**
    - **CNAME**: Name **www**, Value **your-site-name.netlify.app**
@@ -43,17 +43,17 @@ You have the domain on GoDaddy. Next: **host the files** and **point the domain*
 ## Option C: Cloudflare Pages (free)
 
 1. **Go to [pages.cloudflare.com](https://pages.cloudflare.com)** → Create project → Connect to Git.
-2. Select repo, set **Build** to “None” (static), **Build output directory** to `projects/meridian/website` (or upload the folder).
+2. Select repo, set **Build** to “None” (static), **Build output directory** to `projects/dilly/website` (or upload the folder).
 3. Deploy.
-4. **Add domain:** Pages project → Custom domains → Add `meridian-careers.com`.
+4. **Add domain:** Pages project → Custom domains → Add `trydilly.com`.
 5. **In GoDaddy:** Change nameservers to the ones Cloudflare gives you (e.g. `ada.ns.cloudflare.com`, `bob.ns.cloudflare.com`). Then in Cloudflare, DNS is managed there; SSL is automatic.
 
 ---
 
 ## After DNS propagates
 
-- Open `https://meridian-careers.com` and `https://www.meridian-careers.com`.
-- In your site, all links already use `https://meridian-careers.com` and `https://app.meridian-careers.com` for the app; no code change needed for the domain.
+- Open `https://trydilly.com` and `https://www.trydilly.com`.
+- In your site, all links already use `https://trydilly.com` and `https://app.trydilly.com` for the app; no code change needed for the domain.
 
 ## Checklist
 
@@ -62,4 +62,4 @@ You have the domain on GoDaddy. Next: **host the files** and **point the domain*
 - [ ] Custom domain added in the host’s dashboard.
 - [ ] GoDaddy DNS updated (A + CNAME, or nameservers).
 - [ ] Wait for DNS (often 5–60 minutes).
-- [ ] Test https://meridian-careers.com and https://www.meridian-careers.com.
+- [ ] Test https://trydilly.com and https://www.trydilly.com.

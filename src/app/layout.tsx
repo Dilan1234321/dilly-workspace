@@ -8,9 +8,9 @@ const instrumentSans = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Meridian | The Last Check Before You Apply",
+  title: "Dilly | The Last Check Before You Apply",
   description:
-    "Meridian scores your resume the way a senior hiring manager would—Smart, Grit, Build. Get concrete edits, track-specific advice, and a career coach in your pocket. .edu only. We don't sell your data.",
+    "Dilly scores your resume the way a senior hiring manager would—Smart, Grit, Build. Get concrete edits, track-specific advice, and a career coach in your pocket. .edu only. We don't sell your data.",
   keywords: [
     "resume review",
     "career readiness",
@@ -22,9 +22,9 @@ export const metadata: Metadata = {
     "University of Tampa",
   ],
   openGraph: {
-    title: "Meridian | The Last Check Before You Apply",
+    title: "Dilly | The Last Check Before You Apply",
     description:
-      "Score your resume like a hiring manager. Get the edits. Get hired. Meridian is the career center in your pocket.",
+      "Score your resume like a hiring manager. Get the edits. Get hired. Dilly is the career center in your pocket.",
   },
 };
 

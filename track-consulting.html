@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Consulting Track | Meridian — Show Up Ready for the Case</title>
-  <meta name="description" content="Meridian for consulting. MBB, Deloitte S&O, Oliver Wyman. Case competition, PEI-ready stories. We score like McKinsey and BCG recruiters.">
+  <title>Consulting Track | Dilly — Show Up Ready for the Case</title>
+  <meta name="description" content="Dilly for consulting. MBB, Deloitte S&O, Oliver Wyman. Case competition, PEI-ready stories. We score like McKinsey and BCG recruiters.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -74,17 +74,28 @@
     .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
     .footer-logo img { height: 32px; width: auto; display: block; }
   </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="track-landing-dark">
   <nav>
     <div class="nav-inner">
-      <a href="index.html" class="nav-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></a>
-      <div class="nav-links">
-        <a href="features.html">Features</a>
-        <a href="tracks.html" class="nav-active">Tracks</a>
-        <a href="pricing.html">Pricing</a>
-        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
-        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Started</a>
+      <a href="index.html" class="nav-logo"><img src="dilly-logo.png" alt="Dilly" width="40" height="40"><span>Dilly</span></a>
+      <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
+      <div class="nav-menu-panel" id="navMenuPanel">
+        <div class="nav-links">
+          <a href="features.html">Features</a>
+          <a href="how-it-works.html">How it works</a>
+          <a href="the-app.html">The app</a>
+          <a href="your-journey.html">Your journey</a>
+          <a href="tracks.html">Tracks</a>
+          <a href="quiz.html">Quiz</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="recruiters.html">For recruiters</a>
+          <a href="for-parents.html">For parents</a>
+          <a href="trust.html">Trust</a>
+          <a href="about.html">About</a>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary nav-cta">Start free</a>
+        </div>
       </div>
     </div>
   </nav>
@@ -96,7 +107,7 @@
       <h1>Show up ready for the <span class="accent">case</span></h1>
       <p class="sub">MBB, strategy, case work. Consulting recruiters want case competition wins, client impact, and structured thinking. We score your resume exactly how McKinsey and BCG do—so you pass the resume cut before the interview.</p>
       <div class="cta">
-        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Run Your Audit</a>
+        <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Run Your Audit</a>
         <a href="#gaps" class="btn-primary" style="background: transparent; border: 1px solid var(--con-accent); color: var(--con-accent);">See What We Fix</a>
       </div>
       <div class="con-stats">
@@ -173,24 +184,31 @@
     <div class="container">
       <h2>Resume cut first. Then case. Then behavioral.</h2>
       <p>Don't blow it on the resume.</p>
-      <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Consulting Audit</a>
+      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Consulting Audit</a>
     </div>
   </section>
 
-  <footer style="border-top: 1px solid var(--con-border); padding: 2rem 1.5rem;">
-    <div style="max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-      <span class="footer-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></span>
-      <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; flex-wrap: wrap; justify-content: center;">
-        <a href="index.html" style="color: var(--con-muted); text-decoration: none;">Home</a>
-        <a href="features.html" style="color: var(--con-muted); text-decoration: none;">Features</a>
-        <a href="how-it-works.html" style="color: var(--con-muted); text-decoration: none;">How It Works</a>
-        <a href="tracks.html" style="color: var(--con-muted); text-decoration: none;">Tracks</a>
-        <a href="pricing.html" style="color: var(--con-muted); text-decoration: none;">Pricing</a>
-        <a href="about.html" style="color: var(--con-muted); text-decoration: none;">About</a>
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly" width="32" height="32"><span>Dilly</span></span>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="the-app.html">The app</a>
+        <a href="your-journey.html">Your journey</a>
+        <a href="tracks.html">Tracks</a>
+        <a href="quiz.html">Quiz</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="recruiters.html">For recruiters</a>
+        <a href="for-parents.html">For parents</a>
+        <a href="trust.html">Trust</a>
+        <a href="about.html">About</a>
       </div>
     </div>
-    <p style="font-size: 0.75rem; color: var(--con-muted); margin-top: 1.5rem; text-align: center;">© <span id="year"></span> Meridian. The career center in your pocket.</p>
+    <p class="footer-copy">© <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script src="site-nav.js"></script>
 </body>
 </html>

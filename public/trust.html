@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trust | Dilly</title>
+  <meta name="description" content=".edu verification, student-owned data, explainable scores — Meridian Truth Standard.">
+  <link rel="canonical" href="https://trydilly.com/trust.html">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><img src="dilly-logo.png" alt="Dilly" width="40" height="40"><span>Dilly</span></a>
+      <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
+      <div class="nav-menu-panel" id="navMenuPanel">
+        <div class="nav-links">
+          <a href="features.html">Features</a>
+          <a href="how-it-works.html">How it works</a>
+          <a href="the-app.html">The app</a>
+          <a href="your-journey.html">Your journey</a>
+          <a href="tracks.html">Tracks</a>
+          <a href="quiz.html">Quiz</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="recruiters.html">For recruiters</a>
+          <a href="for-parents.html">For parents</a>
+          <a href="trust.html">Trust</a>
+          <a href="about.html">About</a>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary nav-cta">Start free</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <section class="page-hero">
+    <div class="container-narrow">
+      <h1 class="text-center">Trust is the product</h1>
+      <p class="section-sub text-center">Delight gets you in the door; integrity keeps the network valuable.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container-tight">
+      <ul class="trust-check">
+        <li>.edu verification — student-only accounts.</li>
+        <li>Your data is yours; we don’t sell it.</li>
+        <li>HTTPS, download-your-data, clear security posture.</li>
+        <li>Voice explains why; admits uncertainty when evidence is thin.</li>
+        <li>Optional controls for what persists from chat to profile.</li>
+        <li>Prestige-neutral scoring — evidence over brand-name flex.</li>
+      </ul>
+
+      <div class="trust-dark-box">
+        <h2>Meridian Truth Standard</h2>
+        <p>Scores and tips trace back to your resume. No hollow hype. If something’s wrong, it’s a bug in the engine — not on you.</p>
+        <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+          <label for="saveToggle">Demo: “Save Voice notes to profile”</label>
+          <input type="checkbox" id="saveToggle" checked />
+        </div>
+        <p id="privacyNote" style="color:#c9a882;font-weight:700;margin-top:0.65rem;margin-bottom:0;"></p>
+      </div>
+
+      <p class="text-center" style="margin-top:2rem;"><a href="https://app.trydilly.com" class="btn-primary" target="_blank" rel="noopener noreferrer">Open Dilly</a></p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly" width="32" height="32"><span>Dilly</span></span>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="features.html">Features</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="the-app.html">The app</a>
+        <a href="your-journey.html">Your journey</a>
+        <a href="tracks.html">Tracks</a>
+        <a href="quiz.html">Quiz</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="recruiters.html">For recruiters</a>
+        <a href="for-parents.html">For parents</a>
+        <a href="trust.html">Trust</a>
+        <a href="about.html">About</a>
+      </div>
+    </div>
+    <p class="footer-copy">© <span id="year"></span> Dilly. The career center in your pocket.</p>
+  </footer>
+  <script src="site-nav.js"></script>
+  <script src="analytics.js"></script>
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+    (function () {
+      var t = document.getElementById("saveToggle");
+      var n = document.getElementById("privacyNote");
+      if (!t || !n) return;
+      function sync() {
+        n.textContent = t.checked
+          ? "When on, Voice can enrich coaching from saved notes. When off, chat stays ephemeral beyond what you choose to save."
+          : "Demo: saving off — in the app, Voice avoids persisting expansions unless you opt back in.";
+      }
+      t.addEventListener("change", sync);
+      sync();
+    })();
+  </script>
+</body>
+</html>

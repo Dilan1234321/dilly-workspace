@@ -3,17 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tracks | Meridian</title>
-  <meta name="description" content="Meridian supports Pre-Health, Pre-Law, Tech, Finance, Consulting, Business, Science, Communications, Education, Arts, and Humanities. Each track gets advice tailored to its field.">
-  <link rel="canonical" href="https://meridian-careers.com/tracks.html">
-  <meta property="og:url" content="https://meridian-careers.com/tracks.html">
+  <title>Tracks | Dilly</title>
+  <meta name="description" content="Dilly supports Pre-Health, Pre-Law, Tech, Finance, Consulting, Business, Science, Communications, Education, Arts, and Humanities. Each track gets advice tailored to its field.">
+  <link rel="canonical" href="https://trydilly.com/tracks.html">
+  <meta property="og:url" content="https://trydilly.com/tracks.html">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      --dilly-bg: #0f0f0f;
+      --dilly-surface: #1a1a1a;
+      --dilly-taupe-bright: #e8e4df;
+      --dilly-taupe-muted: #8a8279;
+      --dilly-border: rgba(179, 167, 157, 0.15);
       --arts-accent: #d4a574;
       --tech-accent: #22d3ee;
       --ph-accent: #0d9488;
@@ -26,27 +30,32 @@
       --edu-accent: #14b8a6;
       --hum-accent: #b45309;
     }
-    nav { background: rgba(26, 25, 23, 0.88); backdrop-filter: blur(20px) saturate(180%); }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--dilly-bg); color: var(--dilly-taupe-bright); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; border-bottom: 1px solid var(--dilly-border); background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(12px); }
     .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
     .nav-links { display: flex; align-items: center; gap: 1.5rem; }
-    .nav-links a { font-size: 0.875rem; color: var(--meridian-taupe-muted); text-decoration: none; transition: color 0.2s; }
-    .nav-links a:hover, .nav-links a.nav-active { color: var(--meridian-taupe-bright); }
+    .nav-links a { font-size: 0.875rem; color: var(--dilly-taupe-muted); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.nav-active { color: var(--dilly-taupe-bright); }
+    .btn-primary { display: inline-block; padding: 0.625rem 1.25rem; border-radius: 0.75rem; background: var(--dilly-taupe-bright); color: #080808; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+    .btn-primary:hover { background: #fff; }
     .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
     section { padding: 6rem 0 5rem; }
     h1 { font-size: 2rem; font-weight: 700; margin: 0 0 0.5rem; }
     @media (min-width: 768px) { h1 { font-size: 2.5rem; } }
-    .section-sub { color: var(--meridian-taupe-muted); font-size: 1.125rem; margin-bottom: 3rem; }
+    .section-sub { color: var(--dilly-taupe-muted); font-size: 1.125rem; margin-bottom: 3rem; }
     .track-grid { display: grid; gap: 1rem; }
     @media (min-width: 640px) { .track-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (min-width: 1024px) { .track-grid { grid-template-columns: repeat(3, 1fr); } }
     .track-card {
       display: block;
       padding: 1.5rem 1.75rem;
-      border: 1px solid var(--meridian-border);
-      background: var(--meridian-surface);
+      border: 1px solid var(--dilly-border);
+      background: var(--dilly-surface);
       border-radius: 1rem;
       text-decoration: none;
-      color: var(--meridian-taupe-bright);
+      color: var(--dilly-taupe-bright);
       transition: all 0.2s;
     }
     .track-card:hover {
@@ -63,13 +72,13 @@
     .track-card[data-accent="com"]:hover { border-color: rgba(249, 115, 22, 0.4); background: #1a1410; }
     .track-card[data-accent="edu"]:hover { border-color: rgba(20, 184, 166, 0.4); background: #0f1818; }
     .track-card[data-accent="hum"]:hover { border-color: rgba(180, 83, 9, 0.4); background: #1a1610; }
-    .track-card[data-accent="default"]:hover { border-color: rgba(201, 168, 130, 0.4); background: var(--m-surface-2); }
+    .track-card[data-accent="default"]:hover { border-color: rgba(201, 168, 130, 0.4); background: #242424; }
     .track-card .icon { font-size: 1.5rem; margin-bottom: 0.5rem; display: block; }
     .track-card .accent-arts { color: var(--arts-accent); }
     .track-card .accent-tech { color: var(--tech-accent); }
     .track-card .accent-ph { color: var(--ph-accent); }
     .track-card h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.25rem; }
-    .track-card .tagline { font-size: 0.8125rem; color: var(--meridian-taupe-muted); margin: 0; line-height: 1.4; }
+    .track-card .tagline { font-size: 0.8125rem; color: var(--dilly-taupe-muted); margin: 0; line-height: 1.4; }
     .track-card .arrow { margin-top: 0.75rem; font-size: 0.8125rem; opacity: 0.7; }
     .track-card[data-accent="arts"] .arrow { color: var(--arts-accent); }
     .track-card[data-accent="tech"] .arrow { color: var(--tech-accent); }
@@ -82,28 +91,40 @@
     .track-card[data-accent="com"] .arrow { color: var(--com-accent); }
     .track-card[data-accent="edu"] .arrow { color: var(--edu-accent); }
     .track-card[data-accent="hum"] .arrow { color: var(--hum-accent); }
-    .track-card[data-accent="default"] .arrow { color: var(--meridian-taupe-muted); }
-    footer { border-top: 1px solid var(--meridian-border); padding: 2rem 1.5rem; text-align: center; }
+    .track-card[data-accent="default"] .arrow { color: var(--dilly-taupe-muted); }
+    footer { border-top: 1px solid var(--dilly-border); padding: 2rem 1.5rem; text-align: center; }
     .footer-inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1rem; }
     .footer-links { display: flex; gap: 1.5rem; justify-content: center; font-size: 0.875rem; flex-wrap: wrap; }
-    .footer-links a { color: var(--meridian-taupe-muted); text-decoration: none; }
-    .footer-links a:hover { color: var(--meridian-taupe-bright); }
-    .footer-copy { font-size: 0.75rem; color: var(--meridian-taupe-muted); }
+    .footer-links a { color: var(--dilly-taupe-muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--dilly-taupe-bright); }
+    .footer-copy { font-size: 0.75rem; color: var(--dilly-taupe-muted); }
     .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; letter-spacing: -0.02em; color: inherit; text-decoration: none; }
     .nav-logo img { height: 40px; width: auto; display: block; }
     .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
     .footer-logo img { height: 32px; width: auto; display: block; }
   </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="tracks-hub">
   <nav>
     <div class="nav-inner">
-      <a href="index.html" class="nav-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></a>
-      <div class="nav-links">
-        <a href="features.html">Features</a>
-        <a href="tracks.html" class="nav-active">Tracks</a>
-        <a href="pricing.html">Pricing</a>
-        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
+      <a href="index.html" class="nav-logo"><img src="dilly-logo.png" alt="Dilly" width="40" height="40"><span>Dilly</span></a>
+      <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
+      <div class="nav-menu-panel" id="navMenuPanel">
+        <div class="nav-links">
+          <a href="features.html">Features</a>
+          <a href="how-it-works.html">How it works</a>
+          <a href="the-app.html">The app</a>
+          <a href="your-journey.html">Your journey</a>
+          <a href="tracks.html">Tracks</a>
+          <a href="quiz.html">Quiz</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="recruiters.html">For recruiters</a>
+          <a href="for-parents.html">For parents</a>
+          <a href="trust.html">Trust</a>
+          <a href="about.html">About</a>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary nav-cta">Start free</a>
+        </div>
       </div>
     </div>
   </nav>
@@ -111,7 +132,7 @@
   <section>
     <div class="container">
       <h1>Built for your track</h1>
-      <p class="section-sub">Each track leans into its field's vibe. Click one to see majors, benchmarks, and what we score. <a href="quiz.html" style="color: var(--meridian-accent);">Not sure? Find your track</a>.</p>
+      <p class="section-sub">Each track leans into its field's vibe. Click one to see majors, benchmarks, and what we score. <a href="quiz.html" style="color: var(--dilly-accent);">Not sure? Find your track</a>.</p>
       <div class="track-grid">
         <a href="track-pre-health.html" class="track-card" data-accent="ph">
           <span class="icon accent-ph">🏥</span>
@@ -184,19 +205,26 @@
   </section>
 
   <footer>
-    <div class="footer-inner" style="flex-direction: column;">
-      <span class="footer-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></span>
+    <div class="footer-inner">
+      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly" width="32" height="32"><span>Dilly</span></span>
       <div class="footer-links">
         <a href="index.html">Home</a>
         <a href="features.html">Features</a>
-        <a href="how-it-works.html">How It Works</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="the-app.html">The app</a>
+        <a href="your-journey.html">Your journey</a>
         <a href="tracks.html">Tracks</a>
+        <a href="quiz.html">Quiz</a>
         <a href="pricing.html">Pricing</a>
+        <a href="recruiters.html">For recruiters</a>
+        <a href="for-parents.html">For parents</a>
+        <a href="trust.html">Trust</a>
         <a href="about.html">About</a>
       </div>
     </div>
-    <p class="footer-copy">© <span id="year"></span> Meridian. The career center in your pocket.</p>
+    <p class="footer-copy">© <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
   <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script src="site-nav.js"></script>
 </body>
 </html>

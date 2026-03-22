@@ -5,17 +5,17 @@
 }
 
 :root {
-  --meridian-bg: #0f0f0f;
-  --meridian-bg-deep: #080808;
-  --meridian-surface: #1a1a1a;
-  --meridian-surface-raised: #242424;
-  --meridian-taupe: #b3a79d;
-  --meridian-taupe-bright: #e8e4df;
-  --meridian-taupe-muted: #8a8279;
-  --meridian-accent: #c9a882;
-  --meridian-accent-hover: #d4b896;
-  --meridian-border: rgba(179, 167, 157, 0.15);
-  --meridian-gradient: linear-gradient(135deg, #c9a882 0%, #b3a79d 50%, #8a8279 100%);
+  --dilly-bg: #0f0f0f;
+  --dilly-bg-deep: #080808;
+  --dilly-surface: #1a1a1a;
+  --dilly-surface-raised: #242424;
+  --dilly-taupe: #b3a79d;
+  --dilly-taupe-bright: #e8e4df;
+  --dilly-taupe-muted: #8a8279;
+  --dilly-accent: #c9a882;
+  --dilly-accent-hover: #d4b896;
+  --dilly-border: rgba(179, 167, 157, 0.15);
+  --dilly-gradient: linear-gradient(135deg, #c9a882 0%, #b3a79d 50%, #8a8279 100%);
 }
 
 html {
@@ -23,14 +23,14 @@ html {
 }
 
 body {
-  background: var(--meridian-bg);
-  color: var(--meridian-taupe-bright);
+  background: var(--dilly-bg);
+  color: var(--dilly-taupe-bright);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .text-gradient {
-  background: var(--meridian-gradient);
+  background: var(--dilly-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

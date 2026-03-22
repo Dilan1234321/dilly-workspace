@@ -3,22 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Find Your Track | Meridian</title>
-  <meta name="description" content="Pick your primary career goal—we'll suggest the best Meridian track for you: Pre-Health, Tech, Finance, Consulting, and more.">
+  <title>Find Your Track | Dilly</title>
+  <meta name="description" content="Pick your primary career goal—we'll suggest the best Dilly track for you: Pre-Health, Tech, Finance, Consulting, and more.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <nav>
     <div class="nav-inner">
-      <a href="index.html" class="nav-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></a>
-      <div class="nav-links">
-        <a href="features.html">Features</a>
-        <a href="tracks.html">Tracks</a>
-        <a href="pricing.html">Pricing</a>
-        <a href="https://app.meridian-careers.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Start free</a>
+      <a href="index.html" class="nav-logo"><img src="dilly-logo.png" alt="Dilly" width="40" height="40"><span>Dilly</span></a>
+      <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
+      <div class="nav-menu-panel" id="navMenuPanel">
+        <div class="nav-links">
+          <a href="features.html">Features</a>
+          <a href="how-it-works.html">How it works</a>
+          <a href="the-app.html">The app</a>
+          <a href="your-journey.html">Your journey</a>
+          <a href="tracks.html">Tracks</a>
+          <a href="quiz.html">Quiz</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="recruiters.html">For recruiters</a>
+          <a href="for-parents.html">For parents</a>
+          <a href="trust.html">Trust</a>
+          <a href="about.html">About</a>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary nav-cta">Start free</a>
+        </div>
       </div>
     </div>
   </nav>
@@ -32,23 +43,29 @@
         <div class="quiz-options" id="quiz-options"></div>
         <div class="quiz-result" id="quiz-result"></div>
       </div>
-      <p style="margin-top: 1.5rem;"><a href="tracks.html" style="color: var(--meridian-accent);">Browse all tracks →</a></p>
+      <p style="margin-top: 1.5rem;"><a href="tracks.html" style="color: var(--dilly-accent);">Browse all tracks →</a></p>
     </div>
   </section>
 
   <footer>
     <div class="footer-inner">
-      <span class="footer-logo"><img src="meridian-logo.png" alt="Meridian"><span>Meridian</span></span>
+      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly" width="32" height="32"><span>Dilly</span></span>
       <div class="footer-links">
         <a href="index.html">Home</a>
         <a href="features.html">Features</a>
-        <a href="how-it-works.html">How It Works</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="the-app.html">The app</a>
+        <a href="your-journey.html">Your journey</a>
         <a href="tracks.html">Tracks</a>
+        <a href="quiz.html">Quiz</a>
         <a href="pricing.html">Pricing</a>
+        <a href="recruiters.html">For recruiters</a>
+        <a href="for-parents.html">For parents</a>
+        <a href="trust.html">Trust</a>
         <a href="about.html">About</a>
       </div>
     </div>
-    <p class="footer-copy">© <span id="year"></span> Meridian. The career center in your pocket.</p>
+    <p class="footer-copy">© <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
 
   <script>
@@ -75,11 +92,12 @@
         btn.onclick = function() {
           var slug = o.r.toLowerCase().replace(/\s/g, '-');
           resEl.style.display = 'block';
-          resEl.innerHTML = 'Your track: <strong>' + o.r + '</strong>. <a href="track-' + slug + '.html" style="color: var(--meridian-accent);">View track →</a>';
+          resEl.innerHTML = 'Your track: <strong>' + o.r + '</strong>. <a href="track-' + slug + '.html" style="color: var(--dilly-accent);">View track →</a>';
         };
         optsEl.appendChild(btn);
       });
     })();
   </script>
+  <script src="site-nav.js"></script>
 </body>
 </html>
