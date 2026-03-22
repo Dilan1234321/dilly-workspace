@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Span — One journey from first lesson to first job</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #1b1f24;
+      --muted: #5c6470;
+      --paper: #fffef9;
+      --lime: #49c04a;
+      --lime-dark: #2f9a3a;
+      --sky: #1da1f2;
+      --sun: #ffce00;
+      --lavender: #e8e0ff;
+      --radius: 16px;
+      --radius-lg: 28px;
+      --shadow: 0 8px 24px rgba(27, 31, 36, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Nunito", system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    a { color: var(--lime-dark); text-decoration: none; font-weight: 700; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 254, 249, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid #e8ebe4;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 0;
+      gap: 1rem;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 1.35rem;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .logo span { color: var(--lime-dark); }
+    nav ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 1.25rem;
+      align-items: center;
+    }
+    nav a {
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 10px;
+    }
+    nav a:hover { background: #eef7ee; text-decoration: none; }
+    nav a[aria-current="page"] { background: #dff5df; color: var(--lime-dark); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.35rem;
+      border-radius: 999px;
+      font-weight: 800;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    .btn-primary {
+      background: var(--lime);
+      color: #fff;
+      box-shadow: 0 4px 0 var(--lime-dark);
+    }
+    .btn-primary:hover { filter: brightness(1.05); text-decoration: none; }
+    .btn-ghost {
+      background: #fff;
+      border-color: #d5dad3;
+      color: var(--ink);
+    }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.5rem 0.85rem;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 768px) {
+      .menu-toggle { display: block; }
+      nav {
+        width: 100%;
+        display: none;
+        padding-bottom: 0.75rem;
+      }
+      nav.open { display: block; }
+      nav ul { flex-direction: column; align-items: flex-start; }
+    }
+    .hero {
+      padding: 3rem 0 3.5rem;
+      display: grid;
+      gap: 2rem;
+      align-items: center;
+    }
+    @media (min-width: 860px) {
+      .hero { grid-template-columns: 1.1fr 0.9fr; padding: 4rem 0 4.5rem; }
+    }
+    .badge {
+      display: inline-block;
+      background: var(--lavender);
+      color: #4a3d7a;
+      font-weight: 800;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 2.85rem);
+      line-height: 1.12;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 36rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .card-stack {
+      display: grid;
+      gap: 1rem;
+    }
+    .card {
+      background: #fff;
+      border: 2px solid #e4e8e1;
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.35rem;
+      box-shadow: var(--shadow);
+    }
+    .card h3 { font-size: 1.05rem; margin-bottom: 0.35rem; }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .pill {
+      background: #f3f6f1;
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    section { padding: 2.5rem 0; }
+    section.alt { background: linear-gradient(180deg, #f4faf4 0%, var(--paper) 100%); }
+    h2 {
+      font-size: 1.65rem;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .grid-3 {
+      display: grid;
+      gap: 1rem;
+    }
+    @media (min-width: 700px) {
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    }
+    .step {
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      border: 2px dashed #c9d4c4;
+      background: #fff;
+    }
+    .step strong { display: block; font-size: 1.1rem; margin-bottom: 0.35rem; }
+    footer {
+      border-top: 2px solid #e8ebe4;
+      padding: 2rem 0;
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav-bar">
+      <a class="logo" href="index.html">Span<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html" aria-current="page">Home</a></li>
+          <li><a href="analysis.html">Duolingo analysis</a></li>
+          <li><a href="learners.html">Learners</a></li>
+          <li><a href="principles.html">Principles</a></li>
+          <li><a href="path.html">The path</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <div>
+        <p class="badge">Vision · education that grows with you</p>
+        <h1>One brand, every age — without talking down or burning out.</h1>
+        <p class="lede">
+          The thesis: the company that wins learners from elementary through college will feel less like “school software”
+          and more like a habit you actually want — clear, kind, streak-aware, and serious underneath the play.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="analysis.html">Read the Duolingo breakdown</a>
+          <a class="btn btn-ghost" href="learners.html">See the learner ladder</a>
+        </div>
+      </div>
+      <div class="card-stack">
+        <div class="card">
+          <h3>Why Duolingo is the reference</h3>
+          <p>They mapped the same product family across ABC (early literacy), core app (teens & adults), Schools (classrooms), and high-stakes English Test — one mascot economy, one tone, many doors.</p>
+          <div class="pill-row">
+            <span class="pill">Habit loops</span>
+            <span class="pill">Free core</span>
+            <span class="pill">Teacher layer</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>What we’re building toward</h3>
+          <p>A single through-line for skill growth: playful when you’re young, rigorous when it counts, and respectful of attention at every stage.</p>
+          <div class="pill-row">
+            <span class="pill">Meridian-aligned</span>
+            <span class="pill">Truth + momentum</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="alt">
+      <div class="wrap">
+        <h2>The flywheel in three beats</h2>
+        <div class="grid-3">
+          <div class="step">
+            <strong>1 · Delight first</strong>
+            Short sessions, visible progress, and personality that earns trust — so kids come back and teens don’t feel patronized.
+          </div>
+          <div class="step">
+            <strong>2 · Structure second</strong>
+            Standards, dashboards, and proof for teachers and institutions — the same engine, with roles and permissions.
+          </div>
+          <div class="step">
+            <strong>3 · Stakes when ready</strong>
+            When outcomes matter (certs, applications, hiring), the UX stays familiar while the bar goes up — no rebrand whiplash.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Where to go next</h2>
+        <p class="lede" style="margin-bottom:1rem;">Each page is self-contained (CSS and JS inline) and links to the rest of the mini-site.</p>
+        <ul style="margin-left:1.25rem; color:var(--muted); font-weight:600;">
+          <li><a href="analysis.html">Duolingo analysis</a> — full report: brand, IA, monetization, risks.</li>
+          <li><a href="learners.html">Learners</a> — elementary, high school, college as one journey.</li>
+          <li><a href="principles.html">Principles</a> — colors, voice, and product rules to copy ethically.</li>
+          <li><a href="path.html">The path</a> — how Meridian-style “truth” fits the same ladder.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Span is a vision prototype in <code>website v2</code> — not affiliated with Duolingo. Built for Dilan’s roadmap thinking.</p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (!btn || !nav) return;
+      btn.addEventListener("click", function () {
+        var open = nav.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    })();
+  </script>
+</body>
+</html>

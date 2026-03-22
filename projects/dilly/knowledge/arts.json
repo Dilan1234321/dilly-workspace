@@ -1,0 +1,77 @@
+{
+  "track": "Arts",
+  "last_updated": "2026-03",
+  "sources": [
+    "AIGA (American Institute of Graphic Arts) Design Careers",
+    "Creative Mornings and Design Industry Surveys",
+    "NASAD (National Association of Schools of Art and Design) Standards",
+    "Art Directors Club and One Club Career Resources",
+    "LinkedIn Creative and Design Hiring Trends"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Academic Rigor and Craft",
+      "what_counts": [
+        "Art, Design, Film, Music, Theatre, or related major",
+        "Relevant coursework: design theory, art history, production, technique",
+        "Honors, awards, or scholarships in the discipline",
+        "Academic distinction (dean's list, portfolio review recognition)",
+        "Cross-disciplinary study that strengthens craft"
+      ]
+    },
+    "grit": {
+      "label": "Portfolio and Productions",
+      "what_counts": [
+        "Exhibitions, performances, screenings, or shows with dates and venue",
+        "Production roles with clear ownership (director, designer, lead)",
+        "Quantified impact: audience size, reach, collaborations",
+        "Freelance or client work with deliverables",
+        "Awards, competitions, or festival selections",
+        "Sustained commitment to a body of work"
+      ]
+    },
+    "build": {
+      "label": "Concrete Work Evidence",
+      "what_counts": [
+        "Portfolio link with specific projects named",
+        "Projects with client, venue, or context",
+        "Roles in productions: design, direction, performance, technical",
+        "Collaborations with named artists, orgs, or brands",
+        "Tools and mediums: Adobe Suite, Figma, Pro Tools, etc.",
+        "Outcomes: awards, audience reach, publication, or distribution"
+      ]
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No portfolio link or work samples",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Portfolio is non-negotiable. Create a simple site (Behance, Cargo, Squarespace). Include 5-8 strongest projects with context, role, and outcome."
+    },
+    {
+      "gap": "Projects lack context, role, or outcome",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Every project needs: what it was, your role, who it was for (or 'personal'), and the outcome (audience, award, client feedback). Name the medium and tools."
+    },
+    {
+      "gap": "No exhibitions, performances, or productions",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Seek opportunities: student shows, local galleries, theatre productions, film festivals, design competitions. Even one public presentation is a signal."
+    },
+    {
+      "gap": "Resume reads like a job seeker, not a creative",
+      "severity": "moderate",
+      "dimension": "smart",
+      "fix": "Use discipline-specific language. Name your medium, style, or focus. List relevant coursework and awards. Show you think like a practitioner."
+    },
+    {
+      "gap": "No quantified impact (audience, reach, collaborations)",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Add numbers where possible: audience size, followers, collaborators, pieces in show, run length. 'Exhibited in group show of 8 artists' beats 'exhibited work.'"
+    }
+  ]
+}

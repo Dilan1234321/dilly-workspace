@@ -1,0 +1,57 @@
+{
+  "Pre-Health": {
+    "Smart": { "tier_1": 85, "recommendations": [{ "title": "Research Depth", "action": "Apply to a wet-lab research assistantship to increase academic rigor." }] },
+    "Grit": { "tier_1": 80, "recommendations": [{ "title": "Clinical Hours", "action": "Increase clinical exposure via EMT certification or scribing." }] },
+    "Build": { "tier_1": 70, "recommendations": [{ "title": "Community Service", "action": "Volunteer 50+ hours in an underserved health clinic." }] }
+  },
+  "Pre-Law": {
+    "Smart": { "tier_1": 90, "recommendations": [{ "title": "Analytical Writing", "action": "Submit a paper to a law-related undergraduate journal." }] },
+    "Grit": { "tier_1": 85, "recommendations": [{ "title": "Advocacy", "action": "Join a mock trial or debate team to build public speaking grit." }] },
+    "Build": { "tier_1": 75, "recommendations": [{ "title": "Legal Internship", "action": "Seek a summer internship at a local law firm or courthouse." }] }
+  },
+  "Tech": {
+    "Smart": { "tier_1": 80, "recommendations": [{ "title": "Technical Rigor", "action": "Add relevant coursework or certifications (e.g. AWS, algorithms) to strengthen academic signal." }] },
+    "Grit": { "tier_1": 85, "recommendations": [{ "title": "Project Velocity", "action": "Ship a side project or contribute to open source; aim for 3+ commits per week." }] },
+    "Build": { "tier_1": 80, "recommendations": [{ "title": "Stack Depth", "action": "Name concrete tools and languages (Python, SQL, React, etc.) and at least one deployed or portfolio project." }] }
+  },
+  "Science": {
+    "Smart": { "tier_1": 82, "recommendations": [{ "title": "Research Signal", "action": "List lab work, methods, or publications to demonstrate scientific inquiry." }] },
+    "Grit": { "tier_1": 80, "recommendations": [{ "title": "Quantifiable Impact", "action": "Add numbers: hours per week, sample size, outcomes, or grant amounts." }] },
+    "Build": { "tier_1": 70, "recommendations": [{ "title": "Research Longevity", "action": "Show sustained research (e.g. 2+ years in one lab) with clear date ranges." }] }
+  },
+  "Business": {
+    "Smart": { "tier_1": 78, "recommendations": [{ "title": "Academic Consistency", "action": "Highlight honors, relevant coursework, or certifications (e.g. CFA, Excel)." }] },
+    "Grit": { "tier_1": 85, "recommendations": [{ "title": "Leadership Density", "action": "Name specific roles (President, Director, Lead) and outcomes with percentages or dollar impact." }] },
+    "Build": { "tier_1": 72, "recommendations": [{ "title": "Analytics Proof", "action": "Mention tools (Excel, Tableau) and quantifiable results (revenue, conversion, growth)." }] }
+  },
+  "Finance": {
+    "Smart": { "tier_1": 80, "recommendations": [{ "title": "Quant and Certifications", "action": "Highlight CFA/CPA progress, Excel and modeling coursework, and finance/accounting rigor." }] },
+    "Grit": { "tier_1": 85, "recommendations": [{ "title": "Quantifiable Impact", "action": "Add $ or % to every relevant bullet; name deal, audit, or transaction scope." }] },
+    "Build": { "tier_1": 75, "recommendations": [{ "title": "Audit/Advisory Proof", "action": "List audit, tax, or advisory internships with deliverables; add valuation or modeling exposure." }] }
+  },
+  "Consulting": {
+    "Smart": { "tier_1": 80, "recommendations": [{ "title": "Analytical Rigor", "action": "Highlight strategy, econ, or analytics coursework and structured problem-solving." }] },
+    "Grit": { "tier_1": 85, "recommendations": [{ "title": "Client Impact", "action": "Add $ or % outcomes and name deliverables (e.g. recommendation, framework)." }] },
+    "Build": { "tier_1": 75, "recommendations": [{ "title": "Consulting Proof", "action": "List consulting internships, case competitions, or client projects with clear outcomes." }] }
+  },
+  "Communications": {
+    "Smart": { "tier_1": 75, "recommendations": [{ "title": "Relevant Coursework", "action": "List writing, media, or PR courses to strengthen academic signal." }] },
+    "Grit": { "tier_1": 82, "recommendations": [{ "title": "Portfolio Impact", "action": "Add reach, engagement, or campaign outcomes with numbers." }] },
+    "Build": { "tier_1": 70, "recommendations": [{ "title": "Content and Campaigns", "action": "Name specific campaigns, channels, or content types and their impact." }] }
+  },
+  "Education": {
+    "Smart": { "tier_1": 78, "recommendations": [{ "title": "Certifications", "action": "Add teaching or subject-area certifications and date earned." }] },
+    "Grit": { "tier_1": 80, "recommendations": [{ "title": "Teaching Experience", "action": "List tutoring, mentoring, or classroom roles with clear date ranges and outcomes." }] },
+    "Build": { "tier_1": 72, "recommendations": [{ "title": "Student Impact", "action": "Quantify impact (students served, hours, grade improvement) where possible." }] }
+  },
+  "Arts": {
+    "Smart": { "tier_1": 75, "recommendations": [{ "title": "Academic Rigor", "action": "List relevant coursework, awards, or honors to strengthen academic signal." }] },
+    "Grit": { "tier_1": 78, "recommendations": [{ "title": "Portfolio and Productions", "action": "Add links or descriptions of exhibitions, performances, reels, or design projects." }] },
+    "Build": { "tier_1": 70, "recommendations": [{ "title": "Concrete Work", "action": "Name specific projects, roles, and outcomes (audience reach, awards, collaborations)." }] }
+  },
+  "Humanities": {
+    "Smart": { "tier_1": 78, "recommendations": [{ "title": "Research and Writing", "action": "Highlight publications, theses, or conference presentations." }] },
+    "Grit": { "tier_1": 80, "recommendations": [{ "title": "Quantifiable Impact", "action": "Add numbers where possible: readers served, events organized, hours taught." }] },
+    "Build": { "tier_1": 72, "recommendations": [{ "title": "Evidence of Analysis", "action": "Cite specific writing, research, or teaching outcomes with clear dates." }] }
+  }
+}

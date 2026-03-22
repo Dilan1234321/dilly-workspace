@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pydantic
+pypdf
+pymupdf
+docx2txt
+python-multipart
+reportlab
+requests
+beautifulsoup4
+scikit-learn
+openai
+python-dotenv
+resend
+stripe
+firebase-admin
+apns2

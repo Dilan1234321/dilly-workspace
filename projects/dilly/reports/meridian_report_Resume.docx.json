@@ -1,0 +1,19 @@
+{
+    "candidate_name": "Aidan Geller",
+    "major": "Computer Science",
+    "track": "Tech",
+    "scores": {
+        "smart": 100.0,
+        "grit": 97,
+        "build": 19
+    },
+    "final_score": 77.02,
+    "findings": [
+        "Smart: You showcased high academic standard due to your 3.50 GPA, honors recognition, and your research involvement.",
+        "Grit: You demonstrated leadership and impact through your leadership roles, your work and experience history.",
+        "Build: You demonstrated Tech readiness. Certifications: +5 pts.",
+        "Build: Research signal detected; Research Density 1 sem would add +20% weight."
+    ],
+    "status": "Draft Report",
+    "audit_ts": 1742225760
+}

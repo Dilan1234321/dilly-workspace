@@ -8,9 +8,9 @@ BASE_PATH = "/Users/dilankochhar/.openclaw/workspace"
 sys.path.append(BASE_PATH)
 sys.path.append(os.path.join(BASE_PATH, "projects/meridian"))
 
-from projects.meridian.meridian_engine import MeridianAI
-from projects.meridian.meridian_resume_auditor import MeridianResumeAuditor
-from projects.meridian.database_manager import MeridianDatabase
+from projects.dilly.meridian_engine import MeridianAI
+from projects.dilly.meridian_resume_auditor import MeridianResumeAuditor
+from projects.dilly.database_manager import MeridianDatabase
 import pypdf
 
 LOG_FILE = os.path.join(BASE_PATH, "core/memory/2026-02-27.md")

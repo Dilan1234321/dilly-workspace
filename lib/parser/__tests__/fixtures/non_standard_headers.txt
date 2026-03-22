@@ -1,0 +1,8 @@
+Nora Headers
+nora.headers@example.com
+
+PROFESSIONAL JOURNEY
+Acme Corp - Engineer - 2022-Present
+
+AREAS OF EXPERTISE
+Python, Data Analysis, Leadership

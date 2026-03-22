@@ -1,0 +1,319 @@
+/* Career Center: same design language as Recruiter (Talent Engine) */
+
+.career-center-talent {
+  --te-gold: #fdb913;
+  --te-gold-rgb: 253, 185, 19;
+  --te-bg-deep: #040a16;
+  --te-bg-card: linear-gradient(150deg, rgba(6, 16, 37, 0.94), rgba(4, 10, 22, 0.88));
+  --te-border: rgba(255, 255, 255, 0.13);
+  --te-border-gold: rgba(253, 185, 19, 0.46);
+  --te-text: #fff;
+  --te-text-muted: rgba(255, 255, 255, 0.74);
+  --te-text-soft: rgba(255, 255, 255, 0.84);
+  --te-radius: 12px;
+}
+
+.career-center-talent {
+  background: var(--bg);
+  color: var(--te-text);
+  min-height: 100%;
+}
+
+/* Career Hub (/career) + ATS + subscribed home shell: body default is warm --m-bg + grain; force cool
+   background so nothing “taupe” shows between scroll content and fixed minibar / bottom nav. */
+body:has(.career-hub-root),
+body:has(.ats-root),
+body:has(.app-talent),
+body:has(.score-page-root) {
+  background-color: var(--bg);
+  background-image: none;
+}
+
+body:has(.score-page-root),
+body:has(.leaderboard-page-root) {
+  background-color: #080809;
+}
+
+/* Cards: rounded rectangles like recruiter */
+.career-center-talent .cc-card {
+  background: var(--te-bg-card);
+  border: 1px solid var(--te-border);
+  border-radius: var(--te-radius);
+}
+
+.career-center-talent .cc-card:hover {
+  border-color: var(--te-border-gold);
+}
+
+/* Primary buttons */
+.career-center-talent .cc-btn {
+  border-radius: var(--te-radius);
+  border: 1px solid rgba(var(--te-gold-rgb), 0.5);
+  background: rgba(var(--te-gold-rgb), 0.15);
+  color: var(--te-gold);
+  font-family: var(--font-cinzel), serif;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.career-center-talent .cc-btn:hover {
+  background: rgba(var(--te-gold-rgb), 0.25);
+  border-color: var(--te-gold);
+}
+
+.career-center-talent .cc-btn-primary {
+  background: var(--te-gold);
+  color: #040a16;
+  border-color: var(--te-gold);
+}
+
+.career-center-talent .cc-btn-primary:hover {
+  background: #fdc933;
+  border-color: #fdc933;
+}
+
+/* Ghost / secondary */
+.career-center-talent .cc-btn-ghost {
+  background: transparent;
+  color: var(--te-text-soft);
+  border-color: var(--te-border);
+}
+
+.career-center-talent .cc-btn-ghost:hover {
+  color: var(--te-gold);
+  border-color: var(--te-border-gold);
+}
+
+/* Chips / small buttons */
+.career-center-talent .cc-chip {
+  border-radius: var(--te-radius);
+  border: 1px solid var(--te-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--te-text-soft);
+  font-family: var(--font-cinzel), serif;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.career-center-talent .cc-chip:hover {
+  border-color: var(--te-border-gold);
+  color: var(--te-text);
+}
+
+/* Ask Dilly suggestion chips: rounded rectangles, full width stacked */
+.career-center-talent .ask-dilly-chip {
+  border-radius: var(--te-radius);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--te-text-soft);
+  font-family: var(--font-cinzel), serif;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s ease;
+  min-width: 0;
+  text-align: left;
+  white-space: normal;
+  word-wrap: break-word;
+}
+.career-center-talent .ask-dilly-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--te-border-gold);
+  color: var(--te-text);
+  box-shadow: 0 0 0 1px rgba(var(--te-gold-rgb), 0.15);
+}
+
+/* Text hierarchy */
+.career-center-talent .cc-text-muted {
+  color: var(--te-text-muted);
+}
+
+.career-center-talent .cc-text-soft {
+  color: var(--te-text-soft);
+}
+
+.career-center-talent .cc-accent {
+  color: var(--te-gold);
+}
+
+/* Inputs (rounded rect) */
+.career-center-talent .cc-input,
+.career-center-talent input.cc-input,
+.career-center-talent textarea.cc-input {
+  border-radius: var(--te-radius);
+  border: 1px solid var(--te-border-gold);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--te-text);
+  padding: 0.6rem 0.75rem;
+}
+
+.career-center-talent .cc-input::placeholder {
+  color: var(--te-text-muted);
+}
+
+.career-center-talent .cc-input:focus {
+  outline: none;
+  border-color: var(--te-gold);
+  box-shadow: 0 0 0 2px rgba(var(--te-gold-rgb), 0.2);
+}
+
+/* Collapsible trigger */
+.career-center-talent .cc-collapse-trigger {
+  border-radius: var(--te-radius);
+  border: 1px solid var(--te-border);
+  background: var(--te-bg-card);
+  color: var(--te-text);
+}
+
+.career-center-talent .cc-collapse-trigger:hover {
+  border-color: var(--te-border-gold);
+}
+
+/* Alert / deadline card */
+.career-center-talent .cc-alert {
+  border-radius: var(--te-radius);
+  border: 1px solid var(--te-border);
+  border-left: 4px solid #ef4444;
+  background: var(--te-bg-card);
+}
+
+/* Section title (Cinzel) */
+.career-center-talent .cc-title {
+  font-family: var(--font-cinzel), serif;
+  color: var(--te-text);
+  font-weight: 700;
+}
+
+.career-center-talent .cc-kicker {
+  font-family: var(--font-cinzel), serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--te-gold);
+}
+
+/* Legacy cards inside Career Center: align with talent theme */
+.career-center-talent .m-rounded-card {
+  background: var(--te-bg-card) !important;
+  border: 1px solid var(--te-border) !important;
+  border-radius: var(--te-radius);
+}
+
+.career-center-talent .m-rounded-card:hover {
+  border-color: var(--te-border-gold);
+}
+
+/* Share card (the one users share): always white background so shared image is clean */
+.career-center-talent .share-card-canvas {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Map slate text to talent palette so existing Tailwind classes match */
+.career-center-talent .text-slate-100 { color: var(--te-text); }
+.career-center-talent .text-slate-200 { color: var(--te-text-soft); }
+.career-center-talent .text-slate-300 { color: var(--te-text-soft); }
+.career-center-talent .text-slate-400 { color: var(--te-text-muted); }
+.career-center-talent .text-slate-500 { color: var(--te-text-muted); }
+
+/* Form inputs in Career Center (edit profile, etc.) */
+.career-center-talent input:not([type="checkbox"]):not([type="radio"]),
+.career-center-talent textarea {
+  border-radius: var(--te-radius);
+  border-color: var(--te-border) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--te-text) !important;
+}
+.career-center-talent input::placeholder,
+.career-center-talent textarea::placeholder {
+  color: var(--te-text-muted);
+}
+
+/* ─── Calendar: Career Center design (var(--bg), var(--s2), var(--blue)) ─── */
+.career-center-talent .cal-grid-cell:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.career-center-talent .cal-grid-cell.cal-today {
+  background: var(--bdim) !important;
+  border: 1px solid var(--blue) !important;
+}
+.career-center-talent .cal-grid-cell.cal-selected {
+  background: var(--bdim) !important;
+  border: 1px solid var(--blue) !important;
+}
+.career-center-talent .cal-pill-main {
+  background: var(--bdim) !important;
+  border: 1px solid var(--blue) !important;
+  color: var(--t1) !important;
+}
+.career-center-talent .cal-pill-sub {
+  background: var(--s3) !important;
+  border: 1px solid var(--b1) !important;
+  color: var(--t3) !important;
+}
+.career-center-talent .cal-deadline-card,
+.career-center-talent .cal-confirm-card {
+  background: var(--s2) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 18px !important;
+}
+.career-center-talent .cal-confirm-pill {
+  background: var(--s3) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 12px !important;
+}
+.career-center-talent .cal-sub-pill {
+  background: var(--s3) !important;
+  border: 1px solid var(--b1) !important;
+}
+.career-center-talent .voice-chat-container {
+  background: var(--s2) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 18px !important;
+}
+
+/* ─── Resume Edit: Career Center design ─── */
+.career-center-talent .m-resume-section-card {
+  background: var(--s2) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 18px !important;
+  border-left: 4px solid var(--blue) !important;
+}
+.career-center-talent .m-resume-section-card:has(.m-resume-field:focus) {
+  border-color: var(--b1) !important;
+  border-left-color: var(--blue) !important;
+  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.15);
+}
+.career-center-talent .m-resume-entry-card {
+  background: var(--s3) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 12px !important;
+}
+.career-center-talent .m-resume-entry-card:has(.m-resume-field:focus) {
+  border-color: var(--blue) !important;
+}
+.career-center-talent .m-resume-field {
+  color: var(--t1) !important;
+}
+.career-center-talent .m-resume-field::placeholder {
+  color: var(--t3) !important;
+}
+.career-center-talent .m-resume-field:focus {
+  border-bottom-color: var(--blue) !important;
+  background: var(--bdim) !important;
+}
+.career-center-talent .m-resume-field:hover {
+  border-bottom-color: var(--b2) !important;
+}
+.career-center-talent .m-resume-add-btn {
+  border-color: var(--b2) !important;
+  color: var(--t3) !important;
+}
+.career-center-talent .m-resume-add-btn:hover {
+  color: var(--t2) !important;
+  border-color: var(--blue) !important;
+  background: var(--bdim) !important;
+}

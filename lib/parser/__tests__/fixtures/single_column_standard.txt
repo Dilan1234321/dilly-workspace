@@ -1,0 +1,17 @@
+Jane Smith
+jane.smith@university.edu | (555) 123-4567 | Tampa, FL
+
+EDUCATION
+University of Tampa
+B.S. in Marketing | GPA: 3.7/4.0
+Expected May 2025
+
+EXPERIENCE
+Acme Corp
+Marketing Intern
+Jan 2024 - Present
+* Led social media campaign
+* Increased engagement 20%
+
+SKILLS
+Python | SQL | Excel

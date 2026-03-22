@@ -1,0 +1,77 @@
+{
+  "track": "Education",
+  "last_updated": "2026-03",
+  "sources": [
+    "NEA (National Education Association) Teacher Preparation Standards",
+    "State DOE Certification Requirements (FL, NY, TX)",
+    "EdSurge and EdTech Hiring Reports",
+    "Teach For America and TNTP Selection Criteria",
+    "K-12 and Higher Ed Job Market Data"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Certifications and Subject-Area Prep",
+      "what_counts": [
+        "Education major or subject-area degree with education minor",
+        "Teaching certifications (state-specific) or certification in progress",
+        "Relevant coursework: pedagogy, curriculum, assessment, child development",
+        "Subject-area depth (e.g. Math, English, Science for secondary)",
+        "Honors or academic distinction"
+      ]
+    },
+    "grit": {
+      "label": "Teaching Experience and Ownership",
+      "what_counts": [
+        "Student teaching with clear placement and duration",
+        "Tutoring or mentoring with quantified hours and outcomes",
+        "Classroom roles: substitute, paraeducator, after-school",
+        "Leadership in education orgs (Future Educators, tutoring center)",
+        "Curriculum design or lesson planning with scope",
+        "Quantified impact: students served, hours, grade improvement"
+      ]
+    },
+    "build": {
+      "label": "Student Impact Evidence",
+      "what_counts": [
+        "Student teaching with cooperating teacher and school named",
+        "Tutoring outcomes: students served, subject areas, improvement",
+        "Lesson plans or curriculum units with clear scope",
+        "Field placements or practicum with dates and setting",
+        "Ed-tech or instructional design projects",
+        "Service in schools: volunteer, camp counselor, youth programs"
+      ]
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No student teaching or practicum before graduation",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Student teaching is required for certification in most states. Ensure your program includes a full practicum. List placement, grade level, and cooperating teacher."
+    },
+    {
+      "gap": "No teaching or tutoring experience",
+      "severity": "critical",
+      "dimension": "grit",
+      "fix": "Tutor through your university, volunteer at a local school, or work as a camp counselor. Even 20-50 hours of direct student contact is a baseline signal."
+    },
+    {
+      "gap": "Certification status not clear on resume",
+      "severity": "moderate",
+      "dimension": "smart",
+      "fix": "List certification (or 'In progress, expected [date]'). Name the state and subject area. Schools screen on this first."
+    },
+    {
+      "gap": "No quantified student impact",
+      "severity": "moderate",
+      "dimension": "build",
+      "fix": "Add numbers: students tutored, hours per week, grade improvement, or class size. 'Tutored 15 students in algebra' beats 'tutored students.'"
+    },
+    {
+      "gap": "Resume lacks education-specific language",
+      "severity": "moderate",
+      "dimension": "smart",
+      "fix": "Use terms recruiters expect: differentiated instruction, formative assessment, IEP, ELL, classroom management. Name your pedagogy coursework."
+    }
+  ]
+}

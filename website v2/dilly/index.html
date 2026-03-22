@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dilly — Your career center in your pocket</title>
+  <meta name="description" content="100% verified .edu students. Resume audit, ATS hub, jobs, pipeline, and Dilly AI — one app built for real students." />
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #141210;
+      --muted: #5c574f;
+      --paper: #fffbf5;
+      --gold: #c9a882;
+      --gold-deep: #a68562;
+      --leaf: #2d8a5e;
+      --leaf-soft: #e6f5ed;
+      --sky: #2b7fd1;
+      --radius: 16px;
+      --radius-lg: 26px;
+      --shadow: 0 10px 30px rgba(20, 18, 16, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Nunito", system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+    a { color: var(--leaf); text-decoration: none; font-weight: 700; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 251, 245, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid #ebe6de;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 0;
+      gap: 1rem;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 1.4rem;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .logo span { color: var(--gold-deep); }
+    nav ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 1.1rem;
+      align-items: center;
+    }
+    nav a {
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 0.92rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 10px;
+    }
+    nav a:hover { background: var(--leaf-soft); text-decoration: none; }
+    nav a[aria-current="page"] { background: #d4f0e3; color: var(--leaf); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.78rem 1.4rem;
+      border-radius: 999px;
+      font-weight: 800;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, var(--gold) 0%, var(--gold-deep) 100%);
+      color: #1a1208;
+      box-shadow: 0 4px 0 #7d5c3a;
+    }
+    .btn-primary:hover { filter: brightness(1.06); text-decoration: none; }
+    .btn-ghost {
+      background: #fff;
+      border-color: #d9d3c9;
+      color: var(--ink);
+    }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.5rem 0.85rem;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 768px) {
+      .menu-toggle { display: block; }
+      nav { width: 100%; display: none; padding-bottom: 0.75rem; }
+      nav.open { display: block; }
+      nav ul { flex-direction: column; align-items: flex-start; }
+    }
+    .hero {
+      padding: 2.75rem 0 3.25rem;
+      display: grid;
+      gap: 2rem;
+      align-items: center;
+    }
+    @media (min-width: 860px) {
+      .hero { grid-template-columns: 1.05fr 0.95fr; padding: 3.5rem 0 4rem; }
+    }
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #fff6e8, #e8f5ed);
+      color: #4a4035;
+      font-weight: 800;
+      font-size: 0.78rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+      border: 1px solid #e5ddd0;
+    }
+    h1 {
+      font-size: clamp(2rem, 5vw, 2.85rem);
+      line-height: 1.1;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      font-size: 1.12rem;
+      color: var(--muted);
+      max-width: 36rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .card-stack { display: grid; gap: 1rem; }
+    .card {
+      background: #fff;
+      border: 2px solid #e8e2d8;
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.35rem;
+      box-shadow: var(--shadow);
+    }
+    .card h3 { font-size: 1.05rem; margin-bottom: 0.4rem; }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.75rem; }
+    .pill {
+      background: #f4f1eb;
+      border-radius: 999px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--muted);
+    }
+    section { padding: 2.25rem 0; }
+    section.alt {
+      background: linear-gradient(180deg, #f7f9f4 0%, var(--paper) 55%);
+    }
+    h2 {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .grid-3 {
+      display: grid;
+      gap: 1rem;
+    }
+    @media (min-width: 700px) {
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    }
+    .step {
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      border: 2px dashed #cfc7ba;
+      background: #fff;
+    }
+    .step strong { display: block; font-size: 1.08rem; margin-bottom: 0.35rem; }
+    .step p { color: var(--muted); font-size: 0.95rem; }
+    footer {
+      border-top: 2px solid #ebe6de;
+      padding: 2rem 0;
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .fine { font-size: 0.82rem; margin-top: 0.75rem; opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav-bar">
+      <a class="logo" href="index.html">Dilly<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html" aria-current="page">Home</a></li>
+          <li><a href="the-app.html">The app</a></li>
+          <li><a href="your-journey.html">Your journey</a></li>
+          <li><a href="recruiters.html">For recruiters</a></li>
+          <li><a href="trust.html">Trust</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <div>
+        <p class="badge">.edu verified · no fakes · no bots</p>
+        <h1>The last check before you apply.</h1>
+        <p class="lede">
+          Dilly is your mobile career center: resume scored on <strong>Smart, Grit, and Build</strong>, a full ATS hub,
+          jobs and application pipeline, and <strong>Dilly AI</strong> for prep — built for real students, not noise.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://trydilly.com/">Open Dilly</a>
+          <a class="btn btn-ghost" href="the-app.html">See what’s inside</a>
+        </div>
+        <p class="fine">Meridian powers the engine behind Dilly. Same truth standard: evidence from your resume, not vibes.</p>
+      </div>
+      <div class="card-stack">
+        <div class="card">
+          <h3>Why students stay</h3>
+          <p>Short sessions, visible progress, streaks and rituals — habit design that respects a real semester, not a gimmick wall.</p>
+          <div class="pill-row">
+            <span class="pill">Career Center</span>
+            <span class="pill">ATS</span>
+            <span class="pill">Get Hired</span>
+            <span class="pill">Dilly AI</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Why schools care</h3>
+          <p>Every account is a verified .edu student. Career centers get a companion students actually open on their phones between classes.</p>
+          <div class="pill-row">
+            <span class="pill">Verified cohort</span>
+            <span class="pill">Shareable profile</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="alt">
+      <div class="wrap">
+        <h2>free to start. serious underneath.</h2>
+        <div class="grid-3">
+          <div class="step">
+            <strong>1 · Prove you’re real</strong>
+            <p>Sign in with your school email. The network stays student-only — trust is the product.</p>
+          </div>
+          <div class="step">
+            <strong>2 · See your numbers</strong>
+            <p>Upload a resume; get audited dimensions, peer context when available, and a path to improve.</p>
+          </div>
+          <div class="step">
+            <strong>3 · Ship applications</strong>
+            <p>Jobs, checklist, playbook, certifications guidance — one pocket-sized command center through offer season.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Explore the story</h2>
+        <p class="lede" style="margin-bottom:1rem;">Five pages, all inline (no separate CSS/JS files) — same pattern as the Span prototype, now for Dilly.</p>
+        <ul style="margin-left:1.25rem; color:var(--muted); font-weight:600;">
+          <li><a href="the-app.html">The app</a> — tabs, tools, and what you actually tap.</li>
+          <li><a href="your-journey.html">Your journey</a> — freshman to senior without switching products.</li>
+          <li><a href="recruiters.html">For recruiters</a> — verified students and a six-second scan.</li>
+          <li><a href="trust.html">Trust</a> — privacy, data, and how we talk about scores.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Dilly / Meridian vision site in <code>website v2/dilly</code>. Product lives at <a href="https://trydilly.com/">trydilly.com</a>.</p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (!btn || !nav) return;
+      btn.addEventListener("click", function () {
+        var open = nav.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    })();
+  </script>
+</body>
+</html>

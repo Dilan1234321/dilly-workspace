@@ -1,0 +1,82 @@
+/* Scoped design tokens for launch sequence only (spec). Parent adds .dilly-launch-scope */
+.dilly-launch-scope {
+  --bg: #080809;
+  --s2: #16161a;
+  --s3: #1e1e24;
+  --b1: rgba(255, 255, 255, 0.05);
+  --b2: rgba(255, 255, 255, 0.09);
+  --t1: #f4f4fa;
+  --t2: rgba(244, 244, 250, 0.55);
+  --t3: rgba(244, 244, 250, 0.28);
+  --gold: #c9a84c;
+  --golddim: rgba(201, 168, 76, 0.12);
+  --goldbdr: rgba(201, 168, 76, 0.28);
+  --green: #34c759;
+  --coral: #ff453a;
+  --amber: #ff9f0a;
+  --indigo: #5e5ce6;
+  --launch-cta-on-gold: #0d0900;
+  --launch-cta-on-green: #030f06;
+  --launch-muted-eyebrow: rgba(244, 244, 250, 0.35);
+}
+
+@keyframes dilly-launch-rpl {
+  0% {
+    width: 68px;
+    height: 68px;
+    border-color: rgba(201, 168, 76, 0.42);
+  }
+  100% {
+    width: 150px;
+    height: 150px;
+    border-color: rgba(201, 168, 76, 0);
+  }
+}
+
+@keyframes dilly-launch-rpl-green {
+  0% {
+    width: 68px;
+    height: 68px;
+    border-color: rgba(52, 199, 89, 0.42);
+  }
+  100% {
+    width: 150px;
+    height: 150px;
+    border-color: rgba(52, 199, 89, 0);
+  }
+}
+
+@keyframes dilly-launch-pdot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+/* Signature splash backgrounds (exact spec) */
+.dilly-splash-bg-gold {
+  background:
+    radial-gradient(ellipse 130% 60% at 50% -5%, rgba(201, 168, 76, 0.58) 0%, transparent 62%),
+    radial-gradient(ellipse 80% 50% at 15% 100%, rgba(160, 120, 40, 0.32) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 85% 100%, rgba(201, 168, 76, 0.22) 0%, transparent 55%),
+    linear-gradient(170deg, #0e0c07 0%, #080809 45%, #0a0807 100%);
+}
+
+/* While launch overlay fades out, children still default to pointer-events: auto — clicks must pass through. */
+.dilly-launch-pass-through,
+.dilly-launch-pass-through * {
+  pointer-events: none !important;
+}
+
+.dilly-splash-bg-green {
+  background:
+    radial-gradient(ellipse 130% 60% at 50% -5%, rgba(52, 199, 89, 0.28) 0%, transparent 62%),
+    radial-gradient(ellipse 80% 50% at 15% 100%, rgba(52, 199, 89, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 85% 100%, rgba(201, 168, 76, 0.15) 0%, transparent 55%),
+    linear-gradient(170deg, #070e07 0%, #080809 45%, #080a08 100%);
+}

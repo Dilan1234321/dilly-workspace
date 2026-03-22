@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>What’s in Dilly — The app</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #141210;
+      --muted: #5c574f;
+      --paper: #fffbf5;
+      --gold: #c9a882;
+      --gold-deep: #a68562;
+      --leaf: #2d8a5e;
+      --leaf-soft: #e6f5ed;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Nunito", system-ui, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.55; }
+    a { color: var(--leaf); font-weight: 700; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 251, 245, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid #ebe6de;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .logo { font-weight: 800; font-size: 1.25rem; color: var(--ink); }
+    .logo span { color: var(--gold-deep); }
+    nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; }
+    nav a { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 0.3rem 0.45rem; border-radius: 8px; }
+    nav a:hover { background: var(--leaf-soft); }
+    nav a[aria-current="page"] { background: #d4f0e3; color: var(--leaf); }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 640px) {
+      .menu-toggle { display: block; }
+      nav { display: none; width: 100%; padding: 0 1.25rem 0.75rem; }
+      nav.open { display: block; }
+      .nav-bar { flex-wrap: wrap; }
+      nav ul { flex-direction: column; }
+    }
+    h1 { font-size: clamp(1.65rem, 4vw, 2.2rem); margin: 2rem 0 0.5rem; letter-spacing: -0.02em; }
+    .lede { color: var(--muted); margin-bottom: 1.75rem; max-width: 40rem; }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .tab {
+      font-family: inherit;
+      font-weight: 800;
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+      border: 2px solid #d9d3c9;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+    .tab[aria-selected="true"] {
+      background: var(--leaf);
+      color: #fff;
+      border-color: var(--leaf);
+    }
+    .panel {
+      display: none;
+      border: 2px solid #e8e2d8;
+      border-radius: var(--radius);
+      padding: 1.25rem 1.35rem;
+      background: #fff;
+      margin-bottom: 1.5rem;
+    }
+    .panel.active { display: block; }
+    .panel h2 { font-size: 1.15rem; margin-bottom: 0.6rem; }
+    .panel ul { margin-left: 1.2rem; color: var(--muted); }
+    .panel li { margin-bottom: 0.4rem; }
+    .onboard {
+      margin-top: 2rem;
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, #fff6e8, #eef8f2);
+      border: 2px dashed #cfc7ba;
+    }
+    .onboard h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .onboard ol { margin-left: 1.2rem; color: var(--muted); font-weight: 600; }
+    .onboard li { margin-bottom: 0.35rem; }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #ebe6de;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-bar">
+      <a class="logo" href="index.html">Dilly<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="the-app.html" aria-current="page">The app</a></li>
+          <li><a href="your-journey.html">Your journey</a></li>
+          <li><a href="recruiters.html">For recruiters</a></li>
+          <li><a href="trust.html">Trust</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>What you actually get in the app</h1>
+    <p class="lede">Mobile-first shell: bottom nav for the big moves, deep pages for ATS, applications, certifications, and your full score story. Below is a student-friendly map of the main tabs.</p>
+
+    <div class="tabs" role="tablist" aria-label="Dilly main sections">
+      <button type="button" class="tab" role="tab" id="tab-center" aria-selected="true" aria-controls="panel-center" tabindex="0">Career Center</button>
+      <button type="button" class="tab" role="tab" id="tab-rank" aria-selected="false" aria-controls="panel-rank" tabindex="-1">Rank</button>
+      <button type="button" class="tab" role="tab" id="tab-ai" aria-selected="false" aria-controls="panel-ai" tabindex="-1">Dilly AI</button>
+      <button type="button" class="tab" role="tab" id="tab-hired" aria-selected="false" aria-controls="panel-hired" tabindex="-1">Get Hired</button>
+      <button type="button" class="tab" role="tab" id="tab-more" aria-selected="false" aria-controls="panel-more" tabindex="-1">+ More</button>
+    </div>
+
+    <div id="panel-center" class="panel active" role="tabpanel" aria-labelledby="tab-center">
+      <h2>Career Center — command center</h2>
+      <ul>
+        <li>Compact <strong>Smart · Grit · Build</strong> row; tap through to your full report and <strong>My Score</strong>.</li>
+        <li><strong>Ask Meridian</strong> entry + chips for quick questions.</li>
+        <li><strong>ATS readiness</strong> hub: score, tabs for what parsers see, checklist, fixes, keywords, vendors.</li>
+        <li><strong>Career tools:</strong> Gap analysis, cover letter lines, evidence-based interview prep (opens on Center).</li>
+        <li><strong>Habits:</strong> streak, weekly review, rituals, “one thing today” — nudges that fit a real week.</li>
+        <li>Shareable <strong>recruiter profile</strong> link, achievements / sticker sheet, school line (“Meridian for [your school]”).</li>
+      </ul>
+    </div>
+
+    <div id="panel-rank" class="panel" role="tabpanel" aria-labelledby="tab-rank" hidden>
+      <h2>Rank — cohort context</h2>
+      <ul>
+        <li>See how you stack in your track with peer-aware framing when stats are available.</li>
+        <li>Motivation without toxicity: compare to learn, not to spiral.</li>
+      </ul>
+    </div>
+
+    <div id="panel-ai" class="panel" role="tabpanel" aria-labelledby="tab-ai" hidden>
+      <h2>Dilly AI — coach in chat</h2>
+      <ul>
+        <li>Mock interviews with structured feedback; bullet practice; pitch and common questions.</li>
+        <li>Context handoffs from ATS, certifications, job checklist — same voice, right prompt.</li>
+        <li>Tone settings: encouraging, direct, casual, professional, coach.</li>
+      </ul>
+    </div>
+
+    <div id="panel-hired" class="panel" role="tabpanel" aria-labelledby="tab-hired" hidden>
+      <h2>Get Hired — pipeline + jobs</h2>
+      <ul>
+        <li><strong>Applications</strong> tracker: Saved → Applied → Interviewing → Offer → Rejected.</li>
+        <li><strong>Jobs</strong> with readiness-ranked matches, filters, and apply flows.</li>
+        <li><strong>Career playbook</strong> page: cohort lens + resume-grounded deep dive; talk to Dilly from there.</li>
+        <li><strong>Certifications</strong> hub: Build-score context, curated cards, “make it land on your resume” → Voice.</li>
+        <li><strong>Insights</strong> (trajectory, Am I Ready?, vs peers) lives in the hiring / progress story.</li>
+      </ul>
+    </div>
+
+    <div id="panel-more" class="panel" role="tabpanel" aria-labelledby="tab-more" hidden>
+      <h2>Explore &amp; everything else</h2>
+      <ul>
+        <li><strong>Explore:</strong> track explorer (11 tracks), outreach templates, campus career-center prompts.</li>
+        <li><strong>Practice hub</strong> (also reachable from quick links): mock interview, bullets, pitch, prep modes.</li>
+        <li><strong>Companies we know</strong> — verified employer pages with score bars and voice-friendly guidelines.</li>
+        <li><strong>Meridian Profile</strong> (full) with privacy toggles for what recruiters can see.</li>
+      </ul>
+    </div>
+
+    <div class="onboard">
+      <h2>Onboarding (first session)</h2>
+      <ol>
+        <li>Welcome → <strong>.edu</strong> verification code.</li>
+        <li>Profile: name, majors/minors, application target; track hints for pre-professional paths.</li>
+        <li>Upload resume → scanning animation → score reveal and gap callout.</li>
+        <li>Land on Career Center with your numbers ready.</li>
+      </ol>
+    </div>
+
+    <footer>
+      <p><a href="index.html">← Home</a> · <a href="your-journey.html">Your journey →</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (btn && nav) {
+        btn.addEventListener("click", function () {
+          var open = nav.classList.toggle("open");
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+      }
+      var tabs = document.querySelectorAll(".tab");
+      var panels = document.querySelectorAll(".panel");
+      function selectTab(index) {
+        tabs.forEach(function (t, i) {
+          var on = i === index;
+          t.setAttribute("aria-selected", on ? "true" : "false");
+          t.setAttribute("tabindex", on ? "0" : "-1");
+        });
+        panels.forEach(function (p, i) {
+          var on = i === index;
+          p.classList.toggle("active", on);
+          p.hidden = !on;
+        });
+      }
+      tabs.forEach(function (tab, i) {
+        tab.addEventListener("click", function () { selectTab(i); });
+      });
+    })();
+  </script>
+</body>
+</html>

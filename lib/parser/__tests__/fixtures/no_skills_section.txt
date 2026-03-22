@@ -1,0 +1,6 @@
+No Skills Section
+noskills@example.com
+
+EXPERIENCE
+Software Engineer at Tech Corp
+Built applications using Python and React. Used AWS.

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Principles — Span</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #1b1f24;
+      --muted: #5c6470;
+      --paper: #fffef9;
+      --lime: #49c04a;
+      --lime-dark: #2f9a3a;
+      --sky: #1da1f2;
+      --sun: #ffce00;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Nunito", system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    a { color: var(--lime-dark); font-weight: 700; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 254, 249, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid #e8ebe4;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .logo { font-weight: 800; font-size: 1.25rem; color: var(--ink); }
+    .logo span { color: var(--lime-dark); }
+    nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+    nav a { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 0.3rem 0.45rem; border-radius: 8px; }
+    nav a:hover { background: #eef7ee; }
+    nav a[aria-current="page"] { background: #dff5df; color: var(--lime-dark); }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 640px) {
+      .menu-toggle { display: block; }
+      nav { display: none; width: 100%; padding: 0 1.25rem 0.75rem; }
+      nav.open { display: block; }
+      .nav-bar { flex-wrap: wrap; }
+      nav ul { flex-direction: column; }
+    }
+    h1 { font-size: clamp(1.65rem, 4vw, 2.2rem); margin: 2rem 0 0.75rem; }
+    .lede { color: var(--muted); margin-bottom: 1.75rem; max-width: 42rem; }
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+    @media (min-width: 720px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      border: 2px solid #e4e8e1;
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      background: #fff;
+    }
+    .card h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .card p { color: var(--muted); font-size: 0.95rem; }
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .swatch {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 12px;
+      border: 2px solid rgba(0,0,0,0.08);
+      cursor: help;
+    }
+    .swatch span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+    }
+    .swatch-wrap { position: relative; }
+    .interactive-demo {
+      margin-top: 2rem;
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, #f4faf4, #eef6ff);
+      border: 2px dashed #b8d4b8;
+    }
+    .interactive-demo h2 { margin-bottom: 0.75rem; font-size: 1.15rem; }
+    .streak {
+      font-weight: 800;
+      font-size: 1.5rem;
+      color: var(--lime-dark);
+    }
+    button.sample {
+      margin-top: 0.75rem;
+      font-family: inherit;
+      font-weight: 800;
+      padding: 0.65rem 1.2rem;
+      border-radius: 999px;
+      border: none;
+      background: var(--lime);
+      color: #fff;
+      box-shadow: 0 4px 0 var(--lime-dark);
+      cursor: pointer;
+    }
+    button.sample:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--lime-dark); }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #e8ebe4;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-bar">
+      <a class="logo" href="index.html">Span<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="analysis.html">Duolingo analysis</a></li>
+          <li><a href="learners.html">Learners</a></li>
+          <li><a href="principles.html" aria-current="page">Principles</a></li>
+          <li><a href="path.html">The path</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Principles borrowed from the Duolingo playbook</h1>
+    <p class="lede">Use the <em>pattern</em>, not the trademark. Span’s palette below is <strong>inspired by</strong> the genre (growth green, sky blue, optimism yellow) — adjust for your final brand.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Color &amp; shape</h2>
+        <p>High-contrast primary for CTAs; warm off-white backgrounds; rounded geometry; minimal sharp corporate corners.</p>
+        <div class="swatches" id="swatches">
+          <div class="swatch-wrap" title="Growth green — primary action"><div class="swatch" style="background:#49c04a"><span>Lime</span></div></div>
+          <div class="swatch-wrap" title="Deep green — depth / pressed"><div class="swatch" style="background:#2f9a3a"><span>Deep</span></div></div>
+          <div class="swatch-wrap" title="Sky — links, secondary highlights"><div class="swatch" style="background:#1da1f2"><span>Sky</span></div></div>
+          <div class="swatch-wrap" title="Sun — badges, streaks"><div class="swatch" style="background:#ffce00"><span>Sun</span></div></div>
+          <div class="swatch-wrap" title="Ink — text"><div class="swatch" style="background:#1b1f24"><span>Ink</span></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Voice</h2>
+        <p>Short sentences. Confident, not corporate. Lowercase can signal approachability on marketing surfaces; product UI should still meet accessibility contrast and clarity rules.</p>
+      </div>
+      <div class="card">
+        <h2>Motion</h2>
+        <p>Micro-celebrations on success; respect <code>prefers-reduced-motion</code>. Never animate critical reading content in a distracting loop.</p>
+      </div>
+      <div class="card">
+        <h2>Trust layers</h2>
+        <p>Consumer = fun. Schools = standards and dashboards. Stakes = science and security. Same logo; different proof blocks.</p>
+      </div>
+    </div>
+
+    <div class="interactive-demo">
+      <h2>Tiny habit demo (local only)</h2>
+      <p style="color:var(--muted);margin-bottom:0.5rem;">Tap to increment a “streak” — illustrates positive feedback without backend.</p>
+      <p class="streak" id="streakDisplay" aria-live="polite">Streak: 0 days</p>
+      <button type="button" class="sample" id="streakBtn">I practiced today</button>
+    </div>
+
+    <footer>
+      <p><a href="learners.html">← Learners</a> · <a href="path.html">The path →</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (btn && nav) {
+        btn.addEventListener("click", function () {
+          var open = nav.classList.toggle("open");
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+      }
+      var streak = 0;
+      var streakBtn = document.getElementById("streakBtn");
+      var streakDisplay = document.getElementById("streakDisplay");
+      if (streakBtn && streakDisplay) {
+        streakBtn.addEventListener("click", function () {
+          streak += 1;
+          streakDisplay.textContent = "Streak: " + streak + (streak === 1 ? " day" : " days");
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

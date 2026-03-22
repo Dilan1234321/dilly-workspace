@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "Tyler Resume Final.docx",
+        "major": "International Studies",
+        "track": "Humanities",
+        "gpa": 4.0
+    },
+    "scores": {
+        "smart": 100,
+        "grit": 72,
+        "build": 20,
+        "final": 67.4
+    },
+    "pillars": {
+        "research": 22,
+        "clinical": 1,
+        "shadowing": 0,
+        "leadership": 6
+    }
+}

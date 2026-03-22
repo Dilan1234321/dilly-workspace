@@ -1,0 +1,20 @@
+{
+    "metadata": {
+        "name": "Aidan Rina Resume.docx",
+        "major": "Finance",
+        "track": "Finance",
+        "gpa": 4.0
+    },
+    "scores": {
+        "smart": 86.0,
+        "grit": 0,
+        "build": 8,
+        "final": 27.8
+    },
+    "pillars": {
+        "research": 2,
+        "clinical": 0,
+        "shadowing": 0,
+        "leadership": 0
+    }
+}

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The path — Span × Meridian truth</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #1b1f24;
+      --muted: #5c6470;
+      --paper: #fffef9;
+      --lime-dark: #2f9a3a;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Nunito", system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    a { color: var(--lime-dark); font-weight: 700; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 254, 249, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid #e8ebe4;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    .logo { font-weight: 800; font-size: 1.25rem; color: var(--ink); }
+    .logo span { color: var(--lime-dark); }
+    nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+    nav a { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 0.3rem 0.45rem; border-radius: 8px; }
+    nav a:hover { background: #eef7ee; }
+    nav a[aria-current="page"] { background: #dff5df; color: var(--lime-dark); }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 640px) {
+      .menu-toggle { display: block; }
+      nav { display: none; width: 100%; padding: 0 1.25rem 0.75rem; }
+      nav.open { display: block; }
+      .nav-bar { flex-wrap: wrap; }
+      nav ul { flex-direction: column; }
+    }
+    h1 { font-size: clamp(1.65rem, 4vw, 2.15rem); margin: 2rem 0 0.75rem; }
+    .lede { color: var(--muted); margin-bottom: 1.5rem; }
+    .compare {
+      display: grid;
+      gap: 1rem;
+    }
+    @media (min-width: 700px) {
+      .compare { grid-template-columns: 1fr 1fr; }
+    }
+    .box {
+      border: 2px solid #e4e8e1;
+      border-radius: var(--radius);
+      padding: 1.2rem 1.35rem;
+      background: #fff;
+    }
+    .box h2 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+    .box ul { margin-left: 1.15rem; color: var(--muted); }
+    .box li { margin-bottom: 0.35rem; }
+    .merge {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      background: #1b1f24;
+      color: #e8ebe4;
+    }
+    .merge h2 { font-size: 1.1rem; margin-bottom: 0.5rem; color: #fff; }
+    .merge p { color: #c5cbc0; font-size: 0.95rem; }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #e8ebe4;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-bar">
+      <a class="logo" href="index.html">Span<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="analysis.html">Duolingo analysis</a></li>
+          <li><a href="learners.html">Learners</a></li>
+          <li><a href="principles.html">Principles</a></li>
+          <li><a href="path.html" aria-current="page">The path</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Where Duolingo ends and Meridian begins</h1>
+    <p class="lede">Duolingo optimizes for <strong>language reps</strong> and <strong>daily habit</strong>. Your north star is <strong>talent truth</strong> and <strong>career acceleration</strong>. The bridge: use their <em>ladder and delight</em>, keep your <em>integrity bar</em>.</p>
+
+    <div class="compare">
+      <div class="box">
+        <h2>From Duolingo, keep…</h2>
+        <ul>
+          <li>One brand across ages</li>
+          <li>Free core + clear upgrades</li>
+          <li>Teacher/institution overlays</li>
+          <li>Science + playful UX pairing</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h2>For Meridian, insist on…</h2>
+        <ul>
+          <li>Explainable scores (MTS)</li>
+          <li>Prestige-neutral, evidence-first audits</li>
+          <li>No dark patterns on “failure”</li>
+          <li>Privacy-by-design for resumes</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="merge">
+      <h2>Combined path</h2>
+      <p id="pathText">Student meets Span in middle school with low-stakes skill games → high school adds structured progress and teacher visibility → college layers in resume truth, interview prep, and hiring-ready proof. Same account, escalating seriousness.</p>
+      <p style="margin-top:0.75rem;"><button type="button" id="toggleDetail" style="font-family:inherit;font-weight:800;background:#49c04a;color:#fff;border:none;padding:0.5rem 1rem;border-radius:999px;cursor:pointer;">Toggle detail level</button></p>
+    </div>
+
+    <footer>
+      <p><a href="principles.html">← Principles</a> · <a href="index.html">Home →</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (btn && nav) {
+        btn.addEventListener("click", function () {
+          var open = nav.classList.toggle("open");
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+      }
+      var shortText = "Student meets Span in middle school with low-stakes skill games → high school adds structured progress and teacher visibility → college layers in resume truth, interview prep, and hiring-ready proof. Same account, escalating seriousness.";
+      var longText = "Early: build fluency in “how to learn” and meta-skills with short sessions and visible progress. Secondary: align with classroom incentives — assignments, standards, dashboards — while preserving teen-appropriate tone. Tertiary: switch the reward from XP to defensible artifacts — parsed resume quality, audit dimensions, recruiter-ready narratives — always tied to evidence in the file, not vibes.";
+      var pathEl = document.getElementById("pathText");
+      var toggle = document.getElementById("toggleDetail");
+      var expanded = false;
+      if (toggle && pathEl) {
+        toggle.addEventListener("click", function () {
+          expanded = !expanded;
+          pathEl.textContent = expanded ? longText : shortText;
+          toggle.textContent = expanded ? "Show shorter version" : "Toggle detail level";
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

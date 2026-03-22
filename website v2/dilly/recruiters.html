@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>For recruiters — Dilly</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #141210;
+      --muted: #5c574f;
+      --paper: #fffbf5;
+      --gold-deep: #a68562;
+      --leaf: #2d8a5e;
+      --leaf-soft: #e6f5ed;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Nunito", system-ui, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.55; }
+    a { color: var(--leaf); font-weight: 700; }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 251, 245, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid #ebe6de;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    .logo { font-weight: 800; font-size: 1.25rem; color: var(--ink); }
+    .logo span { color: var(--gold-deep); }
+    nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; }
+    nav a { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 0.3rem 0.45rem; border-radius: 8px; }
+    nav a:hover { background: var(--leaf-soft); }
+    nav a[aria-current="page"] { background: #d4f0e3; color: var(--leaf); }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 640px) {
+      .menu-toggle { display: block; }
+      nav { display: none; width: 100%; padding: 0 1.25rem 0.75rem; }
+      nav.open { display: block; }
+      .nav-bar { flex-wrap: wrap; }
+      nav ul { flex-direction: column; }
+    }
+    h1 { font-size: clamp(1.65rem, 4vw, 2.1rem); margin: 2rem 0 0.75rem; }
+    .lede { font-size: 1.08rem; color: var(--muted); margin-bottom: 1.5rem; }
+    .quote {
+      border-left: 4px solid var(--gold-deep);
+      padding: 1rem 1.1rem;
+      background: #fff;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 1.25rem 0;
+      font-weight: 700;
+      color: #3d3830;
+    }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    @media (min-width: 640px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .box {
+      border: 2px solid #e8e2d8;
+      border-radius: var(--radius);
+      padding: 1.15rem 1.25rem;
+      background: #fff;
+    }
+    .box h2 { font-size: 1.02rem; margin-bottom: 0.45rem; }
+    .box p { color: var(--muted); font-size: 0.94rem; }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #ebe6de;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-bar">
+      <a class="logo" href="index.html">Dilly<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="the-app.html">The app</a></li>
+          <li><a href="your-journey.html">Your journey</a></li>
+          <li><a href="recruiters.html" aria-current="page">For recruiters</a></li>
+          <li><a href="trust.html">Trust</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>Every profile is a verified student.</h1>
+    <p class="lede">Meridian’s north star: the largest platform of <strong>100% verified real students</strong> — no fakes, no frauds, no bots. When you see Dilly / Meridian on an application, you know the inbox isn’t synthetic.</p>
+
+    <p class="quote">“When you see Meridian on an application, you know they’re real.”</p>
+
+    <div class="grid">
+      <div class="box">
+        <h2>Six-second profile</h2>
+        <p>Students share a link: scores, proof, and story in one fast scan — updated when they re-audit or edit their portfolio.</p>
+      </div>
+      <div class="box">
+        <h2>Full Meridian profile (opt-in)</h2>
+        <p>Depth when you need it: privacy toggles let students expose only what they want recruiters to see.</p>
+      </div>
+      <div class="box">
+        <h2>Evidence-first signals</h2>
+        <p>Smart, Grit, and Build are anchored in resume content — not prestige hand-waving. Ask “why?” and there’s a trace path.</p>
+      </div>
+      <div class="box">
+        <h2>Company-aware prep</h2>
+        <p>Verified employer pages and guidelines help candidates prep with the same language your bar uses.</p>
+      </div>
+    </div>
+
+    <p style="color:var(--muted); font-weight:600;">Students: put your link in your resume footer. Recruiters: ask for the Dilly link alongside the PDF.</p>
+
+    <footer>
+      <p><a href="your-journey.html">← Your journey</a> · <a href="trust.html">Trust &amp; privacy →</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (!btn || !nav) return;
+      btn.addEventListener("click", function () {
+        var open = nav.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    })();
+  </script>
+</body>
+</html>

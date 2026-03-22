@@ -34,3 +34,19 @@ out/
 # Optional: uncomment to exclude resume PDFs (large)
 # assets/resumes/*.pdf
 # projects/meridian/reports/
+.claude/worktrees/
+meridian-website/
+
+# Local auth, locks, and profile payloads (do not push)
+memory/dilly_auth.json
+memory/dilly_auth.json.lock
+memory/meridian_auth.json
+memory/meridian_auth.json.lock
+memory/dilly_profiles/
+memory/dilly_profile_txt/
+memory/meridian_profiles/
+memory/recruiter_bookmarks/
+memory/recruiter_notes/
+memory/voice_feedback/
+meridian_api.pid
+projects/dilly/dilly_jobs.db

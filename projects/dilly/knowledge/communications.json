@@ -1,0 +1,77 @@
+{
+  "track": "Communications",
+  "last_updated": "2026-03",
+  "sources": [
+    "PRSA (Public Relations Society of America) Career Center",
+    "PRWeek and AdWeek Industry Hiring Reports",
+    "PRSSA Student Resources and Employer Surveys",
+    "Journalism and Mass Communication Educator (AEJMC)",
+    "LinkedIn Marketing and Communications Hiring Trends"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Writing and Media Acumen",
+      "what_counts": [
+        "Communications, PR, Journalism, Advertising, or Marketing major",
+        "Relevant coursework: media studies, writing, campaigns, analytics",
+        "AP style and writing-intensive coursework",
+        "Honors or academic distinction in writing/media",
+        "Certifications: Google Analytics, Meta Blueprint, HubSpot"
+      ]
+    },
+    "grit": {
+      "label": "Portfolio Impact and Ownership",
+      "what_counts": [
+        "Campaign ownership with measurable results (reach, engagement, conversions)",
+        "Internships at agencies, brands, or media outlets",
+        "Leadership in PRSSA, student media, or communications orgs",
+        "Quantified outcomes: follower growth, impressions, click-through, press mentions",
+        "Client or stakeholder work with deliverables",
+        "Content creation with audience metrics"
+      ]
+    },
+    "build": {
+      "label": "Content and Campaign Proof",
+      "what_counts": [
+        "Portfolio of clips, campaigns, or content samples",
+        "Named channels and content types (social, press release, blog, video)",
+        "Agency or in-house internship experience",
+        "Published work (student paper, blog, client deliverables)",
+        "Tools: Muck Rack, Canva, Hootsuite, Adobe Creative Suite",
+        "Campaign case studies with before/after or results"
+      ]
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No campaign portfolio or metrics to show",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Run a real campaign - even for a student org or personal brand. Measure results. Add numbers: reach, impressions, engagement rate, conversions, or press mentions."
+    },
+    {
+      "gap": "No PR or communications internship before senior year",
+      "severity": "critical",
+      "dimension": "grit",
+      "fix": "Agency internships are the primary signal. Apply to PR firms, in-house comms teams, or student-run agencies. PRSSA and networking are key entry points."
+    },
+    {
+      "gap": "Resume lacks writing samples or portfolio link",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Include a portfolio URL. Add 2-3 specific examples: a press release, social campaign, or article. Name the outlet or client."
+    },
+    {
+      "gap": "No digital or analytics certifications",
+      "severity": "moderate",
+      "dimension": "smart",
+      "fix": "Google Analytics, Meta Blueprint, and HubSpot certifications are free and widely recognized. Add them under Skills or Certifications."
+    },
+    {
+      "gap": "Bullets are vague (e.g. 'managed social media')",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Add metrics: grew followers by X%, achieved Y impressions, wrote Z pieces. Name the platform, audience size, and outcome."
+    }
+  ]
+}

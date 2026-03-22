@@ -1,0 +1,13 @@
+John TwoColumn
+john.twocol@example.com
+
+EXPERIENCE
+Acme Corp
+Analyst
+2022 - Present
+* Built dashboard
+
+SKILLS
+Python
+SQL
+Tableau

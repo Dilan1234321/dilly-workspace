@@ -1,0 +1,18 @@
+{
+    "candidate_name": "Aidan Rina",
+    "major": "Finance",
+    "track": "Finance",
+    "scores": {
+        "smart": 77.2,
+        "grit": 20,
+        "build": 6
+    },
+    "final_score": 33.66,
+    "findings": [
+        "Smart: You showcased high academic standard due to your 4.00 GPA, and honors recognition.",
+        "Grit: You demonstrated leadership and impact through your work and experience history.",
+        "Build: You demonstrated Finance readiness; track scoring applied."
+    ],
+    "status": "Draft Report",
+    "audit_ts": 1742225760
+}

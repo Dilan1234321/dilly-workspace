@@ -1,0 +1,31 @@
+{
+  "description": "Expected Finance scoring signals and Build score bands for resume snippets. Used by finance_scoring_regression.py. Aligned to FINANCE_SCORING_SPEC.md and tracks.audit_finance.",
+  "entries": [
+    {
+      "name": "Finance major with keywords and quant impact",
+      "text": "Finance, University of Tampa. Excel, Tableau, financial modeling. Analyst Intern at a regional bank. Jan 2024 - May 2024.\n- Built a DCF model for due diligence; supported a $2M transaction.\n- Increased report accuracy by 15%; reduced budget variance by 10%.",
+      "major": "Finance",
+      "expect": {
+        "quantifiable_impact_count_min": 2,
+        "build_min": 30
+      }
+    },
+    {
+      "name": "Accounting with audit and leadership",
+      "text": "Accounting. Beta Alpha Psi - President. Audit internship at a Big Four firm. Jun 2024 - Aug 2024.\n- Assisted with GAAP compliance and SEC filings.\n- Led a team of 3 on a tax advisory project.",
+      "major": "Accounting",
+      "expect": {
+        "leadership_density_min": 1,
+        "build_min": 25
+      }
+    },
+    {
+      "name": "Economics with few finance signals",
+      "text": "Economics. Research assistant. No finance internships or modeling.",
+      "major": "Economics",
+      "expect": {
+        "build_max": 30
+      }
+    }
+  ]
+}

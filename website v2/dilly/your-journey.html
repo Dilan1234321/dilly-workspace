@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your journey — Dilly</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #141210;
+      --muted: #5c574f;
+      --paper: #fffbf5;
+      --gold-deep: #a68562;
+      --leaf: #2d8a5e;
+      --leaf-soft: #e6f5ed;
+      --c1: #fff5eb;
+      --c2: #eaf4ff;
+      --c3: #f0f7ec;
+      --c4: #f5f0ff;
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Nunito", system-ui, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.55; }
+    a { color: var(--leaf); font-weight: 700; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 251, 245, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid #ebe6de;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .logo { font-weight: 800; font-size: 1.25rem; color: var(--ink); }
+    .logo span { color: var(--gold-deep); }
+    nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; }
+    nav a { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 0.3rem 0.45rem; border-radius: 8px; }
+    nav a:hover { background: var(--leaf-soft); }
+    nav a[aria-current="page"] { background: #d4f0e3; color: var(--leaf); }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 640px) {
+      .menu-toggle { display: block; }
+      nav { display: none; width: 100%; padding: 0 1.25rem 0.75rem; }
+      nav.open { display: block; }
+      .nav-bar { flex-wrap: wrap; }
+      nav ul { flex-direction: column; }
+    }
+    h1 { font-size: clamp(1.65rem, 4vw, 2.15rem); margin: 2rem 0 0.75rem; letter-spacing: -0.02em; }
+    .lede { color: var(--muted); margin-bottom: 1.75rem; max-width: 42rem; }
+    .phase {
+      border-radius: var(--radius);
+      padding: 1.3rem 1.45rem;
+      margin-bottom: 1rem;
+      border: 2px solid rgba(0,0,0,0.06);
+    }
+    .phase h2 { font-size: 1.15rem; margin-bottom: 0.45rem; }
+    .phase p { color: var(--muted); margin-bottom: 0.55rem; font-size: 0.96rem; }
+    .phase ul { margin-left: 1.15rem; }
+    .phase li { margin-bottom: 0.32rem; color: var(--ink); }
+    .y1 { background: var(--c1); }
+    .y2 { background: var(--c2); }
+    .y3 { background: var(--c3); }
+    .y4 { background: var(--c4); }
+    .tag {
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.8;
+      display: block;
+      margin-bottom: 0.35rem;
+    }
+    .connector { text-align: center; font-weight: 800; color: var(--muted); margin: 0.15rem 0 0.65rem; }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #ebe6de;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-bar">
+      <a class="logo" href="index.html">Dilly<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="the-app.html">The app</a></li>
+          <li><a href="your-journey.html" aria-current="page">Your journey</a></li>
+          <li><a href="recruiters.html">For recruiters</a></li>
+          <li><a href="trust.html">Trust</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>One app, four years</h1>
+    <p class="lede">Same playful clarity as the Duolingo-style ladder — but Dilly’s output is <strong>hire-ready proof</strong>: audits, ATS, applications, and coach sessions that escalate as stakes do.</p>
+
+    <article class="phase y1">
+      <span class="tag">Year 1 · foundation</span>
+      <h2>Learn how you read on paper</h2>
+      <p>First resume pass, first Smart/Grit/Build snapshot, first “what ATS sees” moment. Build the habit of updating after every win.</p>
+      <ul>
+        <li>Explore tracks; set a primary goal.</li>
+        <li>Use Dilly AI for bullet practice and club stories.</li>
+      </ul>
+    </article>
+    <div class="connector" aria-hidden="true">↓</div>
+
+    <article class="phase y2">
+      <span class="tag">Year 2 · depth</span>
+      <h2>Turn experience into evidence</h2>
+      <p>Internships and projects land on the resume; rerun audits to see dimensions move. ATS checklist becomes a ritual before every app.</p>
+      <ul>
+        <li>Mock interviews with STAR feedback.</li>
+        <li>Start logging applications in the pipeline.</li>
+      </ul>
+    </article>
+    <div class="connector" aria-hidden="true">↓</div>
+
+    <article class="phase y3">
+      <span class="tag">Year 3 · velocity</span>
+      <h2>Volume without chaos</h2>
+      <p>Jobs tab, filters, and readiness ranks cut noise. Playbook and certifications pages help you choose what actually moves Build.</p>
+      <ul>
+        <li>Target firms for tailored Voice prompts.</li>
+        <li>Weekly review ritual so nothing slips.</li>
+      </ul>
+    </article>
+    <div class="connector" aria-hidden="true">↓</div>
+
+    <article class="phase y4">
+      <span class="tag">Year 4 · stakes</span>
+      <h2>Offer season with receipts</h2>
+      <p>Shareable profile link in your footer. Full Meridian profile when you want depth. Every score tied to something you wrote — recruiter questions get answers.</p>
+      <ul>
+        <li>Am I Ready? against real roles.</li>
+        <li>Outcome capture (interview/offer) for your story — optional, your consent.</li>
+      </ul>
+    </article>
+
+    <footer>
+      <p><a href="the-app.html">← The app</a> · <a href="recruiters.html">For recruiters →</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (!btn || !nav) return;
+      btn.addEventListener("click", function () {
+        var open = nav.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+{
+  "track": "Science",
+  "last_updated": "2026-03",
+  "sources": [
+    "NSF Graduate Research Fellowship Program (GRFP) Selection Criteria",
+    "NIH Research Training and Career Development Guidelines",
+    "Nature Careers: What Labs Look For in PhD Applicants",
+    "CRA (Computing Research Association) Taulbee Survey",
+    "American Chemical Society Career Resources",
+    "Society for Neuroscience Career Resources"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Research Signal and Academic Rigor",
+      "what_counts": [
+        "Relevant science major (Biology, Chemistry, Physics, Environmental Science, Marine Science, etc.)",
+        "Rigorous coursework: methods, statistics, lab techniques, upper-division science",
+        "GPA in major (3.0+ for industry; 3.5+ for competitive grad programs)",
+        "Honors thesis or independent research project",
+        "Research methods and reproducibility focus",
+        "Graduate coursework or advanced seminars"
+      ]
+    },
+    "grit": {
+      "label": "Sustained Effort and Ownership",
+      "what_counts": [
+        "Lab experience with clear duration (months/years) and role",
+        "Quantified impact: sample sizes, grant amounts, hours per week",
+        "Publications, posters, or conference presentations",
+        "Ownership of a project or sub-project within a lab",
+        "Consistent research commitment (not one-off summer)",
+        "Teaching or mentoring in science (TA, tutor, outreach)"
+      ]
+    },
+    "build": {
+      "label": "Evidence of Scientific Work",
+      "what_counts": [
+        "Lab work with PI name, institution, and date range",
+        "Publications (even in prep or under review)",
+        "Conference presentations or posters",
+        "Research methods and techniques named explicitly",
+        "IRB or IACUC involvement where relevant",
+        "Field work, data collection, or analysis projects with outcomes"
+      ]
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No lab or research experience before senior year",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Reach out to professors for research assistantships. Many labs take undergraduates. Start with 5-10 hours/week and build. Even one semester of lab work is a baseline."
+    },
+    {
+      "gap": "Research bullets lack methods, scope, or outcomes",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Every research bullet needs: what you did (techniques, methods), scope (sample size, duration), and outcome (finding, publication, poster). Name the PI and lab."
+    },
+    {
+      "gap": "No quantified impact in research or lab roles",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Add numbers: hours per week, months in lab, sample size, grant amount, number of experiments, or data points analyzed."
+    },
+    {
+      "gap": "GPA below 3.0 with no compensating research signal",
+      "severity": "moderate",
+      "dimension": "smart",
+      "fix": "Strong research (publication, sustained lab work) can offset GPA for grad programs. For industry, highlight technical skills and project outcomes."
+    },
+    {
+      "gap": "Only coursework, no independent or lab-based work",
+      "severity": "moderate",
+      "dimension": "build",
+      "fix": "Lab experience is the primary Build signal. Capstone or class projects help if they include methods and outcomes. Aim for at least one real lab role."
+    }
+  ]
+}

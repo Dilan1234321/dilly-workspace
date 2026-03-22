@@ -1,0 +1,18 @@
+{
+    "candidate_name": "Gabriel Chiaravalloti",
+    "major": "Computer Science",
+    "track": "Tech",
+    "scores": {
+        "smart": 76.3,
+        "grit": 62,
+        "build": 7
+    },
+    "final_score": 52.3,
+    "findings": [
+        "Smart: You showcased high academic standard due to your 3.40 GPA, and honors recognition.",
+        "Grit: You demonstrated leadership and impact through your leadership roles, your work and experience history.",
+        "Build: You demonstrated Tech readiness; track scoring applied."
+    ],
+    "status": "Draft Report",
+    "audit_ts": 1742225760
+}

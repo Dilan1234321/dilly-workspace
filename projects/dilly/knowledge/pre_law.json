@@ -1,0 +1,372 @@
+{
+  "track": "Pre-Law",
+  "last_updated": "2026-03",
+  "sources": [
+    "ABA 509 Required Disclosures (2025)",
+    "LSAC Official Guide to ABA-Approved Law Schools (2025)",
+    "Law School Transparency (LST) Score Reports",
+    "7Sage Admissions Consulting Data",
+    "Spivey Consulting Blog (2024-2025)"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Academic Rigor",
+      "what_counts": [
+        "GPA (most heavily weighted single factor for law school admissions)",
+        "LSAT score (equally weighted with GPA at most schools)",
+        "Writing-intensive and analytical coursework (philosophy, logic, political theory, history)",
+        "Honors thesis or independent research",
+        "Honors distinctions (cum laude, dean's list)",
+        "Relevant graduate coursework or certifications"
+      ],
+      "what_does_not_count": [
+        "Padded coursework or GPA inflation from easy majors without depth",
+        "GPA without LSAT mention - both must be present for law school",
+        "Certifications unrelated to analytical or writing skill"
+      ]
+    },
+    "grit": {
+      "label": "Leadership and Persistence",
+      "what_counts": [
+        "Sustained leadership in organizations (multi-year, not just a title)",
+        "Demonstrated ownership and outcomes in roles",
+        "Commitment to a cause, community, or goal over time",
+        "Work experience that shows discipline and responsibility",
+        "Overcoming adversity or non-traditional path"
+      ],
+      "what_does_not_count": [
+        "Mock trial or debate - not required and should not be flagged as a gap",
+        "One-semester leadership roles with no evidence of impact",
+        "Titles without owned outcomes"
+      ]
+    },
+    "build": {
+      "label": "Legal-Adjacent Proof",
+      "what_counts": [
+        "Legal internship (law firm, public defender, DA office, legal aid clinic)",
+        "Judicial externship or clerkship",
+        "Policy or legislative research",
+        "Writing sample (published article, thesis, policy memo, legal brief)",
+        "Research with a professor in law-adjacent field",
+        "Paralegal or legal assistant work"
+      ],
+      "what_does_not_count": [
+        "General internships with no legal or analytical component",
+        "Club memberships without leadership or output"
+      ]
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No LSAT score or prep signal on resume",
+      "severity": "critical",
+      "dimension": "smart",
+      "fix": "LSAT is the single most important metric. If not yet taken, note prep timeline. A 170+ opens every T14 door."
+    },
+    {
+      "gap": "GPA below 3.7 with no upward trend narrative",
+      "severity": "critical",
+      "dimension": "smart",
+      "fix": "An addendum explaining GPA dip (semester difficulty, personal circumstance, upward trend) is standard practice and effective."
+    },
+    {
+      "gap": "No legal or policy internship",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Even one semester at a legal aid clinic, public defender's office, or policy shop significantly strengthens your application."
+    },
+    {
+      "gap": "No writing sample or analytical writing artifact",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Law schools want proof of your writing ability before you arrive. A thesis, published article, or policy memo is essential."
+    },
+    {
+      "gap": "Shallow extracurricular leadership (title only, no outcomes)",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Add one concrete outcome per leadership role: members recruited, budget managed, event impact, policy change driven."
+    },
+    {
+      "gap": "No 'why law' narrative connecting undergrad to legal ambitions",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Adcoms want to see how your undergraduate experiences pointed you toward law. A clear through-line across your resume matters."
+    },
+    {
+      "gap": "No coursework in legal theory, political philosophy, or policy",
+      "severity": "minor",
+      "dimension": "smart",
+      "fix": "Add a relevant course or two to your resume header or transcript narrative: constitutional law, jurisprudence, policy analysis."
+    }
+  ],
+  "schools": [
+    {
+      "name": "Yale Law School",
+      "ranking": 1,
+      "median_lsat": 174,
+      "median_gpa": 3.93,
+      "p25_lsat": 171,
+      "p75_lsat": 175,
+      "p25_gpa": 3.83,
+      "p75_gpa": 3.97,
+      "acceptance_rate": 0.066,
+      "priorities": [
+        "Intellectual distinction and originality",
+        "Public service and social impact",
+        "Writing quality (personal statement is heavily weighted)",
+        "Diversity of background and perspective",
+        "Strong sense of purpose"
+      ],
+      "notes": "Most holistic T14. Lower LSAT candidates (169-171) can be admitted with exceptional writing, public interest background, or academic distinction. Writing sample and personal statement carry enormous weight here more than anywhere else.",
+      "source": "ABA 509 2025, Yale Law Admissions"
+    },
+    {
+      "name": "Harvard Law School",
+      "ranking": 2,
+      "median_lsat": 174,
+      "median_gpa": 3.93,
+      "p25_lsat": 171,
+      "p75_lsat": 175,
+      "p25_gpa": 3.85,
+      "p75_gpa": 3.98,
+      "acceptance_rate": 0.117,
+      "priorities": [
+        "Academic excellence and intellectual rigor",
+        "Leadership at scale",
+        "Evidence of impact and ambition",
+        "Diversity of thought and background"
+      ],
+      "notes": "More numbers-focused than Yale. Leadership with scale or real-world impact is a major differentiator. Strong preference for candidates who have done something, not just studied.",
+      "source": "ABA 509 2025, HLS Admissions"
+    },
+    {
+      "name": "Stanford Law School",
+      "ranking": 3,
+      "median_lsat": 174,
+      "median_gpa": 3.92,
+      "p25_lsat": 171,
+      "p75_lsat": 175,
+      "p25_gpa": 3.84,
+      "p75_gpa": 3.97,
+      "acceptance_rate": 0.086,
+      "priorities": [
+        "Intellectual curiosity and academic rigor",
+        "Leadership and innovation",
+        "Entrepreneurial or unique career path",
+        "Character and authenticity"
+      ],
+      "notes": "Smaller class than HLS/YLS (about 180/year) makes it intensely selective. Entrepreneurial backgrounds and candidates who have built something stand out. Personal statement authenticity is critical.",
+      "source": "ABA 509 2025, SLS Admissions"
+    },
+    {
+      "name": "Columbia Law School",
+      "ranking": 4,
+      "median_lsat": 174,
+      "median_gpa": 3.82,
+      "p25_lsat": 171,
+      "p75_lsat": 175,
+      "p25_gpa": 3.68,
+      "p75_gpa": 3.93,
+      "acceptance_rate": 0.167,
+      "priorities": [
+        "Academic achievement (LSAT-heavy)",
+        "Internationalism and global perspective",
+        "Biglaw and corporate law career interest",
+        "NYC legal market alignment"
+      ],
+      "notes": "GPA range is wider than peers - a high LSAT can compensate significantly. Best BigLaw placement in NYC. Strong preference for candidates interested in transactional or corporate law.",
+      "source": "ABA 509 2025, Columbia Law Admissions"
+    },
+    {
+      "name": "University of Chicago Law School",
+      "ranking": 5,
+      "median_lsat": 174,
+      "median_gpa": 3.91,
+      "p25_lsat": 171,
+      "p75_lsat": 175,
+      "p25_gpa": 3.80,
+      "p75_gpa": 3.97,
+      "acceptance_rate": 0.165,
+      "priorities": [
+        "Intellectual rigor and analytical thinking",
+        "Academic distinction and grades",
+        "Engagement with ideas (not just credentials)",
+        "Law and economics background valued"
+      ],
+      "notes": "The 'why UChicago' essay matters a lot. They want people who love ideas and can argue. Law-and-economics tradition means quant skills and economics/philosophy backgrounds stand out.",
+      "source": "ABA 509 2025, UChicago Law Admissions"
+    },
+    {
+      "name": "NYU School of Law",
+      "ranking": 6,
+      "median_lsat": 173,
+      "median_gpa": 3.86,
+      "p25_lsat": 169,
+      "p75_lsat": 174,
+      "p25_gpa": 3.71,
+      "p75_gpa": 3.95,
+      "acceptance_rate": 0.21,
+      "priorities": [
+        "Public interest law (Root-Tilden-Kern scholarship pipeline)",
+        "International law",
+        "Academic achievement",
+        "NYC / global legal market"
+      ],
+      "notes": "Top public interest law school in the country. Root-Tilden-Kern scholarship covers full tuition for public interest commitment. Strong international law program. More holistic than Columbia.",
+      "source": "ABA 509 2025, NYU Law Admissions"
+    },
+    {
+      "name": "University of Pennsylvania Carey Law School",
+      "ranking": 7,
+      "median_lsat": 172,
+      "median_gpa": 3.90,
+      "p25_lsat": 168,
+      "p75_lsat": 174,
+      "p25_gpa": 3.72,
+      "p75_gpa": 3.97,
+      "acceptance_rate": 0.155,
+      "priorities": [
+        "Business and corporate law alignment (Wharton proximity)",
+        "Academic achievement",
+        "Professional work experience",
+        "Interdisciplinary interest"
+      ],
+      "notes": "JD/MBA pipeline with Wharton is a unique draw. Business-minded pre-law students are a natural fit. Work experience before law school is viewed positively.",
+      "source": "ABA 509 2025, Penn Carey Law Admissions"
+    },
+    {
+      "name": "University of Virginia School of Law",
+      "ranking": 8,
+      "median_lsat": 172,
+      "median_gpa": 3.88,
+      "p25_lsat": 168,
+      "p75_lsat": 174,
+      "p25_gpa": 3.74,
+      "p75_gpa": 3.97,
+      "acceptance_rate": 0.178,
+      "priorities": [
+        "Academic achievement",
+        "Character and collegiality",
+        "Public service orientation",
+        "Traditional law career pipeline (BigLaw, clerkships)"
+      ],
+      "notes": "Known for its collegial culture. Character matters more here than at pure numbers-focused schools. Strong federal clerkship placement. Southern law market stronghold.",
+      "source": "ABA 509 2025, UVA Law Admissions"
+    },
+    {
+      "name": "University of Michigan Law School",
+      "ranking": 9,
+      "median_lsat": 171,
+      "median_gpa": 3.83,
+      "p25_lsat": 167,
+      "p75_lsat": 173,
+      "p25_gpa": 3.61,
+      "p75_gpa": 3.95,
+      "acceptance_rate": 0.196,
+      "priorities": [
+        "Academic excellence",
+        "Diversity and background",
+        "Leadership and community",
+        "Midwest and national legal markets"
+      ],
+      "notes": "GPA spread is wide - a strong narrative can compensate for a lower GPA. Diversity is genuinely prioritized. Strong regional presence in Midwest/Great Lakes.",
+      "source": "ABA 509 2025, Michigan Law Admissions"
+    },
+    {
+      "name": "Duke University School of Law",
+      "ranking": 10,
+      "median_lsat": 172,
+      "median_gpa": 3.82,
+      "p25_lsat": 168,
+      "p75_lsat": 174,
+      "p25_gpa": 3.65,
+      "p75_gpa": 3.96,
+      "acceptance_rate": 0.202,
+      "priorities": [
+        "Academic achievement",
+        "International and global law interest",
+        "Leadership and character",
+        "BigLaw pipeline"
+      ],
+      "notes": "Strong international law and business law programs. GPA range is wide. Scholarship opportunities are competitive - high LSAT earns significant funding.",
+      "source": "ABA 509 2025, Duke Law Admissions"
+    },
+    {
+      "name": "Northwestern Pritzker School of Law",
+      "ranking": 11,
+      "median_lsat": 172,
+      "median_gpa": 3.88,
+      "p25_lsat": 168,
+      "p75_lsat": 174,
+      "p25_gpa": 3.70,
+      "p75_gpa": 3.97,
+      "acceptance_rate": 0.185,
+      "priorities": [
+        "Professional experience (most work-experience-positive T14)",
+        "Business and corporate law",
+        "Academic achievement",
+        "Chicago / Midwest legal market"
+      ],
+      "notes": "Most work-experience-friendly of the T14. Actively prefers applicants who have worked for a few years. Average age of entering class is higher than peers. Chicago BigLaw pipeline.",
+      "source": "ABA 509 2025, Northwestern Law Admissions"
+    },
+    {
+      "name": "Cornell Law School",
+      "ranking": 12,
+      "median_lsat": 170,
+      "median_gpa": 3.82,
+      "p25_lsat": 167,
+      "p75_lsat": 172,
+      "p25_gpa": 3.63,
+      "p75_gpa": 3.95,
+      "acceptance_rate": 0.215,
+      "priorities": [
+        "Academic achievement",
+        "International law (strong program)",
+        "BigLaw pipeline",
+        "Character and fit"
+      ],
+      "notes": "Most accessible T14 by LSAT. Strong international and comparative law. Ithaca location means concentrated community culture - fit matters more than at NYC/DC schools.",
+      "source": "ABA 509 2025, Cornell Law Admissions"
+    },
+    {
+      "name": "Georgetown University Law Center",
+      "ranking": 13,
+      "median_lsat": 168,
+      "median_gpa": 3.81,
+      "p25_lsat": 165,
+      "p75_lsat": 170,
+      "p25_gpa": 3.58,
+      "p75_gpa": 3.95,
+      "acceptance_rate": 0.237,
+      "priorities": [
+        "Public interest and government law",
+        "Policy and DC market alignment",
+        "Academic achievement",
+        "Diversity and access to legal education"
+      ],
+      "notes": "Best DC legal market placement. Huge class (~550/year) means more holistic review - softs matter more here. Public interest and government candidates thrive. Most accessible T14 entry point.",
+      "source": "ABA 509 2025, Georgetown Law Admissions"
+    },
+    {
+      "name": "UCLA School of Law",
+      "ranking": 14,
+      "median_lsat": 170,
+      "median_gpa": 3.84,
+      "p25_lsat": 167,
+      "p75_lsat": 172,
+      "p25_gpa": 3.66,
+      "p75_gpa": 3.96,
+      "acceptance_rate": 0.199,
+      "priorities": [
+        "Academic excellence",
+        "Public interest and social justice",
+        "Entertainment and IP law (LA market)",
+        "Diversity"
+      ],
+      "notes": "Top California law school. Strong in entertainment, IP, and public interest. California bar alignment makes it dominant in the LA/SF legal market.",
+      "source": "ABA 509 2025, UCLA Law Admissions"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+# Recognized tech employers for Build signal (Tech track).
+# One name per line, lowercase. Used to detect internship/job at recognized company.
+# Edit this file to add/remove companies; no code changes needed.
+#
+# FAANG + major tech
+google
+alphabet
+meta
+facebook
+amazon
+aws
+apple
+netflix
+microsoft
+# Top startups
+stripe
+figma
+# Quant / trading
+jane street
+citadel
+two sigma
+# Enterprise
+ibm
+oracle
+salesforce
+adobe
+intel
+nvidia
+qualcomm
+cisco
+vmware
+# Consumer tech
+spotify
+uber
+lyft
+airbnb
+twitter
+linkedin
+snap
+pinterest
+square
+shopify
+slack
+atlassian
+servicenow
+snowflake
+databricks
+palantir
+# Finance (tech-adjacent)
+bloomberg
+goldman sachs
+morgan stanley
+jpmorgan
+jp morgan
+blackrock

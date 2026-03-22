@@ -1,0 +1,16 @@
+# Pre-commit / pre-push: run dev check (lint + fast tests).
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+# For pre-push only: pre-commit install --hook-type pre-push
+
+default_language_version:
+  python: python3
+
+repos:
+  - repo: local
+    hooks:
+      - id: dev-check
+        name: Dev check (lint + tests)
+        entry: bash -c 'cd "$(git rev-parse --show-toplevel)" && ./scripts/dev_check.sh'
+        language: system
+        pass_filenames: false

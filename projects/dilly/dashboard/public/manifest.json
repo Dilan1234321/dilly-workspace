@@ -1,0 +1,10 @@
+{
+  "name": "Dilly",
+  "short_name": "Dilly",
+  "description": "Your last check before you apply. Recruiters spend seconds on a resume. We hold you to the bar that gets interviews.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1917",
+  "theme_color": "#c9a882",
+  "orientation": "portrait-primary"
+}

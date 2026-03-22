@@ -21,7 +21,7 @@ Already done for you:
 After you **copy this whole workspace** to your personal computer (e.g. clone from GitHub once it’s pushed, or copy the folder via USB/cloud):
 
 ```bash
-cd /path/to/workspace   # the folder that contains meridian_core/, projects/, SOUL.md, etc.
+cd /path/to/workspace   # the folder that contains dilly_core/, projects/, SOUL.md, etc.
 
 # If you haven’t pushed from this machine yet, add GitHub as remote and push:
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
@@ -65,7 +65,7 @@ pip install python-docx      # optional: for .docx in build_training_data
 pip install openai          # optional: for LLM auditor
 ```
 
-For the API to find `meridian_core`, run commands from the repo root (or add it to `PYTHONPATH`).
+For the API to find `dilly_core`, run commands from the repo root (or add it to `PYTHONPATH`).
 
 ### 3. Env (API keys, LLM)
 
@@ -85,7 +85,7 @@ From repo root:
 
 ```bash
 source .venv/bin/activate
-uvicorn projects.meridian.api.main:app --host 0.0.0.0 --port 8000
+uvicorn projects.dilly.api.main:app --host 0.0.0.0 --port 8000
 ```
 
 Or: `./run_meridian_api.sh` (if `.venv` is in repo root).
@@ -108,7 +108,7 @@ Open **http://localhost:3000**. It talks to the API at `http://localhost:8000` b
 - **memory/** — daily notes; in the repo.
 - **MEMORY.md** — create in repo root for long-term memory (main session only); add to `.gitignore` if you don’t want it on GitHub.
 - **Rubrics** — `projects/meridian/prompts/rubric_pre_health.md`, `rubric_builder.md` (in repo).
-- **Training data** — `projects/meridian/prompts/training_data.json` (in repo; may be empty; regenerate with `python3 -m projects.meridian.scripts.build_training_data` after `pip install python-docx` if you have resumes in `assets/resumes/`).
+- **Training data** — `projects/meridian/prompts/training_data.json` (in repo; may be empty; regenerate with `python3 -m projects.dilly.scripts.build_training_data` after `pip install python-docx` if you have resumes in `assets/resumes/`).
 
 ### 7. Quick test
 

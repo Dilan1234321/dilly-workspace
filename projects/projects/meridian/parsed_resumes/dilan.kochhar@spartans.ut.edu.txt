@@ -1,0 +1,98 @@
+Name: Dilan Kochhar
+Cohort: Tech
+
+Dilan Kochhar  
+Email: kochhardilan05@gmail.com  
+Phone: (516)-965-5182  
+Location: New York, NY  
+LinkedIn: www.linkedin.com/in/dilan-k  
+
+[EDUCATION]  
+University: University of Tampa  
+Major(s): Data Science, B.S.  
+Minor(s): Math & Computer Science  
+Graduation date: Expected December 2027  
+Location: Tampa, FL  
+
+[PROFESSIONAL EXPERIENCE]  
+
+Company: KVR Properties  
+Role: Artificial Intelligence Engineering Intern  
+Date: June 2025 - August 2025  
+Location: Fort Lauderdale, FL  
+Description:  
+- Launched the real estate firm’s first-ever internship as the sole Artificial Intelligence Engineer.  
+- Engineered an AI-driven predictive engine that managed a pipeline of 10,000+ applicants, returning a well-educated prediction on whether one would sign a lease.  
+- Finalized prediction accuracy to 88%.  
+
+Company: The Kochhar Education Foundation  
+Role: Co-Founder  
+Date: December 2022 - Present  
+Location: New York, NY  
+Description:  
+- Fundraised $20,000 and purchased 60 full-range personal computers and accessories in 2023 and 2024.  
+- Traveled and donated products to six underprivileged, government-funded schools in Tamil Nadu, in partnership with the Tamil Nadu Foundation (TNF).  
+- Spearheading the move to revitalize the foundation’s digital presence via effective SEO strategies.  
+- Impacted 6,000+ students and their families, expanding the reach of impact to approximately 100,000 people.  
+
+Company: PEACE Volunteer Center - The University of Tampa  
+Role: Desk Assistant  
+Date: February 2026 - Present  
+Location: Tampa, FL  
+Description:  
+- Oversees the general operations of the office to ensure proper service hour distribution to the student body.  
+
+[CAMPUS INVOLVEMENT]  
+
+Company: University of Tampa Mathematics Club  
+Role: Vice President  
+Date: February 2026 - Present  
+Location: Tampa, FL  
+Description:  
+- Curating and leading weekly "Problem Solving" workshops, breaking down and explaining complex concepts in Calculus and Linear Algebra to finance, economics, and tech-focused students to promote mathematical thinking.  
+
+Company: Alpha Kappa Psi - Phi Upsilon Chapter  
+Role: Chairman of Technology/Director of Digital Infrastructure  
+Date: December 2025 - Present  
+Location: Tampa, FL  
+Description:  
+- Developed the digital presence for 80+ members in UTampa’s chapter of the largest business fraternity in the world.  
+- Managing all website and database infrastructure to maximize chapter visibility and impact.  
+
+Company: Mu Epsilon Delta  
+Role: Founding Student Government Representative  
+Date: September 2025 - Present  
+Location: Tampa, FL  
+Description:  
+- Spearheading the student government presence and the introduction of this fraternity at UTampa.  
+- Teaching brothers how to find AI and data management applications in medicine and how to apply them in real-world scenarios.  
+
+Company: University of Tampa Data Science Club  
+Role: Secretary  
+Date: May 2025 - Present  
+Location: Tampa, FL  
+Description:  
+- Directing advertising campaigns, boosting club visibility, and engagement.  
+
+[PROJECTS]  
+
+Project name: Alpha Kappa Psi at the University of Tampa’s Website  
+Date: January 2026  
+Location: N/A  
+Description:  
+- Architected and single-handedly programmed the complete overhaul of the official chapter website. As a result, brand visibility was greatly enhanced, and engagement increased.  
+
+Project name: Can we predict which party each county will affiliate with?  
+Date: May 2025  
+Location: N/A  
+Description:  
+- Developed a classification model using Logistic Regression to predict political affiliation that returned a 96% accuracy through utilizing large-scale datasets from the MIT Election Data and Science Lab.  
+
+[SKILLS]  
+• Python OOP  
+• JavaScript  
+• HTML/CSS  
+• SQL  
+• Data Analysis  
+• Visualization  
+• Regression

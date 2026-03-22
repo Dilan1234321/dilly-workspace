@@ -1,0 +1,34 @@
+@layer _ {}
+@import "tailwindcss";
+
+:root {
+  --bg: #0c0e12;
+  --surface: #141820;
+  --surface2: #1c2230;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #e8ecf4;
+  --muted: #8b95a8;
+  --accent: #5b8cff;
+  --accent-dim: rgba(91, 140, 255, 0.15);
+  --reach: #f87171;
+  --match: #fbbf24;
+  --safety: #4ade80;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+    "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* Touch-friendly targets */
+.ap-btn {
+  min-height: 44px;
+  min-width: 44px;
+}

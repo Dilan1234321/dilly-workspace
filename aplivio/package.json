@@ -1,0 +1,36 @@
+{
+  "name": "aplivio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p ${PORT:-3011}",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3011}",
+    "lint": "eslint .",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.577.0",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "tailwind-merge": "^2.5.5",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "postcss": "^8.5.8",
+    "prisma": "^6.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

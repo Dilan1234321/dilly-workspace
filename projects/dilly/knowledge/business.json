@@ -1,0 +1,67 @@
+{
+  "track": "Business",
+  "last_updated": "2026-03",
+  "sources": [
+    "Vault Guide to Top Internships 2025",
+    "Wall Street Prep Recruiting Data 2025",
+    "Management Consulted Salary & Hiring Report 2025",
+    "LinkedIn Economic Graph Hiring Trends 2025",
+    "Mergers & Inquisitions Recruiting Guide (2025)"
+  ],
+  "subtracks": {
+    "Finance": {
+      "label": "Investment Banking / Private Equity / Asset Management",
+      "dimensions": {
+        "smart": ["Finance, Economics, or Accounting major", "High GPA (3.7+ for BB banks)", "Financial modeling coursework or CFA Level I prep", "Quant coursework: statistics, econometrics"],
+        "grit": ["Finance-related internships (IB, ER, PE, AM)", "Demonstrated deal exposure or client work", "Sustained leadership in finance organizations (investment club, consulting club)", "Series licensing (Series 7, 63, 65 if applicable)"],
+        "build": ["Financial modeling proof: DCF, LBO, merger model", "Investment thesis or stock pitch", "Bloomberg, Capital IQ, FactSet experience", "Deal experience or tombstones (even as intern)"]
+      },
+      "common_gaps": [
+        { "gap": "No financial modeling proof on resume", "severity": "critical", "fix": "Complete Wall Street Prep or BIWS modeling course and add it. Mention DCF/LBO in project descriptions." },
+        { "gap": "GPA below 3.5 without compensating signal", "severity": "critical", "fix": "At BB banks, 3.5 is a GPA screen floor. Consider boutique banks or regional shops as alternative entry points." },
+        { "gap": "No finance internship before junior year recruiting", "severity": "critical", "fix": "IB recruiting happens in SOPHOMORE year for junior summer. You must start building your pipeline in freshman year." },
+        { "gap": "No investment club or finance organization involvement", "severity": "moderate", "fix": "Join an investment club and pitch a stock. A real stock pitch adds Build signal that no course can replicate." }
+      ],
+      "firms": [
+        { "name": "Goldman Sachs", "tier": "Bulge Bracket", "gpa_floor": 3.7, "hiring_culture": "Prestige-conscious, GPA and school-sensitive, heavy emphasis on technical modeling and deal knowledge. Known for grueling analyst programs.", "notes": "SA recruiting is extremely competitive. Network heavily - most offers come through alumni connections." },
+        { "name": "Morgan Stanley", "tier": "Bulge Bracket", "gpa_floor": 3.7, "hiring_culture": "Similar to GS. Strong wealth management and institutional securities divisions. Values polish and professional presentation.", "notes": "Wealth Management has a different (more accessible) recruiting pathway than IBD." },
+        { "name": "JP Morgan", "tier": "Bulge Bracket", "gpa_floor": 3.5, "hiring_culture": "Largest bank by assets. More volume in recruiting means slightly more accessible than pure GS/MS/Lazard. Consumer banking track for non-IBD roles.", "notes": "JPM has the broadest set of entry-level programs across IBD, Asset Management, and Markets." },
+        { "name": "Lazard / Evercore / Centerview", "tier": "Elite Boutique", "gpa_floor": 3.7, "hiring_culture": "Smaller class, higher deal responsibility, less bureaucracy than BB. Pays more per analyst than most BB banks.", "notes": "Elite boutiques are as selective as GS/MS. Strong relationships with PE firms." },
+        { "name": "Blackstone / KKR / Apollo", "tier": "Private Equity (post-banking)", "gpa_floor": 3.8, "hiring_culture": "PE typically recruits from 1st-year IB analysts. GPA and bank brand are critical filters. Near-perfect track record required.", "notes": "Direct PE recruiting from undergrad is rare. Path is: top school → BB or EB bank → PE." }
+      ]
+    },
+    "Consulting": {
+      "label": "Strategy Consulting (MBB and Tier 2)",
+      "dimensions": {
+        "smart": ["Any major but GPA is critical (3.7+ for MBB)", "Quant coursework helps (stats, econ, operations)", "Case competition performance", "Academic distinction"],
+        "grit": ["Leadership in case clubs or business organizations", "Entrepreneurship or startup work", "Community impact at scale", "Work experience showing problem-solving ownership"],
+        "build": ["Case competition wins or top placements", "Consulting internship (any level)", "Data analysis or strategy project with quantified outcome", "Client-facing experience"]
+      },
+      "common_gaps": [
+        { "gap": "No case interview preparation signal", "severity": "critical", "fix": "Join your school's case club. Win or place in a case competition. These are the best resume signals for consulting recruiting." },
+        { "gap": "Behavioral answers not structured using STAR or similar framework", "severity": "critical", "fix": "MBB behavioral interviews are rigorous. Prepare 8-10 polished stories. PEI (Personal Experience Interview) is formalized at McKinsey." },
+        { "gap": "GPA below 3.7 for MBB target", "severity": "moderate", "fix": "Tier 2 firms (Deloitte S&O, EY-Parthenon, Oliver Wyman) are accessible at 3.5+. Use as a bridge to MBB through lateral transfer." },
+        { "gap": "No quant or analytical project to anchor Build signal", "severity": "moderate", "fix": "Add a data-driven project: market sizing analysis, financial model, or strategy analysis. Even a class project with methodology described works." }
+      ],
+      "firms": [
+        { "name": "McKinsey & Company", "tier": "MBB", "gpa_floor": 3.7, "hiring_culture": "Most structured of MBB. Personal Experience Interview (PEI) is a formalized behavioral test. Recruits from target schools heavily.", "notes": "Solve problems at scale. McKinsey values intellectual rigor and structured thinking above all." },
+        { "name": "Boston Consulting Group (BCG)", "tier": "MBB", "gpa_floor": 3.6, "hiring_culture": "More creative and entrepreneurial than McKinsey. Values innovation and new ideas. Case interviews are similar difficulty.", "notes": "BCG is building out its AI and digital practice aggressively - tech + consulting backgrounds are differentiating." },
+        { "name": "Bain & Company", "tier": "MBB", "gpa_floor": 3.6, "hiring_culture": "Most collegial culture of MBB. PE-focused consulting work. Known for the best analyst training program.", "notes": "Bain analysts have high placement into PE. The culture is slightly more team-oriented than McKinsey." },
+        { "name": "Deloitte S&O / Monitor", "tier": "Tier 2", "gpa_floor": 3.5, "hiring_culture": "Lower bar than MBB but excellent strategy work. Good entry point for candidates targeting MBB lateral.", "notes": "Deloitte S&O is formally separate from Deloitte Consulting and maintains MBB-adjacent culture." },
+        { "name": "Oliver Wyman", "tier": "Tier 2", "gpa_floor": 3.5, "hiring_culture": "Strong in financial services consulting. Known for analytical rigor. Smaller firm means faster growth.", "notes": "If targeting finance or insurance industry consulting, Oliver Wyman is a top-5 choice." }
+      ]
+    },
+    "Marketing": {
+      "label": "Brand, Digital Marketing, and Product Marketing",
+      "dimensions": {
+        "smart": ["Marketing, Communications, or Business major", "Analytics and data coursework", "Consumer behavior and market research"],
+        "grit": ["Campaign ownership with measurable results", "Brand or agency internship", "Content creation with audience metrics"],
+        "build": ["Portfolio of campaigns, copy, or creative work", "Google Analytics / Meta Ads certification", "Social media growth metrics", "Internship at brand or agency"]
+      },
+      "common_gaps": [
+        { "gap": "No campaign portfolio or metrics to show", "severity": "critical", "fix": "Run a real campaign - even for a student org. Measure results. Add numbers: reach, conversions, follower growth, engagement rate." },
+        { "gap": "No digital marketing certifications", "severity": "moderate", "fix": "Google Analytics, Meta Blueprint, and HubSpot certifications are free and widely recognized. Add them under Skills or Certifications." }
+      ]
+    }
+  }
+}

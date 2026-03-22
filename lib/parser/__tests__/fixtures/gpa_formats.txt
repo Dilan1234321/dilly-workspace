@@ -1,0 +1,9 @@
+Gina GPA
+gina.gpa@example.com
+
+EDUCATION
+University of Tampa
+B.S. in Computer Science
+GPA: 3.8/4.0
+Cumulative GPA: 3.9
+(3.7 GPA)

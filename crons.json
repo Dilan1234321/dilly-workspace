@@ -3,5 +3,30 @@
     "id": "meridian-optimizer",
     "schedule": "*/10 * * * *",
     "command": "/bin/bash /Users/dilankochhar/.openclaw/workspace/meridian_background_optimizer.sh"
+  },
+  {
+    "id": "meridian-scraper",
+    "schedule": "0 3 * * 0",
+    "command": "/bin/bash /Users/dilankochhar/.openclaw/workspace/meridian_scraper.sh"
+  },
+  {
+    "id": "meridian-cleanup-draft-profiles",
+    "schedule": "0 4 * * *",
+    "command": "/bin/bash /Users/dilankochhar/.openclaw/workspace/scripts/cron_cleanup_profiles.sh"
+  },
+  {
+    "id": "meridian-daily-notifications",
+    "schedule": "0 * * * *",
+    "command": "/bin/bash /Users/dilankochhar/.openclaw/workspace/scripts/cron_daily_notifications.sh"
+  },
+  {
+    "id": "meridian-ready-check-followups",
+    "schedule": "30 * * * *",
+    "command": "/bin/bash /Users/dilankochhar/.openclaw/workspace/scripts/cron_ready_check_followups.sh"
+  },
+  {
+    "id": "meridian-cohort-pulse-generate",
+    "schedule": "0 9 * * 1",
+    "command": "/bin/bash /Users/dilankochhar/.openclaw/workspace/scripts/cron_generate_cohort_pulse.sh"
   }
 ]

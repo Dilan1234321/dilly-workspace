@@ -1,0 +1,137 @@
+{
+  "track": "Pre-Health",
+  "last_updated": "2026-03",
+  "sources": [
+    "AAMC Medical School Admissions Requirements (MSAR) 2025-2026",
+    "AAMC 2025 Facts: Applicants and Matriculants Data",
+    "Association of American Dental Schools (ADEA) Official Guide 2025",
+    "AACOMAS Applicant Data 2025 (Osteopathic)",
+    "Student Doctor Network (SDN) Accepted Data Compilation"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Academic Rigor",
+      "what_counts": [
+        "Science GPA (sGPA) - Biology, Chemistry, Physics, Math - weighted separately by AAMC",
+        "Cumulative GPA",
+        "MCAT score (critical: all four sections scored)",
+        "Rigorous science coursework: Orgo, Biochem, Physics, Genetics, Physiology",
+        "Research coursework, honors thesis in science",
+        "Advanced coursework: upper-division Bio, Chem, or related"
+      ],
+      "what_does_not_count": [
+        "GPA without science breakdown for pre-med applications",
+        "Non-science honors that don't demonstrate science rigor"
+      ]
+    },
+    "grit": {
+      "label": "Sustained Commitment",
+      "what_counts": [
+        "Long-term volunteer commitment (not one-off events)",
+        "Leadership in pre-med or science organizations",
+        "Teaching, tutoring, or mentoring (sustained)",
+        "Work experience (especially healthcare-adjacent)",
+        "Overcoming adversity or non-traditional path to medicine"
+      ],
+      "what_does_not_count": [
+        "Brief volunteer stints without follow-through",
+        "Leadership titles without owned outcomes or member impact"
+      ]
+    },
+    "build": {
+      "label": "Healthcare Profile",
+      "what_counts": [
+        "Clinical hours with direct patient contact (EMT, scribe, CNA, hospital volunteer, clinic volunteer)",
+        "Shadowing hours (across multiple specialties preferred; MD and DO shadowing for DO apps)",
+        "Research (wet lab, clinical research, IRB involvement, publications, conference presentations)",
+        "Community service and public health experience",
+        "Healthcare-adjacent employment"
+      ],
+      "minimums": {
+        "clinical_hours": 100,
+        "competitive_clinical_hours": 200,
+        "shadowing_hours": 40,
+        "competitive_shadowing_hours": 100,
+        "research_hours_for_research_schools": 200
+      }
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No MCAT score or prep signal",
+      "severity": "critical",
+      "dimension": "smart",
+      "fix": "MCAT is required for every MD/DO program. Aim 510+ for most MD programs, 505+ for DO. Retake if score is below these thresholds."
+    },
+    {
+      "gap": "Fewer than 100 clinical hours",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "100 hours is the bare minimum. Competitive applicants have 200+. Add an EMT certification, hospital volunteering, or medical scribe role."
+    },
+    {
+      "gap": "No shadowing experience",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Adcoms want evidence you know what you're signing up for. Shadow at least 2-3 physicians in different specialties. 40+ hours minimum."
+    },
+    {
+      "gap": "Science GPA below 3.5",
+      "severity": "critical",
+      "dimension": "smart",
+      "fix": "Post-bacc coursework or SMPs (Special Master's Programs) are standard ways to demonstrate academic recovery for borderline sGPAs."
+    },
+    {
+      "gap": "No research experience (for MD research-focused programs)",
+      "severity": "moderate",
+      "dimension": "build",
+      "fix": "Join a lab through your department, PI email outreach, or URCA programs. Even a semester of data analysis with a faculty member counts."
+    },
+    {
+      "gap": "Volunteer work is all one-time events, not sustained",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Pick one organization and commit for a full year. Adcoms want to see follow-through, not event-hopping."
+    },
+    {
+      "gap": "Clinical experience only in one setting or specialty",
+      "severity": "minor",
+      "dimension": "build",
+      "fix": "Diversify across at least 2 settings (e.g., hospital + free clinic, or ER + outpatient). Shows breadth of understanding of medicine."
+    }
+  ],
+  "school_tiers": [
+    {
+      "tier": "Research Powerhouses (Top 10 MD)",
+      "examples": ["Johns Hopkins", "Harvard Medical School", "UCSF", "Washington University St. Louis", "Columbia P&S", "Duke", "UPenn", "Mayo Clinic", "Stanford", "Yale"],
+      "median_mcat": 522,
+      "median_gpa": 3.92,
+      "priorities": ["Research (publications, PI-led work, conference presentations)", "Exceptional MCAT/GPA", "Clear research or academic medicine trajectory"],
+      "notes": "Research experience is essentially required. Publications or presentations dramatically increase odds. Aim 520+ MCAT and 3.85+ sGPA."
+    },
+    {
+      "tier": "Balanced MD Programs (Top 25-50)",
+      "examples": ["Emory", "Vanderbilt", "Georgetown", "Case Western", "Boston University", "Tufts", "University of Rochester"],
+      "median_mcat": 517,
+      "median_gpa": 3.82,
+      "priorities": ["Clinical hours", "Community service", "Research valued but not required", "Leadership"],
+      "notes": "More holistic than top-10. Clinical depth and service orientation matter as much as numbers. Strong personal statement can compensate for borderline stats."
+    },
+    {
+      "tier": "State Flagship MD Programs",
+      "examples": ["UCLA", "UC Davis", "Ohio State", "University of Michigan", "Indiana University", "University of Washington"],
+      "median_mcat": 514,
+      "median_gpa": 3.78,
+      "priorities": ["In-state preference (often 80%+ of class)", "Community ties and rural/underserved interest", "Clinical experience"],
+      "notes": "Strong in-state preference dramatically improves odds. Out-of-state applicants need to be near top-25 caliber to compete."
+    },
+    {
+      "tier": "DO Programs (Osteopathic)",
+      "examples": ["AZCOM", "PCOM", "LECOM", "Midwestern University"],
+      "median_mcat": 504,
+      "median_gpa": 3.55,
+      "priorities": ["DO shadowing specifically required", "Hands-on patient care", "Commitment to primary care or family medicine"],
+      "notes": "DO programs require shadowing a DO physician specifically. All DO programs are accredited and eligible for residency matching. Primary care orientation is valued."
+    }
+  ]
+}

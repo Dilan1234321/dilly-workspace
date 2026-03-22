@@ -19,7 +19,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 # Delegate to the full script
-from projects.meridian.scripts.build_training_data import main
+from projects.dilly.scripts.build_training_data import main
 
 if __name__ == "__main__":
     main()

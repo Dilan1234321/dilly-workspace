@@ -1,0 +1,18 @@
+{
+    "candidate_name": "Christopher M.",
+    "major": "Marine Science",
+    "track": "Science",
+    "scores": {
+        "smart": 90.9,
+        "grit": 67,
+        "build": 6
+    },
+    "final_score": 58.92,
+    "findings": [
+        "Smart: You showcased high academic standard due to your 3.50 GPA, and your placement in the honors program.",
+        "Grit: You demonstrated leadership and impact through your leadership roles, your work and experience history.",
+        "Build: You demonstrated Science readiness; track scoring applied."
+    ],
+    "status": "Draft Report",
+    "audit_ts": 1742225760
+}

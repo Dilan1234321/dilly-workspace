@@ -1,0 +1,19 @@
+{
+    "candidate_name": "Victoria Logan",
+    "major": "Marketing",
+    "track": "Business",
+    "scores": {
+        "smart": 80.3,
+        "grit": 100.0,
+        "build": 78
+    },
+    "final_score": 88.59,
+    "findings": [
+        "Smart: You showcased high academic standard due to your 3.50 GPA, your research involvement, and your Business Analytics minor.",
+        "Grit: You demonstrated leadership and impact through your leadership roles, quantifiable outcomes, your work and experience history.",
+        "Build: You demonstrated Business readiness. Leadership density supports Build score.",
+        "Build: Quantifiable impact supports Build score."
+    ],
+    "status": "Draft Report",
+    "audit_ts": 1742225760
+}

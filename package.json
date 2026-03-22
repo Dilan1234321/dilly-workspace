@@ -1,0 +1,14 @@
+{
+  "name": "openclaw-workspace",
+  "private": true,
+  "description": "Workspace root. Run dashboard: cd projects/dilly/dashboard && npm run dev",
+  "scripts": {
+    "dev": "cd projects/dilly/dashboard && npm run dev",
+    "build": "cd projects/dilly/dashboard && npm run build",
+    "dev:aplivio": "cd aplivio && npm run dev",
+    "build:aplivio": "cd aplivio && npm run build"
+  },
+  "dependencies": {
+    "expo-linking": "^55.0.5"
+  }
+}

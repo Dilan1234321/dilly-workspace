@@ -1,0 +1,3 @@
+{
+  "_comment": "Recruiter advice keyed by company slug. Add e.g. \"stripe\": [{\"text\": \"...\", \"created_at\": \"ISO8601\", \"source\": \"recruiter\"}]"
+}

@@ -1,0 +1,7 @@
+Bullet Skills
+bullet.skills@example.com
+
+SKILLS
+* Python
+* JavaScript
+* React

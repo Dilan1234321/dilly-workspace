@@ -1,0 +1,78 @@
+{
+  "track": "Humanities",
+  "last_updated": "2026-03",
+  "sources": [
+    "MLA (Modern Language Association) Job Market Report",
+    "AHA (American Historical Association) Career Resources",
+    "Chronicle of Higher Education Academic Job Market Data",
+    "Versatile PhD and Beyond the Professoriate",
+    "Publishing and Editorial Industry Hiring Trends"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Research and Writing Rigor",
+      "what_counts": [
+        "Humanities major (English, History, Philosophy, Languages, etc.)",
+        "Writing-intensive coursework and analytical rigor",
+        "Honors thesis, capstone, or independent research",
+        "Publications, conference presentations, or submissions",
+        "Graduate coursework or advanced seminars",
+        "Languages, archival work, or primary source analysis"
+      ]
+    },
+    "grit": {
+      "label": "Quantifiable Impact and Ownership",
+      "what_counts": [
+        "Research projects with clear scope and outcome",
+        "Teaching, tutoring, or mentoring with hours and impact",
+        "Editorial or publishing roles with deliverables",
+        "Events organized, readers served, or programs led",
+        "Sustained commitment to a cause or organization",
+        "Leadership in humanities orgs (literary journal, history club)"
+      ]
+    },
+    "build": {
+      "label": "Evidence of Analysis and Output",
+      "what_counts": [
+        "Publications (academic, literary, or journalistic)",
+        "Conference presentations or panels",
+        "Writing samples: thesis, articles, essays with context",
+        "Editorial work: literary journal, newspaper, magazine",
+        "Teaching or tutoring with subject and outcomes",
+        "Research assistantships with PI and project named"
+      ]
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No publication, presentation, or substantial writing sample",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Submit to undergraduate journals, present at campus conferences, or publish in student media. Even one accepted piece or presentation is a baseline."
+    },
+    {
+      "gap": "Resume lacks evidence of analytical or research work",
+      "severity": "critical",
+      "dimension": "smart",
+      "fix": "Name your thesis topic, research methods, or primary sources. List relevant coursework. Show you can do sustained, rigorous analysis."
+    },
+    {
+      "gap": "No teaching, tutoring, or editorial experience",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Tutor through your university, join a literary journal, or volunteer as a writing consultant. Humanities employers value communication and pedagogy."
+    },
+    {
+      "gap": "Bullets are vague (e.g. 'conducted research')",
+      "severity": "moderate",
+      "dimension": "build",
+      "fix": "Specify: research on what, with whom, what methods, what output. 'Researched X under Prof. Y; produced 20-page analysis' beats 'conducted research.'"
+    },
+    {
+      "gap": "No quantified impact where possible",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Add numbers: readers served, events organized, hours taught, words edited, students tutored. Humanities can be quantified more than many assume."
+    }
+  ]
+}

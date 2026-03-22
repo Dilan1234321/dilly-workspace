@@ -1,0 +1,5 @@
+Taylor Table
+taylor.table@example.com
+EXPERIENCE | DATES | LOCATION
+Acme Corp - Intern | Jan 2023 - May 2023 | Tampa, FL
+Beta LLC - Analyst | Jun 2023 - Present | Remote

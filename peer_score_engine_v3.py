@@ -12,7 +12,7 @@ import json
 # V12.1 Update: Research Authorship & Clinical Depth + Law Work Exp Nuance.
 # - Pre-Health: Shift to 40% Build (Authorship/Patient Care focus).
 # - Pre-Law: Shift to 40% Smart (GPA/LSAT dominance) + 2x Work Exp Weight.
-# - Builder: Shift to 50% Build (Technical Impact & Repo receipts).
+# - Tech: Shift to 50% Build (Technical Impact & Repo receipts).
 
 def extract_text(path):
     if path.endswith(".pdf"):
@@ -39,22 +39,22 @@ def get_signals(text):
     elif any(k in text_low for k in ['history', 'international studies', 'archival', 'lsat', 'legal', 'mock trial', 'judicial', 'jurisprudence', 'philosophy', 'political science', 'law firm', 'paralegal', 'briefs', 'litigation', 'pro bono', 'attorney', 'legal writing']):
         signals["track"] = "Pre-Law"
     elif any(k in text_low for k in ['data science', 'computer science', 'cybersecurity', 'python', 'sql', 'algorithms', 'software', 'engineering', 'machine learning', 'api', 'infrastructure', 'predictive engine', 'aws', 'docker', 'git', 'full stack', 'database', 'frontend', 'backend', 'scalability', 'developer', 'react', 'typescript']):
-        signals["track"] = "Builder"
+        signals["track"] = "Tech"
     else:
         signals["track"] = "General"
 
     # Dataset Veracity Hard-Overrides
-    if "dilan" in text_low: signals["track"] = "Builder"
+    if "dilan" in text_low: signals["track"] = "Tech"
     if "vir shah" in text_low: signals["track"] = "Pre-Health"
     if "shreya" in text_low: signals["track"] = "Pre-Health"
     if "rosenblum" in text_low: signals["track"] = "Pre-Health"
     if "bridget" in text_low: signals["track"] = "Pre-Health"
     if "gardner" in text_low: signals["track"] = "Pre-Health"
     if "tyler" in text_low and "smith" in text_low: signals["track"] = "Pre-Law"
-    if "poirier" in text_low: signals["track"] = "Builder"
-    if "rivers" in text_low: signals["track"] = "Builder"
-    if "mfugale" in text_low: signals["track"] = "Builder"
-    if "chiaravalloti" in text_low: signals["track"] = "Builder"
+    if "poirier" in text_low: signals["track"] = "Tech"
+    if "rivers" in text_low: signals["track"] = "Tech"
+    if "mfugale" in text_low: signals["track"] = "Tech"
+    if "chiaravalloti" in text_low: signals["track"] = "Tech"
 
     # 2. SMART PILLAR (Admissions Standard)
     univ_gpa = 0.0
@@ -70,7 +70,7 @@ def get_signals(text):
     rigor_markers = {
         "Pre-Health": ['organic chemistry', 'biochemistry', 'genetics', 'physics', 'microbiology', 'anatomy', 'physiology', 'cell biology', 'neuroscience', 'calculus', 'statistics', 'molecular', 'immunology', 'biopsychology', 'physical chemistry', 'human anatomy', 'medical ethics'],
         "Pre-Law": ['historiography', 'jurisprudence', 'constitutional', 'logic', 'ethics', 'legal writing', 'intermediate macro', 'political theory', 'philosophy', 'writing', 'criminal justice', 'civil rights', 'international law', 'advanced rhetoric', 'economic analysis', 'american government'],
-        "Builder": ['algorithms', 'data structures', 'operating systems', 'machine learning', 'linear algebra', 'discrete math', 'software engineering', 'artificial intelligence', 'database systems', 'distributed systems', 'cloud architecture', 'compilers', 'differential equations', 'numerical analysis'],
+        "Tech": ['algorithms', 'data structures', 'operating systems', 'machine learning', 'linear algebra', 'discrete math', 'software engineering', 'artificial intelligence', 'database systems', 'distributed systems', 'cloud architecture', 'compilers', 'differential equations', 'numerical analysis'],
         "General": ['marketing', 'management', 'business', 'finance', 'accounting', 'economics', 'sociology', 'psychology']
     }
     found_rigor = sum(35 for r in rigor_markers.get(signals["track"], []) if r in text_low)
@@ -82,7 +82,7 @@ def get_signals(text):
     elif signals["track"] == "Pre-Law":
         if any(m in text_low for m in ['philosophy', 'economics', 'math', 'physics', 'classics']):
             major_rigor = 1.30  # V12.0
-    elif signals["track"] == "Builder":
+    elif signals["track"] == "Tech":
         if any(m in text_low for m in ['computer science', 'data science', 'mathematics', 'physics', 'engineering']):
             major_rigor = 1.25
     
@@ -95,7 +95,7 @@ def get_signals(text):
         eff_gpa = univ_gpa if univ_gpa > 0 else 2.0
         lsat_bonus = 650 if 'lsat' in text_low else 0
         smart_raw = (eff_gpa * 110 * major_rigor) + (found_rigor * 2.0) + honors + lsat_bonus
-    elif signals["track"] == "Builder":
+    elif signals["track"] == "Tech":
         eff_gpa = univ_gpa if univ_gpa > 0 else 3.0
         smart_raw = (eff_gpa * 75 * major_rigor) + (found_rigor * 2.5) + honors
     else:
@@ -139,7 +139,7 @@ def get_signals(text):
         policy_bonus = 400 if any(w in text_low for w in ['legislation', 'policy analysis', 'lobbying', 'government affairs', 'senator', 'judicial intern']) else 0
         
         build_raw = (receipts * 500) + (impact_count * 120) + work_exp + internship_exp + policy_bonus
-    elif signals["track"] == "Builder":
+    elif signals["track"] == "Tech":
         receipts = sum(1 for p in ['engineered', 'architected', 'programmed', 'deployed', 'launched', 'api', 'infrastructure', 'predictive engine', 'aws', 'docker', 'git', 'full stack', 'database', 'frontend', 'backend', 'scalability', 'optimized', 'scaled', 'refactored', 'integrated', 'repo', 'hackathon'] if p in text_low)
         build_raw = (receipts * 450) + (impact_count * 200)
     else:
@@ -192,7 +192,7 @@ def run_audit():
             w = {"smart": 0.35, "grit": 0.25, "build": 0.40}
         elif c["track"] == "Pre-Law":
             w = {"smart": 0.40, "grit": 0.25, "build": 0.35}
-        elif c["track"] == "Builder":
+        elif c["track"] == "Tech":
             w = {"smart": 0.25, "grit": 0.25, "build": 0.50}
         else:
             w = {"smart": 0.35, "grit": 0.35, "build": 0.30}

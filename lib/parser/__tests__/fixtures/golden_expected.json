@@ -1,0 +1,101 @@
+{
+  "single_column_standard": {
+    "name_contains": "jane",
+    "email": "jane.smith@university.edu",
+    "layout_in": ["single_column", "mixed"],
+    "sections_include": ["experience", "skills"],
+    "experience_count_min": 1,
+    "skills_count_min": 3
+  },
+  "two_column_sidebar": {
+    "name_contains": "john",
+    "email": "john.twocol@example.com",
+    "layout_in": ["single_column", "multi_column", "mixed"],
+    "sections_include": ["experience", "skills"],
+    "experience_count_min": 1,
+    "skills_count_min": 3
+  },
+  "table_based_layout": {
+    "name_contains": "taylor",
+    "email": "taylor.table@example.com",
+    "layout_in": ["single_column", "table_heavy", "mixed"],
+    "raw_text_len_min": 40
+  },
+  "non_standard_headers": {
+    "name_contains": "nora",
+    "email": "nora.headers@example.com",
+    "sections_include_any": ["experience", "skills"],
+    "raw_text_len_min": 40
+  },
+  "gpa_formats": {
+    "name_contains": "gina",
+    "email": "gina.gpa@example.com",
+    "sections_include": ["education"],
+    "education_count_min": 1
+  },
+  "hyphenated_name": {
+    "name_contains": "mary",
+    "email": "maryjane@example.com",
+    "sections_include": ["education"]
+  },
+  "apostrophe_name": {
+    "name_contains": "patrick",
+    "email": "patrick@example.com",
+    "sections_include": ["education"]
+  },
+  "missing_gpa": {
+    "name_contains": "no",
+    "email": "nogpa@example.com",
+    "sections_include": ["education"],
+    "education_count_min": 1
+  },
+  "double_major": {
+    "name_contains": "jane",
+    "email": "jane.dm@example.com",
+    "sections_include": ["education"],
+    "education_count_min": 1
+  },
+  "multiple_degrees": {
+    "name_contains": "multi",
+    "email": "multi.degree@example.com",
+    "sections_include": ["education"],
+    "education_count_min": 2
+  },
+  "skills_pipe_separated": {
+    "email": "pipe.skills@example.com",
+    "sections_include": ["skills"],
+    "skills_count_min": 4
+  },
+  "skills_bullet_list": {
+    "email": "bullet.skills@example.com",
+    "sections_include": ["skills"],
+    "skills_count_min": 3
+  },
+  "no_skills_section": {
+    "email": "noskills@example.com",
+    "sections_include": ["experience"],
+    "experience_count_min": 1,
+    "skills_count_min": 1
+  },
+  "dates_various_formats": {
+    "name_contains": "date",
+    "email": "dates@example.com",
+    "sections_include": ["experience"],
+    "experience_count_min": 1
+  },
+  "name_in_header": {
+    "name_contains": "header",
+    "email": "header.name@example.com",
+    "sections_include": ["education"]
+  },
+  "contact_in_footer": {
+    "name_contains": "footer",
+    "email_any_of": [null, "footer.contact@example.com"],
+    "sections_include": ["education"]
+  },
+  "international_name": {
+    "name_contains": "jose",
+    "email": "jose.alvarez@example.com",
+    "sections_include": ["education"]
+  }
+}

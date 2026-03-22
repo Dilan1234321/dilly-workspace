@@ -1,0 +1,158 @@
+{
+  "track": "Tech",
+  "last_updated": "2026-03",
+  "sources": [
+    "Levels.fyi Compensation & Hiring Data 2025",
+    "LinkedIn Job Market Insights 2025",
+    "Glassdoor Interview Reports (aggregated 2024-2025)",
+    "FAANG/Big Tech engineering blog hiring posts",
+    "Blind community data (anonymized 2024-2025)"
+  ],
+  "dimensions": {
+    "smart": {
+      "label": "Technical Depth",
+      "what_counts": [
+        "CS, Math, Statistics, or Engineering major (or equivalent rigor)",
+        "Relevant coursework: data structures, algorithms, systems, databases, ML/AI",
+        "GPA in technical major (3.5+ for top companies)",
+        "Technical certifications: AWS, GCP, Azure, TensorFlow, etc.",
+        "Advanced coursework: operating systems, distributed systems, computer architecture",
+        "Graduate coursework in CS or related field"
+      ]
+    },
+    "grit": {
+      "label": "Shipping and Ownership",
+      "what_counts": [
+        "Quantified impact from internships or jobs (users, latency, revenue, accuracy)",
+        "Open source contributions with measurable scope",
+        "Personal projects with real users or deployments",
+        "Hackathon wins or placements",
+        "Technical leadership: tech lead, team lead, engineering lead",
+        "Consistent contribution velocity (GitHub activity)"
+      ]
+    },
+    "build": {
+      "label": "Technical Portfolio",
+      "what_counts": [
+        "GitHub portfolio with active repos and READMEs",
+        "Deployed applications (web, mobile, API) with live links",
+        "Internship experience at recognized tech company",
+        "Research contributions (papers, datasets, models)",
+        "Technical blog or writing demonstrating depth",
+        "Competitive programming (Codeforces, LeetCode, ICPC)"
+      ]
+    }
+  },
+  "common_gaps": [
+    {
+      "gap": "No GitHub portfolio or projects are private",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Make your repos public. Add a README to each. Even a class project with clear documentation counts."
+    },
+    {
+      "gap": "Project descriptions lack tech stack and impact",
+      "severity": "critical",
+      "dimension": "build",
+      "fix": "Every project bullet needs: what you built, what tech you used, and what the outcome was (users, performance, accuracy)."
+    },
+    {
+      "gap": "No internship experience before senior year",
+      "severity": "critical",
+      "dimension": "grit",
+      "fix": "Apply to FAANG new grad pipelines (APM, SWE internship), freshman/sophomore diversity programs (Google STEP, Microsoft Explore)."
+    },
+    {
+      "gap": "Resume lists tools without demonstrating how they were used",
+      "severity": "moderate",
+      "dimension": "smart",
+      "fix": "Replace 'Skills: Python, React, SQL' with project or role bullets that name the tool and the outcome."
+    },
+    {
+      "gap": "No quantified impact in internship or job bullets",
+      "severity": "moderate",
+      "dimension": "grit",
+      "fix": "Add metrics: reduced latency by X%, served Y users, increased model accuracy from A to B, shipped feature used by N teams."
+    },
+    {
+      "gap": "Only coursework projects, no independent or deployed work",
+      "severity": "moderate",
+      "dimension": "build",
+      "fix": "Build one personal project outside of class. Deploy it (Vercel, Heroku, AWS free tier). Even a simple API or web app with a live link is differentiating."
+    }
+  ],
+  "companies": [
+    {
+      "name": "Google / Alphabet",
+      "tier": "FAANG",
+      "hiring_culture": "Algorithmic and systems-first. Google values intellectual curiosity and analytical thinking. General Cognitive Ability (GCA) is one of their formal hiring dimensions.",
+      "dimension_weights": { "smart": 0.40, "grit": 0.35, "build": 0.25 },
+      "key_signals": ["LeetCode hard performance", "System design for SWE III+", "Peer collaboration and communication", "Alignment with Google's principles"],
+      "entry_points": ["STEP internship (freshmen/sophomores)", "Google SWE intern", "APM program (PMs)", "BOLD Immersion (business/ops)"],
+      "notes": "Notorious for bar-raiser culture. One strong 'no' can kill an offer. Prepare for 4-5 rounds. Strong emphasis on communication and the Googleyness dimension."
+    },
+    {
+      "name": "Meta / Facebook",
+      "tier": "FAANG",
+      "hiring_culture": "Move fast, ship often. Meta values speed, impact, and autonomy. Engineers are expected to own full product areas end-to-end.",
+      "dimension_weights": { "smart": 0.35, "grit": 0.40, "build": 0.25 },
+      "key_signals": ["Shipped products and measurable user impact", "Ability to work independently on large systems", "Product sense for PM roles"],
+      "entry_points": ["Meta University (freshmen/sophomores)", "Meta SWE intern", "RPM (Rotational Product Manager)"],
+      "notes": "Strong focus on impact and ownership. Candidates who can demonstrate they shipped something real, scaled it, and owned the outcome stand out."
+    },
+    {
+      "name": "Amazon / AWS",
+      "tier": "FAANG",
+      "hiring_culture": "Leadership Principles-obsessed. Every interview question is mapped to an LP. 'Customer Obsession' and 'Ownership' are the most frequently tested.",
+      "dimension_weights": { "smart": 0.30, "grit": 0.45, "build": 0.25 },
+      "key_signals": ["STAR-format behavioral answers mapped to LPs", "Customer-first thinking", "System design (SDE II+)", "Ownership and bias for action"],
+      "entry_points": ["Amazon Future Engineer", "Amazon SWE intern", "AWS Solutions Architect associate"],
+      "notes": "Bar raiser process is strict. Behavioral prep is as important as coding here. Research the 16 Leadership Principles and have a story for each."
+    },
+    {
+      "name": "Apple",
+      "tier": "FAANG",
+      "hiring_culture": "Detail-oriented, hardware/software integration, secrecy culture. Apple values craft, polish, and product intuition.",
+      "dimension_weights": { "smart": 0.40, "grit": 0.30, "build": 0.30 },
+      "key_signals": ["Portfolio quality (design and engineering depth)", "Attention to detail", "Systems and low-level programming for hardware-adjacent roles", "Ability to work in a compartmentalized, NDA-heavy environment"],
+      "entry_points": ["Apple internship (limited public pipeline)", "WWDC scholarship for students"],
+      "notes": "Most secretive hiring process in FAANG. Strong portfolio and referrals are the primary pathways. Culture is less process-heavy and more craft-focused than Google/Amazon."
+    },
+    {
+      "name": "Netflix",
+      "tier": "Top-tier",
+      "hiring_culture": "High performance, radical candor, no average performers. Netflix pays top-of-market and expects top-of-market output.",
+      "dimension_weights": { "smart": 0.40, "grit": 0.40, "build": 0.20 },
+      "key_signals": ["Senior-level candidates preferred (rarely hires new grads)", "Exceptional track record in previous roles", "Strong alignment with Netflix culture document"],
+      "entry_points": ["Direct application for senior roles; limited new grad pipeline"],
+      "notes": "Rarely hires new grads. Focus on Netflix after 2-3 years of industry experience at another top company."
+    },
+    {
+      "name": "Microsoft",
+      "tier": "FAANG",
+      "hiring_culture": "Growth mindset culture (Satya era). More collaborative than competitive. Values learning, inclusion, and long-term career development.",
+      "dimension_weights": { "smart": 0.35, "grit": 0.35, "build": 0.30 },
+      "key_signals": ["Growth mindset examples in behavioral interviews", "Technical depth in relevant stack", "Teamwork and cross-functional collaboration"],
+      "entry_points": ["Microsoft Explore (freshmen/sophomores)", "Microsoft SWE intern", "MACH program (business/ops)"],
+      "notes": "One of the most inclusive top-tier hirers. Explore program is a premier pipeline for underrepresented freshman/sophomore CS students."
+    },
+    {
+      "name": "Stripe",
+      "tier": "Top-tier startup",
+      "hiring_culture": "API-first, developer-obsessed. Stripe values writing, clarity of thought, and deep technical ownership.",
+      "dimension_weights": { "smart": 0.45, "grit": 0.30, "build": 0.25 },
+      "key_signals": ["Technical writing samples or documentation", "API/systems design", "Strong documentation and communication skills"],
+      "entry_points": ["Stripe internship", "Direct SWE application"],
+      "notes": "Known for a writing-heavy interview process. Strong technical writing and ability to explain complex systems clearly is a major differentiator."
+    },
+    {
+      "name": "Jane Street / Citadel / Two Sigma",
+      "tier": "Quant / Trading",
+      "hiring_culture": "Quant-first. Extreme emphasis on mathematical and probabilistic reasoning. Compensation is highest in industry.",
+      "dimension_weights": { "smart": 0.60, "grit": 0.25, "build": 0.15 },
+      "key_signals": ["Math Olympiad / ICPC / Putnam performance", "Probability and statistics depth", "Coding speed and correctness", "Trading intuition for trading roles"],
+      "entry_points": ["Jane Street FOCUS program", "Citadel Data Open", "Two Sigma intern program"],
+      "notes": "CS + Math or Statistics double major is the gold standard pipeline. Most interview processes include probability puzzles, brain teasers, and trading simulations."
+    }
+  ]
+}

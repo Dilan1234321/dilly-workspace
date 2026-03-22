@@ -1,0 +1,202 @@
+[
+  {
+    "id": "mit",
+    "name": "MIT",
+    "state": "MA",
+    "admitRate": 0.04,
+    "satMid": 1540,
+    "gpaMid": 3.97,
+    "tags": ["STEM", "Private"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-01-01", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "stanford",
+    "name": "Stanford",
+    "state": "CA",
+    "admitRate": 0.04,
+    "satMid": 1520,
+    "gpaMid": 3.96,
+    "tags": ["Research", "Private"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-01-05", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "harvard",
+    "name": "Harvard",
+    "state": "MA",
+    "admitRate": 0.03,
+    "satMid": 1520,
+    "gpaMid": 3.95,
+    "tags": ["Ivy", "Private"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-01-01", "financialAid": "2026-02-01" }
+  },
+  {
+    "id": "utaustin",
+    "name": "University of Texas at Austin",
+    "state": "TX",
+    "admitRate": 0.29,
+    "satMid": 1370,
+    "gpaMid": 3.83,
+    "tags": ["Public", "Flagship"],
+    "deadlines": { "regular": "2025-12-01", "financialAid": "2026-01-15" }
+  },
+  {
+    "id": "umich",
+    "name": "University of Michigan",
+    "state": "MI",
+    "admitRate": 0.2,
+    "satMid": 1450,
+    "gpaMid": 3.9,
+    "tags": ["Public", "Research"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-02-01", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "uga",
+    "name": "University of Georgia",
+    "state": "GA",
+    "admitRate": 0.43,
+    "satMid": 1370,
+    "gpaMid": 3.83,
+    "tags": ["Public", "Flagship"],
+    "deadlines": { "early": "2025-10-15", "regular": "2026-01-01", "financialAid": "2026-01-31" }
+  },
+  {
+    "id": "uf",
+    "name": "University of Florida",
+    "state": "FL",
+    "admitRate": 0.3,
+    "satMid": 1360,
+    "gpaMid": 3.9,
+    "tags": ["Public", "Flagship"],
+    "deadlines": { "regular": "2025-11-01", "financialAid": "2026-01-01" }
+  },
+  {
+    "id": "utampa",
+    "name": "University of Tampa",
+    "state": "FL",
+    "admitRate": 0.41,
+    "satMid": 1190,
+    "gpaMid": 3.4,
+    "tags": ["Private", "Regional"],
+    "deadlines": { "rolling": "2026-03-01", "regular": "2026-03-01", "financialAid": "2026-02-01" }
+  },
+  {
+    "id": "nyu",
+    "name": "NYU",
+    "state": "NY",
+    "admitRate": 0.12,
+    "satMid": 1490,
+    "gpaMid": 3.7,
+    "tags": ["Private", "Urban"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-01-05", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "osu",
+    "name": "Ohio State University",
+    "state": "OH",
+    "admitRate": 0.53,
+    "satMid": 1340,
+    "gpaMid": 3.79,
+    "tags": ["Public", "Flagship"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-02-01", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "purdue",
+    "name": "Purdue University",
+    "state": "IN",
+    "admitRate": 0.53,
+    "satMid": 1410,
+    "gpaMid": 3.7,
+    "tags": ["Public", "STEM"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-01-15", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "asu",
+    "name": "Arizona State University",
+    "state": "AZ",
+    "admitRate": 0.88,
+    "satMid": 1240,
+    "gpaMid": 3.54,
+    "tags": ["Public", "Large"],
+    "deadlines": { "regular": "2026-01-01", "financialAid": "2026-03-01" }
+  },
+  {
+    "id": "binghamton",
+    "name": "Binghamton University (SUNY)",
+    "state": "NY",
+    "admitRate": 0.44,
+    "satMid": 1370,
+    "gpaMid": 3.7,
+    "tags": ["Public", "SUNY"],
+    "deadlines": { "regular": "2026-01-15", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "clemson",
+    "name": "Clemson University",
+    "state": "SC",
+    "admitRate": 0.43,
+    "satMid": 1310,
+    "gpaMid": 3.8,
+    "tags": ["Public", "Flagship"],
+    "deadlines": { "early": "2025-12-01", "regular": "2026-01-03", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "northeastern",
+    "name": "Northeastern University",
+    "state": "MA",
+    "admitRate": 0.07,
+    "satMid": 1480,
+    "gpaMid": 3.7,
+    "tags": ["Private", "Co-op"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-01-01", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "usc",
+    "name": "USC",
+    "state": "CA",
+    "admitRate": 0.1,
+    "satMid": 1480,
+    "gpaMid": 3.85,
+    "tags": ["Private", "Research"],
+    "deadlines": { "early": "2025-12-01", "regular": "2026-01-15", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "unc",
+    "name": "UNC Chapel Hill",
+    "state": "NC",
+    "admitRate": 0.17,
+    "satMid": 1420,
+    "gpaMid": 3.9,
+    "tags": ["Public", "Flagship"],
+    "deadlines": { "early": "2025-10-15", "regular": "2026-01-15", "financialAid": "2026-03-01" }
+  },
+  {
+    "id": "vt",
+    "name": "Virginia Tech",
+    "state": "VA",
+    "admitRate": 0.57,
+    "satMid": 1380,
+    "gpaMid": 3.83,
+    "tags": ["Public", "STEM"],
+    "deadlines": { "early": "2025-12-01", "regular": "2026-01-15", "financialAid": "2026-02-15" }
+  },
+  {
+    "id": "wisc",
+    "name": "University of Wisconsin–Madison",
+    "state": "WI",
+    "admitRate": 0.49,
+    "satMid": 1400,
+    "gpaMid": 3.88,
+    "tags": ["Public", "Research"],
+    "deadlines": { "early": "2025-11-01", "regular": "2026-01-15", "financialAid": "2026-02-01" }
+  },
+  {
+    "id": "iu",
+    "name": "Indiana University Bloomington",
+    "state": "IN",
+    "admitRate": 0.82,
+    "satMid": 1250,
+    "gpaMid": 3.62,
+    "tags": ["Public", "Large"],
+    "deadlines": { "regular": "2026-02-01", "financialAid": "2026-04-15" }
+  }
+]

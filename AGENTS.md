@@ -209,6 +209,27 @@ Think of it like a human reviewing their journal and updating their mental model
 
 The goal: Be helpful without being annoying. Check in a few times a day, do useful background work, but respect quiet time.
 
+## Dilly app
+
+**The Dilly dashboard is a mobile app.** Keep that in mind for every change: short copy (no dense paragraphs), touch-friendly targets (min ~44px), single-column layouts, viewport-safe (no horizontal scroll), and scannable content. When adding or editing UI, ask: "Would this work on a small phone screen? Is this text short enough to scan?"
+
+When you add a feature to the Dilly app, add it to **`projects/dilly/IDEAS.md`** (under *Implemented*). Ideas or on-hold items go under *Ideas / On hold*. Keep the list current so the ideas file is the single place for “what’s in the app” and “what we might do next.”
+
+Before implementing or proposing a new Dilly feature (or when you come up with new ideas), ask yourself: (1) What's the point? (2) How would this benefit someone? (3) How would someone use it? (4) How will this make the app more valuable? If the idea answers all four well and shows promise, explain how. If it doesn't, explain why it's not a good idea and don't push it.
+
+- **When the user asks "what's next":** Read **`projects/dilly/WHATS_NEXT.md`**. State the next idea(s) from that file and explain how each benefits Dilly in its goal to become the **best and most powerful** app. Keep WHATS_NEXT.md updated as items are done or new priorities appear.
+
+**What's in the app:** When you add or remove features, screens, or cohorts in the Dilly dashboard/app, update **`projects/dilly/docs/WHATS_IN_THE_APP.md`** so it stays the single source of truth for what's built vs not.
+
+## Mode Switching
+
+**Adjust mode based on what's best for the current task:**
+
+- **Agent mode** — when actively coding, implementing, editing files, running commands
+- **Plan mode** — when planning next steps, mapping out a roadmap, designing a blueprint, or thinking through architecture before touching code
+
+Switch proactively. Don't wait to be asked.
+
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.

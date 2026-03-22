@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Learners — Span</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap");
+    :root {
+      --ink: #1b1f24;
+      --muted: #5c6470;
+      --paper: #fffef9;
+      --lime-dark: #2f9a3a;
+      --card-a: #fff5f0;
+      --card-b: #eef6ff;
+      --card-c: #f3f0ff;
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Nunito", system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    a { color: var(--lime-dark); font-weight: 700; }
+    .wrap { max-width: 900px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 254, 249, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid #e8ebe4;
+    }
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .logo { font-weight: 800; font-size: 1.25rem; color: var(--ink); }
+    .logo span { color: var(--lime-dark); }
+    nav ul { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+    nav a { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 0.9rem; padding: 0.3rem 0.45rem; border-radius: 8px; }
+    nav a:hover { background: #eef7ee; }
+    nav a[aria-current="page"] { background: #dff5df; color: var(--lime-dark); }
+    .menu-toggle {
+      display: none;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    @media (max-width: 640px) {
+      .menu-toggle { display: block; }
+      nav { display: none; width: 100%; padding: 0 1.25rem 0.75rem; }
+      nav.open { display: block; }
+      .nav-bar { flex-wrap: wrap; }
+      nav ul { flex-direction: column; }
+    }
+    h1 { font-size: clamp(1.65rem, 4vw, 2.2rem); margin: 2rem 0 0.75rem; letter-spacing: -0.02em; }
+    .lede { color: var(--muted); font-size: 1.1rem; margin-bottom: 2rem; max-width: 40rem; }
+    .timeline { position: relative; padding-left: 0; }
+    .phase {
+      border-radius: var(--radius);
+      padding: 1.35rem 1.5rem;
+      margin-bottom: 1.25rem;
+      border: 2px solid rgba(0,0,0,0.06);
+    }
+    .phase h2 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    .phase p { color: var(--muted); margin-bottom: 0.65rem; }
+    .phase ul { margin-left: 1.2rem; color: var(--ink); }
+    .phase li { margin-bottom: 0.35rem; }
+    .elem { background: var(--card-a); }
+    .hs { background: var(--card-b); }
+    .college { background: var(--card-c); }
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.4rem;
+      color: var(--ink);
+      opacity: 0.75;
+    }
+    .connector {
+      text-align: center;
+      font-weight: 800;
+      color: var(--muted);
+      margin: -0.35rem 0 0.5rem;
+      font-size: 1.25rem;
+    }
+    footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #e8ebe4;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-bar">
+      <a class="logo" href="index.html">Span<span>.</span></a>
+      <button type="button" class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="mainNav">Menu</button>
+      <nav id="mainNav" aria-label="Primary">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="analysis.html">Duolingo analysis</a></li>
+          <li><a href="learners.html" aria-current="page">Learners</a></li>
+          <li><a href="principles.html">Principles</a></li>
+          <li><a href="path.html">The path</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <h1>One ladder: elementary → high school → college</h1>
+    <p class="lede">Duolingo’s lesson isn’t “green buttons.” It’s <strong>continuity</strong>: the same brand promise and interaction grammar, with surfaces that match each age’s gatekeepers (parents, teachers, admissions).</p>
+
+    <div class="timeline" id="timeline">
+      <article class="phase elem" data-phase="elem">
+        <span class="tag">Elementary · curiosity safe</span>
+        <h2>Play that secretly teaches</h2>
+        <p>Short loops, characters, and immediate wins. Parents need to trust screen time; kids need autonomy without reading dense instructions.</p>
+        <ul>
+          <li>Bite-sized sessions (attention-matched)</li>
+          <li>Visual progress, not spreadsheets</li>
+          <li>Zero shame on wrong answers — retry is the game</li>
+        </ul>
+      </article>
+      <div class="connector" aria-hidden="true">↓</div>
+      <article class="phase hs" data-phase="hs">
+        <span class="tag">High school · identity + pace</span>
+        <h2>Social energy without chaos</h2>
+        <p>Teens sniff out anything that talks down to them. The UI stays friendly; the copy gets honest. Competition and streaks optional, not humiliating.</p>
+        <ul>
+          <li>Clear “why this matters for my future” hooks</li>
+          <li>Teacher-visible progress (Schools analog)</li>
+          <li>Mobile-first — that’s where they live</li>
+        </ul>
+      </article>
+      <div class="connector" aria-hidden="true">↓</div>
+      <article class="phase college" data-phase="college">
+        <span class="tag">College · stakes + proof</span>
+        <h2>Same habit, harder outputs</h2>
+        <p>Undergrads need efficiency: show me what to do today, how I’m trending, and what I can show an employer. The product matures; the brand doesn’t need to get boring.</p>
+        <ul>
+          <li>Portfolio- or credential-ready artifacts</li>
+          <li>Explainable feedback (especially for AI)</li>
+          <li>Respect for time — fewer gimmicks, same clarity</li>
+        </ul>
+      </article>
+    </div>
+
+    <footer>
+      <p><a href="analysis.html">← Duolingo analysis</a> · <a href="principles.html">Design principles →</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var btn = document.getElementById("menuToggle");
+      var nav = document.getElementById("mainNav");
+      if (btn && nav) {
+        btn.addEventListener("click", function () {
+          var open = nav.classList.toggle("open");
+          btn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+      }
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        var phases = document.querySelectorAll(".phase");
+        phases.forEach(function (el, i) {
+          el.style.opacity = "0";
+          el.style.transform = "translateY(12px)";
+          el.style.transition = "opacity 0.45s ease, transform 0.45s ease";
+          setTimeout(function () {
+            el.style.opacity = "1";
+            el.style.transform = "translateY(0)";
+          }, 80 + i * 120);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

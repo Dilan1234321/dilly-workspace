@@ -1,7 +1,7 @@
 import sys
 import json
 import os
-from projects.meridian.meridian_v7_2 import MeridianV7_2_Med
+from projects.dilly.meridian_v7_2 import MeridianV7_2_Med
 
 def run_test():
     if len(sys.argv) < 2:

@@ -1,0 +1,19 @@
+{
+    "candidate_name": "Tyler J.",
+    "major": "History & International Studies",
+    "track": "Pre-Law",
+    "scores": {
+        "smart": 100.0,
+        "grit": 51,
+        "build": 57.6
+    },
+    "final_score": 74.37,
+    "findings": [
+        "Smart: You showcased high academic standard due to your 3.80 GPA, your placement in the honors program, your research involvement, and your Economics minor.",
+        "Grit: You demonstrated leadership and impact through your leadership roles, your work and experience history.",
+        "Build: You demonstrated Pre-Law readiness. Score +20% for outcome-based leadership (e.g. increased X%, drafted policy).",
+        "Build: Pre-Law Smart score uses 45% GPA weighting."
+    ],
+    "status": "Draft Report",
+    "audit_ts": 1742225760
+}

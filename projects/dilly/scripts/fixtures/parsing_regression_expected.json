@@ -1,0 +1,76 @@
+{
+  "description": "Expected parser output for a subset of resumes. Used by parsing_regression.py to prevent regressions. Update when parser is intentionally changed.",
+  "sources_dir_relative_to_workspace": "assets/resumes",
+  "entries": [
+    {
+      "source": "Aidan Rina Resume.docx",
+      "name": "Aidan Rina",
+      "email": "aidan.rina@spartans.ut.edu",
+      "major": "Finance",
+      "gpa": 4.0
+    },
+    {
+      "source": "Aldana CV 2025.pdf",
+      "name": "Aldana Aniana Flores",
+      "email": "aldanaflores@gmail.com",
+      "major": "Cybersecurity",
+      "gpa": null
+    },
+    {
+      "source": "BridgetKlaus2026Resume.pdf",
+      "name": "Bridget E. Klaus",
+      "email": "bridgetklaus07@gmail.com",
+      "major": "Biomedical Sciences",
+      "gpa": 3.89
+    },
+    {
+      "source": "Kylee Ravenell Resume.pdf",
+      "name": "Kylee Ravenell",
+      "email": "kylee.ravenell@spartans.ut.edu",
+      "major": "Marketing & Finance",
+      "gpa": 4.0
+    },
+    {
+      "source": "Luke DeLoe - Resume.pdf",
+      "name": "Luke DeLoe",
+      "email": "Lukedeloe@gmail.com",
+      "major": "Finance",
+      "gpa": 3.7
+    },
+    {
+      "source": "Shreya Mehta resume.pdf",
+      "name": "Shreya Mehta",
+      "email": "shreya_mehta@icloud.com",
+      "major": "Biology",
+      "gpa": 3.91
+    },
+    {
+      "source": "Resume.docx",
+      "name": "Aidan Geller",
+      "email": "aidanrgeller@gmail.com",
+      "major": "Computer Science",
+      "gpa": 3.5
+    },
+    {
+      "source": "Resume...docx",
+      "name": "Nicholas Gardner",
+      "email": "nicholas.gardner@spartans.ut.edu",
+      "major": "Marine Science",
+      "gpa": 3.41
+    },
+    {
+      "source": "resume copy.pdf",
+      "name": "Cian McLaughlin",
+      "email": "cianedmcl@gmail.com",
+      "major": "Data Science",
+      "gpa": 3.9
+    },
+    {
+      "source": "Ethan_Capone Resume.pdf",
+      "name": "Ethan Capone",
+      "email": null,
+      "major": "Unknown",
+      "gpa": null
+    }
+  ]
+}

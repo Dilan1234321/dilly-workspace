@@ -1,0 +1,65 @@
+{
+  "_policy": "Doors = opportunity types. Required signals are Meridian-native (scores, track, ATS). One resume, one audit, many doors.",
+  "doors": [
+    {
+      "id": "ats_ready_any",
+      "label": "ATS-ready applications",
+      "short_label": "ATS-ready",
+      "description": "Your resume is optimized for applicant tracking systems so you can apply with confidence.",
+      "required": {
+        "min_final_score": 50
+      },
+      "cta_label": "View jobs",
+      "cta_path": "/jobs",
+      "order": 10
+    },
+    {
+      "id": "tech_internship_partner",
+      "label": "Partner tech internships",
+      "short_label": "Tech internships",
+      "description": "Qualify for tech internships from companies we've vetted (e.g. Stripe, Figma).",
+      "required": {
+        "track": "tech",
+        "min_smart": 60,
+        "min_grit": 55,
+        "min_build": 65,
+        "min_final_score": 60
+      },
+      "cta_label": "View tech jobs",
+      "cta_path": "/jobs",
+      "order": 20
+    },
+    {
+      "id": "pre_health_ready",
+      "label": "Pre-Health ready",
+      "short_label": "Pre-Health ready",
+      "description": "Signal readiness for shadowing, clinical roles, and pre-health applications.",
+      "required": {
+        "track": "pre_health",
+        "min_smart": 55,
+        "min_grit": 60,
+        "min_build": 55,
+        "min_final_score": 55
+      },
+      "cta_label": "See recommendations",
+      "cta_path": "/",
+      "order": 30
+    },
+    {
+      "id": "business_ready",
+      "label": "Business & consulting ready",
+      "short_label": "Business ready",
+      "description": "Strong signal for business, consulting, and analyst roles.",
+      "required": {
+        "track": "business",
+        "min_smart": 58,
+        "min_grit": 58,
+        "min_build": 52,
+        "min_final_score": 55
+      },
+      "cta_label": "View jobs",
+      "cta_path": "/jobs",
+      "order": 40
+    }
+  ]
+}

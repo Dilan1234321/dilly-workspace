@@ -15,3 +15,10 @@ out/
 .DS_Store
 .cursor/
 .git/
+
+# SENSITIVE DATA - DO NOT INDEX
+.env
+.env.*
+secrets.json
+*.pem
+*.key

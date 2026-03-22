@@ -1,0 +1,41 @@
+{
+  "description": "Expected Tech scoring signals and Build score bands for inline resume snippets. Used by tech_scoring_regression.py. Update when scoring or extraction is intentionally changed.",
+  "entries": [
+    {
+      "name": "CS with outcome-tied skills",
+      "text": "Computer Science, University of Tampa.\nExperience: Software Intern at Acme Corp. Jan 2024 - May 2024.\n- Built a dashboard using Python and React that reduced report generation time by 30%.\nSkills: Python, SQL, JavaScript.",
+      "major": "Computer Science",
+      "expect": {
+        "outcome_tied_hits_min": 1,
+        "build_min": 15
+      }
+    },
+    {
+      "name": "CS skills list only (no outcome)",
+      "text": "Computer Science. Skills: Python, Java, React, AWS. Experience: Software intern at Acme.\n- Supported the team with debugging and code reviews.",
+      "major": "Computer Science",
+      "expect": {
+        "skills_without_outcome_min": 1
+      }
+    },
+    {
+      "name": "Cybersecurity with security metrics",
+      "text": "Cybersecurity major. SOC Analyst Intern.\n- Triaged 50+ alerts daily. Reduced MTTR by 25%.\n- Investigated incidents using SIEM. False positive reduction 15%.",
+      "major": "Cybersecurity",
+      "expect": {
+        "security_metrics_count_min": 1,
+        "build_min": 0
+      }
+    },
+    {
+      "name": "Data Science with quant impact",
+      "text": "Data Science. Research Assistant.\n- Used Python and pandas to analyze 10K records; improved model accuracy by 12%.\nDeployed at https://project.demo.io.",
+      "major": "Data Science",
+      "expect": {
+        "outcome_tied_hits_min": 1,
+        "deployed_app": true,
+        "build_min": 15
+      }
+    }
+  ]
+}

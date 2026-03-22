@@ -1,0 +1,5 @@
+Pipe Skills
+pipe.skills@example.com
+
+SKILLS
+Python | Java | React | SQL | AWS

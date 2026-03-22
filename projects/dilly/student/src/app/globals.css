@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Core backgrounds */
+  --bg:  #080809;
+  --s1:  #0F0F12;
+  --s2:  #16161A;
+  --s3:  #1E1E24;
+  --s4:  #27272F;
+
+  /* Aliases (legacy) */
+  --surface-1: var(--s1);
+  --surface-2: var(--s2);
+  --surface-3: var(--s3);
+  --surface-4: var(--s4);
+
+  /* Text */
+  --t1: #F4F4FA;
+  --t2: rgba(244, 244, 250, 0.55);
+  --t3: rgba(244, 244, 250, 0.30);
+  --text-primary:    var(--t1);
+  --text-secondary:  var(--t2);
+  --text-tertiary:   var(--t3);
+
+  /* Borders */
+  --b1: rgba(255, 255, 255, 0.06);
+  --b2: rgba(255, 255, 255, 0.10);
+  --b3: rgba(255, 255, 255, 0.16);
+
+  /* Accent colours */
+  --green:  #34C759;
+  --blue:   #0A84FF;
+  --amber:  #FF9F0A;
+  --indigo: #5E5CE6;
+  --coral:  #FF453A;
+  --teal:   #00C7BE;
+  --gold:   #C9A84C;
+
+  /* Derived tints */
+  --golddim: rgba(201, 168, 76, 0.10);
+  --goldbdr: rgba(201, 168, 76, 0.35);
+  --cdim:    rgba(255, 69, 58, 0.10);
+  --gdim:    rgba(52, 199, 89, 0.10);
+  --gbdr:    rgba(52, 199, 89, 0.30);
+  --red:     #E5373A;
+
+  /* Blue tints (Dilly tease card) */
+  --bdim:    rgba(10, 132, 255, 0.10);
+  --bbdr:    rgba(10, 132, 255, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+html { background: #080809; }
+
+/* Mobile-first centered column */
+.screen {
+  max-width: 430px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+input:focus { outline: none; }
+
+/* ── Font helpers ────────────────────────────────────────────────────────── */
+.font-playfair {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+
+/* ── Slide-down reveal animation ─────────────────────────────────────────── */
+.slide-reveal {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 300ms ease-out, opacity 300ms ease-out;
+}
+.slide-reveal.open {
+  max-height: 80px;
+  opacity: 1;
+}
+
+/* ── Pulse animation (leaderboard dot, you-are-in screen) ───────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+/* ── Dilly orb ripple (scanning screen) ──────────────────────────────────── */
+@keyframes rpl {
+  0%   { width: 80px;  height: 80px;  border-color: rgba(201,168,76,0.5); }
+  100% { width: 180px; height: 180px; border-color: rgba(201,168,76,0); }
+}
+
+/* ── Shake animation (error state on code boxes) ─────────────────────────── */
+@keyframes shake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-6px); }
+  40%  { transform: translateX(6px); }
+  60%  { transform: translateX(-4px); }
+  80%  { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+
+.shake {
+  animation: shake 300ms ease-in-out;
+}

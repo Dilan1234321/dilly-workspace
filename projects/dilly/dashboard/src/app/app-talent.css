@@ -1,0 +1,381 @@
+/* Main app talent theme (navy + gold + Cinzel) — applied when user is subscribed. Excludes onboarding. */
+
+.app-talent {
+  --te-gold: #fdb913;
+  --te-gold-rgb: 253, 185, 19;
+  --te-bg-deep: #040a16;
+  --te-bg-card: linear-gradient(150deg, rgba(6, 16, 37, 0.94), rgba(4, 10, 22, 0.88));
+  --te-border: rgba(255, 255, 255, 0.13);
+  --te-border-gold: rgba(253, 185, 19, 0.46);
+  --te-text: #fff;
+  --te-text-muted: rgba(255, 255, 255, 0.74);
+  --te-text-soft: rgba(255, 255, 255, 0.84);
+  --te-radius: 12px;
+}
+
+/* Match Career Center / BottomNav frost (var(--bg)); te-bg-deep is for cards/contrast only — shell was a visible seam vs inner panels. */
+.app-talent {
+  background: var(--bg);
+  color: var(--te-text);
+  min-height: 100vh;
+  font-family: var(--font-montserrat), var(--font-geist-sans), sans-serif;
+}
+
+/* Page hero — one per tab (Cinzel) */
+.app-talent .te-page-hero {
+  padding: 1.5rem 1.25rem 1.25rem;
+  text-align: center;
+  border-bottom: 1px solid var(--te-border);
+}
+
+.app-talent .te-hero-eyebrow {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--te-gold);
+  margin-bottom: 0.35rem;
+}
+
+.app-talent .te-hero-title {
+  font-family: var(--font-cinzel), serif;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 700;
+  color: var(--te-text);
+  margin: 0 0 0.35rem;
+  line-height: 1.15;
+}
+
+.app-talent .te-hero-sub {
+  font-size: 0.875rem;
+  color: var(--te-text-muted);
+  max-width: 32rem;
+  margin: 0 auto;
+  line-height: 1.45;
+}
+
+/* Section titles (Cinzel) */
+.app-talent .app-section-title {
+  font-family: var(--font-cinzel), serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--te-text);
+  letter-spacing: 0.02em;
+}
+
+/* Key numbers/labels (e.g. Smart, Grit, Build) */
+.app-talent .app-key-label {
+  font-family: var(--font-cinzel), serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--te-text-muted);
+}
+
+.app-talent .app-key-value {
+  font-family: var(--font-cinzel), serif;
+  font-weight: 700;
+  color: var(--te-gold);
+}
+
+/* Header — matches Career Center (var(--bg)) */
+.app-talent .m-header {
+  background: var(--bg);
+}
+
+.app-talent .m-header-inner {
+  padding-bottom: 0;
+}
+
+.app-talent .m-header img {
+  filter: brightness(1.05);
+}
+
+/* Bottom nav — talent pill */
+.app-talent .m-nav-pill {
+  background: var(--te-bg-card);
+  border: 1px solid var(--te-border);
+  border-radius: var(--te-radius);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.app-talent .m-nav-btn {
+  color: var(--te-text-muted);
+  background: transparent;
+  border: none;
+}
+
+.app-talent .m-nav-btn:hover {
+  color: var(--te-text-soft);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.app-talent .m-nav-btn.active {
+  color: var(--te-bg-deep);
+  background: var(--te-gold);
+  border-color: var(--te-gold);
+}
+
+.app-talent .m-nav-btn.active svg {
+  color: var(--te-bg-deep);
+}
+
+.app-talent .m-nav-btn span {
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+/* Quick links bar above nav — Career Center design (main app or standalone host).
+   Use --bg (not --s2) so the strip matches the Career Center chrome and no “taupe gap”. */
+.app-talent .app-talent-quicklinks,
+.app-talent-quicklinks-host .app-talent-quicklinks {
+  background: var(--bg) !important;
+  border: 1px solid var(--b1);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+}
+
+.app-talent .app-talent-quicklinks button,
+.app-talent .app-talent-quicklinks a,
+.app-talent-quicklinks-host .app-talent-quicklinks button,
+.app-talent-quicklinks-host .app-talent-quicklinks a {
+  color: var(--t2);
+  border-radius: 12px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.app-talent .app-talent-quicklinks button:hover,
+.app-talent .app-talent-quicklinks a:hover,
+.app-talent-quicklinks-host .app-talent-quicklinks button:hover,
+.app-talent-quicklinks-host .app-talent-quicklinks a:hover {
+  color: var(--t1);
+  background: var(--s3);
+}
+
+.app-talent .app-talent-quicklinks button:active,
+.app-talent .app-talent-quicklinks a:active,
+.app-talent-quicklinks-host .app-talent-quicklinks button:active,
+.app-talent-quicklinks-host .app-talent-quicklinks a:active {
+  background: var(--bdim);
+}
+
+.app-talent .app-talent-quicklinks span,
+.app-talent-quicklinks-host .app-talent-quicklinks span {
+  font-family: var(--font-cinzel), serif;
+}
+
+/* Cards in app use talent look */
+.app-talent .m-rounded-card,
+.app-talent .cc-card {
+  background: var(--te-bg-card) !important;
+  border: 1px solid var(--te-border) !important;
+  border-radius: var(--te-radius);
+}
+
+.app-talent .m-rounded-card:hover,
+.app-talent .cc-card:hover {
+  border-color: var(--te-border-gold);
+}
+
+.app-talent .share-card-canvas {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.app-talent .cc-btn {
+  border-radius: var(--te-radius);
+  border: 1px solid rgba(var(--te-gold-rgb), 0.5);
+  background: rgba(var(--te-gold-rgb), 0.15);
+  color: var(--te-gold);
+  font-weight: 600;
+}
+.app-talent .cc-btn-primary {
+  background: var(--te-gold);
+  color: #040a16;
+  border-color: var(--te-gold);
+}
+.app-talent .cc-btn-ghost {
+  background: transparent;
+  color: var(--te-text-soft);
+  border-color: var(--te-border);
+}
+.app-talent .cc-btn-ghost:hover {
+  color: var(--te-gold);
+  border-color: var(--te-border-gold);
+}
+.app-talent .cc-text-muted { color: var(--te-text-muted); }
+
+/* Map slate text to talent palette */
+.app-talent .text-slate-100 { color: var(--te-text); }
+.app-talent .text-slate-200 { color: var(--te-text-soft); }
+.app-talent .text-slate-300 { color: var(--te-text-soft); }
+.app-talent .text-slate-400 { color: var(--te-text-muted); }
+.app-talent .text-slate-500 { color: var(--te-text-muted); }
+.app-talent .text-slate-600 { color: var(--te-text-muted); }
+
+/* Primary accent → gold where used */
+.app-talent [style*="theme.primary"] {
+  /* Override via CSS var where possible */
+}
+/* Use --te-gold for buttons/accents in app-talent when we add classes; inline theme.primary stays from JS */
+
+/* Standalone pages: resume edit, applications — cards and fields */
+.app-talent .m-resume-section-card {
+  background: var(--te-bg-card) !important;
+  border: 1px solid var(--te-border) !important;
+  border-radius: var(--te-radius);
+}
+.app-talent .m-resume-section-card:has(.m-resume-field:focus) {
+  border-color: var(--te-border-gold);
+  box-shadow: 0 0 0 2px rgba(var(--te-gold-rgb), 0.15);
+}
+.app-talent .m-resume-entry-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--te-border) !important;
+  border-radius: var(--te-radius);
+}
+.app-talent .m-resume-field {
+  color: var(--te-text);
+}
+.app-talent .m-resume-field::placeholder {
+  color: var(--te-text-muted);
+}
+.app-talent .m-resume-field:focus {
+  border-bottom-color: var(--te-gold);
+  background: rgba(var(--te-gold-rgb), 0.08);
+}
+.app-talent .m-resume-field:hover {
+  border-bottom-color: var(--te-border-gold);
+}
+
+/* ─── Calendar & Dilly Voice: same navy + gold styling ─── */
+.app-talent .voice-chat-container {
+  background: var(--te-bg-card) !important;
+  border: 1px solid var(--te-border) !important;
+  border-radius: var(--te-radius);
+}
+.app-talent .voice-convo-card {
+  background: var(--te-bg-card) !important;
+  border: 1px solid var(--te-border) !important;
+  border-radius: var(--te-radius);
+}
+.app-talent .voice-convo-card:hover {
+  border-color: var(--te-border-gold);
+  background: linear-gradient(150deg, rgba(6, 16, 37, 0.98), rgba(4, 10, 22, 0.92)) !important;
+}
+.app-talent .voice-send-btn {
+  background: var(--te-gold) !important;
+  color: var(--te-bg-deep) !important;
+  border: 1px solid var(--te-border-gold);
+}
+.app-talent .voice-send-btn:hover:not(:disabled) {
+  background: #fdc933 !important;
+  box-shadow: 0 2px 12px rgba(253, 185, 19, 0.35);
+}
+.app-talent .voice-send-btn:active:not(:disabled) {
+  background: #f0ad0f !important;
+}
+.app-talent .voice-input-field {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--te-border) !important;
+  color: var(--te-text) !important;
+}
+.app-talent .voice-input-field:focus {
+  border-color: var(--te-border-gold) !important;
+  box-shadow: 0 0 0 2px rgba(var(--te-gold-rgb), 0.15);
+}
+.app-talent .voice-input-field::placeholder {
+  color: var(--te-text-muted);
+}
+.app-talent .voice-suggestion-chip {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--te-border) !important;
+  color: var(--te-text-soft);
+}
+.app-talent .voice-suggestion-chip:hover {
+  border-color: var(--te-border-gold);
+  background: rgba(var(--te-gold-rgb), 0.1) !important;
+}
+
+/* Calendar grid & pills */
+.app-talent .cal-grid-cell:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.app-talent .cal-grid-cell.cal-today {
+  background: rgba(var(--te-gold-rgb), 0.15) !important;
+  border: 1px solid var(--te-border-gold) !important;
+}
+.app-talent .cal-grid-cell.cal-selected {
+  background: rgba(var(--te-gold-rgb), 0.12) !important;
+  border: 1px solid var(--te-border-gold) !important;
+}
+.app-talent .cal-pill-main {
+  background: rgba(var(--te-gold-rgb), 0.2) !important;
+  border: 1px solid var(--te-border-gold) !important;
+  color: var(--te-text) !important;
+}
+.app-talent .cal-pill-sub {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--te-border) !important;
+  color: var(--te-text-muted) !important;
+}
+.app-talent .cal-deadline-card,
+.app-talent .cal-confirm-card {
+  background: var(--te-bg-card) !important;
+  border: 1px solid var(--te-border) !important;
+  border-radius: var(--te-radius);
+}
+.app-talent .cal-confirm-pill {
+  background: rgba(var(--te-gold-rgb), 0.12) !important;
+  border: 1px solid var(--te-border-gold) !important;
+  border-radius: var(--te-radius);
+}
+.app-talent .cal-sub-pill {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid var(--te-border) !important;
+}
+
+/* Calendar inside career-center-talent: Career Center design (var(--bg), var(--blue)) — higher specificity so it overrides above */
+.app-talent .career-center-talent .voice-chat-container {
+  background: var(--s2) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 18px !important;
+}
+.app-talent .career-center-talent .cal-grid-cell:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.app-talent .career-center-talent .cal-grid-cell.cal-today {
+  background: var(--bdim) !important;
+  border: 1px solid var(--blue) !important;
+}
+.app-talent .career-center-talent .cal-grid-cell.cal-selected {
+  background: var(--bdim) !important;
+  border: 1px solid var(--blue) !important;
+}
+.app-talent .career-center-talent .cal-pill-main {
+  background: var(--bdim) !important;
+  border: 1px solid var(--blue) !important;
+  color: var(--t1) !important;
+}
+.app-talent .career-center-talent .cal-pill-sub {
+  background: var(--s3) !important;
+  border: 1px solid var(--b1) !important;
+  color: var(--t3) !important;
+}
+.app-talent .career-center-talent .cal-deadline-card,
+.app-talent .career-center-talent .cal-confirm-card {
+  background: var(--s2) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 18px !important;
+}
+.app-talent .career-center-talent .cal-confirm-pill {
+  background: var(--s3) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 12px !important;
+}
+.app-talent .career-center-talent .cal-sub-pill {
+  background: var(--s3) !important;
+  border: 1px solid var(--b1) !important;
+}
