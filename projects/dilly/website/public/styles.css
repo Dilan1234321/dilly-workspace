@@ -89,7 +89,7 @@ nav {
 .nav-inner {
   max-width: 72rem;
   margin: 0 auto;
-  padding: 0.625rem 1.25rem;
+  padding: 0.85rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -155,12 +155,12 @@ nav {
   text-decoration: none;
 }
 .nav-logo img {
-  height: 34px;
+  height: 56px;
   width: auto;
   display: block;
 }
 @media (min-width: 768px) {
-  .nav-logo img { height: 38px; }
+  .nav-logo img { height: 80px; }
 }
 .footer-logo {
   display: flex;
