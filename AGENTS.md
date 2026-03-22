@@ -221,6 +221,15 @@ Before implementing or proposing a new Dilly feature (or when you come up with n
 
 **What's in the app:** When you add or remove features, screens, or cohorts in the Dilly dashboard/app, update **`projects/dilly/docs/WHATS_IN_THE_APP.md`** so it stays the single source of truth for what's built vs not.
 
+### Dilly marketing website (`projects/dilly/website/`) — push to GitHub automatically
+
+When the human asks you to work on the **Dilly marketing site** (anything under `projects/dilly/website/`: HTML, CSS, JS, images, `public/` mirror), **do not wait for a separate “push” request**. After the work is done:
+
+1. **`dilly-workspace` (this repo):** `git add` the relevant paths under `projects/dilly/website/`, commit with a clear message, `git push origin main`.
+2. **`dilly-website` (production, Vercel):** Sync the same folder into that repo and push `main` (clone or update a temp clone of `https://github.com/Dilan1234321/dilly-website.git`, `rsync` from `projects/dilly/website/` with `--delete` and excludes: `.git`, `node_modules`, `.next`, `out`, `__pycache__`, then commit + `git push origin main`). Keep `public/` in sync with the site root when you change assets or mirrored pages.
+
+If there were **no file changes** (question-only), skip pushes. If **push fails** (auth, network, non–fast-forward), say so plainly—do not claim the site is updated.
+
 ## Mode Switching
 
 **Adjust mode based on what's best for the current task:**
