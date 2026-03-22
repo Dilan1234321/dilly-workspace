@@ -89,7 +89,7 @@ nav {
 .nav-inner {
   max-width: 72rem;
   margin: 0 auto;
-  padding: 0.85rem 1.25rem;
+  padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -155,12 +155,13 @@ nav {
   text-decoration: none;
 }
 .nav-logo img {
-  height: 56px;
+  height: 88px;
   width: auto;
   display: block;
 }
 @media (min-width: 768px) {
-  .nav-logo img { height: 80px; }
+  .nav-logo img { height: 132px; }
+  .nav-inner { padding: 1.15rem 1.5rem; }
 }
 .footer-logo {
   display: flex;
@@ -199,8 +200,11 @@ section { padding: 3rem 1.5rem; }
 .text-center { text-align: center; }
 
 .page-hero {
-  padding-top: 7rem;
+  padding-top: 8.5rem;
   padding-bottom: 3rem;
+}
+@media (min-width: 768px) {
+  .page-hero { padding-top: 12rem; }
 }
 .page-hero h1 { font-size: 2rem; font-weight: 700; margin: 0 0 1rem; }
 @media (min-width: 768px) { .page-hero h1 { font-size: 2.5rem; } }
@@ -554,12 +558,12 @@ footer { border-top: 1px solid var(--dilly-border); padding: 3rem 1.5rem; }
   background-clip: text;
 }
 .hero {
-  padding-top: 6rem;
+  padding-top: 7.75rem;
   padding-bottom: 4rem;
   position: relative;
 }
 @media (min-width: 768px) {
-  .hero { padding-top: 8rem; padding-bottom: 5rem; }
+  .hero { padding-top: 11.5rem; padding-bottom: 5rem; }
 }
 .hero h1 {
   font-size: 2.15rem;
