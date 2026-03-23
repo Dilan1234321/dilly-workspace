@@ -29,18 +29,10 @@ body {
   font-weight: 600;
 }
 
-/* Navbar wordmark — light on dark bar */
-header.site-header img.site-logo {
-  height: 3rem !important;
-  width: auto !important;
-  display: block;
-  filter: brightness(0) invert(1);
+/* Navbar wordmark — Cinzel text (avoids raster stretch from PNG + CSS) */
+header.site-header .site-wordmark {
+  line-height: 1;
   opacity: 0.95;
-}
-@media (min-width: 768px) {
-  header.site-header img.site-logo {
-    height: 3.5rem !important;
-  }
 }
 
 ::selection {
