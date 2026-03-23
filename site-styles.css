@@ -29,13 +29,13 @@ body {
   font-weight: 600;
 }
 
-/* Header / footer — wordmark image (compact nav size; aspect preserved) */
+/* Header / footer — wordmark image (readable nav size; aspect preserved) */
 header.site-header .site-header-logo {
   display: block;
-  height: 1.375rem;
-  max-height: 1.375rem;
+  height: 1.75rem;
+  max-height: 1.75rem;
   width: auto;
-  max-width: 7.5rem;
+  max-width: min(11rem, 52vw);
   object-fit: contain;
   object-position: left center;
   filter: brightness(0) invert(1);
@@ -43,17 +43,17 @@ header.site-header .site-header-logo {
 }
 @media (min-width: 768px) {
   header.site-header .site-header-logo {
-    height: 1.5rem;
-    max-height: 1.5rem;
-    max-width: 8.5rem;
+    height: 2rem;
+    max-height: 2rem;
+    max-width: 12.5rem;
   }
 }
 a.site-footer-brand .site-footer-logo {
   display: block;
-  height: 1.125rem;
-  max-height: 1.125rem;
+  height: 1.5rem;
+  max-height: 1.5rem;
   width: auto;
-  max-width: 6.5rem;
+  max-width: min(9.5rem, 48vw);
   object-fit: contain;
   object-position: left center;
   filter: brightness(0) invert(1);
@@ -61,9 +61,9 @@ a.site-footer-brand .site-footer-logo {
 }
 @media (min-width: 768px) {
   a.site-footer-brand .site-footer-logo {
-    height: 1.25rem;
-    max-height: 1.25rem;
-    max-width: 7.25rem;
+    height: 1.75rem;
+    max-height: 1.75rem;
+    max-width: 10.5rem;
   }
 }
 
