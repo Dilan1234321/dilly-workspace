@@ -29,10 +29,38 @@ body {
   font-weight: 600;
 }
 
-/* Navbar wordmark — Cinzel text (avoids raster stretch from PNG + CSS) */
-header.site-header .site-wordmark {
-  line-height: 1;
+/* Header / footer — single wordmark image (aspect preserved; no squish) */
+header.site-header .site-header-logo {
+  display: block;
+  height: 2rem;
+  width: auto;
+  max-width: min(12rem, 55vw);
+  object-fit: contain;
+  object-position: left center;
+  filter: brightness(0) invert(1);
   opacity: 0.95;
+}
+@media (min-width: 768px) {
+  header.site-header .site-header-logo {
+    height: 2.25rem;
+    max-width: 13rem;
+  }
+}
+a.site-footer-brand .site-footer-logo {
+  display: block;
+  height: 1.75rem;
+  width: auto;
+  max-width: min(10rem, 50vw);
+  object-fit: contain;
+  object-position: left center;
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+}
+@media (min-width: 768px) {
+  a.site-footer-brand .site-footer-logo {
+    height: 2rem;
+    max-width: 11rem;
+  }
 }
 
 ::selection {
