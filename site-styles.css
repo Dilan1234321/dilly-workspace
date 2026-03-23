@@ -373,3 +373,242 @@ body .trust-check li {
   border-color: rgba(255, 255, 255, 0.1) !important;
   color: #e4e4e7 !important;
 }
+
+/* features.html — “In the app” mock grid + score demo (dark surfaces; fix body color bleed + stretched row) */
+body main .app-preview-2col {
+  align-items: start !important;
+}
+body main .score-demo-card {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+body main .score-demo-header {
+  color: #a1a1aa !important;
+}
+body main .score-demo-btn {
+  background: #111113 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #e4e4e7 !important;
+}
+body main .score-demo-btn.score-strong {
+  border-color: rgba(52, 211, 153, 0.45) !important;
+  color: #34d399 !important;
+  background: rgba(52, 211, 153, 0.1) !important;
+}
+body main .score-demo-btn.score-avg {
+  border-color: rgba(197, 163, 83, 0.45) !important;
+  color: #c5a353 !important;
+  background: rgba(197, 163, 83, 0.1) !important;
+}
+body main .score-demo-legend {
+  color: #a1a1aa !important;
+}
+body main .score-demo-legend strong {
+  color: #fafafa !important;
+}
+body main .score-demo-truth {
+  color: #71717a !important;
+}
+body main .score-demo-explain {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+body main .score-demo-block h4 {
+  font-family: Cinzel, Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  color: #fafafa !important;
+}
+body main .score-demo-block p {
+  color: #a1a1aa !important;
+}
+body main .dilly-take {
+  background: rgba(197, 163, 83, 0.08) !important;
+  border-left-color: #c5a353 !important;
+}
+body main .dilly-take .text {
+  color: #d4d4d8 !important;
+}
+
+body main .app-preview-grid .shareable-card {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+body main .app-preview-grid .shareable-card .brand {
+  font-family: Cinzel, Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  color: #fafafa !important;
+}
+body main .app-preview-grid .shareable-card .tagline {
+  font-family: Cinzel, Georgia, serif !important;
+  color: #a1a1aa !important;
+}
+body main .app-preview-grid .shareable-card .track,
+body main .app-preview-grid .shareable-card .footer {
+  color: #71717a !important;
+}
+
+body main .top-pct-block {
+  background: rgba(52, 211, 153, 0.1) !important;
+  border: 1px solid rgba(52, 211, 153, 0.28) !important;
+}
+body main .top-pct-block .num {
+  color: #34d399 !important;
+}
+body main .top-pct-block .label {
+  color: #a1a1aa !important;
+}
+body main .cited-block {
+  background: #111113 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-left: 3px solid #c5a353 !important;
+}
+body main .cited-block .label {
+  font-family: Cinzel, Georgia, serif !important;
+  color: #c5a353 !important;
+}
+body main .cited-block .quote {
+  color: #d4d4d8 !important;
+}
+
+body main .progress-bars {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+body main .progress-bars .header {
+  font-family: Cinzel, Georgia, serif !important;
+  color: #a1a1aa !important;
+}
+body main .progress-row .top {
+  color: #a1a1aa !important;
+}
+body main .progress-row .top span:first-child {
+  color: #fafafa !important;
+  font-weight: 600;
+}
+body main .progress-row .bar {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+body main .rec-card {
+  background: #111113 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+body main .rec-card .before {
+  color: #71717a !important;
+}
+body main .rec-card .after {
+  color: #e4e4e7 !important;
+}
+
+body main .red-flags {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  border-left: 3px solid rgba(248, 113, 113, 0.9) !important;
+}
+body main .red-flags .header {
+  color: #f87171 !important;
+}
+body main .red-flags ul {
+  color: #d4d4d8 !important;
+}
+
+body main .playbook-snippet {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+body main .playbook-snippet .header {
+  font-family: Cinzel, Georgia, serif !important;
+  color: #a1a1aa !important;
+}
+body main .playbook-snippet .headline {
+  color: #fafafa !important;
+}
+body main .playbook-snippet ul {
+  color: #a1a1aa !important;
+}
+
+body main .tab-bar-mock {
+  background: #111113 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+body main .tab-bar-mock .tab {
+  color: #71717a !important;
+}
+body main .tab-bar-mock .tab.active {
+  background: rgba(52, 211, 153, 0.12) !important;
+  color: #34d399 !important;
+}
+
+body main .career-center-mock {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+body main .career-center-mock .goal-line {
+  font-family: Cinzel, Georgia, serif !important;
+  color: #c5a353 !important;
+}
+body main .career-center-mock .goal-value {
+  color: #e4e4e7 !important;
+}
+body main .career-center-mock .profile-name {
+  color: #fafafa !important;
+}
+body main .career-center-mock .profile-school {
+  color: #a1a1aa !important;
+}
+body main .career-center-mock .num-pill.smart {
+  background: rgba(52, 211, 153, 0.12) !important;
+  color: #34d399 !important;
+}
+body main .career-center-mock .num-pill.grit,
+body main .career-center-mock .num-pill.build {
+  background: rgba(197, 163, 83, 0.12) !important;
+  color: #c5a353 !important;
+}
+body main .career-center-mock span[style*="dilly-bg-deep"] {
+  background: #111113 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e4e4e7 !important;
+}
+body main .career-center-mock p[style*="dilly-taupe-muted"] {
+  color: #a1a1aa !important;
+}
+body main .career-center-mock p[style*="dilly-taupe-muted"] strong {
+  color: #e4e4e7 !important;
+}
+
+body main .upload-zone-mock {
+  background: #111113 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+body main .upload-zone-mock:hover {
+  border-color: rgba(197, 163, 83, 0.4) !important;
+  background: #141416 !important;
+}
+body main .upload-zone-mock .upload-zone-icon {
+  color: #c5a353 !important;
+}
+body main .upload-zone-mock .upload-zone-title {
+  color: #fafafa !important;
+}
+body main .upload-zone-mock .upload-zone-meta {
+  color: #a1a1aa !important;
+}
+
+body main .insight-tool .tool-header {
+  font-family: Cinzel, Georgia, serif !important;
+  color: #c5a353 !important;
+}
+body main .insight-tool .tool-title {
+  color: #fafafa !important;
+}
+body main .insight-tool .tool-desc {
+  color: #a1a1aa !important;
+}
+body main .insight-tool {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
