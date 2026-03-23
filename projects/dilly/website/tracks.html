@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,223 +7,148 @@
   <meta name="description" content="Dilly supports Pre-Health, Pre-Law, Tech, Finance, Consulting, Business, Science, Communications, Education, Arts, and Humanities. Each track gets advice tailored to its field.">
   <link rel="canonical" href="https://trydilly.com/tracks.html">
   <meta property="og:url" content="https://trydilly.com/tracks.html">
+  <meta property="og:title" content="Tracks | Dilly">
+  <meta property="og:description" content="Dilly supports Pre-Health, Pre-Law, Tech, Finance, Consulting, Business, Science, Communications, Education, Arts, and Humanities. Each track gets advice tailored to its field.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:image" content="https://trydilly.com/og-image.png">
+  <meta name="twitter:image" content="https://trydilly.com/og-image.png">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%234f46e5' width='32' height='32' rx='6'/><text x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>D</text></svg>">
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --dilly-bg: #0f0f0f;
-      --dilly-surface: #1a1a1a;
-      --dilly-taupe-bright: #e8e4df;
-      --dilly-taupe-muted: #8a8279;
-      --dilly-border: rgba(179, 167, 157, 0.15);
-      --arts-accent: #d4a574;
-      --tech-accent: #22d3ee;
-      --ph-accent: #0d9488;
-      --law-accent: #d4af37;
-      --fin-accent: #22c55e;
-      --con-accent: #3b82f6;
-      --biz-accent: #a855f7;
-      --sci-accent: #10b981;
-      --com-accent: #f97316;
-      --edu-accent: #14b8a6;
-      --hum-accent: #b45309;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--dilly-bg); color: var(--dilly-taupe-bright); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; border-bottom: 1px solid var(--dilly-border); background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(12px); }
-    .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
-    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
-    .nav-links a { font-size: 0.875rem; color: var(--dilly-taupe-muted); text-decoration: none; transition: color 0.2s; }
-    .nav-links a:hover, .nav-links a.nav-active { color: var(--dilly-taupe-bright); }
-    .btn-primary { display: inline-block; padding: 0.625rem 1.25rem; border-radius: 0.75rem; background: var(--dilly-taupe-bright); color: #080808; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
-    .btn-primary:hover { background: #fff; }
-    .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
-    section { padding: 6rem 0 5rem; }
-    h1 { font-size: 2rem; font-weight: 700; margin: 0 0 0.5rem; }
-    @media (min-width: 768px) { h1 { font-size: 2.5rem; } }
-    .section-sub { color: var(--dilly-taupe-muted); font-size: 1.125rem; margin-bottom: 3rem; }
-    .track-grid { display: grid; gap: 1rem; }
-    @media (min-width: 640px) { .track-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (min-width: 1024px) { .track-grid { grid-template-columns: repeat(3, 1fr); } }
-    .track-card {
-      display: block;
-      padding: 1.5rem 1.75rem;
-      border: 1px solid var(--dilly-border);
-      background: var(--dilly-surface);
-      border-radius: 1rem;
-      text-decoration: none;
-      color: var(--dilly-taupe-bright);
-      transition: all 0.2s;
-    }
-    .track-card:hover {
-      transform: translateY(-2px);
-    }
-    .track-card[data-accent="arts"]:hover { border-color: rgba(212, 165, 116, 0.5); background: #1f1c18; }
-    .track-card[data-accent="tech"]:hover { border-color: rgba(34, 211, 238, 0.4); background: #0f1618; }
-    .track-card[data-accent="ph"]:hover { border-color: rgba(13, 148, 136, 0.4); background: #0f1818; }
-    .track-card[data-accent="law"]:hover { border-color: rgba(212, 175, 55, 0.4); background: #1a1810; }
-    .track-card[data-accent="fin"]:hover { border-color: rgba(34, 197, 94, 0.4); background: #0f1810; }
-    .track-card[data-accent="con"]:hover { border-color: rgba(59, 130, 246, 0.4); background: #0f1418; }
-    .track-card[data-accent="biz"]:hover { border-color: rgba(168, 85, 247, 0.4); background: #18101a; }
-    .track-card[data-accent="sci"]:hover { border-color: rgba(16, 185, 129, 0.4); background: #0f1814; }
-    .track-card[data-accent="com"]:hover { border-color: rgba(249, 115, 22, 0.4); background: #1a1410; }
-    .track-card[data-accent="edu"]:hover { border-color: rgba(20, 184, 166, 0.4); background: #0f1818; }
-    .track-card[data-accent="hum"]:hover { border-color: rgba(180, 83, 9, 0.4); background: #1a1610; }
-    .track-card[data-accent="default"]:hover { border-color: rgba(201, 168, 130, 0.4); background: #242424; }
-    .track-card .icon { font-size: 1.5rem; margin-bottom: 0.5rem; display: block; }
-    .track-card .accent-arts { color: var(--arts-accent); }
-    .track-card .accent-tech { color: var(--tech-accent); }
-    .track-card .accent-ph { color: var(--ph-accent); }
-    .track-card h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.25rem; }
-    .track-card .tagline { font-size: 0.8125rem; color: var(--dilly-taupe-muted); margin: 0; line-height: 1.4; }
-    .track-card .arrow { margin-top: 0.75rem; font-size: 0.8125rem; opacity: 0.7; }
-    .track-card[data-accent="arts"] .arrow { color: var(--arts-accent); }
-    .track-card[data-accent="tech"] .arrow { color: var(--tech-accent); }
-    .track-card[data-accent="ph"] .arrow { color: var(--ph-accent); }
-    .track-card[data-accent="law"] .arrow { color: var(--law-accent); }
-    .track-card[data-accent="fin"] .arrow { color: var(--fin-accent); }
-    .track-card[data-accent="con"] .arrow { color: var(--con-accent); }
-    .track-card[data-accent="biz"] .arrow { color: var(--biz-accent); }
-    .track-card[data-accent="sci"] .arrow { color: var(--sci-accent); }
-    .track-card[data-accent="com"] .arrow { color: var(--com-accent); }
-    .track-card[data-accent="edu"] .arrow { color: var(--edu-accent); }
-    .track-card[data-accent="hum"] .arrow { color: var(--hum-accent); }
-    .track-card[data-accent="default"] .arrow { color: var(--dilly-taupe-muted); }
-    footer { border-top: 1px solid var(--dilly-border); padding: 2rem 1.5rem; text-align: center; }
-    .footer-inner { display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-    .footer-links { display: flex; gap: 1.5rem; justify-content: center; font-size: 0.875rem; flex-wrap: wrap; }
-    .footer-links a { color: var(--dilly-taupe-muted); text-decoration: none; }
-    .footer-links a:hover { color: var(--dilly-taupe-bright); }
-    .footer-copy { font-size: 0.75rem; color: var(--dilly-taupe-muted); }
-    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; letter-spacing: -0.02em; color: inherit; text-decoration: none; }
-    .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
-    .footer-logo img { height: 32px; width: auto; display: block; }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="site-tailwind-config.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="site-styles.css">
 </head>
-<body class="tracks-hub">
-  <nav>
-    <div class="nav-inner">
-      <a href="index.html" class="nav-logo"><img src="dilly-wordmark.png" alt="dilly logo" width="612" height="408"></a>
-      <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
-      <div class="nav-menu-panel" id="navMenuPanel">
-        <div class="nav-links">
-          <a href="features.html">Features</a>
-          <a href="how-it-works.html">How it works</a>
-          <a href="the-app.html">The app</a>
-          <a href="your-journey.html">Your journey</a>
-          <a href="tracks.html">Tracks</a>
-          <a href="quiz.html">Quiz</a>
-          <a href="pricing.html">Pricing</a>
-          <a href="recruiters.html">For recruiters</a>
-          <a href="for-parents.html">For parents</a>
-          <a href="trust.html">Trust</a>
-          <a href="about.html">About</a>
-          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary nav-cta">Start free</a>
-        </div>
+<body class="bg-surface text-ink antialiased selection:bg-emerald-500/25 selection:text-white">
+            <header class="site-header sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 md:px-8 md:py-4">
+      <a href="index.html" class="flex shrink-0 items-center">
+        <img src="dilly-wordmark.png" alt="Dilly" class="site-logo" width="612" height="408" decoding="async">
+      </a>
+      <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 md:hidden" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
+      <div class="nav-menu-panel fixed inset-x-0 top-[5.5rem] z-40 hidden border-b border-zinc-800 bg-[#141416]/98 px-5 py-6 shadow-soft backdrop-blur-xl md:static md:inset-auto md:flex md:flex-1 md:justify-end md:border-0 md:bg-transparent md:p-0 md:shadow-none" id="navMenuPanel">
+        <nav class="flex flex-col gap-2 md:flex-row md:items-center md:gap-0 md:rounded-full md:bg-zinc-900/90 md:p-1.5 md:pl-3 md:ring-1 md:ring-white/10">
+          <a href="features.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Features</a>
+          <a href="how-it-works.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">How it works</a>
+          <a href="tracks.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Tracks</a>
+          <a href="pricing.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Pricing</a>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-5 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110 md:mt-0 md:ml-1 md:rounded-full md:px-5 md:py-2">Get Your Dilly Score</a>
+        </nav>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <section>
-    <div class="container">
-      <h1>Built for your track</h1>
-      <p class="section-sub">Each track leans into its field's vibe. Click one to see majors, benchmarks, and what we score. <a href="quiz.html" style="color: var(--dilly-accent);">Not sure? Find your track</a>.</p>
-      <div class="track-grid">
-        <a href="track-pre-health.html" class="track-card" data-accent="ph">
-          <span class="icon accent-ph">🏥</span>
-          <h2>Pre-Health</h2>
-          <p class="tagline">100+ clinical. 40+ shadowing. Pass the adcom screen.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-pre-law.html" class="track-card" data-accent="law">
-          <span class="icon" style="color: var(--law-accent);">⚖</span>
-          <h2>Pre-Law</h2>
-          <p class="tagline">LSAT, internships, advocacy. Score like adcoms.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-tech.html" class="track-card" data-accent="tech">
-          <span class="icon accent-tech">{ }</span>
-          <h2>Tech</h2>
-          <p class="tagline">Stack. Projects. Impact. Pass the 6-second screen.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-finance.html" class="track-card" data-accent="fin">
-          <span class="icon" style="color: var(--fin-accent);">$</span>
-          <h2>Finance</h2>
-          <p class="tagline">Firms, deals, modeling. We score what recruiters scan.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-consulting.html" class="track-card" data-accent="con">
-          <span class="icon" style="color: var(--con-accent);">📊</span>
-          <h2>Consulting</h2>
-          <p class="tagline">MBB, strategy, case work.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-business.html" class="track-card" data-accent="biz">
-          <span class="icon" style="color: var(--biz-accent);">💼</span>
-          <h2>Business</h2>
-          <p class="tagline">Marketing, management, entrepreneurship.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-science.html" class="track-card" data-accent="sci">
-          <span class="icon" style="color: var(--sci-accent);">🧪</span>
-          <h2>Science</h2>
-          <p class="tagline">Lab. Research. Publications.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-communications.html" class="track-card" data-accent="com">
-          <span class="icon" style="color: var(--com-accent);">📢</span>
-          <h2>Communications</h2>
-          <p class="tagline">PR, journalism, media, advertising.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-education.html" class="track-card" data-accent="edu">
-          <span class="icon" style="color: var(--edu-accent);">📚</span>
-          <h2>Education</h2>
-          <p class="tagline">Teaching, K-12, curriculum.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-arts.html" class="track-card" data-accent="arts">
-          <span class="icon accent-arts">🎨</span>
-          <h2>Arts</h2>
-          <p class="tagline">Portfolio-first. Your proof.</p>
-          <span class="arrow">View track →</span>
-        </a>
-        <a href="track-humanities.html" class="track-card" data-accent="hum">
-          <span class="icon" style="color: var(--hum-accent);">📖</span>
-          <h2>Humanities</h2>
-          <p class="tagline">Argument, evidence, impact.</p>
-          <span class="arrow">View track →</span>
-        </a>
-      </div>
-    </div>
-  </section>
+  <main class="mx-auto max-w-6xl px-5 pb-24 pt-10 md:px-8 md:pt-14" data-reveal>
+    <h1 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Built for your track</h1>
+    <p class="mt-4 max-w-2xl text-zinc-400">Each track leans into how that field hires. Open one for majors, benchmarks, and what we score. <a href="quiz.html" class="font-semibold text-[#c5a353] hover:text-[#e4c88a] hover:underline">Not sure? Find your track</a>.</p>
 
-  <footer>
-    <div class="footer-inner">
-      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly" width="32" height="32"><span>Dilly</span></span>
-      <div class="footer-links">
-        <a href="index.html">Home</a>
-        <a href="features.html">Features</a>
-        <a href="how-it-works.html">How it works</a>
-        <a href="the-app.html">The app</a>
-        <a href="your-journey.html">Your journey</a>
-        <a href="tracks.html">Tracks</a>
-        <a href="quiz.html">Quiz</a>
-        <a href="pricing.html">Pricing</a>
-        <a href="recruiters.html">For recruiters</a>
-        <a href="for-parents.html">For parents</a>
-        <a href="trust.html">Trust</a>
-        <a href="about.html">About</a>
+    <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <a href="track-pre-health.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl" aria-hidden="true">🏥</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Pre-Health</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">100+ clinical. 40+ shadowing. Pass the adcom screen.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-pre-law.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl text-amber-700" aria-hidden="true">⚖</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Pre-Law</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">LSAT, internships, advocacy. Score like adcoms.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-tech.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="font-mono text-lg font-bold text-cyan-600" aria-hidden="true">{ }</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Tech</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">Stack. Projects. Impact. Pass the 6-second screen.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-finance.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-xl font-bold text-emerald-600" aria-hidden="true">$</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Finance</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">Firms, deals, modeling. We score what recruiters scan.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-consulting.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl" aria-hidden="true">📊</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Consulting</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">MBB, strategy, case work.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-business.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl" aria-hidden="true">💼</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Business</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">Marketing, management, entrepreneurship.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-science.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl" aria-hidden="true">🧪</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Science</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">Lab. Research. Publications.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-communications.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl" aria-hidden="true">📢</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Communications</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">PR, journalism, media, advertising.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-education.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl" aria-hidden="true">📚</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Education</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">Teaching, K-12, curriculum.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-arts.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl" aria-hidden="true">🎨</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Arts</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">Portfolio-first. Your proof.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+      <a href="track-humanities.html" class="group flex flex-col rounded-2xl border border-white/10 bg-[#1c1c1e] p-6 shadow-card transition hover:-translate-y-0.5 hover:border-[#c5a353]/40 hover:shadow-xl">
+        <span class="text-2xl text-amber-800" aria-hidden="true">📖</span>
+        <h2 class="mt-3 font-serif text-lg font-semibold text-zinc-100">Humanities</h2>
+        <p class="mt-2 flex-1 text-sm leading-relaxed text-zinc-500">Argument, evidence, impact.</p>
+        <span class="mt-4 text-sm font-semibold text-[#c5a353] transition group-hover:text-[#e4c88a]">View track →</span>
+      </a>
+    </div>
+  </main>
+
+  <div class="fixed bottom-0 left-0 right-0 z-50 translate-y-full border-t border-white/10 bg-[#141416]/95 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-transform duration-300 md:py-4" id="sticky-cta">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
+      <span class="hidden text-sm font-medium text-zinc-400 sm:inline">Ready to see your score?</span>
+      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="sticky" class="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[#c5a353] px-6 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 sm:flex-none">Get Your Dilly Score</a>
+    </div>
+  </div>
+
+  <footer class="border-t border-white/10 bg-[#0a0a0a] py-12">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 px-5 md:flex-row md:px-8">
+      <a href="index.html" class="site-footer-brand flex items-center gap-2">
+        <img src="dilly-logo.png" alt="" width="48" height="48" class="h-12 w-12">
+        <span class="text-lg font-bold text-zinc-100">Dilly</span>
+      </a>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-zinc-400">
+        <a href="index.html" class="hover:text-white">Home</a>
+        <a href="features.html" class="hover:text-white">Features</a>
+        <a href="how-it-works.html" class="hover:text-white">How it works</a>
+        <a href="the-app.html" class="hover:text-white">The app</a>
+        <a href="your-journey.html" class="hover:text-white">Your journey</a>
+        <a href="tracks.html" class="hover:text-white">Tracks</a>
+        <a href="quiz.html" class="hover:text-white">Quiz</a>
+        <a href="pricing.html" class="hover:text-white">Pricing</a>
+        <a href="recruiters.html" class="hover:text-white">Recruiters</a>
+        <a href="for-parents.html" class="hover:text-white">Parents</a>
+        <a href="trust.html" class="hover:text-white">Trust</a>
+        <a href="about.html" class="hover:text-white">About</a>
       </div>
     </div>
-    <p class="footer-copy">© <span id="year"></span> Dilly. The career center in your pocket.</p>
+    <p class="mt-8 text-center text-xs text-zinc-600">© <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
-  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+
   <script src="site-nav.js"></script>
+  <script src="analytics.js"></script>
+  <script src="site-page.js"></script>
 </body>
 </html>

@@ -1,264 +1,434 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dilly | The Last Check Before You Apply</title>
+  <title>Dilly | Your Career Has a Score. Improve It.</title>
   <meta name="description" content="100% verified .edu students. Dilly scores your resume (Smart, Grit, Build), runs a full ATS hub, and bundles Get Hired—jobs, pipeline, playbook—with Dilly AI and leaderboard. We don't sell your data.">
   <link rel="canonical" href="https://trydilly.com/">
-  <meta property="og:title" content="Dilly | The Last Check Before You Apply">
+  <meta property="og:title" content="Dilly | Your Career Has a Score. Improve It.">
   <meta property="og:description" content="100% verified real students. .edu only. Resume scored like a senior hiring manager. Your career center in your pocket.">
   <meta property="og:url" content="https://trydilly.com/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Dilly | The Last Check Before You Apply">
+  <meta name="twitter:title" content="Dilly | Your Career Has a Score. Improve It.">
   <meta name="twitter:description" content="100% verified real students. .edu only. Resume scored like a senior hiring manager. Your career center in your pocket.">
   <meta property="og:image" content="https://trydilly.com/og-image.png">
   <meta name="twitter:image" content="https://trydilly.com/og-image.png">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23c9a882' width='32' height='32' rx='6'/><text x='16' y='22' font-size='18' font-weight='bold' fill='%23080808' text-anchor='middle' font-family='sans-serif'>M</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%234f46e5' width='32' height='32' rx='6'/><text x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>D</text></svg>">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="site-tailwind-config.js"></script>
+  <link rel="stylesheet" href="site-styles.css">
 </head>
-<body>
-  <nav>
-    <div class="nav-inner">
-      <a href="index.html" class="nav-logo"><img src="dilly-wordmark.png" alt="dilly logo" width="612" height="408"></a>
-      <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
-      <div class="nav-menu-panel" id="navMenuPanel">
-        <div class="nav-links">
-          <a href="features.html">Features</a>
-          <a href="how-it-works.html">How it works</a>
-          <a href="the-app.html">The app</a>
-          <a href="your-journey.html">Your journey</a>
-          <a href="tracks.html">Tracks</a>
-          <a href="quiz.html">Quiz</a>
-          <a href="pricing.html">Pricing</a>
-          <a href="recruiters.html">For recruiters</a>
-          <a href="for-parents.html">For parents</a>
-          <a href="trust.html">Trust</a>
-          <a href="about.html">About</a>
-          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary nav-cta">Start free</a>
-        </div>
+<body class="bg-surface text-ink antialiased selection:bg-emerald-500/25 selection:text-white">
+  <header class="site-header sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 md:px-8 md:py-4">
+      <a href="index.html" class="flex shrink-0 items-center">
+        <img src="dilly-wordmark.png" alt="Dilly" class="site-logo" width="612" height="408" decoding="async">
+      </a>
+      <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 md:hidden" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
+      <div class="nav-menu-panel fixed inset-x-0 top-[5.5rem] z-40 hidden border-b border-zinc-800 bg-[#141416]/98 px-5 py-6 shadow-soft backdrop-blur-xl md:static md:inset-auto md:flex md:flex-1 md:justify-end md:border-0 md:bg-transparent md:p-0 md:shadow-none" id="navMenuPanel">
+        <nav class="flex flex-col gap-2 md:flex-row md:items-center md:gap-0 md:rounded-full md:bg-zinc-900/90 md:p-1.5 md:pl-3 md:ring-1 md:ring-white/10">
+          <a href="features.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Features</a>
+          <a href="how-it-works.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">How it works</a>
+          <a href="tracks.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Tracks</a>
+          <a href="pricing.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Pricing</a>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-5 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110 md:mt-0 md:ml-1 md:rounded-full md:px-5 md:py-2">Get Your Dilly Score</a>
+        </nav>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <section class="hero text-center hero-gradient">
-    <div class="container-narrow">
-      <p class="hero-sub">The Career Center in Your Pocket</p>
-      <h1>Stop getting ghosted. <span class="text-gradient">Get interviews.</span></h1>
-      <p>Recruiters spend <strong style="color: var(--dilly-taupe-bright);">6 seconds</strong> on a resume. Dilly scores yours like a senior hiring manager—and tells you exactly what to fix.</p>
-      <div class="hero-btns">
-        <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-hero btn-hero-main" data-cta="hero">Start free — run your first audit</a>
+  <!-- Hero: desktop 2-col + app-style mock -->
+  <section class="relative overflow-hidden border-b border-white/10">
+    <div class="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-32 bottom-10 h-80 w-80 rounded-full bg-[#c5a353]/10 blur-3xl"></div>
+    <div class="relative mx-auto grid max-w-7xl min-h-[calc(100vh-5rem)] items-center gap-12 px-5 py-16 lg:grid-cols-12 lg:gap-16 lg:px-10 lg:py-24">
+      <div class="max-w-xl lg:col-span-6">
+        <p class="label-app mb-4 text-appgreen">The career center in your pocket</p>
+        <h1 class="font-serif text-4xl font-semibold leading-[1.08] tracking-[0.02em] text-zinc-50 md:text-5xl lg:text-6xl">
+          Your Career Has a Score.
+          <span class="gradient-text block pt-2 font-semibold">Improve It.</span>
+        </h1>
+        <p class="mt-6 text-base leading-relaxed text-zinc-400 md:text-lg">
+          Recruiters spend <span class="font-semibold text-zinc-200">6 seconds</span> on a resume. Dilly scores yours like a senior hiring manager—and shows exactly what to fix before you apply.
+        </p>
+        <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="hero-primary" class="inline-flex h-14 min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-8 text-base font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 active:scale-[0.98]">
+            Get Your Dilly Score
+          </a>
+          <a href="#how-it-works" class="inline-flex h-14 min-h-[44px] items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-8 text-base font-semibold text-zinc-100 backdrop-blur-sm transition hover:bg-white/10">
+            See How It Works
+          </a>
+        </div>
+        <p class="mt-6 text-sm text-zinc-500">
+          <span class="line-through text-zinc-600">$19.99</span>
+          <span class="ml-2 font-semibold text-appgreen">$9.99</span>/mo · .edu verified · We never sell your data
+        </p>
       </div>
-      <p class="hero-note"><span style="text-decoration: line-through; color: var(--dilly-taupe-muted);">$19.99</span> <strong style="color: var(--dilly-accent);">$9.99</strong>/mo · Verify .edu → Upload → Get scores in minutes</p>
-      <p class="hero-note" style="margin-top: 0.5rem;">100% verified real students. .edu only — no fakes, no frauds, no bots.</p>
-    </div>
-  </section>
 
-  <div class="stats-bar" style="padding: 1.25rem 1.5rem;">
-    <div class="stat"><div class="stat-num">500+</div><div class="stat-label">Resumes audited</div></div>
-    <div class="stat"><div class="stat-num">4</div><div class="stat-label">PA program interviews after Dilly</div></div>
-    <div class="stat"><div class="stat-num">11</div><div class="stat-label">Career tracks supported</div></div>
-    <div class="stat"><div class="stat-num">6 sec</div><div class="stat-label">Recruiter attention span</div></div>
-    <div class="stat"><div class="stat-num">4</div><div class="stat-label">ATS vendors simulated</div></div>
-  </div>
-
-  <section class="section-dark" id="product-preview">
-    <div class="container">
-      <h2 class="text-center" style="margin-bottom: 0.5rem;">Your profile. Your radar. Dilly.</h2>
-      <p class="section-sub text-center" style="margin-bottom: 2rem;">Smart, Grit, Build—Career Center, Rank, Dilly AI, and Get Hired in one flow: ATS hub, applications &amp; jobs, playbook, and chat that follows you screen to screen.</p>
-      <div class="radar-section-split">
-        <div class="radar-left">
-          <h3 class="radar-name-big">Dilan</h3>
-          <p class="radar-track-label">Tech Track · Data Science</p>
-          <div class="radar-dim-blocks">
-            <div class="radar-dim-block smart-strong">
-              <div class="label">Smart</div>
-              <div class="score">72</div>
-            </div>
-            <div class="radar-dim-block grit-avg">
-              <div class="label">Grit</div>
-              <div class="score">65</div>
-            </div>
-            <div class="radar-dim-block build-avg">
-              <div class="label">Build</div>
-              <div class="score">58</div>
-            </div>
-          </div>
-          <p class="radar-profile-take">"Strong academic foundation. Grit and Build have room to grow—add quantified impact and track-specific proof before your next application."</p>
-          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-hero btn-hero-main" style="margin-top: 1rem;" data-cta="radar">Get your radar →</a>
-        </div>
-        <div class="radar-center">
-          <svg viewBox="0 0 200 200">
-            <polygon points="100,20 180,170 20,170" fill="none" stroke="var(--dilly-border)" stroke-width="1"/>
-            <polygon points="100,50 150,155 50,155" fill="none" stroke="var(--dilly-border)" stroke-width="1"/>
-            <polygon points="100,40 168,163 28,165" fill="rgba(201,168,130,0.2)" stroke="var(--dilly-accent)" stroke-width="2"/>
-            <text x="100" y="15" text-anchor="middle" fill="var(--dilly-accent)" font-size="12" font-weight="600">Smart</text>
-            <text x="175" y="185" text-anchor="middle" fill="var(--dilly-taupe-muted)" font-size="11">Grit</text>
-            <text x="25" y="185" text-anchor="middle" fill="var(--dilly-taupe-muted)" font-size="11">Build</text>
-          </svg>
-        </div>
-        <div class="voice-demo voice-demo-lg" style="max-width: none;">
-          <div class="voice-demo-header">Dilly</div>
-          <div class="voice-demo-messages voice-demo-messages-lg">
-            <div class="voice-demo-msg user">
-              <div class="bubble">What's the one thing I should do this week to stand out?</div>
-            </div>
-            <div class="voice-demo-msg ai">
-              <div class="bubble-wrap">
-                <div class="avatar">M</div>
-                <div class="bubble">Your Build score (58) is the biggest lever right now. Tech recruiters want proof—deployed projects, real users, stack. Your predictive engine is strong; add where it's deployed or who uses it. One concrete move: rewrite your KVR Properties bullet to include "used by leasing team" or "500+ applicants processed." That alone could push Build into the mid-60s.</div>
+      <!-- Phone mockup — dark app UI -->
+      <div class="relative mx-auto flex w-full max-w-sm justify-center lg:col-span-6 lg:max-w-none">
+        <div class="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-emerald-500/20 via-zinc-800/30 to-[#c5a353]/15 blur-3xl"></div>
+        <div class="animate-float relative w-[min(100%,300px)]">
+          <div class="rounded-[2.5rem] bg-zinc-950 p-[10px] shadow-2xl shadow-black/50 ring-1 ring-white/10">
+            <div class="overflow-hidden rounded-[2rem] bg-card">
+              <div class="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                <span class="text-sm font-bold text-zinc-100">Dilly</span>
+                <span class="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-semibold text-appgreen">Live</span>
+              </div>
+              <div class="space-y-5 px-5 py-6">
+                <div>
+                  <p class="label-app text-zinc-500">Dilly Score</p>
+                  <div class="mt-1 flex items-end gap-2">
+                    <span class="text-5xl font-extrabold tracking-tight text-appgreen">81</span>
+                    <span class="mb-1.5 text-sm font-medium text-zinc-500">/100</span>
+                  </div>
+                  <p class="mt-1 text-xs text-appgreen">Top 15% Tech · UTampa</p>
+                  <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                    <div class="h-full w-[81%] rounded-full bg-appgreen"></div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center text-[10px] font-semibold uppercase tracking-wide">
+                  <div class="rounded-xl bg-raised py-2 text-sky-400">68 Smart</div>
+                  <div class="rounded-xl bg-raised py-2 text-gold">100 Grit</div>
+                  <div class="rounded-xl bg-raised py-2 text-appgreen">72 Build</div>
+                </div>
+                <div class="flex justify-center py-1">
+                  <svg viewBox="0 0 200 200" class="h-32 w-32" aria-hidden="true">
+                    <polygon points="100,24 176,168 24,168" fill="none" stroke="#3f3f46" stroke-width="1"/>
+                    <polygon points="100,38 168,162 32,162" fill="rgba(52,211,153,0.12)" stroke="#34d399" stroke-width="2"/>
+                    <text x="100" y="18" text-anchor="middle" fill="#a1a1aa" font-size="10" font-family="system-ui">Smart</text>
+                    <text x="172" y="188" text-anchor="middle" fill="#71717a" font-size="9">Grit</text>
+                    <text x="28" y="188" text-anchor="middle" fill="#71717a" font-size="9">Build</text>
+                  </svg>
+                </div>
+                <div class="rounded-2xl border border-white/10 bg-raised p-4">
+                  <p class="text-xs font-semibold text-zinc-300">Resume feedback</p>
+                  <p class="mt-2 text-sm leading-relaxed text-zinc-500">Add quantified impact to your Build bullets—recruiters scan for proof, not adjectives.</p>
+                </div>
               </div>
             </div>
-            <div class="voice-demo-msg user">
-              <div class="bubble">What should I add to my KVR Properties bullet?</div>
-            </div>
-            <div class="voice-demo-msg ai">
-              <div class="bubble-wrap">
-                <div class="avatar">M</div>
-                <div class="bubble">Your predictive engine—the 10,000+ applicant pipeline—already shows scale. Add where it's deployed or who uses it: "Used by leasing team to prioritize leads" so recruiters see real-world impact. Your 96% classification model is a separate proof point; keep both. A GitHub link would let recruiters see the work.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why strip — desktop 3-col -->
+  <section class="border-b border-white/10 bg-raised py-12 md:py-14">
+    <div class="mx-auto grid max-w-6xl gap-6 px-5 md:grid-cols-3 md:gap-8 md:px-8">
+      <div class="rounded-2xl border border-white/10 bg-card p-6 shadow-card transition hover:border-emerald-500/30">
+        <p class="font-serif text-3xl font-semibold tracking-wide text-zinc-100">6 sec</p>
+        <p class="label-app mt-2 text-zinc-500">Recruiter glance</p>
+        <p class="mt-3 text-sm text-zinc-400">Make every line earn its place.</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-card p-6 shadow-card transition hover:border-emerald-500/30">
+        <p class="font-serif text-3xl font-semibold tracking-wide text-zinc-100">24/7</p>
+        <p class="label-app mt-2 text-zinc-500">Career center</p>
+        <p class="mt-3 text-sm text-zinc-400">Scores, audits, and AI in your pocket.</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-card p-6 shadow-card transition hover:border-emerald-500/30">
+        <p class="font-serif text-3xl font-semibold tracking-wide text-zinc-100">0</p>
+        <p class="label-app mt-2 text-zinc-500">Data sold</p>
+        <p class="mt-3 text-sm text-zinc-400">.edu verified. Your resume stays yours.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how-it-works" class="border-b border-white/10 bg-surface py-24 md:py-28">
+    <div class="mx-auto max-w-6xl px-5 md:px-8" data-reveal>
+      <div class="mx-auto max-w-2xl text-center">
+        <p class="label-app text-appgreen">Flow</p>
+        <h2 class="mt-2 font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">How it works</h2>
+        <p class="mt-4 text-zinc-400">Three steps. No dashboard maze—just clarity.</p>
+      </div>
+      <div class="mt-16 grid gap-8 md:grid-cols-3 md:gap-6">
+        <div class="rounded-2xl border border-white/10 bg-card p-8 shadow-card md:text-left">
+          <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-appgreen ring-1 ring-emerald-500/30">
+            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          </div>
+          <p class="label-app text-gold">Step 1</p>
+          <h3 class="mt-2 text-xl font-bold text-zinc-100">Upload resume</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-500">Verify your .edu and drop your latest PDF—takes under a minute.</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-card p-8 shadow-card md:text-left">
+          <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-appgreen ring-1 ring-emerald-500/30">
+            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+          <p class="label-app text-gold">Step 2</p>
+          <h3 class="mt-2 text-xl font-bold text-zinc-100">Get your Dilly Score</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-500">Smart, Grit, Build—scored like a hiring manager, not a keyword toy.</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-card p-8 shadow-card md:text-left">
+          <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-appgreen ring-1 ring-emerald-500/30">
+            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </div>
+          <p class="label-app text-gold">Step 3</p>
+          <h3 class="mt-2 text-xl font-bold text-zinc-100">Follow the plan → interviews</h3>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-500">Concrete edits, track playbooks, and Dilly AI that stays in context.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product preview — desktop bento -->
+  <section id="product-preview" class="border-b border-white/10 bg-raised py-24 md:py-32">
+    <div class="mx-auto max-w-7xl px-5 md:px-8" data-reveal>
+      <div class="mx-auto max-w-2xl text-center">
+        <p class="label-app text-appgreen">Inside the app</p>
+        <h2 class="mt-2 font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Everything in one flow</h2>
+        <p class="mt-4 text-zinc-400">Resume intelligence, your score, and the tools to get hired—without the clutter.</p>
+      </div>
+
+      <div class="mt-16 grid gap-5 lg:grid-cols-12 lg:gap-6">
+        <article class="group relative overflow-hidden rounded-2xl border border-white/10 bg-card p-8 shadow-card transition hover:border-emerald-500/25 lg:col-span-7 lg:row-span-2 lg:min-h-[320px]">
+          <div class="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-emerald-500/10 blur-2xl transition group-hover:bg-emerald-500/20"></div>
+          <div class="relative">
+            <p class="label-app text-gold">Resume analysis</p>
+            <h3 class="mt-2 text-2xl font-bold text-zinc-100">Line-by-line, recruiter-real</h3>
+            <p class="mt-3 max-w-md text-sm leading-relaxed text-zinc-500">Before/after bullets, dimension-tagged feedback, and edits you can paste tonight.</p>
+            <div class="mt-8 space-y-3 rounded-2xl border border-white/10 bg-raised p-4">
+              <div class="flex items-start justify-between gap-3 text-sm">
+                <span class="text-zinc-600 line-through">“Helped with club social media”</span>
               </div>
-            </div>
-            <div class="voice-demo-followups" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
-              <span class="voice-demo-chip">How do I explain my gap?</span>
-              <span class="voice-demo-chip">Prep me for Goldman info session</span>
-              <span class="voice-demo-chip">Run gap scan for Tech</span>
-              <span class="voice-demo-chip">Am I ready for Goldman?</span>
+              <div class="rounded-xl border border-emerald-500/20 bg-card p-3 text-sm font-medium text-zinc-200 shadow-sm">
+                “Grew Instagram reach <span class="text-appgreen">45%</span> in 3 months via content pipeline”
+              </div>
+              <p class="text-xs font-semibold text-appgreen">Grit + suggested</p>
             </div>
           </div>
-          <div class="voice-demo-input">Ask Dilly…</div>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-card p-8 shadow-card transition hover:border-white/20 lg:col-span-5">
+          <p class="label-app text-gold">Dilly Score</p>
+          <h3 class="mt-2 text-xl font-bold text-zinc-100">One number. Three dimensions.</h3>
+          <div class="mt-6 flex items-end gap-2">
+            <span class="text-5xl font-extrabold text-appgreen">84</span>
+            <span class="mb-2 text-sm font-medium text-zinc-500">overall</span>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2 text-sm">
+            <span class="rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 font-semibold text-sky-300">Smart 89</span>
+            <span class="rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 font-semibold text-gold">Grit 72</span>
+            <span class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 font-semibold text-appgreen">Build 82</span>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-card p-8 shadow-card transition hover:border-white/20 lg:col-span-5">
+          <p class="label-app text-gold">Radar</p>
+          <h3 class="mt-2 text-xl font-bold text-zinc-100">See the shape of your profile</h3>
+          <div class="mt-4 flex justify-center">
+            <svg viewBox="0 0 200 200" class="h-32 w-32" aria-hidden="true">
+              <polygon points="100,28 170,162 30,162" fill="rgba(52,211,153,0.08)" stroke="#34d399" stroke-width="2"/>
+              <polygon points="100,28 170,162 30,162" fill="none" stroke="#3f3f46" stroke-width="1"/>
+              <text x="100" y="22" text-anchor="middle" fill="#a1a1aa" font-size="10">Smart</text>
+              <text x="168" y="178" text-anchor="middle" fill="#71717a" font-size="9">Grit</text>
+              <text x="32" y="178" text-anchor="middle" fill="#71717a" font-size="9">Build</text>
+            </svg>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-card p-7 shadow-card transition hover:border-white/20 lg:col-span-4">
+          <p class="label-app text-gold">Leaderboard</p>
+          <h3 class="mt-2 text-lg font-bold text-zinc-100">Peer context</h3>
+          <p class="mt-2 text-sm text-zinc-500">Percentiles by track—know where you stand.</p>
+          <div class="mt-5 space-y-3">
+            <div>
+              <div class="mb-1 flex justify-between text-xs font-semibold text-zinc-400"><span>Smart</span><span class="text-appgreen">Top 5%</span></div>
+              <div class="h-2 overflow-hidden rounded-full bg-zinc-800"><div class="h-full w-[92%] rounded-full bg-gradient-to-r from-emerald-400 to-teal-500"></div></div>
+            </div>
+            <div>
+              <div class="mb-1 flex justify-between text-xs font-semibold text-zinc-500"><span>Grit</span><span>Top 28%</span></div>
+              <div class="h-2 overflow-hidden rounded-full bg-zinc-800"><div class="h-full w-[72%] rounded-full bg-gold/80"></div></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-card p-7 shadow-card transition hover:border-white/20 lg:col-span-4">
+          <p class="label-app text-gold">Career tracks</p>
+          <h3 class="mt-2 text-lg font-bold text-zinc-100">11 tracks, real playbooks</h3>
+          <p class="mt-2 text-sm text-zinc-500">Pre-Health, Tech, Finance, Law, and more—weighted to how employers read you.</p>
+          <p class="mt-4 text-sm font-semibold text-appgreen"><a href="tracks.html" class="hover:underline">Explore tracks →</a></p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-card p-7 shadow-card transition hover:border-white/20 lg:col-span-4">
+          <p class="label-app text-gold">ATS simulator</p>
+          <h3 class="mt-2 text-lg font-bold text-zinc-100">Pass the robots first</h3>
+          <p class="mt-2 text-sm text-zinc-500">See how parsers read your sections and keywords—fix gaps before you submit.</p>
+          <div class="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-appgreen">
+            <span class="h-2 w-2 rounded-full bg-appgreen"></span> Ready · 92 parse
+          </div>
+        </article>
+      </div>
+
+      <div class="mt-12 text-center">
+        <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="product-preview" class="inline-flex h-14 min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-10 text-base font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110">
+          Get Your Dilly Score
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- The system -->
+  <section id="system" class="border-b border-white/10 bg-surface py-24 md:py-28">
+    <div class="mx-auto max-w-7xl px-5 md:px-8" data-reveal>
+      <div class="mx-auto max-w-2xl text-center">
+        <p class="label-app text-appgreen">System</p>
+        <h2 class="mt-2 font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">A system—not a one-off tool</h2>
+        <p class="mt-4 text-zinc-400">Dilly connects what you’ve done, how you show it, and how employers read it.</p>
+      </div>
+      <div class="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl border border-white/10 bg-card p-8 shadow-card transition hover:border-emerald-500/20">
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-raised text-appgreen ring-1 ring-white/10">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-zinc-100">Resume</h3>
+          <p class="mt-2 text-sm leading-relaxed text-zinc-500">Structured feedback on every line that matters.</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-card p-8 shadow-card transition hover:border-emerald-500/20">
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-raised text-gold ring-1 ring-white/10">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-zinc-100">Experience</h3>
+          <p class="mt-2 text-sm leading-relaxed text-zinc-500">Roles and projects framed for impact, not duties.</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-card p-8 shadow-card transition hover:border-emerald-500/20">
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-raised text-sky-400 ring-1 ring-white/10">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-zinc-100">Skills</h3>
+          <p class="mt-2 text-sm leading-relaxed text-zinc-500">Signals that match your track—not a generic cloud.</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-card p-8 shadow-card transition hover:border-emerald-500/20">
+          <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-raised text-appgreen ring-1 ring-white/10">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-zinc-100">Proof</h3>
+          <p class="mt-2 text-sm leading-relaxed text-zinc-500">Build score rewards evidence: shipped work, scale, outcomes.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="diff-section">
-    <div class="container text-center">
-      <h2 class="diff-headline">From <span class="accent">filtered</span> to first-round</h2>
-      <p class="diff-sub">One edit. One recruiter. One shot. Here's what Dilly actually does—turn vague bullets into recruiter-proof proof.</p>
-      <div class="diff-grid">
-        <div class="diff-card">
-          <div>
-            <span class="track-tag">Pre-Health</span>
-            <div class="before-wrap">
-              <div class="label">Before — recruiter skips</div>
-              <div class="text">"Helped with patient care and administrative tasks"</div>
-            </div>
-          </div>
-          <div>
-            <div class="after-wrap">
-              <div class="label">After Dilly — copy-paste ready</div>
-              <div class="text">"Supported 200+ patient visits/week—vitals, intake, EHR documentation—reducing nurse admin load by ~15%"</div>
-            </div>
-            <span class="score-badge">Grit +38</span>
-          </div>
+  <!-- Outcomes -->
+  <section id="outcomes" class="border-b border-white/10 bg-gradient-to-b from-raised to-surface py-24 md:py-28">
+    <div class="mx-auto max-w-7xl px-5 md:px-8" data-reveal>
+      <div class="mx-auto max-w-2xl text-center">
+        <p class="label-app text-gold">Outcomes</p>
+        <h2 class="mt-2 font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Outcomes that compound</h2>
+        <p class="mt-4 text-zinc-400">Students use Dilly to turn ambiguity into a plan—then into interviews.</p>
+      </div>
+      <div class="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl border border-white/10 bg-card px-6 py-10 text-center shadow-card transition hover:border-emerald-500/25">
+          <p class="font-serif text-4xl font-semibold tracking-wide text-appgreen md:text-5xl">3×</p>
+          <p class="mt-2 text-sm font-semibold text-zinc-200">Interview rate</p>
+          <p class="mt-1 text-xs text-zinc-500">More conversations after targeted edits</p>
         </div>
-        <div class="diff-card">
-          <div>
-            <span class="track-tag">Tech</span>
-            <div class="before-wrap">
-              <div class="label">Before — no proof</div>
-              <div class="text">"Built a web app for a class project"</div>
-            </div>
-          </div>
-          <div>
-            <div class="after-wrap">
-              <div class="label">After Dilly — stack + impact</div>
-              <div class="text">"Built full-stack app (React, Node) with 500+ users—auth, real-time updates, deployed on Vercel"</div>
-            </div>
-            <span class="score-badge">Build +42</span>
-          </div>
+        <div class="rounded-2xl border border-white/10 bg-card px-6 py-10 text-center shadow-card transition hover:border-emerald-500/25">
+          <p class="font-serif text-4xl font-semibold tracking-wide text-zinc-100 md:text-5xl">4</p>
+          <p class="mt-2 text-sm font-semibold text-zinc-200">Internship placement</p>
+          <p class="mt-1 text-xs text-zinc-500">PA program interviews (reported)</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-card px-6 py-10 text-center shadow-card transition hover:border-emerald-500/25">
+          <p class="font-serif text-4xl font-semibold tracking-wide text-gold md:text-5xl">2×</p>
+          <p class="mt-2 text-sm font-semibold text-zinc-200">Offer rate</p>
+          <p class="mt-1 text-xs text-zinc-500">Faster interview → offer cycles</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-card px-6 py-10 text-center shadow-card transition hover:border-emerald-500/25">
+          <p class="font-serif text-4xl font-semibold tracking-wide text-appgreen md:text-5xl">+12%</p>
+          <p class="mt-2 text-sm font-semibold text-zinc-200">Salary improvement</p>
+          <p class="mt-1 text-xs text-zinc-500">Negotiation confidence (self-reported)</p>
         </div>
       </div>
-      <div class="diff-cta">
-        <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary" data-cta="diff-section">Get edits like these →</a>
-      </div>
-      <p style="text-align: center; margin-top: 2rem; font-size: 0.875rem; color: var(--dilly-taupe-muted);">"4 PA program interviews after Dilly" · "Landed interview the next week" · "Career coach at 2am"</p>
+      <p class="mx-auto mt-10 max-w-2xl text-center text-xs leading-relaxed text-zinc-600">
+        Figures shown are directional examples. Real outcomes vary by track, materials, and effort. The PA interview count reflects student-reported wins.
+      </p>
     </div>
   </section>
 
-  <section class="section-dark" id="pricing">
-    <div class="container-tight text-center">
-      <h2 style="margin-bottom: 0.5rem;">Less than a coffee a month</h2>
-      <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin: 1rem 0;">
-        <span style="text-decoration: line-through; color: var(--dilly-taupe-muted); font-size: 1.25rem;">$19.99</span>
-        <span style="font-size: 2rem; font-weight: 700; color: var(--dilly-accent);">$9.99</span>
-        <span style="font-size: 1rem; color: var(--dilly-taupe-muted);">/mo</span>
-      </div>
-      <p class="section-sub" style="margin-bottom: 1.5rem;">Unlimited audits, Dilly AI, ATS hub, Get Hired (jobs + pipeline + playbook + certs), leaderboard, practice, track playbooks, peer percentiles, shareable profile &amp; PDF.</p>
-      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-hero btn-hero-main" data-cta="pricing">Start free — run your first audit</a>
-      <p style="margin-top: 1.5rem; font-size: 0.8125rem; color: var(--dilly-taupe-muted);">🎓 .edu verified · 🔒 No data sold · UTampa Career Center partner</p>
-      <p style="margin-top: 2rem; font-size: 0.8125rem;"><a href="features.html" style="color: var(--dilly-accent);">Features</a> · <a href="tracks.html" style="color: var(--dilly-accent);">Tracks</a> · <a href="pricing.html" style="color: var(--dilly-accent);">Full pricing</a></p>
+  <!-- Final CTA -->
+  <section class="bg-surface py-28 md:py-36">
+    <div class="mx-auto max-w-3xl px-5 text-center md:px-8" data-reveal>
+      <p class="label-app text-appgreen">Start</p>
+      <h2 class="mt-2 font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-5xl">Build your career like a system.</h2>
+      <p class="mx-auto mt-5 max-w-lg text-zinc-400">Join verified students who run Dilly before every application.</p>
+      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="final-cta" class="mt-10 inline-flex h-14 min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-10 text-base font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110">
+        Get Your Dilly Score
+      </a>
+      <p class="mt-6 text-sm text-zinc-500">🎓 .edu verified · 🔒 No data sold</p>
     </div>
   </section>
 
-  <section>
-    <div class="container-narrow">
-      <h2 class="text-center" style="margin-bottom: 1.5rem;">Frequently asked questions</h2>
-      <div class="faq" style="max-width: 32rem; margin: 0 auto;">
-        <details class="faq-item">
-          <summary>How does scoring work?</summary>
-          <p>Smart (academics), Grit (leadership, impact), Build (proof—projects, experience). Track-specific: Pre-Health weighs shadowing; Tech weighs deployed projects.</p>
+  <!-- FAQ -->
+  <section class="border-t border-white/10 bg-raised py-20 md:py-24">
+    <div class="mx-auto max-w-xl px-5 md:px-8" data-reveal>
+      <h2 class="text-center font-serif text-2xl font-semibold tracking-[0.04em] text-zinc-100 md:text-3xl">Questions</h2>
+      <div class="mt-10 space-y-3">
+        <details class="group rounded-2xl border border-white/10 bg-card px-5 py-4 open:border-emerald-500/30 open:shadow-card">
+          <summary class="cursor-pointer list-none text-left font-semibold text-zinc-200 marker:content-none [&::-webkit-details-marker]:hidden">How does scoring work?</summary>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-500">Smart (academics), Grit (leadership, impact), Build (proof—projects, experience). Track-specific: Pre-Health weighs shadowing; Tech weighs shipped work.</p>
         </details>
-        <details class="faq-item">
-          <summary>Is my data safe?</summary>
-          <p>Yes. .edu verification only. We never sell your resume. Encrypted, stays yours.</p>
+        <details class="group rounded-2xl border border-white/10 bg-card px-5 py-4 open:border-emerald-500/30 open:shadow-card">
+          <summary class="cursor-pointer list-none text-left font-semibold text-zinc-200 marker:content-none [&::-webkit-details-marker]:hidden">Is my data safe?</summary>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-500">Yes. .edu verification only. We never sell your resume. Encrypted, stays yours.</p>
         </details>
-        <details class="faq-item">
-          <summary>What if I don't have much experience?</summary>
-          <p>Dilly still helps. We show what's missing and how to frame coursework, projects, and campus involvement. Many students improve scores by quantifying what they already have.</p>
+        <details class="group rounded-2xl border border-white/10 bg-card px-5 py-4 open:border-emerald-500/30 open:shadow-card">
+          <summary class="cursor-pointer list-none text-left font-semibold text-zinc-200 marker:content-none [&::-webkit-details-marker]:hidden">What if I don’t have much experience?</summary>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-500">Dilly still helps. We show what’s missing and how to frame coursework, projects, and campus involvement—often by quantifying what you already have.</p>
         </details>
-        <details class="faq-item">
-          <summary>My school isn't UTampa. Can I still use Dilly?</summary>
-          <p>We're launching at UTampa first. Enter your .edu below and we'll notify you when we expand to your campus.</p>
+        <details class="group rounded-2xl border border-white/10 bg-card px-5 py-4 open:border-emerald-500/30 open:shadow-card">
+          <summary class="cursor-pointer list-none text-left font-semibold text-zinc-200 marker:content-none [&::-webkit-details-marker]:hidden">My school isn’t UTampa—can I still use Dilly?</summary>
+          <p class="mt-3 text-sm leading-relaxed text-zinc-500">We’re launching at UTampa first. Join the waitlist with your .edu and we’ll notify you when we expand.</p>
         </details>
-      </div>
-      <div class="container-tight text-center" id="waitlist" style="margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--dilly-border);">
-        <p style="font-size: 0.9375rem; color: var(--dilly-taupe-muted); margin-bottom: 1rem;">Join the waitlist</p>
-        <p style="font-size: 0.8125rem; color: var(--dilly-taupe-muted); margin-bottom: 1rem;">Your school not on the list? We'll notify you when we expand.</p>
-        <form class="waitlist-form" id="waitlist-form" style="max-width: 20rem; margin: 0 auto; display: flex; gap: 0.5rem;">
-          <input type="email" name="email" placeholder="you@university.edu" required class="waitlist-input" id="waitlist-email" style="flex: 1;">
-          <button type="submit" class="btn-primary" id="waitlist-btn">Join the waitlist</button>
-        </form>
-        <p id="waitlist-message" style="font-size: 0.9375rem; margin-top: 1rem; display: none;"></p>
       </div>
     </div>
   </section>
 
-  <section class="section-dark" style="padding: 3rem 1.5rem;">
-    <div class="container-narrow text-center">
-      <h2 style="font-size: 1.5rem; margin-bottom: 0.75rem;">Don't blow your one shot.</h2>
-      <p style="font-size: 1rem; color: var(--dilly-taupe-muted); margin-bottom: 1.5rem;">Run Dilly before every application.</p>
-      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-hero btn-hero-main" data-cta="final-hero">Start free — run your first audit</a>
+  <!-- Waitlist -->
+  <section class="border-t border-white/10 bg-surface py-16" id="waitlist">
+    <div class="mx-auto max-w-lg px-5 text-center md:px-8">
+      <p class="text-sm font-semibold text-zinc-200">Join the waitlist</p>
+      <p class="mt-2 text-sm text-zinc-500">Not on campus yet? We’ll email you when Dilly opens at your school.</p>
+      <form class="mt-6 flex flex-col gap-3 sm:flex-row" id="waitlist-form">
+        <input type="email" name="email" placeholder="you@university.edu" required class="min-h-[44px] flex-1 rounded-2xl border border-white/15 bg-card px-4 text-sm text-zinc-100 shadow-inner outline-none ring-0 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20" id="waitlist-email" autocomplete="email">
+        <button type="submit" class="min-h-[44px] shrink-0 rounded-2xl bg-zinc-100 px-6 text-sm font-semibold text-zinc-950 transition hover:bg-white" id="waitlist-btn">Join</button>
+      </form>
+      <p id="waitlist-message" class="mt-4 hidden text-sm"></p>
     </div>
   </section>
 
-  <div class="sticky-cta" id="sticky-cta">
-    <span style="font-size: 0.875rem;">Ready to run your audit?</span>
-    <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary" data-cta="sticky">Run your audit</a>
-  </div>
-
-  <footer>
-    <div class="footer-inner">
-      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly" width="32" height="32"><span>Dilly</span></span>
-      <div class="footer-links">
-        <a href="index.html">Home</a>
-        <a href="features.html">Features</a>
-        <a href="how-it-works.html">How it works</a>
-        <a href="the-app.html">The app</a>
-        <a href="your-journey.html">Your journey</a>
-        <a href="tracks.html">Tracks</a>
-        <a href="quiz.html">Quiz</a>
-        <a href="pricing.html">Pricing</a>
-        <a href="recruiters.html">For recruiters</a>
-        <a href="for-parents.html">For parents</a>
-        <a href="trust.html">Trust</a>
-        <a href="about.html">About</a>
+  <!-- Footer -->
+  <footer class="border-t border-white/10 bg-[#0a0a0a] py-12">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 px-5 md:flex-row md:px-8">
+      <a href="index.html" class="site-footer-brand flex items-center gap-2">
+        <img src="dilly-logo.png" alt="" width="48" height="48" class="h-12 w-12">
+        <span class="text-lg font-bold text-zinc-100">Dilly</span>
+      </a>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-zinc-400">
+        <a href="features.html" class="hover:text-white">Features</a>
+        <a href="how-it-works.html" class="hover:text-white">How it works</a>
+        <a href="the-app.html" class="hover:text-white">The app</a>
+        <a href="tracks.html" class="hover:text-white">Tracks</a>
+        <a href="pricing.html" class="hover:text-white">Pricing</a>
+        <a href="trust.html" class="hover:text-white">Trust</a>
+        <a href="about.html" class="hover:text-white">About</a>
       </div>
     </div>
-    <p class="footer-copy">© <span id="year"></span> Dilly. The career center in your pocket.</p>
+    <p class="mt-8 text-center text-xs text-zinc-600">© <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
+
+  <!-- Sticky CTA -->
+  <div class="fixed bottom-0 left-0 right-0 z-50 translate-y-full border-t border-white/10 bg-[#141416]/95 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-transform duration-300 md:py-4" id="sticky-cta">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
+      <span class="hidden text-sm font-medium text-zinc-400 sm:inline">Ready to see your score?</span>
+      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="sticky" class="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[#c5a353] px-6 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 sm:flex-none">Get Your Dilly Score</a>
+    </div>
+  </div>
 
   <script type="application/ld+json">
   [
@@ -291,8 +461,24 @@
   <script>
     document.getElementById('year').textContent = new Date().getFullYear();
 
-    // Waitlist form — POST to API, emails stored in memory/dilly_waitlist.txt
-    (function() {
+    (function reveal() {
+      var nodes = document.querySelectorAll('[data-reveal]');
+      if (!nodes.length || !('IntersectionObserver' in window)) {
+        nodes.forEach(function (n) { n.classList.add('is-visible'); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) {
+            e.target.classList.add('is-visible');
+            io.unobserve(e.target);
+          }
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.1 });
+      nodes.forEach(function (n) { io.observe(n); });
+    })();
+
+    (function waitlist() {
       var form = document.getElementById('waitlist-form');
       var msgEl = document.getElementById('waitlist-message');
       var btn = document.getElementById('waitlist-btn');
@@ -301,7 +487,7 @@
       if (window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         apiBase = 'http://localhost:8000';
       }
-      form.addEventListener('submit', function(e) {
+      form.addEventListener('submit', function (e) {
         e.preventDefault();
         var email = document.getElementById('waitlist-email').value.trim();
         if (!email) return;
@@ -310,32 +496,38 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email })
-        }).then(function(r) {
+        }).then(function (r) {
           if (r.ok) {
             form.style.display = 'none';
-            if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = 'var(--dilly-accent)'; msgEl.textContent = "You're on the list. We'll notify you when Dilly launches at your school."; }
+            if (msgEl) {
+              msgEl.classList.remove('hidden');
+              msgEl.classList.add('block', 'text-appgreen');
+              msgEl.textContent = "You're on the list. We'll notify you when Dilly launches at your school.";
+            }
           } else {
-            return r.json().then(function(d) { throw new Error(d.detail || 'Something went wrong'); });
+            return r.json().then(function (d) { throw new Error(d.detail || 'Something went wrong'); });
           }
-        }).catch(function(err) {
-          if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = 'var(--dilly-taupe-muted)'; msgEl.textContent = err.message || 'Something went wrong. Try again.'; }
+        }).catch(function (err) {
+          if (msgEl) {
+            msgEl.classList.remove('hidden');
+            msgEl.classList.add('block', 'text-zinc-500');
+            msgEl.textContent = err.message || 'Something went wrong. Try again.';
+          }
           if (btn) btn.disabled = false;
         });
       });
     })();
 
-    // Sticky CTA on scroll
-    (function() {
+    (function stickyCta() {
       var cta = document.getElementById('sticky-cta');
       var lastScroll = 0;
-      window.addEventListener('scroll', function() {
+      window.addEventListener('scroll', function () {
         var y = window.scrollY;
-        if (y > 400 && y > lastScroll) cta.classList.add('visible');
-        else if (y < 200) cta.classList.remove('visible');
+        if (y > 500 && y > lastScroll) cta.classList.add('translate-y-0');
+        else if (y < 200) cta.classList.remove('translate-y-0');
         lastScroll = y;
       });
     })();
-
   </script>
 </body>
 </html>

@@ -1,0 +1,383 @@
+/* Shared with index + inner pages — dark shell aligned with Dilly app */
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+  background-color: #0a0a0a;
+  color: #e4e4e7;
+}
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.gradient-text {
+  background: linear-gradient(135deg, #34d399 0%, #2dd4bf 50%, #c5a353 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* App-style section labels — Cinzel small caps, restrained tracking */
+.label-app {
+  font-family: Cinzel, Georgia, serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+/* Navbar wordmark — light on dark bar */
+header.site-header img.site-logo {
+  height: 3rem !important;
+  width: auto !important;
+  display: block;
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+}
+@media (min-width: 768px) {
+  header.site-header img.site-logo {
+    height: 3.5rem !important;
+  }
+}
+
+::selection {
+  background: rgba(52, 211, 153, 0.25);
+  color: #fafafa;
+}
+
+a.site-footer-brand img {
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+}
+
+/* ── Legacy `styles.css` inner pages + track landings → dark / gold / Cinzel ── */
+body main .page-hero {
+  padding-top: 2rem;
+  padding-bottom: 0.5rem;
+}
+@media (min-width: 768px) {
+  body main .page-hero {
+    padding-top: 2.5rem;
+  }
+}
+body main .page-hero h1 {
+  font-family: Cinzel, Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  color: #fafafa !important;
+}
+body .section-sub {
+  color: #a1a1aa !important;
+}
+body .section-dark {
+  background: linear-gradient(180deg, #111113 0%, #0a0a0a 55%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+body section {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+body .card {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+  color: #e4e4e7;
+}
+body .card:hover {
+  border-color: rgba(197, 163, 83, 0.35) !important;
+}
+body .card h3 {
+  color: #f4f4f5 !important;
+}
+body .card p {
+  color: #a1a1aa !important;
+}
+body .card-num {
+  font-family: Cinzel, Georgia, serif !important;
+  color: #c5a353 !important;
+}
+body .step h3 {
+  color: #fafafa !important;
+}
+body .step-num {
+  background: rgba(197, 163, 83, 0.12) !important;
+  color: #c5a353 !important;
+  border: 1px solid rgba(197, 163, 83, 0.35);
+}
+body .step p {
+  color: #a1a1aa !important;
+}
+body main section h2 {
+  font-family: Cinzel, Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  color: #fafafa !important;
+}
+body main p a:not(.btn-primary),
+body main .section-sub a {
+  color: #c5a353 !important;
+  font-weight: 600;
+}
+body main p a:not(.btn-primary):hover,
+body main .section-sub a:hover {
+  color: #e4c88a !important;
+}
+body main .btn-primary {
+  background: #c5a353 !important;
+  color: #0a0a0a !important;
+  font-family: Cinzel, Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.06em;
+  border: none !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+}
+body main .btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+/* Flow diagram (how-it-works) */
+body main .flow-visual > span:nth-child(odd) {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e4e4e7 !important;
+}
+body main .flow-visual > span:nth-child(even) {
+  color: #71717a !important;
+}
+
+/* Track *-hero */
+body main [class$="-hero"] .back {
+  color: #c5a353 !important;
+}
+body main [class$="-hero"] .badge {
+  background: rgba(197, 163, 83, 0.12) !important;
+  color: #c5a353 !important;
+  border: 1px solid rgba(197, 163, 83, 0.35);
+}
+body main [class$="-hero"] h1 {
+  font-family: Cinzel, Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  color: #fafafa !important;
+}
+body main [class$="-hero"] h1 .accent {
+  color: #34d399 !important;
+}
+body main [class$="-hero"] .sub,
+body main [class$="-hero"] .tagline {
+  color: #a1a1aa !important;
+}
+body main [class$="-hero"] .prompt {
+  color: #71717a !important;
+}
+body main [class$="-hero"] .cta a.btn-primary:nth-child(2) {
+  background: transparent !important;
+  color: #c5a353 !important;
+  border: 1px solid rgba(197, 163, 83, 0.45) !important;
+  box-shadow: none !important;
+}
+body main [class*="metrics"] > div,
+body main [class$="-stats"] > div,
+body main .com-metric {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
+}
+body main [class*="metrics"] .val,
+body main [class$="-stats"] .val,
+body main .com-metric .val {
+  color: #34d399 !important;
+}
+body main [class*="metrics"] .label,
+body main [class$="-stats"] .label,
+body main .com-metric .label {
+  color: #a1a1aa !important;
+}
+body main [class*="-companies"],
+body main [class*="-firms"],
+body main [class*="-schools"],
+body main [class*="-requirements"],
+body main [class*="-employers"] {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+body main [class*="-companies"] h2,
+body main [class*="-firms"] h2,
+body main [class*="-schools"] h2,
+body main [class*="-requirements"] h2,
+body main [class*="-employers"] h2 {
+  color: #fafafa !important;
+}
+body main [class*="-companies"] .sub,
+body main [class*="-firms"] .sub,
+body main [class*="-schools"] .sub,
+body main [class*="-requirements"] .sub,
+body main [class*="-employers"] .sub {
+  color: #a1a1aa !important;
+}
+body main .company-cell,
+body main .firm-cell {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #e4e4e7 !important;
+}
+body main .company-cell.tier-1,
+body main .firm-cell.mbb {
+  background: rgba(197, 163, 83, 0.1) !important;
+  border-color: rgba(197, 163, 83, 0.45) !important;
+  color: #fafafa !important;
+}
+body main .school-tier h3 {
+  color: #a1a1aa !important;
+}
+body main .school-pill,
+body main .employer-pill {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e4e4e7 !important;
+}
+body main [class*="-dims"],
+body main [class*="-gaps"] {
+  background: transparent !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+body main [class*="-dims"] h2,
+body main [class*="-gaps"] h2 {
+  color: #fafafa !important;
+}
+body main [class*="-dims"] .sub,
+body main [class*="-gaps"] .sub {
+  color: #a1a1aa !important;
+}
+body main .dim-card {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
+}
+body main .dim-card .label {
+  color: #c5a353 !important;
+}
+body main .dim-card h3 {
+  color: #fafafa !important;
+}
+body main .dim-card p {
+  color: #a1a1aa !important;
+}
+body main .tech-dim-row .key {
+  color: #34d399 !important;
+}
+body main .tech-dim-row .val h3 {
+  color: #f4f4f5 !important;
+}
+body main .tech-dim-row .val p {
+  color: #a1a1aa !important;
+}
+body main .gap-line {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-left: 4px solid rgba(197, 163, 83, 0.75) !important;
+  color: #d4d4d8 !important;
+}
+body main .gap-item {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #d4d4d8 !important;
+}
+body main .gap-item .problem {
+  color: #fafafa !important;
+}
+body main .check-item {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+}
+body main .check-item .content h4 {
+  color: #fafafa !important;
+}
+body main .check-item .content p {
+  color: #a1a1aa !important;
+}
+body main [class*="-cta"] {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+body main [class*="-cta"] h2 {
+  color: #fafafa !important;
+}
+body main [class*="-cta"] .prompt {
+  color: #71717a !important;
+}
+
+/* App / journey / pricing / comparison */
+body .app-page-tabs button {
+  background: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #e4e4e7 !important;
+}
+body .app-page-tabs button[aria-selected="true"] {
+  background: rgba(52, 211, 153, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.35) !important;
+}
+body .app-page-panel {
+  background: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #d4d4d8;
+}
+body .onboard-callout {
+  background: rgba(197, 163, 83, 0.08) !important;
+  border-color: rgba(197, 163, 83, 0.35) !important;
+}
+body .journey-phase {
+  background: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+body .journey-y1,
+body .journey-y2,
+body .journey-y3,
+body .journey-y4 {
+  background: #1c1c1e !important;
+}
+body .journey-phase h2,
+body .journey-phase p {
+  color: inherit;
+}
+body .journey-phase p {
+  color: #a1a1aa !important;
+}
+body .pricing-card {
+  background: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #e4e4e7;
+}
+body .comparison-table th,
+body .comparison-table td {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #d4d4d8;
+}
+body .waitlist-input {
+  background: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #fafafa !important;
+}
+
+/* Sticky CTA (legacy class) */
+body .sticky-cta {
+  background: rgba(20, 20, 22, 0.97) !important;
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* features.html sample callout boxes (inline legacy vars) */
+body main div[style*="dilly-bg-deep"] {
+  background: #111113 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #a1a1aa !important;
+}
+body main div[style*="dilly-bg-deep"] strong {
+  color: #c5a353 !important;
+}
+
+body .trust-check li {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e4e4e7 !important;
+}
