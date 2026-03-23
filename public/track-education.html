@@ -1,107 +1,51 @@
+<!-- CHROME_APPLIED v1 -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Education Track | Dilly — Ready for the Classroom</title>
   <meta name="description" content="Dilly for education. Teaching, K-12, curriculum. Student teaching, certification, tutoring. We score like district recruiters.">
+  <link rel="canonical" href="https://trydilly.com/track-education.html">
+  <meta property="og:url" content="https://trydilly.com/track-education.html">
+  <meta property="og:title" content="Education Track | Dilly — Ready for the Classroom">
+  <meta property="og:description" content="Dilly for education. Teaching, K-12, curriculum. Student teaching, certification, tutoring. We score like district recruiters.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:image" content="https://trydilly.com/og-image.png">
+  <meta name="twitter:image" content="https://trydilly.com/og-image.png">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%234f46e5' width='32' height='32' rx='6'/><text x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>D</text></svg>">
+  <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --edu-bg: #0a0a0b;
-      --edu-surface: #131316;
-      --edu-surface-2: #1a1a1e;
-      --edu-text: #e4e4e7;
-      --edu-muted: #71717a;
-      --edu-accent: #14b8a6;
-      --edu-accent-dim: rgba(20, 184, 166, 0.15);
-      --edu-border: rgba(113, 113, 122, 0.2);
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { margin: 0; background: var(--edu-bg); color: var(--edu-text); font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.6; }
-    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; border-bottom: 1px solid var(--edu-border); background: rgba(10, 10, 11, 0.95); backdrop-filter: blur(12px); }
-    .nav-inner { max-width: 72rem; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
-    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
-    .nav-links a { font-size: 0.875rem; color: var(--edu-muted); text-decoration: none; }
-    .nav-links a:hover, .nav-links a.nav-active { color: var(--edu-text); }
-    .btn-primary { display: inline-block; padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--edu-accent); color: #0a0a0b; font-size: 0.875rem; font-weight: 600; text-decoration: none; transition: all 0.2s; }
-    .btn-primary:hover { background: #2dd4bf; }
-    .container { max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
-    .edu-hero { padding-top: 9rem; padding-bottom: 4rem; }
-    .edu-hero .back { display: inline-block; margin-bottom: 1.5rem; color: var(--edu-accent); text-decoration: none; font-size: 0.875rem; }
-    .edu-hero .back:hover { text-decoration: underline; }
-    .edu-hero .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; background: var(--edu-accent-dim); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--edu-accent); margin-bottom: 1rem; }
-    .edu-hero h1 { font-size: 2.5rem; font-weight: 700; margin: 0 0 0.75rem; }
-    @media (min-width: 768px) { .edu-hero h1 { font-size: 3.25rem; } }
-    .edu-hero h1 .accent { color: var(--edu-accent); }
-    .edu-hero .sub { color: var(--edu-muted); font-size: 1.125rem; max-width: 36rem; margin-bottom: 2rem; }
-    .edu-hero .cta { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-    .edu-checklist { display: grid; gap: 0; max-width: 36rem; margin-top: 3rem; }
-    .edu-check { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--edu-border); }
-    .edu-check:last-child { border-bottom: none; }
-    .edu-check .icon { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--edu-accent); color: #0a0a0b; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
-    .edu-check .content h3 { font-size: 1rem; margin: 0 0 0.25rem; }
-    .edu-check .content p { font-size: 0.875rem; color: var(--edu-muted); margin: 0; line-height: 1.5; }
-    .edu-employers { padding: 5rem 0; border-top: 1px solid var(--edu-border); }
-    .edu-employers h2 { font-size: 1.5rem; margin: 0 0 1rem; }
-    .edu-employers .sub { color: var(--edu-muted); margin-bottom: 2rem; }
-    .employer-tier { margin-bottom: 1.5rem; }
-    .employer-tier h4 { font-size: 0.75rem; font-weight: 600; color: var(--edu-accent); margin: 0 0 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
-    .employer-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .employer-pill { padding: 0.5rem 1rem; border-radius: 0.5rem; background: var(--edu-surface); border: 1px solid var(--edu-border); font-size: 0.8125rem; }
-    .edu-dims { padding: 5rem 0; background: var(--edu-surface); }
-    .edu-dims h2 { font-size: 1.5rem; margin: 0 0 2rem; }
-    .dim-grid { display: grid; gap: 1.5rem; }
-    @media (min-width: 768px) { .dim-grid { grid-template-columns: repeat(3, 1fr); } }
-    .dim-card { padding: 1.5rem; background: var(--edu-surface-2); border-radius: 0.75rem; border: 1px solid var(--edu-border); }
-    .dim-card .label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--edu-accent); margin-bottom: 0.5rem; }
-    .dim-card h3 { font-size: 1.125rem; margin: 0 0 0.5rem; }
-    .dim-card p { font-size: 0.875rem; color: var(--edu-muted); margin: 0; line-height: 1.5; }
-    .edu-gaps { padding: 5rem 0; }
-    .edu-gaps h2 { font-size: 1.5rem; margin: 0 0 1rem; }
-    .edu-gaps .sub { color: var(--edu-muted); margin-bottom: 2rem; }
-    .gap-item { padding: 1rem 1.25rem; border-radius: 0.5rem; background: var(--edu-surface); border-left: 4px solid var(--edu-accent); margin-bottom: 0.75rem; border: 1px solid var(--edu-border); border-left: 4px solid var(--edu-accent); }
-    .gap-item .problem { font-weight: 600; display: block; margin-bottom: 0.25rem; }
-    .gap-item .fix { font-size: 0.875rem; color: var(--edu-muted); margin: 0; line-height: 1.5; }
-    .gap-item .badge { font-size: 0.6875rem; padding: 0.2rem 0.5rem; border-radius: 0.25rem; background: var(--edu-accent-dim); color: var(--edu-accent); font-weight: 600; text-transform: uppercase; margin-left: 0.5rem; }
-    .edu-cta { padding: 6rem 0; text-align: center; border-top: 1px solid var(--edu-border); }
-    .edu-cta h2 { font-size: 1.5rem; margin: 0 0 0.5rem; }
-    .edu-cta p { color: var(--edu-muted); margin-bottom: 1.5rem; }
-    footer { border-top: 1px solid var(--edu-border); padding: 2rem; text-align: center; font-size: 0.75rem; color: var(--edu-muted); }
-    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 600; color: inherit; text-decoration: none; }
-    .footer-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; }
-    .footer-logo img { height: 32px; width: auto; display: block; }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="site-tailwind-config.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="site-styles.css">
 </head>
-<body class="track-landing-dark">
-  <nav>
-    <div class="nav-inner">
-      <a href="index.html" class="nav-logo"><img src="dilly-wordmark.png" alt="dilly logo" width="612" height="408"></a>
-      <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
-      <div class="nav-menu-panel" id="navMenuPanel">
-        <div class="nav-links">
-          <a href="features.html">Features</a>
-          <a href="how-it-works.html">How it works</a>
-          <a href="the-app.html">The app</a>
-          <a href="your-journey.html">Your journey</a>
-          <a href="tracks.html">Tracks</a>
-          <a href="quiz.html">Quiz</a>
-          <a href="pricing.html">Pricing</a>
-          <a href="recruiters.html">For recruiters</a>
-          <a href="for-parents.html">For parents</a>
-          <a href="trust.html">Trust</a>
-          <a href="about.html">About</a>
-          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary nav-cta">Start free</a>
-        </div>
+<body class="bg-surface text-ink antialiased selection:bg-emerald-500/25 selection:text-white">
+
+            <header class="site-header sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 md:px-8 md:py-4">
+      <a href="index.html" class="flex shrink-0 items-center">
+        <img src="dilly-wordmark.png" alt="Dilly" class="site-logo" width="612" height="408" decoding="async">
+      </a>
+      <button type="button" class="rounded-xl px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 md:hidden" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
+      <div class="nav-menu-panel fixed inset-x-0 top-[5.5rem] z-40 hidden border-b border-zinc-800 bg-[#141416]/98 px-5 py-6 shadow-soft backdrop-blur-xl md:static md:inset-auto md:flex md:flex-1 md:justify-end md:border-0 md:bg-transparent md:p-0 md:shadow-none" id="navMenuPanel">
+        <nav class="flex flex-col gap-2 md:flex-row md:items-center md:gap-0 md:rounded-full md:bg-zinc-900/90 md:p-1.5 md:pl-3 md:ring-1 md:ring-white/10">
+          <a href="features.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Features</a>
+          <a href="how-it-works.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">How it works</a>
+          <a href="tracks.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Tracks</a>
+          <a href="pricing.html" class="rounded-lg px-2 py-2 text-sm font-medium text-zinc-300 hover:text-white md:rounded-full md:px-3 md:py-2">Pricing</a>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-5 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110 md:mt-0 md:ml-1 md:rounded-full md:px-5 md:py-2">Get Your Dilly Score</a>
+        </nav>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <section class="edu-hero">
+<main class="mx-auto max-w-6xl px-5 pb-24 pt-8 md:px-8 md:pt-12" data-reveal>
+<section class="edu-hero">
     <div class="container">
       <a href="tracks.html" class="back">← All tracks</a>
       <span class="badge">Education</span>
@@ -218,28 +162,41 @@
       <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary">Get Your Education Audit</a>
     </div>
   </section>
+  </main>
+  <div class="fixed bottom-0 left-0 right-0 z-50 translate-y-full border-t border-white/10 bg-[#141416]/95 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-transform duration-300 md:py-4" id="sticky-cta">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
+      <span class="hidden text-sm font-medium text-zinc-400 sm:inline">Ready to see your score?</span>
+      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="sticky" class="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[#c5a353] px-6 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 sm:flex-none">Get Your Dilly Score</a>
+    </div>
+  </div>
 
-  <footer>
-    <div class="footer-inner">
-      <span class="footer-logo"><img src="dilly-logo.png" alt="Dilly" width="32" height="32"><span>Dilly</span></span>
-      <div class="footer-links">
-        <a href="index.html">Home</a>
-        <a href="features.html">Features</a>
-        <a href="how-it-works.html">How it works</a>
-        <a href="the-app.html">The app</a>
-        <a href="your-journey.html">Your journey</a>
-        <a href="tracks.html">Tracks</a>
-        <a href="quiz.html">Quiz</a>
-        <a href="pricing.html">Pricing</a>
-        <a href="recruiters.html">For recruiters</a>
-        <a href="for-parents.html">For parents</a>
-        <a href="trust.html">Trust</a>
-        <a href="about.html">About</a>
+  <footer class="border-t border-white/10 bg-[#0a0a0a] py-12">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 px-5 md:flex-row md:px-8">
+      <a href="index.html" class="site-footer-brand flex items-center gap-2">
+        <img src="dilly-logo.png" alt="" width="48" height="48" class="h-12 w-12">
+        <span class="text-lg font-bold text-zinc-100">Dilly</span>
+      </a>
+      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-zinc-400">
+        <a href="index.html" class="hover:text-white">Home</a>
+        <a href="features.html" class="hover:text-white">Features</a>
+        <a href="how-it-works.html" class="hover:text-white">How it works</a>
+        <a href="the-app.html" class="hover:text-white">The app</a>
+        <a href="your-journey.html" class="hover:text-white">Your journey</a>
+        <a href="tracks.html" class="hover:text-white">Tracks</a>
+        <a href="quiz.html" class="hover:text-white">Quiz</a>
+        <a href="pricing.html" class="hover:text-white">Pricing</a>
+        <a href="recruiters.html" class="hover:text-white">Recruiters</a>
+        <a href="for-parents.html" class="hover:text-white">Parents</a>
+        <a href="trust.html" class="hover:text-white">Trust</a>
+        <a href="about.html" class="hover:text-white">About</a>
       </div>
     </div>
-    <p class="footer-copy">© <span id="year"></span> Dilly. The career center in your pocket.</p>
+    <p class="mt-8 text-center text-xs text-zinc-600">© <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
-  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+
   <script src="site-nav.js"></script>
+  <script src="analytics.js"></script>
+  <script src="site-page.js"></script>
+
 </body>
 </html>
