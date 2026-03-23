@@ -194,8 +194,8 @@ const ls = StyleSheet.create({
   content: { alignItems: 'center' },
   wordmark: {
     fontFamily:    'Cinzel_900Black',
-    fontSize:      40,
-    letterSpacing: 6,
+    fontSize:      46,
+    letterSpacing: 6.9,
     color:         GOLD,
     textAlign:     'center',
     shadowColor:   GOLD,
