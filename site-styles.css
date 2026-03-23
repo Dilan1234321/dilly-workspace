@@ -29,41 +29,44 @@ body {
   font-weight: 600;
 }
 
-/* Header / footer — wordmark image (readable nav size; aspect preserved) */
-header.site-header .site-header-logo {
-  display: block;
-  height: 1.75rem;
-  max-height: 1.75rem;
-  width: auto;
-  max-width: min(11rem, 52vw);
-  object-fit: contain;
+/*
+ * Wordmark images — sizes must use !important: Tailwind CDN injects after this file
+ * and its img { height: auto } otherwise wins, so the logo stays tiny.
+ */
+header.site-header img.site-header-logo {
+  display: block !important;
+  height: 2.5rem !important;
+  max-height: 2.5rem !important;
+  width: auto !important;
+  max-width: min(18rem, 85vw) !important;
+  object-fit: contain !important;
   object-position: left center;
   filter: brightness(0) invert(1);
   opacity: 0.95;
 }
 @media (min-width: 768px) {
-  header.site-header .site-header-logo {
-    height: 2rem;
-    max-height: 2rem;
-    max-width: 12.5rem;
+  header.site-header img.site-header-logo {
+    height: 2.75rem !important;
+    max-height: 2.75rem !important;
+    max-width: 20rem !important;
   }
 }
-a.site-footer-brand .site-footer-logo {
-  display: block;
-  height: 1.5rem;
-  max-height: 1.5rem;
-  width: auto;
-  max-width: min(9.5rem, 48vw);
-  object-fit: contain;
+a.site-footer-brand img.site-footer-logo {
+  display: block !important;
+  height: 2rem !important;
+  max-height: 2rem !important;
+  width: auto !important;
+  max-width: min(16rem, 80vw) !important;
+  object-fit: contain !important;
   object-position: left center;
   filter: brightness(0) invert(1);
   opacity: 0.92;
 }
 @media (min-width: 768px) {
-  a.site-footer-brand .site-footer-logo {
-    height: 1.75rem;
-    max-height: 1.75rem;
-    max-width: 10.5rem;
+  a.site-footer-brand img.site-footer-logo {
+    height: 2.25rem !important;
+    max-height: 2.25rem !important;
+    max-width: 18rem !important;
   }
 }
 
