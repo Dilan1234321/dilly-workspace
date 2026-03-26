@@ -342,6 +342,18 @@
     .section{padding:60px 20px}
     .section-dark>.section-inner{padding:60px 20px}
   }
+
+  .hamburger{display:none;background:none;border:none;cursor:pointer;padding:8px;z-index:200}
+  .hamburger span{display:block;width:24px;height:2px;background:var(--t2);margin:5px 0;transition:all .3s}
+  .hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
+  .hamburger.active span:nth-child(2){opacity:0}
+  .hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+  .mob-ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(8,8,9,.97);z-index:150;flex-direction:column;align-items:center;justify-content:center;gap:32px}
+  .mob-ov.active{display:flex}
+  .mob-ov a{font-family:'Cinzel',serif;font-size:24px;color:var(--t1);text-decoration:none;font-weight:700;letter-spacing:2px}
+  .mob-ov a:hover{color:var(--gold)}
+  .qsc{display:none;flex-direction:column;min-height:60vh}.qsc.active{display:flex}
+  @media(max-width:768px){.hamburger{display:block}.nav-links{display:none}nav{padding:16px 20px}.hero{grid-template-columns:1fr;padding:120px 20px 60px;gap:40px;min-height:auto}.hero-phone{display:none}.hero-stats{grid-template-columns:repeat(2,1fr)}.section{padding:60px 20px}.section-dark>.section-inner{padding:60px 20px}.pillars-grid{grid-template-columns:1fr}.feature-row{grid-template-columns:1fr;gap:40px;padding:60px 20px}.feature-row.reversed .feature-text{order:1}.feature-row.reversed .feature-phones{order:2}.stats-grid{grid-template-columns:repeat(2,1fr)}.more-grid{grid-template-columns:repeat(2,1fr);gap:16px}.pricing-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}.compare-table{font-size:11px}.compare-table th,.compare-table td{padding:10px 6px}}
 </style>
 </head>
 <body>
@@ -355,7 +367,20 @@
     <a href="about.html">About</a>
     <a href="#faq">FAQ</a>
   </div>
+  <button class="hamburger" onclick="this.classList.toggle('active');document.getElementById('mobOv').classList.toggle('active');document.body.style.overflow=document.getElementById('mobOv').classList.contains('active')?'hidden':''"><span></span><span></span><span></span></button>
 </nav>
+<div class="mob-ov" id="mobOv"><a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="about.html">About</a><a href="#faq">FAQ</a></div>
+
+<section style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:120px 20px 60px;position:relative" id="quiz-section">
+<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 30% 20%,rgba(201,168,76,.06),transparent 40%),radial-gradient(circle at 70% 80%,rgba(255,69,58,.04),transparent 40%)"></div>
+<div style="position:relative;z-index:1;max-width:640px;margin:0 auto;width:100%">
+<div class="qsc active" id="qsc-intro"><div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:24px"><div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:100px;font-size:13px;color:var(--gold);font-weight:600;letter-spacing:.5px;text-transform:uppercase">&#9889; 60-Second Career Quiz</div><h1 style="font-family:Cinzel,serif;font-size:clamp(36px,7vw,56px);line-height:1.05;letter-spacing:-.02em;font-weight:900">Will AI take <em style="color:var(--gold);font-style:italic;font-family:Playfair Display,serif">your</em> job?</h1><p style="font-size:17px;color:var(--t2);line-height:1.6;max-width:420px">AI is reshaping every industry. Find out how safe your career path is.</p><button onclick="qStart()" class="btn-primary" style="padding:18px 48px;font-size:15px;border-radius:100px">Find Out Now</button><div style="font-size:13px;color:var(--t3)">No signup required.</div><div id="qSaved"></div></div></div>
+<div class="qsc" id="qsc-qs"><div style="width:100%;height:3px;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden;margin-bottom:40px"><div id="qProg" style="height:100%;background:linear-gradient(90deg,var(--gold),#e0c068);border-radius:10px;transition:width .4s;width:0%"></div></div><div id="qNum" style="font-size:13px;color:var(--gold);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px"></div><div id="qTxt" style="font-family:Cinzel,serif;font-size:clamp(20px,4vw,28px);line-height:1.25;margin-bottom:32px"></div><div id="qOpts" style="display:flex;flex-direction:column;gap:12px"></div></div>
+<div class="qsc" id="qsc-load"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;min-height:40vh"><div style="width:64px;height:64px;border:3px solid rgba(255,255,255,.04);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></div><p id="qLoadT" style="color:var(--t2);font-size:15px;max-width:300px">Analyzing...</p></div></div>
+<div class="qsc" id="qsc-res"><div id="qRes" style="display:flex;flex-direction:column;gap:24px;padding-bottom:40px"></div></div>
+</div>
+<div id="scrollH" style="text-align:center;padding:24px;color:var(--t3);font-size:14px;animation:bounce 2s infinite">&#8595; Scroll to see the product &#8595;</div>
+</section>
 
 <!-- ═══════════════ HERO ═══════════════ -->
 <section class="hero">
@@ -373,7 +398,7 @@
     </p>
     <div class="hero-cta-row fade-up stagger-4">
       <a href="#quiz" class="btn-primary">See the Product →</a>
-      <a href="mailto:dilan@hellodilly.com" class="btn-secondary">Contact Founder</a>
+      <a href="/cdn-cgi/l/email-protection#e2868b8e838ca28a878e8e8d868b8e8e9bcc818d8f" class="btn-secondary">Contact Founder</a>
     </div>
     <div class="hero-stats fade-up stagger-4">
       <div class="hero-stat">
@@ -663,11 +688,310 @@
   <p>.edu verified · No data sold · Made with care</p>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => { if(entry.isIntersecting) entry.target.classList.add('visible'); });
-  }, { threshold:0.1, rootMargin:'0px 0px -40px 0px' });
-  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+  }, { t
+<script>
+
+const C={
+cs:{name:"Computer Science / Software Engineering",short:"CS",base:{a:20,ad:85,d:95},
+qs:[
+{q:"AI can now write production-quality code. How does this change the role of a software engineer?",o:[
+{t:"The job shifts to architecture and system design — AI handles implementation, humans handle decisions",s:{a:-10,ad:15,d:10}},
+{t:"Engineers become AI managers — reviewing, debugging, and orchestrating AI-generated code",s:{a:-15,ad:20,d:5}},
+{t:"The best engineers will be the ones who deeply understand fundamentals, regardless of AI tools",s:{a:5,ad:5,d:10}},
+{t:"Software engineering becomes more about product thinking and less about writing code",s:{a:-5,ad:10,d:5}}
+]},
+{q:"You're choosing your first full-time role after graduation. Which matters most to you?",o:[
+{t:"Working on cutting-edge technology at a company pushing boundaries",s:{a:-15,ad:15,d:15}},
+{t:"Stability and a clear career ladder at a large, established company",s:{a:10,ad:-5,d:5}},
+{t:"Building something from scratch at a startup where I wear many hats",s:{a:-5,ad:15,d:5}},
+{t:"High compensation and prestige — I want the most competitive offer possible",s:{a:0,ad:5,d:10}}
+]},
+{q:"A junior developer at your company gets replaced by an AI coding tool. What's your reaction?",o:[
+{t:"Inevitable — the role was mostly translating specs into code. Higher-level work is safe.",s:{a:-5,ad:10,d:5}},
+{t:"Concerning — it shows that even technical roles aren't immune to automation",s:{a:10,ad:0,d:-5}},
+{t:"An opportunity — someone needs to build, train, and manage these AI tools",s:{a:-15,ad:15,d:10}},
+{t:"Overhyped — AI handles simple tasks but complex engineering still needs humans",s:{a:5,ad:-5,d:5}}
+]},
+{q:"What does 'proof that you can engineer' look like in 2026?",o:[
+{t:"Deployed products with real users — the code matters less than the impact",s:{a:-10,ad:10,d:10}},
+{t:"Deep contributions to complex systems — performance optimization, distributed systems",s:{a:-5,ad:10,d:15}},
+{t:"Open source contributions and technical writing that shows how you think",s:{a:0,ad:10,d:5}},
+{t:"Competitive programming and algorithmic problem solving at a high level",s:{a:5,ad:0,d:5}}
+]},
+{q:"It's 2030. What does the average software engineering job look like?",o:[
+{t:"Engineers mostly prompt and guide AI systems, reviewing output and making architectural calls",s:{a:-15,ad:15,d:5}},
+{t:"The job looks similar to today but with better tools — fundamentals still matter most",s:{a:5,ad:0,d:10}},
+{t:"Only specialists survive — generalist 'full-stack' developers are fully automated",s:{a:10,ad:5,d:-5}},
+{t:"Engineering merges with product management — the line between building and deciding disappears",s:{a:-5,ad:10,d:5}}
+]}
+],r:{f:["AI code generation is real but engineering is more than writing code","Junior implementation tasks face the most risk","System design, product thinking, and AI orchestration are growing"],rec:[{i:"🏗️",t:"Focus on what AI can't do: architecture decisions, user empathy, and debugging complex systems."},{i:"🤖",t:"Learn to orchestrate AI — the engineer who manages AI tools effectively is the new 10x engineer."},{i:"🚀",t:"Ship products, not just code. Impact matters more than implementation."},{i:"📊",t:"Get your full Dilly Build score to see how your projects compare to what companies actually want."}]}},
+
+biz:{name:"Business / Finance / Accounting",short:"Business",base:{a:45,ad:55,d:70},
+qs:[
+{q:"An AI tool can now build a complete financial model in 30 seconds. What becomes the valuable skill?",o:[
+{t:"Knowing which assumptions to feed the model — garbage in, garbage out",s:{a:-10,ad:15,d:10}},
+{t:"Communicating the results to stakeholders who don't speak finance",s:{a:-5,ad:10,d:5}},
+{t:"Building relationships with clients who trust your judgment, not a machine's",s:{a:-10,ad:5,d:10}},
+{t:"Understanding the business context that no model can capture",s:{a:-5,ad:10,d:5}}
+]},
+{q:"You're advising a friend choosing between two career paths in business. Which do you recommend?",o:[
+{t:"Corporate strategy at a Fortune 500 — learn how big organizations make decisions",s:{a:0,ad:5,d:10}},
+{t:"Startup operations — build the playbook for a company that doesn't have one yet",s:{a:-10,ad:15,d:5}},
+{t:"Investment banking — the hours are brutal but the skills and network are unmatched",s:{a:0,ad:5,d:10}},
+{t:"Management consulting — see 10 industries in 2 years and figure out what you love",s:{a:-5,ad:10,d:10}}
+]},
+{q:"Your accounting firm just adopted AI that automates 70% of audit procedures. What happens to junior accountants?",o:[
+{t:"They become reviewers and exception handlers — AI does the work, humans verify",s:{a:5,ad:5,d:0}},
+{t:"The role shifts to client advisory — understanding the story behind the numbers",s:{a:-10,ad:10,d:5}},
+{t:"Fewer junior roles exist, but the ones that remain are more interesting and better paid",s:{a:10,ad:5,d:-5}},
+{t:"The smart ones pivot to building and managing the AI tools that replaced the manual work",s:{a:-15,ad:15,d:10}}
+]},
+{q:"What separates a forgettable business student from one who gets recruited by top firms?",o:[
+{t:"Real experience making decisions with real money — investments, businesses, or client work",s:{a:-10,ad:10,d:10}},
+{t:"The ability to tell a compelling story with data — not just analysis, but persuasion",s:{a:-5,ad:10,d:5}},
+{t:"A network built through genuine relationships, not just LinkedIn connections",s:{a:-5,ad:5,d:10}},
+{t:"Technical skills that most business students don't have — coding, data viz, automation",s:{a:-15,ad:15,d:10}}
+]},
+{q:"It's 2030. What does entry-level finance look like?",o:[
+{t:"AI handles modeling and analysis. Humans handle judgment, ethics, and relationships.",s:{a:-5,ad:10,d:5}},
+{t:"The entry point moves up — you need 2 years of AI-augmented experience just to start",s:{a:10,ad:0,d:-5}},
+{t:"Finance merges with data science — you can't do one without understanding the other",s:{a:-10,ad:10,d:10}},
+{t:"Client-facing roles grow while back-office roles shrink dramatically",s:{a:5,ad:5,d:5}}
+]}
+],r:{f:["Routine financial analysis is being automated rapidly","Client relationships and strategic judgment can't be automated","Business students who combine finance with technology are in highest demand"],rec:[{i:"🤝",t:"Your human skills — judgment, relationships, persuasion — are your moat against AI."},{i:"💻",t:"Add one technical skill to your toolkit. Even basic Python makes you rare in business."},{i:"📈",t:"Build proof that you can make real decisions — case competitions, investments, side businesses."},{i:"📊",t:"Get your full Dilly score to see where you stand against what top firms hire for."}]}},
+
+health:{name:"Healthcare / Nursing / Pre-Med",short:"Healthcare",base:{a:10,ad:40,d:95},
+qs:[
+{q:"AI now diagnoses certain conditions more accurately than doctors. What role does the physician play?",o:[
+{t:"The translator — patients need someone to explain what the AI found and what it means for their life",s:{a:-15,ad:10,d:10}},
+{t:"The decision-maker — AI suggests, but a human must decide treatment considering the whole patient",s:{a:-10,ad:5,d:10}},
+{t:"The researcher — physicians who advance AI in medicine will define the next era of healthcare",s:{a:-10,ad:20,d:10}},
+{t:"The caregiver — the emotional and physical presence that no screen can replace",s:{a:-15,ad:0,d:5}}
+]},
+{q:"Two pre-med students apply to the same program. Same GPA, same MCAT. What actually differentiates them?",o:[
+{t:"Depth of clinical experience — not hours logged, but the complexity of what they've seen",s:{a:-5,ad:10,d:10}},
+{t:"Research with real contributions — not just washing beakers, but advancing knowledge",s:{a:-5,ad:15,d:10}},
+{t:"Leadership in healthcare settings — running a health org, organizing a clinic, managing volunteers",s:{a:-5,ad:10,d:5}},
+{t:"A unique perspective — coming from a non-traditional background that brings diversity to medicine",s:{a:0,ad:10,d:5}}
+]},
+{q:"A hospital replaces its medical coding department with AI. What does this signal for healthcare careers?",o:[
+{t:"Administrative and data-entry healthcare roles face the most risk — clinical roles are safe",s:{a:-10,ad:5,d:5}},
+{t:"It's a preview — diagnostic roles like radiology and pathology could be next",s:{a:10,ad:5,d:0}},
+{t:"Healthcare is becoming a two-track field: tech-enabled clinicians and everyone else",s:{a:0,ad:10,d:5}},
+{t:"The freed-up resources mean more investment in direct patient care roles",s:{a:-5,ad:5,d:10}}
+]},
+{q:"What kind of healthcare professional will be most valuable in 10 years?",o:[
+{t:"Clinicians who use AI as a tool — augmented diagnosis, personalized treatment plans",s:{a:-10,ad:15,d:10}},
+{t:"Specialists in areas requiring physical presence — surgery, emergency medicine, therapy",s:{a:-15,ad:0,d:10}},
+{t:"Those at the intersection of healthcare and technology — health informatics, digital health",s:{a:-5,ad:20,d:10}},
+{t:"Primary care providers — the human relationship at the center of ongoing care",s:{a:-10,ad:0,d:10}}
+]},
+{q:"You have one summer before applications. How do you spend it?",o:[
+{t:"Intensive clinical immersion — ER volunteering, shadowing multiple specialties",s:{a:-5,ad:5,d:10}},
+{t:"Research position in a lab doing work I can actually present or publish",s:{a:-5,ad:15,d:5}},
+{t:"Health tech internship — building tools that improve patient care at scale",s:{a:-5,ad:15,d:10}},
+{t:"Global health experience — working in underserved communities abroad",s:{a:-5,ad:10,d:5}}
+]}
+],r:{f:["Healthcare is one of the most AI-resistant career paths","But administrative and diagnostic roles face real automation","The best clinicians will be those who use AI as a superpower"],rec:[{i:"🏥",t:"Your career is fundamentally safe — humans will always need human care."},{i:"🔬",t:"The differentiator is depth of experience, not breadth. Go deep in clinical or research."},{i:"🤖",t:"Understanding health technology gives you an edge most clinicians won't have."},{i:"📊",t:"Get your Dilly Build score to see how your preparation compares."}]}},
+
+mktg:{name:"Marketing / Communications / Media",short:"Marketing",base:{a:50,ad:65,d:60},
+qs:[
+{q:"AI generates a month of social media content in 10 minutes. What's left for the marketer?",o:[
+{t:"Strategy — knowing WHAT to say and WHO to say it to. AI handles the production.",s:{a:-10,ad:10,d:10}},
+{t:"Taste and curation — AI generates options, humans choose which ones resonate",s:{a:-5,ad:10,d:5}},
+{t:"Relationships — influencer partnerships, community building, brand trust can't be automated",s:{a:-10,ad:5,d:10}},
+{t:"Analysis — measuring what actually worked and why, then adjusting the strategy",s:{a:-5,ad:10,d:5}}
+]},
+{q:"Two marketing candidates interview for the same role. What actually gets one hired over the other?",o:[
+{t:"A portfolio of campaigns with measurable business results — revenue, conversions, growth",s:{a:-10,ad:10,d:10}},
+{t:"An audience they've already built — proof they understand how to earn attention",s:{a:-5,ad:10,d:10}},
+{t:"Strategic thinking — they can diagnose a brand's problem and propose a solution on the spot",s:{a:-5,ad:10,d:5}},
+{t:"Versatility across channels — content, paid, email, events, partnerships",s:{a:0,ad:5,d:5}}
+]},
+{q:"A brand fires its content team and uses AI to generate all copy and visuals. What happens?",o:[
+{t:"Short-term savings, long-term brand erosion — AI content all starts to look and sound the same",s:{a:-5,ad:5,d:5}},
+{t:"It works for commodity content but fails for anything requiring cultural nuance or creativity",s:{a:0,ad:5,d:5}},
+{t:"Smart move if they keep a small strategic team directing the AI output",s:{a:-10,ad:10,d:5}},
+{t:"They'll hire the team back in 6 months when engagement drops",s:{a:5,ad:0,d:5}}
+]},
+{q:"What's the most underrated skill in marketing right now?",o:[
+{t:"Data literacy — being able to prove ROI and make decisions with numbers, not gut feelings",s:{a:-10,ad:15,d:10}},
+{t:"Storytelling — the ability to make people FEEL something in an age of content overload",s:{a:-5,ad:5,d:10}},
+{t:"Community building — turning customers into advocates who do your marketing for you",s:{a:-5,ad:10,d:10}},
+{t:"Speed and adaptability — the marketer who ships fast and iterates beats the one who plans forever",s:{a:-5,ad:10,d:5}}
+]},
+{q:"It's 2030. What does the marketing department look like?",o:[
+{t:"Tiny strategic team using AI to do what 50 people used to do — fewer marketers, higher paid",s:{a:5,ad:10,d:0}},
+{t:"Split into two: creative strategists and marketing technologists who build AI workflows",s:{a:-10,ad:10,d:5}},
+{t:"More marketers than ever because AI lowers the barrier and every company needs a voice",s:{a:-5,ad:5,d:10}},
+{t:"Marketing merges with product — growth teams that build features, not just campaigns",s:{a:-10,ad:10,d:10}}
+]}
+],r:{f:["Content production is being commoditized by AI","Strategy, data analysis, and relationship skills are growing in value","Marketers who use AI produce 10x more but need human judgment to direct it"],rec:[{i:"📊",t:"Learn to measure everything. Data-driven marketers command premium salaries."},{i:"🎯",t:"Build a portfolio of RESULTS — campaigns with real metrics beat beautiful mockups."},{i:"🤖",t:"The best marketing role in 2026 is being the person who directs AI creative tools."},{i:"📊",t:"Get your Dilly score to see how your marketing skills compare to what companies hire for."}]}},
+
+edu:{name:"Education / Social Sciences / Humanities",short:"Education",base:{a:30,ad:40,d:50},
+qs:[
+{q:"An AI tutor can now teach calculus better than most human teachers. What's the teacher's new role?",o:[
+{t:"The mentor — helping students find meaning, motivation, and direction that AI can't provide",s:{a:-15,ad:5,d:10}},
+{t:"The facilitator — designing learning experiences where AI handles content and humans handle growth",s:{a:-10,ad:15,d:10}},
+{t:"The equity bridge — ensuring technology helps all students, not just privileged ones",s:{a:-10,ad:10,d:5}},
+{t:"The community builder — schools are about socialization and belonging, not just knowledge transfer",s:{a:-10,ad:5,d:5}}
+]},
+{q:"Two humanities graduates compete for the same job. What actually separates them?",o:[
+{t:"One can write, analyze, AND use technology — the other can only write and analyze",s:{a:-10,ad:15,d:10}},
+{t:"One has applied their thinking to real organizations through internships and projects",s:{a:-5,ad:10,d:10}},
+{t:"One has a clear narrative connecting their education to a specific career path",s:{a:-5,ad:10,d:5}},
+{t:"One has built a public body of work — writing, research, or community impact that's visible",s:{a:-5,ad:10,d:5}}
+]},
+{q:"A school district automates grading, lesson planning, and parent communications with AI. What changes for teachers?",o:[
+{t:"More time for what matters — small group instruction, mentoring, and student relationships",s:{a:-10,ad:5,d:10}},
+{t:"The role becomes more specialized — teachers focus on pedagogy while AI handles administration",s:{a:-5,ad:10,d:5}},
+{t:"Fewer teaching positions but the remaining ones are more respected and better paid",s:{a:10,ad:5,d:-5}},
+{t:"Teachers become learning designers — curating and adapting AI-generated curriculum",s:{a:-5,ad:15,d:5}}
+]},
+{q:"What's the biggest career advantage a humanities/social sciences education gives you?",o:[
+{t:"Critical thinking and communication — skills that transfer to any industry",s:{a:-5,ad:5,d:5}},
+{t:"Understanding human behavior — valuable in UX research, policy, marketing, and product",s:{a:-10,ad:10,d:10}},
+{t:"Ethical reasoning — someone needs to guide how AI is deployed in society",s:{a:-5,ad:10,d:5}},
+{t:"Research methodology — the ability to find truth in complexity",s:{a:0,ad:10,d:5}}
+]},
+{q:"It's 2030. Which education/humanities career paths are thriving?",o:[
+{t:"EdTech — the people designing how AI teaches are in massive demand",s:{a:-10,ad:15,d:15}},
+{t:"Counseling and social work — the mental health crisis guarantees demand for decades",s:{a:-15,ad:0,d:10}},
+{t:"AI ethics and policy — every company needs people who understand the human implications",s:{a:-10,ad:15,d:10}},
+{t:"Teaching remains essential — but the best teachers use AI to be 10x more effective",s:{a:-5,ad:10,d:5}}
+]}
+],r:{f:["Human-centered roles are among the most AI-resistant","Administrative education tasks face real automation","EdTech and AI ethics are booming new paths for humanities graduates"],rec:[{i:"💡",t:"Your ability to think critically and communicate clearly is more valuable than ever in an AI world."},{i:"🚀",t:"Connect your education to emerging fields — EdTech, AI policy, UX research, content strategy."},{i:"💻",t:"One technical skill transforms your career options. Even basic data literacy opens doors."},{i:"📊",t:"Get your Dilly score to discover career paths you haven't considered."}]}},
+
+eng:{name:"Engineering (Mechanical, Civil, Electrical)",short:"Engineering",base:{a:25,ad:55,d:80},
+qs:[
+{q:"AI generates 50 optimized structural designs in the time it takes an engineer to sketch one. What becomes the engineer's value?",o:[
+{t:"Judgment — knowing which of those 50 designs actually works in the real world with real constraints",s:{a:-5,ad:10,d:10}},
+{t:"Integration — engineering doesn't happen in isolation, someone needs to connect systems together",s:{a:-5,ad:10,d:5}},
+{t:"Innovation — AI optimizes within known parameters, engineers define new parameters",s:{a:-10,ad:10,d:10}},
+{t:"Accountability — when a bridge fails, a human is responsible, not an algorithm",s:{a:0,ad:5,d:5}}
+]},
+{q:"You're choosing your engineering specialty. What guides your decision?",o:[
+{t:"Where the growth is — robotics, energy, AI-hardware, aerospace",s:{a:-10,ad:10,d:15}},
+{t:"What I'm fascinated by — passion sustains you through the hard parts",s:{a:0,ad:5,d:5}},
+{t:"Where I can have the most impact — sustainability, infrastructure, healthcare devices",s:{a:-5,ad:10,d:10}},
+{t:"Where the compensation is highest — I want maximum ROI on this difficult degree",s:{a:0,ad:5,d:10}}
+]},
+{q:"A company replaces its drafting team with AI-powered CAD automation. What does this mean for engineering?",o:[
+{t:"The entry point changes — you need to arrive with higher-level skills than before",s:{a:10,ad:5,d:0}},
+{t:"Engineers who can program and customize these AI tools become the most valuable",s:{a:-15,ad:15,d:10}},
+{t:"Physical engineering work is safe — you can't automate site visits, testing, and manufacturing oversight",s:{a:-5,ad:0,d:10}},
+{t:"It's the same pattern as every engineering revolution — tools change, engineers adapt",s:{a:0,ad:5,d:5}}
+]},
+{q:"What separates an engineer who gets hired from one who doesn't?",o:[
+{t:"They've built something tangible — a robot, a structure, a device — not just solved textbook problems",s:{a:-10,ad:10,d:10}},
+{t:"They can communicate engineering concepts to non-engineers — business people, customers, regulators",s:{a:-5,ad:10,d:5}},
+{t:"They have cross-disciplinary skills — an ME who can code, an EE who understands manufacturing",s:{a:-10,ad:10,d:10}},
+{t:"Strong fundamentals — they can derive from first principles, not just plug into formulas",s:{a:5,ad:5,d:10}}
+]},
+{q:"It's 2030. What does engineering work look like?",o:[
+{t:"Engineers manage AI design tools and focus on constraints, testing, and real-world validation",s:{a:-5,ad:10,d:5}},
+{t:"More interdisciplinary — the line between software, hardware, and systems engineering blurs completely",s:{a:-10,ad:10,d:10}},
+{t:"Two tracks: AI-augmented design engineers and hands-on field/manufacturing engineers",s:{a:0,ad:5,d:5}},
+{t:"Engineering becomes more creative — AI handles optimization, humans handle invention",s:{a:-5,ad:10,d:10}}
+]}
+],r:{f:["Physical-world engineering is hard to automate","AI is transforming design tools but not replacing engineering judgment","Engineers who code and understand AI tools are in highest demand"],rec:[{i:"🔧",t:"Build something real. Tangible proof of engineering ability beats any credential."},{i:"💻",t:"Coding is non-negotiable for modern engineers. Python or MATLAB fluency multiplies your value."},{i:"🤖",t:"Learn AI applications in your specific field — it's the biggest differentiator."},{i:"📊",t:"Get your Dilly Build score to see how your projects compare to what companies want."}]}},
+
+data:{name:"Data Science / Analytics / AI",short:"Data Science",base:{a:15,ad:90,d:98},
+qs:[
+{q:"You're in the field building AI. But AI can now automate data analysis itself. What does this mean for data scientists?",o:[
+{t:"The bar rises — basic analysis is automated, so data scientists need to solve harder problems",s:{a:5,ad:5,d:5}},
+{t:"The role evolves into AI engineering — building and deploying the systems, not just analyzing data",s:{a:-15,ad:10,d:10}},
+{t:"Domain expertise becomes king — anyone can run a model, few can interpret results in context",s:{a:-5,ad:10,d:10}},
+{t:"Data scientists become AI product managers — deciding what to build and why",s:{a:-10,ad:10,d:5}}
+]},
+{q:"Two data scientists apply for the same role. Same degree, same GPA. What gets one hired?",o:[
+{t:"One has deployed models in production. The other has only worked in notebooks.",s:{a:-10,ad:10,d:10}},
+{t:"One can explain their work to a CEO. The other can only present to other data scientists.",s:{a:-5,ad:10,d:5}},
+{t:"One chose a domain — healthcare, finance, climate — and went deep. The other stayed generalist.",s:{a:-5,ad:10,d:10}},
+{t:"One has contributed to open source or published research. The other has only done coursework.",s:{a:-5,ad:10,d:5}}
+]},
+{q:"A company builds an internal AI that answers any analytics question from natural language. What happens to the data team?",o:[
+{t:"Junior analyst roles disappear. Senior roles become more strategic and better compensated.",s:{a:10,ad:5,d:0}},
+{t:"The data team shifts to building and maintaining AI systems rather than answering ad-hoc questions.",s:{a:-10,ad:10,d:10}},
+{t:"Data literacy spreads across the company. The data team focuses on harder, unsolved problems.",s:{a:-5,ad:10,d:5}},
+{t:"Nothing changes much — people still need data scientists to ask the right questions, not just answer them.",s:{a:0,ad:5,d:5}}
+]},
+{q:"What's the most important skill for a data scientist in 2026 that wasn't important in 2020?",o:[
+{t:"LLM engineering — fine-tuning, prompt engineering, RAG systems, and AI agents",s:{a:-15,ad:15,d:15}},
+{t:"ML ops and production engineering — getting models out of notebooks and into the real world",s:{a:-10,ad:10,d:10}},
+{t:"Causal inference and experimentation — understanding WHY, not just predicting WHAT",s:{a:0,ad:10,d:5}},
+{t:"AI ethics and safety — someone needs to ensure these systems are fair and reliable",s:{a:-5,ad:10,d:5}}
+]},
+{q:"It's 2030. What does the data science career path look like?",o:[
+{t:"'Data scientist' as a title barely exists — it's split into ML engineer, AI researcher, and analytics engineer",s:{a:5,ad:5,d:5}},
+{t:"Data science merges with software engineering — you can't do one without the other",s:{a:-10,ad:10,d:10}},
+{t:"Fewer data scientists but each one is 10x more impactful using AI tools",s:{a:0,ad:10,d:5}},
+{t:"The field expands — every company needs AI expertise and there aren't enough people",s:{a:-5,ad:5,d:15}}
+]}
+],r:{f:["You're building the future — data science and AI talent is in extreme demand","Basic analytics is being automated by the tools you build","The future belongs to ML engineers, AI researchers, and domain-expert data scientists"],rec:[{i:"🏗️",t:"Move beyond analysis into building. Deployed systems beat notebooks every time."},{i:"🎯",t:"Pick a domain. A data scientist who deeply understands healthcare or finance is worth 3x a generalist."},{i:"🤖",t:"LLMs, agents, and applied AI — this is where the entire field is heading."},{i:"📊",t:"Get your Dilly Build score to see how your projects compare to what AI companies hire for."}]}},
+
+design:{name:"Design / Creative Arts",short:"Design",base:{a:40,ad:70,d:65},
+qs:[
+{q:"AI generates 100 logo concepts in 30 seconds. What's the designer's role now?",o:[
+{t:"The editor and curator — choosing which output resonates and refining it with human taste",s:{a:-5,ad:10,d:5}},
+{t:"The strategist — AI doesn't know the brand, the audience, or the business problem being solved",s:{a:-10,ad:10,d:10}},
+{t:"The researcher — understanding users deeply enough to direct AI toward the right solution",s:{a:-10,ad:10,d:10}},
+{t:"The storyteller — connecting design decisions to human emotions and cultural context",s:{a:-5,ad:10,d:5}}
+]},
+{q:"Two designers apply for a product design role. Same school, similar portfolios. What's the tiebreaker?",o:[
+{t:"One shows the thinking behind their work — research, iterations, trade-offs, results",s:{a:-5,ad:10,d:10}},
+{t:"One has shipped real features that real users interact with — not just mockups",s:{a:-10,ad:10,d:10}},
+{t:"One can prototype and code — they don't just design, they build",s:{a:-10,ad:10,d:10}},
+{t:"One has a distinctive point of view — their work is recognizable and opinionated",s:{a:-5,ad:10,d:5}}
+]},
+{q:"A startup replaces its 5-person design team with 1 designer using AI tools. What does this mean for the industry?",o:[
+{t:"Fewer designer jobs but each one is more senior, more strategic, and better paid",s:{a:5,ad:5,d:0}},
+{t:"Design becomes a superpower for non-designers — product managers, marketers, and founders can now 'design'",s:{a:10,ad:5,d:-5}},
+{t:"The 1 remaining designer is more powerful than the original 5 — AI is a force multiplier, not a replacement",s:{a:-10,ad:10,d:5}},
+{t:"It creates a split — production design disappears but design thinking and strategy become more valuable",s:{a:0,ad:10,d:5}}
+]},
+{q:"What type of design work is most resilient to AI?",o:[
+{t:"UX research and user understanding — AI can't sit across from a user and feel their frustration",s:{a:-10,ad:5,d:10}},
+{t:"Design systems and principles — the meta-work of defining how things should look and behave",s:{a:-5,ad:10,d:10}},
+{t:"Physical and spatial design — interiors, architecture, products you can touch",s:{a:-10,ad:0,d:10}},
+{t:"Creative direction — having a vision that unifies hundreds of AI-generated outputs into a coherent brand",s:{a:-5,ad:10,d:5}}
+]},
+{q:"It's 2030. What does a successful design career look like?",o:[
+{t:"Design director who manages AI creative pipelines — 1 person, the output of 20",s:{a:-5,ad:10,d:5}},
+{t:"Product designer who research, designs, AND ships — the full-stack designer",s:{a:-10,ad:10,d:10}},
+{t:"Independent creator with AI tools — building and selling directly, no company needed",s:{a:-5,ad:10,d:5}},
+{t:"Specialized in one area AI struggles with — complex systems, accessibility, service design",s:{a:-5,ad:5,d:10}}
+]}
+],r:{f:["Visual production is being commoditized but design thinking is more valuable than ever","Designers who use AI as a tool produce 10x more than those who compete against it","UX research, strategy, and creative direction are the growth areas"],rec:[{i:"🎨",t:"Move up the value chain. AI handles production — you handle strategy and research."},{i:"🏗️",t:"Ship real products, not just mockups. The designer who can build is worth 3x."},{i:"🤖",t:"Master AI creative tools. Be the designer who produces 10 concepts while others do 1."},{i:"📊",t:"Get your Dilly Build score to see how your portfolio compares."}]}}
+};
+
+let cq=0,tot={a:0,ad:0,d:0},sel=null,qs=[];
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function startQuiz(){cq=0;tot={a:0,ad:0,d:0};sel=null;qs=[];show('question-screen');renderCohort()}
+function renderCohort(){document.getElementById('progress').style.width='0%';document.getElementById('q-number').textContent='STEP 1 — CHOOSE YOUR FIELD';document.getElementById('q-text').textContent="What's your field of study or career interest?";const k='ABCDEFGH',c=document.getElementById('options');c.innerHTML='';Object.entries(C).forEach(([key,v],i)=>{const b=document.createElement('button');b.className='option';b.innerHTML=`<span class="option-key">${k[i]}</span><span>${v.name}</span>`;b.onclick=()=>pickCohort(key);c.appendChild(b)})}
+function pickCohort(k){sel=C[k];tot.a+=sel.base.a;tot.ad+=sel.base.ad;tot.d+=sel.base.d;qs=sel.qs;cq=0;renderQ()}
+function renderQ(){const p=cq/qs.length*100;document.getElementById('progress').style.width=p+'%';document.getElementById('q-number').textContent=`QUESTION ${cq+1} OF ${qs.length} — ${sel.short}`;document.getElementById('q-text').textContent=qs[cq].q;const k='ABCD',c=document.getElementById('options');c.innerHTML='';qs[cq].o.forEach((o,i)=>{const b=document.createElement('button');b.className='option';b.innerHTML=`<span class="option-key">${k[i]}</span><span>${o.t}</span>`;b.onclick=()=>pick(i);c.appendChild(b)})}
+function pick(i){const s=qs[cq].o[i].s;tot.a+=(s.a||0);tot.ad+=(s.ad||0);tot.d+=(s.d||0);cq++;if(cq>=qs.length){show('loading-screen');document.getElementById('loading-text').textContent=`Analyzing your ${sel.short} career against AI disruption trends...`;setTimeout(results,2500)}else renderQ()}
+function results(){const ar=Math.max(5,Math.min(95,50+tot.a)),sf=100-ar,ad=Math.max(5,Math.min(95,50+tot.ad)),dm=Math.max(5,Math.min(95,50+tot.d));let lv,cl,em,msg;if(sf>=75){lv='LOW RISK';cl='var(--green)';em='🛡️';msg=`Your ${sel.short} career path is well-positioned against AI disruption. You're building skills that complement AI rather than compete with it. But don't get complacent — students who actively prepare will pull ahead.`}else if(sf>=55){lv='MODERATE RISK';cl='var(--yellow)';em='⚠️';msg=`Your ${sel.short} career is in a transition zone. Some tasks will be automated, but strategic and human elements become more valuable. Students who adapt now will thrive while others scramble.`}else if(sf>=35){lv='HIGH RISK';cl='var(--orange)';em='🔥';msg=`Your ${sel.short} career path faces real disruption. Many entry-level roles are being transformed by AI right now. You have time to pivot, but every month you wait, the gap grows.`}else{lv='CRITICAL RISK';cl='var(--red)';em='🚨';msg=`Your trajectory in ${sel.short} puts you directly in AI's path. Entry-level roles you're targeting are among the most vulnerable. This wake-up call could save your career if you act now.`}
+const rc=sel.r.rec,fc=sel.r.f,r=document.getElementById('results');r.innerHTML=`<div class="result-card animate-in"><div class="risk-label" style="color:${cl}">${em} ${lv}</div><div class="risk-score" style="color:${cl}">${sf}</div><div class="risk-subtitle">AI Safety Score for ${sel.short} — out of 100</div><div class="risk-meter"><div class="risk-meter-fill" id="mf" style="width:0%;background:${cl}"></div></div><div class="risk-meter-labels"><span>Critical Risk</span><span>AI-Proof</span></div></div><div class="breakdown animate-in delay-1"><div class="breakdown-item"><span class="breakdown-label">Your Field</span><span class="breakdown-value">${sel.short}</span></div><div class="breakdown-item"><span class="breakdown-label">Automation Exposure</span><span class="breakdown-value" style="color:${ar>60?'var(--red)':ar>40?'var(--yellow)':'var(--green)'}">${ar}%</span></div><div class="breakdown-item"><span class="breakdown-label">Your Adaptability</span><span class="breakdown-value" style="color:${ad>60?'var(--green)':ad>40?'var(--yellow)':'var(--red)'}">${ad}/100</span></div><div class="breakdown-item"><span class="breakdown-label">${sel.short} Demand (2030)</span><span class="breakdown-value" style="color:${dm>60?'var(--green)':dm>40?'var(--yellow)':'var(--red)'}">${dm}/100</span></div></div><div class="reco-card animate-in delay-2"><h3>${msg.split('.')[0]}.</h3><p>${msg}</p><div class="factors"><div class="factors-title">Key factors for ${sel.short}</div>${fc.map(f=>`<div class="factors-item">• ${f}</div>`).join('')}</div><div class="reco-actions">${rc.map(r=>`<div class="reco-action"><span class="reco-action-icon">${r.i}</span><span>${r.t}</span></div>`).join('')}</div></div><div class="cta-section animate-in delay-3"><h3>This quiz is just the surface.</h3><p>Dilly gives you a complete career readiness score — Smart, Grit, and Build — personalized to your exact ${sel.short} goals. See where you stand and what to do about it.</p><a href="https://hellodilly.com" class="cta-btn">Get Your Full Dilly Score →</a></div><div class="share-row animate-in delay-4"><button class="share-btn" onclick="share(${sf},'${lv}','${sel.short}')">📤 Share My Score</button><button class="share-btn" onclick="copy(${sf},'${lv}','${sel.short}')">📋 Copy Result</button></div><div class="retake animate-in delay-5" onclick="startQuiz()">↻ Retake Quiz</div>`;show('results-screen');setTimeout(()=>{document.getElementById('mf').style.width=sf+'%'},300)}
+function share(s,l,f){const t=`My AI Safety Score for ${f} is ${s}/100 (${l}). Will AI take YOUR job? hellodilly.com/quiz`;if(navigator.share)navigator.share({title:'Will AI Take My Job?',text:t,url:'https://hellodilly.com/quiz'});else copy(s,l,f)}
+function copy(s,l,f){const t=`My AI Safety Score for ${f} is ${s}/100 (${l}). Will AI take YOUR job? Find out: hellodilly.com/quiz`;navigator.clipboard.writeText(t).then(()=>{const b=document.querySelectorAll('.share-btn');b[1].textContent='✓ Copied!';setTimeout(()=>b[1].textContent='📋 Copy Result',2000)})}
+
+
+function qShowS(id){document.querySelectorAll('.qsc').forEach(function(s){s.classList.remove('active')});var el=document.getElementById('qsc-'+id);if(el)el.classList.add('active');var h=document.getElementById('scrollH');if(h)h.style.display=(id==='intro')?'block':'none'}
+function qMkBtn(txt,key,onclick){var b=document.createElement('button');b.style.cssText='padding:18px 22px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;cursor:pointer;font-size:15px;color:#f5f5f7;text-align:left;display:flex;align-items:center;gap:14px;transition:all .2s;width:100%';b.onmouseenter=function(){this.style.borderColor='#C9A84C';this.style.background='rgba(201,168,76,.08)';this.style.transform='translateX(4px)'};b.onmouseleave=function(){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';this.style.transform='none'};b.innerHTML='<span style="min-width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#636366;flex-shrink:0">'+key+'</span><span>'+txt+'</span>';b.onclick=onclick;return b}
+function qStart(){cq=0;tot={a:0,ad:0,d:0};sel=null;qs=[];qShowS('qs');qRC()}
+function qRC(){document.getElementById('qProg').style.width='0%';document.getElementById('qNum').textContent='STEP 1 \u2014 CHOOSE YOUR FIELD';document.getElementById('qTxt').textContent="What\u2019s your field of study or career interest?";var k='ABCDEFGH',c=document.getElementById('qOpts');c.innerHTML='';Object.entries(C).forEach(function(e,i){c.appendChild(qMkBtn(e[1].name,k[i],function(){qPC(e[0])}))})}
+function qPC(k){sel=C[k];tot.a+=sel.base.a;tot.ad+=sel.base.ad;tot.d+=sel.base.d;qs=sel.qs;cq=0;qRQ()}
+function qRQ(){document.getElementById('qProg').style.width=(cq/qs.length*100)+'%';document.getElementById('qNum').textContent='QUESTION '+(cq+1)+' OF '+qs.length+' \u2014 '+sel.short;document.getElementById('qTxt').textContent=qs[cq].q;var k='ABCD',c=document.getElementById('qOpts');c.innerHTML='';qs[cq].o.forEach(function(o,i){c.appendChild(qMkBtn(o.t,k[i],function(){qPK(i)}))})}
+function qPK(i){var s=qs[cq].o[i].s;tot.a+=(s.a||0);tot.ad+=(s.ad||0);tot.d+=(s.d||0);cq++;if(cq>=qs.length){qShowS('load');document.getElementById('qLoadT').textContent='Analyzing your '+sel.short+' career against AI disruption trends...';setTimeout(qRES,2500)}else qRQ()}
+function qRES(){var ar=Math.max(5,Math.min(95,50+tot.a)),sf=100-ar,ad=Math.max(5,Math.min(95,50+tot.ad)),dm=Math.max(5,Math.min(95,50+tot.d));var lv,cl,em,msg;if(sf>=75){lv='LOW RISK';cl='#34C759';em='\ud83d\udee1\ufe0f';msg='Your '+sel.short+' career is well-positioned against AI. You are building skills that complement AI rather than compete with it.'}else if(sf>=55){lv='MODERATE RISK';cl='#FF9F0A';em='\u26a0\ufe0f';msg='Your '+sel.short+' career is in transition. Some tasks will be automated, but strategic and human elements become more valuable.'}else if(sf>=35){lv='HIGH RISK';cl='#FF9F0A';em='\ud83d\udd25';msg='Your '+sel.short+' career faces real disruption. Many entry-level roles are being transformed by AI right now.'}else{lv='CRITICAL RISK';cl='#FF453A';em='\ud83d\udea8';msg='Your '+sel.short+' trajectory puts you in AI\'s crosshairs. Entry-level roles are among the most vulnerable.'}var rc=sel.r.rec,fc=sel.r.f,r=document.getElementById('qRes');r.innerHTML='<div style="background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:32px;text-align:center"><div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:'+cl+'">'+em+' '+lv+'</div><div style="font-family:Playfair Display,serif;font-size:72px;line-height:1;margin-bottom:4px;color:'+cl+'">'+sf+'</div><div style="font-size:15px;color:#a1a1a6;margin-bottom:20px">AI Safety Score for '+sel.short+'</div><div style="width:100%;height:8px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;margin-bottom:8px"><div id="qM" style="height:100%;border-radius:10px;transition:width 1.5s;width:0%;background:'+cl+'"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:#636366"><span>Critical</span><span>AI-Proof</span></div></div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Field</span><span style="font-weight:700">'+sel.short+'</span></div><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Automation</span><span style="font-weight:700;color:'+(ar>60?'#FF453A':ar>40?'#FF9F0A':'#34C759')+'">'+ar+'%</span></div><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Adaptability</span><span style="font-weight:700;color:'+(ad>60?'#34C759':ad>40?'#FF9F0A':'#FF453A')+'">'+ad+'/100</span></div><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Demand 2030</span><span style="font-weight:700;color:'+(dm>60?'#34C759':dm>40?'#FF9F0A':'#FF453A')+'">'+dm+'/100</span></div></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:24px"><h3 style="font-family:Cinzel,serif;font-size:20px;margin-bottom:12px">'+msg.split('.')[0]+'.</h3><p style="font-size:14px;color:#a1a1a6;line-height:1.7;margin-bottom:16px">'+msg+'</p><div style="margin-bottom:16px;padding:12px 16px;background:rgba(255,255,255,.03);border-radius:12px"><div style="font-size:12px;color:#C9A84C;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Key factors</div>'+fc.map(function(f){return '<div style="font-size:13px;color:#a1a1a6;padding:4px 0">\u2022 '+f+'</div>'}).join('')+'</div><div style="display:flex;flex-direction:column;gap:8px">'+rc.map(function(x){return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,.03);border-radius:12px;font-size:14px"><span style="font-size:18px">'+x.i+'</span><span>'+x.t+'</span></div>'}).join('')+'</div></div><div style="background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.04));border:1px solid rgba(201,168,76,.2);border-radius:20px;padding:28px;text-align:center"><h3 style="font-family:Cinzel,serif;font-size:22px;margin-bottom:8px">This quiz is just the surface.</h3><p style="font-size:14px;color:#a1a1a6;margin-bottom:20px">Dilly gives you a complete career readiness score for '+sel.short+'.</p><a href="#pricing" class="btn-primary">Get Your Full Dilly Score \u2192</a></div><div style="display:flex;gap:10px;justify-content:center"><button onclick="qSH('+sf+')" style="padding:12px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:100px;color:#f5f5f7;font-size:14px;font-weight:600;cursor:pointer">\ud83d\udce4 Share</button><button id="qCB" onclick="qCP('+sf+')" style="padding:12px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:100px;color:#f5f5f7;font-size:14px;font-weight:600;cursor:pointer">\ud83d\udccb Copy</button></div><div onclick="qStart()" style="text-align:center;padding:16px;color:#636366;font-size:14px;cursor:pointer">\u21bb Retake Quiz</div><div style="text-align:center;padding:8px;font-size:13px;color:#C9A84C">\u2713 Score saved</div>';qShowS('res');setTimeout(function(){var m=document.getElementById('qM');if(m)m.style.width=sf+'%'},300);try{document.cookie='dilly_quiz='+encodeURIComponent(JSON.stringify({score:sf,level:lv,field:sel.short}))+';max-age=31536000;path=/'}catch(e){}}
+function qSH(s){var t='My AI Safety Score is '+s+'/100. Will AI take YOUR job? hellodilly.com';if(navigator.share)navigator.share({title:'Will AI Take My Job?',text:t,url:'https://hellodilly.com'});else qCP(s)}
+function qCP(s){navigator.clipboard.writeText('My AI Safety Score is '+s+'/100. Take the quiz: hellodilly.com').then(function(){var b=document.getElementById('qCB');if(b){b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='\ud83d\udccb Copy'},2000)}})}
+try{document.cookie.split(';').forEach(function(c){c=c.trim();if(c.startsWith('dilly_quiz=')){var s=JSON.parse(decodeURIComponent(c.substring(11)));var el=document.getElementById('qSaved');if(el&&s.score){var cl=s.score>=75?'#34C759':s.score>=55?'#FF9F0A':'#FF453A';el.innerHTML='<div style="margin-top:16px;padding:16px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:16px"><div style="font-size:13px;color:#636366;margin-bottom:4px">Your last result</div><div style="font-size:28px;font-weight:800;color:'+cl+'">'+s.score+'/100</div><div style="font-size:13px;color:#636366">'+s.field+' \u00b7 '+s.level+'</div></div>'}}})}catch(e){}
+
 </script>
-</body>
-</html>
+h
