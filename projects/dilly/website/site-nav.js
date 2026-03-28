@@ -5,14 +5,14 @@
     '<a href="index.html" class="relative z-[120] flex min-w-0 shrink-0 items-center">' +
     '<img src="dilly-wordmark.png" alt="Dilly" class="site-header-logo shrink-0" width="612" height="408" decoding="async" />' +
     '</a>' +
-    '<button type="button" class="nav-menu-toggle relative z-[120] inline-flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center rounded-xl px-3 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 md:hidden" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>' +
-    '<div class="nav-menu-panel fixed inset-0 z-[100] hidden overflow-y-auto overscroll-contain border-0 bg-[#0a0a0a]/98 backdrop-blur-xl md:static md:inset-auto md:z-auto md:flex md:max-h-none md:flex-1 md:flex-row md:justify-end md:overflow-visible md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none" id="navMenuPanel">' +
-    '<nav class="mx-auto flex w-full max-w-lg flex-col gap-1 px-6 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(6.5rem,env(safe-area-inset-top,0px)+1.5rem)] md:mx-0 md:max-w-none md:flex-row md:items-center md:gap-0 md:rounded-full md:bg-zinc-900/90 md:p-1.5 md:pl-3 md:ring-1 md:ring-white/10 md:px-0 md:pb-0 md:pt-0" aria-label="Main">' +
-    '<a href="features.html" class="site-nav-link rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 sm:py-3.5 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Features</a>' +
-    '<a href="how-it-works.html" class="site-nav-link rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 sm:py-3.5 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">How it works</a>' +
-    '<a href="tracks.html" class="site-nav-link rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 sm:py-3.5 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Tracks</a>' +
-    '<a href="pricing.html" class="site-nav-link rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 sm:py-3.5 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Pricing</a>' +
-    '<a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="mt-4 inline-flex w-full min-h-[48px] items-center justify-center rounded-2xl bg-[#c5a353] px-5 py-3 text-base font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110 md:mt-0 md:ml-1 md:w-auto md:rounded-full md:py-2 md:text-sm">Get Your Dilly Score</a>' +
+    '' +
+    '<div class="nav-menu-panel static z-auto flex max-h-none flex-1 flex-row justify-end overflow-visible border-0 bg-transparent p-0 shadow-none backdrop-blur-none" id="navMenuPanel">' +
+    '<nav class="mx-0 flex max-w-none flex-row items-center gap-0 rounded-full bg-zinc-900/90 p-1.5 pl-3 ring-1 ring-white/10" aria-label="Main">' +
+    '<a href="features.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">Features</a>' +
+    '<a href="how-it-works.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">How it works</a>' +
+    '<a href="tracks.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">Tracks</a>' +
+    '<a href="pricing.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">Pricing</a>' +
+    '<a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="ml-1 inline-flex w-auto items-center justify-center rounded-full bg-[#c5a353] px-5 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110">Get Your Dilly Score</a>' +
     '</nav>' +
     '</div>' +
     '</div>' +
