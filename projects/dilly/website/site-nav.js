@@ -12,6 +12,7 @@
     '<a href="how-it-works.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">How it works</a>' +
     '<a href="tracks.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">Tracks</a>' +
     '<a href="pricing.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">Pricing</a>' +
+    '<a href="about.html" class="site-nav-link rounded-full px-3 py-2 text-sm font-medium text-zinc-300 hover:text-white">About</a>' +
     '<a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="ml-1 inline-flex w-auto items-center justify-center rounded-full bg-[#c5a353] px-5 py-2 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110">Get Your Dilly Score</a>' +
     '</nav>' +
     '</div>' +

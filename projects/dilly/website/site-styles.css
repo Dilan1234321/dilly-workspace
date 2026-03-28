@@ -151,9 +151,9 @@ body .step p {
 }
 body main section h2 {
   font-family: Cinzel, Georgia, serif !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   letter-spacing: 0.02em !important;
-  color: #fafafa !important;
+  color: #ffffff !important;
 }
 body main p a:not(.btn-primary),
 body main .section-sub a {
