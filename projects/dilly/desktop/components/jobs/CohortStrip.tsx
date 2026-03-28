@@ -47,7 +47,7 @@ export default function CohortStrip({ cohorts, activeCohort, onSelect, matchCoun
                 ? 'bg-surface-2 ring-1 shadow-[0_2px_8px_rgba(0,0,0,0.15)]'
                 : 'bg-surface-1 hover:bg-surface-2 border border-transparent hover:border-border-main'
               }`}
-            style={active ? { borderColor: color + '40', ringColor: color + '30' } : {}}
+            style={active ? { borderColor: color + '40', boxShadow: `0 0 0 1px ${color}30` } : {}}
           >
             <div className="flex flex-col items-start">
               <div className="flex items-center gap-1.5">

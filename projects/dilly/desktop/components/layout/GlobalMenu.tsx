@@ -104,7 +104,7 @@ export function GlobalMenuProvider({ children }: { children: React.ReactNode }) 
     ? commands.filter(c => c.label.toLowerCase().includes(cmdSearch.toLowerCase()))
     : commands;
 
-  const sections = [...new Set(filteredCmds.map(c => c.section))];
+  const sections = Array.from(new Set(filteredCmds.map(c => c.section)));
 
   return (
     <GlobalMenuContext.Provider value={{ showMenu, closeMenu }}>

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiFetchBlob } from '@/lib/api';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 
 function AnimNum({ value, delay = 0 }: { value: number; delay?: number }) {
@@ -156,9 +156,7 @@ export default function HomePage() {
   useEffect(() => {
     Promise.all([
       apiFetch('/profile').then(setProfile),
-      fetch('http://10.106.52.22:8000/profile/photo', {
-        headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('dilly_token') || 'CDGRr6KLXjUEO7n6SUAmNolOsSl1ur1zWsXGleL5QHE') }
-      }).then(r => r.ok ? r.blob() : null).then(b => { if (b) setPhotoUrl(URL.createObjectURL(b)); }).catch(() => {}),
+      apiFetchBlob('/profile/photo').then(b => { if (b) setPhotoUrl(URL.createObjectURL(b)); }).catch(() => {}),
       apiFetch('/v2/internships/stats').then(setStats),
       apiFetch('/v2/internships/feed?readiness=ready&limit=8').then(d => {
         const usStates = /^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i;

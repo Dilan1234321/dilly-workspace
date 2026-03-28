@@ -48,8 +48,7 @@ export default function ScoresPage() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !cohorts.length) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx = canvas.getContext('2d')!;
 
     const dpr = window.devicePixelRatio || 1;
     const size = canvasSize;

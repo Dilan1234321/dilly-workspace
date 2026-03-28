@@ -1,11 +1,15 @@
-const API_BASE = 'http://10.106.52.22:8000';
-const TEST_TOKEN = 'CDGRr6KLXjUEO7n6SUAmNolOsSl1ur1zWsXGleL5QHE';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+const TEST_TOKEN = process.env.NEXT_PUBLIC_TEST_TOKEN || '';
+
+function getToken(): string {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('dilly_token') || TEST_TOKEN;
+  }
+  return TEST_TOKEN;
+}
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined'
-    ? (localStorage.getItem('dilly_token') || TEST_TOKEN)
-    : TEST_TOKEN;
-
+  const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
@@ -18,4 +22,14 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     throw new Error(err.detail || res.statusText);
   }
   return res.json();
+}
+
+export async function apiFetchBlob(path: string): Promise<Blob | null> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) return null;
+  return res.blob();
 }

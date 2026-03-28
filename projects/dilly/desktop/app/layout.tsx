@@ -13,12 +13,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             var saved = localStorage.getItem('dilly_theme');
-            var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var dark = saved ? saved === 'dark' : true;
             if (dark) document.documentElement.classList.add('dark');
           })();
         `}} />
       </head>
-      <body className="min-h-screen bg-surface-0 text-txt-1">
+      <body className="min-h-screen bg-surface-0 text-txt-1 antialiased">
         {children}
       </body>
     </html>
