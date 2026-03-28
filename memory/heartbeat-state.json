@@ -1,6 +1,9 @@
 {
-  "last_check": "2026-03-22 17:14:00",
-  "files_at_last_check": [
+  "lastChecks": {
+    "resume_monitoring": 1774673040,
+    "fastapi_server": 1774673040
+  },
+  "known_resumes": [
     "Abbigail Stasiuk-Resume.pdf",
     "Aidan Rina Resume.docx",
     "Aldana CV 2025.pdf",
@@ -32,8 +35,5 @@
     "Yumna Sweid- Resume (1).pdf",
     "mattriversresume5.pdf",
     "resume copy.pdf"
-  ],
-  "server_status": "CRITICAL_INSTABILITY",
-  "port": 8001,
-  "pid": 68501
+  ]
 }

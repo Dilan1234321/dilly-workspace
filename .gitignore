@@ -50,3 +50,14 @@ memory/recruiter_notes/
 memory/voice_feedback/
 meridian_api.pid
 projects/dilly/dilly_jobs.db
+projects/dilly/api/dilly.db
+
+# Local session store (do not push)
+memory/auth/
+
+# Archives and local symlinks
+*.zip
+meridian_core
+
+# Expo local cache
+**/.expo/

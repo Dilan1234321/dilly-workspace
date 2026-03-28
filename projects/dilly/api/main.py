@@ -126,6 +126,7 @@ from projects.dilly.api.routers import auth as auth_router
 from projects.dilly.api.routers import recruiter as recruiter_router
 from projects.dilly.api.routers import profile as profile_router
 from projects.dilly.api.routers import jobs as jobs_router
+from projects.dilly.api.routers import jobs_listings as jobs_listings_router
 from projects.dilly.api.routers import audit as audit_router
 from projects.dilly.api.routers import voice as voice_router
 from projects.dilly.api.routers import ats as ats_router
@@ -141,6 +142,8 @@ from projects.dilly.api.routers import tracks as tracks_router
 from projects.dilly.api.routers import templates as templates_router
 from projects.dilly.api.routers import career_brain as career_brain_router
 from projects.dilly.api.routers import habits as habits_router
+from projects.dilly.api.routers import internships_v2 as internships_v2_router
+from projects.dilly.api.routers import push as push_router
 from projects.dilly.api.routers import notifications as notifications_router
 from projects.dilly.api.routers import internal_notifications as internal_notifications_router
 from projects.dilly.api.routers import memory as memory_router
@@ -153,6 +156,9 @@ from projects.dilly.api.routers import actions as actions_router
 from projects.dilly.api.routers import voice_history as voice_history_router
 from projects.dilly.api.routers import internal_voice_extract as internal_voice_extract_router
 from projects.dilly.api.routers import internal_voice_agent as internal_voice_agent_router
+from projects.dilly.api.routers import ai as ai_router
+from projects.dilly.api.routers import cron_jobs_cleanup
+app.include_router(cron_jobs_cleanup.router)
 app.include_router(auth_router.router)
 app.include_router(recruiter_router.router)
 app.include_router(profile_router.router)
@@ -172,6 +178,8 @@ app.include_router(tracks_router.router)
 app.include_router(templates_router.router)
 app.include_router(career_brain_router.router)
 app.include_router(habits_router.router)
+app.include_router(internships_v2_router.router)
+app.include_router(push_router.router)
 app.include_router(notifications_router.router)
 app.include_router(internal_notifications_router.router)
 app.include_router(memory_router.router)
@@ -184,6 +192,7 @@ app.include_router(actions_router.router)
 app.include_router(voice_history_router.router)
 app.include_router(internal_voice_extract_router.router)
 app.include_router(internal_voice_agent_router.router)
+app.include_router(ai_router.router)
 
 benchmarks = Benchmarks()
 

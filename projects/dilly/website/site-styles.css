@@ -51,6 +51,19 @@ header.site-header img.site-header-logo {
     max-width: 28rem !important;
   }
 }
+
+/* Unified top nav — current page + mobile tap targets */
+header.site-header nav a.site-nav-link.site-nav-link--active {
+  color: #fafafa !important;
+  background: rgba(255, 255, 255, 0.08);
+}
+@media (min-width: 768px) {
+  header.site-header nav a.site-nav-link.site-nav-link--active {
+    background: transparent !important;
+    color: #fafafa !important;
+    font-weight: 600;
+  }
+}
 a.site-footer-brand img.site-footer-logo {
   display: block !important;
   height: 3rem !important;

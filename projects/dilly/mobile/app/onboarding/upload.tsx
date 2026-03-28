@@ -10,7 +10,10 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, radius, spacing } from '../../lib/tokens';
+
+export const PENDING_UPLOAD_KEY = 'dilly_pending_upload';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -145,10 +148,19 @@ export default function UploadScreen() {
     } catch { /* cancelled */ }
   }
 
-  function handleContinue() {
-    pendingUpload.uri      = file?.uri      ?? null;
-    pendingUpload.name     = file?.name     ?? null;
-    pendingUpload.mimeType = file?.mimeType ?? null;
+  async function handleContinue() {
+    const uri      = file?.uri      ?? null;
+    const name     = file?.name     ?? null;
+    const mimeType = file?.mimeType ?? null;
+
+    // Module-level (same JS session)
+    pendingUpload.uri      = uri;
+    pendingUpload.name     = name;
+    pendingUpload.mimeType = mimeType;
+
+    // AsyncStorage fallback (survives Fast Refresh / module re-eval)
+    await AsyncStorage.setItem(PENDING_UPLOAD_KEY, JSON.stringify({ uri, name, mimeType }));
+
     router.push('/onboarding/scanning');
   }
 

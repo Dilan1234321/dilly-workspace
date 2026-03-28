@@ -1,6 +1,10 @@
 """
 Jobs: recommended jobs, JD→Meridian scores, job required-scores, door eligibility.
 """
+import os
+import json
+import sqlite3
+
 from fastapi import APIRouter, Body, HTTPException, Request
 
 from projects.dilly.api import deps
@@ -149,3 +153,202 @@ async def get_door_eligibility(request: Request):
         return evaluate_doors(profile=profile, audit=latest_audit)
     except Exception:
         raise HTTPException(status_code=500, detail="Could not compute door eligibility.")
+
+# ── Crawled listings (direct from SQLite) ──────────────────────────────────────
+
+import sqlite3
+_ROUTER_DIR = os.path.dirname(os.path.abspath(__file__))
+_LISTINGS_DB = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "dilly_jobs.db"))
+
+@router.get("/jobs/listings")
+async def get_job_listings(
+    request: Request,
+    q: str = None, company: str = None, source: str = None,
+    remote: bool = None, limit: int = 50, offset: int = 0,
+):
+    deps.require_auth(request)
+    if not os.path.isfile(_LISTINGS_DB):
+        return {"listings": [], "total": 0, "has_more": False}
+    conn = sqlite3.connect(_LISTINGS_DB)
+    conn.row_factory = sqlite3.Row
+    where, params = [], []
+    if q:
+        where.append("(title LIKE ? OR company LIKE ? OR tags LIKE ? OR description LIKE ?)")
+        params.extend([f"%{q}%"] * 4)
+    if company:
+        where.append("company LIKE ?"); params.append(f"%{company}%")
+    if source:
+        where.append("source = ?"); params.append(source)
+    if remote is True:
+        where.append("remote = 1")
+    w = (" WHERE " + " AND ".join(where)) if where else ""
+    total = conn.execute(f"SELECT COUNT(*) FROM jobs{w}", params).fetchone()[0]
+    rows = conn.execute(f"SELECT * FROM jobs{w} ORDER BY scraped_at DESC LIMIT ? OFFSET ?", params + [limit, offset]).fetchall()
+    conn.close()
+    listings = []
+    for row in rows:
+        r = dict(row)
+        try: r["tags"] = json.loads(r.get("tags") or "[]")
+        except: r["tags"] = []
+        try: r["required_scores"] = json.loads(r.get("required_scores") or "{}")
+        except: r["required_scores"] = {}
+        r["remote"] = bool(r.get("remote"))
+        listings.append(r)
+    return {"listings": listings, "total": total, "has_more": (offset + limit) < total}
+
+@router.get("/jobs/companies")
+async def get_job_companies(request: Request):
+    deps.require_auth(request)
+    if not os.path.isfile(_LISTINGS_DB):
+        return {"companies": []}
+    conn = sqlite3.connect(_LISTINGS_DB)
+    rows = conn.execute("SELECT company, COUNT(*) as count FROM jobs GROUP BY company ORDER BY count DESC").fetchall()
+    conn.close()
+    return {"companies": [{"name": r[0], "count": r[1]} for r in rows]}
+
+# ── Crawled listings with relevance filtering ──────────────────────────────────
+# Add this to the BOTTOM of projects/dilly/api/routers/jobs.py
+# Make sure `import os, json, sqlite3` are at the top of jobs.py
+
+_ROUTER_DIR = os.path.dirname(os.path.abspath(__file__))
+_LISTINGS_DB = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "dilly_jobs.db"))
+
+
+@router.get("/jobs/listings")
+async def get_job_listings(
+    request: Request,
+    q: str = None,
+    company: str = None,
+    source: str = None,
+    remote: bool = None,
+    show_all: bool = False,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """
+    Return crawled internship listings. By default, filters by student interests
+    and education level. Pass show_all=true to bypass relevance filtering.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+
+    if not os.path.isfile(_LISTINGS_DB):
+        return {"listings": [], "total": 0, "has_more": False, "filtered": False}
+
+    # Load student profile for relevance filtering
+    interests = []
+    education_level = "Undergraduate"
+    if not show_all and email:
+        try:
+            from projects.dilly.api.profile_store import get_profile
+            profile = get_profile(email) or {}
+            interests = profile.get("interests") or []
+            education_level = profile.get("education_level") or "Undergraduate"
+
+            # Auto-include majors and minors as interests if not already present
+            majors = profile.get("majors") or []
+            if isinstance(majors, str):
+                majors = [majors]
+            minors = profile.get("minors") or []
+            if isinstance(minors, str):
+                minors = [minors]
+            for m in majors + minors:
+                m_clean = m.strip()
+                if m_clean and m_clean not in interests:
+                    interests.append(m_clean)
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(_LISTINGS_DB)
+    conn.row_factory = sqlite3.Row
+
+    where_clauses = []
+    params = []
+
+    if q:
+        where_clauses.append("(title LIKE ? OR company LIKE ? OR tags LIKE ? OR description LIKE ?)")
+        like = f"%{q}%"
+        params.extend([like, like, like, like])
+    if company:
+        where_clauses.append("company LIKE ?")
+        params.append(f"%{company}%")
+    if source:
+        where_clauses.append("source = ?")
+        params.append(source)
+    if remote is True:
+        where_clauses.append("remote = 1")
+
+    w = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+    rows = conn.execute(
+        f"SELECT * FROM jobs{w} ORDER BY scraped_at DESC LIMIT 500",
+        params,
+    ).fetchall()
+    conn.close()
+
+    # Parse and filter
+    from projects.dilly.api.interests import job_requires_grad_level, job_matches_interests
+
+    all_listings = []
+    for row in rows:
+        r = dict(row)
+        try:
+            r["tags"] = json.loads(r.get("tags") or "[]")
+        except (json.JSONDecodeError, TypeError):
+            r["tags"] = []
+        try:
+            r["required_scores"] = json.loads(r.get("required_scores") or "{}")
+        except (json.JSONDecodeError, TypeError):
+            r["required_scores"] = {}
+        r["remote"] = bool(r.get("remote"))
+        all_listings.append(r)
+
+    # Apply relevance filtering (unless show_all)
+    filtered = not show_all and len(interests) > 0
+    if not show_all:
+        relevant = []
+        for listing in all_listings:
+            title = listing.get("title", "")
+            tags = listing.get("tags", [])
+            desc = listing.get("description", "")
+
+            # Filter by education level
+            if education_level == "Undergraduate":
+                grad_req = job_requires_grad_level(title, desc)
+                if grad_req in ("phd", "masters", "mba"):
+                    continue
+
+            # Filter by interests (if student has any)
+            if interests:
+                if not job_matches_interests(title, tags, desc, interests):
+                    continue
+
+            relevant.append(listing)
+        listings = relevant
+    else:
+        listings = all_listings
+
+    total = len(listings)
+    page = listings[offset:offset + limit]
+
+    return {
+        "listings": page,
+        "total": total,
+        "has_more": (offset + limit) < total,
+        "filtered": filtered,
+        "interests_used": interests if filtered else [],
+    }
+
+
+@router.get("/jobs/companies")
+async def get_job_companies_list(request: Request):
+    """Return distinct companies in the database for filter UI."""
+    deps.require_auth(request)
+    if not os.path.isfile(_LISTINGS_DB):
+        return {"companies": []}
+    conn = sqlite3.connect(_LISTINGS_DB)
+    rows = conn.execute(
+        "SELECT company, COUNT(*) as count FROM jobs GROUP BY company ORDER BY count DESC"
+    ).fetchall()
+    conn.close()
+    return {"companies": [{"name": r[0], "count": r[1]} for r in rows]}

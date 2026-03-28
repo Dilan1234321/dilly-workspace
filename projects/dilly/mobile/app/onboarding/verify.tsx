@@ -53,12 +53,16 @@ const pb = StyleSheet.create({
 
 export default function VerifyScreen() {
   const insets = useSafeAreaInsets();
-  const { email: emailParam, devCode: devCodeParam } = useLocalSearchParams<{
+  const { email: emailParam, devCode: devCodeParam, returning } = useLocalSearchParams<{
     email: string;
     devCode?: string;
+    returning?: string;
   }>();
 
+  const isReturning = returning === 'true';
   const email = emailParam ?? '';
+  const [returningEmail, setReturningEmail] = useState('');
+  const [returningStep, setReturningStep] = useState<'email' | 'code'>('email');
   const [devCode, setDevCode] = useState<string | undefined>(devCodeParam || undefined);
   const [digits, setDigits] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -98,10 +102,11 @@ export default function VerifyScreen() {
       setLoading(true);
       setError(null);
       try {
+        const emailToVerify = isReturning ? returningEmail.trim() : email;
         const res = await fetch(`${API_BASE}/auth/verify-code`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, code }),
+          body: JSON.stringify({ email: emailToVerify, code }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -109,11 +114,15 @@ export default function VerifyScreen() {
           throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
         }
         if (data.token) await setToken(data.token);
-        const isNewUser = data.is_new_user !== false;
-        if (isNewUser) {
-          router.replace('/onboarding/profile');
-        } else {
+        if (isReturning) {
           router.replace('/(app)');
+        } else {
+          const isNewUser = data.is_new_user !== false;
+          if (isNewUser) {
+            router.replace('/onboarding/profile');
+          } else {
+            router.replace('/(app)');
+          }
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Something went wrong.';
@@ -126,7 +135,7 @@ export default function VerifyScreen() {
             const r2 = await fetch(`${API_BASE}/auth/send-verification-code`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
+              body: JSON.stringify({ email: isReturning ? returningEmail.trim() : email }),
             });
             const d2 = await r2.json();
             if (d2.dev_code) setDevCode(d2.dev_code);
@@ -145,7 +154,7 @@ export default function VerifyScreen() {
         setLoading(false);
       }
     },
-    [email, loading]
+    [email, returningEmail, isReturning, loading]
   );
 
   function handleChangeText(raw: string) {
@@ -161,11 +170,12 @@ export default function VerifyScreen() {
     setError(null);
     setErrorType(null);
     setDigits('');
+    const emailToUse = isReturning ? returningEmail : email;
     try {
       const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: emailToUse }),
       });
       const data = await res.json();
       if (data.dev_code) setDevCode(data.dev_code);
@@ -176,9 +186,90 @@ export default function VerifyScreen() {
     }
   }
 
+  async function handleReturningEmailSubmit() {
+    const trimmed = returningEmail.trim().toLowerCase();
+    if (!trimmed || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const detail = data?.detail;
+        throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
+      }
+      if (data.dev_code) setDevCode(data.dev_code);
+      setReturningStep('code');
+      startResendCooldown();
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Returning user — email entry step
+  if (isReturning && returningStep === 'email') {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.iconTile}>
+            <Ionicons name="person-outline" size={22} color={colors.gold} />
+          </View>
+          <Text style={styles.heading}>Welcome back.</Text>
+          <Text style={styles.sub}>Enter your .edu email to get back in.</Text>
+
+          <TextInput
+            style={[styles.emailInput, error ? { borderColor: colors.coral } : {}]}
+            value={returningEmail}
+            onChangeText={v => { setReturningEmail(v); setError(null); }}
+            placeholder="you@university.edu"
+            placeholderTextColor={colors.t3}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+            returnKeyType="send"
+            onSubmitEditing={handleReturningEmailSubmit}
+            editable={!loading}
+          />
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          <TouchableOpacity
+            style={[styles.button, returningEmail.trim() && !loading ? styles.buttonActive : styles.buttonDisabled]}
+            onPress={handleReturningEmailSubmit}
+            disabled={!returningEmail.trim() || loading}
+            activeOpacity={0.85}
+          >
+            {loading
+              ? <ActivityIndicator color="#080809" size="small" />
+              : <Text style={[styles.buttonText, !returningEmail.trim() && styles.buttonTextDisabled]}>Send code →</Text>
+            }
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.replace('/onboarding/welcome')}>
+            <Text style={[styles.link, { textAlign: 'center', marginTop: 4 }]}>New user? Start here</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  const activeEmail = isReturning ? returningEmail.trim() : email;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ProgressBar step={1} />
+      {!isReturning && <ProgressBar step={1} />}
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -191,11 +282,13 @@ export default function VerifyScreen() {
         </View>
 
         {/* Heading */}
-        <Text style={styles.heading}>Check your inbox</Text>
+        <Text style={styles.heading}>
+          {isReturning ? 'Welcome back.' : 'Check your inbox'}
+        </Text>
 
         {/* Subtitle */}
         <Text style={styles.sub}>6-digit code sent to</Text>
-        <Text style={styles.emailLabel}>{email}</Text>
+        <Text style={styles.emailLabel}>{activeEmail}</Text>
 
         {/* 6 boxes + hidden input */}
         <Animated.View
@@ -279,7 +372,15 @@ export default function VerifyScreen() {
               </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => router.replace('/onboarding/welcome')}>
+          <TouchableOpacity onPress={() => {
+            if (isReturning) {
+              setReturningStep('email');
+              setDigits('');
+              setError(null);
+            } else {
+              router.replace('/onboarding/welcome');
+            }
+          }}>
             <Text style={styles.link}>Different email</Text>
           </TouchableOpacity>
         </View>
@@ -310,6 +411,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
+  },
+  emailInput: {
+    width: '100%',
+    height: 50,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.b2,
+    backgroundColor: colors.s3,
+    paddingHorizontal: spacing.lg,
+    fontSize: 15,
+    color: colors.t1,
+    marginBottom: spacing.md,
+    marginTop: spacing.xl,
   },
   heading: {
     fontFamily: 'PlayfairDisplay_700Bold',

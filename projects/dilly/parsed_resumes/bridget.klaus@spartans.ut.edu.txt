@@ -1,19 +1,18 @@
 Name: Bridget E. Klaus
 Cohort: Pre-Health
 
-BRIDGET E. KLAUS  
+Bridget E. Klaus  
 Email: bridgetklaus07@gmail.com  
 Phone: 410-382-8624  
 Location: Ellicott City, MD  
 
 [EDUCATION]  
 University: The University of Tampa, Tampa, FL  
-Major(s): Bachelor of Science in Biochemistry and Allied Health (Medical Science)  
+Major(s): Biochemistry and Allied Health (Medical Science)  
 Minor(s): N/A  
-Honors: Presidential Scholar  
+Graduation date: N/A  
+Honors: N/A  
 GPA: Major-Specific: 4.0, Cumulative: 3.89  
-
-(High School: Marriotts Ridge High School, Marriottsville, MD, May 2024)
 
 [RESEARCH]  
 Lab: The University of Tampa  
@@ -22,8 +21,9 @@ Date: Aug 2025 – May 2026
 Location: Tampa, FL  
 Description:  
 - Awarded competitive research funding for "Influences of resistance training participants and engagement on different functional disability types among young adults: Mix Methods," in collaboration with Dr. Willie Leung, Ph.D.  
+- Conducted thematic qualitative analysis of 10 interviews examining perspectives on immortality and life-extension beliefs.  
 
-Lab: Institute of Marine and Environmental Technology  
+Institution: Institute of Marine and Environmental Technology  
 Role: Marine Biology Research Intern  
 Date: May 2023 – May 2024  
 Location: Baltimore, MD  
@@ -31,7 +31,7 @@ Description:
 - Investigated the effects of cold temperature incubation on Limulus polyphemus embryonic development.  
 - Utilized microscopy techniques to quantify hatch rates and assess morphological changes with Dr. J. Sook Chung.  
 
-Lab: Delaware Academy of Medicine  
+Company: Delaware Academy of Medicine  
 Role: Editorial Intern  
 Date: May 2023 – Aug 2023  
 Location: N/A  
@@ -42,7 +42,7 @@ Description:
 [PROFESSIONAL EXPERIENCE]  
 Company: The University of Tampa  
 Role: Honors Program Mentor  
-Date: Aug 2025 – Present  
+Date: August 2025 – Present  
 Location: Tampa, FL  
 Description:  
 - Co-facilitate the Honors 100 course for incoming students with Dr. Abraham Miller.  
@@ -63,7 +63,7 @@ Description:
 - Maintain swimmer safety and administer CPR/First Aid.  
 - Coached athletes (ages 4–17) by providing instruction on technique, nutrition, and recovery during training and competitions.  
 
-Company: UM Center for Environmental Science  
+Lab: UM Center for Environmental Science  
 Role: Marine Research Laboratory General Assistant  
 Date: Jun 2023 – Aug 2023  
 Location: Baltimore, MD  
@@ -72,9 +72,9 @@ Description:
 - Cultured Limulus polyphemus embryos for distribution across 16 Maryland Public Schools for curriculum-based learning.  
 
 [CAMPUS INVOLVEMENT]  
-Company: Mu Epsilon Delta | Pre-Health Professional Fraternity  
-Role: Founding Member, Executive Board Member, Vice President of Membership & Recruitment  
-Date: Oct 2025 – Present  
+Company: Mu Epsilon Delta  
+Role: Vice President of Membership & Recruitment  
+Date: October 2025 – Present  
 Location: Tampa, FL  
 Description:  
 - Lead the full recruitment cycle, from outreach through candidate interviews, ensuring high academic and professional standards.  
@@ -82,7 +82,7 @@ Description:
 
 Company: Cru+ Campus Crusade for Christ International  
 Role: Treasurer  
-Date: Aug 2025 – Present  
+Date: August 2025 – Present  
 Location: Tampa, FL  
 Description:  
 - Coordinate events while managing resources, scheduling, and communication to support community and student development.  
@@ -90,23 +90,23 @@ Description:
 [VOLUNTEER EXPERIENCE]  
 Company: Camp Open Arms  
 Role: Head Assistant Counselor  
-Date: Aug 2025  
+Date: August 2025  
 Location: N/A  
 Description: N/A  
 
 Company: St. Francis Homeless Shelter  
 Role: Volunteer  
-Date: Dec 2025  
+Date: December 2025  
 Location: N/A  
 Description: N/A  
 
 [PUBLICATIONS / PRESENTATIONS]  
-Title: Impact of resistance training on mobility among obese individuals living in the U.S.  
+Title: Impact of resistance training on mobility among obese individuals living in the US  
 Venue: American Physical Therapy Association (AOTA) conference, Anaheim, California  
 Date: April 2026  
 
 Title: Impact of resistance training on performance of activities of daily living among obese adults  
-Venue: Combined Sections Meeting (CSM), Anaheim, California  
+Venue: Combined Sections Meeting (APTA), Anaheim, California  
 Date: February 2026  
 
 Title: From steps to synapse: A population level study on how physical activity impacts cognitive function in stroke survivors  
@@ -147,12 +147,11 @@ Venue: Student Leadership Conference, Johns Hopkins University Applied Physics L
 Date: April 2023  
 
 [SKILLS]  
-• Material and physics knowledge of ski equipment  
-• CPR/First Aid  
-• Microscopy techniques  
-• Qualitative analysis  
+• Cell Culture, DNA Sequencing, PCR, Aseptic Techniques, CRISPR  
+• Microscopy, Data Analysis, Literature Review  
 
 [HONORS]  
+• Presidential Scholar  
 • University of Tampa Presidential Merit Scholar Recipient  
 • Spartan Undergraduate Research Experience (SURE) - Grant Writing & Research  
 
@@ -161,7 +160,4 @@ Date: April 2023
 • Biotility Biotechnician Assistant Credential (2024–2029)  
 • CITI Program: Biomedical Research, GCP, Human Subjects, RCR (2028)  
 • HIPAA Research & IT Compliance (UM School of Medicine, Completed 2025)  
-• PADI Open Water Scuba (2024)  
-
-[ADDITIONAL INFORMATION]  
-• Interests: Skiing, Nutrition, Weightlifting, Photography, Hiking, Travelling, Art, Long-Distance Running, Cooking, Card Games
+• PADI Open Water Scuba (2024)

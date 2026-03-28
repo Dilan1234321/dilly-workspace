@@ -13,10 +13,12 @@ import {
   Cinzel_900Black,
 } from '@expo-google-fonts/cinzel';
 import { View, StyleSheet, Animated, Easing } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../lib/tokens';
 import SplashScreen from '../components/SplashScreen';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const GOLD = '#C9A84C';
 
@@ -122,6 +124,7 @@ export default function RootLayout() {
     Cinzel_900Black,
   });
 
+  const { expoPushToken } = usePushNotifications();
   const [phase,       setPhase]       = useState<Phase>('loading');
   const [isReturning, setIsReturning] = useState(false);
   const [checkedAuth, setCheckedAuth] = useState(false);
@@ -156,9 +159,10 @@ export default function RootLayout() {
 
   if (phase === 'splash') {
     return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="onboarding" />
           <Stack.Screen name="(app)" />
@@ -174,18 +178,21 @@ export default function RootLayout() {
           }}
         />
       </SafeAreaProvider>
+</GestureHandlerRootView>
     );
   }
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
         <Stack.Screen name="(app)" />
       </Stack>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -61,7 +61,7 @@ def _ats_analysis_from_body_dict(body: dict) -> dict | None:
 @router.post("/ats-analysis-from-audit")
 async def ats_analysis_from_audit(request: Request, body: dict = Body(...)):
     """Run full ATS analysis from parsed/raw text (e.g. from audit). Returns score, issues, checklist, etc."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     timeout_sec = float(os.environ.get("DILLY_ATS_ANALYSIS_TIMEOUT_SEC", "90"))
     try:
         result = await asyncio.wait_for(
@@ -92,7 +92,7 @@ async def get_resume_text(request: Request):
 @router.post("/ats-score/record")
 async def ats_score_record(request: Request, body: dict = Body(...)):
     """Record one ATS score for the current user (after a scan)."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     if not email:
@@ -113,7 +113,7 @@ async def ats_score_record(request: Request, body: dict = Body(...)):
 @router.get("/ats-score/history")
 async def ats_score_history(request: Request):
     """Return current user's ATS score history and optional peer percentile."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     if not email:
@@ -132,7 +132,7 @@ async def ats_score_history(request: Request):
 @router.post("/ats-keyword-density")
 async def ats_keyword_density(request: Request, body: dict = Body(...)):
     """Run keyword density and placement analysis. Optional job_description for JD match."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     parsed, raw_text, _, _, _ = _parse_body_to_parsed(body)
     if not raw_text or parsed is None:
         raise HTTPException(status_code=400, detail="Provide parsed_text or raw_text.")
@@ -148,7 +148,7 @@ async def ats_keyword_density(request: Request, body: dict = Body(...)):
 @router.post("/ats-vendor-sim")
 async def ats_vendor_sim(request: Request, body: dict = Body(...)):
     """Simulate Workday, Greenhouse, iCIMS, Lever on this resume. Optional target_company for highlight."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     from dilly_core.ats_analysis import ats_analysis_result_from_dict, run_ats_analysis
     from dilly_core.ats_vendors import run_vendor_simulation
     analysis_payload = body.get("ats_analysis")
@@ -183,7 +183,7 @@ async def ats_vendor_sim(request: Request, body: dict = Body(...)):
 @router.post("/ats-rewrite")
 async def ats_rewrite(request: Request, body: dict = Body(...)):
     """Rewrite bullets for ATS (from issues + bullets or bullets only)."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     bullets = body.get("bullets") or []
     issues = body.get("issues") or []
     track = (body.get("track") or "").strip() or None
@@ -204,7 +204,7 @@ async def ats_rewrite(request: Request, body: dict = Body(...)):
 @router.post("/ats-keyword-inject")
 async def ats_keyword_inject(request: Request, body: dict = Body(...)):
     """Generate contextual keyword injection suggestions (needs keyword_analysis from ats-keyword-density)."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     keyword_analysis = body.get("keyword_analysis") or body.get("keyword_density") or {}
     parsed_text = (body.get("parsed_text") or body.get("raw_text") or "").strip()
     if not parsed_text:
@@ -221,7 +221,7 @@ async def ats_keyword_inject(request: Request, body: dict = Body(...)):
 @router.get("/ats-company-lookup")
 async def ats_company_lookup(request: Request, company: str = ""):
     """Look up which ATS a company uses (Workday, Greenhouse, iCIMS, Lever)."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     company = (company or "").strip()
     if not company:
         return {"vendor_key": None, "vendor_name": None, "company": None}
@@ -235,7 +235,7 @@ async def ats_company_lookup(request: Request, company: str = ""):
 @router.post("/ats-check")
 async def ats_check(request: Request, body: dict = Body(...)):
     """Check resume against job description for ATS keyword gaps (LLM). Returns missing keywords, suggestions, ready."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     job_description = (body.get("job_description") or "").strip()
     if not job_description or len(job_description) < 50:
         raise HTTPException(status_code=400, detail="Paste the full job description (at least 50 characters).")
@@ -284,7 +284,7 @@ async def ats_check(request: Request, body: dict = Body(...)):
 @router.post("/gap-analysis")
 async def gap_analysis(request: Request, body: dict = Body(...)):
     """Deep gap analysis: what's missing or weak for the target (LLM)."""
-    deps.require_subscribed(request)
+    deps.require_auth(request)
     target = (body.get("target") or body.get("application_target") or "").strip()
     audit = body.get("audit") or {}
     if not target or len(target) > 300:
@@ -312,3 +312,43 @@ async def gap_analysis(request: Request, body: dict = Body(...)):
             except (json.JSONDecodeError, ValueError):
                 pass
     return result
+
+
+# ── New standalone ATS scan (no dilly_core dependency) ─────────────────────
+
+@router.post("/ats/scan")
+async def ats_scan_standalone(request: Request, body: dict = Body(...)):
+    """Scan resume against all major ATS systems."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    raw_text = (body.get("raw_text") or body.get("parsed_text") or "").strip()
+    if not raw_text or len(raw_text) < 50:
+        if email:
+            try:
+                raw_text = load_parsed_resume_for_voice(email, max_chars=50000) or ""
+            except Exception:
+                raw_text = ""
+    if not raw_text or len(raw_text) < 50:
+        raise HTTPException(status_code=400, detail="No resume text found. Upload your resume first through New Audit.")
+    from projects.dilly.api.ats_engine import scan_resume_ats
+    result = scan_resume_ats(raw_text)
+    return result.to_dict()
+
+
+@router.get("/ats/scan")
+async def ats_scan_auto(request: Request):
+    """GET version — auto-loads user's saved resume and scans it."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Auth required.")
+    raw_text = ""
+    try:
+        raw_text = load_parsed_resume_for_voice(email, max_chars=50000) or ""
+    except Exception:
+        pass
+    if not raw_text or len(raw_text) < 50:
+        raise HTTPException(status_code=400, detail="No resume found. Upload your resume first.")
+    from projects.dilly.api.ats_engine import scan_resume_ats
+    result = scan_resume_ats(raw_text)
+    return result.to_dict()

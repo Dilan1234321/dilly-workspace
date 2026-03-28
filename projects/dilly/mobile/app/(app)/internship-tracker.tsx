@@ -1,0 +1,615 @@
+import { useEffect, useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Linking,
+} from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { apiFetch } from '../../lib/auth';
+import { colors, spacing } from '../../lib/tokens';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import FadeInView from '../../components/FadeInView';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+
+const GOLD   = '#C9A84C';
+const GREEN  = '#34C759';
+const AMBER  = '#FF9F0A';
+const CORAL  = '#FF453A';
+const BLUE   = '#0A84FF';
+const INDIGO = '#5E5CE6';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type AppStatus = 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected';
+
+interface Application {
+  id: string;
+  company: string;
+  role: string;
+  status: AppStatus;
+  applied_at?: string | null;
+  deadline?: string | null;
+  match_pct?: number | null;
+  job_url?: string | null;
+  notes?: string | null;
+  next_action?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+const STATUSES: { key: AppStatus; label: string; color: string; icon: string }[] = [
+  { key: 'saved',        label: 'Saved',        color: colors.t3,  icon: 'bookmark-outline' },
+  { key: 'applied',      label: 'Applied',      color: BLUE,       icon: 'paper-plane-outline' },
+  { key: 'interviewing', label: 'Interviewing', color: AMBER,      icon: 'people-outline' },
+  { key: 'offer',        label: 'Offer',        color: GREEN,      icon: 'trophy-outline' },
+  { key: 'rejected',     label: 'Rejected',     color: CORAL,      icon: 'close-circle-outline' },
+];
+
+function statusConfig(s: AppStatus) {
+  return STATUSES.find(x => x.key === s) || STATUSES[0];
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function daysAgo(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 0) return `In ${Math.abs(diff)}d`;
+  return `${diff}d ago`;
+}
+
+// ── Pipeline summary ──────────────────────────────────────────────────────────
+
+function PipelineSummary({ apps }: { apps: Application[] }) {
+  const counts = useMemo(() => {
+    const c: Record<AppStatus, number> = { saved: 0, applied: 0, interviewing: 0, offer: 0, rejected: 0 };
+    for (const a of apps) c[a.status] = (c[a.status] || 0) + 1;
+    return c;
+  }, [apps]);
+
+  return (
+    <View style={ts.pipelineWrap}>
+      <View style={ts.pipelineHeader}>
+        <Ionicons name="git-branch-outline" size={14} color={GOLD} />
+        <Text style={ts.pipelineTitle}>YOUR PIPELINE</Text>
+        <Text style={ts.pipelineTotal}>{apps.length} total</Text>
+      </View>
+      <View style={ts.pipelineRow}>
+        {STATUSES.map(s => (
+          <View key={s.key} style={ts.pipelineCol}>
+            <Text style={[ts.pipelineNum, { color: counts[s.key] > 0 ? s.color : colors.t3 }]}>
+              {counts[s.key]}
+            </Text>
+            <Text style={ts.pipelineLabel}>{s.label}</Text>
+            <View style={[ts.pipelineDot, { backgroundColor: counts[s.key] > 0 ? s.color : colors.s3 }]} />
+          </View>
+        ))}
+      </View>
+      {/* Progress bar */}
+      <View style={ts.pipelineBar}>
+        {STATUSES.filter(s => counts[s.key] > 0).map(s => (
+          <View
+            key={s.key}
+            style={[ts.pipelineBarSeg, { flex: counts[s.key], backgroundColor: s.color + '60' }]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ── Status pill selector ──────────────────────────────────────────────────────
+
+function StatusPills({ current, onChange }: { current: AppStatus; onChange: (s: AppStatus) => void }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ts.statusPillRow}>
+      {STATUSES.map(s => (
+        <AnimatedPressable
+          key={s.key}
+          style={[ts.statusPill, current === s.key && { backgroundColor: s.color + '20', borderColor: s.color + '40' }]}
+          onPress={() => onChange(s.key)}
+          scaleDown={0.95}
+        >
+          <Ionicons name={s.icon as any} size={12} color={current === s.key ? s.color : colors.t3} />
+          <Text style={[ts.statusPillText, current === s.key && { color: s.color }]}>{s.label}</Text>
+        </AnimatedPressable>
+      ))}
+    </ScrollView>
+  );
+}
+
+// ── Application Card ──────────────────────────────────────────────────────────
+
+function AppCard({ app, onStatusChange, onDelete, onPrepInterview, onEdit }: {
+  app: Application;
+  onStatusChange: (id: string, status: AppStatus) => void;
+  onDelete: (id: string) => void;
+  onPrepInterview: (app: Application) => void;
+  onEdit: (app: Application) => void;
+}) {
+  const cfg = statusConfig(app.status);
+  const isInterviewing = app.status === 'interviewing';
+  const appliedAge = daysAgo(app.applied_at);
+  const isSilent = app.status === 'applied' && app.applied_at && (() => {
+    const d = new Date(app.applied_at);
+    return (Date.now() - d.getTime()) > 14 * 24 * 60 * 60 * 1000;
+  })();
+
+  // Next status actions
+  const nextStatuses: AppStatus[] = [];
+  if (app.status === 'saved') nextStatuses.push('applied');
+  if (app.status === 'applied') nextStatuses.push('interviewing', 'rejected');
+  if (app.status === 'interviewing') nextStatuses.push('offer', 'rejected');
+
+  return (
+    <AnimatedPressable style={[ts.appCard, isInterviewing && { borderColor: AMBER + '30' }]} onPress={() => onEdit(app)} scaleDown={0.985}>
+      {/* Header */}
+      <View style={ts.appCardHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={ts.appCompany} numberOfLines={1}>{app.company}</Text>
+          <Text style={ts.appRole} numberOfLines={1}>{app.role}</Text>
+        </View>
+        <View style={[ts.statusBadge, { backgroundColor: cfg.color + '15', borderColor: cfg.color + '30' }]}>
+          <Ionicons name={cfg.icon as any} size={10} color={cfg.color} />
+          <Text style={[ts.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
+        </View>
+      </View>
+
+      {/* Meta */}
+      <View style={ts.appMeta}>
+        {appliedAge ? (
+          <View style={ts.appMetaChip}>
+            <Ionicons name="time-outline" size={10} color={colors.t3} />
+            <Text style={ts.appMetaText}>{appliedAge}</Text>
+          </View>
+        ) : null}
+        {app.match_pct != null && (
+          <View style={ts.appMetaChip}>
+            <Ionicons name="analytics-outline" size={10} color={GOLD} />
+            <Text style={[ts.appMetaText, { color: GOLD }]}>{app.match_pct}% match</Text>
+          </View>
+        )}
+        {isSilent && (
+          <View style={[ts.appMetaChip, { backgroundColor: CORAL + '10' }]}>
+            <Ionicons name="alert-circle" size={10} color={CORAL} />
+            <Text style={[ts.appMetaText, { color: CORAL }]}>No response 2+ weeks</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Notes / next action */}
+      {app.next_action ? (
+        <View style={ts.nextActionRow}>
+          <Ionicons name="flash" size={10} color={GOLD} />
+          <Text style={ts.nextActionText} numberOfLines={1}>{app.next_action}</Text>
+        </View>
+      ) : null}
+
+      {/* Interview prep CTA */}
+      {isInterviewing && (
+        <AnimatedPressable style={ts.prepBtn} onPress={() => onPrepInterview(app)} scaleDown={0.97}>
+          <Ionicons name="school" size={12} color="#1a1400" />
+          <Text style={ts.prepBtnText}>Prep for interview</Text>
+        </AnimatedPressable>
+      )}
+
+      {/* Action buttons */}
+      <View style={ts.appActions}>
+        {nextStatuses.map(ns => {
+          const nsCfg = statusConfig(ns);
+          return (
+            <AnimatedPressable
+              key={ns}
+              style={[ts.actionChip, { borderColor: nsCfg.color + '30' }]}
+              onPress={() => onStatusChange(app.id, ns)}
+              scaleDown={0.95}
+            >
+              <Ionicons name={nsCfg.icon as any} size={10} color={nsCfg.color} />
+              <Text style={[ts.actionChipText, { color: nsCfg.color }]}>
+                {ns === 'applied' ? 'Mark Applied' : ns === 'interviewing' ? 'Got Interview' : ns === 'offer' ? 'Got Offer' : 'Rejected'}
+              </Text>
+            </AnimatedPressable>
+          );
+        })}
+        <AnimatedPressable onPress={() => onDelete(app.id)} scaleDown={0.9} hitSlop={8}>
+          <Ionicons name="trash-outline" size={13} color={colors.t3 + '50'} />
+        </AnimatedPressable>
+      </View>
+    </AnimatedPressable>
+  );
+}
+
+// ── Add Application Modal ─────────────────────────────────────────────────────
+
+function AddAppModal({ visible, onClose, onAdd }: {
+  visible: boolean; onClose: () => void;
+  onAdd: (company: string, role: string, notes: string) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [company, setCompany] = useState('');
+  const [role, setRole]       = useState('');
+  const [notes, setNotes]     = useState('');
+
+  function handleAdd() {
+    if (!company.trim()) { Alert.alert('Company required'); return; }
+    if (!role.trim()) { Alert.alert('Role required'); return; }
+    onAdd(company.trim(), role.trim(), notes.trim());
+    setCompany(''); setRole(''); setNotes('');
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View style={ts.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
+          <View style={[ts.modalCard, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={ts.modalHeader}>
+              <Text style={ts.modalTitle}>Track Application</Text>
+              <AnimatedPressable onPress={onClose} scaleDown={0.9} hitSlop={12}>
+                <Ionicons name="close" size={20} color={colors.t2} />
+              </AnimatedPressable>
+            </View>
+
+            <TextInput style={ts.modalInput} value={company} onChangeText={setCompany} placeholder="Company name" placeholderTextColor={colors.t3} autoFocus />
+            <TextInput style={ts.modalInput} value={role} onChangeText={setRole} placeholder="Role (e.g. Data Science Intern)" placeholderTextColor={colors.t3} />
+            <TextInput style={[ts.modalInput, { minHeight: 56 }]} value={notes} onChangeText={setNotes} placeholder="Notes (optional)" placeholderTextColor={colors.t3} multiline />
+
+            <AnimatedPressable style={ts.modalBtn} onPress={handleAdd} scaleDown={0.97}>
+              <Ionicons name="add-circle" size={16} color="#1a1400" />
+              <Text style={ts.modalBtnText}>Add to Pipeline</Text>
+            </AnimatedPressable>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
+
+export default function InternshipTrackerScreen() {
+  const insets = useSafeAreaInsets();
+
+  const [apps, setApps]             = useState<Application[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [showAdd, setShowAdd]       = useState(false);
+  const [filterStatus, setFilterStatus] = useState<AppStatus | 'all'>('all');
+  const [profile, setProfile]       = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [appsRes, profileRes] = await Promise.all([
+          apiFetch('/applications').then(r => r.json()),
+          apiFetch('/profile').then(r => r.json()),
+        ]);
+        setApps(appsRes?.applications || []);
+        setProfile(profileRes || {});
+      } catch {}
+      finally { setLoading(false); }
+    })();
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (filterStatus === 'all') return apps;
+    return apps.filter(a => a.status === filterStatus);
+  }, [apps, filterStatus]);
+
+  // Sort: interviewing first, then applied, saved, offer, rejected
+  const sorted = useMemo(() => {
+    const order: Record<AppStatus, number> = { interviewing: 0, applied: 1, saved: 2, offer: 3, rejected: 4 };
+    return [...filtered].sort((a, b) => (order[a.status] ?? 5) - (order[b.status] ?? 5));
+  }, [filtered]);
+
+  async function handleAdd(company: string, role: string, notes: string) {
+    try {
+      const res = await apiFetch('/applications', {
+        method: 'POST',
+        body: JSON.stringify({ company, role, status: 'saved', notes: notes || undefined }),
+      });
+      const data = await res.json();
+      if (data?.application) {
+        setApps(prev => [data.application, ...prev]);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not add application.');
+    }
+  }
+
+  async function handleStatusChange(id: string, status: AppStatus) {
+    // Optimistic update
+    setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    try {
+      await apiFetch(`/applications/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+    } catch {
+      Alert.alert('Error', 'Could not update status.');
+    }
+  }
+
+  async function handleDelete(id: string) {
+    Alert.alert('Remove application?', 'This will remove it from your pipeline.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove', style: 'destructive',
+        onPress: async () => {
+          setApps(prev => prev.filter(a => a.id !== id));
+          try { await apiFetch(`/applications/${id}`, { method: 'DELETE' }); } catch {}
+        },
+      },
+    ]);
+  }
+
+  function handlePrepInterview(app: Application) {
+    const p = profile as any;
+    const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
+    const cohort = p.track || p.cohort || 'General';
+    const score = p.first_audit_snapshot?.scores;
+
+    openDillyOverlay({
+      name: firstName,
+      cohort,
+      score: 0,
+      smart: score?.smart || 0,
+      grit: score?.grit || 0,
+      build: score?.build || 0,
+      gap: 0,
+      cohortBar: 75,
+      referenceCompany: app.company,
+      applicationTarget: `${app.role} at ${app.company}`,
+      isPaid: true,
+    });
+  }
+
+  function handleEdit(app: Application) {
+    Alert.alert(app.company, `${app.role}\n\nStatus: ${statusConfig(app.status).label}${app.notes ? '\n\nNotes: ' + app.notes : ''}${app.next_action ? '\n\nNext: ' + app.next_action : ''}`, [
+      { text: 'Close' },
+      ...(app.job_url ? [{ text: 'Open Link', onPress: () => Linking.openURL(app.job_url!) }] : []),
+    ]);
+  }
+
+  if (loading) {
+    return (
+      <View style={[ts.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.t3, fontSize: 12 }}>Loading pipeline...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[ts.container, { paddingTop: insets.top }]}>
+
+      {/* Nav bar */}
+      <FadeInView delay={0}>
+        <View style={ts.navBar}>
+          <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
+            <Ionicons name="chevron-back" size={22} color={colors.t1} />
+          </AnimatedPressable>
+          <Text style={ts.navTitle}>Internship Tracker</Text>
+          <AnimatedPressable onPress={() => setShowAdd(true)} scaleDown={0.9} hitSlop={12}>
+            <View style={ts.addBtn}>
+              <Ionicons name="add" size={18} color={GOLD} />
+            </View>
+          </AnimatedPressable>
+        </View>
+      </FadeInView>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ts.scroll, { paddingBottom: insets.bottom + 80 }]}>
+
+        {/* Pipeline summary */}
+        <FadeInView delay={60}>
+          <PipelineSummary apps={apps} />
+        </FadeInView>
+
+        {/* Filter pills */}
+        <FadeInView delay={120}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ts.filterRow}>
+            <AnimatedPressable
+              style={[ts.statusPill, filterStatus === 'all' && { backgroundColor: GOLD + '20', borderColor: GOLD + '40' }]}
+              onPress={() => setFilterStatus('all')}
+              scaleDown={0.95}
+            >
+              <Text style={[ts.statusPillText, filterStatus === 'all' && { color: GOLD }]}>All ({apps.length})</Text>
+            </AnimatedPressable>
+            {STATUSES.map(s => {
+              const count = apps.filter(a => a.status === s.key).length;
+              return (
+                <AnimatedPressable
+                  key={s.key}
+                  style={[ts.statusPill, filterStatus === s.key && { backgroundColor: s.color + '20', borderColor: s.color + '40' }]}
+                  onPress={() => setFilterStatus(s.key)}
+                  scaleDown={0.95}
+                >
+                  <Ionicons name={s.icon as any} size={10} color={filterStatus === s.key ? s.color : colors.t3} />
+                  <Text style={[ts.statusPillText, filterStatus === s.key && { color: s.color }]}>{s.label} ({count})</Text>
+                </AnimatedPressable>
+              );
+            })}
+          </ScrollView>
+        </FadeInView>
+
+        {/* Application cards */}
+        {sorted.length === 0 ? (
+          <FadeInView delay={180}>
+            <View style={ts.emptyWrap}>
+              <Ionicons name="briefcase-outline" size={40} color={colors.t3 + '30'} />
+              <Text style={ts.emptyTitle}>No applications yet</Text>
+              <Text style={ts.emptyText}>Start tracking your internship applications. Add companies you're interested in, even before you apply.</Text>
+              <AnimatedPressable style={ts.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
+                <Ionicons name="add-circle" size={16} color="#1a1400" />
+                <Text style={ts.emptyBtnText}>Add your first application</Text>
+              </AnimatedPressable>
+            </View>
+          </FadeInView>
+        ) : (
+          sorted.map((app, i) => (
+            <FadeInView key={app.id} delay={180 + i * 40}>
+              <AppCard
+                app={app}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
+                onPrepInterview={handlePrepInterview}
+                onEdit={handleEdit}
+              />
+            </FadeInView>
+          ))
+        )}
+
+      </ScrollView>
+
+      {/* FAB */}
+      <AnimatedPressable
+        style={[ts.fab, { bottom: insets.bottom + 16 }]}
+        onPress={() => setShowAdd(true)}
+        scaleDown={0.92}
+      >
+        <Ionicons name="add" size={24} color="#1a1400" />
+      </AnimatedPressable>
+
+      <AddAppModal visible={showAdd} onClose={() => setShowAdd(false)} onAdd={handleAdd} />
+    </View>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const ts = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  navBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 18, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: colors.b1,
+  },
+  navTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1, color: colors.t1 },
+  addBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(201,168,76,0.12)', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  scroll: { paddingHorizontal: spacing.xl, paddingTop: 16 },
+
+  // Pipeline
+  pipelineWrap: {
+    backgroundColor: colors.s2, borderRadius: 16, borderWidth: 1, borderColor: colors.b1,
+    padding: 16, marginBottom: 16,
+  },
+  pipelineHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  pipelineTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.5, color: GOLD, flex: 1 },
+  pipelineTotal: { fontSize: 11, color: colors.t3, fontWeight: '600' },
+  pipelineRow: { flexDirection: 'row', marginBottom: 10 },
+  pipelineCol: { flex: 1, alignItems: 'center', gap: 3 },
+  pipelineNum: { fontFamily: 'Cinzel_700Bold', fontSize: 18 },
+  pipelineLabel: { fontSize: 8, color: colors.t3, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  pipelineDot: { width: 6, height: 3, borderRadius: 1.5 },
+  pipelineBar: { flexDirection: 'row', height: 4, borderRadius: 999, overflow: 'hidden', backgroundColor: colors.s3 },
+  pipelineBarSeg: { height: '100%' },
+
+  // Filter
+  filterRow: { gap: 6, paddingBottom: 14 },
+  statusPillRow: { gap: 6 },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.s3, borderRadius: 10, borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 10, paddingVertical: 7,
+  },
+  statusPillText: { fontSize: 11, color: colors.t3, fontWeight: '600' },
+
+  // App card
+  appCard: {
+    backgroundColor: colors.s2, borderRadius: 14, borderWidth: 1, borderColor: colors.b1,
+    padding: 14, marginBottom: 10,
+  },
+  appCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
+  appCompany: { fontSize: 15, fontWeight: '700', color: colors.t1 },
+  appRole: { fontSize: 12, color: colors.t2, marginTop: 1 },
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 8, borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  statusBadgeText: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Meta
+  appMeta: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 6 },
+  appMetaChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.s3, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
+  },
+  appMetaText: { fontSize: 10, color: colors.t3 },
+
+  // Next action
+  nextActionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(201,168,76,0.06)', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 6, marginBottom: 8,
+  },
+  nextActionText: { fontSize: 11, color: GOLD, flex: 1 },
+
+  // Interview prep
+  prepBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: AMBER, borderRadius: 10, paddingVertical: 10, marginBottom: 8,
+  },
+  prepBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.5, color: '#1a1400' },
+
+  // Actions
+  appActions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  actionChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  actionChipText: { fontSize: 10, fontWeight: '600' },
+
+  // Empty
+  emptyWrap: { alignItems: 'center', paddingVertical: 48, gap: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.t1 },
+  emptyText: { fontSize: 13, color: colors.t3, textAlign: 'center', lineHeight: 20, paddingHorizontal: 20 },
+  emptyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: GOLD, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8,
+  },
+  emptyBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.5, color: '#1a1400' },
+
+  // FAB
+  fab: {
+    position: 'absolute', right: 20,
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center',
+    shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12,
+  },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalCard: {
+    backgroundColor: colors.s1, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, paddingTop: 16,
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1, color: colors.t1 },
+  modalInput: {
+    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.t1, marginBottom: 10,
+  },
+  modalBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: GOLD, borderRadius: 12, paddingVertical: 14, marginTop: 6,
+  },
+  modalBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#1a1400' },
+});

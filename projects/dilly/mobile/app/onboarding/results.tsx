@@ -99,15 +99,21 @@ export default function ResultsScreen() {
       const cohort = await AsyncStorage.getItem('dilly_onboarding_cohort') ?? '';
       const raw    = await AsyncStorage.getItem('dilly_audit_result');
 
+      // ── DIAGNOSTIC LOG 4: stored audit result ──────────────────────────
+      console.log('[results] dilly_onboarding_name:', name);
+      console.log('[results] dilly_onboarding_cohort:', cohort);
+      console.log('[results] dilly_audit_result raw:', raw);
+
       setFirstName(name.trim().split(/\s+/)[0] ?? '');
       setTrack(cohort || 'General');
 
       let parsed: AuditResult | null = null;
       let err = false;
-      if (!raw) { err = true; }
+      if (!raw) { err = true; console.log('[results] ERROR: no raw audit result in AsyncStorage'); }
       else {
         try {
           parsed = JSON.parse(raw) as AuditResult;
+          console.log('[results] parsed final_score:', parsed.final_score, 'error flag:', parsed.error);
           if (parsed.error || parsed.final_score === undefined) err = true;
         } catch { err = true; }
       }
@@ -159,6 +165,7 @@ export default function ResultsScreen() {
     if (completing) return;
     setCompleting(true);
     try { await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify({ onboarding_complete: true }) }); } catch {}
+    await AsyncStorage.setItem('dilly_has_onboarded', 'true');
     await AsyncStorage.removeItem('dilly_audit_result');
     router.replace('/(app)');
   }

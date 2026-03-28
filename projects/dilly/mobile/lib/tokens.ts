@@ -47,5 +47,5 @@ export const radius = {
   full: 999,
 };
 
-// Your Mac's local IP — simulator reaches FastAPI over LAN
-export const API_BASE = 'http://192.168.1.232:8000';
+// localhost works for iOS Simulator (shares Mac network stack); use LAN IP for real devices
+export const API_BASE = 'http://10.106.52.22:8000';

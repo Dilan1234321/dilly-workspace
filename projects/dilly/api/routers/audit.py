@@ -2009,7 +2009,7 @@ async def audit_batch(request: Request, files: list[UploadFile] = File(...), coh
         raise errors.validation_error("Provide 1–100 PDF or DOCX files.")
     for f in files:
         if not _allowed_resume_file(f.filename or ""):
-            raise errors.validation_error(f"Unsupported file: {f.filename}. Sparty only reads PDF and DOCX.")
+            raise errors.validation_error(f"Unsupported file: {f.filename}. Dilly only reads PDF and DOCX.")
     results = []
     for up in files:
         ext = ".pdf" if (up.filename or "").lower().endswith(".pdf") else ".docx"

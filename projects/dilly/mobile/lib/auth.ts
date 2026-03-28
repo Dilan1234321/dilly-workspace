@@ -22,12 +22,24 @@ export async function getToken(): Promise<string | null> {
   return AsyncStorage.getItem(TOKEN_KEY);
 }
 
+// Clears auth tokens and session data. Preserves dilly_has_onboarded so returning
+// users go to verify screen instead of full onboarding.
 export async function clearAuth(): Promise<void> {
   await Promise.all([
     SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => null),
     SecureStore.deleteItemAsync(USER_KEY).catch(() => null),
     AsyncStorage.removeItem(TOKEN_KEY),
     AsyncStorage.removeItem(USER_KEY),
+    AsyncStorage.removeItem('dilly_audit_result'),
+    AsyncStorage.removeItem('dilly_onboarding_name'),
+    AsyncStorage.removeItem('dilly_onboarding_cohort'),
+    AsyncStorage.removeItem('dilly_onboarding_track'),
+    AsyncStorage.removeItem('dilly_onboarding_majors'),
+    AsyncStorage.removeItem('dilly_onboarding_pre_prof'),
+    AsyncStorage.removeItem('dilly_onboarding_target'),
+    AsyncStorage.removeItem('dilly_onboarding_industry_target'),
+    AsyncStorage.removeItem('dilly_pending_upload'),
+    // NOTE: dilly_has_onboarded is intentionally NOT cleared
   ]);
 }
 

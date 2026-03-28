@@ -34,6 +34,37 @@ async def get_profile(request: Request):
         from projects.dilly.api.profile_store import ensure_profile_exists, get_profile_slug
         profile = ensure_profile_exists(email)
         profile["profile_slug"] = get_profile_slug(email)
+
+        # Merge cohort scores from PostgreSQL
+        try:
+            import psycopg2, psycopg2.extras, json, os
+            pw = os.environ.get("DILLY_DB_PASSWORD", "")
+            if not pw:
+                try: pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
+                except: pass
+            conn = psycopg2.connect(
+                host=os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+                database="dilly", user="dilly_admin", password=pw, sslmode="require"
+            )
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                "SELECT cohort_scores, overall_smart, overall_grit, overall_build, overall_dilly_score "
+                "FROM students WHERE LOWER(email) = LOWER(%s)", (email,)
+            )
+            row = cur.fetchone()
+            if row:
+                cs = row["cohort_scores"]
+                if isinstance(cs, str):
+                    cs = json.loads(cs)
+                profile["cohort_scores"] = cs or {}
+                profile["overall_smart"] = float(row["overall_smart"]) if row["overall_smart"] else None
+                profile["overall_grit"] = float(row["overall_grit"]) if row["overall_grit"] else None
+                profile["overall_build"] = float(row["overall_build"]) if row["overall_build"] else None
+                profile["overall_dilly_score"] = float(row["overall_dilly_score"]) if row["overall_dilly_score"] else None
+            conn.close()
+        except Exception:
+            pass
+
         return profile
     except ValueError as e:
         raise errors.validation_error(str(e))
@@ -102,7 +133,7 @@ async def update_profile(request: Request, body: dict = Body(...)):
     """Update current user's profile. Merges with existing. Only allowed fields are updated."""
     user = deps.require_auth(request)
     email = user.get("email") or ""
-    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "meridian_profile_privacy", "meridian_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit"}
+    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "meridian_profile_privacy", "meridian_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level"}
     data = {k: v for k, v in (body or {}).items() if k in allowed}
     if "majors" in data:
         raw = data["majors"]
@@ -860,4 +891,13 @@ async def get_streak(request: Request):
         "checked_in_today": last_checkin == today,
         "today": today,
         "daily_action": daily_action,
+    }
+
+@router.get("/interests/list")
+async def get_interests_list(request: Request):
+    """Return the curated list of interests/fields for the UI picker."""
+    from projects.dilly.api.interests import INTERESTS_LIST, EDUCATION_LEVELS
+    return {
+        "interests": INTERESTS_LIST,
+        "education_levels": EDUCATION_LEVELS,
     }

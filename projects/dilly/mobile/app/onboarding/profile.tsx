@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -25,12 +26,12 @@ const PRE_PROF_OPTIONS = [
   'Pre-Law', 'None / Not applicable',
 ];
 
+// key is used for UI selection state; apiValue is sent to the API
 const TARGET_OPTIONS = [
-  { label: 'Internship · Summer 2026', value: 'internship_summer' },
-  { label: 'Internship · Fall 2026',   value: 'internship_fall'   },
-  { label: 'Full-time job',            value: 'full_time'         },
-  { label: 'Part-time job',            value: 'part_time'         },
-  { label: 'Just exploring',           value: 'exploring'         },
+  { key: 'internship_summer', label: 'Internship · Summer 2026', apiValue: 'internship' },
+  { key: 'internship_fall',   label: 'Internship · Fall 2026',   apiValue: 'internship' },
+  { key: 'full_time',         label: 'Full-time job',            apiValue: 'full_time'  },
+  { key: 'exploring',         label: 'Just exploring',           apiValue: 'exploring'  },
 ];
 
 const MAJOR_TO_COHORT: Record<string, string> = {
@@ -220,7 +221,7 @@ export default function ProfileScreen() {
   const [majors,      setMajors]      = useState<string[]>([]);
   const [minors,      setMinors]      = useState<string[]>([]);
   const [preProf,     setPreProf]     = useState<string | null>(null);
-  const [target,      setTarget]      = useState('internship_summer');
+  const [targetKey,   setTargetKey]   = useState('internship_summer');
   const [submitError, setSubmitError] = useState('');
   const [loading,     setLoading]     = useState(false);
 
@@ -250,7 +251,7 @@ export default function ProfileScreen() {
           majors,
           minors,
           pre_professional_track: preProfToSend,
-          application_target: target,
+          application_target: TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'internship',
           track: resolvedCohort,
           cohort: resolvedCohort,
           onboarding_complete: false,
@@ -262,6 +263,16 @@ export default function ProfileScreen() {
         const msg = typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.';
         throw new Error(msg);
       }
+
+      // Persist onboarding data for scanning/results screens
+      await AsyncStorage.multiSet([
+        ['dilly_onboarding_name',    fullName.trim()],
+        ['dilly_onboarding_cohort',  resolvedCohort],
+        ['dilly_onboarding_track',   resolvedCohort],
+        ['dilly_onboarding_majors',  JSON.stringify(majors)],
+        ['dilly_onboarding_pre_prof', preProfToSend ?? ''],
+        ['dilly_onboarding_target',  TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'internship'],
+      ]);
 
       const goToIndustry = resolvedCohort === 'Quantitative' || majors.includes('Data Science');
       if (goToIndustry) {
@@ -399,12 +410,12 @@ export default function ProfileScreen() {
           <FieldLabel>What are you aiming for?</FieldLabel>
           <View style={s.pillsWrap}>
             {TARGET_OPTIONS.map((opt) => {
-              const selected = target === opt.value;
+              const selected = targetKey === opt.key;
               return (
                 <TouchableOpacity
-                  key={opt.value}
+                  key={opt.key}
                   style={[s.pill, selected ? s.pillActive : s.pillDefault]}
-                  onPress={() => setTarget(opt.value)}
+                  onPress={() => setTargetKey(opt.key)}
                   activeOpacity={0.7}
                 >
                   <Text style={[s.pillText, selected ? s.pillTextActive : s.pillTextDefault]}>

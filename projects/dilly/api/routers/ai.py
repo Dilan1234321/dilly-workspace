@@ -1,0 +1,407 @@
+"""
+AI router: Dilly AI chat with full student context integration.
+Calls Claude claude-sonnet-4-6 via the Anthropic SDK.
+Requires ANTHROPIC_API_KEY in .env.
+
+Endpoints:
+  POST /ai/chat       — chat with full context
+  GET  /ai/context    — rich student snapshot for the overlay
+"""
+
+import json
+import os
+import sys
+import time
+
+_ROUTER_DIR = os.path.dirname(os.path.abspath(__file__))
+_WORKSPACE_ROOT = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "..", ".."))
+if _WORKSPACE_ROOT not in sys.path:
+    sys.path.insert(0, _WORKSPACE_ROOT)
+
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
+from typing import Any, Dict, List, Optional
+
+from projects.dilly.api import deps, errors
+
+router = APIRouter(tags=["ai"])
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class StudentContext(BaseModel):
+    name: Optional[str] = None
+    cohort: Optional[str] = None
+    score: Optional[float] = None
+    smart: Optional[float] = None
+    grit: Optional[float] = None
+    build: Optional[float] = None
+    gap: Optional[float] = None
+    cohort_bar: Optional[float] = None
+    reference_company: Optional[str] = None
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+    mode: str = "coaching"
+    system: Optional[str] = None
+    student_context: Optional[StudentContext] = None
+    rich_context: Optional[Dict[str, Any]] = None
+
+class ChatResponse(BaseModel):
+    content: str
+
+
+def _build_rich_context(email: str) -> dict:
+    from projects.dilly.api.profile_store import get_profile, get_profile_folder_path
+    from projects.dilly.api.audit_history import get_audits
+    from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
+
+    profile = get_profile(email) or {}
+    name = (profile.get("name") or "").strip() or "the student"
+    first_name = name.split()[0] if name != "the student" else "there"
+    cohort = profile.get("track") or profile.get("cohort") or "General"
+    school = "University of Tampa" if profile.get("school_id") == "utampa" else (profile.get("school_id") or "Unknown")
+    major = (profile.get("majors") or [None])[0] or profile.get("major") or ""
+    minor = (profile.get("minors") or [None])[0] or ""
+    career_goal = profile.get("career_goal") or ""
+    industry_target = profile.get("industry_target") or ""
+    target_companies = profile.get("target_companies") or []
+    tagline = profile.get("profile_tagline") or ""
+    bio = profile.get("profile_bio") or ""
+    linkedin = profile.get("linkedin_url") or ""
+    pronouns = profile.get("pronouns") or ""
+
+    audits = get_audits(email)
+    latest_audit = audits[0] if audits else None
+    previous_audit = audits[1] if len(audits) > 1 else None
+    current_score = latest_audit.get("final_score") if latest_audit else None
+    scores = latest_audit.get("scores", {}) if latest_audit else {}
+    smart = scores.get("smart", 0)
+    grit = scores.get("grit", 0)
+    build = scores.get("build", 0)
+    dilly_take = (latest_audit.get("dilly_take") or latest_audit.get("meridian_take") or "") if latest_audit else ""
+    previous_score = previous_audit.get("final_score") if previous_audit else None
+    score_delta = (current_score - previous_score) if (current_score is not None and previous_score is not None) else None
+    audit_count = len(audits)
+    last_audit_ts = latest_audit.get("ts") if latest_audit else None
+    days_since_audit = int((time.time() - last_audit_ts) / 86400) if last_audit_ts else None
+
+    audit_history = []
+    for a in audits[:5]:
+        audit_history.append({
+            "score": a.get("final_score"),
+            "scores": a.get("scores", {}),
+            "date": time.strftime("%Y-%m-%d", time.gmtime(a["ts"])) if a.get("ts") else None,
+            "dilly_take": a.get("dilly_take") or a.get("meridian_take") or "",
+        })
+
+    COHORT_BARS = {"Tech": {"bar": 75, "company": "Google"}, "Finance": {"bar": 72, "company": "Goldman Sachs"}, "Health": {"bar": 68, "company": "Mayo Clinic"}, "Quantitative": {"bar": 75, "company": "Jane Street"}, "General": {"bar": 65, "company": "top companies"}}
+    cohort_cfg = COHORT_BARS.get(cohort, COHORT_BARS["General"])
+    bar = cohort_cfg["bar"]
+    reference_company = cohort_cfg["company"]
+    gap = bar - (current_score or 0) if current_score else None
+    cleared_bar = current_score is not None and current_score >= bar
+
+    weakest = strongest = None
+    if smart and grit and build:
+        dims = {"Smart": smart, "Grit": grit, "Build": build}
+        weakest = min(dims, key=dims.get)
+        strongest = max(dims, key=dims.get)
+
+    applications = []
+    folder = get_profile_folder_path(email)
+    if folder:
+        try:
+            app_path = os.path.join(folder, "applications.json")
+            if os.path.isfile(app_path):
+                with open(app_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    applications = data.get("applications", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+        except Exception:
+            pass
+
+    app_counts = {"saved": 0, "applied": 0, "interviewing": 0, "offer": 0, "rejected": 0}
+    for a in applications:
+        s = a.get("status", "saved")
+        if s in app_counts: app_counts[s] += 1
+
+    interviewing_at = [a.get("company") for a in applications if a.get("status") == "interviewing" and a.get("company")]
+    applied_companies = [a.get("company") for a in applications if a.get("status") == "applied" and a.get("company")]
+    silent_apps = []
+    for a in applications:
+        if a.get("status") == "applied" and a.get("applied_at"):
+            try:
+                from datetime import datetime
+                ad = datetime.fromisoformat(a["applied_at"].replace("Z", "+00:00"))
+                days = (time.time() - ad.timestamp()) / 86400
+                if days > 14: silent_apps.append(a.get("company", "Unknown"))
+            except Exception: pass
+
+    deadlines = profile.get("deadlines") or []
+    upcoming_deadlines = []
+    for d in deadlines:
+        if not isinstance(d, dict) or d.get("completedAt"): continue
+        label = (d.get("label") or d.get("title") or "").strip()
+        date_str = d.get("date", "")
+        if not label or not date_str: continue
+        try:
+            from datetime import datetime
+            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            days_until = int((dt.timestamp() - time.time()) / 86400)
+            if -1 <= days_until <= 30:
+                upcoming_deadlines.append({"label": label, "date": date_str[:10], "days_until": days_until, "type": d.get("type", "deadline")})
+        except Exception: pass
+    upcoming_deadlines.sort(key=lambda x: x["days_until"])
+
+    resume_text = load_parsed_resume_for_voice(email, max_chars=6000) or ""
+    has_resume = len(resume_text.strip()) > 50
+    has_editor_resume = False
+    if folder:
+        has_editor_resume = os.path.isfile(os.path.join(folder, "resume_edited.json"))
+
+    nudges = []
+    for dl in upcoming_deadlines:
+        if dl.get("type") == "interview" and dl["days_until"] <= 1:
+            nudges.append({"priority": "urgent", "message": f"You have an interview{'  today' if dl['days_until'] == 0 else ' tomorrow'}: {dl['label']}. Want me to help you prep?"})
+    for dl in upcoming_deadlines:
+        if dl.get("type") != "interview" and 0 <= dl["days_until"] <= 2:
+            nudges.append({"priority": "high", "message": f"Your deadline '{dl['label']}' is {'today' if dl['days_until'] == 0 else 'tomorrow' if dl['days_until'] == 1 else 'in 2 days'}."})
+    if days_since_audit and days_since_audit > 14:
+        nudges.append({"priority": "medium", "message": f"It's been {days_since_audit} days since your last audit. Your resume may have changed. Want to run a new one?"})
+    if silent_apps:
+        nudges.append({"priority": "medium", "message": f"No response from {', '.join(silent_apps[:3])} in 2+ weeks. Want help drafting a follow-up?"})
+    if gap and gap > 0 and weakest:
+        nudges.append({"priority": "medium", "message": f"You're {int(gap)} points below the {reference_company} bar. Your {weakest} score is the biggest opportunity."})
+    if sum(app_counts.values()) == 0 and current_score is not None:
+        nudges.append({"priority": "low", "message": "You haven't added any applications yet. Want me to help you build your pipeline?"})
+
+    return {
+        "name": name, "first_name": first_name, "cohort": cohort, "school": school,
+        "major": major, "minor": minor, "pronouns": pronouns, "career_goal": career_goal,
+        "industry_target": industry_target, "target_companies": target_companies,
+        "tagline": tagline, "bio": bio, "linkedin": linkedin,
+        "current_score": current_score, "smart": smart, "grit": grit, "build": build,
+        "previous_score": previous_score, "score_delta": score_delta,
+        "weakest_dimension": weakest, "strongest_dimension": strongest,
+        "cohort_bar": bar, "reference_company": reference_company,
+        "gap": gap, "cleared_bar": cleared_bar, "dilly_take": dilly_take,
+        "audit_count": audit_count, "days_since_audit": days_since_audit,
+        "audit_history": audit_history,
+        "app_counts": app_counts, "total_applications": sum(app_counts.values()),
+        "interviewing_at": interviewing_at, "applied_companies": applied_companies[:10],
+        "silent_apps": silent_apps,
+        "upcoming_deadlines": upcoming_deadlines[:10],
+        "has_resume": has_resume, "has_editor_resume": has_editor_resume,
+        "resume_snippet": resume_text[:5000] if resume_text else "",
+        "nudges": nudges,
+    }
+
+
+def _build_rich_system_prompt(r: dict) -> str:
+    name = r.get("name", "the student")
+    cohort = r.get("cohort", "General")
+    school = r.get("school", "their university")
+    major = r.get("major", "")
+    score = r.get("current_score")
+    smart = r.get("smart", 0)
+    grit = r.get("grit", 0)
+    build = r.get("build", 0)
+    bar = r.get("cohort_bar", 65)
+    ref_company = r.get("reference_company", "top companies")
+    gap = r.get("gap")
+    cleared = r.get("cleared_bar", False)
+    weakest = r.get("weakest_dimension")
+    strongest = r.get("strongest_dimension")
+    delta = r.get("score_delta")
+    days_since = r.get("days_since_audit")
+    dilly_take = r.get("dilly_take", "")
+    apps = r.get("app_counts", {})
+    total_apps = r.get("total_applications", 0)
+    interviewing = r.get("interviewing_at", [])
+    silent = r.get("silent_apps", [])
+    deadlines = r.get("upcoming_deadlines", [])
+    resume_snippet = r.get("resume_snippet", "")
+    audit_history = r.get("audit_history", [])
+    career_goal = r.get("career_goal", "")
+    industry = r.get("industry_target", "")
+    target_companies = r.get("target_companies", [])
+
+    score_block = ""
+    if score is not None:
+        score_block = f"CURRENT SCORE: {int(score)}/100\nDimensions: Smart {int(smart)}, Grit {int(grit)}, Build {int(build)}\nCohort bar ({ref_company}): {int(bar)}/100\n"
+        if cleared:
+            score_block += "ABOVE the bar. Recruiter ready.\n"
+        else:
+            score_block += f"BELOW the bar by {int(gap)} points. {weakest} is the weakest dimension.\n"
+        if strongest: score_block += f"Strongest dimension: {strongest}\n"
+        if delta: score_block += f"Score changed by {'+' if delta > 0 else ''}{int(delta)} since last audit.\n"
+        if days_since: score_block += f"Last audited {days_since} days ago.\n"
+        if dilly_take: score_block += f"Last audit insight: {dilly_take}\n"
+    else:
+        score_block = "NO SCORE YET. Student has not run their first audit.\n"
+
+    apps_block = ""
+    if total_apps > 0:
+        apps_block = f"APPLICATION PIPELINE: {total_apps} total\nSaved: {apps.get('saved',0)} | Applied: {apps.get('applied',0)} | Interviewing: {apps.get('interviewing',0)} | Offers: {apps.get('offer',0)} | Rejected: {apps.get('rejected',0)}\n"
+        if interviewing: apps_block += f"Currently interviewing at: {', '.join(interviewing)}\n"
+        if silent: apps_block += f"WARNING: No response from {', '.join(silent[:3])} in 2+ weeks.\n"
+    else:
+        apps_block = "APPLICATION PIPELINE: Empty. Student hasn't started tracking applications.\n"
+
+    deadline_block = ""
+    if deadlines:
+        dl_lines = []
+        for dl in deadlines[:5]:
+            days = dl["days_until"]
+            urgency = "TODAY" if days == 0 else "TOMORROW" if days == 1 else f"in {days} days"
+            dl_lines.append(f"  - {dl['label']} ({urgency}, {dl['date']})")
+        deadline_block = "UPCOMING DEADLINES:\n" + "\n".join(dl_lines) + "\n"
+    else:
+        deadline_block = "UPCOMING DEADLINES: None scheduled.\n"
+
+    target_block = ""
+    parts = []
+    if career_goal: parts.append(f"Career goal: {career_goal}")
+    if industry: parts.append(f"Industry target: {industry}")
+    if target_companies: parts.append(f"Target companies: {', '.join(target_companies[:5])}")
+    if parts: target_block = "CAREER TARGETS:\n" + "\n".join(f"  - {p}" for p in parts) + "\n"
+
+    history_block = ""
+    if len(audit_history) > 1:
+        h_lines = [f"  - {h.get('date','?')}: {h.get('score','?')}/100" for h in audit_history[:5]]
+        history_block = "SCORE HISTORY:\n" + "\n".join(h_lines) + "\n"
+
+    resume_block = f"FULL RESUME TEXT (reference specific bullets and sections — never ask what is on their resume):\n{resume_snippet[:5000]}\n" if resume_snippet else ""
+
+    return f"""You are Dilly, an AI career coach embedded in a career acceleration app for college students. You are not just a chatbot. You are the student's personal career strategist who can see their entire dashboard.
+
+STUDENT: {name}
+{f"Pronouns: {r.get('pronouns')}" if r.get("pronouns") else ""}
+School: {school}
+Major: {major}{f", Minor: {r.get('minor')}" if r.get("minor") else ""}
+Cohort: {cohort}
+{f"Tagline: {r.get('tagline')}" if r.get("tagline") else ""}
+
+{score_block}
+{apps_block}
+{deadline_block}
+{target_block}
+{history_block}
+{resume_block}
+
+APP FEATURES YOU CAN REFERENCE (tell the student to use these by name):
+- Resume Editor: Edit resume sections with live bullet scoring. Each bullet gets scored 0-100 in real time.
+- New Audit: Upload a PDF or re-audit from the editor. Shows before/after score comparison.
+- Internship Tracker: Pipeline view (Saved > Applied > Interviewing > Offer > Rejected). Track companies and get interview prep.
+- Calendar: Month view with deadlines, interviews, career fairs.
+- Score Detail: Full breakdown of Smart/Grit/Build with evidence and recommendations.
+- Leaderboard: Cohort ranking with movement indicators.
+- Jobs: Matched job listings by skill alignment.
+- Profile: Career card showing score, achievements, and career targets.
+
+YOUR PERSONALITY AND RULES:
+- You are warm, sharp, and invested. Think "brilliant friend who went to Wharton and actually cares."
+- Be specific. Never say "consider improving your resume." Say "your second bullet under Google is missing a number, add the dataset size or time saved."
+- Reference their actual data. If their Build score is 52, say so. If they have an interview at Goldman Thursday, mention it.
+- When they ask "what should I do?", give a prioritized action plan: interviews first, then deadlines, then score gaps, then applications.
+- Direct them to specific app features: "Open the Resume Editor and rewrite your top 3 bullets" not "work on your resume."
+- Keep responses to 2-4 short paragraphs. No walls of text.
+- NEVER use em-dashes. Use commas or periods instead.
+- NEVER use emojis.
+- NEVER start with filler like "Great question!" or "That's a good point."
+- NEVER start your response with the student's name.
+- NEVER use bullet points unless listing 3+ specific items.
+- NEVER ask more than one question at a time.
+- If they seem stuck or don't know what to ask, proactively suggest the most impactful thing they could do right now based on their data.""".strip()
+
+
+def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: Optional[dict] = None) -> str:
+    if mode == "practice":
+        company = (rich or {}).get("reference_company") or (ctx.reference_company if ctx else None) or "a top company"
+        name = (rich or {}).get("name") or (ctx.name if ctx else None) or "the student"
+        cohort = (rich or {}).get("cohort") or (ctx.cohort if ctx else None) or "General"
+        return (
+            f"You are a tough but fair interviewer at {company}. "
+            f"You are interviewing {name} for an internship or full-time role in {cohort}. "
+            "Conduct a realistic interview simulation. Ask ONE question at a time. "
+            "After each student answer, give 1-2 sentences of direct feedback, then ask your next question. "
+            "Start by briefly introducing yourself and asking your first question. "
+            "Be direct, professional, and challenging."
+        )
+
+    if rich:
+        return _build_rich_system_prompt(rich)
+
+    name = (ctx.name if ctx else None) or "the student"
+    cohort = (ctx.cohort if ctx else None) or "General"
+    company = (ctx.reference_company if ctx else None) or "top companies"
+    score = ctx.score if ctx else None
+    smart = ctx.smart if ctx else None
+    grit = ctx.grit if ctx else None
+    build = ctx.build if ctx else None
+    bar = ctx.cohort_bar if ctx else None
+    score_info = f"Overall Dilly Score: {int(score)}/100. " if score else ""
+    dim_info = f"Dimension scores: Smart {int(smart)}, Grit {int(grit)}, Build {int(build)}. " if (smart is not None and grit is not None and build is not None) else ""
+    bar_info = f"The recruiter bar at {company} is {int(bar)}/100. " if bar and company else ""
+
+    return (
+        "You are Dilly, an AI career coach for college students. "
+        f"You are coaching {name}, a {cohort} student. "
+        f"{score_info}{dim_info}{bar_info}"
+        "Give specific, actionable coaching to help them improve their resume scores and land internships. "
+        "Be direct and honest. No generic advice. Name the exact problem and exact fix. "
+        "Keep replies to 2-4 short paragraphs. "
+        "If you lack enough context, ask one sharp clarifying question before giving advice."
+    )
+
+
+@router.get("/ai/context")
+async def get_ai_context(request: Request):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    try:
+        ctx = _build_rich_context(email)
+        return ctx
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Could not build context: {str(e)[:200]}")
+
+
+@router.post("/ai/chat", response_model=ChatResponse)
+async def ai_chat(request: Request, body: ChatRequest):
+    deps.require_auth(request)
+
+    try:
+        import anthropic
+    except ImportError:
+        raise HTTPException(status_code=503, detail="Anthropic SDK not installed. Run: pip install anthropic")
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not set")
+
+    if body.rich_context:
+        system = _build_rich_system_prompt(body.rich_context)
+    elif body.system:
+        system = body.system
+    else:
+        system = _build_system_prompt(body.mode, body.student_context)
+
+    messages = [{"role": m.role, "content": m.content} for m in body.messages if m.role in ("user", "assistant") and m.content.strip()]
+    if not messages:
+        raise HTTPException(status_code=400, detail="No messages provided")
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(model="claude-sonnet-4-6", max_tokens=1024, system=system, messages=messages)
+        content = response.content[0].text if response.content else ""
+        return ChatResponse(content=content.strip())
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=502, detail=f"Claude API error: {str(e)}")

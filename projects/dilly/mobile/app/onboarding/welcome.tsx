@@ -21,24 +21,35 @@ export default function WelcomeScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
+    console.log('[welcome] submit tapped');
     setError('');
     const trimmed = email.trim().toLowerCase();
+    console.log('[welcome] email:', trimmed);
+    console.log('[welcome] API_BASE:', API_BASE);
+    console.log('[welcome] full URL:', `${API_BASE}/auth/send-verification-code`);
     if (!trimmed.endsWith('.edu')) {
       setError('Use your .edu email — Dilly is for students.');
       return;
     }
     setLoading(true);
     try {
+      console.log('[welcome] firing fetch...');
       const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: trimmed }),
       });
+      console.log('[welcome] response status:', res.status);
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.detail || 'Something went wrong.');
+      console.log('[welcome] response data:', JSON.stringify(data));
+      if (!res.ok) {
+        const detail = data?.detail;
+        throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
+      }
       // Store email for the verify screen via router params
       router.push({ pathname: '/onboarding/verify', params: { email: trimmed, devCode: data.dev_code || '' } });
     } catch (err: unknown) {
+      console.log('[welcome] CATCH:', err instanceof Error ? err.message : String(err));
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setLoading(false);

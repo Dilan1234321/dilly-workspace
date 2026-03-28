@@ -25,24 +25,23 @@
   <link rel="stylesheet" href="site-styles.css">
 </head>
 <body class="bg-surface text-ink antialiased selection:bg-emerald-500/25 selection:text-white">
-
-                  <header class="site-header sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 md:px-8 md:py-4">
-      <a href="index.html" class="relative z-[120] flex shrink-0 items-center">
-        <img src="dilly-wordmark.png" alt="Dilly" class="site-header-logo shrink-0" width="612" height="408" decoding="async" />
-      </a>
-      <button type="button" class="relative z-[120] rounded-xl px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 md:hidden" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
-      <div class="nav-menu-panel fixed inset-0 z-[100] hidden overflow-y-auto overscroll-contain border-0 bg-[#0a0a0a]/98 backdrop-blur-xl md:static md:inset-auto md:z-auto md:flex md:max-h-none md:flex-1 md:flex-row md:justify-end md:overflow-visible md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none" id="navMenuPanel">
-        <nav class="mx-auto flex w-full max-w-lg flex-col gap-1 px-6 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(6.5rem,env(safe-area-inset-top,0px)+1.5rem)] md:mx-0 md:max-w-none md:flex-row md:items-center md:gap-0 md:rounded-full md:bg-zinc-900/90 md:p-1.5 md:pl-3 md:ring-1 md:ring-white/10 md:px-0 md:pb-0 md:pt-0">
-          <a href="features.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Features</a>
-          <a href="how-it-works.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">How it works</a>
-          <a href="tracks.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Tracks</a>
-          <a href="pricing.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Pricing</a>
-          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="mt-4 inline-flex w-full min-h-[48px] items-center justify-center rounded-2xl bg-[#c5a353] px-5 py-3 text-base font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110 md:mt-0 md:ml-1 md:w-auto md:rounded-full md:py-2 md:text-sm">Get Your Dilly Score</a>
-        </nav>
-      </div>
+  <div id="dilly-site-header"></div>
+  <script src="site-nav.js"></script>
+  <noscript>
+    <div class="border-b border-white/10 bg-[#0a0a0a] px-5 py-3 text-sm text-zinc-300">
+      <a href="index.html" class="font-semibold text-white">Dilly</a>
+      <span class="mx-2 text-zinc-600">·</span>
+      <a href="features.html">Features</a>
+      <span class="mx-2 text-zinc-600">·</span>
+      <a href="how-it-works.html">How it works</a>
+      <span class="mx-2 text-zinc-600">·</span>
+      <a href="tracks.html">Tracks</a>
+      <span class="mx-2 text-zinc-600">·</span>
+      <a href="pricing.html">Pricing</a>
+      <span class="mx-2 text-zinc-600">·</span>
+      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer">App</a>
     </div>
-  </header>
+  </noscript>
 
 <main class="mx-auto max-w-6xl px-5 pb-24 pt-8 md:px-8 md:pt-12" data-reveal>
 <section class="fin-hero">
@@ -171,8 +170,6 @@
     </div>
     <p class="mt-8 text-center text-xs text-zinc-600">© <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
-
-  <script src="site-nav.js"></script>
   <script src="analytics.js"></script>
   <script src="site-page.js"></script>
 

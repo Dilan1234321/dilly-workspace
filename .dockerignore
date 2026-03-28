@@ -1,0 +1,14 @@
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+assets/resumes
+projects/dilly/mobile
+projects/dilly/dashboard
+projects/dilly/student
+projects/dilly/website
+projects/meridian
+.git
+*.log
+*.pdf
+*.docx

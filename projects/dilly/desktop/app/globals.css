@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+:root {
+  --surface-0: #ffffff;
+  --surface-1: #f8f8fa;
+  --surface-2: #f0f0f3;
+  --text-1: #1a1a1a;
+  --text-2: #6b6b6b;
+  --text-3: #a0a0a0;
+  --border-main: rgba(0,0,0,0.08);
+}
+
+.dark {
+  --surface-0: #1c1c1e;
+  --surface-1: #2c2c2e;
+  --surface-2: #3a3a3c;
+  --text-1: #f5f5f7;
+  --text-2: #98989f;
+  --text-3: #636366;
+  --border-main: rgba(255,255,255,0.08);
+}
+
+* { -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--surface-0);
+  color: var(--text-1);
+  transition: background 300ms ease, color 300ms ease;
+}
+
+::selection { background: rgba(59, 76, 192, 0.2); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 3px; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+.animate-fade-in { animation: fadeIn 400ms ease-out both; }
+.animate-slide-in { animation: slideIn 350ms ease-out both; }
+.skeleton { background: linear-gradient(90deg, var(--surface-1) 25%, var(--surface-2) 50%, var(--surface-1) 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+
+
+/* Sidebar and menu hover states */
+.sidebar-item:hover {
+  background: var(--surface-1) !important;
+}
+.sidebar-item-active:hover {
+  background: rgba(59,76,192,0.08) !important;
+}
+.ctx-item:hover {
+  background: rgba(59,76,192,0.08) !important;
+}
+.ctx-item:hover .ctx-label {
+  color: #3B4CC0 !important;
+}
+.ctx-item:hover .ctx-icon {
+  opacity: 0.8 !important;
+}

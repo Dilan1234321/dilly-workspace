@@ -10,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authHeaders, API_BASE } from '../../lib/auth';
-import { pendingUpload } from './upload';
-import { colors, spacing } from '../../lib/tokens';
+import { authHeaders } from '../../lib/auth';
+import { pendingUpload, PENDING_UPLOAD_KEY } from './upload';
+import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ONBOARDING_KEYS = {
@@ -258,17 +258,48 @@ export default function ScanningScreen() {
     hasCalledApi.current = true;
 
     (async () => {
+      // Temporary connectivity test
+      fetch(`${API_BASE}/health`)
+        .then(r => console.log('[network] health check status:', r.status))
+        .catch(e => console.log('[network] health check FAILED:', e.message));
+
       try {
         const headers = await authHeaders();
+        console.log('[scan] auth headers present:', Object.keys(headers).join(', ') || 'NONE');
         const formData = new FormData();
 
+        // Resolve file: prefer module-level (same JS session), fall back to AsyncStorage
+        let fileUri      = pendingUpload.uri;
+        let fileName     = pendingUpload.name;
+        let fileMimeType = pendingUpload.mimeType;
+
+        if (!fileUri) {
+          const stored = await AsyncStorage.getItem(PENDING_UPLOAD_KEY);
+          if (stored) {
+            try {
+              const p = JSON.parse(stored);
+              fileUri      = p.uri      ?? null;
+              fileName     = p.name     ?? null;
+              fileMimeType = p.mimeType ?? null;
+              console.log('[scan] file recovered from AsyncStorage');
+            } catch { /* ignore */ }
+          }
+        }
+
+        // ── DIAGNOSTIC LOG 1: file ──────────────────────────────────────
+        console.log('[scan] file uri:', fileUri);
+        console.log('[scan] file name:', fileName);
+        console.log('[scan] file mimeType:', fileMimeType);
+
         // Attach file if present
-        if (pendingUpload.uri && pendingUpload.name) {
+        if (fileUri && fileName) {
           formData.append('file', {
-            uri:  pendingUpload.uri,
-            name: pendingUpload.name,
-            type: pendingUpload.mimeType ?? 'application/pdf',
+            uri:  fileUri,
+            name: fileName,
+            type: fileMimeType ?? 'application/pdf',
           } as any);
+        } else {
+          console.log('[scan] WARNING: no file to attach — API will reject');
         }
 
         // Attach profile params
@@ -280,6 +311,14 @@ export default function ScanningScreen() {
           AsyncStorage.getItem(ONBOARDING_KEYS.track),
           AsyncStorage.getItem(ONBOARDING_KEYS.target),
         ]);
+
+        // ── DIAGNOSTIC LOG 2: formData fields ───────────────────────────
+        console.log('[scan] majorsRaw:', majorsRaw);
+        console.log('[scan] preProf:', preProf);
+        console.log('[scan] indTarget:', indTarget);
+        console.log('[scan] cohortVal:', cohortVal);
+        console.log('[scan] track:', track);
+        console.log('[scan] appTarget:', appTarget);
 
         if (majorsRaw) {
           try {
@@ -295,19 +334,26 @@ export default function ScanningScreen() {
         if (track)      formData.append('track',                  track);
         if (appTarget)  formData.append('application_target',     appTarget);
 
+        console.log('[scan] firing POST /audit/first-run');
         const res = await fetch(`${API_BASE}/audit/first-run`, {
           method:  'POST',
           headers: { ...headers },
           body:    formData,
         });
 
+        // ── DIAGNOSTIC LOG 3: API response ──────────────────────────────
+        console.log('[scan] API status:', res.status);
         const result = await res.json();
+        console.log('[scan] API response:', JSON.stringify(result, null, 2));
+
         const payload = res.ok
           ? result
           : { error: true, status: res.status, detail: result.detail };
 
         await AsyncStorage.setItem(AUDIT_RESULT_KEY, JSON.stringify(payload));
-      } catch {
+        console.log('[scan] stored payload keys:', Object.keys(payload).join(', '));
+      } catch (e) {
+        console.log('[scan] CATCH ERROR:', e);
         await AsyncStorage.setItem(AUDIT_RESULT_KEY, JSON.stringify({ error: true }));
       }
 
