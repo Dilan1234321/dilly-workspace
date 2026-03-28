@@ -4,16 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pricing | Dilly</title>
-  <meta name="description" content="Dilly is $9.99/mo—cheaper than a DoorDash order. Audits, Dilly AI, ATS hub, Get Hired, leaderboard, practice, shareable profile &amp; PDF.">
-  <link rel="canonical" href="https://trydilly.com/pricing.html">
-  <meta property="og:url" content="https://trydilly.com/pricing.html">
+  <title>Pricing | Dilly - Cheaper Than a DoorDash Order</title>
+  <meta name="description" content="Dilly Pro gives you an AI career advisor, personalized job matching, full ATS scanning, and a desktop command center for $9.99/mo. Free tier available.">
+  <link rel="canonical" href="https://hellodilly.com/pricing.html">
+  <meta property="og:url" content="https://hellodilly.com/pricing.html">
   <meta property="og:title" content="Pricing | Dilly">
-  <meta property="og:description" content="Dilly is $9.99/mo—cheaper than a DoorDash order. Audits, Dilly AI, ATS hub, Get Hired, leaderboard, practice, shareable profile &amp; PDF.">
+  <meta property="og:description" content="Your personal career center for less than a DoorDash order. $9.99/mo or $79/year.">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta property="og:image" content="https://trydilly.com/og-image.png">
-  <meta name="twitter:image" content="https://trydilly.com/og-image.png">
+  <meta property="og:image" content="https://hellodilly.com/og-image.png">
+  <meta name="twitter:image" content="https://hellodilly.com/og-image.png">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%234f46e5' width='32' height='32' rx='6'/><text x='16' y='22' font-size='18' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>D</text></svg>">
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,71 +21,245 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="site-tailwind-config.js"></script>
-  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="site-styles.css">
+  <style>
+    .toggle-bg { background: #27272a; border-radius: 999px; padding: 4px; display: inline-flex; }
+    .toggle-btn { padding: 8px 20px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
+    .toggle-btn.active { background: #c5a353; color: #1a1400; }
+    .toggle-btn.inactive { background: transparent; color: #a1a1aa; }
+    .check { color: #34d399; }
+    .x { color: #3f3f46; }
+    .plan-card { border-radius: 20px; padding: 40px 32px; position: relative; transition: transform 0.2s; }
+    .plan-card:hover { transform: translateY(-2px); }
+    .plan-card.pro { border: 2px solid rgba(197,163,83,0.3); background: linear-gradient(180deg, rgba(197,163,83,0.04) 0%, rgba(10,10,10,0) 60%); }
+    .plan-card.free { border: 1px solid rgba(255,255,255,0.06); background: #111113; }
+    .badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #c5a353; color: #1a1400; font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 5px 16px; border-radius: 999px; }
+    .feat-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .feat-row:last-child { border-bottom: none; }
+    .feat-icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; }
+    .compare-row { display: grid; grid-template-columns: 1fr 120px 120px; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-row.header { border-bottom: 1px solid rgba(255,255,255,0.08); }
+    @media(max-width:768px) {
+      .plans-grid { flex-direction: column !important; }
+      .plan-card { padding: 32px 24px; }
+      .compare-row { grid-template-columns: 1fr 80px 80px; font-size: 13px; }
+    }
+  </style>
 </head>
 <body class="bg-surface text-ink antialiased selection:bg-emerald-500/25 selection:text-white">
+
   <div id="dilly-site-header"></div>
   <script src="site-nav.js"></script>
-  <noscript>
-    <div class="border-b border-white/10 bg-[#0a0a0a] px-5 py-3 text-sm text-zinc-300">
-      <a href="index.html" class="font-semibold text-white">Dilly</a>
-      <span class="mx-2 text-zinc-600">·</span>
-      <a href="features.html">Features</a>
-      <span class="mx-2 text-zinc-600">·</span>
-      <a href="how-it-works.html">How it works</a>
-      <span class="mx-2 text-zinc-600">·</span>
-      <a href="tracks.html">Tracks</a>
-      <span class="mx-2 text-zinc-600">·</span>
-      <a href="pricing.html">Pricing</a>
-      <span class="mx-2 text-zinc-600">·</span>
-      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer">App</a>
-    </div>
-  </noscript>
 
-<main class="mx-auto max-w-6xl px-5 pb-24 pt-8 md:px-8 md:pt-12" data-reveal>
-<section class="page-hero">
-    <div class="container-narrow text-center">
-      <h1>Cheaper than a DoorDash order</h1>
-      <p class="section-sub">Career coaches charge $200+/hr. Dilly is $9.99/mo—unlimited audits, 24/7 advice, track-specific edits. An internship pays $25–40/hr; if Dilly improves your odds even 10%, it pays for itself in the first hour of your first day.</p>
-    </div>
-  </section>
+<main>
 
-  <section class="section-dark">
-    <div class="container-tight text-center">
-      <div class="pricing-card">
-        <div class="launch-badge">Launch pricing — through April 30</div>
-        <div style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 0.5rem; background: rgba(34,197,94,0.15); font-size: 0.75rem; font-weight: 600; color: #22c55e; margin-bottom: 0.5rem;">First audit free</div>
-        <div class="price">
-          <span style="text-decoration: line-through; color: var(--dilly-taupe-muted); font-size: 1.25rem; margin-right: 0.5rem;">$19.99</span>
-          $9.99
+  <!-- Hero -->
+  <section class="relative overflow-hidden border-b border-white/10">
+    <div class="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-32 bottom-10 h-80 w-80 rounded-full bg-[#c5a353]/10 blur-3xl"></div>
+    <div class="relative mx-auto max-w-4xl px-5 py-24 text-center md:px-8 md:py-32" data-reveal>
+      <p class="label-app mb-6 text-appgreen">Pricing</p>
+      <h1 class="font-serif text-4xl font-semibold leading-[1.08] tracking-[0.02em] text-zinc-50 md:text-5xl lg:text-6xl">
+        Your career center.<br>
+        <span class="gradient-text font-semibold">Less than a DoorDash order.</span>
+      </h1>
+      <p class="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-zinc-400 md:text-lg">
+        Everything you need to land your first internship or job. Free to start. $9.99/mo to unlock the full power of AI-driven career readiness.
+      </p>
+
+      <!-- Toggle -->
+      <div class="mt-10 flex justify-center">
+        <div class="toggle-bg" id="billingToggle">
+          <button class="toggle-btn active" id="btnMonthly" onclick="setBilling('monthly')">Monthly</button>
+          <button class="toggle-btn inactive" id="btnAnnual" onclick="setBilling('annual')">Annual <span style="font-size:10px;color:#34d399;font-weight:700">Save 34%</span></button>
         </div>
-        <div class="urgency-line">Recruiting season starts soon. Get audit-ready now.</div>
-        <div class="price-period">per month</div>
-        <ul class="price-list">
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Unlimited resume audits & audit history</li>
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Dilly AI (chat, mock interview, inline visuals)</li>
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> ATS Readiness hub (vendors, keywords, Fix It)</li>
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Get Hired: jobs, applications pipeline, playbook, certifications</li>
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> My Score page & track leaderboard</li>
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Practice hub, companies, Insights, calendar export</li>
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Track playbooks, peer percentiles, achievements & share cards</li>
-          <li><svg class="check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Shareable profile link & PDF report</li>
-        </ul>
-        <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="btn-primary btn-full" data-cta="pricing">Start free — run your first audit</a>
-        <p class="risk-reversal">Cancel anytime · No questions asked · 7-day guarantee: not confident? Cancel and we'll refund.</p>
       </div>
     </div>
   </section>
 
-  <section>
-    <div class="container-tight text-center">
-      <h2>Built for students</h2>
-      <p class="section-sub">Track-specific scoring · Four-tab app shell · .edu verified · We don't sell your data · Export your data anytime</p>
-      <p style="font-size: 0.875rem; color: var(--dilly-taupe-muted); margin-top: 1rem;">Career coaches charge $200+/hr. Dilly: $9.99/mo—cheaper than a DoorDash order, unlimited.</p>
+  <!-- Pricing Cards -->
+  <section class="py-16 md:py-24">
+    <div class="mx-auto max-w-5xl px-5 md:px-8" data-reveal>
+      <div class="plans-grid" style="display:flex;gap:20px;align-items:stretch">
+
+        <!-- Free -->
+        <div class="plan-card free" style="flex:1">
+          <h3 class="font-serif text-2xl font-semibold text-zinc-100 tracking-[0.02em]">Free</h3>
+          <p class="mt-2 text-sm text-zinc-500">Get started. See your score.</p>
+          <div class="mt-6 flex items-baseline gap-1">
+            <span class="text-4xl font-bold text-zinc-100">$0</span>
+            <span class="text-sm text-zinc-500">/forever</span>
+          </div>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="mt-8 flex h-12 items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-sm font-semibold text-zinc-100 transition hover:bg-white/10">
+            Get Started Free
+          </a>
+          <div class="mt-8">
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Unlimited resume audits</p><p class="text-xs text-zinc-500">Rule-based scoring</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Basic Smart, Grit, Build score</p><p class="text-xs text-zinc-500">Overall only, no cohort breakdown</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Browse job listings</p><p class="text-xs text-zinc-500">No personalized matching</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Basic ATS format check</p><p class="text-xs text-zinc-500">General formatting only</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Basic Dilly profile</p><p class="text-xs text-zinc-500">Standard template</p></div></div>
+          </div>
+        </div>
+
+        <!-- Pro -->
+        <div class="plan-card pro" style="flex:1">
+          <div class="badge">RECOMMENDED</div>
+          <h3 class="font-serif text-2xl font-semibold text-zinc-100 tracking-[0.02em]">Dilly Pro</h3>
+          <p class="mt-2 text-sm text-gold">Your personal AI career center</p>
+          <div class="mt-6 flex items-baseline gap-1">
+            <span class="text-4xl font-bold text-zinc-100" id="proPrice">$9.99</span>
+            <span class="text-sm text-zinc-500" id="proPeriod">/month</span>
+          </div>
+          <p class="mt-1 text-xs text-zinc-500" id="proSavings" style="display:none">$79/year - save $40.88 vs monthly</p>
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="pricing-pro" class="mt-8 flex h-12 items-center justify-center rounded-2xl bg-[#c5a353] text-sm font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 active:scale-[0.98]">
+            Start Dilly Pro
+          </a>
+          <div class="mt-8">
+            <p class="text-xs font-bold text-gold tracking-wider uppercase mb-3">Everything in Free, plus:</p>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">AI-powered resume audits</p><p class="text-xs text-zinc-500">Deep analysis with line-by-line AI rewrites</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Full cohort scoring (22 career fields)</p><p class="text-xs text-zinc-500">S/G/B breakdown per cohort with gap analysis</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Ask Dilly - AI career advisor</p><p class="text-xs text-zinc-500">24/7 personalized coaching that knows your resume and goals</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Smart job matching</p><p class="text-xs text-zinc-500">Ready / Almost / Gap for every listing based on your scores</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Full ATS scanning (6 vendors)</p><p class="text-xs text-zinc-500">Greenhouse, Workday, iCIMS, Taleo, Lever, SuccessFactors</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Resume editor with AI rewrites</p><p class="text-xs text-zinc-500">Per-bullet scoring with specific improvement suggestions</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Career Genome visualization</p><p class="text-xs text-zinc-500">Interactive radar chart of your career DNA</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Desktop command center</p><p class="text-xs text-zinc-500">Full career dashboard at app.hellodilly.com</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Application tracker</p><p class="text-xs text-zinc-500">Kanban board: Saved to Applied to Interview to Offer</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Leaderboard with full rankings</p><p class="text-xs text-zinc-500">See where you rank by school, cohort, and dimension</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Calendar with deadline alerts</p><p class="text-xs text-zinc-500">Never miss an application deadline again</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Enhanced recruiter-visible profile</p><p class="text-xs text-zinc-500">Premium profile that employers actually see</p></div></div>
+            <div class="feat-row"><svg class="feat-icon check" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg><div><p class="text-sm text-zinc-200">Mock interviews with AI feedback</p><p class="text-xs text-zinc-500">Practice mode tailored to your target roles</p></div></div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </section>
-  </main>
+
+  <!-- Comparison Table -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="mx-auto max-w-4xl px-5 md:px-8" data-reveal>
+      <div class="text-center mb-12">
+        <p class="label-app mb-3 text-gold">Compare plans</p>
+        <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Feature by feature</h2>
+      </div>
+
+      <div class="rounded-2xl bg-card p-6 ring-1 ring-white/5 md:p-8">
+        <div class="compare-row header">
+          <span class="text-sm font-semibold text-zinc-400">Feature</span>
+          <span class="text-sm font-semibold text-zinc-400 text-center">Free</span>
+          <span class="text-sm font-semibold text-gold text-center">Pro</span>
+        </div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Resume audits</span><span class="text-sm text-zinc-400 text-center">Rule-based</span><span class="text-sm text-gold text-center font-semibold">AI-powered</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Audit limit</span><span class="text-sm text-zinc-400 text-center">Unlimited</span><span class="text-sm text-gold text-center font-semibold">Unlimited</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Smart / Grit / Build score</span><span class="text-sm text-zinc-400 text-center">Basic</span><span class="text-sm text-gold text-center font-semibold">Full + cohorts</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Cohort breakdown (22 fields)</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">AI advisor (Ask Dilly)</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Job listings</span><span class="text-sm text-zinc-400 text-center">Browse</span><span class="text-sm text-gold text-center font-semibold">Matched to you</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Ready / Almost / Gap matching</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">ATS scanning</span><span class="text-sm text-zinc-400 text-center">Format check</span><span class="text-sm text-gold text-center font-semibold">6 vendors</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Resume editor + AI rewrites</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Career Genome</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Desktop command center</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Application tracker</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Leaderboard</span><span class="text-sm text-zinc-400 text-center">Rank only</span><span class="text-sm text-gold text-center font-semibold">Full details</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Calendar + deadline alerts</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Recruiter-visible profile</span><span class="text-sm text-zinc-400 text-center">Basic</span><span class="text-sm text-gold text-center font-semibold">Enhanced</span></div>
+        <div class="compare-row"><span class="text-sm text-zinc-300">Mock interviews</span><span class="text-sm x text-center">-</span><span class="text-sm check text-center">&#10003;</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Social proof / perspective -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="mx-auto max-w-4xl px-5 text-center md:px-8" data-reveal>
+      <p class="label-app mb-3 text-appgreen">Perspective</p>
+      <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">What $9.99/mo really means</h2>
+      <div class="mx-auto mt-12 grid max-w-3xl grid-cols-2 gap-4 md:grid-cols-4">
+        <div class="rounded-2xl bg-card p-5 text-center ring-1 ring-white/5">
+          <p class="text-2xl">&#9749;</p>
+          <p class="mt-2 text-sm font-semibold text-zinc-300">2 coffees</p>
+          <p class="mt-1 text-xs text-zinc-500">from Starbucks</p>
+        </div>
+        <div class="rounded-2xl bg-card p-5 text-center ring-1 ring-white/5">
+          <p class="text-2xl">&#127829;</p>
+          <p class="mt-2 text-sm font-semibold text-zinc-300">1 DoorDash</p>
+          <p class="mt-1 text-xs text-zinc-500">delivery fee included</p>
+        </div>
+        <div class="rounded-2xl bg-card p-5 text-center ring-1 ring-white/5">
+          <p class="text-2xl">&#127909;</p>
+          <p class="mt-2 text-sm font-semibold text-zinc-300">1 Netflix</p>
+          <p class="mt-1 text-xs text-zinc-500">standard plan</p>
+        </div>
+        <div class="rounded-2xl bg-card p-5 text-center ring-1 ring-white/5">
+          <p class="text-2xl" style="color:#c5a353">&#9733;</p>
+          <p class="mt-2 text-sm font-semibold text-gold">Your career</p>
+          <p class="mt-1 text-xs text-zinc-500">actually figured out</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="mx-auto max-w-3xl px-5 md:px-8" data-reveal>
+      <div class="text-center mb-12">
+        <p class="label-app mb-3 text-gold">FAQ</p>
+        <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Common questions</h2>
+      </div>
+      <div class="space-y-6">
+        <div>
+          <h3 class="text-base font-semibold text-zinc-100">Can I try Dilly before paying?</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Yes. The free tier gives you unlimited rule-based resume audits, a basic score, and access to job listings. You can see if Dilly works for you before upgrading.</p>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-zinc-100">What's the difference between rule-based and AI-powered audits?</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Rule-based audits check for formatting, structure, and keyword presence. AI-powered audits read your resume like a senior hiring manager would, analyzing the quality of your bullet points, the strength of your narrative, and giving you specific rewrites tailored to your target career field.</p>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-zinc-100">Can I cancel anytime?</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Yes. Cancel from your account settings and you won't be charged again. Your data stays yours.</p>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-zinc-100">Is there a student discount?</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Dilly is already priced for students. $9.99/mo is cheaper than a DoorDash order. The annual plan at $79/year saves you 34% and comes out to $6.58/mo.</p>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-zinc-100">Do you sell my data?</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Never. Dilly is .edu verified and student-first. Your resume, scores, and personal information are never sold to third parties.</p>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-zinc-100">What's the desktop command center?</h3>
+          <p class="mt-2 text-sm text-zinc-400 leading-relaxed">Pro members get access to app.hellodilly.com, a full desktop career workspace with your Career Genome, application tracker, calendar, leaderboard, and AI advisor all in one place. Think of it as your personal career center's headquarters.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-24 md:py-32">
+    <div class="relative mx-auto max-w-3xl px-5 text-center md:px-8" data-reveal>
+      <div class="pointer-events-none absolute left-1/2 top-0 h-80 w-[500px] -translate-x-1/2 rounded-full bg-gradient-to-br from-emerald-500/10 to-[#c5a353]/10 blur-3xl"></div>
+      <div class="relative">
+        <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Your career is worth more<br>than a pizza</h2>
+        <p class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-400">
+          Start free. Upgrade when you're ready. Either way, you'll know exactly where you stand.
+        </p>
+        <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="pricing-bottom" class="inline-flex h-14 min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-10 text-base font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 active:scale-[0.98]">
+            Get Your Dilly Score
+          </a>
+        </div>
+        <p class="mt-6 text-sm text-zinc-500">.edu verified &middot; Cancel anytime &middot; We never sell your data</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+  <!-- Sticky CTA -->
   <div class="fixed bottom-0 left-0 right-0 z-50 translate-y-full border-t border-white/10 bg-[#141416]/95 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-transform duration-300 md:py-4" id="sticky-cta">
     <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
       <span class="hidden text-sm font-medium text-zinc-400 sm:inline">Ready to see your score?</span>
@@ -102,21 +276,49 @@
         <a href="index.html" class="hover:text-white">Home</a>
         <a href="features.html" class="hover:text-white">Features</a>
         <a href="how-it-works.html" class="hover:text-white">How it works</a>
-        <a href="the-app.html" class="hover:text-white">The app</a>
-        <a href="your-journey.html" class="hover:text-white">Your journey</a>
         <a href="tracks.html" class="hover:text-white">Tracks</a>
-        <a href="quiz.html" class="hover:text-white">Quiz</a>
         <a href="pricing.html" class="hover:text-white">Pricing</a>
-        <a href="recruiters.html" class="hover:text-white">Recruiters</a>
-        <a href="for-parents.html" class="hover:text-white">Parents</a>
-        <a href="trust.html" class="hover:text-white">Trust</a>
         <a href="about.html" class="hover:text-white">About</a>
       </div>
     </div>
-    <p class="mt-8 text-center text-xs text-zinc-600">© <span id="year"></span> Dilly. The career center in your pocket.</p>
+    <p class="mt-8 text-center text-xs text-zinc-600">&copy; <span id="year"></span> Dilly. The career center in your pocket.</p>
   </footer>
+
   <script src="analytics.js"></script>
   <script src="site-page.js"></script>
+  <script>
+    function setBilling(mode) {
+      var price = document.getElementById('proPrice');
+      var period = document.getElementById('proPeriod');
+      var savings = document.getElementById('proSavings');
+      var btnM = document.getElementById('btnMonthly');
+      var btnA = document.getElementById('btnAnnual');
+      if (mode === 'annual') {
+        price.textContent = '$6.58';
+        period.textContent = '/month';
+        savings.style.display = 'block';
+        btnA.className = 'toggle-btn active';
+        btnM.className = 'toggle-btn inactive';
+      } else {
+        price.textContent = '$9.99';
+        period.textContent = '/month';
+        savings.style.display = 'none';
+        btnM.className = 'toggle-btn active';
+        btnA.className = 'toggle-btn inactive';
+      }
+    }
+
+    (function stickyCta() {
+      var cta = document.getElementById('sticky-cta');
+      var lastScroll = 0;
+      window.addEventListener('scroll', function () {
+        var y = window.scrollY;
+        if (y > 500 && y > lastScroll) cta.classList.add('translate-y-0');
+        else if (y < 200) cta.classList.remove('translate-y-0');
+        lastScroll = y;
+      });
+    })();
+  </script>
 
 </body>
 </html>
