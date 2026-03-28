@@ -12,14 +12,33 @@ interface Event {
 }
 
 const DEMO_EVENTS: Event[] = [
-  { date: '2026-03-28', title: 'Cloudflare deadline', type: 'deadline', company: 'Cloudflare' },
-  { date: '2026-03-30', title: 'Stripe phone screen', type: 'interview', company: 'Stripe' },
-  { date: '2026-04-01', title: 'Resume audit reminder', type: 'audit' },
-  { date: '2026-04-03', title: 'Goldman Sachs deadline', type: 'deadline', company: 'Goldman Sachs' },
-  { date: '2026-04-05', title: 'MongoDB final round', type: 'interview', company: 'MongoDB' },
-  { date: '2026-04-10', title: '12 new matches', type: 'match' },
-  { date: '2026-04-15', title: 'Cloudflare application due', type: 'deadline', company: 'Cloudflare' },
-  { date: '2026-04-18', title: 'Weekly audit', type: 'audit' },
+  // March 28–31
+  { date: '2026-03-28', title: 'Palantir app deadline',         type: 'deadline',  company: 'Palantir' },
+  { date: '2026-03-28', title: 'Weekly score audit',            type: 'audit' },
+  { date: '2026-03-30', title: 'Stripe phone screen',           type: 'interview', company: 'Stripe' },
+  { date: '2026-03-31', title: '8 new job matches',             type: 'match' },
+  // April
+  { date: '2026-04-01', title: 'Goldman Sachs tech screen',     type: 'interview', company: 'Goldman Sachs' },
+  { date: '2026-04-02', title: 'Snowflake app deadline',        type: 'deadline',  company: 'Snowflake' },
+  { date: '2026-04-03', title: 'Resume refresh reminder',       type: 'audit' },
+  { date: '2026-04-04', title: 'Databricks app deadline',       type: 'deadline',  company: 'Databricks' },
+  { date: '2026-04-05', title: 'MongoDB final round',           type: 'interview', company: 'MongoDB' },
+  { date: '2026-04-07', title: 'Stripe 2nd round',              type: 'interview', company: 'Stripe' },
+  { date: '2026-04-08', title: '15 new job matches',            type: 'match' },
+  { date: '2026-04-10', title: 'Goldman Sachs case interview',  type: 'interview', company: 'Goldman Sachs' },
+  { date: '2026-04-12', title: 'Twilio onsite interview',       type: 'interview', company: 'Twilio' },
+  { date: '2026-04-14', title: 'Weekly score audit',            type: 'audit' },
+  { date: '2026-04-15', title: 'Cloudflare app deadline',       type: 'deadline',  company: 'Cloudflare' },
+  { date: '2026-04-15', title: 'HubSpot app deadline',          type: 'deadline',  company: 'HubSpot' },
+  { date: '2026-04-16', title: 'Figma app deadline',            type: 'deadline',  company: 'Figma' },
+  { date: '2026-04-18', title: 'Okta hiring event',             type: 'interview', company: 'Okta' },
+  { date: '2026-04-20', title: 'Toast app deadline',            type: 'deadline',  company: 'Toast' },
+  { date: '2026-04-21', title: '11 new job matches',            type: 'match' },
+  { date: '2026-04-22', title: 'Notion app deadline',           type: 'deadline',  company: 'Notion' },
+  { date: '2026-04-23', title: 'Intercom final interview',      type: 'interview', company: 'Intercom' },
+  { date: '2026-04-25', title: 'Monthly profile review',        type: 'audit' },
+  { date: '2026-04-26', title: 'Dropbox app deadline',          type: 'deadline',  company: 'Dropbox' },
+  { date: '2026-04-28', title: 'Figma final round',             type: 'interview', company: 'Figma' },
 ];
 
 const EVENT_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
@@ -29,15 +48,20 @@ const EVENT_COLORS: Record<string, { bg: string; text: string; dot: string }> = 
   match: { bg: 'rgba(52,199,89,0.1)', text: '#34C759', dot: '#34C759' },
 };
 
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 27));
-  const [selectedDate, setSelectedDate] = useState<string | null>('2026-03-28');
+  const now = new Date();
+  const [currentDate, setCurrentDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState<string | null>(toDateStr(now));
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = '2026-03-27';
+  const today = toDateStr(now);
 
   const days: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) days.push(null);
@@ -46,7 +70,7 @@ export default function CalendarPage() {
   const selectedEvents = selectedDate ? DEMO_EVENTS.filter(e => e.date === selectedDate) : [];
 
   function dateStr(day: number) {
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return toDateStr(new Date(year, month, day));
   }
 
   function prevMonth() { setCurrentDate(new Date(year, month - 1, 1)); }

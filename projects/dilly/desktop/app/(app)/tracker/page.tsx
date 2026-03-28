@@ -27,16 +27,29 @@ const COLUMNS: { key: Status; label: string; color: string; emptyText: string }[
   { key: 'rejected', label: 'Rejected', color: '#FF453A', emptyText: 'It happens. Keep going.' },
 ];
 
-// Demo data until we wire up the real API
 const DEMO_APPS: Application[] = [
-  { id: '1', company: 'Cloudflare', role: 'Data Analytics Intern', status: 'saved', deadline: '2026-04-15' },
-  { id: '2', company: 'Toast', role: 'Product Analyst', status: 'saved' },
-  { id: '3', company: 'Dropbox', role: 'People Data Analyst', status: 'applied', applied_at: '2026-03-25' },
-  { id: '4', company: 'Okta', role: 'Data Analyst Intern', status: 'applied', applied_at: '2026-03-22' },
-  { id: '5', company: 'Stripe', role: 'Software Engineer Intern', status: 'interviewing', applied_at: '2026-03-10' },
-  { id: '6', company: 'Goldman Sachs', role: 'Summer Analyst', status: 'interviewing', applied_at: '2026-03-05' },
-  { id: '7', company: 'MongoDB', role: 'Sales Dev Representative', status: 'offer', applied_at: '2026-02-20' },
-  { id: '8', company: 'Visa', role: 'AI Center of Excellence Analyst', status: 'rejected', applied_at: '2026-03-01' },
+  // Saved (6)
+  { id: '1',  company: 'Cloudflare',    role: 'Data Analytics Intern',          status: 'saved',        deadline: '2026-04-15' },
+  { id: '2',  company: 'Toast',         role: 'Product Analyst Intern',          status: 'saved',        deadline: '2026-04-20' },
+  { id: '3',  company: 'Figma',         role: 'Business Analytics Intern',       status: 'saved',        deadline: '2026-04-28' },
+  { id: '4',  company: 'HubSpot',       role: 'Marketing Data Analyst Intern',   status: 'saved',        deadline: '2026-05-01' },
+  { id: '5',  company: 'Notion',        role: 'Growth Analytics Intern',         status: 'saved' },
+  { id: '6',  company: 'Intercom',      role: 'Data Science Intern',             status: 'saved' },
+  // Applied (5)
+  { id: '7',  company: 'Dropbox',       role: 'People Data Analyst',             status: 'applied',      applied_at: '2026-03-25' },
+  { id: '8',  company: 'Okta',          role: 'Data Analyst Intern',             status: 'applied',      applied_at: '2026-03-22' },
+  { id: '9',  company: 'Databricks',    role: 'Data Engineering Intern',         status: 'applied',      applied_at: '2026-03-18' },
+  { id: '10', company: 'Snowflake',     role: 'Solutions Engineer Intern',       status: 'applied',      applied_at: '2026-03-15' },
+  { id: '11', company: 'Palantir',      role: 'Forward Deployed SW Intern',      status: 'applied',      applied_at: '2026-03-12' },
+  // Interviewing (3)
+  { id: '12', company: 'Stripe',        role: 'Software Engineer Intern',        status: 'interviewing', applied_at: '2026-03-10' },
+  { id: '13', company: 'Goldman Sachs', role: 'Summer Analyst — Tech',           status: 'interviewing', applied_at: '2026-03-05' },
+  { id: '14', company: 'Twilio',        role: 'Data Analyst Intern',             status: 'interviewing', applied_at: '2026-03-02' },
+  // Offer (1)
+  { id: '15', company: 'MongoDB',       role: 'Sales Development Rep Intern',    status: 'offer',        applied_at: '2026-02-20' },
+  // Rejected (2)
+  { id: '16', company: 'Visa',          role: 'AI Center of Excellence Analyst', status: 'rejected',     applied_at: '2026-03-01' },
+  { id: '17', company: 'JPMorgan',      role: 'Technology Analyst Intern',       status: 'rejected',     applied_at: '2026-02-28' },
 ];
 
 export default function TrackerPage() {
