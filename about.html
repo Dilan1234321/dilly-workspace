@@ -1,11 +1,10 @@
-<!-- CHROME_APPLIED v1 -->
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>About | Dilly — The Career Center in Your Pocket</title>
-  <meta name="description" content="Dilly was built by a college student who saw the problem firsthand. Career centers are broken. AI is changing everything. Students deserve better.">
+  <meta name="description" content="Built by a college student who saw the problem firsthand. Career centers are broken. AI is changing everything. Students deserve better.">
   <link rel="canonical" href="https://trydilly.com/about.html">
   <meta property="og:url" content="https://trydilly.com/about.html">
   <meta property="og:title" content="About | Dilly">
@@ -25,246 +24,174 @@
 </head>
 <body class="bg-surface text-ink antialiased selection:bg-emerald-500/25 selection:text-white">
 
-  <header class="site-header sticky top-0 z-50 border-b border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 md:px-8 md:py-4">
-      <a href="index.html" class="relative z-[120] flex shrink-0 items-center">
-        <img src="dilly-wordmark.png" alt="Dilly" class="site-header-logo shrink-0" width="612" height="408" decoding="async" />
-      </a>
-      <button type="button" class="relative z-[120] rounded-xl px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-zinc-800 md:hidden" id="navMenuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenuPanel">Menu</button>
-      <div class="nav-menu-panel fixed inset-0 z-[100] hidden overflow-y-auto overscroll-contain border-0 bg-[#0a0a0a]/98 backdrop-blur-xl md:static md:inset-auto md:z-auto md:flex md:max-h-none md:flex-1 md:flex-row md:justify-end md:overflow-visible md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none" id="navMenuPanel">
-        <nav class="mx-auto flex w-full max-w-lg flex-col gap-1 px-6 pb-[max(2rem,env(safe-area-inset-bottom,0px))] pt-[max(6.5rem,env(safe-area-inset-top,0px)+1.5rem)] md:mx-0 md:max-w-none md:flex-row md:items-center md:gap-0 md:rounded-full md:bg-zinc-900/90 md:p-1.5 md:pl-3 md:ring-1 md:ring-white/10 md:px-0 md:pb-0 md:pt-0">
-          <a href="features.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Features</a>
-          <a href="how-it-works.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">How it works</a>
-          <a href="tracks.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Tracks</a>
-          <a href="pricing.html" class="rounded-xl px-4 py-4 text-lg font-medium text-zinc-100 hover:bg-zinc-800/80 md:rounded-full md:px-3 md:py-2 md:text-sm md:font-medium md:text-zinc-300 md:hover:bg-transparent md:hover:text-white">Pricing</a>
-          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="nav" class="mt-4 inline-flex w-full min-h-[48px] items-center justify-center rounded-2xl bg-[#c5a353] px-5 py-3 text-base font-semibold text-zinc-950 shadow-lg shadow-black/20 transition hover:brightness-110 md:mt-0 md:ml-1 md:w-auto md:rounded-full md:py-2 md:text-sm">Get Your Dilly Score</a>
-        </nav>
+<main class="mx-auto max-w-6xl px-5 pb-24 pt-8 md:px-8 md:pt-12" data-reveal>
+
+  <!-- Hero -->
+  <section class="relative overflow-hidden pb-16 pt-20 md:pb-24 md:pt-28">
+    <div class="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl"></div>
+    <div class="pointer-events-none absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-gold/10 blur-3xl"></div>
+    <div class="relative mx-auto max-w-3xl text-center">
+      <p class="label-app mb-5 text-appgreen">Our story</p>
+      <h1 class="font-serif text-4xl font-semibold leading-[1.1] tracking-[0.02em] text-zinc-50 md:text-5xl lg:text-6xl">
+        The Career Center<br>
+        <span class="gradient-text font-semibold">Students Were Promised</span>
+      </h1>
+      <p class="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-zinc-400 md:text-lg">
+        Every university promises career support. Most students never get it. The ones who do wait weeks for a 15-minute appointment that ends with generic advice. We built Dilly because students deserve better.
+      </p>
+    </div>
+  </section>
+
+  <!-- The Problem -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="mx-auto max-w-3xl">
+      <p class="label-app mb-3 text-gold">The problem</p>
+      <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Career centers are broken</h2>
+      <div class="mt-8 space-y-5 text-base leading-relaxed text-zinc-400">
+        <p>The average university career center has <span class="font-semibold text-zinc-200">1 counselor for every 2,500 students</span>. Appointments book out weeks in advance. When you finally get one, you get 15 minutes of surface-level advice that could apply to anyone.</p>
+        <p>Meanwhile, AI is reshaping every industry. Students are graduating into a job market that looks nothing like what their parents experienced. The roles that exist today might not exist in five years. The skills that matter are changing faster than any career center can keep up with.</p>
+        <p>Students don't need another resume template. They need someone who knows them, understands the market, and tells them exactly where they stand and what to do next.</p>
       </div>
     </div>
-  </header>
-
-  <main data-reveal>
-
-    <!-- Hero -->
-    <section class="relative overflow-hidden border-b border-white/10">
-      <div class="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl"></div>
-      <div class="pointer-events-none absolute -right-32 bottom-10 h-80 w-80 rounded-full bg-[#c5a353]/10 blur-3xl"></div>
-      <div class="relative mx-auto max-w-4xl px-5 py-24 text-center md:px-8 md:py-32">
-        <p class="label-app mb-6 text-appgreen">Our story</p>
-        <h1 class="font-serif text-4xl font-semibold leading-[1.1] tracking-[0.02em] text-zinc-50 md:text-5xl lg:text-6xl">
-          The Career Center<br>
-          <span class="gradient-text font-semibold">Students Were Promised</span>
-        </h1>
-        <p class="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-zinc-400 md:text-lg">
-          Every university promises a career center. Most students never use theirs. The ones who do wait weeks for a 15-minute appointment that ends with generic advice. We built Dilly because students deserve better.
-        </p>
+    <div class="mx-auto mt-14 grid max-w-4xl grid-cols-2 gap-3 md:grid-cols-4">
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-appgreen md:text-4xl">1:2500</p>
+        <p class="mt-2 text-sm text-zinc-500">Counselor-to-student ratio</p>
       </div>
-    </section>
-
-    <!-- The Problem -->
-    <section class="border-b border-white/10 py-20 md:py-28">
-      <div class="mx-auto max-w-6xl px-5 md:px-8">
-        <div class="mx-auto max-w-3xl">
-          <p class="label-app mb-4 text-[#c5a353]">The problem</p>
-          <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">
-            Career centers are broken
-          </h2>
-          <div class="mt-10 space-y-6 text-base leading-relaxed text-zinc-400">
-            <p>The average university career center has <span class="font-semibold text-zinc-200">1 counselor for every 2,500 students</span>. Appointments book out weeks in advance. When you finally get one, you get 15 minutes of surface-level advice that could apply to anyone.</p>
-            <p>Meanwhile, AI is reshaping every industry. Students are graduating into a job market that looks nothing like what their parents experienced. The roles that exist today might not exist in five years. The skills that matter are changing faster than any career center can keep up with.</p>
-            <p>Students don't need another resume template. They need someone who knows them, understands the market, and tells them exactly where they stand and what to do next.</p>
-          </div>
-        </div>
-
-        <!-- Stats -->
-        <div class="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-appgreen md:text-4xl">1:2500</p>
-            <p class="mt-2 text-sm text-zinc-500">Counselor-to-student ratio</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-[#c5a353] md:text-4xl">15 min</p>
-            <p class="mt-2 text-sm text-zinc-500">Average appointment length</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-zinc-100 md:text-4xl">73%</p>
-            <p class="mt-2 text-sm text-zinc-500">Students never use their career center</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-red-400 md:text-4xl">6 sec</p>
-            <p class="mt-2 text-sm text-zinc-500">Time recruiters spend on a resume</p>
-          </div>
-        </div>
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-gold md:text-4xl">15 min</p>
+        <p class="mt-2 text-sm text-zinc-500">Average appointment</p>
       </div>
-    </section>
-
-    <!-- The Solution -->
-    <section class="border-b border-white/10 py-20 md:py-28">
-      <div class="mx-auto max-w-6xl px-5 md:px-8">
-        <div class="mx-auto max-w-3xl">
-          <p class="label-app mb-4 text-appgreen">The solution</p>
-          <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">
-            A career center that knows you
-          </h2>
-          <div class="mt-10 space-y-6 text-base leading-relaxed text-zinc-400">
-            <p>Dilly gives every student what only the most connected students had before: <span class="font-semibold text-zinc-200">a personal career advisor who knows your strengths, understands the market, and is available 24/7</span>.</p>
-            <p>Upload your resume and Dilly scores you across three dimensions: <span class="font-semibold text-sky-400">Smart</span> (your academics and technical knowledge), <span class="font-semibold text-[#c5a353]">Grit</span> (your leadership, initiative, and persistence), and <span class="font-semibold text-appgreen">Build</span> (what you've actually created and shipped).</p>
-            <p>Your score isn't just a number. It's a map. Dilly breaks it down by career field, matches you to real jobs, tells you which ones you're ready for, and shows you exactly how to close the gaps on the ones you're not.</p>
-            <p>No more guessing. No more generic advice. No more waiting three weeks for an appointment. Dilly is the career center in your pocket — and it's always working for you.</p>
-          </div>
-        </div>
-
-        <!-- What makes Dilly different -->
-        <div class="mx-auto mt-16 grid max-w-5xl gap-4 md:grid-cols-3">
-          <div class="rounded-2xl bg-zinc-900/60 p-8 ring-1 ring-white/5">
-            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sky-500/10">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-zinc-100">The Score</h3>
-            <p class="mt-2 text-sm leading-relaxed text-zinc-400">No one else tells you "you're a 77." Dilly quantifies your career readiness so you know exactly where you stand — and what to do about it.</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-8 ring-1 ring-white/5">
-            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#c5a353]/10">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c5a353" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-zinc-100">The Advisor</h3>
-            <p class="mt-2 text-sm leading-relaxed text-zinc-400">Dilly's AI advisor knows your resume, your scores, and your goals. It gives personalized guidance — not template advice — anytime you need it.</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-8 ring-1 ring-white/5">
-            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-appgreen/10">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-zinc-100">The Matches</h3>
-            <p class="mt-2 text-sm leading-relaxed text-zinc-400">Real internships and jobs, matched to your specific scores. Not a job board — a curated feed of roles where you actually have a shot.</p>
-          </div>
-        </div>
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-zinc-100 md:text-4xl">73%</p>
+        <p class="mt-2 text-sm text-zinc-500">Never use their career center</p>
       </div>
-    </section>
-
-    <!-- The Founder -->
-    <section class="border-b border-white/10 py-20 md:py-28">
-      <div class="mx-auto max-w-6xl px-5 md:px-8">
-        <div class="mx-auto max-w-3xl text-center">
-          <p class="label-app mb-4 text-[#c5a353]">The founder</p>
-          <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">
-            Built by a student,<br>for students
-          </h2>
-        </div>
-        <div class="mx-auto mt-12 max-w-3xl">
-          <div class="rounded-2xl bg-zinc-900/60 p-8 ring-1 ring-white/5 md:p-10">
-            <div class="flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-10">
-              <div class="h-28 w-28 flex-shrink-0 rounded-full bg-zinc-800 ring-2 ring-white/10" style="background: linear-gradient(135deg, #3B4CC0 0%, #c5a353 100%);"></div>
-              <div>
-                <h3 class="text-xl font-bold text-zinc-100">Dilan Kochhar</h3>
-                <p class="mt-1 text-sm text-[#c5a353]">Founder & CEO · University of Tampa</p>
-                <p class="mt-1 text-xs text-zinc-500">Data Science · Mathematics · Computer Science</p>
-                <div class="mt-6 space-y-4 text-sm leading-relaxed text-zinc-400">
-                  <p>I built Dilly because I lived the problem. I watched friends with 3.8 GPAs and real internship experience get passed over because their resumes didn't tell the right story. I saw the career center — one overworked counselor for thousands of students — and thought, "there has to be a better way."</p>
-                  <p>AI isn't just changing how we work. It's changing what employers look for, which roles exist, and how fast the market moves. Students need a tool that moves as fast as the world around them. That's what Dilly is.</p>
-                  <p>We started at the University of Tampa. We're not trying to be everything to everyone. We're trying to be the best career tool one school has ever seen — and then do it again at the next one.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Mission -->
-    <section class="border-b border-white/10 py-20 md:py-28">
-      <div class="mx-auto max-w-4xl px-5 text-center md:px-8">
-        <p class="label-app mb-4 text-appgreen">Our mission</p>
-        <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">
-          Every student deserves<br>a fair shot
-        </h2>
-        <p class="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-zinc-400 md:text-lg">
-          Your career shouldn't depend on whether your parents know the right people, whether your school has a well-funded career center, or whether you happened to find the right LinkedIn post at the right time. Dilly levels the playing field. If you have talent and you're willing to work, we'll make sure the right people see it.
-        </p>
-      </div>
-    </section>
-
-    <!-- By the Numbers -->
-    <section class="border-b border-white/10 py-20 md:py-28">
-      <div class="mx-auto max-w-6xl px-5 md:px-8">
-        <div class="text-center">
-          <p class="label-app mb-4 text-[#c5a353]">By the numbers</p>
-          <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Where we are today</h2>
-        </div>
-        <div class="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-appgreen md:text-4xl">992</p>
-            <p class="mt-2 text-sm text-zinc-500">Active job listings</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-[#c5a353] md:text-4xl">58</p>
-            <p class="mt-2 text-sm text-zinc-500">Companies tracked</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-zinc-100 md:text-4xl">22</p>
-            <p class="mt-2 text-sm text-zinc-500">Career cohorts</p>
-          </div>
-          <div class="rounded-2xl bg-zinc-900/60 p-6 text-center ring-1 ring-white/5">
-            <p class="text-3xl font-bold text-sky-400 md:text-4xl">3</p>
-            <p class="mt-2 text-sm text-zinc-500">Score dimensions</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="py-24 md:py-32">
-      <div class="mx-auto max-w-3xl px-5 text-center md:px-8">
-        <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">
-          Ready to see where you stand?
-        </h2>
-        <p class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-400">
-          Upload your resume. Get your Dilly Score. See which jobs you're ready for — and which ones need work. It takes 2 minutes.
-        </p>
-        <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="about-bottom" class="inline-flex h-14 min-h-[44px] items-center justify-center rounded-2xl bg-[#c5a353] px-10 text-base font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 active:scale-[0.98]">
-            Get Your Dilly Score
-          </a>
-        </div>
-        <p class="mt-6 text-sm text-zinc-500">.edu verified · $9.99/mo · Cancel anytime</p>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Sticky CTA -->
-  <div class="fixed bottom-0 left-0 right-0 z-50 translate-y-full border-t border-white/10 bg-[#141416]/95 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-transform duration-300 md:py-4" id="sticky-cta">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
-      <span class="hidden text-sm font-medium text-zinc-400 sm:inline">Ready to see your score?</span>
-      <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="sticky" class="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[#c5a353] px-6 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 sm:flex-none">Get Your Dilly Score</a>
-    </div>
-  </div>
-
-  <footer class="border-t border-white/10 bg-[#0a0a0a] py-12">
-    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 px-5 md:flex-row md:px-8">
-      <a href="index.html" class="site-footer-brand inline-flex items-center">
-        <img src="dilly-wordmark.png" alt="Dilly" class="site-footer-logo shrink-0" width="612" height="408" decoding="async" />
-      </a>
-      <div class="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-zinc-400">
-        <a href="index.html" class="hover:text-white">Home</a>
-        <a href="features.html" class="hover:text-white">Features</a>
-        <a href="how-it-works.html" class="hover:text-white">How it works</a>
-        <a href="the-app.html" class="hover:text-white">The app</a>
-        <a href="your-journey.html" class="hover:text-white">Your journey</a>
-        <a href="tracks.html" class="hover:text-white">Tracks</a>
-        <a href="quiz.html" class="hover:text-white">Quiz</a>
-        <a href="pricing.html" class="hover:text-white">Pricing</a>
-        <a href="recruiters.html" class="hover:text-white">Recruiters</a>
-        <a href="for-parents.html" class="hover:text-white">Parents</a>
-        <a href="trust.html" class="hover:text-white">Trust</a>
-        <a href="about.html" class="hover:text-white">About</a>
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-red-400 md:text-4xl">6 sec</p>
+        <p class="mt-2 text-sm text-zinc-500">Recruiter resume scan</p>
       </div>
     </div>
-    <p class="mt-8 text-center text-xs text-zinc-600">&copy; <span id="year"></span> Dilly. The career center in your pocket.</p>
-  </footer>
+  </section>
 
-  <script src="site-nav.js"></script>
-  <script src="analytics.js"></script>
-  <script src="site-page.js"></script>
+  <!-- The Solution -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="mx-auto max-w-3xl">
+      <p class="label-app mb-3 text-appgreen">The solution</p>
+      <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">A career center that knows you</h2>
+      <div class="mt-8 space-y-5 text-base leading-relaxed text-zinc-400">
+        <p>Dilly gives every student what only the most connected students had before: <span class="font-semibold text-zinc-200">a personal career advisor who knows your strengths, understands the market, and is available 24/7</span>.</p>
+        <p>Upload your resume and Dilly scores you across three dimensions: <span class="font-semibold text-sky-400">Smart</span> (your academics and technical knowledge), <span class="font-semibold text-gold">Grit</span> (your leadership, initiative, and persistence), and <span class="font-semibold text-appgreen">Build</span> (what you've actually created and shipped).</p>
+        <p>Your score isn't just a number. It's a map. Dilly breaks it down by career field, matches you to real jobs, tells you which ones you're ready for, and shows you exactly how to close the gaps on the ones you're not.</p>
+      </div>
+    </div>
+    <div class="mx-auto mt-14 grid max-w-5xl gap-3 md:grid-cols-3">
+      <div class="rounded-2xl bg-raised p-8 ring-1 ring-white/5">
+        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sky-500/10">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-zinc-100">The Score</h3>
+        <p class="mt-2 text-sm leading-relaxed text-zinc-400">No one else tells you "you're a 77." Dilly quantifies your career readiness so you know exactly where you stand — and what to do about it.</p>
+      </div>
+      <div class="rounded-2xl bg-raised p-8 ring-1 ring-white/5">
+        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gold/10">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c5a353" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-zinc-100">The Advisor</h3>
+        <p class="mt-2 text-sm leading-relaxed text-zinc-400">Dilly's AI knows your resume, your scores, and your goals. Personalized guidance — not template advice — anytime you need it.</p>
+      </div>
+      <div class="rounded-2xl bg-raised p-8 ring-1 ring-white/5">
+        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-appgreen/10">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-zinc-100">The Matches</h3>
+        <p class="mt-2 text-sm leading-relaxed text-zinc-400">Real internships and jobs, matched to your specific scores. Not a job board — a curated feed of roles where you actually have a shot.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The Founder -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="mx-auto max-w-3xl text-center">
+      <p class="label-app mb-3 text-gold">The founder</p>
+      <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Built by a student, for students</h2>
+    </div>
+    <div class="mx-auto mt-12 max-w-3xl">
+      <div class="rounded-2xl bg-raised p-8 ring-1 ring-white/5 md:p-10">
+        <div class="flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-10">
+          <div class="h-28 w-28 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-white/10" style="background: linear-gradient(135deg, #3B4CC0 0%, #c5a353 100%);"></div>
+          <div>
+            <h3 class="text-xl font-bold text-zinc-100">Dilan Kochhar</h3>
+            <p class="mt-1 text-sm font-semibold text-gold">Founder & CEO</p>
+            <p class="mt-1 text-xs text-zinc-500">University of Tampa · Data Science · Mathematics · Computer Science</p>
+            <div class="mt-6 space-y-4 text-sm leading-relaxed text-zinc-400">
+              <p>I built Dilly because I lived the problem. I watched friends with 3.8 GPAs and real internship experience get passed over because their resumes didn't tell the right story. I saw the career center — one overworked counselor for thousands of students — and thought, there has to be a better way.</p>
+              <p>AI isn't just changing how we work. It's changing what employers look for, which roles exist, and how fast the market moves. Students need a tool that moves as fast as the world around them. That's what Dilly is.</p>
+              <p>We started at the University of Tampa. We're not trying to be everything to everyone. We're building the best career tool one school has ever seen — and then doing it again at the next one.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mission -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="mx-auto max-w-3xl text-center">
+      <p class="label-app mb-3 text-appgreen">Our mission</p>
+      <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Every student deserves a fair shot</h2>
+      <p class="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-zinc-400 md:text-lg">
+        Your career shouldn't depend on whether your parents know the right people, whether your school has a well-funded career center, or whether you happened to find the right LinkedIn post at the right time. Dilly levels the playing field. If you have talent and you're willing to work, we'll make sure the right people see it.
+      </p>
+    </div>
+  </section>
+
+  <!-- By the Numbers -->
+  <section class="border-t border-white/10 py-16 md:py-24">
+    <div class="text-center">
+      <p class="label-app mb-3 text-gold">By the numbers</p>
+      <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Where we are today</h2>
+    </div>
+    <div class="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-3 md:grid-cols-4">
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-appgreen md:text-4xl">992</p>
+        <p class="mt-2 text-sm text-zinc-500">Active job listings</p>
+      </div>
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-gold md:text-4xl">58</p>
+        <p class="mt-2 text-sm text-zinc-500">Companies tracked</p>
+      </div>
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-zinc-100 md:text-4xl">22</p>
+        <p class="mt-2 text-sm text-zinc-500">Career cohorts</p>
+      </div>
+      <div class="rounded-2xl bg-raised p-6 text-center ring-1 ring-white/5">
+        <p class="font-serif text-3xl font-bold text-sky-400 md:text-4xl">3</p>
+        <p class="mt-2 text-sm text-zinc-500">Score dimensions</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 md:py-24">
+    <div class="mx-auto max-w-3xl text-center">
+      <h2 class="font-serif text-3xl font-semibold tracking-[0.02em] text-zinc-50 md:text-4xl">Ready to see where you stand?</h2>
+      <p class="mx-auto mt-6 max-w-xl text-base leading-relaxed text-zinc-400">
+        Upload your resume. Get your Dilly Score. See which jobs you're ready for — and which ones need work. It takes 2 minutes.
+      </p>
+      <div class="mt-10">
+        <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" data-cta="about-bottom" class="inline-flex h-14 min-h-[44px] items-center justify-center rounded-2xl bg-gold px-10 text-base font-semibold text-zinc-950 shadow-lg shadow-black/30 transition hover:brightness-110 active:scale-[0.98]">
+          Get Your Dilly Score
+        </a>
+      </div>
+      <p class="mt-6 text-sm text-zinc-500">.edu verified · $9.99/mo · Cancel anytime</p>
+    </div>
+  </section>
+
+</main>
+
+<script src="site-nav.js"></script>
+<script src="analytics.js"></script>
+<script src="site-page.js"></script>
 
 </body>
 </html>
