@@ -100,7 +100,7 @@ export default function SettingsPage() {
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-border-main text-center">
-          <p className="text-[11px] text-txt-3">Dilly v1.0 \u00b7 Built by Dilan Kochhar</p>
+          <p className="text-[11px] text-txt-3">Dilly v1.0 · Built by Dilan Kochhar</p>
           <p className="text-[10px] text-txt-3 mt-1">app.hellodilly.com</p>
         </div>
       </div>
