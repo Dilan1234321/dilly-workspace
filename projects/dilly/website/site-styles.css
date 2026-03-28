@@ -15,10 +15,10 @@ body {
   transform: translateY(0);
 }
 .gradient-text {
-  background: linear-gradient(135deg, #34d399 0%, #2dd4bf 50%, #c5a353 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  background: linear-gradient(135deg, #34d399 0%, #2dd4bf 50%, #c5a353 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
 }
 /* App-style section labels — Cinzel small caps, restrained tracking */
 .label-app {
