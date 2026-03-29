@@ -385,6 +385,22 @@ export default function ProfileScreen() {
         )}
 
         {/* \u2500\u2500 Achievements \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+        {/* Dilly Profile button */}
+        <TouchableOpacity
+          style={ps.dillyProfileBtn}
+          onPress={() => router.push('/(app)/my-dilly-profile')}
+          activeOpacity={0.8}
+        >
+          <View style={ps.dillyProfileBtnIcon}>
+            <Ionicons name="sparkles" size={14} color={GOLD} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={ps.dillyProfileBtnTitle}>My Dilly Profile</Text>
+            <Text style={ps.dillyProfileBtnSub}>See everything Dilly knows about you</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.t3} />
+        </TouchableOpacity>
+
         <View style={ps.section}>
           <View style={ps.sectionHeader}>
             <Text style={ps.sectionEyebrow}>ACHIEVEMENTS</Text>
@@ -426,7 +442,7 @@ export default function ProfileScreen() {
           <View style={ps.activityRow}>
             {[
               { label: 'Audits Run', value: auditCount, icon: 'document-text', color: colors.blue },
-              { label: 'AI Sessions', value: '\u2014', icon: 'chatbubble', color: colors.indigo },
+              { label: 'AI Sessions', value: '—', icon: 'chatbubble', color: colors.indigo },
               { label: 'Jobs Applied', value: jobsApplied, icon: 'briefcase', color: GREEN },
             ].map(item => (
               <View key={item.label} style={ps.activityCard}>
@@ -652,6 +668,30 @@ const ps = StyleSheet.create({
   },
   targetChipText: { fontSize: 11, color: colors.t2 },
   targetEmpty: { fontSize: 12, color: colors.t3, fontStyle: 'italic' },
+
+  // Dilly Profile button
+  dillyProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.s2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.goldbdr,
+    padding: 14,
+    marginBottom: 20,
+  },
+  dillyProfileBtnIcon: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: colors.golddim,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  dillyProfileBtnTitle: {
+    fontSize: 13, fontWeight: '600', color: colors.t1, marginBottom: 2,
+  },
+  dillyProfileBtnSub: {
+    fontSize: 11, color: colors.t2,
+  },
 
   // Achievements
   achieveRow: { gap: 10, paddingRight: 8 },

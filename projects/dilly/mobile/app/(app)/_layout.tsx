@@ -130,6 +130,13 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="my-dilly-profile"
+        options={{
+          href: null,
+          animation: 'fade',
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           href: null,
