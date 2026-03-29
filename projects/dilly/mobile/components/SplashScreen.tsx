@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DillyFace } from './DillyFace';
 import { colors, API_BASE } from '../lib/tokens';
 import { getToken } from '../lib/auth';
+import { openDillyOverlay } from '../hooks/useDillyOverlay';
 
 const { height: H } = Dimensions.get('window');
 const GOLD  = '#C9A84C';
@@ -151,7 +152,7 @@ export default function SplashScreen({ onDismiss }: Props) {
             headline: 'Your career center is ready.',
             headline_gold: 'career center is ready.',
             sub: 'Pick up where you left off.',
-            cta_primary: 'Go to career center →',
+            cta_primary: 'Talk to Dilly →',
             cta_route: '/(app)',
             cta_context: '',
             glow_color: 'gold',
@@ -250,10 +251,17 @@ export default function SplashScreen({ onDismiss }: Props) {
         <Animated.View style={{ opacity: primaryOpacity, width: '100%' }}>
           <Pressable
             style={({ pressed }) => [ss.primaryBtn, pressed && { transform: [{ scale: 0.97 }] }]}
-            onPress={() => dismiss(splashData?.cta_route)}
+            onPress={() => {
+              const prompt = splashData?.voice_prompt
+                || `The user just saw this on their splash screen: "${splashData?.headline ?? ''}" with context "${splashData?.sub ?? ''}". Help them take the next step.`;
+              dismiss('/(app)');
+              setTimeout(() => {
+                openDillyOverlay({ initialMessage: prompt });
+              }, 400);
+            }}
           >
             <Text style={ss.primaryBtnText}>
-              {splashData?.cta_primary ?? 'Go to your career center'}
+              {splashData?.cta_primary ?? 'Talk to Dilly →'}
             </Text>
           </Pressable>
         </Animated.View>
