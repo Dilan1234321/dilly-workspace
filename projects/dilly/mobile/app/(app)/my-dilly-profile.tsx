@@ -97,6 +97,42 @@ export default function MyDillyProfileScreen() {
     setExpanded(prev => prev === cat ? null : cat);
   }
 
+  function addFact(category: string) {
+    const cfg = CATEGORY_CONFIG[category] || { label: category };
+    Alert.prompt(
+      `Add to ${cfg.label}`,
+      'What should Dilly know?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add',
+          onPress: async (text?: string) => {
+            const value = (text || '').trim();
+            if (!value) return;
+            try {
+              const res = await apiFetch('/memory/items', {
+                method: 'POST',
+                body: JSON.stringify({
+                  category,
+                  label: value.slice(0, 50),
+                  value: value,
+                  source: 'profile',
+                  confidence: 'high',
+                }),
+              });
+              if (res.ok) {
+                // Refresh the data
+                fetchData();
+              }
+            } catch {}
+          },
+        },
+      ],
+      'plain-text',
+      '',
+    );
+  }
+
   async function deleteFact(id: string) {
     Alert.alert('Remove fact', 'Dilly will forget this. Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
@@ -213,7 +249,7 @@ export default function MyDillyProfileScreen() {
                       {facts.map((fact, i) => (
                         <View
                           key={fact.id}
-                          style={[s.factRow, i < facts.length - 1 && s.factRowBorder]}
+                          style={[s.factRow, s.factRowBorder]}
                         >
                           <View style={s.factContent}>
                             <Text style={s.factLabel}>{fact.label}</Text>
@@ -232,6 +268,15 @@ export default function MyDillyProfileScreen() {
                           </TouchableOpacity>
                         </View>
                       ))}
+                      {/* Add fact button */}
+                      <TouchableOpacity
+                        style={s.addFactRow}
+                        onPress={() => addFact(cat)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="add-circle-outline" size={15} color={cfg.color} />
+                        <Text style={[s.addFactText, { color: cfg.color }]}>Add</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
@@ -423,6 +468,17 @@ const s = StyleSheet.create({
   },
   factDelete: {
     paddingTop: 2,
+  },
+  addFactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  addFactText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // ── Empty State ───────────────────────────────────────────────────────────
