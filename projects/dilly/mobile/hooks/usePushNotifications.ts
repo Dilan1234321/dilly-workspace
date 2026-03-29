@@ -1,24 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { apiFetch } from '../lib/auth';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// expo-device and expo-notifications require native modules that aren't available
+// in Expo Go or the iOS Simulator. Lazy-import to avoid crashing at module load.
+let Device: any = null;
+let Notifications: any = null;
+
+try {
+  Device = require('expo-device');
+  Notifications = require('expo-notifications');
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+} catch {
+  // Native modules not available (Expo Go / Simulator)
+}
 
 export function usePushNotifications() {
   const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
-  const [notification, setNotification] = useState<Notifications.Notification | null>(null);
+  const [notification, setNotification] = useState<any>(null);
   const notificationListener = useRef<any>();
   const responseListener = useRef<any>();
 
   useEffect(() => {
+    if (!Notifications || !Device) return; // Native modules not available
     registerForPush().then(token => {
       if (token) {
         setExpoPushToken(token);
@@ -44,8 +54,8 @@ export function usePushNotifications() {
     });
 
     return () => {
-      if (notificationListener.current) Notifications.removeNotificationSubscription(notificationListener.current);
-      if (responseListener.current) Notifications.removeNotificationSubscription(responseListener.current);
+      if (notificationListener.current) notificationListener.current.remove();
+      if (responseListener.current) responseListener.current.remove();
     };
   }, []);
 
@@ -53,8 +63,7 @@ export function usePushNotifications() {
 }
 
 async function registerForPush(): Promise<string | null> {
-  if (!Device.isDevice) {
-    // Simulator — skip
+  if (!Device || !Notifications || !Device.isDevice) {
     return null;
   }
 
