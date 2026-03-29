@@ -337,26 +337,61 @@ export default function ScoresPage() {
               </div>
 
               {/* Dimension Bars */}
-              <div className="flex flex-col gap-4 mb-5">
+              <div className="flex flex-col gap-5 mb-6">
                 {dims.map(d => {
                   const val = Math.round(d.value);
                   const valColor = val >= 75 ? '#34C759' : val >= 55 ? '#FF9F0A' : '#FF453A';
+                  const aboveAvg = val >= d.avg;
+                  const diff = Math.abs(val - d.avg);
                   return (
-                    <div key={d.key}>
-                      <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-3)', fontFamily: "'Cinzel', serif" }}>{d.label}</span>
-                        <span className="text-[22px] font-bold font-mono" style={{ color: valColor }}>{val}</span>
-                      </div>
-                      <div className="relative h-2 rounded-full overflow-visible" style={{ background: 'var(--surface-2)' }}>
-                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(val, 100)}%`, background: d.color, opacity: 0.85 }} />
-                        {/* Peer avg marker */}
-                        <div className="absolute top-[-3px]" style={{ left: `${d.avg}%` }}>
-                          <div className="w-0.5 h-3.5 rounded-sm" style={{ background: 'var(--text-1)', opacity: 0.4 }} />
+                    <div key={d.key} className="rounded-xl p-4" style={{ background: 'var(--surface-2)' }}>
+                      {/* Header row */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
+                          <span className="text-[11px] font-bold tracking-widest uppercase" style={{ fontFamily: "'Cinzel', serif", color: 'var(--text-2)' }}>{d.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[28px] font-bold font-mono leading-none" style={{ color: valColor }}>{val}</span>
+                          <span className="text-[12px] font-mono" style={{ color: 'var(--text-3)' }}>/100</span>
                         </div>
                       </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>You</span>
-                        <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>&#9662; Peer avg {d.avg}</span>
+
+                      {/* Bar */}
+                      <div className="relative h-6 rounded-lg overflow-visible" style={{ background: 'var(--surface-0)' }}>
+                        <div
+                          className="h-full rounded-lg transition-all duration-700 flex items-center justify-end pr-2"
+                          style={{
+                            width: `${Math.max(Math.min(val, 100), 4)}%`,
+                            background: `linear-gradient(90deg, ${d.color}40, ${d.color})`,
+                          }}
+                        >
+                          {val >= 15 && (
+                            <span className="text-[10px] font-bold font-mono" style={{ color: 'rgba(0,0,0,0.6)' }}>{val}</span>
+                          )}
+                        </div>
+                        {/* Peer avg marker */}
+                        <div className="absolute top-0 bottom-0 flex flex-col items-center justify-center" style={{ left: `${d.avg}%`, transform: 'translateX(-50%)' }}>
+                          <div className="w-0.5 h-full" style={{ background: 'var(--text-1)', opacity: 0.35 }} />
+                        </div>
+                      </div>
+
+                      {/* Bottom info */}
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded"
+                            style={{
+                              color: aboveAvg ? '#34C759' : '#FF453A',
+                              background: aboveAvg ? 'rgba(52,199,89,0.1)' : 'rgba(255,69,58,0.1)',
+                            }}
+                          >
+                            {aboveAvg ? '+' : '-'}{diff} {aboveAvg ? 'above' : 'below'} avg
+                          </span>
+                        </div>
+                        <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>
+                          Peer avg: <span className="font-mono font-bold">{d.avg}</span>
+                        </span>
                       </div>
                     </div>
                   );
