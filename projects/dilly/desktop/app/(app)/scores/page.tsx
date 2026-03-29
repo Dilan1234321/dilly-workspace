@@ -296,14 +296,20 @@ export default function ScoresPage() {
                             )}
                           </div>
                         </div>
-                        <div className="relative">
-                          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
-                            <div className="h-full rounded-full transition-all duration-200"
-                              style={{ width: `${Math.min(proj, 100)}%`, background: `linear-gradient(90deg, ${d.color}50, ${d.color})` }} />
+                        <div className="relative cursor-ew-resize group">
+                          <div className="h-3 rounded-full overflow-visible" style={{ background: 'var(--surface-2)' }}>
+                            <div className="h-full rounded-full transition-all duration-200 relative"
+                              style={{ width: `${Math.min(proj, 100)}%`, background: `linear-gradient(90deg, ${d.color}50, ${d.color})` }}>
+                              {/* Drag handle */}
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2
+                                w-4 h-4 rounded-full border-2 transition-transform duration-150
+                                group-hover:scale-125 shadow-md"
+                                style={{ background: d.color, borderColor: 'var(--surface-0)', boxShadow: `0 0 8px ${d.color}60` }} />
+                            </div>
                           </div>
                           <input type="range" min="-20" max="20" value={adj} step="1"
                             onChange={e => setSimAdjust(p => ({ ...p, [d.key]: Number(e.target.value) }))}
-                            className="absolute inset-0 w-full opacity-0 cursor-pointer" style={{ height: 20, marginTop: -4 }} />
+                            className="absolute inset-0 w-full opacity-0 cursor-ew-resize" style={{ height: 24, marginTop: -6 }} />
                         </div>
                       </div>
                     );
