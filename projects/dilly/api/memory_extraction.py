@@ -50,22 +50,47 @@ def _existing_memory_for_prompt(items: list[dict[str, Any]]) -> list[dict[str, s
 
 
 def extract_memory_items(uid: str, conv_id: str, messages: list[dict[str, Any]], existing_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    system = """You are extracting structured memory items from a conversation between a student and their AI career coach Dilly.
+    system = """You are building a Dilly Profile by extracting everything you can learn about a student from their conversation with Dilly, their AI career coach.
 
-Extract ONLY information that is:
-1) Specific and actionable (not vague feelings)
-2) Not already in the existing memory items list
-3) Meaningful to the student's career journey
+Dilly Profiles capture EVERYTHING about a user — not just career facts, but who they are as a person. The goal is to know the user beyond their resume: what they couldn't fit on one page, what drives them, what they're like to work with, and what a recruiter or advisor would want to know.
+
+Extract ANY new information the student reveals. Be thorough — if they mention something, capture it. Categories:
+
+CAREER (original):
+- target_company: companies they want to work at
+- concern: worries or anxieties about career/job search
+- mentioned_but_not_done: things they said they'd do but haven't
+- person_to_follow_up: people they should contact
+- deadline: dates, due dates, application deadlines
+- achievement: accomplishments, wins, things they're proud of
+- preference: career preferences (remote vs office, salary, role type)
+- goal: career goals, short or long term
+- rejection: companies/roles that rejected them
+- interview: upcoming or past interviews
+- strength: things they're good at
+- weakness: areas they need to improve
+
+PERSONAL (expanded — know them beyond the resume):
+- hobby: interests, sports, creative pursuits, activities outside career
+- personality: how they communicate, think, handle stress, work style
+- soft_skill: teamwork ability, leadership style, empathy, adaptability
+- life_context: family situation, financial constraints, where they live/want to live, background story
+- motivation: why they chose their field, what excites them, what drives them
+- challenge: obstacles, struggles, things blocking their progress
+- project_detail: specifics about projects not on their resume (tech stack, impact, what they learned)
+- skill_unlisted: skills they mention in conversation that aren't on their resume
+- company_culture_pref: startup vs corporate, team size, values, work environment preferences
+- availability: when they can start work, internship timing, schedule constraints
 
 Return a JSON array of objects with:
-- category: one of target_company | concern | mentioned_but_not_done | person_to_follow_up | deadline | achievement | preference | goal | rejection | interview | strength | weakness
+- category: one of the categories above
 - label: short display label, max 50 chars
-- value: full context, max 200 chars
+- value: full context with specifics, max 200 chars
 - confidence: high | medium | low
 - action_type: open_am_i_ready | open_bullet_practice | open_interview_prep | open_templates | open_calendar | open_career_hub | open_voice | open_certifications | open_ats | null
 - action_payload: object or null
 
-Action mapping examples:
+Action mapping (set action_type only when relevant):
 - target_company -> open_am_i_ready with { company: "<name>" }
 - concern about interviews -> open_interview_prep
 - mentioned_but_not_done for bullets -> open_bullet_practice
@@ -73,8 +98,10 @@ Action mapping examples:
 - person_to_follow_up -> open_templates with { person: "<name>", company: "<company>" }
 - deadline -> open_calendar with { label: "<name>", date: "<date if present>" }
 - weakness -> open_voice with { prompt: "Let's work on <weakness>" }
+- For personal categories (hobby, personality, etc.), action_type is usually null.
 
-If nothing meaningful was captured, return [].
+Be specific. "Likes sports" is bad. "Plays club soccer at UTampa, midfielder, practices 3x/week" is good.
+If nothing new was revealed, return [].
 Return JSON array only."""
     convo = []
     for m in messages or []:
@@ -95,7 +122,7 @@ Extract new memory items now. Return JSON array only."""
         system,
         user_prompt,
         model="claude-sonnet-4-20250514",
-        max_tokens=800,
+        max_tokens=1200,
         temperature=0.2,
     )
     if not raw:

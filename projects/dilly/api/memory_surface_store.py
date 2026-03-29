@@ -10,6 +10,7 @@ from typing import Any
 from projects.dilly.api.profile_store import get_profile, save_profile
 
 _MEMORY_CATEGORIES = {
+    # Career-specific (original)
     "target_company",
     "concern",
     "mentioned_but_not_done",
@@ -22,6 +23,17 @@ _MEMORY_CATEGORIES = {
     "interview",
     "strength",
     "weakness",
+    # Expanded — Dilly Profiles: know the user beyond their resume
+    "hobby",                 # interests, sports, activities outside career
+    "personality",           # communication style, work preferences, thinking style
+    "soft_skill",            # teamwork, leadership style, conflict resolution
+    "life_context",          # family, financial constraints, location preferences, background
+    "motivation",            # what drives them, why they chose their field
+    "challenge",             # obstacles, struggles, things holding them back
+    "project_detail",        # specific details about projects not on resume
+    "skill_unlisted",        # skills mentioned in conversation but not on resume
+    "company_culture_pref",  # what kind of workplace they want
+    "availability",          # when they can start, schedule constraints
 }
 
 _MEMORY_ACTIONS = {

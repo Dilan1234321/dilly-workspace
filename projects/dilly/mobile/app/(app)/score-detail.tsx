@@ -1,14 +1,28 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
+  Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiFetch } from '../../lib/auth';
-import { colors, spacing } from '../../lib/tokens';
+import { colors, spacing, radius } from '../../lib/tokens';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface CohortScore {
+  smart: number;
+  grit: number;
+  build: number;
+  final?: number;
+}
+
+interface CohortEntry {
+  name: string;
+  type: 'MAJOR' | 'MINOR' | 'INTEREST';
+  scores: CohortScore;
+}
 
 interface Rec {
   type?: string;
@@ -17,63 +31,73 @@ interface Rec {
   current_line?: string | null;
 }
 
-interface Audit {
-  final_score: number;
-  scores: { smart: number; grit: number; build: number };
-  evidence: { smart?: string; grit?: string; build?: string };
-  peer_percentiles?: { smart?: number; grit?: number; build?: number };
-  recommendations: Rec[];
-  detected_track: string;
-}
+// ── Constants ────────────────────────────────────────────────────────────────
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+const { width: SCREEN_W } = Dimensions.get('window');
 
-const COHORT: Record<string, { bar: number; company: string }> = {
-  Tech:    { bar: 75, company: 'Google' },
-  Finance: { bar: 72, company: 'Goldman Sachs' },
-  Health:  { bar: 68, company: 'Mayo Clinic' },
-  General: { bar: 65, company: 'your target company' },
-};
-
-const DIM_SUB_BAR: Record<string, number> = { smart: 70, grit: 68, build: 72 };
 const DIM_COLOR: Record<string, string> = {
-  smart: colors.blue, grit: colors.gold, build: colors.green,
+  smart: colors.blue,
+  grit: colors.gold,
+  build: colors.green,
 };
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+const DIM_LABEL: Record<string, string> = {
+  smart: 'SMART',
+  grit: 'GRIT',
+  build: 'BUILD',
+};
+
+// Peer avg fallbacks per dimension (used when real data unavailable)
+const PEER_AVG_FALLBACK: Record<string, number> = { smart: 62, grit: 58, build: 55 };
+
+const TYPE_ORDER: Record<string, number> = { MAJOR: 0, MINOR: 1, INTEREST: 2 };
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function scoreColor(n: number) {
-  return n >= 80 ? colors.green : n >= 55 ? colors.amber : colors.coral;
+  return n >= 75 ? colors.green : n >= 55 ? colors.amber : colors.coral;
 }
 
-function percentileLabel(n: number) {
-  if (n >= 90) return 5;
-  if (n >= 80) return 15;
-  if (n >= 70) return 30;
-  if (n >= 60) return 50;
-  return 65;
+function cohortFinal(s: CohortScore): number {
+  if (s.final && s.final > 0) return Math.round(s.final);
+  return Math.round(s.smart * 0.20 + s.grit * 0.30 + s.build * 0.50);
 }
 
 function dimTagFromRec(rec: Rec): string {
-  const t = rec.title.toLowerCase() + rec.action.toLowerCase();
+  const t = (rec.title + rec.action).toLowerCase();
   if (t.includes('grit') || t.includes('leadership') || t.includes('impact')) return 'grit';
   if (t.includes('smart') || t.includes('academic') || t.includes('gpa')) return 'smart';
   return 'build';
 }
 
-// ── Screen ─────────────────────────────────────────────────────────────────────
+// ── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ScoreDetailScreen() {
   const insets = useSafeAreaInsets();
-  const [audit,   setAudit]   = useState<Audit | null>(null);
-  const [track,   setTrack]   = useState('General');
-  const [loading, setLoading] = useState(true);
-  const [display, setDisplay] = useState(0);
+  const [cohorts, setCohorts]           = useState<CohortEntry[]>([]);
+  const [activeIdx, setActiveIdx]       = useState(0);
+  const [recs, setRecs]                 = useState<Rec[]>([]);
+  const [peerAvgs, setPeerAvgs]         = useState<Record<string, number>>(PEER_AVG_FALLBACK);
+  const [loading, setLoading]           = useState(true);
+  const [displayScore, setDisplayScore] = useState(0);
+
+  // Legacy fallback (single score, no cohort_scores)
+  const [legacyAudit, setLegacyAudit] = useState<{
+    final_score: number;
+    scores: { smart: number; grit: number; build: number };
+    evidence: Record<string, string>;
+  } | null>(null);
 
   const scoreAnim = useRef(new Animated.Value(0)).current;
-  const barAnim   = useRef(new Animated.Value(0)).current;
+  const barAnims = useRef({
+    smart: new Animated.Value(0),
+    grit: new Animated.Value(0),
+    build: new Animated.Value(0),
+  }).current;
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const pillScrollRef = useRef<ScrollView>(null);
+
+  // ── Fetch ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     (async () => {
@@ -84,230 +108,435 @@ export default function ScoreDetailScreen() {
         ]);
 
         const p = profileRes as any;
-        setTrack(p.track || p.cohort || 'General');
-
         const auditObj = auditRaw?.audit ?? auditRaw;
-        if (!auditObj?.final_score) { setLoading(false); return; }
 
-        const snap  = profileRes?.first_audit_snapshot?.scores;
-        const smart = auditObj.scores?.smart ?? snap?.smart ?? 0;
-        const grit  = auditObj.scores?.grit  ?? snap?.grit  ?? 0;
-        const build = auditObj.scores?.build ?? snap?.build ?? 0;
+        // Extract recommendations
+        setRecs(auditObj?.recommendations || []);
 
-        const w     = { smart: 0.20, grit: 0.30, build: 0.50 };
-        const calc  = Math.round(smart * w.smart + grit * w.grit + build * w.build);
+        // Extract peer dimension bars if available
+        const dimBarS = p?.dimension_bar_smart || auditObj?.dimension_bar_smart;
+        const dimBarG = p?.dimension_bar_grit || auditObj?.dimension_bar_grit;
+        const dimBarB = p?.dimension_bar_build || auditObj?.dimension_bar_build;
+        if (dimBarS || dimBarG || dimBarB) {
+          setPeerAvgs({
+            smart: dimBarS || PEER_AVG_FALLBACK.smart,
+            grit: dimBarG || PEER_AVG_FALLBACK.grit,
+            build: dimBarB || PEER_AVG_FALLBACK.build,
+          });
+        }
 
-        setAudit({
-          final_score:    auditObj.final_score ?? calc,
-          scores:         { smart, grit, build },
-          evidence:       auditObj.evidence   || {},
-          peer_percentiles: auditObj.peer_percentiles,
-          recommendations: auditObj.recommendations || [],
-          detected_track: auditObj.detected_track || p.track || 'General',
-        });
+        // Build cohort list from cohort_scores
+        const cs = p?.cohort_scores;
+        if (cs && typeof cs === 'object' && Object.keys(cs).length > 0) {
+          const majors  = Array.isArray(p.majors) ? p.majors : (p.major ? [p.major] : []);
+          const minors  = Array.isArray(p.minors) ? p.minors : (p.minor ? [p.minor] : []);
+          const interests = Array.isArray(p.interests) ? p.interests : [];
+
+          const majorSet = new Set(majors.map((m: string) => m.toLowerCase()));
+          const minorSet = new Set(minors.map((m: string) => m.toLowerCase()));
+
+          const entries: CohortEntry[] = [];
+          for (const [name, scores] of Object.entries(cs)) {
+            if (!scores || typeof scores !== 'object') continue;
+            const s = scores as any;
+            const smart = Number(s.smart) || 0;
+            const grit  = Number(s.grit) || 0;
+            const build = Number(s.build) || 0;
+            if (smart === 0 && grit === 0 && build === 0) continue;
+
+            let type: 'MAJOR' | 'MINOR' | 'INTEREST' = 'INTEREST';
+            const nl = name.toLowerCase();
+            if (majorSet.has(nl) || majors.some((m: string) => nl.includes(m.toLowerCase().split(' ')[0]))) {
+              type = 'MAJOR';
+            } else if (minorSet.has(nl) || minors.some((m: string) => nl.includes(m.toLowerCase().split(' ')[0]))) {
+              type = 'MINOR';
+            }
+
+            entries.push({
+              name,
+              type,
+              scores: { smart, grit, build, final: Number(s.final) || 0 },
+            });
+          }
+
+          // Sort: Major first, then Minor, then Interest
+          entries.sort((a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type]);
+
+          if (entries.length > 0) {
+            setCohorts(entries);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // ── Legacy fallback: no cohort_scores ────────────────────────────
+        if (auditObj?.final_score) {
+          const snap = p?.first_audit_snapshot?.scores;
+          const smart = auditObj.scores?.smart ?? snap?.smart ?? 0;
+          const grit  = auditObj.scores?.grit  ?? snap?.grit  ?? 0;
+          const build = auditObj.scores?.build ?? snap?.build ?? 0;
+          setLegacyAudit({
+            final_score: auditObj.final_score,
+            scores: { smart, grit, build },
+            evidence: auditObj.evidence || {},
+          });
+        }
       } catch {
-        // leave null
+        // leave empty
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // ── Animate ────────────────────────────────────────────────────────────────
+  // ── Animate on cohort change ─────────────────────────────────────────────
+
+  const active = cohorts[activeIdx];
+  const activeScores = active?.scores;
+  const activeFinal = activeScores ? cohortFinal(activeScores) : 0;
 
   useEffect(() => {
-    if (!audit) return;
-    scoreAnim.addListener(({ value }) => setDisplay(Math.round(value)));
-    Animated.timing(scoreAnim, { toValue: audit.final_score, duration: 1000, useNativeDriver: false }).start();
-    Animated.timing(barAnim,   { toValue: audit.final_score, duration: 1000, useNativeDriver: false }).start();
-    return () => scoreAnim.removeAllListeners();
-  }, [audit]);
+    if (!activeScores) return;
+    const final = cohortFinal(activeScores);
 
-  // ── Derived ────────────────────────────────────────────────────────────────
+    scoreAnim.setValue(0);
+    const listener = scoreAnim.addListener(({ value }) => setDisplayScore(Math.round(value)));
+    Animated.timing(scoreAnim, { toValue: final, duration: 600, useNativeDriver: false }).start();
 
-  const cfg      = COHORT[track] || COHORT.General;
-  const fs       = audit?.final_score ?? 0;
-  const sc       = scoreColor(fs);
-  const pct      = percentileLabel(fs);
-  const gap      = cfg.bar - fs;
-  const aboveBar = gap <= 0;
+    (['smart', 'grit', 'build'] as const).forEach(dim => {
+      barAnims[dim].setValue(0);
+      Animated.timing(barAnims[dim], {
+        toValue: activeScores[dim],
+        duration: 700,
+        useNativeDriver: false,
+      }).start();
+    });
 
-  const scores   = audit?.scores || { smart: 0, grit: 0, build: 0 };
-  const weakest  = (Object.entries(scores) as [string, number][])
-    .sort((a, b) => a[1] - b[1])[0]?.[0] || 'build';
-  const weakestLabel = weakest.charAt(0).toUpperCase() + weakest.slice(1);
+    return () => scoreAnim.removeListener(listener);
+  }, [activeIdx, cohorts.length]);
 
-  const recs     = audit?.recommendations || [];
-  const visRecs  = recs.slice(0, 2);
+  // Legacy animation
+  useEffect(() => {
+    if (!legacyAudit) return;
+    scoreAnim.setValue(0);
+    const listener = scoreAnim.addListener(({ value }) => setDisplayScore(Math.round(value)));
+    Animated.timing(scoreAnim, { toValue: legacyAudit.final_score, duration: 800, useNativeDriver: false }).start();
+
+    (['smart', 'grit', 'build'] as const).forEach(dim => {
+      barAnims[dim].setValue(0);
+      Animated.timing(barAnims[dim], {
+        toValue: legacyAudit.scores[dim],
+        duration: 700,
+        useNativeDriver: false,
+      }).start();
+    });
+
+    return () => scoreAnim.removeListener(listener);
+  }, [legacyAudit]);
+
+  const selectCohort = useCallback((idx: number) => {
+    setActiveIdx(idx);
+  }, []);
+
+  // ── Derived ──────────────────────────────────────────────────────────────
+
+  const sc = scoreColor(activeFinal);
+
+  const weakestDim = activeScores
+    ? (['smart', 'grit', 'build'] as const).reduce((w, d) =>
+        activeScores[d] < activeScores[w] ? d : w, 'smart' as const)
+    : 'build';
+
+  const visRecs = recs.slice(0, 2);
   const hasLocked = recs.length > 2;
 
-  const barWidth = barAnim.interpolate({
-    inputRange: [0, 100], outputRange: ['0%', '100%'], extrapolate: 'clamp',
-  });
-
-  const trackLabel   = (audit?.detected_track || track).toUpperCase();
-  const companyLabel = cfg.company.toUpperCase();
-
-  // ── Empty / loading states ─────────────────────────────────────────────────
+  // ── Loading ──────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <View style={[s.container, s.center]}>
-        <Text style={s.loadingText}>Loading…</Text>
+        <Text style={s.loadingText}>Loading scores...</Text>
       </View>
     );
   }
 
-  if (!audit) {
+  // ── Empty state ──────────────────────────────────────────────────────────
+
+  if (cohorts.length === 0 && !legacyAudit) {
     return (
       <View style={[s.container, { paddingTop: insets.top }]}>
         <TouchableOpacity style={[s.backBtn, { top: insets.top + 14 }]} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color={colors.t1} />
         </TouchableOpacity>
         <View style={s.center}>
-          <Text style={s.emptyText}>No audit yet — upload your resume to get started.</Text>
+          <Ionicons name="analytics-outline" size={48} color={colors.t3} style={{ marginBottom: 16 }} />
+          <Text style={s.emptyTitle}>No scores yet</Text>
+          <Text style={s.emptyText}>Upload your resume to see how you score across career fields.</Text>
         </View>
       </View>
     );
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Legacy single-score render ───────────────────────────────────────────
+
+  if (cohorts.length === 0 && legacyAudit) {
+    return (
+      <View style={s.container}>
+        <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+          <TouchableOpacity style={s.backBtnHeader} onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="chevron-back" size={22} color={colors.t1} />
+          </TouchableOpacity>
+          <Text style={s.headerTitle}>MY SCORES</Text>
+          <View style={{ width: 36 }} />
+        </View>
+        <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 36 }]} showsVerticalScrollIndicator={false}>
+          {/* Hero */}
+          <View style={s.heroSection}>
+            <Text style={[s.heroScore, { color: scoreColor(legacyAudit.final_score) }]}>{displayScore}</Text>
+            <Text style={s.heroLabel}>Overall Score</Text>
+          </View>
+          {/* Dim bars */}
+          {renderDimBars(legacyAudit.scores, barAnims, peerAvgs)}
+          {/* Recs */}
+          {renderRecs(visRecs, hasLocked, recs.length)}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Cohort-first render ──────────────────────────────────────────────────
 
   return (
     <View style={s.container}>
-
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+        <TouchableOpacity style={s.backBtnHeader} onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={22} color={colors.t1} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>SCORE BREAKDOWN</Text>
-        <View style={s.headerRight} />
+        <Text style={s.headerTitle}>MY SCORES</Text>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 36 }]}
         showsVerticalScrollIndicator={false}
       >
-
-        {/* ── Score Hero ─────────────────────────────────────────────────── */}
-        <View style={s.hero}>
-          <View style={s.heroScoreRow}>
-            <Text style={[s.heroScore, { color: sc }]}>{display}</Text>
-            <Text style={[s.heroOf, { color: colors.t3 }]}>/100</Text>
-          </View>
-          <Text style={s.heroPct}>Top {pct}% of your cohort</Text>
-
-          <View style={s.barTrack}>
-            <Animated.View style={[s.barFill, { width: barWidth, backgroundColor: sc }]} />
-          </View>
-
-          <View style={s.cohortPill}>
-            <Text style={s.cohortPillText}>{trackLabel} · {companyLabel}</Text>
-          </View>
-        </View>
-
-        {/* ── Dimension Row ─────────────────────────────────────────────── */}
-        <View style={s.dimRow}>
-          {(['smart', 'grit', 'build'] as const).map(dim => {
-            const score   = scores[dim] ?? 0;
-            const color   = DIM_COLOR[dim];
-            const above   = score >= (DIM_SUB_BAR[dim] ?? 70);
-            const evidence = audit.evidence?.[dim];
+        {/* ── Cohort Pills ─────────────────────────────────────────────── */}
+        <ScrollView
+          ref={pillScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.pillRow}
+          style={s.pillScroll}
+        >
+          {cohorts.map((c, i) => {
+            const isActive = i === activeIdx;
             return (
-              <View key={dim} style={s.dimCard}>
-                <Text style={s.dimName}>{dim.toUpperCase()}</Text>
-                <Text style={[s.dimScore, { color: above ? colors.green : colors.coral }]}>
-                  {Math.round(score)}
+              <TouchableOpacity
+                key={c.name}
+                style={[
+                  s.pill,
+                  isActive && s.pillActive,
+                ]}
+                onPress={() => selectCohort(i)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.pillText, isActive && s.pillTextActive]} numberOfLines={1}>
+                  {c.name}
                 </Text>
-                <View style={[s.dimPill, { backgroundColor: (above ? colors.green : colors.coral) + '26', borderColor: (above ? colors.green : colors.coral) + '55' }]}>
-                  <Text style={[s.dimPillText, { color: above ? colors.green : colors.coral }]}>
-                    {above ? '✓ Above' : '↓ Below'}
-                  </Text>
-                </View>
-                {evidence ? (
-                  <Text style={s.dimEvidence} numberOfLines={2}>{evidence}</Text>
-                ) : null}
-              </View>
+                <Text style={[s.pillType, isActive && s.pillTypeActive]}>
+                  {c.type}
+                </Text>
+              </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
-        {/* ── Gap Callout ───────────────────────────────────────────────── */}
-        <View style={[s.gapCard, { borderLeftColor: aboveBar ? colors.green : colors.gold }]}>
-          <Text style={[s.gapHeadline, { color: aboveBar ? colors.green : colors.t1 }]}>
-            {aboveBar ? "You're above the bar" : `${Math.round(Math.abs(gap))} points to the bar`}
-          </Text>
-          <Text style={s.gapSub}>
-            {aboveBar
-              ? `You're competitive at ${cfg.company}. Apply this week.`
-              : `Your ${weakestLabel} is the gap — improve quantified project impact to close it.`}
-          </Text>
-        </View>
-
-        {/* ── Recommendations ───────────────────────────────────────────── */}
-        <Text style={s.eyebrow}>WHAT TO DO NEXT</Text>
-
-        {visRecs.length === 0 ? (
-          <Text style={s.emptyText}>No recommendations available.</Text>
-        ) : (
-          visRecs.map((rec, i) => {
-            const dim   = dimTagFromRec(rec);
-            const color = DIM_COLOR[dim];
-            const isLast = i === visRecs.length - 1 && !hasLocked;
-            return (
-              <View key={i}>
-                <View style={s.recRow}>
-                  <View style={[s.recTag, { backgroundColor: color + '22', borderColor: color + '55' }]}>
-                    <Text style={[s.recTagText, { color }]}>{dim.toUpperCase()}</Text>
-                  </View>
-                  <View style={s.recBody}>
-                    <Text style={s.recTitle} numberOfLines={1}>{rec.title}</Text>
-                    <Text style={s.recAction} numberOfLines={2}>{rec.action}</Text>
-                  </View>
-                </View>
-                {!isLast && <View style={s.divider} />}
-              </View>
-            );
-          })
+        {/* ── Cohort Hero ──────────────────────────────────────────────── */}
+        {active && (
+          <View style={s.heroSection}>
+            <Text style={[s.heroScore, { color: sc }]}>{displayScore}</Text>
+            <Text style={s.heroName}>{active.name}</Text>
+            <View style={s.heroTypeBadge}>
+              <Text style={s.heroTypeText}>{active.type}</Text>
+            </View>
+          </View>
         )}
 
-        {/* Locked recs */}
-        {hasLocked && (
+        {/* ── S/G/B Dimension Bars ─────────────────────────────────────── */}
+        {activeScores && renderDimBars(activeScores, barAnims, peerAvgs)}
+
+        {/* ── All Cohorts At-a-Glance ──────────────────────────────────── */}
+        {cohorts.length > 1 && (
           <>
-            <View style={s.divider} />
-            <View style={s.lockedRow}>
-              <View style={s.lockedBlur}>
-                <Text style={s.lockedBlurText}>████████████████ ██████████</Text>
-                <Text style={[s.lockedBlurText, { opacity: 0.4 }]}>████████████ ████████</Text>
-              </View>
-              <View style={s.lockedOverlay}>
-                <Ionicons name="lock-closed" size={12} color={colors.indigo} />
-                <Text style={s.lockedCount}>{recs.length - 2} more locked</Text>
+            <Text style={s.sectionEyebrow}>ALL COHORTS</Text>
+            <View style={s.glanceCard}>
+              {cohorts.map((c, i) => {
+                const final = cohortFinal(c.scores);
+                const isActive = i === activeIdx;
+                return (
+                  <TouchableOpacity
+                    key={c.name}
+                    style={[s.glanceRow, isActive && s.glanceRowActive, i < cohorts.length - 1 && s.glanceRowBorder]}
+                    onPress={() => selectCohort(i)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={s.glanceLeft}>
+                      <Text style={[s.glanceName, isActive && s.glanceNameActive]} numberOfLines={1}>
+                        {c.name}
+                      </Text>
+                      <Text style={s.glanceType}>{c.type}</Text>
+                    </View>
+                    <View style={s.glanceScores}>
+                      <Text style={[s.glanceDim, { color: scoreColor(c.scores.smart) }]}>
+                        {Math.round(c.scores.smart)}
+                      </Text>
+                      <Text style={[s.glanceDim, { color: scoreColor(c.scores.grit) }]}>
+                        {Math.round(c.scores.grit)}
+                      </Text>
+                      <Text style={[s.glanceDim, { color: scoreColor(c.scores.build) }]}>
+                        {Math.round(c.scores.build)}
+                      </Text>
+                      <View style={s.glanceFinalPill}>
+                        <Text style={[s.glanceFinal, { color: scoreColor(final) }]}>{final}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+              {/* Column headers (S / G / B / F) */}
+              <View style={s.glanceHeaders}>
+                <View style={s.glanceLeft} />
+                <View style={s.glanceScores}>
+                  <Text style={s.glanceHeaderLabel}>S</Text>
+                  <Text style={s.glanceHeaderLabel}>G</Text>
+                  <Text style={s.glanceHeaderLabel}>B</Text>
+                  <View style={s.glanceFinalPill}>
+                    <Text style={s.glanceHeaderLabel}>F</Text>
+                  </View>
+                </View>
               </View>
             </View>
-            <TouchableOpacity
-              style={s.unlockBtn}
-              onPress={() => { /* TODO: paywall */ }}
-              activeOpacity={0.85}
-            >
-              <Text style={s.unlockBtnText}>Unlock all recommendations →</Text>
-            </TouchableOpacity>
           </>
         )}
 
+        {/* ── Gap Callout ──────────────────────────────────────────────── */}
+        {activeScores && (
+          <View style={[s.gapCard, { borderLeftColor: scoreColor(activeScores[weakestDim]) }]}>
+            <Text style={s.gapHeadline}>
+              {weakestDim.charAt(0).toUpperCase() + weakestDim.slice(1)} is your biggest opportunity
+            </Text>
+            <Text style={s.gapSub}>
+              Your {weakestDim.charAt(0).toUpperCase() + weakestDim.slice(1)} is {Math.round(activeScores[weakestDim])} in {active?.name}. Peer average is around {peerAvgs[weakestDim]}. Close this gap to move up.
+            </Text>
+          </View>
+        )}
+
+        {/* ── Recommendations ──────────────────────────────────────────── */}
+        {renderRecs(visRecs, hasLocked, recs.length)}
       </ScrollView>
     </View>
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
+// ── Shared render helpers ──────────────────────────────────────────────────
+
+function renderDimBars(
+  scores: { smart: number; grit: number; build: number },
+  anims: Record<string, Animated.Value>,
+  peerAvgs: Record<string, number>,
+) {
+  return (
+    <View style={s.dimSection}>
+      {(['smart', 'grit', 'build'] as const).map(dim => {
+        const score = Math.round(scores[dim]);
+        const color = DIM_COLOR[dim];
+        const peerAvg = peerAvgs[dim] || 60;
+        const barWidth = anims[dim].interpolate({
+          inputRange: [0, 100],
+          outputRange: ['0%', '100%'],
+          extrapolate: 'clamp',
+        });
+
+        return (
+          <View key={dim} style={s.dimRow}>
+            <View style={s.dimLabelRow}>
+              <Text style={s.dimLabel}>{DIM_LABEL[dim]}</Text>
+              <Text style={[s.dimScore, { color: scoreColor(score) }]}>{score}</Text>
+            </View>
+            <View style={s.barTrack}>
+              <Animated.View style={[s.barFill, { width: barWidth, backgroundColor: color }]} />
+              {/* Peer avg marker */}
+              <View style={[s.peerMarker, { left: `${Math.min(peerAvg, 100)}%` }]}>
+                <View style={s.peerMarkerLine} />
+              </View>
+            </View>
+            <View style={s.barLegendRow}>
+              <Text style={s.barLegendYou}>You</Text>
+              <Text style={s.barLegendPeer}>▾ Peer avg {peerAvg}</Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function renderRecs(visRecs: Rec[], hasLocked: boolean, totalCount: number) {
+  if (visRecs.length === 0 && !hasLocked) return null;
+  return (
+    <>
+      <Text style={s.sectionEyebrow}>WHAT TO DO NEXT</Text>
+      {visRecs.map((rec, i) => {
+        const dim = dimTagFromRec(rec);
+        const color = DIM_COLOR[dim];
+        return (
+          <View key={i}>
+            <View style={s.recRow}>
+              <View style={[s.recTag, { backgroundColor: color + '22', borderColor: color + '55' }]}>
+                <Text style={[s.recTagText, { color }]}>{dim.toUpperCase()}</Text>
+              </View>
+              <View style={s.recBody}>
+                <Text style={s.recTitle} numberOfLines={1}>{rec.title}</Text>
+                <Text style={s.recAction} numberOfLines={2}>{rec.action}</Text>
+              </View>
+            </View>
+            {i < visRecs.length - 1 && <View style={s.divider} />}
+          </View>
+        );
+      })}
+      {hasLocked && (
+        <>
+          <View style={s.divider} />
+          <View style={s.lockedRow}>
+            <View style={s.lockedBlur}>
+              <Text style={s.lockedBlurText}>████████████████ ██████████</Text>
+              <Text style={[s.lockedBlurText, { opacity: 0.4 }]}>████████████ ████████</Text>
+            </View>
+            <View style={s.lockedOverlay}>
+              <Ionicons name="lock-closed" size={12} color={colors.indigo} />
+              <Text style={s.lockedCount}>{totalCount - 2} more locked</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={s.unlockBtn} onPress={() => {}} activeOpacity={0.85}>
+            <Text style={s.unlockBtnText}>Unlock all recommendations →</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </>
+  );
+}
+
+// ── Styles ──────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  center:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { fontSize: 12, color: colors.t3 },
-  emptyText:   { fontSize: 13, color: colors.t2, textAlign: 'center', paddingHorizontal: 32 },
+  center:    { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  loadingText: { fontSize: 13, color: colors.t3 },
+
+  // Empty
+  emptyTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 16, color: colors.t1, marginBottom: 8 },
+  emptyText:  { fontSize: 14, color: colors.t2, textAlign: 'center', lineHeight: 20 },
 
   // Header
   header: {
@@ -319,79 +548,256 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.b1,
   },
-  backBtn:     { width: 36 },
-  headerTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.4, color: colors.t1 },
-  headerRight: { width: 36 },
-
-  scroll: { paddingHorizontal: spacing.xl, paddingTop: 16 },
-
-  // Hero
-  hero: { marginBottom: 14 },
-  heroScoreRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, marginBottom: 2 },
-  heroScore: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 64, lineHeight: 70 },
-  heroOf:    { fontSize: 16, fontWeight: '300', paddingBottom: 10 },
-  heroPct:   { fontSize: 12, color: colors.t2, marginBottom: 10 },
-  barTrack: {
-    height: 4, backgroundColor: colors.b2, borderRadius: 999,
-    overflow: 'hidden', marginBottom: 10,
+  backBtn: { position: 'absolute', left: spacing.xl, zIndex: 10 },
+  backBtnHeader: { width: 36 },
+  headerTitle: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: colors.t1,
   },
-  barFill: { height: '100%', borderRadius: 999 },
-  cohortPill: {
-    alignSelf: 'flex-start',
+
+  scroll: { paddingHorizontal: spacing.xl, paddingTop: 8 },
+
+  // ── Cohort Pills ─────────────────────────────────────────────────────────
+  pillScroll: { marginHorizontal: -spacing.xl, marginBottom: 4 },
+  pillRow: { paddingHorizontal: spacing.xl, gap: 8, paddingVertical: 12 },
+  pill: {
+    borderWidth: 1,
+    borderColor: colors.b2,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    maxWidth: 200,
+  },
+  pillActive: {
+    borderColor: colors.gold,
+    backgroundColor: colors.golddim,
+  },
+  pillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.t2,
+  },
+  pillTextActive: {
+    color: colors.gold,
+  },
+  pillType: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 7,
+    letterSpacing: 1,
+    color: colors.t3,
+    marginTop: 2,
+  },
+  pillTypeActive: {
+    color: colors.gold,
+  },
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  heroSection: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  heroScore: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 72,
+    lineHeight: 80,
+  },
+  heroLabel: {
+    fontSize: 13,
+    color: colors.t2,
+    marginTop: 4,
+  },
+  heroName: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 13,
+    letterSpacing: 0.8,
+    color: colors.t1,
+    textAlign: 'center',
+    marginTop: 6,
+    paddingHorizontal: 20,
+  },
+  heroTypeBadge: {
+    marginTop: 8,
     borderWidth: 1,
     borderColor: colors.goldbdr,
-    borderRadius: 99,
+    borderRadius: radius.full,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
-  cohortPillText: {
+  heroTypeText: {
     fontFamily: 'Cinzel_700Bold',
-    fontSize: 8,
+    fontSize: 7,
     letterSpacing: 1.2,
     color: colors.gold,
   },
 
-  // Dimension row
-  dimRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  dimCard: {
-    flex: 1,
-    backgroundColor: colors.s2,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.b1,
+  // ── Dimension Bars ────────────────────────────────────────────────────────
+  dimSection: { gap: 16, marginBottom: 24 },
+  dimRow: {},
+  dimLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 6,
   },
-  dimName:     { fontFamily: 'Cinzel_700Bold', fontSize: 7, letterSpacing: 1, color: colors.t3, marginBottom: 4 },
-  dimScore:    { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 28, lineHeight: 32, marginBottom: 6 },
-  dimPill:     { alignSelf: 'flex-start', borderRadius: 99, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 6 },
-  dimPillText: { fontSize: 9, fontWeight: '700' },
-  dimEvidence: { fontSize: 11, color: colors.t2, lineHeight: 15 },
-
-  // Gap callout
-  gapCard: {
-    backgroundColor: colors.s3,
-    borderLeftWidth: 4,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
+  dimLabel: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: colors.t3,
   },
-  gapHeadline: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  gapSub:      { fontSize: 12, color: colors.t2, lineHeight: 18 },
+  dimScore: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 22,
+    lineHeight: 26,
+  },
+  barTrack: {
+    height: 8,
+    backgroundColor: colors.b2,
+    borderRadius: radius.full,
+    overflow: 'visible',
+    position: 'relative',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: radius.full,
+    opacity: 0.85,
+  },
+  peerMarker: {
+    position: 'absolute',
+    top: -3,
+    transform: [{ translateX: -1 }],
+  },
+  peerMarkerLine: {
+    width: 2,
+    height: 14,
+    backgroundColor: colors.t1,
+    borderRadius: 1,
+    opacity: 0.45,
+  },
+  barLegendRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  barLegendYou: {
+    fontSize: 9,
+    color: colors.t3,
+  },
+  barLegendPeer: {
+    fontSize: 9,
+    color: colors.t3,
+  },
 
-  // Eyebrow
-  eyebrow: {
+  // ── Section eyebrow ───────────────────────────────────────────────────────
+  sectionEyebrow: {
     fontFamily: 'Cinzel_700Bold',
     fontSize: 9,
     letterSpacing: 1.4,
-    textTransform: 'uppercase',
     color: colors.t3,
     marginBottom: 12,
+    marginTop: 8,
   },
 
-  // Rec rows
+  // ── Glance Card ───────────────────────────────────────────────────────────
+  glanceCard: {
+    backgroundColor: colors.s2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.b1,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  glanceHeaders: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.b1,
+    backgroundColor: colors.s3,
+  },
+  glanceHeaderLabel: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 7,
+    letterSpacing: 0.8,
+    color: colors.t3,
+    width: 32,
+    textAlign: 'center',
+  },
+  glanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  glanceRowActive: {
+    backgroundColor: colors.golddim,
+  },
+  glanceRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.b1,
+  },
+  glanceLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  glanceName: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.t2,
+  },
+  glanceNameActive: {
+    color: colors.gold,
+    fontWeight: '700',
+  },
+  glanceType: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 7,
+    letterSpacing: 0.8,
+    color: colors.t3,
+    marginTop: 2,
+  },
+  glanceScores: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
+  },
+  glanceDim: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 13,
+    width: 32,
+    textAlign: 'center',
+  },
+  glanceFinalPill: {
+    width: 36,
+    alignItems: 'center',
+  },
+  glanceFinal: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  // ── Gap Callout ───────────────────────────────────────────────────────────
+  gapCard: {
+    backgroundColor: colors.s3,
+    borderLeftWidth: 4,
+    borderRadius: radius.md,
+    padding: 14,
+    marginBottom: 20,
+  },
+  gapHeadline: { fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 4 },
+  gapSub:      { fontSize: 12, color: colors.t2, lineHeight: 18 },
+
+  // ── Recommendations ───────────────────────────────────────────────────────
   recRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 12 },
   recTag: {
-    borderRadius: 99, borderWidth: 1,
+    borderRadius: radius.full, borderWidth: 1,
     paddingHorizontal: 7, paddingVertical: 3,
     marginTop: 1,
   },
@@ -401,7 +807,7 @@ const s = StyleSheet.create({
   recAction:  { fontSize: 12, color: colors.t2, lineHeight: 17 },
   divider:    { height: 1, backgroundColor: colors.b1 },
 
-  // Locked
+  // ── Locked ────────────────────────────────────────────────────────────────
   lockedRow: {
     position: 'relative',
     paddingVertical: 14,

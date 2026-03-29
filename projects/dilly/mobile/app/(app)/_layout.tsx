@@ -64,10 +64,10 @@ export default function AppLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Career Center',
           tabBarIcon: ({ focused }) => (
             <Ionicons
-              name={focused ? 'star' : 'star-outline'}
+              name={focused ? 'school' : 'school-outline'}
               size={20}
               color={focused ? colors.t1 : colors.t3}
             />

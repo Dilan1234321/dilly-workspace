@@ -226,14 +226,14 @@ export default function HomeScreen() {
     ? {
         type: 'upload',
         body: 'Upload your resume. Dilly will tell you exactly where you stand.',
-        cta: 'Upload my resume \u2192',
+        cta: 'Upload my resume →',
         onPress: () => router.push('/onboarding/upload'),
       }
     : gap > 0
     ? {
         type: 'close_gap',
         body: `Your ${weakestLabel} score is holding you back from ${cohortCfg.company}'s bar. Fix it and you close ${Math.round(gap)} points tonight.`,
-        cta: `Fix my ${weakestLabel} score \u2192`,
+        cta: `Fix my ${weakestLabel} score →`,
         onPress: () => openDillyOverlay({
           name: firstName, cohort, score: finalScore,
           smart: smartScore, grit: gritScore, build: buildScore,
@@ -244,8 +244,8 @@ export default function HomeScreen() {
       }
     : {
         type: 'apply',
-        body: `You clear ${cohortCfg.company}'s bar. Apply this week \u2014 don't wait.`,
-        cta: 'Show me where to apply \u2192',
+        body: `You clear ${cohortCfg.company}'s bar. Apply this week — don't wait.`,
+        cta: 'Show me where to apply →',
         onPress: () => router.push('/(app)/jobs'),
       };
 
@@ -271,7 +271,7 @@ export default function HomeScreen() {
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={s.headerName}>{firstName || 'Hey there'}</Text>
               {cohort ? (
-                <Text style={s.headerCohort}>{cohort} cohort \u00b7 {school}</Text>
+                <Text style={s.headerCohort}>{cohort} cohort · {school}</Text>
               ) : null}
             </View>
             <AnimatedPressable onPress={() => Alert.alert('Settings', 'Coming soon')} scaleDown={0.9} hitSlop={10}>
@@ -295,14 +295,14 @@ export default function HomeScreen() {
 
             <View style={s.scoreRow}>
               <Text style={[s.scoreBig, { color: hasAudit ? sColor : colors.t3 }]}>
-                {hasAudit ? displayScore : '\u2014'}
+                {hasAudit ? displayScore : '—'}
               </Text>
               {hasAudit && <Text style={s.scoreOf}>/100</Text>}
             </View>
 
             {hasAudit ? (
               <Text style={[s.percentileLine, { color: sColor }]}>
-                Top {percentile}% {track} \u00b7 UTampa
+                Top {percentile}% {track} · UTampa
               </Text>
             ) : (
               <Text style={s.noAuditHint}>Run an audit to see your score</Text>
@@ -320,14 +320,14 @@ export default function HomeScreen() {
               ].map(({ label, score, color }) => (
                 <View key={label} style={s.dimTile}>
                   <Text style={[s.dimScore, { color: hasAudit ? color : colors.t3 }]}>
-                    {hasAudit ? Math.round(score) : '\u2014'}
+                    {hasAudit ? Math.round(score) : '—'}
                   </Text>
                   <Text style={s.dimLabel}>{label}</Text>
                 </View>
               ))}
             </View>
 
-            <Text style={[s.viewBreakdown, !hasAudit && { opacity: 0.35 }]}>View full breakdown \u2192</Text>
+            <Text style={[s.viewBreakdown, !hasAudit && { opacity: 0.35 }]}>View full breakdown →</Text>
           </AnimatedPressable>
         </FadeInView>
 
@@ -373,46 +373,34 @@ export default function HomeScreen() {
                 tileBdr: colors.gbdr,
                 title: 'New Audit',
                 sub: 'Upload a new resume',
-                onPress: () => router.push('/onboarding/upload'),
+                onPress: () => router.push('/(app)/new-audit'),
               },
               {
-                icon: 'bar-chart' as const,
+                icon: 'clipboard' as const,
                 iconColor: colors.gold,
                 tileBg: colors.golddim,
                 tileBdr: colors.goldbdr,
-                title: 'Leaderboard',
-                sub: 'See how you rank',
-                onPress: () => router.push('/(app)/rank'),
+                title: 'Tracker',
+                sub: 'Track your applications',
+                onPress: () => router.push('/(app)/internship-tracker'),
               },
               {
-                icon: 'chatbubble' as const,
+                icon: 'create' as const,
                 iconColor: colors.indigo,
                 tileBg: colors.idim,
                 tileBdr: colors.ibdr,
-                title: 'Talk to Dilly',
-                sub: 'Get specific coaching',
-                onPress: () => openDillyOverlay({
-                  name:              firstName,
-                  cohort:            cohort,
-                  score:             finalScore,
-                  smart:             smartScore,
-                  grit:              gritScore,
-                  build:             buildScore,
-                  gap:               gap,
-                  cohortBar:         cohortCfg.bar,
-                  referenceCompany:  cohortCfg.company,
-                  applicationTarget: cohortCfg.company,
-                  isPaid:            false,
-                }),
+                title: 'Resume Editor',
+                sub: 'Edit & improve your resume',
+                onPress: () => router.push('/(app)/resume-editor'),
               },
               {
-                icon: 'briefcase' as const,
+                icon: 'calendar' as const,
                 iconColor: colors.blue,
                 tileBg: colors.bdim,
                 tileBdr: colors.bbdr,
-                title: 'Jobs',
-                sub: 'See your matches',
-                onPress: () => router.push('/(app)/jobs'),
+                title: 'Calendar',
+                sub: 'Deadlines & events',
+                onPress: () => router.push('/(app)/calendar'),
               },
             ].map(({ icon, iconColor, tileBg, tileBdr, title, sub, onPress }) => (
               <AnimatedPressable key={title} style={s.gridTile} onPress={onPress} scaleDown={0.96}>
@@ -431,12 +419,12 @@ export default function HomeScreen() {
         {/* \u2500\u2500 Unlock Dilly card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
         <FadeInView delay={400}>
           <View style={s.unlockCard}>
-            <Text style={s.unlockTitle}>Unlock Dilly \u00b7 $9.99/mo</Text>
+            <Text style={s.unlockTitle}>Unlock Dilly · $9.99/mo</Text>
             <Text style={s.unlockSub}>
               Unlimited audits, AI coaching, leaderboard rank, and job matching.
             </Text>
             <AnimatedPressable style={s.unlockBtn} onPress={() => Alert.alert('Coming soon', 'Payments are not yet available.')} scaleDown={0.97}>
-              <Text style={s.unlockBtnText}>Unlock Dilly \u2192</Text>
+              <Text style={s.unlockBtnText}>Unlock Dilly →</Text>
             </AnimatedPressable>
           </View>
         </FadeInView>

@@ -473,14 +473,6 @@ export default function InternshipTrackerScreen() {
 
       </ScrollView>
 
-      {/* FAB */}
-      <AnimatedPressable
-        style={[ts.fab, { bottom: insets.bottom + 16 }]}
-        onPress={() => setShowAdd(true)}
-        scaleDown={0.92}
-      >
-        <Ionicons name="add" size={24} color="#1a1400" />
-      </AnimatedPressable>
 
       <AddAppModal visible={showAdd} onClose={() => setShowAdd(false)} onAdd={handleAdd} />
     </View>

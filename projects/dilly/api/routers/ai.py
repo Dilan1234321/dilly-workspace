@@ -48,6 +48,7 @@ class ChatRequest(BaseModel):
     system: Optional[str] = None
     student_context: Optional[StudentContext] = None
     rich_context: Optional[Dict[str, Any]] = None
+    conv_id: Optional[str] = None  # Conversation session ID for profile extraction
 
 class ChatResponse(BaseModel):
     content: str
@@ -372,9 +373,20 @@ async def get_ai_context(request: Request):
         raise HTTPException(status_code=500, detail=f"Could not build context: {str(e)[:200]}")
 
 
+def _run_profile_extraction_background(email: str, conv_id: str, messages: list[dict]) -> None:
+    """Fire-and-forget: extract profile facts from conversation and store them.
+    Runs in a background thread so it never blocks the chat response."""
+    try:
+        from projects.dilly.api.memory_extraction import run_extraction
+        run_extraction(email, conv_id, messages)
+    except Exception:
+        pass  # Extraction failure must never surface to the user
+
+
 @router.post("/ai/chat", response_model=ChatResponse)
 async def ai_chat(request: Request, body: ChatRequest):
-    deps.require_auth(request)
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
 
     try:
         import anthropic
@@ -400,6 +412,25 @@ async def ai_chat(request: Request, body: ChatRequest):
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(model="claude-sonnet-4-6", max_tokens=1024, system=system, messages=messages)
         content = response.content[0].text if response.content else ""
+
+        # ── Background profile extraction ────────────────────────────
+        # Fire-and-forget: extract everything Dilly learned about the user
+        # from this conversation and store it in their Dilly Profile.
+        if email and len(messages) >= 2:
+            import hashlib
+            import threading
+            conv_id = body.conv_id or hashlib.sha256(
+                f"{email}:{messages[0].get('content', '')[:100]}".encode()
+            ).hexdigest()[:16]
+            # Include the assistant reply in the extraction context
+            full_messages = messages + [{"role": "assistant", "content": content.strip()}]
+            thread = threading.Thread(
+                target=_run_profile_extraction_background,
+                args=(email, conv_id, full_messages[-12:]),
+                daemon=True,
+            )
+            thread.start()
+
         return ChatResponse(content=content.strip())
     except Exception as e:
         import traceback

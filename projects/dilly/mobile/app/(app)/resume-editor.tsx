@@ -29,6 +29,7 @@ import { apiFetch } from '../../lib/auth';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
 
@@ -362,10 +363,22 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
     debounceRef.current = setTimeout(() => scoreBullet(text), 600);
   }
 
+  function handleAskDilly() {
+    if (bullet.text.trim().length < 10) return;
+    const score = localScore?.score ?? 0;
+    const scoreLabel = sLabel(score);
+    openDillyOverlay({
+      isPaid: true,
+      initialMessage: `Help me improve this resume bullet. It currently scores ${score}/100 (${scoreLabel}). Show me a rewritten version that would score higher, and explain what you changed and why. Use color to show the score change: current ${score} → new score.\n\nMy bullet: "${bullet.text}"`,
+    });
+  }
+
   useEffect(() => {
     if (bullet.text.trim().length >= 10) scoreBullet(bullet.text);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
+
+  const canAskDilly = bullet.text.trim().length >= 10;
 
   return (
     <View style={rs.bulletWrap}>
@@ -384,6 +397,15 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
           <Ionicons name="close-circle" size={14} color={colors.t3 + '60'} />
         </AnimatedPressable>
       </View>
+      {/* Ask Dilly — small button below bullet, left-aligned */}
+      {canAskDilly && (
+        <AnimatedPressable onPress={handleAskDilly} scaleDown={0.92} style={rs.askDillyRow}>
+          <View style={rs.askDillyBtn}>
+            <Ionicons name="sparkles" size={9} color={colors.indigo} />
+          </View>
+          <Text style={rs.askDillyText}>Improve with Dilly</Text>
+        </AnimatedPressable>
+      )}
     </View>
   );
 }
@@ -557,16 +579,28 @@ export default function ResumeEditorScreen() {
   const [major, setMajor]           = useState('');
   const [bulletScores, setBulletScores] = useState<Record<string, number>>({});
   const [overallScore, setOverallScore] = useState(0);
+  const [initialScore, setInitialScore] = useState<number | null>(null);
 
   // Load resume + profile for major
   useEffect(() => {
     (async () => {
       try {
-        const [resumeRes, profileRes] = await Promise.all([
+        const [resumeRes, profileRes, auditRes] = await Promise.all([
           apiFetch('/resume/edited').then(r => r.json()),
           apiFetch('/profile').then(r => r.json()),
+          apiFetch('/audit/latest').then(r => r.json()).catch(() => null),
         ]);
         setMajor(profileRes?.majors?.[0] || profileRes?.major || '');
+
+        // Seed initial score from latest audit or profile
+        const auditObj = auditRes?.audit ?? auditRes;
+        const fs = auditObj?.final_score
+          || profileRes?.overall_dilly_score
+          || 0;
+        if (fs > 0) {
+          setInitialScore(Math.round(Number(fs)));
+          setOverallScore(Math.round(Number(fs)));
+        }
         if (resumeRes?.resume?.sections?.length) {
           setSections(resumeRes.resume.sections);
         } else {
@@ -593,9 +627,15 @@ export default function ResumeEditorScreen() {
   }, []);
 
   // Recalculate overall score when bullet scores change
+  // Only switch from the initial audit score once the user has actually made edits
   useEffect(() => {
+    if (!hasChanges) {
+      // No edits yet — keep showing the real audit score
+      if (initialScore !== null) setOverallScore(initialScore);
+      return;
+    }
     const scores = Object.values(bulletScores);
-    if (scores.length === 0) { setOverallScore(0); return; }
+    if (scores.length === 0) { setOverallScore(initialScore ?? 0); return; }
     const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
     // Blend bullet avg with section completeness
     let completionBonus = 0;
@@ -610,7 +650,7 @@ export default function ResumeEditorScreen() {
     const completionPct = totalSections > 0 ? completionBonus / totalSections : 0;
     const blended = Math.round(avg * 0.7 + completionPct * 100 * 0.3);
     setOverallScore(Math.min(100, blended));
-  }, [bulletScores, sections]);
+  }, [bulletScores, sections, hasChanges, initialScore]);
 
   const ph = getPlaceholders(major);
 
@@ -816,6 +856,20 @@ const rs = StyleSheet.create({
   bulletWrap: { paddingLeft: 4, marginBottom: 2 },
   bulletRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
   bulletDot: { color: colors.t2, fontSize: 14, marginTop: 6, width: 12 },
+  // Ask Dilly row (below bullet, left-aligned)
+  askDillyRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginLeft: 18, marginTop: 2, marginBottom: 4,
+  },
+  askDillyBtn: {
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: colors.idim,
+    borderWidth: 1, borderColor: colors.ibdr,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  askDillyText: {
+    fontSize: 10, color: colors.indigo, fontWeight: '500',
+  },
 
   // Bullet score bar
   bScoreWrap: { marginTop: 4, marginBottom: 4, marginLeft: 2 },

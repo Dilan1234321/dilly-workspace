@@ -535,52 +535,89 @@ async def score_bullet(request: Request, body: BulletScoreRequest):
 
     words = bullet.lower().split()
     first_word = words[0].rstrip(".,;:") if words else ""
+    bullet_lower = bullet.lower()
 
-    # --- Action verb (up to 30pts) ---
+    # --- Action verb (up to 25pts) ---
     if first_word in _STRONG_ACTION_VERBS:
-        score += 30
+        score += 25
     elif first_word in _WEAK_VERBS:
         score += 5
         hints.append("Start with a stronger action verb (e.g. Built, Led, Developed).")
     elif bullet[0].isupper() and len(words) >= 3:
-        score += 15
+        score += 12
         hints.append("Start with an action verb (e.g. Built, Led, Developed).")
     else:
         hints.append("Start with a strong action verb.")
 
-    # --- Quantification (up to 35pts) ---
+    # --- Quantification (up to 25pts) ---
     qty_matches = _QUANTITY_PATTERN.findall(bullet)
-    if len(qty_matches) >= 2:
-        score += 35
-    elif len(qty_matches) == 1:
+    if len(qty_matches) >= 3:
+        score += 25
+    elif len(qty_matches) == 2:
         score += 20
+    elif len(qty_matches) == 1:
+        score += 12
         hints.append("Add a second number (e.g. time saved, % improvement, scale).")
     else:
         score += 0
         hints.append("Add measurable impact — a number, %, or scale.")
 
-    # --- Length and specificity (up to 20pts) ---
+    # --- Length and specificity (up to 15pts) ---
     word_count = len(words)
-    if 12 <= word_count <= 30:
-        score += 20
-    elif 8 <= word_count < 12:
+    if 15 <= word_count <= 28:
+        score += 15
+    elif 12 <= word_count < 15:
         score += 12
+    elif 8 <= word_count < 12:
+        score += 8
         hints.append("A little more detail would strengthen this bullet.")
     elif word_count > 35:
-        score += 10
+        score += 6
         hints.append("Tighten this bullet — aim for under 35 words.")
+    elif word_count > 28:
+        score += 11
     else:
-        score += 5
+        score += 3
         hints.append("This bullet is too short. Add context and impact.")
 
-    # --- Tools / tech keywords (up to 15pts) ---
-    bullet_lower = bullet.lower()
+    # --- Tools / tech keywords (up to 12pts, scaled by count) ---
     tool_hits = sum(1 for t in _TOOL_KEYWORDS if t in bullet_lower)
-    if tool_hits >= 1:
-        score += 15
+    if tool_hits >= 3:
+        score += 12
+    elif tool_hits == 2:
+        score += 9
+    elif tool_hits == 1:
+        score += 6
 
-    # Cap at 100
-    score = min(score, 100)
+    # --- Result / outcome language (up to 10pts) ---
+    _RESULT_PATTERNS = [
+        "resulting in", "leading to", "which led to", "enabling", "contributing to",
+        "improving", "reducing", "increasing", "generating", "saving",
+        "achieving", "delivering", "driving", "accelerating", "streamlining",
+    ]
+    result_hits = sum(1 for p in _RESULT_PATTERNS if p in bullet_lower)
+    if result_hits >= 2:
+        score += 10
+    elif result_hits == 1:
+        score += 6
+
+    # --- Specificity bonus (up to 8pts) ---
+    # Reward concrete nouns: team sizes, proper nouns (capitalized words mid-sentence), dates
+    import re as _re
+    proper_nouns = len(_re.findall(r"(?<!\.\s)(?<!^)\b[A-Z][a-z]{2,}", bullet))
+    if proper_nouns >= 2:
+        score += 8
+    elif proper_nouns == 1:
+        score += 4
+
+    # --- Deterministic per-bullet variation (up to ±5pts) ---
+    # Use a hash of the bullet text so the same bullet always gets the same score,
+    # but different bullets get different micro-adjustments
+    text_hash = hash(bullet.strip()) % 11 - 5  # range: -5 to +5
+    score += text_hash
+
+    # Cap at 100, floor at 5
+    score = max(5, min(score, 100))
 
     # Label
     if score >= 80:
