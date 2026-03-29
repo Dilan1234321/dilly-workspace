@@ -298,7 +298,7 @@ export default function ScoresPage() {
                         </div>
                         <div className="relative cursor-ew-resize group">
                           <div className="h-3 rounded-full overflow-visible" style={{ background: 'var(--surface-2)' }}>
-                            <div className="h-full rounded-full transition-all duration-200 relative"
+                            <div className="h-full rounded-full transition-all duration-100 relative"
                               style={{ width: `${Math.min(proj, 100)}%`, background: `linear-gradient(90deg, ${d.color}50, ${d.color})` }}>
                               {/* Drag handle */}
                               <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2
@@ -307,8 +307,15 @@ export default function ScoresPage() {
                                 style={{ background: d.color, borderColor: 'var(--surface-0)', boxShadow: `0 0 8px ${d.color}60` }} />
                             </div>
                           </div>
-                          <input type="range" min="-20" max="20" value={adj} step="1"
-                            onChange={e => setSimAdjust(p => ({ ...p, [d.key]: Number(e.target.value) }))}
+                          <input type="range"
+                            min={Math.max(0, Math.round(d.base) - 20)}
+                            max={Math.min(100, Math.round(d.base) + 20)}
+                            value={proj} step="1"
+                            onChange={e => {
+                              const newProj = Number(e.target.value);
+                              const newAdj = newProj - Math.round(d.base);
+                              setSimAdjust(p => ({ ...p, [d.key]: Math.max(-20, Math.min(20, newAdj)) }));
+                            }}
                             className="absolute inset-0 w-full opacity-0 cursor-ew-resize" style={{ height: 24, marginTop: -6 }} />
                         </div>
                       </div>
