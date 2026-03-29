@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   Animated,
   Alert,
   Image,
+  AppState,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { apiFetch, getToken } from '../../lib/auth';
 import { DillyFace } from '../../components/DillyFace';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import useCelebration from '../../hooks/useCelebration';
@@ -96,6 +97,18 @@ export default function HomeScreen() {
   const barAnim   = useRef(new Animated.Value(0)).current;
 
   const { celebrate, CelebrationPortal } = useCelebration();
+
+  // Auth guard: if token is gone (sign-out), redirect away from app screens
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const token = await getToken();
+        if (!token) {
+          router.replace('/');
+        }
+      })();
+    }, [])
+  );
 
   // \u2500\u2500 Load data \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
@@ -195,7 +208,7 @@ export default function HomeScreen() {
   // \u2500\u2500 Derived \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const p = profile as any;
-  const firstName = p.name?.trim().split(/\s+/)[0] || p.first_name || 'there';
+  const firstName = p.name?.trim().split(/\s+/)[0] || p.first_name || '';
   const cohort    = p.track || p.cohort || 'General';
   const school    = p.school_id === 'utampa' ? 'UTampa' : 'UTampa';
 
@@ -269,12 +282,12 @@ export default function HomeScreen() {
               <ProfilePhoto name={firstName} photoUri={photoUri} size={36} />
             </AnimatedPressable>
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={s.headerName}>{firstName || 'Hey there'}</Text>
+              <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
               {cohort ? (
                 <Text style={s.headerCohort}>{cohort} cohort · {school}</Text>
               ) : null}
             </View>
-            <AnimatedPressable onPress={() => Alert.alert('Settings', 'Coming soon')} scaleDown={0.9} hitSlop={10}>
+            <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
               <Ionicons name="settings-outline" size={20} color={colors.t3} />
             </AnimatedPressable>
           </View>
