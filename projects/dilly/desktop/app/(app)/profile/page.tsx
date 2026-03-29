@@ -125,6 +125,24 @@ export default function DillyProfilePage() {
   const sessionCount = new Set(data?.items?.map(i => (i as any).conv_id).filter(Boolean)).size;
   const orderedCategories = CATEGORY_ORDER.filter(cat => data?.grouped?.[cat]?.length);
 
+  // Completeness
+  const CORE_CATEGORIES = [
+    { key: 'goal', nudge: 'Career goals' },
+    { key: 'target_company', nudge: 'Dream companies' },
+    { key: 'skill_unlisted', nudge: 'Skills not on resume' },
+    { key: 'project_detail', nudge: 'Projects you have worked on' },
+    { key: 'motivation', nudge: 'What drives you' },
+    { key: 'hobby', nudge: 'Hobbies and interests' },
+    { key: 'personality', nudge: 'Work style and personality' },
+    { key: 'strength', nudge: 'Your strengths' },
+    { key: 'company_culture_pref', nudge: 'Ideal workplace' },
+    { key: 'availability', nudge: 'When you can start' },
+  ];
+  const filledCore = CORE_CATEGORIES.filter(c => (data?.grouped?.[c.key]?.length ?? 0) > 0);
+  const missingCore = CORE_CATEGORIES.filter(c => (data?.grouped?.[c.key]?.length ?? 0) === 0);
+  const completeness = CORE_CATEGORIES.length > 0 ? Math.round((filledCore.length / CORE_CATEGORIES.length) * 100) : 0;
+  const compColor = completeness >= 70 ? '#34C759' : completeness >= 40 ? '#FF9F0A' : '#FF453A';
+
   // ── Loading ──────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -186,6 +204,56 @@ export default function DillyProfilePage() {
             </p>
           )}
         </div>
+
+        {/* Completeness Card */}
+        {totalFacts > 0 && completeness < 100 && (
+          <div
+            className="rounded-xl p-5 mb-8"
+            style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)' }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] font-bold tracking-widest uppercase mb-1" style={{ fontFamily: "'Cinzel', serif", color: 'var(--text-3)' }}>
+                  Profile Strength
+                </p>
+                <p className="text-xl font-bold" style={{ fontFamily: "'Cinzel', serif" }}>
+                  <span style={{ color: compColor }}>{completeness}%</span>
+                  <span className="text-sm font-normal ml-1" style={{ color: 'var(--text-3)' }}>complete</span>
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold font-mono" style={{ color: compColor }}>{filledCore.length}/{CORE_CATEGORIES.length}</p>
+                <p className="text-[9px]" style={{ color: 'var(--text-3)' }}>areas filled</p>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-2 rounded-full overflow-hidden mb-4" style={{ background: 'var(--surface-2)' }}>
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${completeness}%`, background: compColor }} />
+            </div>
+
+            {/* Missing nudges */}
+            {missingCore.length > 0 && (
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: 'var(--text-3)' }}>Tell Dilly more about:</p>
+                <div className="flex flex-wrap gap-2">
+                  {missingCore.slice(0, 4).map(m => {
+                    const cfg = CATEGORY_CONFIG[m.key];
+                    return (
+                      <span
+                        key={m.key}
+                        className="text-[11px] px-2.5 py-1.5 rounded-lg"
+                        style={{ background: 'var(--surface-2)', color: cfg?.color || 'var(--text-2)' }}
+                      >
+                        {m.nudge}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Fact Categories */}
         {orderedCategories.length > 0 ? (

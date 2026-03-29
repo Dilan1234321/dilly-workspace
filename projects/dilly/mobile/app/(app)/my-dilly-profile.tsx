@@ -137,6 +137,23 @@ export default function MyDillyProfileScreen() {
     cat => data?.grouped?.[cat]?.length
   );
 
+  // Completeness: core categories every student should have
+  const CORE_CATEGORIES = [
+    { key: 'goal', nudge: 'Tell Dilly about your career goals' },
+    { key: 'target_company', nudge: 'Share your dream companies' },
+    { key: 'skill_unlisted', nudge: 'Mention skills not on your resume' },
+    { key: 'project_detail', nudge: 'Describe projects you have worked on' },
+    { key: 'motivation', nudge: 'Tell Dilly what drives you' },
+    { key: 'hobby', nudge: 'Share your hobbies and interests' },
+    { key: 'personality', nudge: 'Tell Dilly about your work style' },
+    { key: 'strength', nudge: 'Talk about what you are good at' },
+    { key: 'company_culture_pref', nudge: 'Describe your ideal workplace' },
+    { key: 'availability', nudge: 'Share when you can start working' },
+  ];
+  const filledCore = CORE_CATEGORIES.filter(c => (data?.grouped?.[c.key]?.length ?? 0) > 0);
+  const missingCore = CORE_CATEGORIES.filter(c => (data?.grouped?.[c.key]?.length ?? 0) === 0);
+  const completeness = CORE_CATEGORIES.length > 0 ? Math.round((filledCore.length / CORE_CATEGORIES.length) * 100) : 0;
+
   // ── Loading ──────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -183,6 +200,64 @@ export default function MyDillyProfileScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Completeness Card ──────────────────────────────────────── */}
+        {totalFacts > 0 && completeness < 100 && (
+          <View style={s.completenessCard}>
+            <View style={s.completenessHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.completenessTitle}>Profile Strength</Text>
+                <Text style={s.completenessPercent}>
+                  <Text style={{ color: completeness >= 70 ? colors.green : completeness >= 40 ? colors.amber : colors.coral }}>
+                    {completeness}%
+                  </Text>
+                  <Text style={{ color: colors.t3 }}> complete</Text>
+                </Text>
+              </View>
+              {/* Ring */}
+              <View style={s.ringWrap}>
+                <View style={s.ringBg} />
+                <View style={[s.ringFill, {
+                  borderTopColor: completeness >= 70 ? colors.green : completeness >= 40 ? colors.amber : colors.coral,
+                  borderRightColor: completeness >= 50 ? (completeness >= 70 ? colors.green : colors.amber) : 'transparent',
+                  borderBottomColor: completeness >= 75 ? colors.green : 'transparent',
+                  borderLeftColor: completeness >= 100 ? colors.green : 'transparent',
+                  transform: [{ rotate: `${(completeness / 100) * 360}deg` }],
+                }]} />
+                <Text style={s.ringText}>{filledCore.length}/{CORE_CATEGORIES.length}</Text>
+              </View>
+            </View>
+
+            {/* Bar */}
+            <View style={s.completenessBar}>
+              <View style={[s.completenessFill, {
+                width: `${completeness}%`,
+                backgroundColor: completeness >= 70 ? colors.green : completeness >= 40 ? colors.amber : colors.coral,
+              }]} />
+            </View>
+
+            {/* Missing nudges */}
+            {missingCore.length > 0 && (
+              <View style={s.nudgeList}>
+                <Text style={s.nudgeLabel}>Tell Dilly more about:</Text>
+                {missingCore.slice(0, 3).map(m => {
+                  const cfg = CATEGORY_CONFIG[m.key];
+                  return (
+                    <TouchableOpacity
+                      key={m.key}
+                      style={s.nudgeChip}
+                      onPress={() => router.push('/(app)/voice')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={cfg?.icon as any || 'ellipse'} size={11} color={cfg?.color || colors.t3} />
+                      <Text style={s.nudgeText}>{m.nudge}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* ── Fact Categories ────────────────────────────────────────── */}
         {orderedCategories.length > 0 ? (
@@ -449,6 +524,91 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: colors.t2,
     lineHeight: 20,
+  },
+
+  // ── Completeness Card ──────────────────────────────────────────────────────
+  completenessCard: {
+    backgroundColor: colors.s2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.b1,
+    padding: 16,
+    marginBottom: 20,
+  },
+  completenessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  completenessTitle: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 10,
+    letterSpacing: 1,
+    color: colors.t3,
+    marginBottom: 4,
+  },
+  completenessPercent: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: 'PlayfairDisplay_700Bold',
+  },
+  ringWrap: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringBg: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+    borderColor: colors.b2,
+  },
+  ringFill: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
+  },
+  ringText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.t2,
+  },
+  completenessBar: {
+    height: 6,
+    backgroundColor: colors.b2,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  completenessFill: {
+    height: '100%',
+    borderRadius: radius.full,
+  },
+  nudgeList: {
+    gap: 6,
+  },
+  nudgeLabel: {
+    fontSize: 10,
+    color: colors.t3,
+    marginBottom: 2,
+  },
+  nudgeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.s3,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  nudgeText: {
+    fontSize: 11,
+    color: colors.t2,
   },
 
   // ── Section eyebrow ───────────────────────────────────────────────────────
