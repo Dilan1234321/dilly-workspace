@@ -298,15 +298,18 @@ export default function ScoresPage() {
                   <MiniScore label="Smart" value={c.smart} color="#3B4CC0" />
                   <MiniScore label="Grit" value={c.grit} color="#C9A84C" />
                   <MiniScore label="Build" value={c.build} color="#34C759" />
-                  <span className={`ml-auto text-[9px] transition-opacity duration-200 ${isH || isSel ? 'opacity-100' : 'opacity-0'}`}
-                    style={{ color: isSel ? '#3B4CC0' : 'var(--text-3)' }}>
-                    {isSel ? 'Click to close' : 'Click for detail'}
-                  </span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                    className={`transition-all duration-200 ${isH || isSel ? 'opacity-100' : 'opacity-0'}`}
-                    style={{ color: isSel ? '#3B4CC0' : 'var(--text-3)', transform: isSel ? 'rotate(180deg)' : '' }}>
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
+                  <div className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200"
+                    style={{ background: isSel ? 'rgba(59,76,192,0.1)' : 'var(--surface-2)' }}>
+                    <span className="text-[10px] font-semibold"
+                      style={{ color: isSel ? '#3B4CC0' : 'var(--text-2)' }}>
+                      {isSel ? 'Close' : 'Details'}
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      className="transition-transform duration-200"
+                      style={{ color: isSel ? '#3B4CC0' : 'var(--text-2)', transform: isSel ? 'rotate(180deg)' : '' }}>
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             );
