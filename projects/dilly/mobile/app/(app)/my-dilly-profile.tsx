@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  LayoutAnimation, UIManager, Platform, Alert,
+  LayoutAnimation, UIManager, Platform, Alert, Modal,
+  TextInput, KeyboardAvoidingView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,40 +98,10 @@ export default function MyDillyProfileScreen() {
     setExpanded(prev => prev === cat ? null : cat);
   }
 
-  function addFact(category: string) {
-    const cfg = CATEGORY_CONFIG[category] || { label: category };
-    Alert.prompt(
-      `Add to ${cfg.label}`,
-      'What should Dilly know?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Add',
-          onPress: async (text?: string) => {
-            const value = (text || '').trim();
-            if (!value) return;
-            try {
-              const res = await apiFetch('/memory/items', {
-                method: 'POST',
-                body: JSON.stringify({
-                  category,
-                  label: value.slice(0, 50),
-                  value: value,
-                  source: 'profile',
-                  confidence: 'high',
-                }),
-              });
-              if (res.ok) {
-                // Refresh the data
-                fetchData();
-              }
-            } catch {}
-          },
-        },
-      ],
-      'plain-text',
-      '',
-    );
+  const [addCategory, setAddCategory] = useState<string | null>(null);
+
+  function openAddModal(category: string) {
+    setAddCategory(category);
   }
 
   async function deleteFact(id: string) {
@@ -271,7 +242,7 @@ export default function MyDillyProfileScreen() {
                       {/* Add fact button */}
                       <TouchableOpacity
                         style={s.addFactRow}
-                        onPress={() => addFact(cat)}
+                        onPress={() => openAddModal(cat)}
                         activeOpacity={0.7}
                       >
                         <Ionicons name="add-circle-outline" size={15} color={cfg.color} />
@@ -309,7 +280,107 @@ export default function MyDillyProfileScreen() {
           </Text>
         )}
       </ScrollView>
+
+      {/* ── Add Fact Modal ──────────────────────────────────────────── */}
+      <AddFactModal
+        visible={!!addCategory}
+        category={addCategory || ''}
+        onClose={() => setAddCategory(null)}
+        onAdd={async (label, value) => {
+          if (!addCategory) return;
+          try {
+            const res = await apiFetch('/memory/items', {
+              method: 'POST',
+              body: JSON.stringify({
+                category: addCategory,
+                label: label.slice(0, 80),
+                value: value,
+                source: 'profile',
+                confidence: 'high',
+              }),
+            });
+            if (res.ok) fetchData();
+          } catch {}
+          setAddCategory(null);
+        }}
+      />
     </View>
+  );
+}
+
+// ── Add Fact Modal ──────────────────────────────────────────────────────────
+
+function AddFactModal({ visible, category, onClose, onAdd }: {
+  visible: boolean;
+  category: string;
+  onClose: () => void;
+  onAdd: (label: string, value: string) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [label, setLabel] = useState('');
+  const [value, setValue] = useState('');
+
+  const cfg = CATEGORY_CONFIG[category] || { icon: 'ellipse', label: category, color: colors.t2 };
+
+  function handleAdd() {
+    if (!label.trim()) { Alert.alert('Title required'); return; }
+    onAdd(label.trim(), value.trim() || label.trim());
+    setLabel('');
+    setValue('');
+  }
+
+  function handleClose() {
+    setLabel('');
+    setValue('');
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={handleClose}>
+      <View style={s.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
+          <View style={[s.modalCard, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={s.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[s.categoryIcon, { backgroundColor: cfg.color + '18' }]}>
+                  <Ionicons name={cfg.icon as any} size={14} color={cfg.color} />
+                </View>
+                <Text style={s.modalTitle}>Add to {cfg.label}</Text>
+              </View>
+              <TouchableOpacity onPress={handleClose} hitSlop={12}>
+                <Ionicons name="close" size={20} color={colors.t2} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={s.modalInput}
+              value={label}
+              onChangeText={setLabel}
+              placeholder="Title (e.g. Rock climbing)"
+              placeholderTextColor={colors.t3}
+              autoFocus
+            />
+            <TextInput
+              style={[s.modalInput, { minHeight: 72 }]}
+              value={value}
+              onChangeText={setValue}
+              placeholder="Details (e.g. Play club soccer at UTampa, midfielder, 3x/week)"
+              placeholderTextColor={colors.t3}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[s.modalBtn, { backgroundColor: cfg.color }]}
+              onPress={handleAdd}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add-circle" size={16} color="#1a1400" />
+              <Text style={s.modalBtnText}>Add to Profile</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
   );
 }
 
@@ -522,5 +593,51 @@ const s = StyleSheet.create({
     color: colors.t3,
     textAlign: 'center',
     marginTop: 20,
+  },
+
+  // ── Add Fact Modal ────────────────────────────────────────────────────────
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalCard: {
+    backgroundColor: colors.s1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 14,
+    letterSpacing: 1,
+    color: colors.t1,
+  },
+  modalInput: {
+    backgroundColor: colors.s2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.b1,
+    padding: 14,
+    fontSize: 14,
+    color: colors.t1,
+    marginBottom: 10,
+  },
+  modalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 6,
+  },
+  modalBtnText: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 13,
+    letterSpacing: 0.5,
+    color: '#1a1400',
   },
 });
