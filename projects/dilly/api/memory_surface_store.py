@@ -1,16 +1,28 @@
-"""Storage helpers for Dilly memory surface fields in profile.json."""
+"""
+Storage for Dilly Profile facts — what Dilly learns about each user.
+
+Primary store: PostgreSQL (profile_facts table).
+Fallback: profile.json on disk (if PostgreSQL is unreachable).
+
+All public functions maintain the same signatures and return shapes
+as the original file-based implementation so callers are unaffected.
+"""
 
 from __future__ import annotations
 
+import json
 import time
+import traceback
 import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+import psycopg2.extras
+
 from projects.dilly.api.profile_store import get_profile, save_profile
 
 _MEMORY_CATEGORIES = {
-    # Career-specific (original)
+    # Career-specific
     "target_company",
     "concern",
     "mentioned_but_not_done",
@@ -24,16 +36,16 @@ _MEMORY_CATEGORIES = {
     "strength",
     "weakness",
     # Expanded — Dilly Profiles: know the user beyond their resume
-    "hobby",                 # interests, sports, activities outside career
-    "personality",           # communication style, work preferences, thinking style
-    "soft_skill",            # teamwork, leadership style, conflict resolution
-    "life_context",          # family, financial constraints, location preferences, background
-    "motivation",            # what drives them, why they chose their field
-    "challenge",             # obstacles, struggles, things holding them back
-    "project_detail",        # specific details about projects not on resume
-    "skill_unlisted",        # skills mentioned in conversation but not on resume
-    "company_culture_pref",  # what kind of workplace they want
-    "availability",          # when they can start, schedule constraints
+    "hobby",
+    "personality",
+    "soft_skill",
+    "life_context",
+    "motivation",
+    "challenge",
+    "project_detail",
+    "skill_unlisted",
+    "company_culture_pref",
+    "availability",
 }
 
 _MEMORY_ACTIONS = {
@@ -52,6 +64,22 @@ _MEMORY_ACTIONS = {
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
+
+def _db_available() -> bool:
+    """Quick check if we can import and connect."""
+    try:
+        from projects.dilly.api.database import get_db
+        return True
+    except Exception:
+        return False
+
+
+def _get_db():
+    from projects.dilly.api.database import get_db
+    return get_db()
+
+
+# ── Normalization (shared by both backends) ──────────────────────────────────
 
 def _normalize_memory_item(email: str, raw: dict[str, Any]) -> dict[str, Any] | None:
     category = str(raw.get("category") or "").strip()
@@ -79,8 +107,8 @@ def _normalize_memory_item(email: str, raw: dict[str, Any]) -> dict[str, Any] | 
         "id": existing_id or str(uuid.uuid4()),
         "uid": email,
         "category": category,
-        "label": label[:50],
-        "value": value[:200],
+        "label": label[:80],
+        "value": value[:500],
         "source": source,
         "created_at": str(raw.get("created_at") or now),
         "updated_at": str(raw.get("updated_at") or now),
@@ -88,10 +116,183 @@ def _normalize_memory_item(email: str, raw: dict[str, Any]) -> dict[str, Any] | 
         "action_payload": payload,
         "confidence": confidence,
         "shown_to_user": bool(raw.get("shown_to_user", False)),
+        "conv_id": str(raw.get("conv_id") or "").strip() or None,
     }
 
 
-def get_memory_surface(email: str) -> dict[str, Any]:
+def _row_to_item(row: dict) -> dict[str, Any]:
+    """Convert a PostgreSQL row (RealDictRow) to the standard item dict."""
+    return {
+        "id": str(row["id"]),
+        "uid": row["email"],
+        "category": row["category"],
+        "label": row["label"],
+        "value": row["value"],
+        "source": row.get("source", "voice"),
+        "created_at": row["created_at"].isoformat().replace("+00:00", "Z") if hasattr(row.get("created_at"), "isoformat") else str(row.get("created_at", "")),
+        "updated_at": row["updated_at"].isoformat().replace("+00:00", "Z") if hasattr(row.get("updated_at"), "isoformat") else str(row.get("updated_at", "")),
+        "action_type": row.get("action_type"),
+        "action_payload": row.get("action_payload"),
+        "confidence": row.get("confidence", "medium"),
+        "shown_to_user": bool(row.get("shown_to_user", False)),
+        "conv_id": row.get("conv_id"),
+    }
+
+
+# ── PostgreSQL backend ───────────────────────────────────────────────────────
+
+def _pg_get_items(email: str) -> list[dict[str, Any]]:
+    with _get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT * FROM profile_facts WHERE LOWER(email) = LOWER(%s) ORDER BY updated_at DESC LIMIT 400",
+            (email,),
+        )
+        return [_row_to_item(r) for r in cur.fetchall()]
+
+
+def _pg_get_narrative(email: str) -> tuple[str | None, str | None]:
+    with _get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT dilly_narrative, dilly_narrative_updated_at FROM students WHERE LOWER(email) = LOWER(%s)",
+            (email,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None, None
+        updated = row.get("dilly_narrative_updated_at")
+        if hasattr(updated, "isoformat"):
+            updated = updated.isoformat().replace("+00:00", "Z")
+        return row.get("dilly_narrative"), updated
+
+
+def _pg_save_narrative(email: str, narrative: str | None, updated_at: str | None) -> None:
+    with _get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE students SET dilly_narrative = %s, dilly_narrative_updated_at = %s WHERE LOWER(email) = LOWER(%s)",
+            (narrative, updated_at, email),
+        )
+
+
+def _pg_get_session_captures(email: str) -> list[dict]:
+    with _get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT voice_session_captures FROM students WHERE LOWER(email) = LOWER(%s)",
+            (email,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return []
+        caps = row.get("voice_session_captures")
+        if isinstance(caps, str):
+            caps = json.loads(caps)
+        return caps if isinstance(caps, list) else []
+
+
+def _pg_save_session_captures(email: str, captures: list[dict]) -> None:
+    with _get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE students SET voice_session_captures = %s::jsonb WHERE LOWER(email) = LOWER(%s)",
+            (json.dumps(captures), email),
+        )
+
+
+def _pg_upsert_item(email: str, item: dict[str, Any]) -> dict[str, Any]:
+    """Insert or update on (email, category, label) uniqueness."""
+    with _get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("""
+            INSERT INTO profile_facts (id, email, category, label, value, source, confidence, action_type, action_payload, shown_to_user, conv_id, created_at, updated_at)
+            VALUES (%s, LOWER(%s), %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s::timestamptz, %s::timestamptz)
+            ON CONFLICT (email, category, label) DO UPDATE SET
+                value = EXCLUDED.value,
+                confidence = EXCLUDED.confidence,
+                action_type = EXCLUDED.action_type,
+                action_payload = EXCLUDED.action_payload,
+                conv_id = EXCLUDED.conv_id,
+                updated_at = EXCLUDED.updated_at
+            RETURNING *
+        """, (
+            item["id"], email, item["category"], item["label"], item["value"],
+            item["source"], item["confidence"], item.get("action_type"),
+            json.dumps(item["action_payload"]) if item.get("action_payload") else None,
+            item.get("shown_to_user", False), item.get("conv_id"),
+            item["created_at"], item["updated_at"],
+        ))
+        row = cur.fetchone()
+        return _row_to_item(row) if row else item
+
+
+def _pg_delete_item(email: str, item_id: str) -> bool:
+    with _get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM profile_facts WHERE id = %s::uuid AND LOWER(email) = LOWER(%s)",
+            (item_id, email),
+        )
+        return cur.rowcount > 0
+
+
+def _pg_update_item(email: str, item_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+    sets = []
+    params = []
+    now = _now_iso()
+    if "label" in patch and patch["label"] is not None:
+        sets.append("label = %s")
+        params.append(str(patch["label"])[:80])
+    if "value" in patch and patch["value"] is not None:
+        sets.append("value = %s")
+        params.append(str(patch["value"])[:500])
+    if "shown_to_user" in patch:
+        sets.append("shown_to_user = %s")
+        params.append(bool(patch["shown_to_user"]))
+    if "action_type" in patch:
+        at = patch.get("action_type")
+        if at is None or str(at).strip() not in _MEMORY_ACTIONS:
+            sets.append("action_type = NULL")
+        else:
+            sets.append("action_type = %s")
+            params.append(str(at).strip())
+    if "action_payload" in patch:
+        pl = patch.get("action_payload")
+        sets.append("action_payload = %s::jsonb")
+        params.append(json.dumps(pl) if isinstance(pl, dict) else None)
+    if not sets:
+        return None
+    sets.append("updated_at = %s::timestamptz")
+    params.append(now)
+    params.extend([item_id, email])
+
+    with _get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            f"UPDATE profile_facts SET {', '.join(sets)} WHERE id = %s::uuid AND LOWER(email) = LOWER(%s) RETURNING *",
+            params,
+        )
+        row = cur.fetchone()
+        return _row_to_item(row) if row else None
+
+
+def _pg_mark_seen(email: str, item_ids: list[str]) -> int:
+    if not item_ids:
+        return 0
+    with _get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE profile_facts SET shown_to_user = true, updated_at = %s::timestamptz "
+            "WHERE LOWER(email) = LOWER(%s) AND id = ANY(%s::uuid[]) AND shown_to_user = false",
+            (_now_iso(), email, item_ids),
+        )
+        return cur.rowcount
+
+
+# ── File-based fallback (original implementation) ────────────────────────────
+
+def _file_get_memory_surface(email: str) -> dict[str, Any]:
     profile = get_profile(email) or {}
     items_raw = profile.get("dilly_memory_items")
     if not isinstance(items_raw, list):
@@ -115,7 +316,7 @@ def get_memory_surface(email: str) -> dict[str, Any]:
 _SENTINEL = object()
 
 
-def save_memory_surface(
+def _file_save_memory_surface(
     email: str,
     *,
     items: list[dict[str, Any]] | None = None,
@@ -144,83 +345,140 @@ def save_memory_surface(
     return save_profile(email, update)
 
 
+# ── Public API (PostgreSQL primary, file fallback) ───────────────────────────
+
+def get_memory_surface(email: str) -> dict[str, Any]:
+    try:
+        items = _pg_get_items(email)
+        narrative, narrative_updated_at = _pg_get_narrative(email)
+        captures = _pg_get_session_captures(email)
+        return {
+            "narrative": narrative,
+            "narrative_updated_at": narrative_updated_at,
+            "items": items,
+            "session_captures": captures,
+        }
+    except Exception:
+        traceback.print_exc()
+        return _file_get_memory_surface(email)
+
+
+def save_memory_surface(
+    email: str,
+    *,
+    items: list[dict[str, Any]] | None = None,
+    narrative: str | None | object = _SENTINEL,
+    narrative_updated_at: str | None = None,
+    session_captures: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    try:
+        if items is not None:
+            for row in items:
+                if not isinstance(row, dict):
+                    continue
+                norm = _normalize_memory_item(email, row)
+                if norm:
+                    _pg_upsert_item(email, norm)
+        if narrative is not _SENTINEL:
+            _pg_save_narrative(email, narrative, narrative_updated_at)
+        elif narrative_updated_at is not None:
+            _pg_save_narrative(email, None, narrative_updated_at)
+        if session_captures is not None:
+            clean = [row for row in session_captures if isinstance(row, dict)]
+            clean.sort(key=lambda x: str(x.get("captured_at") or ""), reverse=True)
+            _pg_save_session_captures(email, clean[:120])
+        return get_memory_surface(email)
+    except Exception:
+        traceback.print_exc()
+        return _file_save_memory_surface(
+            email, items=items, narrative=narrative,
+            narrative_updated_at=narrative_updated_at, session_captures=session_captures,
+        )
+
+
 def add_memory_item(email: str, payload: dict[str, Any]) -> dict[str, Any] | None:
-    surface = get_memory_surface(email)
     item = _normalize_memory_item(email, payload)
     if not item:
         return None
-    items = list(surface["items"])
-    items.insert(0, item)
-    save_memory_surface(email, items=items)
-    return item
+    try:
+        return _pg_upsert_item(email, item)
+    except Exception:
+        traceback.print_exc()
+        surface = _file_get_memory_surface(email)
+        items = list(surface["items"])
+        items.insert(0, item)
+        _file_save_memory_surface(email, items=items)
+        return item
 
 
 def update_memory_item(email: str, item_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
     target = (item_id or "").strip()
     if not target:
         return None
-    surface = get_memory_surface(email)
-    items = list(surface["items"])
-    out: dict[str, Any] | None = None
-    now = _now_iso()
-    for row in items:
-        if row.get("id") != target:
-            continue
-        if "label" in patch and patch.get("label") is not None:
-            row["label"] = str(patch.get("label") or "").strip()[:50]
-        if "value" in patch and patch.get("value") is not None:
-            row["value"] = str(patch.get("value") or "").strip()[:200]
-        if "shown_to_user" in patch:
-            row["shown_to_user"] = bool(patch.get("shown_to_user"))
-        if "action_type" in patch:
-            at = patch.get("action_type")
-            if at is None:
-                row["action_type"] = None
-            else:
-                at_s = str(at).strip()
-                row["action_type"] = at_s if at_s in _MEMORY_ACTIONS else row.get("action_type")
-        if "action_payload" in patch:
-            payload = patch.get("action_payload")
-            row["action_payload"] = payload if isinstance(payload, dict) else None
-        row["updated_at"] = now
-        out = row
-        break
-    if out is None:
-        return None
-    save_memory_surface(email, items=items)
-    return out
+    try:
+        return _pg_update_item(email, target, patch)
+    except Exception:
+        traceback.print_exc()
+        # File fallback
+        surface = _file_get_memory_surface(email)
+        items = list(surface["items"])
+        now = _now_iso()
+        out = None
+        for row in items:
+            if row.get("id") != target:
+                continue
+            if "label" in patch and patch.get("label") is not None:
+                row["label"] = str(patch["label"])[:80]
+            if "value" in patch and patch.get("value") is not None:
+                row["value"] = str(patch["value"])[:500]
+            if "shown_to_user" in patch:
+                row["shown_to_user"] = bool(patch["shown_to_user"])
+            row["updated_at"] = now
+            out = row
+            break
+        if out:
+            _file_save_memory_surface(email, items=items)
+        return out
 
 
 def delete_memory_item(email: str, item_id: str) -> bool:
     target = (item_id or "").strip()
     if not target:
         return False
-    surface = get_memory_surface(email)
-    items = list(surface["items"])
-    before = len(items)
-    items = [row for row in items if row.get("id") != target]
-    if len(items) == before:
-        return False
-    save_memory_surface(email, items=items)
-    return True
+    try:
+        return _pg_delete_item(email, target)
+    except Exception:
+        traceback.print_exc()
+        surface = _file_get_memory_surface(email)
+        items = list(surface["items"])
+        before = len(items)
+        items = [row for row in items if row.get("id") != target]
+        if len(items) == before:
+            return False
+        _file_save_memory_surface(email, items=items)
+        return True
 
 
 def mark_items_seen(email: str, item_ids: list[str]) -> int:
-    ids = {str(x).strip() for x in (item_ids or []) if str(x).strip()}
+    ids = [str(x).strip() for x in (item_ids or []) if str(x).strip()]
     if not ids:
         return 0
-    surface = get_memory_surface(email)
-    changed = 0
-    now = _now_iso()
-    items = list(surface["items"])
-    for row in items:
-        if row.get("id") in ids and not row.get("shown_to_user"):
-            row["shown_to_user"] = True
-            row["updated_at"] = now
-            changed += 1
-    if changed > 0:
-        save_memory_surface(email, items=items)
-    return changed
+    try:
+        return _pg_mark_seen(email, ids)
+    except Exception:
+        traceback.print_exc()
+        surface = _file_get_memory_surface(email)
+        changed = 0
+        now = _now_iso()
+        items = list(surface["items"])
+        for row in items:
+            if row.get("id") in set(ids) and not row.get("shown_to_user"):
+                row["shown_to_user"] = True
+                row["updated_at"] = now
+                changed += 1
+        if changed > 0:
+            _file_save_memory_surface(email, items=items)
+        return changed
 
 
 def get_session_capture(email: str, conv_id: str) -> dict[str, Any] | None:
@@ -257,15 +515,19 @@ def upsert_session_capture(
             "narrative_updated": bool(narrative_updated),
         }
         captures.insert(0, row)
-        save_memory_surface(email, session_captures=captures)
-        return row
-    row = captures[existing_idx]
-    merged = list(dict.fromkeys([*(row.get("items_added") or []), *ids]))
-    row["items_added"] = merged
-    row["captured_at"] = now
-    row["narrative_updated"] = bool(row.get("narrative_updated")) or bool(narrative_updated)
-    captures[existing_idx] = row
-    save_memory_surface(email, session_captures=captures)
+    else:
+        row = captures[existing_idx]
+        merged = list(dict.fromkeys([*(row.get("items_added") or []), *ids]))
+        row["items_added"] = merged
+        row["captured_at"] = now
+        row["narrative_updated"] = bool(row.get("narrative_updated")) or bool(narrative_updated)
+        captures[existing_idx] = row
+
+    try:
+        _pg_save_session_captures(email, captures[:120])
+    except Exception:
+        traceback.print_exc()
+        _file_save_memory_surface(email, session_captures=captures[:120])
     return row
 
 
@@ -283,4 +545,3 @@ def should_regenerate_narrative(last_updated_at: str | None, new_items_count: in
     if new_items_count > 0 and age > 24 * 3600:
         return True
     return False
-
