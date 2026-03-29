@@ -159,6 +159,41 @@ def _build_rich_context(email: str) -> dict:
     resume_text = load_parsed_resume_for_voice(email, max_chars=6000) or ""
     has_resume = len(resume_text.strip()) > 50
     has_editor_resume = False
+
+    # Dilly Profile facts — everything Dilly has learned about this user
+    profile_facts_text = ""
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        surface = get_memory_surface(email)
+        facts = surface.get("items") or []
+        narrative = surface.get("narrative") or ""
+        if facts:
+            grouped: dict[str, list] = {}
+            for f in facts:
+                cat = f.get("category", "other")
+                if cat not in grouped:
+                    grouped[cat] = []
+                grouped[cat].append(f)
+            lines = []
+            cat_labels = {
+                "achievement": "Achievements", "goal": "Goals", "target_company": "Target Companies",
+                "skill_unlisted": "Skills (not on resume)", "project_detail": "Projects (beyond resume)",
+                "motivation": "What drives them", "personality": "Personality & style",
+                "soft_skill": "Soft skills", "hobby": "Interests & hobbies",
+                "life_context": "Background & life context", "company_culture_pref": "Workplace preferences",
+                "strength": "Strengths", "weakness": "Growth areas", "challenge": "Challenges",
+                "availability": "Availability", "preference": "Preferences",
+                "concern": "Concerns", "deadline": "Deadlines", "interview": "Interviews",
+                "rejection": "Rejections", "mentioned_but_not_done": "Said they'd do but haven't",
+                "person_to_follow_up": "People to follow up with",
+            }
+            for cat, items in grouped.items():
+                label = cat_labels.get(cat, cat.replace("_", " ").title())
+                entries = "; ".join(f"{i['label']}: {i['value']}" for i in items[:8])
+                lines.append(f"  {label}: {entries}")
+            profile_facts_text = "\n".join(lines)
+    except Exception:
+        pass
     if folder:
         has_editor_resume = os.path.isfile(os.path.join(folder, "resume_edited.json"))
 
@@ -197,6 +232,7 @@ def _build_rich_context(email: str) -> dict:
         "has_resume": has_resume, "has_editor_resume": has_editor_resume,
         "resume_snippet": resume_text[:5000] if resume_text else "",
         "nudges": nudges,
+        "profile_facts_text": profile_facts_text,
     }
 
 
@@ -276,6 +312,13 @@ def _build_rich_system_prompt(r: dict) -> str:
 
     resume_block = f"FULL RESUME TEXT (reference specific bullets and sections — never ask what is on their resume):\n{resume_snippet[:5000]}\n" if resume_snippet else ""
 
+    profile_facts = r.get("profile_facts_text", "")
+    profile_block = ""
+    if profile_facts:
+        profile_block = f"""DILLY PROFILE (what you've learned about this student beyond their resume — from conversations, onboarding, and their own additions. Reference these naturally. NEVER re-ask things you already know here):
+{profile_facts}
+"""
+
     return f"""You are Dilly, an AI career coach embedded in a career acceleration app for college students. You are not just a chatbot. You are the student's personal career strategist who can see their entire dashboard.
 
 STUDENT: {name}
@@ -291,7 +334,7 @@ Cohort: {cohort}
 {target_block}
 {history_block}
 {resume_block}
-
+{profile_block}
 APP FEATURES YOU CAN REFERENCE (tell the student to use these by name):
 - Resume Editor: Edit resume sections with live bullet scoring. Each bullet gets scored 0-100 in real time.
 - New Audit: Upload a PDF or re-audit from the editor. Shows before/after score comparison.
