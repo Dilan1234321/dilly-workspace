@@ -21,7 +21,9 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type ChatMode = 'coaching' | 'practice';
 
+let _msgId = 0;
 interface Message {
+  id: number;
   role: 'user' | 'assistant';
   content: string;
   visual?: VisualPayload;
@@ -48,6 +50,24 @@ interface Props {
   onClose: () => void;
   studentContext?: StudentContext;
 }
+
+// Message animation wrapper — defined as a const to prevent Metro cache issues
+// where standalone function components can lose their reference during hot reload.
+const MessageAnimIn = ({ children }: { children: React.ReactNode; index?: number | string }) => {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(12)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 280, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 280, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+    ]).start();
+  }, []);
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+};
 
 export default function DillyAIOverlay({ visible, onClose, studentContext }: Props) {
   const insets = useSafeAreaInsets();
@@ -136,7 +156,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   const sendMessageWithText = useCallback(async (text: string, currentMessages: Message[]) => {
     if (!canSendAIMessage) { showPaywall('ai_limit'); return; }
     await incrementAIMessage();
-    const userMsg: Message = { role: 'user', content: text };
+    const userMsg: Message = { id: ++_msgId, role: 'user', content: text };
     const apiHistory = [...currentMessages, userMsg].map(m => ({ role: m.role, content: m.content }));
     const newHistory: Message[] = [...currentMessages, userMsg];
     setMessages(newHistory);
@@ -175,7 +195,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       const fullText = data.content as string;
 
       setIsTyping(false);
-      setMessages([...newHistory, { role: 'assistant', content: '', visual: undefined }]);
+      setMessages([...newHistory, { id: ++_msgId, role: 'assistant', content: '', visual: undefined }]);
 
       let i = 0;
       streamRef.current = setInterval(() => {
@@ -202,6 +222,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     } catch {
       setIsTyping(false);
       setMessages([...newHistory, {
+        id: ++_msgId,
         role: 'assistant',
         content: 'Something went wrong. Make sure the API is running and ANTHROPIC_API_KEY is set in .env.',
       }]);
@@ -244,7 +265,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
               setTimeout(() => {
                 setMessages(prev => {
                   if (prev.length === 0) {
-                    return [{ role: 'assistant', content: data.proactive_message }];
+                    return [{ id: ++_msgId, role: 'assistant', content: data.proactive_message }];
                   }
                   return prev;
                 });
@@ -372,29 +393,34 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
               </View>
             )}
 
-            {messages.map((msg, i) =>
-              msg.role === 'user' ? (
-                <View key={i} style={[s.msgRow, { justifyContent: 'flex-end' }]}>
-                  <View style={s.userBubble}>
-                    <Text style={s.msgText}>{msg.content}</Text>
-                  </View>
-                </View>
-              ) : (
-                <View key={i} style={s.assistantBlock}>
-                  <View style={s.msgRow}>
-                    <View style={s.assistantDot} />
-                    <View style={s.assistantBubble}>
-                      <RichText text={msg.content} baseStyle={s.msgText} />
+            {messages.map((msg) => {
+              const Wrapper = MessageAnimIn || View;
+              return (
+              <Wrapper key={msg.id} index={msg.id}>
+                {msg.role === 'user' ? (
+                  <View style={[s.msgRow, { justifyContent: 'flex-end' }]}>
+                    <View style={s.userBubble}>
+                      <Text style={s.msgText}>{msg.content}</Text>
                     </View>
                   </View>
-                  {msg.visual && (
-                    <View style={s.visualWrap}>
-                      <DillyVisual payload={msg.visual} />
+                ) : (
+                  <View style={s.assistantBlock}>
+                    <View style={s.msgRow}>
+                      <View style={s.assistantDot} />
+                      <View style={s.assistantBubble}>
+                        <RichText text={msg.content} baseStyle={s.msgText} />
+                      </View>
                     </View>
-                  )}
-                </View>
-              )
-            )}
+                    {msg.visual && (
+                      <View style={s.visualWrap}>
+                        <DillyVisual payload={msg.visual} />
+                      </View>
+                    )}
+                  </View>
+                )}
+              </Wrapper>
+              );
+            })}
 
             {isTyping && (
               <View style={[s.msgRow, { justifyContent: 'flex-start' }]}>
