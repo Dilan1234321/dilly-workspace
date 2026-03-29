@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In | Dilly</title>
+<meta name="description" content="Sign in to Dilly. Students, parents, recruiters, and professionals welcome.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080809;--s1:#0a0a0c;--s2:#0f0f12;--s3:#1a1a1f;--gold:#C9A84C;--gdim:rgba(201,168,76,.12);--green:#34C759;--t1:#f5f5f7;--t2:#a1a1a6;--t3:#636366;--bdr:rgba(255,255,255,.06)}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;overflow-x:hidden;line-height:1.6}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(8,8,9,.85);border-bottom:1px solid var(--bdr);padding:16px 0;transition:padding .3s}
+.ni{max-width:1200px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Cinzel',serif;font-weight:700;font-size:18px;color:var(--t1);text-decoration:none}
+.nl{display:flex;gap:28px;align-items:center}.nl a{color:var(--t2);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s}.nl a:hover{color:var(--t1)}.nl a.act{color:var(--gold)}
+.nc{background:var(--gold);color:#1a1400;padding:9px 20px;border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:11px;letter-spacing:1px;text-decoration:none}
+.mm{display:none;background:0;border:0;color:var(--t1);font-size:24px;cursor:pointer}
+
+.ph{padding:160px 32px 40px;text-align:center;position:relative}
+.ph::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(201,168,76,.04) 0%,transparent 65%);pointer-events:none}
+.ph h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(28px,4vw,44px);margin-bottom:12px}
+.ph h1 .g{color:var(--gold)}
+.ph p{font-size:16px;color:var(--t2);max-width:440px;margin:0 auto;line-height:1.6}
+
+.cards-wrap{max-width:460px;margin:40px auto 80px;padding:0 20px;display:flex;flex-direction:column;gap:10px}
+
+.signin-card{display:flex;align-items:center;gap:16px;padding:18px 20px;background:var(--s2);border:2px solid var(--bdr);border-radius:14px;text-decoration:none;color:inherit;transition:all .2s;cursor:pointer}
+.signin-card:hover{border-color:var(--gold);background:var(--gdim);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.signin-card:active{transform:translateY(0)}
+.signin-card .si-icon{font-size:1.5rem;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--s3);flex-shrink:0}
+.signin-card .si-text h3{font-size:15px;font-weight:700;margin:0 0 2px}
+.signin-card .si-text p{font-size:12px;color:var(--t2);margin:0;line-height:1.4}
+
+.signin-card.disabled{opacity:.45;cursor:default;pointer-events:none}
+
+.badge{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:2px 8px;border-radius:9999px;background:var(--gold);color:#1a1400;margin-left:8px;vertical-align:middle}
+
+.quiz-link{text-align:center;margin-top:8px;font-size:13px;color:var(--t3)}
+.quiz-link a{color:var(--gold);text-decoration:none}
+.quiz-link a:hover{text-decoration:underline}
+
+footer{border-top:1px solid var(--bdr);padding:40px 32px;text-align:center;color:var(--t3);font-size:12px}
+footer .fl{display:flex;gap:20px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+footer a{color:var(--t3);text-decoration:none;font-size:12px}footer a:hover{color:var(--t2)}
+
+@media(max-width:900px){.nl{display:none}.mm{display:block}}
+</style>
+</head>
+<body>
+
+<nav><div class="ni">
+  <a href="index.html" class="logo">dilly</a>
+  <div class="nl">
+    <a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="signin.html" class="act">Sign in</a>
+    <a href="https://app.trydilly.com" class="nc" target="_blank" rel="noopener noreferrer">GET YOUR SCORE</a>
+  </div>
+  <button class="mm" onclick="let n=document.querySelector('.nl');n.style.display=n.style.display==='flex'?'none':'flex'">&#9776;</button>
+</div></nav>
+
+<div class="ph">
+  <h1>Welcome to <span class="g">Dilly</span></h1>
+  <p>Choose how you want to sign in.</p>
+</div>
+
+<div class="cards-wrap">
+
+  <a href="https://app.trydilly.com" target="_blank" rel="noopener noreferrer" class="signin-card">
+    <div class="si-icon">&#127891;</div>
+    <div class="si-text">
+      <h3>I am a student</h3>
+      <p>Get your Dilly Score, match to internships, and level up your resume.</p>
+    </div>
+  </a>
+
+  <div class="signin-card disabled">
+    <div class="si-icon">&#128106;</div>
+    <div class="si-text">
+      <h3>I am a parent <span class="badge">Coming soon</span></h3>
+      <p>Track your child's career readiness and give them the tools to succeed.</p>
+    </div>
+  </div>
+
+  <div class="signin-card disabled">
+    <div class="si-icon">&#128188;</div>
+    <div class="si-text">
+      <h3>I hire or recruit people <span class="badge">Coming soon</span></h3>
+      <p>Browse pre-scored candidates and find the right talent faster.</p>
+    </div>
+  </div>
+
+  <div class="signin-card disabled">
+    <div class="si-icon">&#128270;</div>
+    <div class="si-text">
+      <h3>I am looking for a job <span class="badge">Coming soon</span></h3>
+      <p>See where you stand, improve your resume, and find the right opportunities.</p>
+    </div>
+  </div>
+
+  <div class="signin-card disabled">
+    <div class="si-icon">&#9889;</div>
+    <div class="si-text">
+      <h3>I am currently employed <span class="badge">Coming soon</span></h3>
+      <p>Future-proof your career, benchmark your skills, and explore new paths.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="quiz-link">
+  Not sure yet? <a href="quiz.html">Take the quiz</a> to see what Dilly can do for you.
+</div>
+
+<div style="height:60px"></div>
+
+<footer><div class="fl"><a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="tracks.html">Tracks</a><a href="quiz.html">Quiz</a><a href="signin.html">Sign in</a></div>
+<p>&copy; 2026 Dilly. The career center in your pocket.</p></footer>
+
+<script>
+window.addEventListener('scroll', function() {
+  document.querySelector('nav').style.padding = window.scrollY > 50 ? '10px 0' : '16px 0';
+});
+</script>
+</body>
+</html>
