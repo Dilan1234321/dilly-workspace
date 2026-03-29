@@ -101,12 +101,14 @@ export default function HomeScreen() {
   // Auth guard: if token is gone (sign-out), redirect away from app screens
   useFocusEffect(
     useCallback(() => {
+      let active = true;
       (async () => {
         const token = await getToken();
-        if (!token) {
+        if (!token && active) {
           router.replace('/');
         }
       })();
+      return () => { active = false; };
     }, [])
   );
 
@@ -114,10 +116,26 @@ export default function HomeScreen() {
 
   useEffect(() => {
     (async () => {
+      // Don't even try fetching if there's no token
+      const token = await getToken();
+      if (!token) {
+        router.replace('/');
+        return;
+      }
       try {
+        const [profileRaw, auditRawRes] = await Promise.all([
+          apiFetch('/profile'),
+          apiFetch('/audit/latest'),
+        ]);
+        // If API returns 401, token is invalid — redirect to login
+        if (profileRaw.status === 401 || profileRaw.status === 403) {
+          await (await import('../../lib/auth')).clearAuth();
+          router.replace('/');
+          return;
+        }
         const [profileRes, auditRaw] = await Promise.all([
-          apiFetch('/profile').then(r => r.json()),
-          apiFetch('/audit/latest').then(r => r.json()),
+          profileRaw.json(),
+          auditRawRes.json(),
         ]);
 
         const auditObj = auditRaw?.audit ?? auditRaw ?? {};
@@ -176,7 +194,12 @@ export default function HomeScreen() {
           }
         }
       } catch {
-        // leave empty states
+        // If fetch failed entirely (network error, no auth), redirect to login
+        const stillHasToken = await getToken();
+        if (!stillHasToken) {
+          router.replace('/');
+          return;
+        }
       } finally {
         setLoading(false);
       }
