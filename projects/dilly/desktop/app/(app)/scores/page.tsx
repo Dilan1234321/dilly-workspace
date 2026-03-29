@@ -242,21 +242,113 @@ export default function ScoresPage() {
           </div>
 
           {/* Simulator */}
-          <div className="w-full max-w-sm bg-surface-1 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[9px] font-bold text-dilly-blue tracking-[0.15em] uppercase">What-if simulator</h3>
-              <span className="text-[12px] font-mono text-ready font-bold">{simMatches} matches</span>
-            </div>
-            <SimSlider label="Smart" value={simAdjust.smart} color="#3B4CC0" onChange={v => setSimAdjust(p => ({ ...p, smart: v }))} />
-            <SimSlider label="Grit" value={simAdjust.grit} color="#C9A84C" onChange={v => setSimAdjust(p => ({ ...p, grit: v }))} />
-            <SimSlider label="Build" value={simAdjust.build} color="#34C759" onChange={v => setSimAdjust(p => ({ ...p, build: v }))} />
-            {(simAdjust.smart !== 0 || simAdjust.grit !== 0 || simAdjust.build !== 0) && (
-              <button onClick={() => setSimAdjust({ smart: 0, grit: 0, build: 0 })}
-                className="text-[10px] text-txt-3 hover:text-dilly-blue mt-2 transition-colors">
-                Reset
-              </button>
-            )}
-          </div>
+          {(() => {
+            const hasAdj = simAdjust.smart !== 0 || simAdjust.grit !== 0 || simAdjust.build !== 0;
+            const baseMatches = stats ? Math.max(0, Math.round(stats.ready)) : 0;
+            const projDilly = Math.min(100, Math.max(0, Math.round(
+              (overall.smart + simAdjust.smart) * 0.20 +
+              (overall.grit + simAdjust.grit) * 0.30 +
+              (overall.build + simAdjust.build) * 0.50
+            )));
+            const curDilly = Math.round(overall.smart * 0.20 + overall.grit * 0.30 + overall.build * 0.50);
+            const dillyDelta = projDilly - curDilly;
+            const matchDelta = simMatches - baseMatches;
+
+            return (
+              <div className="w-full bg-surface-1 rounded-xl p-5 mt-1">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-[10px] font-bold tracking-[0.15em] uppercase" style={{ color: '#3B4CC0', fontFamily: "'Cinzel', serif" }}>What-if Simulator</h3>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Drag to see how improvements change your outcomes</p>
+                  </div>
+                  {hasAdj && (
+                    <button onClick={() => setSimAdjust({ smart: 0, grit: 0, build: 0 })}
+                      className="text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+                      style={{ color: '#FF453A', background: 'rgba(255,69,58,0.1)' }}>
+                      Reset
+                    </button>
+                  )}
+                </div>
+
+                {/* Sliders */}
+                <div className="flex flex-col gap-3 mb-5">
+                  {[
+                    { key: 'smart', label: 'Smart', color: '#3B4CC0', base: overall.smart },
+                    { key: 'grit', label: 'Grit', color: '#C9A84C', base: overall.grit },
+                    { key: 'build', label: 'Build', color: '#34C759', base: overall.build },
+                  ].map(d => {
+                    const adj = simAdjust[d.key as keyof typeof simAdjust];
+                    const proj = Math.min(100, Math.max(0, Math.round(d.base + adj)));
+                    return (
+                      <div key={d.key}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
+                            <span className="text-[11px] font-semibold" style={{ color: d.color }}>{d.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-mono" style={{ color: 'var(--text-3)' }}>{Math.round(d.base)}</span>
+                            {adj !== 0 && (
+                              <>
+                                <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>→</span>
+                                <span className="text-[12px] font-mono font-bold" style={{ color: adj > 0 ? '#34C759' : '#FF453A' }}>{proj}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+                            <div className="h-full rounded-full transition-all duration-200"
+                              style={{ width: `${Math.min(proj, 100)}%`, background: `linear-gradient(90deg, ${d.color}50, ${d.color})` }} />
+                          </div>
+                          <input type="range" min="-20" max="20" value={adj} step="1"
+                            onChange={e => setSimAdjust(p => ({ ...p, [d.key]: Number(e.target.value) }))}
+                            className="absolute inset-0 w-full opacity-0 cursor-pointer" style={{ height: 20, marginTop: -4 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Projected outcomes */}
+                {hasAdj && (
+                  <div className="rounded-lg p-4" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-main)' }}>
+                    <p className="text-[9px] font-bold tracking-widest uppercase mb-3" style={{ color: 'var(--text-3)', fontFamily: "'Cinzel', serif" }}>Projected Impact</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[9px] mb-1" style={{ color: 'var(--text-3)' }}>Dilly Score</p>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-[11px] font-mono" style={{ color: 'var(--text-3)' }}>{curDilly}</span>
+                          <span style={{ color: 'var(--text-3)' }}>→</span>
+                          <span className="text-[22px] font-bold font-mono" style={{ color: dillyDelta > 0 ? '#34C759' : dillyDelta < 0 ? '#FF453A' : 'var(--text-1)' }}>{projDilly}</span>
+                          {dillyDelta !== 0 && (
+                            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded"
+                              style={{ color: dillyDelta > 0 ? '#34C759' : '#FF453A', background: dillyDelta > 0 ? 'rgba(52,199,89,0.1)' : 'rgba(255,69,58,0.1)' }}>
+                              {dillyDelta > 0 ? '+' : ''}{dillyDelta}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[9px] mb-1" style={{ color: 'var(--text-3)' }}>Job Matches</p>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-[11px] font-mono" style={{ color: 'var(--text-3)' }}>{baseMatches}</span>
+                          <span style={{ color: 'var(--text-3)' }}>→</span>
+                          <span className="text-[22px] font-bold font-mono" style={{ color: matchDelta > 0 ? '#34C759' : matchDelta < 0 ? '#FF453A' : 'var(--text-1)' }}>{simMatches}</span>
+                          {matchDelta !== 0 && (
+                            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded"
+                              style={{ color: matchDelta > 0 ? '#34C759' : '#FF453A', background: matchDelta > 0 ? 'rgba(52,199,89,0.1)' : 'rgba(255,69,58,0.1)' }}>
+                              {matchDelta > 0 ? '+' : ''}{matchDelta}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── Right: Stats + Cohort Cards + Detail ───────────────────── */}
