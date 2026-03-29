@@ -13,6 +13,7 @@ export default function ScoresPage() {
   const [overall, setOverall] = useState({ smart: 0, grit: 0, build: 0, dilly: 0 });
   const [stats, setStats] = useState<any>(null);
   const [hoveredCohort, setHoveredCohort] = useState<string | null>(null);
+  const [selectedCohort, setSelectedCohort] = useState<string | null>(null);
   const [simAdjust, setSimAdjust] = useState({ smart: 0, grit: 0, build: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -277,12 +278,14 @@ export default function ScoresPage() {
             const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
             const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
             const isH = hoveredCohort === c.cohort;
+            const isSel = selectedCohort === c.cohort;
             return (
               <div key={c.cohort}
                 onMouseEnter={() => setHoveredCohort(c.cohort)}
                 onMouseLeave={() => setHoveredCohort(null)}
+                onClick={() => setSelectedCohort(isSel ? null : c.cohort)}
                 className={`bg-surface-1 rounded-xl p-5 transition-all duration-200 cursor-pointer border
-                  ${isH ? 'border-dilly-blue/30 -translate-y-[1px] shadow-[0_4px_20px_rgba(59,76,192,0.08)]' : 'border-transparent'}`}>
+                  ${isSel ? 'border-dilly-blue/40 shadow-[0_4px_20px_rgba(59,76,192,0.12)]' : isH ? 'border-dilly-blue/30 -translate-y-[1px] shadow-[0_4px_20px_rgba(59,76,192,0.08)]' : 'border-transparent'}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-1.5 py-0.5 rounded">{tag}</span>
                   <span className="text-[13px] font-semibold text-txt-1 truncate">{c.cohort}</span>
@@ -305,12 +308,14 @@ export default function ScoresPage() {
             const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
             const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
             const isH = hoveredCohort === c.cohort;
+            const isSel = selectedCohort === c.cohort;
             return (
               <div key={c.cohort}
                 onMouseEnter={() => setHoveredCohort(c.cohort)}
                 onMouseLeave={() => setHoveredCohort(null)}
+                onClick={() => setSelectedCohort(isSel ? null : c.cohort)}
                 className={`bg-surface-1 rounded-xl p-4 transition-all duration-200 cursor-pointer border
-                  ${isH ? 'border-dilly-blue/30 -translate-y-[1px]' : 'border-transparent'}`}>
+                  ${isSel ? 'border-dilly-blue/40' : isH ? 'border-dilly-blue/30 -translate-y-[1px]' : 'border-transparent'}`}>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[8px] font-bold text-txt-3 tracking-widest">{tag}</span>
                   <span className="text-[16px] font-bold font-mono" style={{ color }}>{score}</span>
@@ -325,6 +330,78 @@ export default function ScoresPage() {
             );
           })}
         </div>
+
+        {/* ── Cohort Detail Panel ────────────────────────────────────── */}
+        {selectedCohort && (() => {
+          const c = cohorts.find(x => x.cohort === selectedCohort);
+          if (!c) return null;
+          const score = Math.round(c.dilly_score);
+          const scoreColor = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
+          const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
+          const dims = [
+            { key: 'smart', label: 'Smart', value: c.smart, color: '#3B4CC0', avg: 62 },
+            { key: 'grit', label: 'Grit', value: c.grit, color: '#C9A84C', avg: 58 },
+            { key: 'build', label: 'Build', value: c.build, color: '#34C759', avg: 55 },
+          ];
+          const weakest = dims.reduce((w, d) => d.value < w.value ? d : w, dims[0]);
+
+          return (
+            <div className="mt-4 bg-surface-1 rounded-xl p-6 border border-dilly-blue/20 animate-fade-in">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-2 py-1 rounded">{tag}</span>
+                  <h3 className="text-[18px] font-bold text-txt-1" style={{ fontFamily: "'Cinzel', serif" }}>{c.cohort}</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[36px] font-bold font-mono leading-none" style={{ color: scoreColor }}>{score}</span>
+                  <button onClick={() => setSelectedCohort(null)} className="p-1 hover:bg-surface-2 rounded transition-colors">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-3)' }}>
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Dimension Bars */}
+              <div className="flex flex-col gap-4 mb-5">
+                {dims.map(d => {
+                  const val = Math.round(d.value);
+                  const valColor = val >= 75 ? '#34C759' : val >= 55 ? '#FF9F0A' : '#FF453A';
+                  return (
+                    <div key={d.key}>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: 'var(--text-3)', fontFamily: "'Cinzel', serif" }}>{d.label}</span>
+                        <span className="text-[22px] font-bold font-mono" style={{ color: valColor }}>{val}</span>
+                      </div>
+                      <div className="relative h-2 rounded-full overflow-visible" style={{ background: 'var(--surface-2)' }}>
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(val, 100)}%`, background: d.color, opacity: 0.85 }} />
+                        {/* Peer avg marker */}
+                        <div className="absolute top-[-3px]" style={{ left: `${d.avg}%` }}>
+                          <div className="w-0.5 h-3.5 rounded-sm" style={{ background: 'var(--text-1)', opacity: 0.4 }} />
+                        </div>
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>You</span>
+                        <span className="text-[9px]" style={{ color: 'var(--text-3)' }}>&#9662; Peer avg {d.avg}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Gap Callout */}
+              <div className="rounded-lg p-4" style={{ background: 'var(--surface-2)', borderLeft: `3px solid ${weakest.value >= 75 ? '#34C759' : weakest.value >= 55 ? '#FF9F0A' : '#FF453A'}` }}>
+                <p className="text-[13px] font-bold text-txt-1 mb-1">
+                  {weakest.label} is your biggest opportunity
+                </p>
+                <p className="text-[12px] text-txt-2 leading-relaxed">
+                  Your {weakest.label} is {Math.round(weakest.value)} in {c.cohort}. Peer average is around {weakest.avg}. Close this gap to move up.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
