@@ -532,6 +532,17 @@ def upsert_session_capture(
 
 
 def should_regenerate_narrative(last_updated_at: str | None, new_items_count: int, now_ts: float | None = None) -> bool:
+    """
+    Decide whether to regenerate the narrative summary.
+    More aggressive than before — the narrative should feel alive, not stale.
+
+    Triggers:
+    1. Never generated → always regenerate
+    2. 3+ new facts in this extraction → regenerate (significant new info)
+    3. Any new facts AND narrative older than 2 hours → regenerate
+    4. Narrative older than 3 days → regenerate regardless
+    5. Narrative older than 7 days → always regenerate (safety net)
+    """
     now = now_ts if now_ts is not None else time.time()
     if not last_updated_at:
         return True
@@ -540,8 +551,16 @@ def should_regenerate_narrative(last_updated_at: str | None, new_items_count: in
     except Exception:
         return True
     age = now - last_ts
+    # Safety net: always regen if very old
     if age > 7 * 86400:
         return True
-    if new_items_count > 0 and age > 24 * 3600:
+    # Stale: regen if older than 3 days even with no new items
+    if age > 3 * 86400:
+        return True
+    # Significant new info: 3+ facts means the profile changed meaningfully
+    if new_items_count >= 3:
+        return True
+    # Fresh new info + some time passed: regen after 2 hours
+    if new_items_count > 0 and age > 2 * 3600:
         return True
     return False
