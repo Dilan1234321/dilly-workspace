@@ -199,111 +199,84 @@ export default function ScoresPage() {
 
   return (
     <div className="h-full overflow-y-auto" ref={containerRef}>
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-8 pt-5 pb-2">
-        <div>
-          <h1 className="font-display text-[28px] text-txt-1 tracking-tight">Career genome</h1>
-          <p className="text-[13px] text-txt-3">Your unique career readiness fingerprint</p>
-        </div>
-        <div className="flex items-center gap-8">
-          <div className="text-right">
-            <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Live matches</p>
-            <p className="text-[28px] font-bold font-mono text-ready leading-none mt-1">{simMatches}</p>
+      {/* Two-column layout: genome left, details right */}
+      <div className="flex h-full">
+
+        {/* ── Left: Radar Genome ─────────────────────────────────────── */}
+        <div className="flex flex-col items-center justify-start pt-6 px-4" style={{ width: '45%', minWidth: 380 }}>
+          <div className="mb-2 text-center">
+            <h1 className="font-display text-[24px] text-txt-1 tracking-tight">Career genome</h1>
+            <p className="text-[12px] text-txt-3">Your career readiness fingerprint</p>
           </div>
-          <div className="text-right">
-            <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Percentile</p>
-            <p className="text-[28px] font-bold font-mono text-dilly-blue leading-none mt-1">Top 15%</p>
+
+          <canvas ref={canvasRef}
+            className="cursor-crosshair"
+            onMouseMove={(e) => {
+              if (!cohorts.length) return;
+              const rect = canvasRef.current?.getBoundingClientRect();
+              if (!rect) return;
+              const mx = e.clientX - rect.left;
+              const my = e.clientY - rect.top;
+              const cx = canvasSize / 2, cy = canvasSize / 2, maxR = canvasSize / 2 - 80;
+              let closest: string | null = null;
+              let closestDist = 60;
+              cohorts.forEach((c, i) => {
+                const angle = (Math.PI * 2 * i / cohorts.length) - Math.PI / 2;
+                const val = c.dilly_score / 100;
+                const r = maxR * Math.min(val, 1);
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+                if (dist < closestDist) { closest = c.cohort; closestDist = dist; }
+              });
+              setHoveredCohort(closest);
+            }}
+            onMouseLeave={() => setHoveredCohort(null)}
+          />
+
+          {/* Legend */}
+          <div className="flex gap-6 mt-2 mb-4">
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 rounded-full" style={{background:'#3B4CC0'}}/><span className="text-[10px] text-txt-3">Smart</span></div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 rounded-full" style={{background:'#C9A84C'}}/><span className="text-[10px] text-txt-3">Grit</span></div>
+            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 rounded-full" style={{background:'#34C759'}}/><span className="text-[10px] text-txt-3">Build</span></div>
           </div>
-        </div>
-      </div>
 
-      {/* Radar - centered, full width */}
-      <div className="flex justify-center py-2">
-        <canvas ref={canvasRef}
-          className="cursor-crosshair"
-          onMouseMove={(e) => {
-            if (!cohorts.length) return;
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (!rect) return;
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
-            const cx = canvasSize / 2, cy = canvasSize / 2, maxR = canvasSize / 2 - 80;
-            let closest: string | null = null;
-            let closestDist = 60;
-            cohorts.forEach((c, i) => {
-              const angle = (Math.PI * 2 * i / cohorts.length) - Math.PI / 2;
-              const val = c.dilly_score / 100;
-              const r = maxR * Math.min(val, 1);
-              const x = cx + Math.cos(angle) * r;
-              const y = cy + Math.sin(angle) * r;
-              const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
-              if (dist < closestDist) { closest = c.cohort; closestDist = dist; }
-            });
-            setHoveredCohort(closest);
-          }}
-          onMouseLeave={() => setHoveredCohort(null)}
-        />
-      </div>
-
-      {/* Legend */}
-      <div className="flex justify-center gap-8 mb-6">
-        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#3B4CC0'}}/><span className="text-[11px] text-txt-3">Smart</span></div>
-        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#C9A84C'}}/><span className="text-[11px] text-txt-3">Grit</span></div>
-        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#34C759'}}/><span className="text-[11px] text-txt-3">Build</span></div>
-      </div>
-
-      {/* Bottom section: Simulator + Cohort cards */}
-      <div className="px-8 pb-8">
-        <div className="grid grid-cols-3 gap-4">
           {/* Simulator */}
-          <div className="bg-surface-1 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-bold text-dilly-blue tracking-[0.15em] uppercase">What-if simulator</h3>
-              <span className="text-[13px] font-mono text-ready font-bold">{simMatches} matches</span>
+          <div className="w-full max-w-sm bg-surface-1 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[9px] font-bold text-dilly-blue tracking-[0.15em] uppercase">What-if simulator</h3>
+              <span className="text-[12px] font-mono text-ready font-bold">{simMatches} matches</span>
             </div>
             <SimSlider label="Smart" value={simAdjust.smart} color="#3B4CC0" onChange={v => setSimAdjust(p => ({ ...p, smart: v }))} />
             <SimSlider label="Grit" value={simAdjust.grit} color="#C9A84C" onChange={v => setSimAdjust(p => ({ ...p, grit: v }))} />
             <SimSlider label="Build" value={simAdjust.build} color="#34C759" onChange={v => setSimAdjust(p => ({ ...p, build: v }))} />
             {(simAdjust.smart !== 0 || simAdjust.grit !== 0 || simAdjust.build !== 0) && (
               <button onClick={() => setSimAdjust({ smart: 0, grit: 0, build: 0 })}
-                className="text-[11px] text-txt-3 hover:text-dilly-blue mt-3 transition-colors">
+                className="text-[10px] text-txt-3 hover:text-dilly-blue mt-2 transition-colors">
                 Reset
               </button>
             )}
           </div>
-
-          {/* Cohort cards */}
-          {cohorts.slice(0, 2).map(c => {
-            const score = Math.round(c.dilly_score);
-            const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
-            const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
-            const isH = hoveredCohort === c.cohort;
-            const isSel = selectedCohort === c.cohort;
-            return (
-              <div key={c.cohort}
-                onMouseEnter={() => setHoveredCohort(c.cohort)}
-                onMouseLeave={() => setHoveredCohort(null)}
-                onClick={() => setSelectedCohort(isSel ? null : c.cohort)}
-                className={`bg-surface-1 rounded-xl p-5 transition-all duration-200 cursor-pointer border
-                  ${isSel ? 'border-dilly-blue/40 shadow-[0_4px_20px_rgba(59,76,192,0.12)]' : isH ? 'border-dilly-blue/30 -translate-y-[1px] shadow-[0_4px_20px_rgba(59,76,192,0.08)]' : 'border-transparent'}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-1.5 py-0.5 rounded">{tag}</span>
-                  <span className="text-[13px] font-semibold text-txt-1 truncate">{c.cohort}</span>
-                  <span className="text-[20px] font-bold font-mono ml-auto" style={{ color }}>{score}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  <MiniScore label="Smart" value={c.smart} color="#3B4CC0" />
-                  <MiniScore label="Grit" value={c.grit} color="#C9A84C" />
-                  <MiniScore label="Build" value={c.build} color="#34C759" />
-                </div>
-              </div>
-            );
-          })}
         </div>
 
-        {/* Remaining cohort cards */}
-        <div className="grid grid-cols-4 gap-3 mt-3">
-          {cohorts.slice(2).map(c => {
+        {/* ── Right: Stats + Cohort Cards + Detail ───────────────────── */}
+        <div className="flex-1 overflow-y-auto py-6 pr-6 pl-2">
+          {/* Stats row */}
+          <div className="flex items-center gap-6 mb-5">
+            <div>
+              <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Live matches</p>
+              <p className="text-[28px] font-bold font-mono text-ready leading-none mt-1">{simMatches}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Percentile</p>
+              <p className="text-[28px] font-bold font-mono text-dilly-blue leading-none mt-1">Top 15%</p>
+            </div>
+          </div>
+
+          {/* Cohort cards */}
+          <h3 className="text-[10px] font-bold text-txt-3 tracking-widest uppercase mb-3" style={{ fontFamily: "'Cinzel', serif" }}>Your Cohorts</h3>
+          <div className="grid grid-cols-2 gap-3">
+          {cohorts.map(c => {
             const score = Math.round(c.dilly_score);
             const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
             const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
@@ -315,21 +288,21 @@ export default function ScoresPage() {
                 onMouseLeave={() => setHoveredCohort(null)}
                 onClick={() => setSelectedCohort(isSel ? null : c.cohort)}
                 className={`bg-surface-1 rounded-xl p-4 transition-all duration-200 cursor-pointer border
-                  ${isSel ? 'border-dilly-blue/40' : isH ? 'border-dilly-blue/30 -translate-y-[1px]' : 'border-transparent'}`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[8px] font-bold text-txt-3 tracking-widest">{tag}</span>
-                  <span className="text-[16px] font-bold font-mono" style={{ color }}>{score}</span>
+                  ${isSel ? 'border-dilly-blue/40 shadow-[0_4px_20px_rgba(59,76,192,0.1)]' : isH ? 'border-dilly-blue/20 -translate-y-[1px]' : 'border-transparent'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-1.5 py-0.5 rounded">{tag}</span>
+                  <span className="text-[12px] font-semibold text-txt-1 truncate flex-1">{c.cohort}</span>
+                  <span className="text-[20px] font-bold font-mono" style={{ color }}>{score}</span>
                 </div>
-                <p className="text-[12px] font-semibold text-txt-1 truncate">{c.cohort}</p>
-                <div className="flex gap-3 mt-2 text-[10px]">
-                  <span><span className="text-txt-3">S</span> <span className="font-bold font-mono text-dilly-blue">{Math.round(c.smart)}</span></span>
-                  <span><span className="text-txt-3">G</span> <span className="font-bold font-mono text-dilly-gold">{Math.round(c.grit)}</span></span>
-                  <span><span className="text-txt-3">B</span> <span className="font-bold font-mono text-ready">{Math.round(c.build)}</span></span>
+                <div className="flex gap-4 mt-2">
+                  <MiniScore label="Smart" value={c.smart} color="#3B4CC0" />
+                  <MiniScore label="Grit" value={c.grit} color="#C9A84C" />
+                  <MiniScore label="Build" value={c.build} color="#34C759" />
                 </div>
               </div>
             );
           })}
-        </div>
+          </div>
 
         {/* ── Cohort Detail Panel ────────────────────────────────────── */}
         {selectedCohort && (() => {
@@ -402,6 +375,7 @@ export default function ScoresPage() {
             </div>
           );
         })()}
+        </div>
       </div>
     </div>
   );
