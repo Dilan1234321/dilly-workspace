@@ -139,7 +139,7 @@ async def recruiter_typo_feedback(request: Request, body: dict = Body(...)):
 @router.post("/jd-fit")
 async def recruiter_jd_fit(request: Request, body: dict = Body(...)):
     """
-    Infer Meridian score requirements from a job description (Smart/Grit/Build bars + track + signals).
+    Infer Dilly score requirements from a job description (Smart/Grit/Build bars + track + signals).
     Requires recruiter API key. Body: job_description (required), job_title (optional).
     Returns smart_min, grit_min, build_min, min_final_score, track, signals, unavailable.
     Use these to pre-fill min filters when searching candidates.
@@ -211,6 +211,83 @@ async def recruiter_jd_fit_correction(request: Request, body: dict = Body(...)):
     return {"ok": True}
 
 
+def _get_profile_facts_text(email: str, role_description: str = "", max_facts: int = 30) -> str:
+    """
+    Fetch profile facts from PostgreSQL and format as natural text.
+    If a role_description is provided, filter to facts relevant to the role.
+    Returns a text block to append to profile_txt for LLM consumption.
+    """
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+    except ImportError:
+        return ""
+    try:
+        surface = get_memory_surface(email)
+        items = surface.get("items") or []
+        if not items:
+            return ""
+
+        # Filter to relevant facts if we have a role description
+        if role_description.strip():
+            role_lower = role_description.lower()
+            role_words = set(role_lower.split())
+            scored: list[tuple[float, dict]] = []
+            for item in items:
+                label_lower = item.get("label", "").lower()
+                value_lower = item.get("value", "").lower()
+                cat = item.get("category", "")
+                # Always-relevant categories
+                if cat in ("achievement", "strength", "skill_unlisted", "project_detail", "soft_skill", "goal"):
+                    score = 3.0
+                elif cat in ("target_company", "company_culture_pref", "motivation", "availability"):
+                    score = 2.0
+                elif cat in ("personality", "hobby", "life_context"):
+                    score = 1.0
+                else:
+                    score = 1.5
+                # Boost if keywords overlap with role
+                overlap = sum(1 for w in role_words if len(w) > 3 and (w in label_lower or w in value_lower))
+                score += overlap * 2
+                # High confidence boost
+                if item.get("confidence") == "high":
+                    score += 1
+                scored.append((score, item))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            items = [item for _, item in scored[:max_facts]]
+        else:
+            items = items[:max_facts]
+
+        # Format as natural text paragraphs
+        lines: list[str] = []
+        lines.append("\n--- Additional context about this candidate (from coaching conversations) ---\n")
+
+        # Group by category for readability
+        grouped: dict[str, list[dict]] = {}
+        for item in items:
+            cat = item.get("category", "other")
+            if cat not in grouped:
+                grouped[cat] = []
+            grouped[cat].append(item)
+
+        category_labels = {
+            "achievement": "Achievements", "goal": "Goals", "target_company": "Target Companies",
+            "skill_unlisted": "Additional Skills", "project_detail": "Projects & Work",
+            "motivation": "Motivations", "personality": "Personality & Work Style",
+            "soft_skill": "Soft Skills", "hobby": "Interests",
+            "life_context": "Background", "company_culture_pref": "Workplace Preferences",
+            "strength": "Strengths", "weakness": "Growth Areas", "challenge": "Challenges",
+            "availability": "Availability", "preference": "Preferences",
+        }
+        for cat, cat_items in grouped.items():
+            label = category_labels.get(cat, cat.replace("_", " ").title())
+            facts = "; ".join(f"{i['label']}: {i['value']}" for i in cat_items)
+            lines.append(f"{label}: {facts}")
+
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 def _why_fit_bullets_for_role(profile_txt: str, role_description: str, fit_level: str = "") -> list[str]:
     """Generate 3 bullets on why this candidate fits the role, tone-matched to fit_level."""
     if not (profile_txt or "").strip() or not (role_description or "").strip():
@@ -258,7 +335,7 @@ def _why_fit_bullets_for_role(profile_txt: str, role_description: str, fit_level
         )
 
     system = (
-        "You are Meridian's recruiter-facing advisor. Given a candidate's Meridian profile and a "
+        "You are Dilly's recruiter-facing advisor. Given a candidate's Dilly profile and a "
         "job/role description, produce exactly 3 short bullets (one sentence each).\n\n"
         f"TONE INSTRUCTION: {tone}\n\n"
         "Each bullet must cite something specific from the candidate's profile. "
@@ -266,7 +343,7 @@ def _why_fit_bullets_for_role(profile_txt: str, role_description: str, fit_level
     )
     user = (
         f"Role description:\n{role_description.strip()[:2000]}\n\n"
-        f"Candidate Meridian profile (excerpt):\n{profile_txt.strip()[:6000]}\n\n"
+        f"Candidate Dilly profile (excerpt):\n{profile_txt.strip()[:6000]}\n\n"
         "Respond with a JSON array of exactly 3 strings: [\"bullet 1\", \"bullet 2\", \"bullet 3\"]"
     )
     out = get_chat_completion(system, user, max_tokens=600, temperature=0.3)
@@ -311,7 +388,7 @@ def _why_bad_fit_bullets_for_role(profile_txt: str, role_description: str, jd_ev
         gap_context = "\n\nGap analysis from JD mapping:\n" + "\n".join(parts)
 
     system = (
-        "You are Meridian's recruiter-facing advisor. This candidate is a WEAK or POOR fit for the role. "
+        "You are Dilly's recruiter-facing advisor. This candidate is a WEAK or POOR fit for the role. "
         "Produce exactly 3 short bullets (one sentence each) explaining WHY they are a bad fit.\n\n"
         "Be direct and specific. Cite what's missing, what's weak, or what doesn't align. "
         "Reference their profile — e.g. 'No evidence of X in their experience' or 'Experience at Y is tangential to the role's need for Z'. "
@@ -319,7 +396,7 @@ def _why_bad_fit_bullets_for_role(profile_txt: str, role_description: str, jd_ev
     )
     user = (
         f"Role description:\n{role_description.strip()[:2000]}\n\n"
-        f"Candidate Meridian profile (excerpt):\n{profile_txt.strip()[:5000]}\n"
+        f"Candidate Dilly profile (excerpt):\n{profile_txt.strip()[:5000]}\n"
         f"{gap_context}\n\n"
         "Respond with a JSON array of exactly 3 strings: [\"bullet 1\", \"bullet 2\", \"bullet 3\"]"
     )
@@ -352,8 +429,8 @@ def _jd_to_evidence_map(profile_txt: str, role_description: str) -> list[dict]:
         return []
     if not os.environ.get("OPENAI_API_KEY"):
         return []
-    system = """You are Meridian's recruiter-facing evaluator. You will map a job description to evidence in a candidate profile.\n\nOutput MUST be a JSON array (6 to 10 items). Each item MUST have:\n- requirement: short JD requirement (max 80 chars)\n- status: one of \"green\", \"yellow\", \"red\"\n- evidence: array of 1–2 short strings (each max 140 chars) citing specific experience/skills/metrics from the candidate profile.\n\nRules:\n- Prefer concrete requirements (skills, tools, responsibilities) over generic fluff.\n- green = strong direct evidence; yellow = partial/adjacent evidence; red = missing.\n- If red, evidence can be an empty array.\n- Be concise, recruiter-scannable.\n"""
-    user = f"""Job description:\n{role_description.strip()[:2400]}\n\nCandidate Meridian profile (excerpt):\n{profile_txt.strip()[:6500]}\n\nReturn ONLY the JSON array."""
+    system = """You are Dilly's recruiter-facing evaluator. You will map a job description to evidence in a candidate profile.\n\nOutput MUST be a JSON array (6 to 10 items). Each item MUST have:\n- requirement: short JD requirement (max 80 chars)\n- status: one of \"green\", \"yellow\", \"red\"\n- evidence: array of 1–2 short strings (each max 140 chars) citing specific experience/skills/metrics from the candidate profile.\n\nRules:\n- Prefer concrete requirements (skills, tools, responsibilities) over generic fluff.\n- green = strong direct evidence; yellow = partial/adjacent evidence; red = missing.\n- If red, evidence can be an empty array.\n- Be concise, recruiter-scannable.\n"""
+    user = f"""Job description:\n{role_description.strip()[:2400]}\n\nCandidate Dilly profile (excerpt):\n{profile_txt.strip()[:6500]}\n\nReturn ONLY the JSON array."""
     out = get_chat_completion(system, user, max_tokens=900, temperature=0.2)
     if not out or not out.strip():
         return []
@@ -508,7 +585,7 @@ def _rank_structured_experience_for_role(structured_experience: list[dict], role
         })
 
     system = (
-        "You are Meridian's recruiter assistant.\n"
+        "You are Dilly's recruiter assistant.\n"
         "Given a job description and a candidate's structured experience entries, "
         "rank the entries by relevance to the job.\n\n"
         "Return ONLY JSON with:\n"
@@ -638,6 +715,13 @@ async def recruiter_get_candidate(request: Request, candidate_id: str, role_desc
     scores = latest.get("scores") or {}
     profile_txt = get_dilly_profile_txt_content(email, max_chars=10000)
     structured_experience = parse_structured_experience_from_profile_txt(profile_txt) if profile_txt else []
+
+    # Enrich profile_txt with Dilly Profile facts (from AI conversations)
+    # so LLM-generated fit analysis naturally includes beyond-resume knowledge
+    facts_text = _get_profile_facts_text(email, role_description or "")
+    if facts_text:
+        profile_txt = (profile_txt or "") + facts_text
+
     why_fit_bullets: list[str] = []
     why_bad_fit_bullets: list[str] = []
     jd_evidence_map: list[dict] = []
@@ -703,7 +787,7 @@ async def recruiter_get_candidate(request: Request, candidate_id: str, role_desc
 # ---------------------------------------------------------------------------
 
 _ASK_AI_SYSTEM_PROMPT = (
-    """You are an expert recruiter assistant for Meridian. Your job is to find evidence of high-performance traits in candidates. You must be EVIDENCE-BASED: only cite information that appears in the provided context. Never invent or assume facts.
+    """You are an expert recruiter assistant for Dilly. Your job is to find evidence of high-performance traits in candidates. You must be EVIDENCE-BASED: only cite information that appears in the provided context. Never invent or assume facts.
 
 Rules:
 - If a student doesn't have a GitHub link for a project, look at their technical descriptions and Smart/Grit/Build evidence quotes to validate their logic and work ethic.
@@ -809,6 +893,12 @@ def _get_ask_ai_context_bundle(candidate_id: str, role_description: str) -> dict
     scores = latest.get("scores") or {}
     profile_txt = get_dilly_profile_txt_content(email, max_chars=10000)
     structured_experience = parse_structured_experience_from_profile_txt(profile_txt) if profile_txt else []
+
+    # Enrich with Dilly Profile facts
+    facts_text = _get_profile_facts_text(email, role_description or "")
+    if facts_text:
+        profile_txt = (profile_txt or "") + facts_text
+
     jd_evidence_map: list = []
     if role_description:
         jd_evidence_map = _jd_to_evidence_map(profile_txt or "", role_description)
@@ -953,7 +1043,7 @@ def _parse_search_intent(query: str, conversation_history: list[dict] | None = N
         return {"role_description": query, "filters": {}, "limit": 5}
 
     model = get_light_model()  # gpt-4o-mini for speed
-    system = """You are Meridian's recruiter search parser. Extract search parameters from a natural language query.
+    system = """You are Dilly's recruiter search parser. Extract search parameters from a natural language query.
 
 Return ONLY valid JSON with these keys (no other text):
 {
@@ -1050,6 +1140,9 @@ def _summarize_candidates_evidence(
         profile_txt = ""
         try:
             profile_txt = (get_dilly_profile_txt_content(email, max_chars=1200) or "").strip()
+            facts_text = _get_profile_facts_text(email, role_desc or "", max_facts=10)
+            if facts_text:
+                profile_txt = profile_txt + facts_text
         except Exception:
             pass
         name = (c.get("name") or "").strip() or "Candidate"
@@ -1071,7 +1164,7 @@ def _summarize_candidates_evidence(
         return {}
 
     system = (
-        "You are Meridian's recruiter assistant. For each candidate, write ONE sentence (max 25 words) "
+        "You are Dilly's recruiter assistant. For each candidate, write ONE sentence (max 25 words) "
         "explaining why they fit the role. Cite specific experience, skills, or achievements from their profile. "
         "Be evidence-based; never invent.\n\n"
         "Return ONLY a JSON object: { \"candidate_id\": \"evidence sentence\", ... }\n"
@@ -1307,7 +1400,7 @@ async def recruiter_submit_feedback(request: Request, body: dict = Body(...)):
 @router.post("/contact")
 async def recruiter_contact_candidate(request: Request, body: dict = Body(...)):
     """
-    Email relay outreach: recruiter sends a short intro message; Meridian emails the student with reply-to set to recruiter.
+    Email relay outreach: recruiter sends a short intro message; Dilly emails the student with reply-to set to recruiter.
     Requires recruiter API key.
 
     Body: candidate_id (16-char hex), recruiter_email (required), recruiter_name (optional),
@@ -1720,6 +1813,14 @@ async def recruiter_compare(request: Request, body: dict = Body(...)):
     profile_txt_a = get_dilly_profile_txt_content(email_a, max_chars=8000)
     profile_txt_b = get_dilly_profile_txt_content(email_b, max_chars=8000)
 
+    # Enrich with Dilly Profile facts
+    facts_a = _get_profile_facts_text(email_a, role_description or "", max_facts=15)
+    facts_b = _get_profile_facts_text(email_b, role_description or "", max_facts=15)
+    if facts_a:
+        profile_txt_a = (profile_txt_a or "") + facts_a
+    if facts_b:
+        profile_txt_b = (profile_txt_b or "") + facts_b
+
     # Fetch evidence and structured experience for personal, specific comparison
     def _evidence_str(email: str) -> str:
         audits = get_audits(email)
@@ -1904,7 +2005,7 @@ async def recruiter_export_shortlist(request: Request):
                 "smart": "",
                 "grit": "",
                 "build": "",
-                "meridian_profile_link": f"{base_url}/p/{cid}/full",
+                "dilly_profile_link": f"{base_url}/p/{cid}/full",
                 "dilly_take": "",
                 "job_locations": "",
                 "source": "Dilly",
@@ -1925,7 +2026,7 @@ async def recruiter_export_shortlist(request: Request):
                 "smart": "",
                 "grit": "",
                 "build": "",
-                "meridian_profile_link": f"{base_url}/p/{cid}/full",
+                "dilly_profile_link": f"{base_url}/p/{cid}/full",
                 "dilly_take": "",
                 "job_locations": "",
                 "source": "Dilly",
@@ -1966,9 +2067,9 @@ async def recruiter_export_shortlist(request: Request):
             "smart": str(round(smart)) if smart is not None else "",
             "grit": str(round(grit)) if grit is not None else "",
             "build": str(round(build)) if build is not None else "",
-            "meridian_profile_link": f"{base_url}/p/{cid}/full",
+            "dilly_profile_link": f"{base_url}/p/{cid}/full",
             "dilly_take": dilly_take,
             "job_locations": job_locations_str,
-            "source": "Meridian",
+            "source": "Dilly",
         })
     return {"candidates": out}
