@@ -2393,6 +2393,12 @@ img {
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
 }
 
+:root.light .fp-split-visual {
+  background: var(--surface-2);
+  border-color: var(--border);
+  box-shadow: 0 8px 32px rgba(0, 30, 80, 0.06);
+}
+
 .fp-split-copy .fp-h2 {
   margin-top: 0;
 }
