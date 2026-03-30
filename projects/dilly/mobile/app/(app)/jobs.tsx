@@ -738,67 +738,67 @@ export default function JobsScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const js = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   
   // Header
   header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-  headerTitle: { fontFamily: 'Cinzel_900Black', fontSize: 28, letterSpacing: 2, color: '#FFFFFF' },
-  headerSub: { fontSize: 13, color: '#636366', marginTop: 4, fontWeight: '400' },
-  atsHeaderBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(201,168,76,0.08)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  headerTitle: { fontFamily: 'Cinzel_900Black', fontSize: 28, letterSpacing: 2, color: '#1A1A2E' },
+  headerSub: { fontSize: 13, color: 'rgba(26,26,46,0.5)', marginTop: 4, fontWeight: '400' },
+  atsHeaderBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(43,58,142,0.06)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
   atsHeaderBtnText: { fontSize: 11, fontWeight: '600', color: '#2B3A8E' },
 
   // Setup
-  setupCard: { backgroundColor: '#0A0A0A', borderRadius: 20, padding: 24, marginBottom: 20, marginHorizontal: 20 },
+  setupCard: { backgroundColor: '#F7F8FC', borderRadius: 20, padding: 24, marginBottom: 20, marginHorizontal: 20 },
   setupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  setupTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 18, color: '#FFFFFF' },
-  setupSub: { fontSize: 14, color: '#636366', lineHeight: 22, marginBottom: 20 },
+  setupTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 18, color: '#1A1A2E' },
+  setupSub: { fontSize: 14, color: 'rgba(26,26,46,0.5)', lineHeight: 22, marginBottom: 20 },
   setupSectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: '#2B3A8E', marginBottom: 10, textTransform: 'uppercase' },
   setupBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2B3A8E', borderRadius: 16, paddingVertical: 16, marginTop: 24 },
-  setupBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 15, letterSpacing: 1, color: '#000000' },
+  setupBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 15, letterSpacing: 1, color: '#FFFFFF' },
 
   // Education picker
   eduRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  eduChip: { backgroundColor: '#111111', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 },
+  eduChip: { backgroundColor: '#EFF0F6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 },
   eduChipSelected: { backgroundColor: 'rgba(94,92,230,0.15)' },
-  eduChipText: { fontSize: 13, color: '#636366', fontWeight: '500' },
+  eduChipText: { fontSize: 13, color: 'rgba(26,26,46,0.5)', fontWeight: '500' },
   eduChipTextSelected: { color: '#5E5CE6' },
 
   // Search
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#0A0A0A', borderRadius: 14, marginHorizontal: 20, marginBottom: 12, paddingHorizontal: 16, paddingVertical: 13 },
-  searchInput: { flex: 1, fontSize: 15, color: '#FFFFFF', paddingVertical: 0 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7F8FC', borderRadius: 14, marginHorizontal: 20, marginBottom: 12, paddingHorizontal: 16, paddingVertical: 13 },
+  searchInput: { flex: 1, fontSize: 15, color: '#1A1A2E', paddingVertical: 0 },
 
   // Tabs
   tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 6, marginBottom: 14 },
-  tab: { flex: 1, paddingVertical: 11, borderRadius: 14, backgroundColor: '#0A0A0A', alignItems: 'center' },
+  tab: { flex: 1, paddingVertical: 11, borderRadius: 14, backgroundColor: '#F7F8FC', alignItems: 'center' },
   tabActive: { backgroundColor: '#2B3A8E' },
-  tabText: { fontSize: 13, fontWeight: '700', color: '#636366' },
-  tabTextActive: { color: '#000000' },
+  tabText: { fontSize: 13, fontWeight: '700', color: 'rgba(26,26,46,0.5)' },
+  tabTextActive: { color: '#FFFFFF' },
 
   // Filters
   filterRow: { gap: 8, paddingHorizontal: 20, paddingBottom: 14 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#111111', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  filterText: { fontSize: 12, color: '#636366', fontWeight: '500' },
-  settingsIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#0A0A0A', alignItems: 'center', justifyContent: 'center' },
+  filterChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#EFF0F6', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+  filterText: { fontSize: 12, color: 'rgba(26,26,46,0.5)', fontWeight: '500' },
+  settingsIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F7F8FC', alignItems: 'center', justifyContent: 'center' },
 
   // Scroll
   scroll: { paddingHorizontal: 20, paddingTop: 4 },
 
   // Job Card — Robinhood inspired
-  jobCard: { backgroundColor: '#0A0A0A', borderRadius: 14, marginBottom: 6, overflow: 'hidden' },
+  jobCard: { backgroundColor: '#F7F8FC', borderRadius: 14, marginBottom: 6, overflow: 'hidden' },
   cardOuter: { flexDirection: 'row' },
   accentBar: { width: 3, borderRadius: 0 },
   cardInner: { flex: 1, padding: 16, paddingLeft: 14 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.3, lineHeight: 23 },
-  cardCompany: { fontSize: 14, color: '#8E8E93', marginTop: 3, fontWeight: '500' },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A2E', letterSpacing: -0.3, lineHeight: 23 },
+  cardCompany: { fontSize: 14, color: 'rgba(26,26,46,0.45)', marginTop: 3, fontWeight: '500' },
   readinessLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
-  metaLine: { fontSize: 13, color: '#48484A', marginTop: 6 },
+  metaLine: { fontSize: 13, color: 'rgba(26,26,46,0.3)', marginTop: 6 },
 
   // Legacy — keep for compat
   readinessBadge: { display: 'none' },
   readinessText: { display: 'none' },
   metaRow: { display: 'none' },
   metaChip: { display: 'none' },
-  metaText: { fontSize: 12, color: '#48484A' },
+  metaText: { fontSize: 12, color: 'rgba(26,26,46,0.3)' },
   sourceBadge: { display: 'none' },
   sourceBadgeText: { display: 'none' },
 
@@ -816,70 +816,70 @@ const js = StyleSheet.create({
   tagText: { display: 'none' },
 
   // Expanded section
-  expandedSection: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#1C1C1E' },
+  expandedSection: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#EFF0F6' },
   
   // Fit section
-  gapSection: { backgroundColor: '#111111', borderRadius: 14, padding: 16, marginBottom: 12 },
+  gapSection: { backgroundColor: '#EFF0F6', borderRadius: 14, padding: 16, marginBottom: 12 },
   gapTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#2B3A8E', marginBottom: 14, textTransform: 'uppercase' },
 
   // Dimension bars — clean and precise
   dimBar: { marginBottom: 10 },
   dimBarHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  dimBarLabel: { fontSize: 13, fontWeight: '600', color: '#8E8E93', width: 44 },
+  dimBarLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(26,26,46,0.45)', width: 44 },
   dimBarScores: { flexDirection: 'row', alignItems: 'baseline' },
   dimBarYou: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  dimBarSlash: { fontSize: 12, color: '#3A3A3C', marginHorizontal: 2 },
-  dimBarReq: { fontSize: 12, color: '#3A3A3C', fontVariant: ['tabular-nums'] },
+  dimBarSlash: { fontSize: 12, color: 'rgba(26,26,46,0.3)', marginHorizontal: 2 },
+  dimBarReq: { fontSize: 12, color: 'rgba(26,26,46,0.3)', fontVariant: ['tabular-nums'] },
   dimBarGap: { fontSize: 11, fontWeight: '600', marginLeft: 'auto' },
-  dimBarTrack: { height: 3, backgroundColor: '#1C1C1E', borderRadius: 999, overflow: 'visible', position: 'relative' },
+  dimBarTrack: { height: 3, backgroundColor: '#EFF0F6', borderRadius: 999, overflow: 'visible', position: 'relative' },
   dimBarFill: { height: '100%', borderRadius: 999 },
-  dimBarTarget: { position: 'absolute', top: -3, width: 2, height: 9, backgroundColor: '#48484A', borderRadius: 1 },
+  dimBarTarget: { position: 'absolute', top: -3, width: 2, height: 9, backgroundColor: 'rgba(26,26,46,0.3)', borderRadius: 1 },
   overallBar: { fontSize: 12, color: '#2B3A8E', marginTop: 10, lineHeight: 18, fontWeight: '500' },
 
   // Description
-  description: { fontSize: 13, color: '#636366', lineHeight: 20, marginBottom: 14 },
+  description: { fontSize: 13, color: 'rgba(26,26,46,0.5)', lineHeight: 20, marginBottom: 14 },
 
   // Action buttons
   actionRow: { flexDirection: 'row', gap: 10 },
   applyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#2B3A8E', borderRadius: 14, paddingVertical: 14 },
-  applyBtnText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5, color: '#000000' },
-  dillyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(201,168,76,0.1)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
+  applyBtnText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5, color: '#FFFFFF' },
+  dillyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(43,58,142,0.08)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
   dillyBtnText: { fontSize: 13, fontWeight: '700', color: '#2B3A8E' },
 
   // Loading / Empty
   loadingWrap: { alignItems: 'center', paddingTop: 80, gap: 16 },
-  loadingText: { fontSize: 13, color: '#48484A' },
+  loadingText: { fontSize: 13, color: 'rgba(26,26,46,0.3)' },
   emptyWrap: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
-  emptyText: { fontSize: 14, color: '#48484A', textAlign: 'center', lineHeight: 22, paddingHorizontal: 24 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E' },
+  emptyText: { fontSize: 14, color: 'rgba(26,26,46,0.3)', textAlign: 'center', lineHeight: 22, paddingHorizontal: 24 },
   showAllInlineBtn: { backgroundColor: 'rgba(10,132,255,0.1)', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 10 },
   showAllInlineBtnText: { fontSize: 13, color: '#0A84FF', fontWeight: '600' },
 
   // Insight
-  insightWrap: { flexDirection: 'row', gap: 10, backgroundColor: 'rgba(201,168,76,0.06)', borderRadius: 14, padding: 14, marginBottom: 12, alignItems: 'flex-start' },
+  insightWrap: { flexDirection: 'row', gap: 10, backgroundColor: 'rgba(43,58,142,0.05)', borderRadius: 14, padding: 14, marginBottom: 12, alignItems: 'flex-start' },
   insightText: { flex: 1, fontSize: 13, color: '#2B3A8E', lineHeight: 20, fontWeight: '500' },
 
   // ATS
-  atsSection: { backgroundColor: '#111111', borderRadius: 14, padding: 16, marginBottom: 12 },
+  atsSection: { backgroundColor: '#EFF0F6', borderRadius: 14, padding: 16, marginBottom: 12 },
   atsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  atsSectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#48484A', textTransform: 'uppercase' },
+  atsSectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: 'rgba(26,26,46,0.3)', textTransform: 'uppercase' },
   atsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  atsLabel: { fontSize: 12, color: '#48484A' },
+  atsLabel: { fontSize: 12, color: 'rgba(26,26,46,0.3)' },
   atsBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   atsBadgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-  atsTip: { fontSize: 12, color: '#636366', lineHeight: 18, marginBottom: 8 },
+  atsTip: { fontSize: 12, color: 'rgba(26,26,46,0.5)', lineHeight: 18, marginBottom: 8 },
   atsFixBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(255,69,58,0.08)', borderRadius: 10, paddingVertical: 10, marginTop: 4 },
   atsFixBtnText: { fontSize: 11, fontWeight: '600', color: '#FF453A' },
 
   // Scoring explain
-  scoringExplain: { backgroundColor: '#0A0A0A', borderRadius: 12, padding: 12, marginBottom: 12 },
-  scoringTitle: { fontSize: 10, fontWeight: '700', color: '#48484A', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  scoringText: { fontSize: 11, color: '#48484A', lineHeight: 16, marginBottom: 6 },
-  scoringDetail: { fontSize: 11, color: '#48484A', lineHeight: 16, fontStyle: 'italic' },
+  scoringExplain: { backgroundColor: '#F7F8FC', borderRadius: 12, padding: 12, marginBottom: 12 },
+  scoringTitle: { fontSize: 10, fontWeight: '700', color: 'rgba(26,26,46,0.3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  scoringText: { fontSize: 11, color: 'rgba(26,26,46,0.3)', lineHeight: 16, marginBottom: 6 },
+  scoringDetail: { fontSize: 11, color: 'rgba(26,26,46,0.3)', lineHeight: 16, fontStyle: 'italic' },
 
   // Legend
-  legendWrap: { paddingVertical: 20, paddingHorizontal: 4, gap: 8, borderTopWidth: 1, borderTopColor: '#1C1C1E', marginTop: 12 },
+  legendWrap: { paddingVertical: 20, paddingHorizontal: 4, gap: 8, borderTopWidth: 1, borderTopColor: '#EFF0F6', marginTop: 12 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   legendDot: { width: 6, height: 6, borderRadius: 3 },
-  legendText: { fontSize: 11, color: '#48484A' },
+  legendText: { fontSize: 11, color: 'rgba(26,26,46,0.3)' },
 });
