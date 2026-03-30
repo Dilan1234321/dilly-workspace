@@ -2384,13 +2384,19 @@ img {
 }
 
 .fp-split-visual {
-  min-height: min(320px, 42vw);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background:
-    radial-gradient(circle at 30% 35%, rgba(253, 185, 19, 0.22), transparent 55%),
-    linear-gradient(145deg, var(--navy) 0%, #12101f 55%, #0a0a12 100%);
+  overflow: hidden;
+  background: var(--surface-2);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
+}
+
+.fp-split-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 0;
 }
 
 :root.light .fp-split-visual {
