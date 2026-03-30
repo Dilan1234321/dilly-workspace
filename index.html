@@ -208,32 +208,117 @@
     </div>
   </section>
 
-  <section class="section" style="background:var(--surface)">
-    <div class="section-inner">
-      <div class="section-head">
-        <p class="section-eyebrow">How Dilly works</p>
-        <h2 class="section-title">Three things. That is it.</h2>
-        <p class="section-desc">No feature maze. No dashboard overload. Dilly does three jobs and ties them into one score.</p>
+  <!-- ═══════════════ PRODUCT CAROUSEL ═══════════════ -->
+  <section class="section" style="background:var(--surface);overflow:hidden;padding-top:4rem;padding-bottom:4rem">
+    <div class="section-inner" style="max-width:1100px">
+      <div class="section-head" style="margin-bottom:2.5rem">
+        <p class="section-eyebrow">See the product</p>
+        <h2 class="section-title">What you actually get</h2>
       </div>
-      <div class="pillars">
-        <article class="pillar">
-          <div class="pillar-icon" aria-hidden="true">📊</div>
-          <h3>See your score</h3>
-          <p>Upload your resume. Get scored on Smart, Grit, and Build. Know where you stand before you apply.</p>
-        </article>
-        <article class="pillar">
-          <div class="pillar-icon" aria-hidden="true">🎯</div>
-          <h3>Know where you fit</h3>
-          <p>Real internships from top employers. Readiness per role with Ready, Almost, or Gap—plus <strong>Tailor resume</strong> on each card from your real experience.</p>
-        </article>
-        <article class="pillar">
-          <div class="pillar-icon" aria-hidden="true">💬</div>
-          <h3>Fix it with Dilly</h3>
-          <p>AI coaching that knows your resume, scores, applications, and deadlines. Specific plans for your gaps.</p>
-        </article>
+
+      <div style="position:relative" id="carousel-wrap">
+        <!-- Slides -->
+        <div id="carousel-track" style="display:flex;transition:transform 0.5s cubic-bezier(0.4,0,0.2,1);will-change:transform">
+
+          <!-- Slide 1: Dilly Score -->
+          <div class="carousel-slide" style="min-width:100%;padding:0 1rem;box-sizing:border-box">
+            <div style="border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 16px 48px rgba(0,0,0,0.3)">
+              <img src="dilly-ai-scores.png" alt="Dilly Score dashboard showing career genome radar and cohort scores" style="width:100%;display:block" loading="lazy">
+            </div>
+            <div style="text-align:center;margin-top:1.5rem">
+              <h3 style="font-family:Cinzel,serif;font-size:clamp(1.1rem,2.5vw,1.5rem);font-weight:700;margin-bottom:0.35rem">Your Career Readiness Score</h3>
+              <p style="color:var(--text-muted);font-size:0.95rem;max-width:32rem;margin:0 auto">Scored across Smart, Grit, and Build for 22 career fields. See exactly where you stand.</p>
+            </div>
+          </div>
+
+          <!-- Slide 2: Resume Editor -->
+          <div class="carousel-slide" style="min-width:100%;padding:0 1rem;box-sizing:border-box">
+            <div style="border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 16px 48px rgba(0,0,0,0.3)">
+              <img src="dillyresumeeditor.png" alt="Dilly resume editor with AI rewrites and job tailoring" style="width:100%;display:block" loading="lazy">
+            </div>
+            <div style="text-align:center;margin-top:1.5rem">
+              <h3 style="font-family:Cinzel,serif;font-size:clamp(1.1rem,2.5vw,1.5rem);font-weight:700;margin-bottom:0.35rem">AI Resume Editor</h3>
+              <p style="color:var(--text-muted);font-size:0.95rem;max-width:32rem;margin:0 auto">Tailored to every job. Line-by-line AI rewrites with your built-in career coach.</p>
+            </div>
+          </div>
+
+          <!-- Slide 3: Job Matching -->
+          <div class="carousel-slide" style="min-width:100%;padding:0 1rem;box-sizing:border-box">
+            <div style="border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 16px 48px rgba(0,0,0,0.3)">
+              <img src="dillyinternships.png" alt="Dilly job matching with Ready, Almost, and Gap indicators" style="width:100%;display:block" loading="lazy">
+            </div>
+            <div style="text-align:center;margin-top:1.5rem">
+              <h3 style="font-family:Cinzel,serif;font-size:clamp(1.1rem,2.5vw,1.5rem);font-weight:700;margin-bottom:0.35rem">Job Matching</h3>
+              <p style="color:var(--text-muted);font-size:0.95rem;max-width:32rem;margin:0 auto">Matched to real roles. See if you are Ready, Almost, or have a Gap before you apply.</p>
+            </div>
+          </div>
+
+          <!-- Slide 4: ATS Scanner -->
+          <div class="carousel-slide" style="min-width:100%;padding:0 1rem;box-sizing:border-box">
+            <div style="border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 16px 48px rgba(0,0,0,0.3)">
+              <img src="dillyats.png" alt="Dilly ATS scanner showing 6-vendor compatibility scores" style="width:100%;display:block" loading="lazy">
+            </div>
+            <div style="text-align:center;margin-top:1.5rem">
+              <h3 style="font-family:Cinzel,serif;font-size:clamp(1.1rem,2.5vw,1.5rem);font-weight:700;margin-bottom:0.35rem">ATS Scanner</h3>
+              <p style="color:var(--text-muted);font-size:0.95rem;max-width:32rem;margin:0 auto">Scanned against 6 real ATS systems. Know your resume will actually get seen.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Arrow buttons -->
+        <button id="carousel-prev" aria-label="Previous slide" style="position:absolute;top:40%;left:-0.5rem;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);background:rgba(15,15,20,0.85);backdrop-filter:blur(8px);color:#f5f5f7;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;z-index:2" onmouseover="this.style.borderColor='var(--gold)';this.style.background='rgba(201,168,76,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.background='rgba(15,15,20,0.85)'">&lsaquo;</button>
+        <button id="carousel-next" aria-label="Next slide" style="position:absolute;top:40%;right:-0.5rem;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);background:rgba(15,15,20,0.85);backdrop-filter:blur(8px);color:#f5f5f7;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;z-index:2" onmouseover="this.style.borderColor='var(--gold)';this.style.background='rgba(201,168,76,0.15)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.background='rgba(15,15,20,0.85)'">&rsaquo;</button>
       </div>
+
+      <!-- Dot indicators -->
+      <div id="carousel-dots" style="display:flex;justify-content:center;gap:8px;margin-top:1.5rem"></div>
     </div>
   </section>
+
+  <script>
+  (function(){
+    var track=document.getElementById('carousel-track');
+    var slides=track.querySelectorAll('.carousel-slide');
+    var dotsWrap=document.getElementById('carousel-dots');
+    var idx=0,total=slides.length;
+
+    // Create dots
+    for(var i=0;i<total;i++){
+      var dot=document.createElement('button');
+      dot.setAttribute('aria-label','Go to slide '+(i+1));
+      dot.style.cssText='width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;transition:all 0.3s;padding:0';
+      dot.dataset.idx=i;
+      dot.onclick=function(){goTo(parseInt(this.dataset.idx))};
+      dotsWrap.appendChild(dot);
+    }
+
+    function goTo(n){
+      idx=(n+total)%total;
+      track.style.transform='translateX(-'+idx*100+'%)';
+      var dots=dotsWrap.querySelectorAll('button');
+      for(var j=0;j<dots.length;j++){
+        dots[j].style.background=j===idx?'var(--gold)':'rgba(255,255,255,0.2)';
+        dots[j].style.width=j===idx?'24px':'10px';
+        dots[j].style.borderRadius=j===idx?'5px':'50%';
+      }
+    }
+
+    document.getElementById('carousel-prev').onclick=function(){goTo(idx-1)};
+    document.getElementById('carousel-next').onclick=function(){goTo(idx+1)};
+
+    // Touch/swipe support
+    var startX=0,deltaX=0;
+    track.addEventListener('touchstart',function(e){startX=e.touches[0].clientX},{passive:true});
+    track.addEventListener('touchmove',function(e){deltaX=e.touches[0].clientX-startX},{passive:true});
+    track.addEventListener('touchend',function(){
+      if(Math.abs(deltaX)>50){goTo(deltaX>0?idx-1:idx+1)}
+      deltaX=0;
+    });
+
+    goTo(0);
+  })();
+  </script>
 
   <section class="section toolkit-showcase" aria-labelledby="toolkit-heading">
     <div class="toolkit-showcase-bg" aria-hidden="true"></div>
