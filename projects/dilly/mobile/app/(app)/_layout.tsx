@@ -64,14 +64,16 @@ export default function AppLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Career Center',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'school' : 'school-outline'}
-              size={20}
-              color={focused ? colors.t1 : colors.t3}
-            />
-          ),
+          title: 'Home',
+          tabBarIcon: ({ focused }) => <DillyTabIcon focused={focused} />,
+          tabBarActiveTintColor: colors.gold,
+          tabBarInactiveTintColor: colors.gold,
+          tabBarLabelStyle: {
+            fontSize: 9,
+            fontWeight: '600',
+            color: colors.gold,
+            marginTop: 2,
+          },
         }}
       />
       <Tabs.Screen
@@ -90,16 +92,14 @@ export default function AppLayout() {
       <Tabs.Screen
         name="voice"
         options={{
-          title: 'Dilly',
-          tabBarIcon: ({ focused }) => <DillyTabIcon focused={focused} />,
-          tabBarActiveTintColor: colors.indigo,
-          tabBarInactiveTintColor: colors.indigo,
-          tabBarLabelStyle: {
-            fontSize: 9,
-            fontWeight: '500',
-            color: colors.indigo,
-            marginTop: 2,
-          },
+          title: 'Dilly AI',
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'chatbubble' : 'chatbubble-outline'}
+              size={20}
+              color={focused ? colors.t1 : colors.t3}
+            />
+          ),
         }}
       />
       <Tabs.Screen

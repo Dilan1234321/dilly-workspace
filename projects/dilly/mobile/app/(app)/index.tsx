@@ -373,140 +373,137 @@ export default function HomeScreen() {
           </View>
         </FadeInView>
 
-        {/* \u2500\u2500 Score card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+
+        {/* ── A. AI Coach Card (HERO) ──────────────────────────── */}
         <FadeInView delay={80}>
-          <AnimatedPressable
-            onPress={() => hasAudit && router.push('/(app)/score-detail')}
-            disabled={!hasAudit}
-            style={s.scoreCard}
-            scaleDown={0.985}
-          >
-            <View style={s.scoreCardTop}>
-              <Text style={s.scoreCardLabel}>DILLY SCORE</Text>
-              {hasAudit && <Text style={s.scoreCardUpdated}>Updated today</Text>}
-            </View>
+          <View style={s.aiCard}>
+            <AnimatedPressable
+              style={s.aiPrompt}
+              onPress={() => openDillyOverlay({
+                name: firstName, cohort, score: finalScore,
+                smart: smartScore, grit: gritScore, build: buildScore,
+                gap, cohortBar: cohortCfg.bar,
+                referenceCompany: cohortCfg.company,
+                isPaid: false,
+              })}
+              scaleDown={0.98}
+            >
+              <View style={s.aiPromptIcon}>
+                <DillyFace size={36} />
+              </View>
+              <Text style={s.aiPromptText}>Ask Dilly anything...</Text>
+              <View style={s.aiPromptArrow}>
+                <Ionicons name="arrow-forward-circle" size={28} color={colors.gold} />
+              </View>
+            </AnimatedPressable>
 
-            <View style={s.scoreRow}>
-              <Text style={[s.scoreBig, { color: hasAudit ? sColor : colors.t3 }]}>
-                {hasAudit ? displayScore : '—'}
-              </Text>
-              {hasAudit && <Text style={s.scoreOf}>/100</Text>}
-            </View>
-
-            {hasAudit ? (
-              <Text style={[s.percentileLine, { color: sColor }]}>
-                Top {percentile}% {track} · UTampa
-              </Text>
-            ) : (
-              <Text style={s.noAuditHint}>Run an audit to see your score</Text>
-            )}
-
-            <View style={s.barTrack}>
-              <Animated.View style={[s.barFill, { width: barWidth, backgroundColor: hasAudit ? sColor : colors.b2 }]} />
-            </View>
-
-            <View style={s.dimRow}>
-              {[
-                { label: 'SMART', score: smartScore, color: colors.blue  },
-                { label: 'GRIT',  score: gritScore,  color: colors.gold  },
-                { label: 'BUILD', score: buildScore,  color: colors.green },
-              ].map(({ label, score, color }) => (
-                <View key={label} style={s.dimTile}>
-                  <Text style={[s.dimScore, { color: hasAudit ? color : colors.t3 }]}>
-                    {hasAudit ? Math.round(score) : '—'}
-                  </Text>
-                  <Text style={s.dimLabel}>{label}</Text>
-                </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
+              {(!hasAudit ? [
+                { label: 'How do I get started?', msg: 'How do I get started with Dilly? What should I do first?' },
+                { label: 'What can you help me with?', msg: 'What can you help me with?' },
+              ] : gap > 0 ? [
+                { label: 'What should I work on?', msg: `What should I work on to improve my score? My weakest area is ${weakestLabel}.` },
+                { label: `How close am I to ${cohortCfg.company}?`, msg: `How close am I to ${cohortCfg.company}'s hiring bar? What do I need to do to get there?` },
+                { label: 'Help with my resume', msg: 'Help me improve my resume. What are the biggest things I should fix?' },
+              ] : [
+                { label: "I'm above the bar — now what?", msg: `I'm above ${cohortCfg.company}'s hiring bar. What should I do this week to maximize my chances?` },
+                { label: 'Prep me for interviews', msg: 'Help me prepare for interviews. What should I expect and how should I practice?' },
+                { label: 'Where should I apply?', msg: 'Based on my profile, where should I apply this week?' },
+              ]).map(chip => (
+                <AnimatedPressable
+                  key={chip.label}
+                  style={s.chip}
+                  onPress={() => openDillyOverlay({
+                    name: firstName, cohort, score: finalScore,
+                    smart: smartScore, grit: gritScore, build: buildScore,
+                    gap, cohortBar: cohortCfg.bar,
+                    referenceCompany: cohortCfg.company,
+                    isPaid: false,
+                    initialMessage: chip.msg,
+                  })}
+                  scaleDown={0.95}
+                >
+                  <Text style={s.chipText}>{chip.label}</Text>
+                </AnimatedPressable>
               ))}
-            </View>
-
-            <Text style={[s.viewBreakdown, !hasAudit && { opacity: 0.35 }]}>View full breakdown →</Text>
-          </AnimatedPressable>
-        </FadeInView>
-
-        {/* \u2500\u2500 Dilly noticed card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
-        <FadeInView delay={160}>
-          <View style={s.dillyCard}>
-            <View style={s.dillyAvatar}>
-              <DillyFace size={48} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.dillyLabel}>DILLY NOTICED</Text>
-              <Text style={s.dillyText}>
-                {audit.dilly_take
-                  ? audit.dilly_take
-                  : 'Upload your resume and I\'ll tell you exactly where you stand.'}
-              </Text>
-            </View>
+            </ScrollView>
           </View>
         </FadeInView>
 
-        {/* \u2500\u2500 Next Action card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
-        <FadeInView delay={240}>
-          <View style={s.nextCard}>
-            <View style={s.nextHeader}>
-              <Ionicons name="flash" size={11} color={colors.gold} />
-              <Text style={s.nextLabel}>YOUR NEXT MOVE</Text>
+        {/* ── B. Compact Score Card ───────────────────────────── */}
+        <FadeInView delay={160}>
+          <AnimatedPressable
+            onPress={() => hasAudit && router.push('/(app)/score-detail')}
+            disabled={!hasAudit}
+            style={s.compactScoreCard}
+            scaleDown={0.985}
+          >
+            <View style={s.compactScoreLeft}>
+              <Text style={[s.compactScoreNum, { color: hasAudit ? sColor : colors.t3 }]}>
+                {hasAudit ? displayScore : '—'}
+              </Text>
+              {hasAudit && (
+                <View style={[s.compactPctBadge, { backgroundColor: sColor + '15' }]}>
+                  <Text style={[s.compactPctText, { color: sColor }]}>Top {percentile}%</Text>
+                </View>
+              )}
             </View>
-            <Text style={s.nextBody}>{nextAction.body}</Text>
-            <AnimatedPressable style={s.nextBtn} onPress={nextAction.onPress} scaleDown={0.97}>
-              <Text style={s.nextBtnText}>{nextAction.cta}</Text>
+            <View style={s.compactDims}>
+              {[
+                { label: 'S', score: smartScore, color: colors.blue },
+                { label: 'G', score: gritScore, color: colors.gold },
+                { label: 'B', score: buildScore, color: colors.green },
+              ].map(d => (
+                <View key={d.label} style={s.compactDim}>
+                  <Text style={[s.compactDimScore, { color: hasAudit ? d.color : colors.t3 }]}>
+                    {hasAudit ? Math.round(d.score) : '—'}
+                  </Text>
+                  <Text style={s.compactDimLabel}>{d.label}</Text>
+                </View>
+              ))}
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.t3} />
+          </AnimatedPressable>
+        </FadeInView>
+
+        {/* ── C. Insight + Next Move (merged) ─────────────────── */}
+        <FadeInView delay={240}>
+          <View style={s.insightCard}>
+            <View style={s.insightHeader}>
+              <View style={s.insightDot}>
+                <DillyFace size={24} />
+              </View>
+              <Text style={s.insightLabel}>
+                {hasAudit ? 'DILLY SAYS' : 'GET STARTED'}
+              </Text>
+            </View>
+            <Text style={s.insightText}>
+              {audit.dilly_take || nextAction.body}
+            </Text>
+            <AnimatedPressable style={s.insightBtn} onPress={nextAction.onPress} scaleDown={0.97}>
+              <Text style={s.insightBtnText}>{nextAction.cta}</Text>
             </AnimatedPressable>
           </View>
         </FadeInView>
 
-        {/* \u2500\u2500 Quick action grid \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+        {/* ── D. Tools Row (compact horizontal) ──────────────── */}
         <FadeInView delay={320}>
-          <View style={s.grid}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
             {[
-              {
-                icon: 'arrow-up-circle' as const,
-                iconColor: colors.green,
-                tileBg: colors.gdim,
-                tileBdr: colors.gbdr,
-                title: 'New Audit',
-                sub: 'Upload a new resume',
-                onPress: () => router.push('/(app)/new-audit'),
-              },
-              {
-                icon: 'clipboard' as const,
-                iconColor: colors.gold,
-                tileBg: colors.golddim,
-                tileBdr: colors.goldbdr,
-                title: 'Tracker',
-                sub: 'Track your applications',
-                onPress: () => router.push('/(app)/internship-tracker'),
-              },
-              {
-                icon: 'create' as const,
-                iconColor: colors.indigo,
-                tileBg: colors.idim,
-                tileBdr: colors.ibdr,
-                title: 'Resume Editor',
-                sub: 'Edit & improve your resume',
-                onPress: () => router.push('/(app)/resume-editor'),
-              },
-              {
-                icon: 'calendar' as const,
-                iconColor: colors.blue,
-                tileBg: colors.bdim,
-                tileBdr: colors.bbdr,
-                title: 'Calendar',
-                sub: 'Deadlines & events',
-                onPress: () => router.push('/(app)/calendar'),
-              },
-            ].map(({ icon, iconColor, tileBg, tileBdr, title, sub, onPress }) => (
-              <AnimatedPressable key={title} style={s.gridTile} onPress={onPress} scaleDown={0.96}>
-                <View style={[s.gridIcon, { backgroundColor: tileBg, borderColor: tileBdr }]}>
-                  <Ionicons name={icon} size={18} color={iconColor} />
+              { icon: 'arrow-up-circle' as const, color: colors.green, label: 'Audit', onPress: () => router.push('/(app)/new-audit') },
+              { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
+              { icon: 'create' as const, color: colors.indigo, label: 'Resume', onPress: () => router.push('/(app)/resume-editor') },
+              { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar') },
+              { icon: 'analytics' as const, color: colors.green, label: 'Scores', onPress: () => router.push('/(app)/score-detail') },
+            ].map(tool => (
+              <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
+                <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
+                  <Ionicons name={tool.icon} size={20} color={tool.color} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.gridTitle}>{title}</Text>
-                  <Text style={s.gridSub}>{sub}</Text>
-                </View>
+                <Text style={s.toolLabel}>{tool.label}</Text>
               </AnimatedPressable>
             ))}
-          </View>
+          </ScrollView>
         </FadeInView>
 
         {/* \u2500\u2500 Unlock Dilly card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
@@ -663,6 +660,60 @@ const s = StyleSheet.create({
   },
   gridTitle: { fontSize: 13, fontWeight: '700', color: colors.t1, marginBottom: 1 },
   gridSub:   { fontSize: 10, color: colors.t2 },
+
+  // AI Coach Card
+  aiCard: { marginBottom: 16 },
+  aiPrompt: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.s1, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: colors.goldbdr,
+  },
+  aiPromptIcon: { width: 36, height: 36 },
+  aiPromptText: { flex: 1, fontSize: 15, color: colors.t3 },
+  aiPromptArrow: {},
+  chipRow: { gap: 8, paddingTop: 10 },
+  chip: {
+    backgroundColor: colors.golddim, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: colors.goldbdr,
+  },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.gold },
+
+  // Compact Score
+  compactScoreCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.s1, borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: colors.b1, marginBottom: 12,
+  },
+  compactScoreLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 'auto' },
+  compactScoreNum: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 32, lineHeight: 36 },
+  compactPctBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  compactPctText: { fontSize: 10, fontWeight: '700' },
+  compactDims: { flexDirection: 'row', gap: 12, marginRight: 10 },
+  compactDim: { alignItems: 'center' },
+  compactDimScore: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 16 },
+  compactDimLabel: { fontSize: 8, fontWeight: '700', color: colors.t3, letterSpacing: 0.5 },
+
+  // Insight Card
+  insightCard: {
+    backgroundColor: colors.s1, borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: colors.b1, marginBottom: 16,
+  },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  insightDot: { width: 24, height: 24 },
+  insightLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3 },
+  insightText: { fontSize: 13, color: colors.t2, lineHeight: 19, marginBottom: 12 },
+  insightBtn: { backgroundColor: colors.gold, borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  insightBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.8, color: '#FFFFFF' },
+
+  // Tools Row
+  toolRow: { gap: 16, paddingVertical: 4, marginBottom: 16 },
+  toolItem: { alignItems: 'center', width: 56 },
+  toolIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+  },
+  toolLabel: { fontSize: 10, fontWeight: '600', color: colors.t2, textAlign: 'center' },
 
   // Unlock
   unlockCard: {
