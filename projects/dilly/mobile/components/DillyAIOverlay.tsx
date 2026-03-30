@@ -99,6 +99,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   const [input,    setInput]    = useState('');
   const [mode,     setMode]     = useState<ChatMode>('coaching');
   const [isTyping, setIsTyping] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
   const initialMessageSent = useRef(false);
   const pendingInitialMessage = useRef<string | null>(null);
   const sendFnRef = useRef<(text: string, msgs: Message[]) => Promise<void>>();
@@ -374,6 +376,19 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
                 </TouchableOpacity>
               ))}
             </View>
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  const res = await apiFetch('/voice/history?limit=20');
+                  if (res.ok) { const data = await res.json(); setHistory(data?.items || []); }
+                } catch {}
+                setShowHistory(true);
+              }}
+              hitSlop={12}
+              style={{ marginRight: 8 }}
+            >
+              <Ionicons name="time-outline" size={20} color={colors.t2} />
+            </TouchableOpacity>
             <TouchableOpacity style={s.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <View style={s.closeBtnCircle}>
                 <Ionicons name="close" size={18} color={colors.t1} />
@@ -453,6 +468,38 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
           </View>
         </KeyboardAvoidingView>
       </Animated.View>
+
+      {/* History overlay */}
+      {showHistory && (
+        <View style={s.historyOverlay}>
+          <View style={[s.historyHeader, { paddingTop: insets.top + 10 }]}>
+            <Text style={s.historyTitle}>Past Conversations</Text>
+            <TouchableOpacity onPress={() => setShowHistory(false)} hitSlop={12}>
+              <Ionicons name="close" size={20} color={colors.t2} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={s.historyList}>
+            {history.length === 0 ? (
+              <Text style={s.historyEmpty}>No past conversations yet.</Text>
+            ) : (
+              history.map((item: any, i: number) => (
+                <TouchableOpacity
+                  key={item.conv_id || i}
+                  style={s.historyItem}
+                  onPress={() => setShowHistory(false)}
+                >
+                  <Text style={s.historyItemTitle} numberOfLines={1}>
+                    {item.session_title || item.topic || 'Conversation'}
+                  </Text>
+                  <Text style={s.historyItemDate}>
+                    {item.captured_at ? new Date(item.captured_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      )}
     </Modal>
   );
 }
@@ -492,4 +539,14 @@ const s = StyleSheet.create({
   input: { flex: 1, backgroundColor: colors.s1, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: colors.t1, borderWidth: 1, borderColor: colors.b1 },
   sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
+
+  // History overlay
+  historyOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, zIndex: 30 },
+  historyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.b1 },
+  historyTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1, color: colors.t1 },
+  historyList: { flex: 1, paddingHorizontal: 16 },
+  historyEmpty: { fontSize: 13, color: colors.t3, textAlign: 'center', paddingTop: 40 },
+  historyItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.b1 },
+  historyItemTitle: { fontSize: 14, fontWeight: '500', color: colors.t1, flex: 1, marginRight: 10 },
+  historyItemDate: { fontSize: 11, color: colors.t3 },
 });

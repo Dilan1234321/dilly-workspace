@@ -11,6 +11,7 @@ import {
   UIManager,
   Platform,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -580,6 +581,8 @@ export default function ResumeEditorScreen() {
   const [bulletScores, setBulletScores] = useState<Record<string, number>>({});
   const [overallScore, setOverallScore] = useState(0);
   const [initialScore, setInitialScore] = useState<number | null>(null);
+  const [variants, setVariants]     = useState<any[]>([]);
+  const [activeVariant, setActiveVariant] = useState<string | null>(null);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -623,6 +626,11 @@ export default function ResumeEditorScreen() {
       } finally {
         setLoading(false);
       }
+
+      // Fetch resume variants
+      apiFetch('/resume/variants').then(r => r.json()).then(data => {
+        setVariants(data?.variants || []);
+      }).catch(() => {});
     })();
   }, []);
 
@@ -720,6 +728,37 @@ export default function ResumeEditorScreen() {
       </FadeInView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[rs.scroll, { paddingBottom: insets.bottom + 60 }]} keyboardShouldPersistTaps="handled">
+
+        {/* Resume variants */}
+        {variants.length > 0 && (
+          <View style={rs.variantSection}>
+            <Text style={rs.variantLabel}>MY RESUMES</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={rs.variantRow}>
+              <TouchableOpacity
+                style={[rs.variantChip, !activeVariant && rs.variantChipActive]}
+                onPress={() => setActiveVariant(null)}
+              >
+                <Text style={[rs.variantChipText, !activeVariant && rs.variantChipTextActive]}>Base Resume</Text>
+              </TouchableOpacity>
+              {variants.map((v: any) => (
+                <TouchableOpacity
+                  key={v.id}
+                  style={[rs.variantChip, activeVariant === v.id && rs.variantChipActive]}
+                  onPress={() => {
+                    setActiveVariant(v.id);
+                    apiFetch(`/resume/variants/${v.id}`).then(r => r.json()).then(data => {
+                      if (data?.resume?.sections) setSections(data.resume.sections);
+                    }).catch(() => {});
+                  }}
+                >
+                  <Text style={[rs.variantChipText, activeVariant === v.id && rs.variantChipTextActive]} numberOfLines={1}>
+                    {v.label || v.job_company || 'Variant'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Overall strength */}
         <FadeInView delay={60}>
@@ -916,4 +955,13 @@ const rs = StyleSheet.create({
   },
   reauditBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
   reauditHint: { fontSize: 10, color: colors.t3, textAlign: 'center', marginTop: 6 },
+
+  // Variant selector
+  variantSection: { marginBottom: 12 },
+  variantLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3, marginBottom: 8 },
+  variantRow: { gap: 8 },
+  variantChip: { backgroundColor: colors.s2, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.b1 },
+  variantChipActive: { backgroundColor: colors.golddim, borderColor: colors.goldbdr },
+  variantChipText: { fontSize: 12, fontWeight: '600', color: colors.t2, maxWidth: 140 },
+  variantChipTextActive: { color: colors.gold },
 });

@@ -17,6 +17,7 @@ import { apiFetch } from '../../lib/auth';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { getAutomationRisk } from '../../lib/automation-risk';
 import InterestsPicker from '../../components/InterestsPicker';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { lookupCompanyATS } from '../../lib/atsLookup';
@@ -210,7 +211,14 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
       <View style={js.cardOuter}>
         {readiness !== 'unknown' && <View style={[js.accentBar, { backgroundColor: rc.color }]} />}
         <View style={js.cardInner}>
-          <Text style={js.cardTitle} numberOfLines={expanded ? 4 : 2}>{listing.title}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 }}>
+            <Text style={[js.cardTitle, { flex: 1 }]} numberOfLines={expanded ? 4 : 2}>{listing.title}</Text>
+            {(() => { const risk = getAutomationRisk(listing.title); return (
+              <View style={{ backgroundColor: risk.bg, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: risk.border }}>
+                <Text style={{ fontSize: 8, fontWeight: '700', color: risk.color }}>{risk.shortLabel}</Text>
+              </View>
+            ); })()}
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
             <Text style={js.cardCompany}>{listing.company}</Text>
             {readiness !== 'unknown' && <Text style={[js.readinessLabel, { color: rc.color }]}> · {rc.label}</Text>}

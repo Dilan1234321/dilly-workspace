@@ -21,6 +21,7 @@ import useCelebration from '../../hooks/useCelebration';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { Svg, Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 
 // \u2500\u2500 Types \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
@@ -104,6 +105,8 @@ export default function HomeScreen() {
   const [displayScore, setDisplayScore] = useState(0);
   const [photoUri, setPhotoUri]   = useState<string | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
+  const [auditHistory, setAuditHistory] = useState<{score: number; date: string; ts: number}[]>([]);
+  const [topJobs, setTopJobs] = useState<any[]>([]);
 
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const barAnim   = useRef(new Animated.Value(0)).current;
@@ -206,6 +209,18 @@ export default function HomeScreen() {
             celebrate('first-audit');
           }
         }
+        apiFetch('/audit/history').then(r => r.json()).then(data => {
+          const audits = (data?.audits || []).map((a: any) => ({
+            score: a.final_score || 0,
+            date: a.ts ? new Date(a.ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
+            ts: a.ts || 0,
+          })).filter((a: any) => a.score > 0).reverse();
+          setAuditHistory(audits);
+        }).catch(() => {});
+
+        apiFetch('/v2/internships/feed?readiness=ready&limit=3').then(r => r.json()).then(data => {
+          setTopJobs((data?.listings || []).slice(0, 3));
+        }).catch(() => {});
       } catch {
         // If fetch failed entirely (network error, no auth), redirect to login
         const stillHasToken = await getToken();
@@ -466,6 +481,37 @@ export default function HomeScreen() {
           </AnimatedPressable>
         </FadeInView>
 
+        {/* ── Score History Mini Chart ─────────────────────────── */}
+        {auditHistory.length >= 2 && (
+          <FadeInView delay={180}>
+            <AnimatedPressable style={s.historyCard} onPress={() => router.push('/(app)/score-detail')} scaleDown={0.985}>
+              <Text style={s.historyLabel}>SCORE HISTORY</Text>
+              <Svg width="100%" height={80} viewBox={`0 0 ${(auditHistory.length - 1) * 60 + 20} 80`}>
+                {/* Grid lines */}
+                <Line x1="0" y1="20" x2={(auditHistory.length - 1) * 60 + 20} y2="20" stroke={colors.b1} strokeWidth="1" />
+                <Line x1="0" y1="50" x2={(auditHistory.length - 1) * 60 + 20} y2="50" stroke={colors.b1} strokeWidth="1" />
+                {/* Line */}
+                <Polyline
+                  points={auditHistory.map((a, i) => `${i * 60 + 10},${70 - (a.score / 100) * 60}`).join(' ')}
+                  fill="none"
+                  stroke="#2B3A8E"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                {/* Dots */}
+                {auditHistory.map((a, i) => (
+                  <Circle key={i} cx={i * 60 + 10} cy={70 - (a.score / 100) * 60} r="4" fill="#2B3A8E" />
+                ))}
+              </Svg>
+              <View style={s.historyDates}>
+                {auditHistory.map((a, i) => (
+                  <Text key={i} style={s.historyDate}>{a.date}</Text>
+                ))}
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
         {/* ── C. Insight + Next Move (merged) ─────────────────── */}
         <FadeInView delay={240}>
           <View style={s.insightCard}>
@@ -485,6 +531,27 @@ export default function HomeScreen() {
             </AnimatedPressable>
           </View>
         </FadeInView>
+
+        {/* ── Top Matches ──────────────────────────────────────── */}
+        {topJobs.length > 0 && (
+          <FadeInView delay={280}>
+            <Text style={s.jobsLabel}>TOP MATCHES</Text>
+            {topJobs.map((job: any) => (
+              <AnimatedPressable
+                key={job.id}
+                style={s.jobCard}
+                onPress={() => router.push('/(app)/jobs')}
+                scaleDown={0.98}
+              >
+                <View style={s.jobInfo}>
+                  <Text style={s.jobTitle} numberOfLines={1}>{job.title}</Text>
+                  <Text style={s.jobCompany} numberOfLines={1}>{job.company} · {job.location || 'Remote'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+              </AnimatedPressable>
+            ))}
+          </FadeInView>
+        )}
 
         {/* ── D. Tools Row (compact horizontal) ──────────────── */}
         <FadeInView delay={320}>
@@ -693,6 +760,19 @@ const s = StyleSheet.create({
   compactDim: { alignItems: 'center' },
   compactDimScore: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 16 },
   compactDimLabel: { fontSize: 8, fontWeight: '700', color: colors.t3, letterSpacing: 0.5 },
+
+  // Score History
+  historyCard: { backgroundColor: colors.s1, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.b1, marginBottom: 12, overflow: 'hidden' },
+  historyLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3, marginBottom: 8 },
+  historyDates: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
+  historyDate: { fontSize: 9, color: colors.t3 },
+
+  // Job Recommendations
+  jobsLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3, marginBottom: 8 },
+  jobCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.s1, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.b1, marginBottom: 6 },
+  jobInfo: { flex: 1, marginRight: 8 },
+  jobTitle: { fontSize: 13, fontWeight: '600', color: colors.t1 },
+  jobCompany: { fontSize: 11, color: colors.t2, marginTop: 2 },
 
   // Insight Card
   insightCard: {
