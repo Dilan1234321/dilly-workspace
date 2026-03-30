@@ -585,6 +585,7 @@ export default function ResumeEditorScreen() {
   const [initialScore, setInitialScore] = useState<number | null>(null);
   const [variants, setVariants]     = useState<any[]>([]);
   const [activeVariant, setActiveVariant] = useState<string | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
   const [showTailor, setShowTailor] = useState(false);
   const [tailorCompany, setTailorCompany] = useState('');
   const [tailorRole, setTailorRole] = useState('');
@@ -735,36 +736,23 @@ export default function ResumeEditorScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[rs.scroll, { paddingBottom: insets.bottom + 60 }]} keyboardShouldPersistTaps="handled">
 
-        {/* Resume variants */}
-        {variants.length > 0 && (
-          <View style={rs.variantSection}>
-            <Text style={rs.variantLabel}>MY RESUMES</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={rs.variantRow}>
-              <TouchableOpacity
-                style={[rs.variantChip, !activeVariant && rs.variantChipActive]}
-                onPress={() => setActiveVariant(null)}
-              >
-                <Text style={[rs.variantChipText, !activeVariant && rs.variantChipTextActive]}>Base Resume</Text>
-              </TouchableOpacity>
-              {variants.map((v: any) => (
-                <TouchableOpacity
-                  key={v.id}
-                  style={[rs.variantChip, activeVariant === v.id && rs.variantChipActive]}
-                  onPress={() => {
-                    setActiveVariant(v.id);
-                    apiFetch(`/resume/variants/${v.id}`).then(r => r.json()).then(data => {
-                      if (data?.resume?.sections) setSections(data.resume.sections);
-                    }).catch(() => {});
-                  }}
-                >
-                  <Text style={[rs.variantChipText, activeVariant === v.id && rs.variantChipTextActive]} numberOfLines={1}>
-                    {v.label || v.job_company || 'Variant'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        {/* Resume selector — grid button */}
+        <View style={rs.variantSection}>
+          <AnimatedPressable style={rs.gridBtn} onPress={() => setShowGrid(true)} scaleDown={0.97}>
+            <View style={rs.gridBtnLeft}>
+              <Ionicons name="document-text" size={16} color={colors.gold} />
+              <Text style={rs.gridBtnTitle} numberOfLines={1}>
+                {activeVariant
+                  ? (variants.find((v: any) => v.id === activeVariant)?.label || variants.find((v: any) => v.id === activeVariant)?.job_company || 'Tailored')
+                  : 'Base Resume'}
+              </Text>
+            </View>
+            <View style={rs.gridBtnRight}>
+              <Text style={rs.gridBtnCount}>{variants.length + 1} resumes</Text>
+              <Ionicons name="grid" size={16} color={colors.t2} />
+            </View>
+          </AnimatedPressable>
+        </View>
 
         {/* Tailor for a job */}
         <AnimatedPressable
@@ -839,6 +827,78 @@ export default function ResumeEditorScreen() {
         </FadeInView>
 
       </ScrollView>
+
+      {/* Bento grid modal */}
+      <Modal visible={showGrid} animationType="fade" transparent statusBarTranslucent onRequestClose={() => setShowGrid(false)}>
+        <View style={rs.bentoOverlay}>
+          <View style={[rs.bentoContainer, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 }]}>
+            <View style={rs.bentoHeader}>
+              <Text style={rs.bentoTitle}>My Resumes</Text>
+              <TouchableOpacity onPress={() => setShowGrid(false)} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.t1} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={rs.bentoGrid}>
+              {/* Base resume card — always first, larger */}
+              <AnimatedPressable
+                style={[rs.bentoCardLarge, !activeVariant && rs.bentoCardSelected]}
+                onPress={() => { setActiveVariant(null); setShowGrid(false); }}
+                scaleDown={0.96}
+              >
+                <View style={rs.bentoCardIcon}>
+                  <Ionicons name="document-text" size={28} color={colors.gold} />
+                </View>
+                <Text style={rs.bentoCardTitle}>Base Resume</Text>
+                <Text style={rs.bentoCardSub}>Your original resume</Text>
+                {!activeVariant && <View style={rs.bentoActiveDot}><Ionicons name="checkmark-circle" size={16} color={colors.green} /></View>}
+              </AnimatedPressable>
+
+              {/* Variant cards */}
+              {variants.map((v: any, i: number) => {
+                const isActive = activeVariant === v.id;
+                const isTailored = v.type === 'tailored';
+                return (
+                  <AnimatedPressable
+                    key={v.id}
+                    style={[rs.bentoCard, isActive && rs.bentoCardSelected]}
+                    onPress={() => {
+                      setActiveVariant(v.id);
+                      setShowGrid(false);
+                      apiFetch(`/resume/variants/${v.id}`).then(r => r.json()).then(data => {
+                        if (data?.resume?.sections) setSections(data.resume.sections);
+                      }).catch(() => {});
+                    }}
+                    scaleDown={0.96}
+                  >
+                    <View style={[rs.bentoCardIcon, isTailored && { backgroundColor: colors.golddim }]}>
+                      <Ionicons name={isTailored ? 'sparkles' : 'copy'} size={20} color={isTailored ? colors.gold : colors.t2} />
+                    </View>
+                    <Text style={rs.bentoCardTitle} numberOfLines={1}>{v.label || v.job_company || 'Variant'}</Text>
+                    <Text style={rs.bentoCardSub} numberOfLines={1}>
+                      {isTailored ? `Tailored for ${v.job_company || 'job'}` : v.cohort || 'Custom variant'}
+                    </Text>
+                    {isActive && <View style={rs.bentoActiveDot}><Ionicons name="checkmark-circle" size={16} color={colors.green} /></View>}
+                  </AnimatedPressable>
+                );
+              })}
+
+              {/* Create new — tailor button */}
+              <AnimatedPressable
+                style={rs.bentoCardNew}
+                onPress={() => { setShowGrid(false); setTimeout(() => setShowTailor(true), 300); }}
+                scaleDown={0.96}
+              >
+                <View style={[rs.bentoCardIcon, { backgroundColor: colors.golddim }]}>
+                  <Ionicons name="add" size={24} color={colors.gold} />
+                </View>
+                <Text style={[rs.bentoCardTitle, { color: colors.gold }]}>Tailor for a job</Text>
+                <Text style={rs.bentoCardSub}>AI rewrites for a company</Text>
+              </AnimatedPressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Tailor modal */}
       <Modal visible={showTailor} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowTailor(false)}>
@@ -1103,6 +1163,51 @@ const rs = StyleSheet.create({
     borderWidth: 1, borderColor: colors.goldbdr,
   },
   tailorBtnText: { fontSize: 13, fontWeight: '600', color: colors.gold },
+
+  // Grid button
+  gridBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.s1, borderRadius: 12, padding: 12,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  gridBtnLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  gridBtnTitle: { fontSize: 14, fontWeight: '600', color: colors.t1 },
+  gridBtnRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  gridBtnCount: { fontSize: 11, color: colors.t3 },
+
+  // Bento grid
+  bentoOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  bentoContainer: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: 16 },
+  bentoHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 20, paddingHorizontal: 4,
+  },
+  bentoTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 18, letterSpacing: 1, color: colors.t1 },
+  bentoGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
+  },
+  bentoCardLarge: {
+    width: '100%', backgroundColor: colors.s1, borderRadius: 16, padding: 20,
+    borderWidth: 1.5, borderColor: colors.b1, position: 'relative',
+  },
+  bentoCard: {
+    width: '47.5%', backgroundColor: colors.s1, borderRadius: 16, padding: 16,
+    borderWidth: 1.5, borderColor: colors.b1, position: 'relative',
+  },
+  bentoCardNew: {
+    width: '47.5%', backgroundColor: colors.bg, borderRadius: 16, padding: 16,
+    borderWidth: 1.5, borderColor: colors.goldbdr, borderStyle: 'dashed',
+  },
+  bentoCardSelected: {
+    borderColor: colors.gold, backgroundColor: colors.golddim,
+  },
+  bentoCardIcon: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: colors.s2,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
+  },
+  bentoCardTitle: { fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 3 },
+  bentoCardSub: { fontSize: 11, color: colors.t3 },
+  bentoActiveDot: { position: 'absolute', top: 12, right: 12 },
 
   // Tailor modal
   tailorOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
