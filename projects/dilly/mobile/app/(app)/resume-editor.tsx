@@ -672,7 +672,7 @@ export default function ResumeEditorScreen() {
   function toggleSection(key: string) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(prev => {
-      const next = new Set(prev);
+      const next = new Set(prev || []);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
@@ -790,7 +790,7 @@ export default function ResumeEditorScreen() {
             {/* Sections as accordion */}
             {sections.map((sec, i) => {
               const comp = sectionCompleteness(sec);
-              const isOpen = expanded.has(sec.key);
+              const isOpen = expanded?.has(sec.key) ?? false;
 
               return (
                 <View key={sec.key}>
