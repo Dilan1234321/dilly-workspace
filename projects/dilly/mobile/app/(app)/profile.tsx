@@ -17,7 +17,7 @@ import { apiFetch } from '../../lib/auth';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import EditProfileModal from '../../components/EditProfileModal';
 
-const GOLD  = '#C9A84C';
+const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const CORAL = '#FF453A';

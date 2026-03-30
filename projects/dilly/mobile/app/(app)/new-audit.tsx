@@ -25,7 +25,7 @@ import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
-const GOLD  = '#C9A84C';
+const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const CORAL = '#FF453A';
@@ -240,7 +240,7 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
 
       <AnimatedPressable style={ns.resultsBtn} onPress={() => router.push('/(app)/score-detail')} scaleDown={0.97}>
         <Text style={ns.resultsBtnText}>View Full Breakdown</Text>
-        <Ionicons name="arrow-forward" size={14} color="#1a1400" />
+        <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
       </AnimatedPressable>
     </View>
   );
@@ -514,7 +514,7 @@ export default function NewAuditScreen() {
                 disabled={!file && !useEditor}
                 scaleDown={0.97}
               >
-                <Ionicons name="flash" size={18} color="#1a1400" />
+                <Ionicons name="flash" size={18} color="#FFFFFF" />
                 <Text style={ns.auditBtnText}>Audit My Resume</Text>
               </AnimatedPressable>
             </FadeInView>
@@ -655,7 +655,7 @@ const ns = StyleSheet.create({
     backgroundColor: GOLD, borderRadius: 14, paddingVertical: 16, marginBottom: 20,
     shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12,
   },
-  auditBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 0.8, color: '#1a1400' },
+  auditBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 0.8, color: '#FFFFFF' },
 
   // Scanning
   scanningSection: { alignItems: 'center', paddingTop: 32, paddingBottom: 20 },
@@ -721,7 +721,7 @@ const ns = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: GOLD, borderRadius: 12, paddingVertical: 13,
   },
-  resultsBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.5, color: '#1a1400' },
+  resultsBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.5, color: '#FFFFFF' },
   runAgainBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     borderWidth: 1, borderColor: GOLD + '30', borderRadius: 12, paddingVertical: 12,

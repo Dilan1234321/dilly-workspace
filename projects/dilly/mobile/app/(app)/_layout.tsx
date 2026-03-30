@@ -44,7 +44,7 @@ export default function AppLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(8,8,9,0.97)',
+          backgroundColor: 'rgba(255,255,255,0.97)',
           borderTopWidth: 1,
           borderTopColor: colors.b1,
           paddingBottom: insets.bottom,

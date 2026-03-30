@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { colors } from '../lib/tokens';
 
-const GOLD   = '#C9A84C';
+const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
 const AMBER  = '#FF9F0A';
 const CORAL  = '#FF453A';

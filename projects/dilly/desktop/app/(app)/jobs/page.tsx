@@ -6,6 +6,7 @@ import CohortStrip from '@/components/jobs/CohortStrip';
 import ContextMenu from '@/components/ui/ContextMenu';
 import { useRightPanel } from '../layout';
 import { apiFetch } from '@/lib/api';
+import { getAutomationRisk } from '@/lib/automation-risk';
 
 function pickRecommended(jobs: any[]): any[] {
   const ready = jobs.filter(j => j.readiness === 'ready');
@@ -172,12 +173,18 @@ export default function JobsPage() {
                     </div>
                     <p className="text-[10px] text-txt-3 mb-2">{job.location}{job.remote ? ' \u00b7 Remote' : ''}</p>
                     {cr && (
-                      <div className="flex gap-4 text-[10px] font-mono">
+                      <div className="flex gap-4 text-[10px] font-mono mb-2">
                         <span style={{ color: (cr.required_smart||0) - (cr.student_smart||0) <= 0 ? '#34C759' : '#FF9F0A' }}>S:{Math.round(cr.student_smart||0)}</span>
                         <span style={{ color: (cr.required_grit||0) - (cr.student_grit||0) <= 0 ? '#34C759' : '#FF9F0A' }}>G:{Math.round(cr.student_grit||0)}</span>
                         <span style={{ color: (cr.required_build||0) - (cr.student_build||0) <= 0 ? '#34C759' : '#FF9F0A' }}>B:{Math.round(cr.student_build||0)}</span>
                       </div>
                     )}
+                    {(() => { const risk = getAutomationRisk(job.title); return (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 6px', borderRadius: 4, background: risk.bg, border: '1px solid ' + risk.border }}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: risk.color }} />
+                        <span style={{ fontSize: 9, fontWeight: 700, color: risk.color, letterSpacing: 0.3, textTransform: 'uppercase' }}>{risk.shortLabel}</span>
+                      </span>
+                    ); })()}
                   </button>
                 );
               })}

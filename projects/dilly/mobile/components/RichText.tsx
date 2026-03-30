@@ -6,7 +6,7 @@
  *   *text*          → italic
  *   __text__        → underline
  *   ~~text~~        → strikethrough
- *   ==gold==        → bold gold (#C9A84C)
+ *   ==gold==        → bold gold (#2B3A8E)
  *   ==green:text==  → bold green (#34C759)
  *   ==amber:text==  → bold amber (#FF9F0A)
  *   ==blue:text==   → bold blue (#0A84FF)
@@ -19,7 +19,7 @@
 import React from 'react';
 import { Text, TextStyle } from 'react-native';
 
-const GOLD  = '#C9A84C';
+const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const BLUE  = '#0A84FF';

@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
-  Platform,
   ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,9 +52,8 @@ const pb = StyleSheet.create({
 
 export default function VerifyScreen() {
   const insets = useSafeAreaInsets();
-  const { email: emailParam, devCode: devCodeParam, returning } = useLocalSearchParams<{
+  const { email: emailParam, returning } = useLocalSearchParams<{
     email: string;
-    devCode?: string;
     returning?: string;
   }>();
 
@@ -63,7 +61,6 @@ export default function VerifyScreen() {
   const email = emailParam ?? '';
   const [returningEmail, setReturningEmail] = useState('');
   const [returningStep, setReturningStep] = useState<'email' | 'code'>('email');
-  const [devCode, setDevCode] = useState<string | undefined>(devCodeParam || undefined);
   const [digits, setDigits] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<string | null>(null);
@@ -138,7 +135,6 @@ export default function VerifyScreen() {
               body: JSON.stringify({ email: isReturning ? returningEmail.trim() : email }),
             });
             const d2 = await r2.json();
-            if (d2.dev_code) setDevCode(d2.dev_code);
             startResendCooldown();
           } catch { /* ignore */ }
         } else if (msg.toLowerCase().includes('too many') || msg.toLowerCase().includes('attempts')) {
@@ -178,7 +174,6 @@ export default function VerifyScreen() {
         body: JSON.stringify({ email: emailToUse }),
       });
       const data = await res.json();
-      if (data.dev_code) setDevCode(data.dev_code);
       startResendCooldown();
       inputRef.current?.focus();
     } catch (err: unknown) {
@@ -202,7 +197,6 @@ export default function VerifyScreen() {
         const detail = data?.detail;
         throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
       }
-      if (data.dev_code) setDevCode(data.dev_code);
       setReturningStep('code');
       startResendCooldown();
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -252,7 +246,7 @@ export default function VerifyScreen() {
             activeOpacity={0.85}
           >
             {loading
-              ? <ActivityIndicator color="#080809" size="small" />
+              ? <ActivityIndicator color="#FFFFFF" size="small" />
               : <Text style={[styles.buttonText, !returningEmail.trim() && styles.buttonTextDisabled]}>Send code →</Text>
             }
           </TouchableOpacity>
@@ -342,11 +336,6 @@ export default function VerifyScreen() {
         {/* Error text */}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {/* Dev code */}
-        {devCode ? (
-          <Text style={styles.devCode}>Dev: {devCode}</Text>
-        ) : null}
-
         {/* Verify button */}
         <TouchableOpacity
           style={[styles.button, allFilled && !loading ? styles.buttonActive : styles.buttonDisabled]}
@@ -355,7 +344,7 @@ export default function VerifyScreen() {
           activeOpacity={0.85}
         >
           {loading ? (
-            <ActivityIndicator color="#080809" size="small" />
+            <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Text style={[styles.buttonText, !allFilled && styles.buttonTextDisabled]}>
               Verify and continue →
@@ -498,13 +487,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
-  devCode: {
-    fontSize: 10,
-    color: colors.t3,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
   button: {
     width: '100%',
     borderRadius: radius.md,
@@ -523,7 +505,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#080809',
+    color: '#FFFFFF',
     letterSpacing: 0.1,
   },
   buttonTextDisabled: {

@@ -5,7 +5,7 @@ import { colors } from '../lib/tokens';
 import AnimatedPressable from './AnimatedPressable';
 import { useSubscription } from '../hooks/useSubscription';
 
-const GOLD = '#C9A84C';
+const GOLD = '#2B3A8E';
 const GREEN = '#34C759';
 
 const FEATURES = [
@@ -116,7 +116,7 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   logo: { fontFamily: 'Cinzel_900Black', fontSize: 24, color: GOLD, letterSpacing: 3 },
   proBadge: { backgroundColor: GOLD, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  proBadgeText: { fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1, color: '#1a1400' },
+  proBadgeText: { fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1, color: '#FFFFFF' },
 
   headline: { fontFamily: 'Cinzel_700Bold', fontSize: 20, color: colors.t1, letterSpacing: 0.5, lineHeight: 28, marginBottom: 12 },
   featurePrompt: { fontSize: 13, color: GOLD, lineHeight: 20, marginBottom: 16, fontWeight: '600' },
@@ -133,7 +133,7 @@ const s = StyleSheet.create({
   priceNote: { fontSize: 11, color: colors.t3, marginLeft: 8, paddingBottom: 4 },
 
   ctaBtn: { backgroundColor: GOLD, borderRadius: 16, paddingVertical: 18, alignItems: 'center', marginBottom: 12, shadowColor: GOLD, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16 },
-  ctaBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 16, letterSpacing: 1, color: '#1a1400' },
+  ctaBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 16, letterSpacing: 1, color: '#FFFFFF' },
 
   terms: { fontSize: 10, color: colors.t3, textAlign: 'center', lineHeight: 15 },
 });

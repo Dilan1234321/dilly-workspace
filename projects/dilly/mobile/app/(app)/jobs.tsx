@@ -22,7 +22,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { lookupCompanyATS } from '../../lib/atsLookup';
 import { router } from 'expo-router';
 
-const GOLD  = '#C9A84C';
+const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const CORAL = '#FF453A';
@@ -240,7 +240,7 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
               {(listing as any).cohort_readiness?.length > 0 ? (
                 (listing as any).cohort_readiness.map((cr: any, idx: number) => (
                   <View key={idx} style={{ marginBottom: idx < (listing as any).cohort_readiness.length - 1 ? 12 : 0 }}>
-                    <Text style={[js.gapTitle, { fontSize: 9, color: '#C9A84C', marginBottom: 6 }]}>{cr.cohort}</Text>
+                    <Text style={[js.gapTitle, { fontSize: 9, color: '#2B3A8E', marginBottom: 6 }]}>{cr.cohort}</Text>
                     <DimBar label="Smart" student={cr.student_smart ?? studentScores.smart} required={cr.required_smart ?? rs.smart ?? 0} />
                     <DimBar label="Grit" student={cr.student_grit ?? studentScores.grit} required={cr.required_grit ?? rs.grit ?? 0} />
                     <DimBar label="Build" student={cr.student_build ?? studentScores.build} required={cr.required_build ?? rs.build ?? 0} />
@@ -319,7 +319,7 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
 
 <View style={js.actionRow}>
             <Pressable style={js.applyBtn} onPress={(e) => { e.stopPropagation(); onApply(listing); }}>
-              <Ionicons name="open-outline" size={13} color="#1a1400" />
+              <Ionicons name="open-outline" size={13} color="#FFFFFF" />
               <Text style={js.applyBtnText}>Apply + Track</Text>
             </Pressable>
             {hasScores && studentScores && (
@@ -395,10 +395,10 @@ function InterestsSetupCard({ profile, onComplete }: { profile: Record<string, a
         scaleDown={0.97}
       >
         {saving ? (
-          <ActivityIndicator size="small" color="#1a1400" />
+          <ActivityIndicator size="small" color="#FFFFFF" />
         ) : (
           <>
-            <Ionicons name="flash" size={16} color="#1a1400" />
+            <Ionicons name="flash" size={16} color="#FFFFFF" />
             <Text style={js.setupBtnText}>Show my jobs</Text>
           </>
         )}
@@ -590,8 +590,13 @@ export default function JobsScreen() {
         </View>
       </FadeInView>
 
-      {/* Setup card — shown when no interests */}
-      {needsSetup && profileLoaded ? (
+      {/* Loading state — show spinner until profile is loaded */}
+      {!profileLoaded ? (
+        <View style={js.loadingWrap}>
+          <ActivityIndicator size="large" color={GOLD} />
+          <Text style={js.loadingText}>Loading...</Text>
+        </View>
+      ) : needsSetup ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[js.scroll, { paddingBottom: insets.bottom + 40 }]}>
           <FadeInView delay={100}>
             <InterestsSetupCard profile={profile} onComplete={handleSetupComplete} />
@@ -740,15 +745,15 @@ const js = StyleSheet.create({
   headerTitle: { fontFamily: 'Cinzel_900Black', fontSize: 28, letterSpacing: 2, color: '#FFFFFF' },
   headerSub: { fontSize: 13, color: '#636366', marginTop: 4, fontWeight: '400' },
   atsHeaderBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(201,168,76,0.08)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  atsHeaderBtnText: { fontSize: 11, fontWeight: '600', color: '#C9A84C' },
+  atsHeaderBtnText: { fontSize: 11, fontWeight: '600', color: '#2B3A8E' },
 
   // Setup
   setupCard: { backgroundColor: '#0A0A0A', borderRadius: 20, padding: 24, marginBottom: 20, marginHorizontal: 20 },
   setupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   setupTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 18, color: '#FFFFFF' },
   setupSub: { fontSize: 14, color: '#636366', lineHeight: 22, marginBottom: 20 },
-  setupSectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: '#C9A84C', marginBottom: 10, textTransform: 'uppercase' },
-  setupBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#C9A84C', borderRadius: 16, paddingVertical: 16, marginTop: 24 },
+  setupSectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: '#2B3A8E', marginBottom: 10, textTransform: 'uppercase' },
+  setupBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2B3A8E', borderRadius: 16, paddingVertical: 16, marginTop: 24 },
   setupBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 15, letterSpacing: 1, color: '#000000' },
 
   // Education picker
@@ -765,7 +770,7 @@ const js = StyleSheet.create({
   // Tabs
   tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 6, marginBottom: 14 },
   tab: { flex: 1, paddingVertical: 11, borderRadius: 14, backgroundColor: '#0A0A0A', alignItems: 'center' },
-  tabActive: { backgroundColor: '#C9A84C' },
+  tabActive: { backgroundColor: '#2B3A8E' },
   tabText: { fontSize: 13, fontWeight: '700', color: '#636366' },
   tabTextActive: { color: '#000000' },
 
@@ -815,7 +820,7 @@ const js = StyleSheet.create({
   
   // Fit section
   gapSection: { backgroundColor: '#111111', borderRadius: 14, padding: 16, marginBottom: 12 },
-  gapTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#C9A84C', marginBottom: 14, textTransform: 'uppercase' },
+  gapTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#2B3A8E', marginBottom: 14, textTransform: 'uppercase' },
 
   // Dimension bars — clean and precise
   dimBar: { marginBottom: 10 },
@@ -829,17 +834,17 @@ const js = StyleSheet.create({
   dimBarTrack: { height: 3, backgroundColor: '#1C1C1E', borderRadius: 999, overflow: 'visible', position: 'relative' },
   dimBarFill: { height: '100%', borderRadius: 999 },
   dimBarTarget: { position: 'absolute', top: -3, width: 2, height: 9, backgroundColor: '#48484A', borderRadius: 1 },
-  overallBar: { fontSize: 12, color: '#C9A84C', marginTop: 10, lineHeight: 18, fontWeight: '500' },
+  overallBar: { fontSize: 12, color: '#2B3A8E', marginTop: 10, lineHeight: 18, fontWeight: '500' },
 
   // Description
   description: { fontSize: 13, color: '#636366', lineHeight: 20, marginBottom: 14 },
 
   // Action buttons
   actionRow: { flexDirection: 'row', gap: 10 },
-  applyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#C9A84C', borderRadius: 14, paddingVertical: 14 },
+  applyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#2B3A8E', borderRadius: 14, paddingVertical: 14 },
   applyBtnText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5, color: '#000000' },
   dillyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(201,168,76,0.1)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
-  dillyBtnText: { fontSize: 13, fontWeight: '700', color: '#C9A84C' },
+  dillyBtnText: { fontSize: 13, fontWeight: '700', color: '#2B3A8E' },
 
   // Loading / Empty
   loadingWrap: { alignItems: 'center', paddingTop: 80, gap: 16 },
@@ -852,7 +857,7 @@ const js = StyleSheet.create({
 
   // Insight
   insightWrap: { flexDirection: 'row', gap: 10, backgroundColor: 'rgba(201,168,76,0.06)', borderRadius: 14, padding: 14, marginBottom: 12, alignItems: 'flex-start' },
-  insightText: { flex: 1, fontSize: 13, color: '#C9A84C', lineHeight: 20, fontWeight: '500' },
+  insightText: { flex: 1, fontSize: 13, color: '#2B3A8E', lineHeight: 20, fontWeight: '500' },
 
   // ATS
   atsSection: { backgroundColor: '#111111', borderRadius: 14, padding: 16, marginBottom: 12 },

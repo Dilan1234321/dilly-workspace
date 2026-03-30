@@ -20,7 +20,7 @@ import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
-const GOLD = '#C9A84C';
+const GOLD = '#2B3A8E';
 const GREEN = '#34C759';
 const BLUE = '#0A84FF';
 const CORAL = '#FF453A';
@@ -447,7 +447,7 @@ export default function SettingsScreen() {
                 <>
                   <Divider />
                   <AnimatedPressable style={st.upgradeBtn} onPress={() => Alert.alert('Coming soon', 'Payments are not yet available.')} scaleDown={0.97}>
-                    <Ionicons name="flash" size={14} color="#1a1400" />
+                    <Ionicons name="flash" size={14} color="#FFFFFF" />
                     <Text style={st.upgradeBtnText}>Upgrade to Dilly · $9.99/mo</Text>
                   </AnimatedPressable>
                   <Text style={st.upgradeHint}>Unlimited audits, AI coaching, all jobs, score history</Text>
@@ -910,7 +910,7 @@ const st = StyleSheet.create({
     backgroundColor: GOLD, marginHorizontal: 14, marginTop: 10, marginBottom: 6,
     borderRadius: 11, paddingVertical: 12,
   },
-  upgradeBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.5, color: '#1a1400' },
+  upgradeBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.5, color: '#FFFFFF' },
   upgradeHint: { fontSize: 10, color: colors.t3, textAlign: 'center', paddingBottom: 14, paddingHorizontal: 14 },
 
   giftRow: {
@@ -926,7 +926,7 @@ const st = StyleSheet.create({
     backgroundColor: GOLD, borderRadius: 10,
     paddingHorizontal: 16, paddingVertical: 9,
   },
-  giftBtnText: { fontSize: 12, fontWeight: '700', color: '#1a1400' },
+  giftBtnText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
 
   innerSection: { paddingHorizontal: 14, paddingVertical: 10 },
   innerLabel: { fontSize: 13, fontWeight: '600', color: colors.t1 },

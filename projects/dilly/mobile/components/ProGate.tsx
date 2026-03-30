@@ -4,7 +4,7 @@ import { colors } from '../lib/tokens';
 import AnimatedPressable from './AnimatedPressable';
 import { useSubscription } from '../hooks/useSubscription';
 
-const GOLD = '#C9A84C';
+const GOLD = '#2B3A8E';
 
 interface Props {
   feature: string;  // e.g. 'resume_editor', 'tracker', 'ats', 'gap_analysis'
@@ -37,7 +37,7 @@ export default function ProGate({ feature, children, fallback }: Props) {
         <Text style={s.lockTitle}>Dilly Pro Feature</Text>
         <Text style={s.lockSub}>Upgrade to access this and all Pro features.</Text>
         <AnimatedPressable style={s.unlockBtn} onPress={() => showPaywall(feature)} scaleDown={0.97}>
-          <Ionicons name="flash" size={14} color="#1a1400" />
+          <Ionicons name="flash" size={14} color="#FFFFFF" />
           <Text style={s.unlockBtnText}>Unlock with Pro</Text>
         </AnimatedPressable>
       </View>
@@ -82,7 +82,7 @@ const s = StyleSheet.create({
     backgroundColor: GOLD, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 14,
     shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12,
   },
-  unlockBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#1a1400' },
+  unlockBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,

@@ -20,7 +20,7 @@ import { colors, API_BASE } from '../lib/tokens';
 import { apiFetch, getToken } from '../lib/auth';
 import * as ImagePicker from 'expo-image-picker';
 
-const GOLD = '#C9A84C';
+const GOLD = '#2B3A8E';
 
 interface Props {
   visible: boolean;
@@ -63,7 +63,7 @@ function Field({
       <View style={es.fieldGroup}>
         <Text style={es.fieldLabel}>{label}</Text>
         <View style={[es.fieldInput, es.fieldDisabled]}>
-          <Text style={es.fieldDisabledText}>{disabledText || '\u2014'}</Text>
+          <Text style={es.fieldDisabledText}>{disabledText || '—'}</Text>
         </View>
         {hint ? <Text style={es.fieldHint}>{hint}</Text> : null}
       </View>

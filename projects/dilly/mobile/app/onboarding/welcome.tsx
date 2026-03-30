@@ -47,7 +47,7 @@ export default function WelcomeScreen() {
         throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
       }
       // Store email for the verify screen via router params
-      router.push({ pathname: '/onboarding/verify', params: { email: trimmed, devCode: data.dev_code || '' } });
+      router.push({ pathname: '/onboarding/verify', params: { email: trimmed } });
     } catch (err: unknown) {
       console.log('[welcome] CATCH:', err instanceof Error ? err.message : String(err));
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -128,7 +128,7 @@ export default function WelcomeScreen() {
             activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color="#080809" size="small" />
+              <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <Text style={[styles.buttonText, !buttonActive && styles.buttonTextDisabled]}>
                 Get my scores →
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#080809',
+    color: '#FFFFFF',
     letterSpacing: 0.1,
   },
   buttonTextDisabled: {

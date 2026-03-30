@@ -39,7 +39,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
   const adjustedY = Math.min(y, window.innerHeight - items.length * 36 - 20);
 
   return (
-    <div className="fixed inset-0 z-[100]" onContextMenu={e => e.preventDefault()}>
+    <div className="fixed inset-0 z-[100]" onContextMenu={() => onClose()}>
       <div
         ref={ref}
         className="absolute bg-surface-1 border border-border-main rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.4)] py-1.5 min-w-[200px] backdrop-blur-xl overflow-hidden"

@@ -297,7 +297,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#080809',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -321,7 +321,7 @@ const s = StyleSheet.create({
     width: RING_CONTAINER,
     height: RING_CONTAINER,
     borderRadius: RING_CONTAINER / 2,
-    backgroundColor: 'rgba(201,168,76,0.08)',
+    backgroundColor: 'rgba(43,58,142,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -334,7 +334,7 @@ const s = StyleSheet.create({
     bottom: 0,
     borderRadius: RING_CONTAINER / 2,
     borderWidth: 2,
-    borderColor: '#C9A84C',
+    borderColor: '#2B3A8E',
   },
 
   eyebrow: {
@@ -370,7 +370,7 @@ const s = StyleSheet.create({
   cta: {
     width: '100%',
     height: 52,
-    backgroundColor: '#C9A84C',
+    backgroundColor: '#2B3A8E',
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -379,6 +379,6 @@ const s = StyleSheet.create({
     fontFamily: 'Cinzel_700Bold',
     fontSize: 14,
     letterSpacing: 2,
-    color: '#080809',
+    color: '#FFFFFF',
   },
 });

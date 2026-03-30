@@ -306,25 +306,25 @@ export default function DillyOverlay() {
           {/* Top */}
           <Animated.View style={[s.edgeH, { top: 0, height: glowThick, opacity: glowOpacity }]}>
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
-            <View style={{ flex: 1, backgroundColor: '#C9A84C' }} />
+            <View style={{ flex: 1, backgroundColor: '#2B3A8E' }} />
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
           </Animated.View>
           {/* Bottom */}
           <Animated.View style={[s.edgeH, { bottom: 0, height: glowThick, opacity: glowOpacity }]}>
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
-            <View style={{ flex: 1, backgroundColor: '#C9A84C' }} />
+            <View style={{ flex: 1, backgroundColor: '#2B3A8E' }} />
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
           </Animated.View>
           {/* Left */}
           <Animated.View style={[s.edgeV, { left: 0, width: glowThick, opacity: glowOpacity }]}>
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
-            <View style={{ flex: 1, backgroundColor: '#C9A84C' }} />
+            <View style={{ flex: 1, backgroundColor: '#2B3A8E' }} />
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
           </Animated.View>
           {/* Right */}
           <Animated.View style={[s.edgeV, { right: 0, width: glowThick, opacity: glowOpacity }]}>
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
-            <View style={{ flex: 1, backgroundColor: '#C9A84C' }} />
+            <View style={{ flex: 1, backgroundColor: '#2B3A8E' }} />
             <View style={{ flex: 1, backgroundColor: '#0A84FF' }} />
           </Animated.View>
         </View>
@@ -446,7 +446,7 @@ export default function DillyOverlay() {
                   disabled={!input.trim()}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="arrow-up" size={18} color="#080809" />
+                  <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             </>
@@ -640,7 +640,7 @@ const s = StyleSheet.create({
     letterSpacing: 1,
     color: colors.t3,
   },
-  modePillTextActive: { color: '#080809' },
+  modePillTextActive: { color: '#FFFFFF' },
 
   // ── Input bar ────────────────────────────────────────────────────────────
   inputBar: {
@@ -686,7 +686,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
     height: '60%',
-    backgroundColor: 'rgba(8,8,9,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.6)',
   },
   unlockBtn: {
     height: 52,
@@ -700,7 +700,7 @@ const s = StyleSheet.create({
     fontFamily: 'Cinzel_700Bold',
     fontSize: 14,
     letterSpacing: 2,
-    color: '#080809',
+    color: '#FFFFFF',
   },
   unlockSub: {
     color: colors.t3,

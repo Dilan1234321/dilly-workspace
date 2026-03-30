@@ -1,275 +1,487 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { apiFetch } from '@/lib/api';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 
+/* ── Types ───────────────────────────────────────────── */
 type Status = 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected';
-
 interface Application {
-  id: string;
-  company: string;
-  role: string;
-  status: Status;
-  applied_at?: string;
-  deadline?: string;
-  job_url?: string;
-  notes?: string;
+  id: string; company: string; role: string; status: Status;
+  applied_at?: string; deadline?: string; job_url?: string; notes?: string;
 }
 
-const COLUMNS: { key: Status; label: string; color: string; emptyText: string }[] = [
-  { key: 'saved', label: 'Saved', color: '#8E8E93', emptyText: 'Save jobs from the feed' },
-  { key: 'applied', label: 'Applied', color: '#3B4CC0', emptyText: 'Drag saved jobs here when you apply' },
-  { key: 'interviewing', label: 'Interviewing', color: '#FF9F0A', emptyText: 'Move jobs here when you hear back' },
-  { key: 'offer', label: 'Offer', color: '#34C759', emptyText: 'The goal' },
-  { key: 'rejected', label: 'Rejected', color: '#FF453A', emptyText: 'It happens. Keep going.' },
+/* ── Columns ─────────────────────────────────────────── */
+const COLS: { key: Status; label: string; color: string; glow: string; emptyIcon: string; emptyLine: string; emptyHint: string }[] = [
+  { key: 'saved',        label: 'Saved',        color: '#636366', glow: 'rgba(99,99,102,0.45)',  emptyIcon: '📌', emptyLine: 'No saved jobs yet', emptyHint: 'Browse the Jobs tab and save roles you like' },
+  { key: 'applied',      label: 'Applied',      color: '#5B8DEF', glow: 'rgba(91,141,239,0.5)',  emptyIcon: '📤', emptyLine: 'Nothing applied', emptyHint: 'Drag a saved job here once you hit submit' },
+  { key: 'interviewing', label: 'Interviewing', color: '#FF9F0A', glow: 'rgba(255,159,10,0.5)',  emptyIcon: '🎙️', emptyLine: 'No interviews yet', emptyHint: 'When you hear back, move cards here' },
+  { key: 'offer',        label: 'Offer',        color: '#34C759', glow: 'rgba(52,199,89,0.55)',  emptyIcon: '🏆', emptyLine: 'The finish line', emptyHint: 'Your offers will land here' },
+  { key: 'rejected',     label: 'Rejected',     color: '#FF453A', glow: 'rgba(255,69,58,0.35)',  emptyIcon: '💪', emptyLine: 'Part of the process', emptyHint: 'Every rejection gets you closer' },
 ];
 
-// Demo data until we wire up the real API
-const DEMO_APPS: Application[] = [
-  { id: '1', company: 'Cloudflare', role: 'Data Analytics Intern', status: 'saved', deadline: '2026-04-15' },
+/* ── Demo data ───────────────────────────────────────── */
+const DEMO: Application[] = [
+  { id: '1', company: 'Cloudflare', role: 'Data Analytics Intern', status: 'saved', deadline: '2026-04-01' },
   { id: '2', company: 'Toast', role: 'Product Analyst', status: 'saved' },
+  { id: '9', company: 'Figma', role: 'Design Engineer Intern', status: 'saved' },
   { id: '3', company: 'Dropbox', role: 'People Data Analyst', status: 'applied', applied_at: '2026-03-25' },
   { id: '4', company: 'Okta', role: 'Data Analyst Intern', status: 'applied', applied_at: '2026-03-22' },
+  { id: '10', company: 'HubSpot', role: 'Revenue Ops Intern', status: 'applied', applied_at: '2026-03-14' },
   { id: '5', company: 'Stripe', role: 'Software Engineer Intern', status: 'interviewing', applied_at: '2026-03-10' },
   { id: '6', company: 'Goldman Sachs', role: 'Summer Analyst', status: 'interviewing', applied_at: '2026-03-05' },
   { id: '7', company: 'MongoDB', role: 'Sales Dev Representative', status: 'offer', applied_at: '2026-02-20' },
   { id: '8', company: 'Visa', role: 'AI Center of Excellence Analyst', status: 'rejected', applied_at: '2026-03-01' },
 ];
 
+/* ── Helpers ──────────────────────────────────────────── */
+function daysAgo(iso?: string) { if (!iso) return null; return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)); }
+function daysUntil(iso?: string) { if (!iso) return null; return Math.floor((new Date(iso).getTime() - Date.now()) / 86400000); }
+function friendlyAgo(d: number | null) {
+  if (d === null) return null;
+  if (d === 0) return 'Today'; if (d === 1) return 'Yesterday'; if (d < 7) return `${d}d ago`;
+  return `${Math.floor(d / 7)}w ago`;
+}
+
+/* ── Nudges ───────────────────────────────────────────── */
+interface Nudge { label: string; detail: string; type: 'urgent' | 'warning' | 'info' }
+function buildNudges(apps: Application[]): Nudge[] {
+  const out: Nudge[] = [];
+  apps.filter(a => a.status === 'saved' && a.deadline).forEach(a => {
+    const d = daysUntil(a.deadline);
+    if (d !== null && d >= 0 && d <= 5)
+      out.push({ label: 'Deadline', detail: `${a.company} closes ${d === 0 ? 'today' : d === 1 ? 'tomorrow' : 'in ' + d + ' days'}`, type: 'urgent' });
+  });
+  apps.filter(a => a.status === 'applied').forEach(a => {
+    const d = daysAgo(a.applied_at);
+    if (d !== null && d >= 10)
+      out.push({ label: 'No response', detail: `${a.company} — ${d} days. Consider following up.`, type: 'warning' });
+  });
+  if (apps.filter(a => a.applied_at && daysAgo(a.applied_at)! < 3).length === 0 && apps.filter(a => a.status === 'saved').length > 0)
+    out.push({ label: 'Momentum', detail: 'You have saved jobs waiting. Pick one and apply today.', type: 'info' });
+  return out.slice(0, 3);
+}
+
+const NUDGE_ICON: Record<string, string> = { urgent: '🔴', warning: '🟡', info: '🟢' };
+const NUDGE_COLORS: Record<string, { accent: string; bg: string; border: string }> = {
+  urgent:  { accent: '#FF453A', bg: 'rgba(255,69,58,0.06)',  border: 'rgba(255,69,58,0.18)' },
+  warning: { accent: '#FF9F0A', bg: 'rgba(255,159,10,0.06)', border: 'rgba(255,159,10,0.18)' },
+  info:    { accent: '#5B8DEF', bg: 'rgba(91,141,239,0.06)', border: 'rgba(91,141,239,0.18)' },
+};
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 export default function TrackerPage() {
-  const [apps, setApps] = useState<Application[]>(DEMO_APPS);
+  const [apps, setApps] = useState<Application[]>(DEMO);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; app: Application } | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
-
-  function handleDragStart(event: any) {
-    setActiveId(event.active.id);
-  }
+  const [confetti, setConfetti] = useState(false);
+  const [quickAdd, setQuickAdd] = useState('');
+  const quickRef = useRef<HTMLInputElement>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   function handleDragEnd(event: any) {
     setActiveId(null);
     const { active, over } = event;
     if (!over) return;
-
-    const overId = over.id as string;
-    const activeApp = apps.find(a => a.id === active.id);
-    if (!activeApp) return;
-
-    // Check if dropped on a column
-    const targetColumn = COLUMNS.find(c => c.key === overId);
-    if (targetColumn) {
-      setApps(prev => prev.map(a =>
-        a.id === active.id ? { ...a, status: targetColumn.key } : a
-      ));
-      return;
-    }
-
-    // Dropped on another card - move to that card's column
-    const targetApp = apps.find(a => a.id === overId);
-    if (targetApp && targetApp.status !== activeApp.status) {
-      setApps(prev => prev.map(a =>
-        a.id === active.id ? { ...a, status: targetApp.status } : a
-      ));
-    }
+    const app = apps.find(a => a.id === active.id);
+    if (!app) return;
+    const col = COLS.find(c => c.key === over.id);
+    const target = col ? col.key : apps.find(a => a.id === over.id)?.status;
+    if (!target || target === app.status) return;
+    if (target === 'offer') { setConfetti(true); setTimeout(() => setConfetti(false), 3000); }
+    setApps(prev => prev.map(a => a.id === active.id ? {
+      ...a, status: target,
+      applied_at: (target !== 'saved' && !a.applied_at) ? new Date().toISOString().slice(0, 10) : a.applied_at,
+    } : a));
   }
 
+  function handleQuickAdd() {
+    const val = quickAdd.trim();
+    if (!val) return;
+    const parts = val.split(/\s*[—–-]\s*/);
+    setApps(prev => [...prev, { id: Date.now().toString(), company: parts[0]?.trim() || val, role: parts[1]?.trim() || 'Position', status: 'saved' }]);
+    setQuickAdd('');
+    quickRef.current?.focus();
+  }
+
+  const counts = Object.fromEntries(COLS.map(c => [c.key, apps.filter(a => a.status === c.key).length])) as Record<Status, number>;
+  const applied = counts.applied + counts.interviewing + counts.offer;
+  const responseRate = applied > 0 ? Math.round((counts.interviewing + counts.offer) / applied * 100) : 0;
+  const nudges = buildNudges(apps);
   const activeApp = apps.find(a => a.id === activeId);
 
-  // Stats
-  const total = apps.length;
-  const applied = apps.filter(a => a.status !== 'saved').length;
-  const interviewing = apps.filter(a => a.status === 'interviewing').length;
-  const offers = apps.filter(a => a.status === 'offer').length;
-  const responseRate = applied > 0 ? Math.round((interviewing + offers) / applied * 100) : 0;
+  // Pipeline bar proportions (only forward-flowing stages)
+  const pipelineKeys: Status[] = ['saved', 'applied', 'interviewing', 'offer'];
+  const pipelineTotal = pipelineKeys.reduce((s, k) => s + counts[k], 0) || 1;
+
+  // Column-level insights
+  const colInsights = useMemo(() => {
+    const out: Record<Status, string | null> = { saved: null, applied: null, interviewing: null, offer: null, rejected: null };
+    const savedWithDeadline = apps.filter(a => a.status === 'saved' && a.deadline).sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
+    if (savedWithDeadline.length > 0) {
+      const d = daysUntil(savedWithDeadline[0].deadline);
+      if (d !== null && d >= 0 && d <= 14) out.saved = `⏰ ${savedWithDeadline[0].company} closes in ${d}d`;
+    }
+    const oldestApplied = apps.filter(a => a.status === 'applied' && a.applied_at).sort((a, b) => new Date(a.applied_at!).getTime() - new Date(b.applied_at!).getTime());
+    if (oldestApplied.length > 0) {
+      const d = daysAgo(oldestApplied[0].applied_at);
+      if (d !== null && d >= 7) out.applied = `📬 Oldest: ${oldestApplied[0].company} (${d}d)`;
+    }
+    if (counts.interviewing > 0) out.interviewing = `🎯 ${counts.interviewing} active — prep with Dilly Voice`;
+    if (counts.offer > 0) out.offer = `🎉 Congrats! Compare in Career Center`;
+    return out;
+  }, [apps, counts]);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header + Stats */}
-      <div className="px-6 pt-5 pb-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: 24, fontWeight: 600, color: 'var(--text-1)', letterSpacing: 0.5 }}>Application tracker</h1>
-            <p className="text-[13px] text-txt-3 mt-1">Drag cards between columns to update status</p>
+    <div className="h-full flex flex-col bg-surface-0 relative overflow-hidden">
+      {confetti && <ConfettiOverlay />}
+
+      {/* ── Header bar ── */}
+      <div className="px-8 pt-5 pb-4 flex-shrink-0">
+        <div className="flex items-center gap-5 mb-4">
+          <h1 className="text-[22px] font-semibold text-txt-1 tracking-[-0.02em] shrink-0" style={{ fontFamily: 'Cinzel, serif' }}>
+            Your pipeline
+          </h1>
+          <div className="flex-1 max-w-[420px] relative">
+            {/* Search icon */}
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <input ref={quickRef} value={quickAdd} onChange={e => setQuickAdd(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); }}
+              placeholder="Add application — Company — Role name"
+              className="w-full bg-surface-1 border border-border-main rounded-lg pl-8 pr-24 py-2 text-[12px] text-txt-1 placeholder:text-txt-3 outline-none focus:border-[#5B8DEF]/40 focus:shadow-[0_0_0_3px_rgba(91,141,239,0.08)] transition-all" />
+            {/* Enter hint or Add button */}
+            {quickAdd ? (
+              <button onClick={handleQuickAdd} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-white bg-[#5B8DEF] px-2.5 py-1 rounded-md hover:bg-[#7AA5FF] transition-colors">
+                Add ↵
+              </button>
+            ) : (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-txt-3 font-medium bg-surface-2 px-1.5 py-0.5 rounded pointer-events-none">⏎ Enter</span>
+            )}
+          </div>
+          <div className="ml-auto flex items-center gap-6 text-[11px] font-mono">
+            <Stat label="Tracked" value={String(apps.length)} color="var(--text-1)" />
+            <Stat label="Applied" value={String(applied)} color="#5B8DEF" />
+            <Stat label="Response" value={responseRate + '%'} color="#FF9F0A" />
+            <Stat label="Offers" value={String(counts.offer)} color="#34C759" />
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-3">
-          <StatCard label="Total" value={total} color="#f5f5f7" />
-          <StatCard label="Applied" value={applied} color="#3B4CC0" />
-          <StatCard label="Response rate" value={responseRate + '%'} color="#FF9F0A" />
-          <StatCard label="Offers" value={offers} color="#34C759" />
-        </div>
-      </div>
 
-      {/* Kanban board */}
-      <div className="flex-1 overflow-x-auto px-4 pb-4">
-        <DndContext sensors={sensors} collisionDetection={closestCorners}
-          onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="flex gap-3 h-full min-w-max">
-            {COLUMNS.map(col => {
-              const colApps = apps.filter(a => a.status === col.key);
+        {/* ── Glowing pipeline bar ── */}
+        <div className="mb-4">
+          <div className="flex gap-[3px] h-[7px] rounded-full overflow-hidden bg-surface-2">
+            {pipelineKeys.map(key => {
+              const col = COLS.find(c => c.key === key)!;
+              const pct = (counts[key] / pipelineTotal) * 100;
+              if (counts[key] === 0) return null;
               return (
-                <Column key={col.key} col={col} apps={colApps}
-                  onContext={(e, app) => setCtxMenu({ x: e.clientX, y: e.clientY, app })} />
+                <div key={key} className="relative h-full rounded-full pipeline-bar"
+                  style={{
+                    width: pct + '%',
+                    backgroundColor: col.color,
+                    boxShadow: `0 0 8px 1px ${col.glow}, 0 0 20px ${col.glow}`,
+                  }}>
+                  <div className="absolute inset-0 rounded-full" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 50%)' }} />
+                </div>
               );
             })}
           </div>
+          <div className="flex mt-2">
+            {pipelineKeys.map(key => {
+              const col = COLS.find(c => c.key === key)!;
+              const pct = (counts[key] / pipelineTotal) * 100;
+              if (counts[key] === 0) return null;
+              return (
+                <div key={key} style={{ width: pct + '%' }} className="flex items-center justify-center gap-1.5">
+                  <span className="text-[10px] font-bold font-mono" style={{ color: col.color }}>{counts[key]}</span>
+                  <span className="text-[8px] uppercase tracking-[0.08em] text-txt-3 hidden sm:inline">{col.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-          <DragOverlay>
-            {activeApp && <AppCard app={activeApp} isDragging />}
-          </DragOverlay>
+        {/* ── Nudges — redesigned ── */}
+        {nudges.length > 0 && (
+          <div className="flex gap-2.5 mb-1 overflow-x-auto pb-1">
+            {nudges.map((n, i) => {
+              const c = NUDGE_COLORS[n.type];
+              return (
+                <div key={i} className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 min-w-[200px] max-w-[280px] flex-shrink-0 nudge-card transition-all duration-200 hover:-translate-y-[2px]"
+                  style={{ background: c.bg, border: `1px solid ${c.border}`, borderLeft: `3px solid ${c.accent}` }}>
+                  <span className="text-[11px] mt-[1px] shrink-0">{NUDGE_ICON[n.type]}</span>
+                  <div className="min-w-0">
+                    <span className="text-[8px] font-extrabold uppercase tracking-[0.15em] block" style={{ color: c.accent }}>{n.label}</span>
+                    <span className="text-[11px] text-txt-2 leading-snug block mt-1">{n.detail}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Kanban — fills remaining height ── */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 py-3 min-h-0">
+        <DndContext sensors={sensors} collisionDetection={closestCorners}
+          onDragStart={e => setActiveId(e.active.id as string)} onDragEnd={handleDragEnd}>
+          <div className="flex gap-3 h-full">
+            {COLS.map(col => (
+              <KanbanColumn key={col.key} col={col} apps={apps.filter(a => a.status === col.key)}
+                insight={colInsights[col.key]}
+                onContext={(e, app) => setCtxMenu({ x: e.clientX, y: e.clientY, app })} />
+            ))}
+          </div>
+          <DragOverlay>{activeApp && <AppCard app={activeApp} isDragging />}</DragOverlay>
         </DndContext>
       </div>
 
-      {/* Context menu */}
       {ctxMenu && (
         <CtxMenu x={ctxMenu.x} y={ctxMenu.y} app={ctxMenu.app}
           onClose={() => setCtxMenu(null)}
-          onMove={(status) => {
-            setApps(prev => prev.map(a => a.id === ctxMenu.app.id ? { ...a, status } : a));
+          onMove={s => {
+            if (s === 'offer') { setConfetti(true); setTimeout(() => setConfetti(false), 3000); }
+            setApps(prev => prev.map(a => a.id === ctxMenu.app.id ? { ...a, status: s } : a));
             setCtxMenu(null);
           }}
-          onDelete={() => {
-            setApps(prev => prev.filter(a => a.id !== ctxMenu.app.id));
-            setCtxMenu(null);
-          }}
+          onDelete={() => { setApps(prev => prev.filter(a => a.id !== ctxMenu.app.id)); setCtxMenu(null); }}
         />
       )}
+
+      <style>{`
+        @keyframes ctxIn { from { opacity:0; transform:scale(0.96) translateY(-4px); } to { opacity:1; transform:none; } }
+        @keyframes barPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+        .pipeline-bar { animation: barPulse 2.5s ease-in-out infinite; }
+        @keyframes nudgeSlideIn { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:none; } }
+        .nudge-card { animation: nudgeSlideIn 400ms ease-out both; }
+        .nudge-card:nth-child(2) { animation-delay: 80ms; }
+        .nudge-card:nth-child(3) { animation-delay: 160ms; }
+        @keyframes confettiFall { 0% { opacity:1; transform: translateY(0) translateX(0) rotate(0deg); } 100% { opacity:0; transform: translateY(100vh) translateX(var(--drift)) rotate(720deg); } }
+      `}</style>
     </div>
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: number | string; color: string }) {
+/* ── Stat pill ──────────────────────────────────────── */
+function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-surface-1 rounded-xl p-3.5">
-      <p className="text-[10px] text-txt-3 font-semibold uppercase tracking-wider">{label}</p>
-      <p className="text-[24px] font-bold font-mono mt-0.5" style={{ color }}>{value}</p>
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-txt-3">{label}</span>
+      <span className="text-[18px] font-bold" style={{ color }}>{value}</span>
     </div>
   );
 }
 
-function Column({ col, apps, onContext }: {
-  col: typeof COLUMNS[number]; apps: Application[];
+/* ── Kanban column — full height ────────────────────── */
+function KanbanColumn({ col, apps, insight, onContext }: {
+  col: typeof COLS[number]; apps: Application[]; insight: string | null;
   onContext: (e: React.MouseEvent, app: Application) => void;
 }) {
-  const { setNodeRef } = useSortable({ id: col.key });
-
+  const { setNodeRef, isOver } = useSortable({ id: col.key });
   return (
     <div ref={setNodeRef}
-      className="w-[240px] flex-shrink-0 flex flex-col bg-surface-1 rounded-xl overflow-hidden">
-      {/* Column header */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-border-main">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-          <span className="text-[13px] font-semibold text-txt-1">{col.label}</span>
-        </div>
-        <span className="text-[11px] font-mono text-txt-3 bg-surface-2 px-2 py-0.5 rounded-md">{apps.length}</span>
+      className={`flex-1 min-w-[200px] max-w-[280px] flex flex-col rounded-xl overflow-hidden transition-all duration-150 h-full ${isOver ? 'ring-1' : ''}`}
+      style={{
+        background: isOver ? `${col.color}06` : 'var(--surface-1)',
+        border: isOver ? `1px solid ${col.color}30` : '1px solid var(--border-main)',
+      }}>
+      {/* Header with glowing dot */}
+      <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-border-main shrink-0">
+        <div className="w-[6px] h-[6px] rounded-full"
+          style={{ background: col.color, boxShadow: apps.length > 0 ? `0 0 6px ${col.glow}, 0 0 2px ${col.glow}` : 'none' }} />
+        <span className="text-[12px] font-semibold text-txt-1">{col.label}</span>
+        <span className="text-[10px] font-mono text-txt-3 ml-auto">{apps.length}</span>
       </div>
 
       {/* Cards */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
         <SortableContext items={apps.map(a => a.id)} strategy={verticalListSortingStrategy}>
           {apps.length === 0 ? (
-            <div className="flex items-center justify-center h-[80px] text-[11px] text-txt-3 text-center px-4">
-              {col.emptyText}
-            </div>
-          ) : (
-            apps.map(app => (
-              <SortableAppCard key={app.id} app={app} onContext={onContext} />
-            ))
-          )}
+            <EmptyColumn col={col} />
+          ) : apps.map(app => <SortableAppCard key={app.id} app={app} onContext={onContext} />)}
         </SortableContext>
+      </div>
+
+      {/* Footer insight */}
+      {insight && (
+        <div className="px-3 py-2.5 border-t border-border-main shrink-0">
+          <p className="text-[10px] text-txt-3 leading-snug">{insight}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Empty column ──────────────────────────────────── */
+function EmptyColumn({ col }: { col: typeof COLS[number] }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-10 px-4 text-center h-full">
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3"
+        style={{ background: `${col.color}12` }}>
+        <span className="text-[20px]">{col.emptyIcon}</span>
+      </div>
+      <p className="text-[12px] font-medium text-txt-2 mb-1">{col.emptyLine}</p>
+      <p className="text-[10px] text-txt-3 leading-relaxed max-w-[160px]">{col.emptyHint}</p>
+      <div className="mt-5 w-full border border-dashed rounded-lg py-3 text-[10px] text-txt-3 transition-colors"
+        style={{ borderColor: `${col.color}25` }}>
+        Drop a card here
       </div>
     </div>
   );
 }
 
+/* ── Cards ──────────────────────────────────────────── */
 function SortableAppCard({ app, onContext }: { app: Application; onContext: (e: React.MouseEvent, app: Application) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: app.id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 }} {...attributes} {...listeners}>
       <AppCard app={app} onContext={onContext} />
     </div>
   );
 }
 
+/** Returns a left-border color indicating activity level for a card */
+function getCardStaleColor(app: Application): string | null {
+  const dl = daysUntil(app.deadline);
+  // Deadline red — highest priority
+  if (dl !== null && dl <= 3) return '#FF453A';
+  const d = daysAgo(app.applied_at);
+  // Applied and no response — staleness
+  if (app.status === 'applied' && d !== null) {
+    if (d >= 14) return '#FF9F0A';  // orange — stale
+    if (d < 7) return '#34C759';    // green — recently applied
+  }
+  // Saved with recent activity
+  if (app.status === 'saved' && d === null) return null;
+  // Interviewing — always show active green
+  if (app.status === 'interviewing') return '#34C759';
+  return null;
+}
+
+/** Returns a short next-step string for the card */
+function getNextStep(app: Application): string | null {
+  const dl = daysUntil(app.deadline);
+  const d = daysAgo(app.applied_at);
+  if (app.status === 'saved') {
+    if (dl !== null && dl <= 5) return dl <= 0 ? 'Deadline passed' : `Apply in ${dl}d`;
+    return 'Submit application';
+  }
+  if (app.status === 'applied') {
+    if (d !== null && d >= 10) return 'Consider following up';
+    return 'Awaiting response';
+  }
+  if (app.status === 'interviewing') return 'Prep with Dilly';
+  if (app.status === 'offer') return 'Review & respond';
+  if (app.status === 'rejected') return 'Request feedback';
+  return null;
+}
+
 function AppCard({ app, isDragging, onContext }: { app: Application; isDragging?: boolean; onContext?: (e: React.MouseEvent, app: Application) => void }) {
-  const daysAgo = app.applied_at ? Math.floor((Date.now() - new Date(app.applied_at).getTime()) / 86400000) : null;
-  const deadlineDays = app.deadline ? Math.floor((new Date(app.deadline).getTime() - Date.now()) / 86400000) : null;
+  const d = daysAgo(app.applied_at);
+  const dl = daysUntil(app.deadline);
+  const staleColor = getCardStaleColor(app);
+  const nextStep = getNextStep(app);
+  const isStale = app.status === 'applied' && d !== null && d >= 10;
 
   return (
-    <div
-      onContextMenu={(e) => { e.preventDefault(); onContext?.(e, app); }}
-      className={`bg-surface-2 rounded-lg p-3 cursor-grab active:cursor-grabbing transition-all duration-150
-        hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)]
-        ${isDragging ? 'shadow-[0_8px_30px_rgba(59,76,192,0.2)] scale-105 rotate-1' : ''}`}>
-      <div className="flex items-center gap-2.5 mb-2">
-        <CompanyLogo company={app.company} size={24} />
-        <div className="min-w-0">
-          <p className="text-[12px] font-semibold text-txt-1 truncate">{app.role}</p>
-          <p className="text-[10px] text-txt-2 truncate">{app.company}</p>
+    <div data-contextmenu onContextMenu={e => { e.preventDefault(); (e.nativeEvent as any)._dillyHandled = true; onContext?.(e, app); }}
+      className={`group bg-surface-2 rounded-lg cursor-grab active:cursor-grabbing transition-all duration-150
+        hover:-translate-y-[1px] hover:shadow-[0_4px_16px_rgba(0,0,0,0.1)]
+        ${isDragging ? 'shadow-[0_12px_40px_rgba(91,141,239,0.2)] scale-[1.04] rotate-[1.5deg]' : ''}`}
+      style={{
+        borderLeft: staleColor ? `3px solid ${staleColor}` : '3px solid transparent',
+        border: `1px solid var(--border-main)`,
+        borderLeftWidth: staleColor ? 3 : 1,
+        borderLeftColor: staleColor || 'var(--border-main)',
+        padding: '10px 12px 10px 10px',
+        overflow: 'hidden',
+      }}>
+      <div className="flex items-start gap-2.5">
+        <CompanyLogo company={app.company} size={28} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold text-txt-1 leading-tight truncate">{app.role}</p>
+          <p className="text-[10px] text-txt-2 mt-0.5 truncate">{app.company}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        {daysAgo !== null && (
-          <span className="text-[9px] text-txt-3">{daysAgo}d ago</span>
-        )}
-        {deadlineDays !== null && (
-          <span className={`text-[9px] font-semibold ${deadlineDays <= 3 ? 'text-gap' : deadlineDays <= 7 ? 'text-almost' : 'text-txt-3'}`}>
-            {deadlineDays <= 0 ? 'Past due' : deadlineDays + 'd left'}
+
+      {/* Timestamps */}
+      {(d !== null || dl !== null) && (
+        <div className="flex items-center gap-1.5 mt-2">
+          {d !== null && <span className="text-[9px] text-txt-3 bg-surface-1 px-1.5 py-0.5 rounded font-medium">{friendlyAgo(d)}</span>}
+          {dl !== null && (
+            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${
+              dl <= 3 ? 'text-[#FF453A] bg-[#FF453A]/10' : dl <= 7 ? 'text-[#FF9F0A] bg-[#FF9F0A]/10' : 'text-txt-3 bg-surface-1'
+            }`}>{dl <= 0 ? 'Overdue' : `${dl}d left`}</span>
+          )}
+        </div>
+      )}
+
+      {/* Next step hint */}
+      {nextStep && (
+        <div className="mt-2 flex items-center gap-1">
+          <div style={{ width: 4, height: 4, borderRadius: '50%', background: staleColor || 'var(--text-3)', flexShrink: 0 }} />
+          <span className="text-[9px] font-medium truncate"
+            style={{ color: isStale ? '#FF9F0A' : staleColor ? staleColor : 'var(--text-3)' }}>
+            {nextStep}
           </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Context menu ──────────────────────────────────── */
+function CtxMenu({ x, y, app, onClose, onMove, onDelete }: {
+  x: number; y: number; app: Application;
+  onClose: () => void; onMove: (s: Status) => void; onDelete: () => void;
+}) {
+  const bx = Math.min(x, (typeof window !== 'undefined' ? window.innerWidth : 1200) - 220);
+  const by = Math.min(y, (typeof window !== 'undefined' ? window.innerHeight : 800) - 300);
+  return (
+    <div className="fixed inset-0 z-[100]" onClick={onClose} onContextMenu={() => onClose()}>
+      <div className="absolute bg-surface-1/95 backdrop-blur-lg border border-border-main rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.35)] py-1.5 min-w-[190px]"
+        style={{ left: bx, top: by, animation: 'ctxIn 120ms ease-out' }} onClick={e => e.stopPropagation()}>
+        <div className="px-3 py-2 flex items-center gap-2.5">
+          <CompanyLogo company={app.company} size={22} />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-txt-1 truncate">{app.role}</p>
+            <p className="text-[9px] text-txt-3 truncate">{app.company}</p>
+          </div>
+        </div>
+        <div className="h-px bg-border-main mx-2.5 my-1" />
+        <p className="px-3 py-1 text-[8px] text-txt-3 font-bold uppercase tracking-[0.15em]">Move to</p>
+        {COLS.filter(c => c.key !== app.status).map(c => (
+          <button key={c.key} onClick={() => onMove(c.key)}
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left hover:bg-[#5B8DEF]/8 transition-colors group">
+            <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: c.color }} />
+            <span className="text-[11px] text-txt-1 group-hover:text-[#5B8DEF] transition-colors">{c.label}</span>
+          </button>
+        ))}
+        <div className="h-px bg-border-main mx-2.5 my-1" />
+        {app.job_url && (
+          <button onClick={() => { window.open(app.job_url, '_blank'); onClose(); }}
+            className="w-full px-3 py-1.5 text-left text-[11px] text-txt-2 hover:bg-[#5B8DEF]/8 hover:text-[#5B8DEF] transition-colors">Open listing</button>
         )}
+        <button onClick={onDelete} className="w-full px-3 py-1.5 text-left text-[11px] text-[#FF453A] hover:bg-[#FF453A]/8 transition-colors">Remove</button>
       </div>
     </div>
   );
 }
 
-function CtxMenu({ x, y, app, onClose, onMove, onDelete }: {
-  x: number; y: number; app: Application;
-  onClose: () => void; onMove: (s: Status) => void; onDelete: () => void;
-}) {
-  const adjustedX = Math.min(x, window.innerWidth - 200);
-  const adjustedY = Math.min(y, window.innerHeight - 250);
-
+/* ── Confetti ──────────────────────────────────────── */
+function ConfettiOverlay() {
+  const colors = ['#34C759', '#5B8DEF', '#FF9F0A', '#FF375F', '#BF5AF2', '#FFD60A', '#64D2FF'];
+  const pieces = Array.from({ length: 50 }, (_, i) => ({
+    id: i, color: colors[i % colors.length], left: Math.random() * 100,
+    delay: Math.random() * 0.8, size: 4 + Math.random() * 6, drift: -30 + Math.random() * 60,
+  }));
   return (
-    <div className="fixed inset-0 z-[100]" onClick={onClose} onContextMenu={e => e.preventDefault()}>
-      <div className="absolute bg-surface-1 border border-border-main rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.4)] py-1.5 min-w-[180px]"
-        style={{ left: adjustedX, top: adjustedY, animation: 'ctxIn 120ms ease-out' }}
-        onClick={e => e.stopPropagation()}>
-        <p className="px-3 py-1.5 text-[11px] text-txt-3 font-semibold truncate">{app.role}</p>
-        <div className="h-px bg-border-main mx-2 my-1" />
-        <p className="px-3 py-1 text-[10px] text-txt-3 font-semibold uppercase tracking-wider">Move to</p>
-        {COLUMNS.filter(c => c.key !== app.status).map(c => (
-          <button key={c.key} onClick={() => onMove(c.key)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-dilly-blue/10 transition-colors group">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
-            <span className="text-[12px] text-txt-1 group-hover:text-dilly-blue transition-colors">{c.label}</span>
-          </button>
-        ))}
-        <div className="h-px bg-border-main mx-2 my-1" />
-        {app.job_url && (
-          <button onClick={() => { window.open(app.job_url, '_blank'); onClose(); }}
-            className="w-full px-3 py-2 text-left text-[12px] text-txt-2 hover:bg-dilly-blue/10 hover:text-dilly-blue transition-colors">
-            Open listing
-          </button>
-        )}
-        <button onClick={onDelete}
-          className="w-full px-3 py-2 text-left text-[12px] text-gap hover:bg-gap/10 transition-colors">
-          Remove
-        </button>
-      </div>
-      <style>{`@keyframes ctxIn { from { opacity:0; transform:scale(0.95) translateY(-4px); } to { opacity:1; transform:scale(1) translateY(0); } }`}</style>
+    <div className="fixed inset-0 z-[200] pointer-events-none overflow-hidden">
+      {pieces.map(p => (
+        <div key={p.id} className="absolute animate-[confettiFall_2.5s_ease-out_forwards]"
+          style={{ left: `${p.left}%`, top: -20, width: p.size, height: p.size * 1.5, background: p.color,
+            borderRadius: 1, animationDelay: `${p.delay}s`, opacity: 0, '--drift': `${p.drift}px` } as React.CSSProperties} />
+      ))}
     </div>
   );
 }

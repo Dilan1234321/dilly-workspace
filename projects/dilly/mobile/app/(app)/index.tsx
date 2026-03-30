@@ -584,7 +584,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  nextBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, color: '#1a1400' },
+  nextBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, color: '#FFFFFF' },
 
   // Quick actions
   grid:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
@@ -625,5 +625,5 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  unlockBtnText: { fontSize: 13, fontWeight: '700', color: '#1a1400' },
+  unlockBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
 });

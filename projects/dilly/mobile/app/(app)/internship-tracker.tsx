@@ -20,7 +20,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
-const GOLD   = '#C9A84C';
+const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
 const AMBER  = '#FF9F0A';
 const CORAL  = '#FF453A';
@@ -202,7 +202,7 @@ function AppCard({ app, onStatusChange, onDelete, onPrepInterview, onEdit }: {
       {/* Interview prep CTA */}
       {isInterviewing && (
         <AnimatedPressable style={ts.prepBtn} onPress={() => onPrepInterview(app)} scaleDown={0.97}>
-          <Ionicons name="school" size={12} color="#1a1400" />
+          <Ionicons name="school" size={12} color="#FFFFFF" />
           <Text style={ts.prepBtnText}>Prep for interview</Text>
         </AnimatedPressable>
       )}
@@ -269,7 +269,7 @@ function AddAppModal({ visible, onClose, onAdd }: {
             <TextInput style={[ts.modalInput, { minHeight: 56 }]} value={notes} onChangeText={setNotes} placeholder="Notes (optional)" placeholderTextColor={colors.t3} multiline />
 
             <AnimatedPressable style={ts.modalBtn} onPress={handleAdd} scaleDown={0.97}>
-              <Ionicons name="add-circle" size={16} color="#1a1400" />
+              <Ionicons name="add-circle" size={16} color="#FFFFFF" />
               <Text style={ts.modalBtnText}>Add to Pipeline</Text>
             </AnimatedPressable>
           </View>
@@ -452,7 +452,7 @@ export default function InternshipTrackerScreen() {
               <Text style={ts.emptyTitle}>No applications yet</Text>
               <Text style={ts.emptyText}>Start tracking your internship applications. Add companies you're interested in, even before you apply.</Text>
               <AnimatedPressable style={ts.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
-                <Ionicons name="add-circle" size={16} color="#1a1400" />
+                <Ionicons name="add-circle" size={16} color="#FFFFFF" />
                 <Text style={ts.emptyBtnText}>Add your first application</Text>
               </AnimatedPressable>
             </View>
@@ -491,7 +491,7 @@ const ts = StyleSheet.create({
   navTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1, color: colors.t1 },
   addBtn: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(201,168,76,0.12)', borderWidth: 1, borderColor: 'rgba(201,168,76,0.25)',
+    backgroundColor: 'rgba(43,58,142,0.12)', borderWidth: 1, borderColor: 'rgba(43,58,142,0.25)',
     alignItems: 'center', justifyContent: 'center',
   },
   scroll: { paddingHorizontal: spacing.xl, paddingTop: 16 },
@@ -548,7 +548,7 @@ const ts = StyleSheet.create({
   // Next action
   nextActionRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(201,168,76,0.06)', borderRadius: 8,
+    backgroundColor: 'rgba(43,58,142,0.06)', borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 6, marginBottom: 8,
   },
   nextActionText: { fontSize: 11, color: GOLD, flex: 1 },
@@ -558,7 +558,7 @@ const ts = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: AMBER, borderRadius: 10, paddingVertical: 10, marginBottom: 8,
   },
-  prepBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.5, color: '#1a1400' },
+  prepBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.5, color: '#FFFFFF' },
 
   // Actions
   appActions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
@@ -577,7 +577,7 @@ const ts = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: GOLD, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8,
   },
-  emptyBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.5, color: '#1a1400' },
+  emptyBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.5, color: '#FFFFFF' },
 
   // FAB
   fab: {
@@ -603,5 +603,5 @@ const ts = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: GOLD, borderRadius: 12, paddingVertical: 14, marginTop: 6,
   },
-  modalBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#1a1400' },
+  modalBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
 });

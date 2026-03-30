@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, apiFetchBlob } from '@/lib/api';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
+import { saveSnapshot, getDailyHistory, getMilestone, type ScoreSnapshot } from '@/lib/score-history';
 
 function AnimNum({ value, delay = 0 }: { value: number; delay?: number }) {
   const [d, setD] = useState(0);
@@ -35,7 +36,7 @@ function AnimBar({ pct, color, delay = 0 }: { pct: number; color: string; delay?
 function DillyNote({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
     <div className="animate-fade-in" style={{ animationDelay: delay + 'ms', display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0' }}>
-      <span style={{ fontSize: 12, fontWeight: 800, color: '#3B4CC0', flexShrink: 0, letterSpacing: -0.3 }}>dilly</span>
+      <span style={{ fontSize: 12, fontWeight: 800, color: '#2B3A8E', flexShrink: 0, letterSpacing: -0.3 }}>dilly</span>
       <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65, margin: 0 }}>{children}</p>
     </div>
   );
@@ -62,8 +63,8 @@ function SGBBox({ label, value, delay }: { label: string; value: number; delay: 
 function MiniSGB({ label, s, g, b, delay }: { label: string; s: number; g: number; b: number; delay: number }) {
   return (
     <div className="animate-fade-in" style={{ animationDelay: delay + 'ms', display: 'flex', gap: 8 }}>
-      <MiniBar label="S" value={s} color="#3B4CC0" delay={delay + 200} />
-      <MiniBar label="G" value={g} color="#C9A84C" delay={delay + 300} />
+      <MiniBar label="S" value={s} color="#2B3A8E" delay={delay + 200} />
+      <MiniBar label="G" value={g} color="#2B3A8E" delay={delay + 300} />
       <MiniBar label="B" value={b} color="#34C759" delay={delay + 400} />
     </div>
   );
@@ -86,12 +87,12 @@ function CohortSGBCard({ label, value, delay, isDilly, small }: { label: string;
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}>
       <p style={{ fontSize: small ? 9 : 11, fontWeight: 600, color: 'var(--text-3)', letterSpacing: small ? 1 : 2, textTransform: 'uppercase', margin: 0 }}>{label}</p>
       {value > 0 ? (
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: small ? 16 : 28, fontWeight: 700, color: isDilly ? '#3B4CC0' : color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: small ? 16 : 28, fontWeight: 700, color: isDilly ? '#2B3A8E' : color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
           <AnimNum value={value} delay={delay} />
         </p>
       ) : (
         <div style={{ width: '50%', height: small ? 3 : 4, background: 'var(--border-main)', borderRadius: 2, margin: small ? '4px 0' : '8px 0' }}>
-          <div style={{ height: '100%', borderRadius: 2, backgroundColor: isDilly ? '#3B4CC0' : color, width: '100%' }} />
+          <div style={{ height: '100%', borderRadius: 2, backgroundColor: isDilly ? '#2B3A8E' : color, width: '100%' }} />
         </div>
       )}
     </div>
@@ -145,17 +146,126 @@ function smartCapitalize(name: string): string {
   }).join(' ');
 }
 
+function ScoreHistoryChart({ history, currentScore }: { history: ScoreSnapshot[]; currentScore: number }) {
+  if (history.length < 2) return null;
+
+  const W = 560; const H = 120; const PAD = { top: 12, right: 16, bottom: 28, left: 32 };
+  const minScore = Math.max(0, Math.min(...history.map(s => s.dilly)) - 10);
+  const maxScore = Math.min(100, Math.max(...history.map(s => s.dilly)) + 10);
+  const xScale = (i: number) => PAD.left + (i / (history.length - 1)) * (W - PAD.left - PAD.right);
+  const yScale = (v: number) => PAD.top + (1 - (v - minScore) / (maxScore - minScore)) * (H - PAD.top - PAD.bottom);
+
+  const points = history.map((s, i) => `${xScale(i)},${yScale(s.dilly)}`).join(' ');
+  const fillPts = `${xScale(0)},${H - PAD.bottom} ${points} ${xScale(history.length - 1)},${H - PAD.bottom}`;
+
+  // Find milestones
+  const milestones: { idx: number; label: string }[] = [];
+  for (let i = 1; i < history.length; i++) {
+    const m = getMilestone(history[i - 1].dilly, history[i].dilly);
+    if (m) milestones.push({ idx: i, label: m });
+  }
+
+  const first = history[0];
+  const last = history[history.length - 1];
+  const delta = last.dilly - first.dilly;
+  const daySpan = Math.round((last.ts - first.ts) / 86400000) || 1;
+
+  return (
+    <div className="animate-fade-in" style={{ animationDelay: '600ms', marginTop: 40, paddingTop: 32, borderTop: '1px solid var(--border-main)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: 'var(--text-1)', letterSpacing: 1.5, textTransform: 'uppercase', margin: '0 0 4px' }}>
+            Your trajectory
+          </h2>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            {daySpan === 1 ? 'Today' : `${daySpan} days`} &middot; {history.length} sessions tracked
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 20, textAlign: 'right' as const }}>
+          <div>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, margin: '0 0 2px' }}>Change</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: delta >= 0 ? '#34C759' : '#FF453A', margin: 0 }}>
+              {delta >= 0 ? '+' : ''}{delta}
+            </p>
+          </div>
+          <div>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, margin: '0 0 2px' }}>Now</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: currentScore >= 80 ? '#34C759' : currentScore >= 60 ? '#FF9F0A' : '#FF453A', margin: 0 }}>
+              {currentScore}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, overflow: 'visible' }}>
+        <defs>
+          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#2B3A8E" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#2B3A8E" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {[60, 70, 80, 90].map(v => {
+          const y = yScale(v);
+          if (y < PAD.top || y > H - PAD.bottom) return null;
+          return (
+            <g key={v}>
+              <line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="var(--border-main)" strokeWidth="1" />
+              <text x={PAD.left - 4} y={y + 3.5} textAnchor="end" fill="var(--text-3)" fontSize="9" fontFamily="monospace">{v}</text>
+            </g>
+          );
+        })}
+
+        {/* Fill area */}
+        <polygon points={fillPts} fill="url(#chartFill)" />
+
+        {/* Line */}
+        <polyline points={points} fill="none" stroke="#2B3A8E" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+        {/* Milestone dots */}
+        {milestones.map(m => {
+          const x = xScale(m.idx); const y = yScale(history[m.idx].dilly);
+          return (
+            <g key={m.idx}>
+              <circle cx={x} cy={y} r="5" fill="#2B3A8E" stroke="var(--surface-0)" strokeWidth="2" />
+              <text x={x} y={y - 8} textAnchor="middle" fill="#2B3A8E" fontSize="9" fontWeight="600">{m.label}</text>
+            </g>
+          );
+        })}
+
+        {/* Current dot */}
+        <circle cx={xScale(history.length - 1)} cy={yScale(last.dilly)} r="5" fill="#2B3A8E" stroke="var(--surface-0)" strokeWidth="2" />
+
+        {/* X-axis date labels */}
+        {[0, Math.floor((history.length - 1) / 2), history.length - 1].map(i => {
+          const snap = history[i];
+          const d = new Date(snap.ts);
+          const label = (d.getMonth() + 1) + '/' + d.getDate();
+          return <text key={i} x={xScale(i)} y={H - PAD.bottom + 14} textAnchor="middle" fill="var(--text-3)" fontSize="9">{label}</text>;
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [topJobs, setTopJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [history, setHistory] = useState<ScoreSnapshot[]>([]);
   const router = useRouter();
 
   useEffect(() => {
     Promise.all([
-      apiFetch('/profile').then(setProfile),
+      apiFetch('/profile').then(p => {
+        setProfile(p);
+        saveSnapshot(p.overall_smart || 0, p.overall_grit || 0, p.overall_build || 0, p.overall_dilly_score || 0);
+        setHistory(getDailyHistory());
+        return p;
+      }),
       apiFetchBlob('/profile/photo').then(b => { if (b) setPhotoUrl(URL.createObjectURL(b)); }).catch(() => {}),
       apiFetch('/v2/internships/stats').then(setStats),
       apiFetch('/v2/internships/feed?readiness=ready&limit=8').then(d => {
@@ -210,11 +320,11 @@ export default function HomePage() {
               {smartCapitalize(name)}
             </h1>
             <div style={{ marginTop: 10 }}>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 600, color: '#3B4CC0', margin: 0, lineHeight: 1.3 }}>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 600, color: '#2B3A8E', margin: 0, lineHeight: 1.3 }}>
                 {majors.join(' & ')}
               </p>
               {minors.length > 0 && (
-                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: '#C9A84C', margin: '4px 0 0', lineHeight: 1.3 }}>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: '#2B3A8E', margin: '4px 0 0', lineHeight: 1.3 }}>
                   {minors.join(' & ')}
                 </p>
               )}
@@ -263,7 +373,7 @@ export default function HomePage() {
 
           <DillyNote delay={300}>
             {greet}. You have <strong style={{ color: '#34C759' }}>{stats?.ready || 0} Ready matches</strong> right now.
-            Your strongest dimension is <strong style={{ color: '#3B4CC0' }}>{strongestDim}</strong> — that's what sets you apart.
+            Your strongest dimension is <strong style={{ color: '#2B3A8E' }}>{strongestDim}</strong> — that's what sets you apart.
           </DillyNote>
 
           {strongestCohort && (
@@ -272,7 +382,7 @@ export default function HomePage() {
               {weakestCohort && weakestCohort.cohort !== strongestCohort.cohort && (
                 <> Your <strong>{weakestCohort.cohort}</strong> at <strong style={{ color: '#FF9F0A' }}>{Math.round(weakestCohort.dilly_score)}</strong> has the most room to grow. </>
               )}
-              <button onClick={() => router.push('/scores')} style={{ color: '#3B4CC0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>View genome &rarr;</button>
+              <button onClick={() => router.push('/scores')} style={{ color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>View genome &rarr;</button>
             </DillyNote>
           )}
 
@@ -283,7 +393,7 @@ export default function HomePage() {
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', letterSpacing: 1.5, textTransform: 'uppercase', margin: 0 }}>Apply this week</p>
-              <button onClick={() => router.push('/jobs')} style={{ fontSize: 11, color: '#3B4CC0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View all &rarr;</button>
+              <button onClick={() => router.push('/jobs')} style={{ fontSize: 11, color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View all &rarr;</button>
             </div>
             {topJobs.map((job, i) => (
               <div key={job.id} className="animate-fade-in" style={{
@@ -311,7 +421,7 @@ export default function HomePage() {
             <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: 'var(--text-1)', letterSpacing: 1.5, textTransform: 'uppercase', margin: 0 }}>
               Cohort breakdown
             </h2>
-            <button onClick={() => router.push('/scores')} style={{ fontSize: 11, color: '#3B4CC0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View genome &rarr;</button>
+            <button onClick={() => router.push('/scores')} style={{ fontSize: 11, color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View genome &rarr;</button>
           </div>
 
           {/* Per-cohort grids */}
@@ -345,6 +455,8 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      <ScoreHistoryChart history={history} currentScore={dillyScore} />
     </div>
   );
 }

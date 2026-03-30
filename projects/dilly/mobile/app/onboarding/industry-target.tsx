@@ -190,7 +190,7 @@ export default function IndustryTargetScreen() {
           activeOpacity={0.85}
         >
           {loading ? (
-            <ActivityIndicator color="#1a1400" size="small" />
+            <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Text style={s.buttonText}>This looks right →</Text>
           )}
@@ -312,7 +312,7 @@ const s = StyleSheet.create({
   buttonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1a1400',
+    color: '#FFFFFF',
     letterSpacing: -0.1,
   },
 });

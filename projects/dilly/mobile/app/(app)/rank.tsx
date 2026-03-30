@@ -390,7 +390,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  moveBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, color: '#1a1400' },
+  moveBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, color: '#FFFFFF' },
 
   // Activity
   activityCard: {

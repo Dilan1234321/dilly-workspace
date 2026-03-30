@@ -33,7 +33,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
 
-const GOLD  = '#C9A84C';
+const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const CORAL = '#FF453A';
@@ -768,7 +768,7 @@ export default function ResumeEditorScreen() {
         {/* Re-audit */}
         <FadeInView delay={300}>
           <AnimatedPressable style={rs.reauditBtn} onPress={() => Alert.alert('Re-audit', 'Re-auditing requires a Dilly Pro subscription. Upgrade in Settings.')} scaleDown={0.97}>
-            <Ionicons name="flash" size={16} color="#1a1400" />
+            <Ionicons name="flash" size={16} color="#FFFFFF" />
             <Text style={rs.reauditBtnText}>Re-audit my resume</Text>
           </AnimatedPressable>
           <Text style={rs.reauditHint}>Score your entire resume with one tap</Text>
@@ -914,6 +914,6 @@ const rs = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: GOLD, borderRadius: 14, paddingVertical: 15, marginTop: 20,
   },
-  reauditBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#1a1400' },
+  reauditBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
   reauditHint: { fontSize: 10, color: colors.t3, textAlign: 'center', marginTop: 6 },
 });

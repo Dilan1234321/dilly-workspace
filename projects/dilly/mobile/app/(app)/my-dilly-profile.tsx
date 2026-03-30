@@ -341,7 +341,7 @@ export default function MyDillyProfileScreen() {
               onPress={() => router.push('/(app)/voice')}
               activeOpacity={0.85}
             >
-              <Ionicons name="chatbubble" size={14} color="#1a1400" />
+              <Ionicons name="chatbubble" size={14} color="#FFFFFF" />
               <Text style={s.emptyCtaText}>Talk to Dilly</Text>
             </TouchableOpacity>
           </View>
@@ -449,7 +449,7 @@ function AddFactModal({ visible, category, onClose, onAdd }: {
               onPress={handleAdd}
               activeOpacity={0.85}
             >
-              <Ionicons name="add-circle" size={16} color="#1a1400" />
+              <Ionicons name="add-circle" size={16} color="#FFFFFF" />
               <Text style={s.modalBtnText}>Add to Profile</Text>
             </TouchableOpacity>
           </View>
@@ -744,7 +744,7 @@ const s = StyleSheet.create({
     fontFamily: 'Cinzel_700Bold',
     fontSize: 11,
     letterSpacing: 0.5,
-    color: '#1a1400',
+    color: '#FFFFFF',
   },
 
   // ── Stats Footer ──────────────────────────────────────────────────────────
@@ -798,6 +798,6 @@ const s = StyleSheet.create({
     fontFamily: 'Cinzel_700Bold',
     fontSize: 13,
     letterSpacing: 0.5,
-    color: '#1a1400',
+    color: '#FFFFFF',
   },
 });

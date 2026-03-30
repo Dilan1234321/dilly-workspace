@@ -2,7 +2,7 @@
 import { useState } from 'react';
 
 const BRAND_COLORS: Record<string, string> = {
-  'A': '#FF453A', 'B': '#FF9F0A', 'C': '#34C759', 'D': '#3B4CC0',
+  'A': '#FF453A', 'B': '#FF9F0A', 'C': '#34C759', 'D': '#2B3A8E',
   'E': '#5E5CE6', 'F': '#FF375F', 'G': '#30D158', 'H': '#64D2FF',
   'I': '#BF5AF2', 'J': '#FFD60A', 'K': '#FF6482', 'L': '#0A84FF',
   'M': '#FF9500', 'N': '#AF52DE', 'O': '#5AC8FA', 'P': '#FF2D55',
@@ -15,7 +15,7 @@ export default function CompanyLogo({ company, size = 40 }: { company: string; s
   const [imgError, setImgError] = useState(false);
   const domain = guessDomain(company);
   const initial = company.charAt(0).toUpperCase();
-  const bgColor = BRAND_COLORS[initial] || '#3B4CC0';
+  const bgColor = BRAND_COLORS[initial] || '#2B3A8E';
 
   if (domain && !imgError) {
     return (

@@ -16,7 +16,7 @@ import { getToken } from '../lib/auth';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
 
 const { height: H } = Dimensions.get('window');
-const GOLD  = '#C9A84C';
+const GOLD  = '#2B3A8E';
 const CORAL = '#FF453A';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
@@ -285,7 +285,7 @@ const ss = StyleSheet.create({
   },
   bg: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
   },
   orbWrap: {
     marginTop: H * 0.38 - ORB_SIZE / 2 - 70,
@@ -295,22 +295,22 @@ const ss = StyleSheet.create({
   ripple: {
     position: 'absolute',
     width: ORB_SIZE, height: ORB_SIZE, borderRadius: ORB_SIZE / 2,
-    borderWidth: 1, borderColor: 'rgba(201,168,76,0.15)',
+    borderWidth: 1, borderColor: 'rgba(43,58,142,0.15)',
     backgroundColor: 'transparent',
   },
   orbOuter: {
     width: ORB_SIZE, height: ORB_SIZE, borderRadius: ORB_SIZE / 2,
-    borderWidth: 1, borderColor: 'rgba(201,168,76,0.20)',
+    borderWidth: 1, borderColor: 'rgba(43,58,142,0.20)',
     backgroundColor: 'transparent',
     alignItems: 'center', justifyContent: 'center',
   },
   orbInner: {
     width: 152, height: 152, borderRadius: 76,
-    backgroundColor: '#0d0900',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(201,168,76,1)',
+    borderColor: 'rgba(43,58,142,1)',
   },
   contentBlock: {
     paddingHorizontal: 28, alignItems: 'center',
@@ -339,12 +339,12 @@ const ss = StyleSheet.create({
   },
   primaryBtnText: {
     fontFamily: 'Cinzel_700Bold', fontSize: 14,
-    letterSpacing: 1.12, color: '#1a1400',
+    letterSpacing: 1.12, color: '#FFFFFF',
   },
   secondaryBtn: {
     width: '100%', height: 52, backgroundColor: 'transparent',
     borderRadius: 14, borderWidth: 1,
-    borderColor: 'rgba(201,168,76,0.25)',
+    borderColor: 'rgba(43,58,142,0.25)',
     alignItems: 'center', justifyContent: 'center',
   },
   secondaryBtnText: {

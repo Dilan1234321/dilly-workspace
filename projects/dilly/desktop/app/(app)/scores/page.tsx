@@ -13,7 +13,6 @@ export default function ScoresPage() {
   const [overall, setOverall] = useState({ smart: 0, grit: 0, build: 0, dilly: 0 });
   const [stats, setStats] = useState<any>(null);
   const [hoveredCohort, setHoveredCohort] = useState<string | null>(null);
-  const [selectedCohort, setSelectedCohort] = useState<string | null>(null);
   const [simAdjust, setSimAdjust] = useState({ smart: 0, grit: 0, build: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -114,7 +113,7 @@ export default function ScoresPage() {
         ctx.save();
         const isHovered = hoveredCohort === c.cohort;
         ctx.font = isHovered ? '600 13px Inter, system-ui' : '11px Inter, system-ui';
-        ctx.fillStyle = isHovered ? '#3B4CC0' : 'rgba(142,142,147,0.8)';
+        ctx.fillStyle = isHovered ? '#2B3A8E' : 'rgba(142,142,147,0.8)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const shortName = c.cohort
@@ -164,7 +163,7 @@ export default function ScoresPage() {
 
         ctx.beginPath();
         ctx.arc(x, y, isH ? 5 : 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = isH ? '#3B4CC0' : '#f5f5f7';
+        ctx.fillStyle = isH ? '#2B3A8E' : '#f5f5f7';
         ctx.fill();
 
         if (isH) {
@@ -199,346 +198,136 @@ export default function ScoresPage() {
 
   return (
     <div className="h-full overflow-y-auto" ref={containerRef}>
-      {/* Two-column layout: genome left, details right */}
-      <div className="flex h-full">
-
-        {/* ── Left: Radar Genome ─────────────────────────────────────── */}
-        <div className="flex flex-col items-center justify-start pt-6 px-4" style={{ width: '45%', minWidth: 380 }}>
-          <div className="mb-2 text-center">
-            <h1 className="font-display text-[24px] text-txt-1 tracking-tight">Career genome</h1>
-            <p className="text-[12px] text-txt-3">Your career readiness fingerprint</p>
-          </div>
-
-          <canvas ref={canvasRef}
-            className="cursor-crosshair"
-            onMouseMove={(e) => {
-              if (!cohorts.length) return;
-              const rect = canvasRef.current?.getBoundingClientRect();
-              if (!rect) return;
-              const mx = e.clientX - rect.left;
-              const my = e.clientY - rect.top;
-              const cx = canvasSize / 2, cy = canvasSize / 2, maxR = canvasSize / 2 - 80;
-              let closest: string | null = null;
-              let closestDist = 60;
-              cohorts.forEach((c, i) => {
-                const angle = (Math.PI * 2 * i / cohorts.length) - Math.PI / 2;
-                const val = c.dilly_score / 100;
-                const r = maxR * Math.min(val, 1);
-                const x = cx + Math.cos(angle) * r;
-                const y = cy + Math.sin(angle) * r;
-                const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
-                if (dist < closestDist) { closest = c.cohort; closestDist = dist; }
-              });
-              setHoveredCohort(closest);
-            }}
-            onMouseLeave={() => setHoveredCohort(null)}
-          />
-
-          {/* Legend */}
-          <div className="flex gap-6 mt-2 mb-4">
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 rounded-full" style={{background:'#3B4CC0'}}/><span className="text-[10px] text-txt-3">Smart</span></div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 rounded-full" style={{background:'#C9A84C'}}/><span className="text-[10px] text-txt-3">Grit</span></div>
-            <div className="flex items-center gap-2"><div className="w-3.5 h-1.5 rounded-full" style={{background:'#34C759'}}/><span className="text-[10px] text-txt-3">Build</span></div>
-          </div>
-
-          {/* Simulator */}
-          {(() => {
-            const hasAdj = simAdjust.smart !== 0 || simAdjust.grit !== 0 || simAdjust.build !== 0;
-            const baseMatches = stats ? Math.max(0, Math.round(stats.ready)) : 0;
-            const projDilly = Math.min(100, Math.max(0, Math.round(
-              (overall.smart + simAdjust.smart) * 0.20 +
-              (overall.grit + simAdjust.grit) * 0.30 +
-              (overall.build + simAdjust.build) * 0.50
-            )));
-            const curDilly = Math.round(overall.smart * 0.20 + overall.grit * 0.30 + overall.build * 0.50);
-            const dillyDelta = projDilly - curDilly;
-            const matchDelta = simMatches - baseMatches;
-
-            return (
-              <div className="w-full bg-surface-1 rounded-xl p-5 mt-1">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-[10px] font-bold tracking-[0.15em] uppercase" style={{ color: '#3B4CC0', fontFamily: "'Cinzel', serif" }}>What-if Simulator</h3>
-                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Drag to see how improvements change your outcomes</p>
-                  </div>
-                  {hasAdj && (
-                    <button onClick={() => setSimAdjust({ smart: 0, grit: 0, build: 0 })}
-                      className="text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
-                      style={{ color: '#FF453A', background: 'rgba(255,69,58,0.1)' }}>
-                      Reset
-                    </button>
-                  )}
-                </div>
-
-                {/* Sliders */}
-                <div className="flex flex-col gap-3 mb-5">
-                  {[
-                    { key: 'smart', label: 'Smart', color: '#3B4CC0', base: overall.smart },
-                    { key: 'grit', label: 'Grit', color: '#C9A84C', base: overall.grit },
-                    { key: 'build', label: 'Build', color: '#34C759', base: overall.build },
-                  ].map(d => {
-                    const adj = simAdjust[d.key as keyof typeof simAdjust];
-                    const proj = Math.min(100, Math.max(0, Math.round(d.base + adj)));
-                    return (
-                      <div key={d.key}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-                            <span className="text-[11px] font-semibold" style={{ color: d.color }}>{d.label}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-mono" style={{ color: 'var(--text-3)' }}>{Math.round(d.base)}</span>
-                            {adj !== 0 && (
-                              <>
-                                <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>→</span>
-                                <span className="text-[12px] font-mono font-bold" style={{ color: adj > 0 ? '#34C759' : '#FF453A' }}>{proj}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div
-                          className="relative cursor-ew-resize group select-none"
-                          onMouseDown={e => {
-                            e.preventDefault();
-                            const bar = e.currentTarget;
-                            const update = (clientX: number) => {
-                              const rect = bar.getBoundingClientRect();
-                              const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-                              const newProj = Math.round(pct * 100);
-                              const newAdj = Math.max(-20, Math.min(20, newProj - Math.round(d.base)));
-                              setSimAdjust(p => ({ ...p, [d.key]: newAdj }));
-                            };
-                            // Don't jump on initial click — only move on drag
-                            const onMove = (ev: MouseEvent) => update(ev.clientX);
-                            const onUp = () => {
-                              window.removeEventListener('mousemove', onMove);
-                              window.removeEventListener('mouseup', onUp);
-                            };
-                            window.addEventListener('mousemove', onMove);
-                            window.addEventListener('mouseup', onUp);
-                          }}
-                        >
-                          <div className="h-3 rounded-full overflow-visible" style={{ background: 'var(--surface-2)' }}>
-                            <div className="h-full rounded-full transition-none relative"
-                              style={{ width: `${Math.min(proj, 100)}%`, background: `linear-gradient(90deg, ${d.color}50, ${d.color})` }}>
-                              {/* Drag handle */}
-                              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2
-                                w-4 h-4 rounded-full border-2 transition-transform duration-150
-                                group-hover:scale-125 shadow-md"
-                                style={{ background: d.color, borderColor: 'var(--surface-0)', boxShadow: `0 0 8px ${d.color}60` }} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Projected outcomes */}
-                {hasAdj && (
-                  <div className="rounded-lg p-4" style={{ background: 'var(--surface-2)', border: '1px solid var(--border-main)' }}>
-                    <p className="text-[9px] font-bold tracking-widest uppercase mb-3" style={{ color: 'var(--text-3)', fontFamily: "'Cinzel', serif" }}>Projected Impact</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[9px] mb-1" style={{ color: 'var(--text-3)' }}>Dilly Score</p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-[11px] font-mono" style={{ color: 'var(--text-3)' }}>{curDilly}</span>
-                          <span style={{ color: 'var(--text-3)' }}>→</span>
-                          <span className="text-[22px] font-bold font-mono" style={{ color: dillyDelta > 0 ? '#34C759' : dillyDelta < 0 ? '#FF453A' : 'var(--text-1)' }}>{projDilly}</span>
-                          {dillyDelta !== 0 && (
-                            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded"
-                              style={{ color: dillyDelta > 0 ? '#34C759' : '#FF453A', background: dillyDelta > 0 ? 'rgba(52,199,89,0.1)' : 'rgba(255,69,58,0.1)' }}>
-                              {dillyDelta > 0 ? '+' : ''}{dillyDelta}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[9px] mb-1" style={{ color: 'var(--text-3)' }}>Job Matches</p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-[11px] font-mono" style={{ color: 'var(--text-3)' }}>{baseMatches}</span>
-                          <span style={{ color: 'var(--text-3)' }}>→</span>
-                          <span className="text-[22px] font-bold font-mono" style={{ color: matchDelta > 0 ? '#34C759' : matchDelta < 0 ? '#FF453A' : 'var(--text-1)' }}>{simMatches}</span>
-                          {matchDelta !== 0 && (
-                            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded"
-                              style={{ color: matchDelta > 0 ? '#34C759' : '#FF453A', background: matchDelta > 0 ? 'rgba(52,199,89,0.1)' : 'rgba(255,69,58,0.1)' }}>
-                              {matchDelta > 0 ? '+' : ''}{matchDelta}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-8 pt-5 pb-2">
+        <div>
+          <h1 className="font-display text-[28px] text-txt-1 tracking-tight">Career genome</h1>
+          <p className="text-[13px] text-txt-3">Your unique career readiness fingerprint</p>
         </div>
+        <div className="flex items-center gap-8">
+          <div className="text-right">
+            <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Live matches</p>
+            <p className="text-[28px] font-bold font-mono text-ready leading-none mt-1">{simMatches}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Percentile</p>
+            <p className="text-[28px] font-bold font-mono text-dilly-blue leading-none mt-1">Top 15%</p>
+          </div>
+        </div>
+      </div>
 
-        {/* ── Right: Stats + Cohort Cards + Detail ───────────────────── */}
-        <div className="flex-1 overflow-y-auto py-6 pr-6 pl-2">
-          {/* Stats row */}
-          <div className="flex items-center gap-6 mb-5">
-            <div>
-              <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Live matches</p>
-              <p className="text-[28px] font-bold font-mono text-ready leading-none mt-1">{simMatches}</p>
+      {/* Radar - centered, full width */}
+      <div className="flex justify-center py-2">
+        <canvas ref={canvasRef}
+          className="cursor-crosshair"
+          onMouseMove={(e) => {
+            if (!cohorts.length) return;
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const cx = canvasSize / 2, cy = canvasSize / 2, maxR = canvasSize / 2 - 80;
+            let closest: string | null = null;
+            let closestDist = 60;
+            cohorts.forEach((c, i) => {
+              const angle = (Math.PI * 2 * i / cohorts.length) - Math.PI / 2;
+              const val = c.dilly_score / 100;
+              const r = maxR * Math.min(val, 1);
+              const x = cx + Math.cos(angle) * r;
+              const y = cy + Math.sin(angle) * r;
+              const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+              if (dist < closestDist) { closest = c.cohort; closestDist = dist; }
+            });
+            setHoveredCohort(closest);
+          }}
+          onMouseLeave={() => setHoveredCohort(null)}
+        />
+      </div>
+
+      {/* Legend */}
+      <div className="flex justify-center gap-8 mb-6">
+        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#2B3A8E'}}/><span className="text-[11px] text-txt-3">Smart</span></div>
+        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#2B3A8E'}}/><span className="text-[11px] text-txt-3">Grit</span></div>
+        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#34C759'}}/><span className="text-[11px] text-txt-3">Build</span></div>
+      </div>
+
+      {/* Bottom section: Simulator + Cohort cards */}
+      <div className="px-8 pb-8">
+        <div className="grid grid-cols-3 gap-4">
+          {/* Simulator */}
+          <div className="bg-surface-1 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-bold text-dilly-blue tracking-[0.15em] uppercase">What-if simulator</h3>
+              <span className="text-[13px] font-mono text-ready font-bold">{simMatches} matches</span>
             </div>
-            <div>
-              <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Percentile</p>
-              <p className="text-[28px] font-bold font-mono text-dilly-blue leading-none mt-1">Top 15%</p>
-            </div>
+            <SimSlider label="Smart" value={simAdjust.smart} color="#2B3A8E" onChange={v => setSimAdjust(p => ({ ...p, smart: v }))} />
+            <SimSlider label="Grit" value={simAdjust.grit} color="#2B3A8E" onChange={v => setSimAdjust(p => ({ ...p, grit: v }))} />
+            <SimSlider label="Build" value={simAdjust.build} color="#34C759" onChange={v => setSimAdjust(p => ({ ...p, build: v }))} />
+            {(simAdjust.smart !== 0 || simAdjust.grit !== 0 || simAdjust.build !== 0) && (
+              <button onClick={() => setSimAdjust({ smart: 0, grit: 0, build: 0 })}
+                className="text-[11px] text-txt-3 hover:text-dilly-blue mt-3 transition-colors">
+                Reset
+              </button>
+            )}
           </div>
 
           {/* Cohort cards */}
-          <h3 className="text-[10px] font-bold text-txt-3 tracking-widest uppercase mb-3" style={{ fontFamily: "'Cinzel', serif" }}>Your Cohorts</h3>
-          <div className="grid grid-cols-2 gap-3">
-          {cohorts.map(c => {
+          {cohorts.slice(0, 2).map(c => {
             const score = Math.round(c.dilly_score);
             const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
             const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
             const isH = hoveredCohort === c.cohort;
-            const isSel = selectedCohort === c.cohort;
             return (
               <div key={c.cohort}
                 onMouseEnter={() => setHoveredCohort(c.cohort)}
                 onMouseLeave={() => setHoveredCohort(null)}
-                onClick={() => setSelectedCohort(isSel ? null : c.cohort)}
-                className={`bg-surface-1 rounded-xl p-4 transition-all duration-200 cursor-pointer border
-                  ${isSel ? 'border-dilly-blue/40 shadow-[0_4px_20px_rgba(59,76,192,0.1)]' : isH ? 'border-dilly-blue/20 -translate-y-[1px]' : 'border-transparent'}`}>
-                <div className="flex items-center gap-2 mb-1">
+                className={`bg-surface-1 rounded-xl p-5 transition-all duration-200 cursor-pointer border
+                  ${isH ? 'border-dilly-blue/30 -translate-y-[1px] shadow-[0_4px_20px_rgba(59,76,192,0.08)]' : 'border-transparent'}`}>
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-1.5 py-0.5 rounded">{tag}</span>
-                  <span className="text-[12px] font-semibold text-txt-1 truncate flex-1">{c.cohort}</span>
-                  <span className="text-[20px] font-bold font-mono" style={{ color }}>{score}</span>
+                  <span className="text-[13px] font-semibold text-txt-1 truncate">{c.cohort}</span>
+                  <span className="text-[20px] font-bold font-mono ml-auto" style={{ color }}>{score}</span>
                 </div>
-                <div className="flex items-center gap-4 mt-2">
-                  <MiniScore label="Smart" value={c.smart} color="#3B4CC0" />
-                  <MiniScore label="Grit" value={c.grit} color="#C9A84C" />
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <MiniScore label="Smart" value={c.smart} color="#2B3A8E" />
+                  <MiniScore label="Grit" value={c.grit} color="#2B3A8E" />
                   <MiniScore label="Build" value={c.build} color="#34C759" />
-                  <div className="ml-auto flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors duration-200"
-                    style={{ background: isSel ? 'rgba(59,76,192,0.1)' : 'var(--surface-2)' }}>
-                    <span className="text-[10px] font-semibold"
-                      style={{ color: isSel ? '#3B4CC0' : 'var(--text-2)' }}>
-                      {isSel ? 'Close' : 'Details'}
-                    </span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                      className="transition-transform duration-200"
-                      style={{ color: isSel ? '#3B4CC0' : 'var(--text-2)', transform: isSel ? 'rotate(180deg)' : '' }}>
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </div>
                 </div>
               </div>
             );
           })}
-          </div>
-
-        {/* ── Cohort Detail Panel ────────────────────────────────────── */}
-        {selectedCohort && (() => {
-          const c = cohorts.find(x => x.cohort === selectedCohort);
-          if (!c) return null;
-          const score = Math.round(c.dilly_score);
-          const scoreColor = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
-          const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
-          const dims = [
-            { key: 'smart', label: 'Smart', value: c.smart, color: '#3B4CC0', avg: 62 },
-            { key: 'grit', label: 'Grit', value: c.grit, color: '#C9A84C', avg: 58 },
-            { key: 'build', label: 'Build', value: c.build, color: '#34C759', avg: 55 },
-          ];
-          const weakest = dims.reduce((w, d) => d.value < w.value ? d : w, dims[0]);
-
-          return (
-            <div className="mt-4 bg-surface-1 rounded-xl p-6 border border-dilly-blue/20 animate-fade-in">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-2 py-1 rounded">{tag}</span>
-                  <h3 className="text-[18px] font-bold text-txt-1" style={{ fontFamily: "'Cinzel', serif" }}>{c.cohort}</h3>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[36px] font-bold font-mono leading-none" style={{ color: scoreColor }}>{score}</span>
-                  <button onClick={() => setSelectedCohort(null)} className="p-1 hover:bg-surface-2 rounded transition-colors">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-3)' }}>
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Dimension Bars */}
-              <div className="flex flex-col gap-5 mb-6">
-                {dims.map(d => {
-                  const val = Math.round(d.value);
-                  const valColor = val >= 75 ? '#34C759' : val >= 55 ? '#FF9F0A' : '#FF453A';
-                  const aboveAvg = val >= d.avg;
-                  const diff = Math.abs(val - d.avg);
-                  return (
-                    <div key={d.key} className="rounded-xl p-4" style={{ background: 'var(--surface-2)' }}>
-                      {/* Header row */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
-                          <span className="text-[11px] font-bold tracking-widest uppercase" style={{ fontFamily: "'Cinzel', serif", color: 'var(--text-2)' }}>{d.label}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[28px] font-bold font-mono leading-none" style={{ color: valColor }}>{val}</span>
-                          <span className="text-[12px] font-mono" style={{ color: 'var(--text-3)' }}>/100</span>
-                        </div>
-                      </div>
-
-                      {/* Bar */}
-                      <div className="relative h-6 rounded-lg overflow-visible" style={{ background: 'var(--surface-0)' }}>
-                        <div
-                          className="h-full rounded-lg transition-all duration-700 flex items-center justify-end pr-2"
-                          style={{
-                            width: `${Math.max(Math.min(val, 100), 4)}%`,
-                            background: `linear-gradient(90deg, ${d.color}40, ${d.color})`,
-                          }}
-                        >
-                          {val >= 15 && (
-                            <span className="text-[10px] font-bold font-mono" style={{ color: 'rgba(0,0,0,0.6)' }}>{val}</span>
-                          )}
-                        </div>
-                        {/* Peer avg marker */}
-                        <div className="absolute top-0 bottom-0 flex flex-col items-center justify-center" style={{ left: `${d.avg}%`, transform: 'translateX(-50%)' }}>
-                          <div className="w-0.5 h-full" style={{ background: 'var(--text-1)', opacity: 0.35 }} />
-                        </div>
-                      </div>
-
-                      {/* Bottom info */}
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded"
-                            style={{
-                              color: aboveAvg ? '#34C759' : '#FF453A',
-                              background: aboveAvg ? 'rgba(52,199,89,0.1)' : 'rgba(255,69,58,0.1)',
-                            }}
-                          >
-                            {aboveAvg ? '+' : '-'}{diff} {aboveAvg ? 'above' : 'below'} avg
-                          </span>
-                        </div>
-                        <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>
-                          Peer avg: <span className="font-mono font-bold">{d.avg}</span>
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Gap Callout */}
-              <div className="rounded-lg p-4" style={{ background: 'var(--surface-2)', borderLeft: `3px solid ${weakest.value >= 75 ? '#34C759' : weakest.value >= 55 ? '#FF9F0A' : '#FF453A'}` }}>
-                <p className="text-[13px] font-bold text-txt-1 mb-1">
-                  {weakest.label} is your biggest opportunity
-                </p>
-                <p className="text-[12px] text-txt-2 leading-relaxed">
-                  Your {weakest.label} is {Math.round(weakest.value)} in {c.cohort}. Peer average is around {weakest.avg}. Close this gap to move up.
-                </p>
-              </div>
-            </div>
-          );
-        })()}
         </div>
+
+        {/* Remaining cohort cards */}
+        <div className="grid grid-cols-4 gap-3 mt-3">
+          {cohorts.slice(2).map(c => {
+            const score = Math.round(c.dilly_score);
+            const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
+            const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
+            const isH = hoveredCohort === c.cohort;
+            return (
+              <div key={c.cohort}
+                onMouseEnter={() => setHoveredCohort(c.cohort)}
+                onMouseLeave={() => setHoveredCohort(null)}
+                className={`bg-surface-1 rounded-xl p-4 transition-all duration-200 cursor-pointer border
+                  ${isH ? 'border-dilly-blue/30 -translate-y-[1px]' : 'border-transparent'}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[8px] font-bold text-txt-3 tracking-widest">{tag}</span>
+                  <span className="text-[16px] font-bold font-mono" style={{ color }}>{score}</span>
+                </div>
+                <p className="text-[12px] font-semibold text-txt-1 truncate">{c.cohort}</p>
+                <div className="flex gap-3 mt-2 text-[10px]">
+                  <span><span className="text-txt-3">S</span> <span className="font-bold font-mono text-dilly-blue">{Math.round(c.smart)}</span></span>
+                  <span><span className="text-txt-3">G</span> <span className="font-bold font-mono text-dilly-gold">{Math.round(c.grit)}</span></span>
+                  <span><span className="text-txt-3">B</span> <span className="font-bold font-mono text-ready">{Math.round(c.build)}</span></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* AI Resilience Panel */}
+        <AIResiliencePanel build={overall.build} grit={overall.grit} smart={overall.smart} cohorts={cohorts} />
       </div>
     </div>
   );
@@ -564,6 +353,94 @@ function MiniScore({ label, value, color }: { label: string; value: number; colo
     <div>
       <p className="text-[9px] text-txt-3 mb-0.5">{label}</p>
       <p className="text-[16px] font-bold font-mono" style={{ color }}>{Math.round(value)}</p>
+    </div>
+  );
+}
+
+function AIResiliencePanel({ build, grit, smart, cohorts }: { build: number; grit: number; smart: number; cohorts: CohortScore[] }) {
+  const techCohorts = /software|computer science|data science|machine learning|cs/i;
+  const hasTechMajor = cohorts.some(c => c.level === 'major' && techCohorts.test(c.cohort));
+  const base = Math.round(build * 0.60 + grit * 0.25 + smart * 0.15);
+  const aiScore = Math.min(100, base + (hasTechMajor ? 8 : 0));
+
+  const tier = aiScore >= 80 ? { label: 'AI-Amplified', sub: 'Your profile is built for the AI era', color: '#34C759', bg: 'rgba(52,199,89,0.06)', border: 'rgba(52,199,89,0.25)' }
+    : aiScore >= 65 ? { label: 'Adapting', sub: 'Strong foundation — sharpen your edge', color: '#FF9F0A', bg: 'rgba(255,159,10,0.06)', border: 'rgba(255,159,10,0.25)' }
+    : aiScore >= 50 ? { label: 'Developing', sub: 'Time to build AI-resilient habits', color: '#FF9F0A', bg: 'rgba(255,159,10,0.04)', border: 'rgba(255,159,10,0.2)' }
+    : { label: 'At Risk', sub: 'Prioritize AI-proof skills now', color: '#FF453A', bg: 'rgba(255,69,58,0.06)', border: 'rgba(255,69,58,0.25)' };
+
+  const actions = aiScore >= 80
+    ? ['Pursue AI research or publish a project on GitHub to signal thought leadership', 'Get certified in a high-signal framework (AWS ML Specialty, TensorFlow Developer)', 'Contribute to an open-source AI tool — recruiters notice pull requests']
+    : aiScore >= 65
+    ? ['Build one end-to-end ML or automation project and ship it publicly', 'Learn prompt engineering and LLM APIs (OpenAI, Anthropic) — it\'s now a baseline skill', 'Add a data/analytics layer to your resume projects to show quantified impact']
+    : aiScore >= 50
+    ? ['Start a 30-day coding streak: LeetCode, HackerRank, or a personal Python project', 'Take one free Coursera/edX course on AI fundamentals (Stanford ML, DeepLearning.AI)', 'Reframe your resume around outcomes — not tasks. AI replaces tasks, not impact-makers']
+    : ['Immediately identify which of your target roles are high automation risk (see job flags)', 'Pivot toward roles requiring human judgment: strategy, sales, creative, management', 'Start building technical fluency now: Python basics, data analysis, no-code AI tools'];
+
+  const bars = [
+    { label: 'Build', value: build, weight: '60%', color: '#34C759', desc: 'Projects, code, tools built' },
+    { label: 'Grit', value: grit, weight: '25%', color: '#2B3A8E', desc: 'Persistence under pressure' },
+    { label: 'Smart', value: smart, weight: '15%', color: '#2B3A8E', desc: 'Breadth of knowledge' },
+  ];
+
+  return (
+    <div style={{ marginTop: 16, background: tier.bg, border: '1px solid ' + tier.border, borderRadius: 14, padding: '20px 24px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <p style={{ fontSize: 9, fontWeight: 700, color: tier.color, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 4 }}>AI Resilience Score</p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 42, fontWeight: 700, fontStyle: 'italic', color: tier.color, lineHeight: 1 }}>{aiScore}</span>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>{tier.label}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{tier.sub}</p>
+            </div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          {hasTechMajor && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, background: 'rgba(52,199,89,0.1)', border: '1px solid rgba(52,199,89,0.25)' }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34C759' }} />
+              <span style={{ fontSize: 9, fontWeight: 700, color: '#34C759', letterSpacing: 0.3, textTransform: 'uppercase' as const }}>Tech Major Bonus +8</span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        {/* Contribution bars */}
+        <div>
+          <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>Score Breakdown</p>
+          {bars.map(b => {
+            const pct = Math.min(b.value, 100);
+            const barColor = pct >= 75 ? '#34C759' : pct >= 55 ? '#FF9F0A' : '#FF453A';
+            return (
+              <div key={b.label} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: b.color }}>{b.label}</span>
+                    <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{b.weight}</span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: barColor }}>{Math.round(b.value)}</span>
+                </div>
+                <div style={{ height: 3, background: 'var(--border-main)', borderRadius: 2 }}>
+                  <div style={{ height: '100%', borderRadius: 2, background: barColor, width: pct + '%', opacity: 0.8 }} />
+                </div>
+                <p style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>{b.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Actions */}
+        <div>
+          <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>Recommended Actions</p>
+          {actions.map((a, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: tier.color, background: tier.border, borderRadius: 3, padding: '2px 5px', flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+              <p style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>{a}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

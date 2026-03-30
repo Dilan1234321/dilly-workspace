@@ -1,5 +1,30 @@
 'use client';
+import { useState, useEffect } from 'react';
 import CompanyLogo from './CompanyLogo';
+import { useRightPanel } from '@/app/(app)/layout';
+import { apiFetch } from '@/lib/api';
+
+/** Decode HTML entities + strip tags via the browser's own parser.
+ *  Runs two passes to handle double-encoded HTML (entities that decode into tags). */
+function cleanDescription(raw: string): string {
+  if (!raw) return '';
+  try {
+    const parse = (s: string) => {
+      const doc = new DOMParser().parseFromString(s, 'text/html');
+      return doc.body.textContent ?? '';
+    };
+    let text = parse(raw);
+    // If decoded text still contains HTML tags, strip them too
+    if (/<[a-zA-Z]/.test(text)) text = parse(text);
+    // Strip any remaining HTML entities (including truncated ones like &lt or &amp without semicolons)
+    text = text.replace(/&[a-z#0-9]{1,10};?/gi, ' ');
+    // Remove common boilerplate labels prepended by job boards
+    text = text.replace(/^role\s+description[:\s]*/i, '');
+    return text.replace(/\n{3,}/g, '\n\n').trim();
+  } catch {
+    return raw.replace(/<[^>]*>/g, '').replace(/&[a-z#0-9]+;/gi, ' ').trim();
+  }
+}
 
 interface CohortReadiness {
   cohort: string; readiness: string; level: string;
@@ -13,6 +38,21 @@ interface Job {
 }
 
 export default function JobDetail({ job }: { job: Job }) {
+  const { fireProactiveCoach } = useRightPanel();
+  const [fullDescription, setFullDescription] = useState<string | null>(null);
+  const [descLoading, setDescLoading] = useState(false);
+
+  useEffect(() => {
+    setFullDescription(null);
+    if (!job.id) return;
+    setDescLoading(true);
+    apiFetch(`/v2/internships/${job.id}`)
+      .then((data: { description?: string }) => {
+        if (data?.description) setFullDescription(data.description);
+      })
+      .catch(() => { /* fall back to description_preview */ })
+      .finally(() => setDescLoading(false));
+  }, [job.id]);
   const rc: Record<string, { color: string; label: string; bg: string }> = {
     ready: { color: '#34C759', label: 'Ready', bg: 'rgba(52,199,89,0.08)' },
     almost: { color: '#FF9F0A', label: 'Almost', bg: 'rgba(255,159,10,0.08)' },
@@ -55,18 +95,52 @@ export default function JobDetail({ job }: { job: Job }) {
                   <DimBar label="Smart" student={cr.student_smart || 0} required={cr.required_smart || 0} />
                   <DimBar label="Grit" student={cr.student_grit || 0} required={cr.required_grit || 0} />
                   <DimBar label="Build" student={cr.student_build || 0} required={cr.required_build || 0} />
+                  <button
+                    onClick={() => {
+                      const gaps = [
+                        { dim: 'Smart', gap: (cr.required_smart || 0) - (cr.student_smart || 0), student: cr.student_smart || 0, req: cr.required_smart || 0 },
+                        { dim: 'Grit', gap: (cr.required_grit || 0) - (cr.student_grit || 0), student: cr.student_grit || 0, req: cr.required_grit || 0 },
+                        { dim: 'Build', gap: (cr.required_build || 0) - (cr.student_build || 0), student: cr.student_build || 0, req: cr.required_build || 0 },
+                      ].filter(g => g.gap > 0).sort((a, b) => b.gap - a.gap);
+                      const gapSummary = gaps.length > 0
+                        ? gaps.map(g => `${g.dim}: ${g.student} vs ${g.req} required (gap of ${Math.round(g.gap)})`).join(', ')
+                        : 'all dimensions clear';
+                      fireProactiveCoach(
+                        `User clicked Ask Dilly about their ${cr.cohort} fit for ${job.title} at ${job.company}. ` +
+                        `Their readiness: ${cr.readiness}. Scores — Smart: ${cr.student_smart || 0}/${cr.required_smart || 0}, ` +
+                        `Grit: ${cr.student_grit || 0}/${cr.required_grit || 0}, Build: ${cr.student_build || 0}/${cr.required_build || 0}. ` +
+                        `Gaps: ${gapSummary}. ` +
+                        `Give specific, actionable advice on how to close these gaps for this specific role and cohort.`
+                      );
+                    }}
+                    className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-semibold transition-all duration-150 hover:-translate-y-[0.5px]"
+                    style={{ color: '#2B3A8E', background: 'rgba(59,76,192,0.08)', border: '1px solid rgba(59,76,192,0.12)' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3c-4.97 0-9 3.13-9 7 0 2.38 1.42 4.5 3.6 5.82L5 21l4.34-2.17C10.2 18.94 11.08 19 12 19c4.97 0 9-3.13 9-7s-4.03-7-9-7z"/>
+                    </svg>
+                    Ask Dilly about {cr.cohort}
+                  </button>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {job.description && (
+        {(fullDescription || job.description) && (
           <div className="px-5 pb-5">
             <h3 className="text-[10px] font-bold text-txt-3 tracking-[0.15em] uppercase mb-3">About this role</h3>
-            <p className="text-[13px] text-txt-2 leading-[1.7] whitespace-pre-line">
-              {job.description.replace(/<[^>]*>/g, '').slice(0, 1200)}
-            </p>
+            {descLoading ? (
+              <div className="space-y-2">
+                {[100, 85, 92, 70, 88].map((w, i) => (
+                  <div key={i} className="h-3 rounded animate-pulse" style={{ width: w + '%', background: 'var(--surface-2)' }} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] text-txt-2 leading-[1.7] whitespace-pre-line">
+                {cleanDescription(fullDescription || job.description || '')}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -85,11 +159,6 @@ export default function JobDetail({ job }: { job: Job }) {
           <button className="h-11 w-11 bg-surface-2 hover:bg-surface-2/70 text-txt-2 rounded-xl flex items-center justify-center transition-all duration-150 hover:text-dilly-gold active:scale-95">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
-            </svg>
-          </button>
-          <button className="h-11 w-11 bg-surface-2 hover:bg-surface-2/70 text-txt-2 rounded-xl flex items-center justify-center transition-all duration-150 hover:text-gap active:scale-95">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
         </div>

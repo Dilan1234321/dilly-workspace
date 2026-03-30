@@ -18,7 +18,7 @@ import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
-const GOLD  = '#C9A84C';
+const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const CORAL = '#FF453A';
@@ -389,7 +389,7 @@ function AddEventModal({ visible, onClose, onAdd }: {
             />
 
             <AnimatedPressable style={cs.modalBtn} onPress={handleAdd} scaleDown={0.97}>
-              <Ionicons name="add-circle" size={16} color="#1a1400" />
+              <Ionicons name="add-circle" size={16} color="#FFFFFF" />
               <Text style={cs.modalBtnText}>Add Event</Text>
             </AnimatedPressable>
           </View>
@@ -596,7 +596,7 @@ export default function CalendarScreen() {
         onPress={() => setShowAdd(true)}
         scaleDown={0.92}
       >
-        <Ionicons name="add" size={24} color="#1a1400" />
+        <Ionicons name="add" size={24} color="#FFFFFF" />
       </AnimatedPressable>
 
       {/* Add modal */}
@@ -746,5 +746,5 @@ const cs = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: GOLD, borderRadius: 12, paddingVertical: 14, marginTop: 6,
   },
-  modalBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#1a1400' },
+  modalBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
 });

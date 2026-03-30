@@ -17,7 +17,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
-const GOLD   = '#C9A84C';
+const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
 const AMBER  = '#FF9F0A';
 const CORAL  = '#FF453A';
@@ -334,10 +334,10 @@ export default function ATSScreen() {
                   scaleDown={0.97}
                 >
                   {loading ? (
-                    <ActivityIndicator size="small" color="#1a1400" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <>
-                      <Ionicons name="scan" size={16} color="#1a1400" />
+                      <Ionicons name="scan" size={16} color="#FFFFFF" />
                       <Text style={ss.scanBtnText}>Scan My Resume</Text>
                     </>
                   )}
@@ -648,10 +648,10 @@ export default function ATSScreen() {
                 scaleDown={0.97}
               >
                 {matchLoading ? (
-                  <ActivityIndicator size="small" color="#1a1400" />
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Ionicons name="analytics" size={16} color="#1a1400" />
+                    <Ionicons name="analytics" size={16} color="#FFFFFF" />
                     <Text style={ss.scanBtnText}>Analyze Keywords</Text>
                   </>
                 )}
@@ -742,7 +742,7 @@ const ss = StyleSheet.create({
 
   // Scan button
   scanBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: GOLD, borderRadius: 14, paddingVertical: 15, marginBottom: 16, shadowColor: GOLD, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12 },
-  scanBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#1a1400' },
+  scanBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
   rescanBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: GOLD + '40', borderRadius: 12, paddingVertical: 10, marginBottom: 16 },
   rescanBtnText: { fontSize: 12, color: GOLD, fontWeight: '600' },
 
@@ -790,7 +790,7 @@ const ss = StyleSheet.create({
   companyAtsBadgeText: { fontSize: 12, fontWeight: '700' },
   companyAdvice: { fontSize: 12, color: colors.t2, lineHeight: 18, marginBottom: 12 },
   companyScanBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: GOLD, borderRadius: 11, paddingVertical: 11 },
-  companyScanBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.3, color: '#1a1400' },
+  companyScanBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.3, color: '#FFFFFF' },
   companyNotFound: { fontSize: 12, color: colors.t3, lineHeight: 18 },
   companyBreakdownCard: { backgroundColor: colors.s2, borderRadius: 14, borderWidth: 1, borderColor: colors.b1, padding: 14, marginBottom: 12 },
   breakdownTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1.5, color: GOLD, marginBottom: 10 },

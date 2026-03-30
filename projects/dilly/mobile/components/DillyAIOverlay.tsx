@@ -13,7 +13,7 @@ import { DillyVisual, VisualPayload } from './DillyVisuals';
 import { useSubscription } from '../hooks/useSubscription';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const GOLD = '#C9A84C';
+const GOLD = '#2B3A8E';
 const BLUE = '#0A84FF';
 
 const AnimatedPath   = Animated.createAnimatedComponent(Path);

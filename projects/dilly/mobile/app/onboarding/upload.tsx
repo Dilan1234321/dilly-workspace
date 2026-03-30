@@ -386,7 +386,7 @@ const s = StyleSheet.create({
   buttonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1400',
+    color: '#FFFFFF',
     letterSpacing: -0.1,
   },
 });

@@ -20,7 +20,7 @@ import { colors } from '../lib/tokens';
 import SplashScreen from '../components/SplashScreen';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
-const GOLD = '#C9A84C';
+const GOLD = '#2B3A8E';
 
 function LoadingScreen({ onComplete }: { onComplete: () => void }) {
   const wordmarkOpacity    = useRef(new Animated.Value(0)).current;
@@ -132,6 +132,31 @@ export default function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
+        // One-time forced sign-out to clear stale dkochhar session
+        const didReset = await AsyncStorage.getItem('dilly_reset_2026_03_29');
+        if (!didReset) {
+          await Promise.all([
+            SecureStore.deleteItemAsync('dilly_auth_token').catch(() => null),
+            SecureStore.deleteItemAsync('dilly_user').catch(() => null),
+            AsyncStorage.removeItem('dilly_auth_token'),
+            AsyncStorage.removeItem('dilly_user'),
+            AsyncStorage.removeItem('dilly_has_onboarded'),
+            AsyncStorage.removeItem('dilly_audit_result'),
+            AsyncStorage.removeItem('dilly_onboarding_name'),
+            AsyncStorage.removeItem('dilly_onboarding_cohort'),
+            AsyncStorage.removeItem('dilly_onboarding_track'),
+            AsyncStorage.removeItem('dilly_onboarding_majors'),
+            AsyncStorage.removeItem('dilly_onboarding_pre_prof'),
+            AsyncStorage.removeItem('dilly_onboarding_target'),
+            AsyncStorage.removeItem('dilly_onboarding_industry_target'),
+            AsyncStorage.removeItem('dilly_pending_upload'),
+            AsyncStorage.setItem('dilly_reset_2026_03_29', '1'),
+          ]);
+          setIsReturning(false);
+          setCheckedAuth(true);
+          return;
+        }
+
         const secure = await SecureStore.getItemAsync('dilly_auth_token').catch(() => null);
         const token  = secure ?? await AsyncStorage.getItem('dilly_auth_token');
         setIsReturning(!!token);
@@ -144,7 +169,7 @@ export default function RootLayout() {
   }, []);
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: '#000000' }} />;
+    return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
   }
 
   if (phase === 'loading') {
@@ -161,7 +186,7 @@ export default function RootLayout() {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="onboarding" />
@@ -185,7 +210,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
@@ -197,7 +222,7 @@ export default function RootLayout() {
 }
 
 const ls = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: '#000000', alignItems: 'center', justifyContent: 'center' },
+  root:    { flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   content: { alignItems: 'center' },
   wordmark: {
     fontFamily:    'Cinzel_900Black',
@@ -215,7 +240,7 @@ const ls = StyleSheet.create({
     fontSize:      13,
     fontWeight:    '300',
     letterSpacing: 1.04,
-    color:         'rgba(244,244,250,0.45)',
+    color:         'rgba(26,26,46,0.4)',
     textAlign:     'center',
     marginBottom:  36,
   },
@@ -234,7 +259,7 @@ const ls = StyleSheet.create({
   barTrack: {
     width:           120,
     height:          1.5,
-    backgroundColor: 'rgba(201,168,76,0.15)',
+    backgroundColor: 'rgba(43,58,142,0.15)',
     borderRadius:    999,
     overflow:        'hidden',
   },

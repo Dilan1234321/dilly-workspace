@@ -1,5 +1,7 @@
 'use client';
+import { useState } from 'react';
 import CompanyLogo from './CompanyLogo';
+import { getAutomationRisk } from '@/lib/automation-risk';
 
 interface CohortReadiness { cohort: string; readiness: string; level: string;
   student_smart?: number; student_grit?: number; student_build?: number;
@@ -14,6 +16,7 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
   job: Job; selected: boolean; onSelect: (j: Job) => void;
   onContext: (e: React.MouseEvent, j: Job) => void;
 }) {
+  const [tipVisible, setTipVisible] = useState(false);
   const rc: Record<string, { color: string; label: string }> = {
     ready: { color: '#34C759', label: 'Ready' },
     almost: { color: '#FF9F0A', label: 'Almost' },
@@ -22,6 +25,7 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
   const r = rc[job.readiness] || { color: '#48484A', label: '' };
   const posted = daysAgo(job.posted_date);
   const cr = job.cohort_readiness?.[0];
+  const risk = getAutomationRisk(job.title);
 
   return (
     <button
@@ -40,7 +44,7 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
         <CompanyLogo company={job.company} size={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 500, color: selected ? '#3B4CC0' : 'var(--text-1)', margin: 0, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          <p style={{ fontSize: 14, fontWeight: 500, color: selected ? '#2B3A8E' : 'var(--text-1)', margin: 0, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {job.title}
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>{job.company}</p>
@@ -55,12 +59,51 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
       </p>
 
       {cr && (
-        <div style={{ display: 'flex', gap: 4 }}>
-          <ScoreBar label="S" value={cr.student_smart || 0} req={cr.required_smart || 0} color="#3B4CC0" />
-          <ScoreBar label="G" value={cr.student_grit || 0} req={cr.required_grit || 0} color="#C9A84C" />
+        <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+          <ScoreBar label="S" value={cr.student_smart || 0} req={cr.required_smart || 0} color="#2B3A8E" />
+          <ScoreBar label="G" value={cr.student_grit || 0} req={cr.required_grit || 0} color="#2B3A8E" />
           <ScoreBar label="B" value={cr.student_build || 0} req={cr.required_build || 0} color="#34C759" />
         </div>
       )}
+
+      {/* Automation risk badge */}
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={e => { e.stopPropagation(); setTipVisible(v => !v); }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '2px 7px', borderRadius: 4,
+            background: risk.bg, border: '1px solid ' + risk.border,
+            cursor: 'pointer', transition: 'opacity 150ms',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.8'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+        >
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: risk.color, flexShrink: 0 }} />
+          <span style={{ fontSize: 9, fontWeight: 700, color: risk.color, letterSpacing: 0.3, textTransform: 'uppercase' as const }}>
+            {risk.shortLabel}
+          </span>
+        </button>
+
+        {tipVisible && (
+          <div
+            style={{
+              position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, zIndex: 50,
+              background: 'var(--surface-2)', border: '1px solid var(--border-main)',
+              borderRadius: 8, padding: '10px 12px', width: 220,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <p style={{ fontSize: 11, fontWeight: 700, color: risk.color, margin: '0 0 4px', textTransform: 'uppercase' as const, letterSpacing: 0.5 }}>
+              {risk.label}
+            </p>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, lineHeight: 1.55 }}>
+              {risk.reason}
+            </p>
+          </div>
+        )}
+      </div>
     </button>
   );
 }

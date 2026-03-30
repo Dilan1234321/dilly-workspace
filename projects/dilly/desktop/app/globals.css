@@ -2,41 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:wght@300;400&display=swap');
 
+/* ── Light mode ─────────────────────────────────────
+   Clean blue-tinted whites — professional, sharp, airy.
+   ──────────────────────────────────────────────────── */
 :root {
-  --surface-0: #ffffff;
-  --surface-1: #f8f8fa;
-  --surface-2: #f0f0f3;
-  --text-1: #1a1a1a;
-  --text-2: #6b6b6b;
-  --text-3: #a0a0a0;
-  --border-main: rgba(0,0,0,0.08);
+  --surface-0: #FFFFFF;            /* main bg — pure white                        */
+  --surface-1: #F7F8FC;           /* cards, panels, sidebars                      */
+  --surface-2: #EFF0F6;           /* inputs, hover fills, deepest surface          */
+  --text-1: #1A1A2E;             /* primary — dark indigo                         */
+  --text-2: #52526a;             /* secondary — muted indigo-gray                 */
+  --text-3: #9292aa;             /* tertiary / disabled                           */
+  --border-main: rgba(43, 58, 142, 0.08);   /* Dilly Blue tinted border          */
+
+  /* Accent glow — Dilly Blue */
+  --accent-glow: rgba(43, 58, 142, 0.10);
+  --accent-glow-strong: rgba(43, 58, 142, 0.20);
 }
 
+/* ── Dark mode ──────────────────────────────────────
+   Deep indigo-black — ambitious, night-sky feel.
+   Brand blue glows naturally against these surfaces.
+   ──────────────────────────────────────────────────── */
 .dark {
-  --surface-0: #1c1c1e;
-  --surface-1: #2c2c2e;
-  --surface-2: #3a3a3c;
-  --text-1: #f5f5f7;
-  --text-2: #98989f;
-  --text-3: #636366;
-  --border-main: rgba(255,255,255,0.08);
+  --surface-0: #0d0d16;          /* deepest — sidebar, page bg, void              */
+  --surface-1: #13131e;          /* elevated — cards, panels, drawers             */
+  --surface-2: #1a1a2a;          /* highest — inputs, hover states, popovers      */
+  --text-1: #eeeef8;             /* primary — bright cool-white                   */
+  --text-2: #8484a0;             /* secondary — muted indigo-gray                 */
+  --text-3: #4c4c65;             /* tertiary / ghost                              */
+  --border-main: rgba(130, 120, 220, 0.13); /* indigo-tinted border              */
+
+  --accent-glow: rgba(59, 76, 192, 0.18);
+  --accent-glow-strong: rgba(59, 76, 192, 0.32);
 }
 
-* { -webkit-font-smoothing: antialiased; }
+* { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--surface-0);
   color: var(--text-1);
-  transition: background 300ms ease, color 300ms ease;
+  transition: background 280ms ease, color 280ms ease;
 }
 
-::selection { background: rgba(59, 76, 192, 0.2); }
-::-webkit-scrollbar { width: 6px; }
+::selection { background: rgba(59, 76, 192, 0.22); color: inherit; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59, 76, 192, 0.25); }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
@@ -46,20 +61,334 @@ body {
 .animate-slide-in { animation: slideIn 350ms ease-out both; }
 .skeleton { background: linear-gradient(90deg, var(--surface-1) 25%, var(--surface-2) 50%, var(--surface-1) 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
 
+/* ── Page Transitions ── */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px) scale(0.998); filter: blur(2px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes pageExit {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.998); filter: blur(2px); }
+}
+.page-enter { animation: pageEnter 300ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.page-exit  { animation: pageExit 150ms ease-in both; }
 
 /* Sidebar and menu hover states */
 .sidebar-item:hover {
-  background: var(--surface-1) !important;
+  background: var(--surface-2) !important;
 }
 .sidebar-item-active:hover {
-  background: rgba(59,76,192,0.08) !important;
+  background: var(--accent-glow) !important;
 }
 .ctx-item:hover {
-  background: rgba(59,76,192,0.08) !important;
+  background: var(--accent-glow) !important;
 }
 .ctx-item:hover .ctx-label {
   color: #3B4CC0 !important;
 }
 .ctx-item:hover .ctx-icon {
   opacity: 0.8 !important;
+}
+
+/* ── Custom Cursor Ecosystem ── */
+
+/* Hide native cursor on the app shell */
+.dilly-app-shell, .dilly-app-shell * { cursor: none !important; }
+
+/* ── Base element ── */
+.dilly-cursor {
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --blue: #3B4CC0;
+  --score-pct: 0%;
+  --score-color: #3B4CC0;
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 99999;
+  pointer-events: none;
+  width: 0; height: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  opacity: 0;
+  will-change: transform;
+  transition: width 200ms var(--ease), height 200ms var(--ease),
+              margin 200ms var(--ease), border 200ms var(--ease),
+              background 200ms var(--ease), box-shadow 200ms var(--ease),
+              opacity 120ms ease;
+}
+.dilly-cursor[data-visible="true"] { opacity: 1; }
+
+/* Pseudo-elements: ::before = vertical line, ::after = horizontal line */
+.dilly-cursor::before,
+.dilly-cursor::after {
+  content: '';
+  position: absolute;
+  background: var(--blue);
+  border-radius: 1px;
+  transition: all 200ms var(--ease);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: default — crosshair (vertical + horizontal)
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="default"]::before {
+  width: 3px; height: 22px;
+  left: -1px; top: -11px;
+  opacity: 1;
+}
+.dilly-cursor[data-mode="default"]::after {
+  width: 22px; height: 3px;
+  left: -11px; top: -1px;
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: text — tall pulsing vertical beam
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="text"]::before {
+  width: 2px; height: 28px;
+  left: -1px; top: -14px;
+  opacity: 1;
+  animation: cursorTextPulse 1s ease-in-out infinite;
+}
+.dilly-cursor[data-mode="text"]::after {
+  width: 0; height: 0; opacity: 0;
+}
+@keyframes cursorTextPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: drag — crosshair with arrowhead tips
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="drag"]::before {
+  width: 2px; height: 14px;
+  left: -1px; top: -7px;
+  opacity: 0.7;
+  box-shadow:
+    -2px -7px 0 0 var(--blue),
+     2px -7px 0 0 var(--blue),
+    -2px  7px 0 0 var(--blue),
+     2px  7px 0 0 var(--blue);
+}
+.dilly-cursor[data-mode="drag"]::after {
+  width: 14px; height: 2px;
+  left: -7px; top: -1px;
+  opacity: 0.7;
+  box-shadow:
+    -7px -2px 0 0 var(--blue),
+    -7px  2px 0 0 var(--blue),
+     7px -2px 0 0 var(--blue),
+     7px  2px 0 0 var(--blue);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: dragging — collapsed tight dot
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="dragging"] {
+  width: 8px; height: 8px;
+  margin-left: -4px; margin-top: -4px;
+  background: var(--blue);
+  box-shadow: 0 0 8px rgba(59,76,192,0.4);
+}
+.dilly-cursor[data-mode="dragging"]::before,
+.dilly-cursor[data-mode="dragging"]::after {
+  width: 0; height: 0; opacity: 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: external — rotated 45° with extended top-right arm
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="external"] {
+  transform: rotate(45deg);
+}
+.dilly-cursor[data-mode="external"]::before {
+  width: 3px; height: 26px;
+  left: -1px; top: -16px; /* extended upward */
+  opacity: 1;
+}
+.dilly-cursor[data-mode="external"]::after {
+  width: 22px; height: 3px;
+  left: -8px; top: -1px;
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: loading — rotating radar sweep
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="loading"] {
+  animation: cursorRadar 1.2s linear infinite;
+}
+.dilly-cursor[data-mode="loading"]::before {
+  width: 2px; height: 20px;
+  left: -1px; top: -10px;
+  opacity: 0.7;
+}
+.dilly-cursor[data-mode="loading"]::after {
+  width: 2px; height: 20px;
+  left: -1px; top: -10px;
+  opacity: 0.25;
+  transform: rotate(90deg);
+}
+@keyframes cursorRadar {
+  from { transform: translate3d(var(--x, 0), var(--y, 0), 0) rotate(0deg); }
+  to   { transform: translate3d(var(--x, 0), var(--y, 0), 0) rotate(360deg); }
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: score — ring that fills to match score %
+   Uses conic-gradient with CSS custom properties
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="score"] {
+  width: 24px; height: 24px;
+  margin-left: -12px; margin-top: -12px;
+  border: 3px solid transparent;
+  background:
+    conic-gradient(var(--score-color) var(--score-pct), transparent var(--score-pct)) border-box,
+    linear-gradient(var(--surface-1, #13131e), var(--surface-1, #13131e)) padding-box;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--score-color) 30%, transparent);
+}
+.dilly-cursor[data-mode="score"]::before,
+.dilly-cursor[data-mode="score"]::after {
+  width: 0; height: 0; opacity: 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: scroll — vertical line with directional chevron
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="scroll"]::before {
+  width: 3px; height: 22px;
+  left: -1px; top: -11px;
+  opacity: 0.5;
+}
+.dilly-cursor[data-mode="scroll"]::after {
+  width: 0; height: 0; opacity: 0;
+}
+/* Down chevron */
+.dilly-cursor[data-mode="scroll"][data-scroll-dir="down"] {
+  box-shadow:
+    -4px 14px 0 0 var(--blue),
+     0px 17px 0 0 var(--blue),
+     4px 14px 0 0 var(--blue);
+}
+/* Up chevron */
+.dilly-cursor[data-mode="scroll"][data-scroll-dir="up"] {
+  box-shadow:
+    -4px -14px 0 0 var(--blue),
+     0px -17px 0 0 var(--blue),
+     4px -14px 0 0 var(--blue);
+}
+/* Both directions */
+.dilly-cursor[data-mode="scroll"][data-scroll-dir="both"] {
+  box-shadow:
+    -4px 14px 0 0 var(--blue),
+     0px 17px 0 0 var(--blue),
+     4px 14px 0 0 var(--blue),
+    -4px -14px 0 0 var(--blue),
+     0px -17px 0 0 var(--blue),
+     4px -14px 0 0 var(--blue);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: resize — two parallel vertical lines with arrows
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="resize"]::before {
+  width: 2px; height: 16px;
+  left: -5px; top: -8px;
+  opacity: 1;
+}
+.dilly-cursor[data-mode="resize"]::after {
+  width: 2px; height: 16px;
+  left: 3px; top: -8px;
+  opacity: 1;
+}
+.dilly-cursor[data-mode="resize"] {
+  box-shadow:
+    -8px 0 0 0 var(--blue),
+     8px 0 0 0 var(--blue);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: context — hover ring with center dot
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="context"] {
+  width: 20px; height: 20px;
+  margin-left: -10px; margin-top: -10px;
+  border: 3px solid var(--blue);
+  background: rgba(59,76,192,0.06);
+  box-shadow: 0 0 0 0 var(--blue), inset 0 0 0 3px var(--blue);
+}
+.dilly-cursor[data-mode="context"]::before {
+  /* Center dot */
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  left: 4px; top: 4px;
+  opacity: 1;
+}
+.dilly-cursor[data-mode="context"]::after {
+  width: 0; height: 0; opacity: 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODE: hover — standard ring morph (buttons, links)
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-mode="hover"] {
+  width: 20px; height: 20px;
+  margin-left: -10px; margin-top: -10px;
+  border: 3px solid var(--blue);
+  background: rgba(59,76,192,0.06);
+  box-shadow: 0 0 12px rgba(59,76,192,0.25);
+}
+.dilly-cursor[data-mode="hover"]::before,
+.dilly-cursor[data-mode="hover"]::after {
+  width: 0; height: 0; opacity: 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODIFIER: pressed — scale down on any ring mode
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-pressed="true"][data-mode="hover"],
+.dilly-cursor[data-pressed="true"][data-mode="context"] {
+  transform: scale(0.85);
+  background: rgba(59,76,192,0.12);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODIFIER: copy flash — green checkmark burst
+   ══════════════════════════════════════════════════════ */
+.dilly-cursor[data-copy-flash="true"] {
+  width: 24px !important; height: 24px !important;
+  margin-left: -12px !important; margin-top: -12px !important;
+  border: 3px solid #34C759 !important;
+  background: rgba(52,199,89,0.12) !important;
+  box-shadow: 0 0 16px rgba(52,199,89,0.4) !important;
+  animation: cursorCopyPop 500ms var(--ease) both !important;
+}
+.dilly-cursor[data-copy-flash="true"]::before {
+  /* Checkmark short arm */
+  width: 3px !important; height: 6px !important;
+  background: #34C759 !important;
+  left: 3px !important; top: 5px !important;
+  transform: rotate(-45deg) !important;
+  opacity: 1 !important;
+}
+.dilly-cursor[data-copy-flash="true"]::after {
+  /* Checkmark long arm */
+  width: 3px !important; height: 10px !important;
+  background: #34C759 !important;
+  left: 8px !important; top: 1px !important;
+  transform: rotate(35deg) !important;
+  opacity: 1 !important;
+}
+@keyframes cursorCopyPop {
+  0%   { transform: scale(0.6); opacity: 0.5; }
+  40%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
 }

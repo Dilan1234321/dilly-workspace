@@ -12,7 +12,7 @@ import { apiFetch } from '../lib/auth';
 import { colors } from '../lib/tokens';
 import AnimatedPressable from './AnimatedPressable';
 
-const GOLD = '#C9A84C';
+const GOLD = '#2B3A8E';
 const GREEN = '#34C759';
 const BLUE = '#0A84FF';
 
@@ -158,7 +158,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 4,
   },
   chipSelected: {
-    backgroundColor: GOLD + '15', borderColor: GOLD + '35',
+    backgroundColor: GOLD + '25', borderColor: GOLD + '60',
   },
   chipAuto: {
     backgroundColor: GREEN + '10', borderColor: GREEN + '30',

@@ -1,33 +1,47 @@
+// Dilly Light Mode — Brand Blue (#2B3A8E) from logo
 export const colors = {
-  bg: '#080809',
-  s1: '#0F0F12',
-  s2: '#16161A',
-  s3: '#1E1E24',
-  s4: '#27272F',
-  b1: 'rgba(255,255,255,0.05)',
-  b2: 'rgba(255,255,255,0.09)',
-  b3: 'rgba(255,255,255,0.15)',
-  t1: '#F4F4FA',
-  t2: 'rgba(244,244,250,0.55)',
-  t3: 'rgba(244,244,250,0.30)',
-  gold: '#C9A84C',
-  golddim: 'rgba(201,168,76,0.12)',
-  goldbdr: 'rgba(201,168,76,0.28)',
+  // Backgrounds: white → cool gray scale
+  bg: '#FFFFFF',
+  s1: '#F7F8FC',
+  s2: '#EFF0F6',
+  s3: '#E4E6F0',
+  s4: '#D8DAE8',
+
+  // Borders: blue-tinted transparency
+  b1: 'rgba(43,58,142,0.06)',
+  b2: 'rgba(43,58,142,0.10)',
+  b3: 'rgba(43,58,142,0.16)',
+
+  // Text: dark indigo
+  t1: '#1A1A2E',
+  t2: 'rgba(26,26,46,0.6)',
+  t3: 'rgba(26,26,46,0.35)',
+
+  // Brand: Dilly Blue (replaces gold)
+  gold: '#2B3A8E',
+  golddim: 'rgba(43,58,142,0.08)',
+  goldbdr: 'rgba(43,58,142,0.18)',
+
+  // Status colors (unchanged)
   green: '#34C759',
-  gdim: 'rgba(52,199,89,0.12)',
-  gbdr: 'rgba(52,199,89,0.25)',
+  gdim: 'rgba(52,199,89,0.08)',
+  gbdr: 'rgba(52,199,89,0.18)',
+
   blue: '#0A84FF',
-  bdim: 'rgba(10,132,255,0.12)',
-  bbdr: 'rgba(10,132,255,0.25)',
+  bdim: 'rgba(10,132,255,0.08)',
+  bbdr: 'rgba(10,132,255,0.18)',
+
   amber: '#FF9F0A',
-  adim: 'rgba(255,159,10,0.12)',
-  abdr: 'rgba(255,159,10,0.25)',
+  adim: 'rgba(255,159,10,0.08)',
+  abdr: 'rgba(255,159,10,0.18)',
+
   coral: '#FF453A',
-  cdim: 'rgba(255,69,58,0.12)',
-  cbdr: 'rgba(255,69,58,0.25)',
-  indigo: '#5E5CE6',
-  idim: 'rgba(94,92,230,0.12)',
-  ibdr: 'rgba(94,92,230,0.25)',
+  cdim: 'rgba(255,69,58,0.08)',
+  cbdr: 'rgba(255,69,58,0.18)',
+
+  indigo: '#2B3A8E',
+  idim: 'rgba(43,58,142,0.08)',
+  ibdr: 'rgba(43,58,142,0.18)',
 };
 
 export const spacing = {
@@ -48,4 +62,4 @@ export const radius = {
 };
 
 // localhost works for iOS Simulator (shares Mac network stack); use LAN IP for real devices
-export const API_BASE = 'http://10.106.52.22:8000';
+export const API_BASE = 'http://localhost:8000';

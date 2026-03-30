@@ -1,5 +1,11 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+const DIRECT_API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 const TEST_TOKEN = process.env.NEXT_PUBLIC_TEST_TOKEN || '';
+
+/** In the browser, route through Next.js rewrite proxy to avoid cross-origin issues (Safari). */
+function getApiBase(): string {
+  if (typeof window !== 'undefined') return '/api/proxy';
+  return DIRECT_API_BASE;
+}
 
 function getToken(): string {
   if (typeof window !== 'undefined') {
@@ -16,7 +22,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || res.statusText);
@@ -29,7 +35,7 @@ export async function apiFetchBlob(path: string): Promise<Blob | null> {
   const headers: Record<string, string> = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { headers });
+  const res = await fetch(`${getApiBase()}${path}`, { headers });
   if (!res.ok) return null;
   return res.blob();
 }

@@ -51,14 +51,13 @@ export function GlobalMenuProvider({ children }: { children: React.ReactNode }) 
         { divider: true, label: '', action: () => {} },
         { label: 'Command palette', icon: 'cmd', shortcut: '\u2318K', action: () => setCmdOpen(true) },
         { divider: true, label: '', action: () => {} },
-        { label: 'Home', icon: 'home', action: () => router.push('/home') },
+        { label: 'Career Center', icon: 'graduation', action: () => router.push('/home') },
         { label: 'Jobs', icon: 'briefcase', action: () => router.push('/jobs') },
-        { label: 'Tracker', icon: 'kanban', action: () => router.push('/tracker') },
+        { label: 'Resume Editor', icon: 'file', action: () => router.push('/resume-editor') },
+        { label: 'ATS', icon: 'clipboard', action: () => router.push('/ats') },
         { label: 'Scores', icon: 'chart', action: () => router.push('/scores') },
-        { label: 'Calendar', icon: 'calendar', action: () => router.push('/calendar') },
         { divider: true, label: '', action: () => {} },
         { label: 'Toggle theme', icon: 'moon', action: () => document.documentElement.classList.toggle('dark') },
-        { label: 'Shortcuts', icon: 'keyboard', action: () => setCmdOpen(true) },
       ];
 
       setMenu({ x: e.clientX, y: e.clientY, items: defaultItems });
@@ -187,6 +186,8 @@ function CtxIcon({ name }: { name: string }) {
     trophy: <svg {...s}><path d="M6 9H4.5a2.5 2.5 0 010-5H6m12 5h1.5a2.5 2.5 0 000-5H18M18 2H6v7a6 6 0 1012 0V2zM4 22h16"/></svg>,
     settings: <svg {...s}><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/></svg>,
     file: <svg {...s}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+    graduation: <svg {...s}><path d="M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 2 3 4 6 4s6-2 6-4v-5"/><path d="M2 10v5"/></svg>,
+    clipboard: <svg {...s}><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4"/></svg>,
     zap: <svg {...s}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
     search: <svg {...s}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
     chat: <svg {...s}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
@@ -209,7 +210,7 @@ function ContextMenuUI({ menu, onClose }: { menu: ContextMenuState; onClose: () 
   const adjustedY = Math.min(menu.y, window.innerHeight - menu.items.length * 36 - 20);
 
   return (
-    <div className="fixed inset-0 z-[150]" onContextMenu={e => e.preventDefault()}>
+    <div className="fixed inset-0 z-[150] cursor-none" onContextMenu={() => closeMenu()}>
       <div ref={ref}
         className="absolute bg-surface-1 border border-border-main rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.4)] py-1.5 min-w-[200px] backdrop-blur-xl overflow-hidden"
         style={{ left: adjustedX, top: adjustedY, animation: 'ctxIn 120ms ease-out' }}>
@@ -218,14 +219,14 @@ function ContextMenuUI({ menu, onClose }: { menu: ContextMenuState; onClose: () 
             <div key={i} style={{ height: 1, background: 'var(--border-main)', margin: '4px 10px' }} />
           ) : item.label === '__dilly_logo__' ? (
             <div key={i} style={{ padding: '8px 14px 4px' }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#3B4CC0', letterSpacing: -0.3 }}>dilly</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#2B3A8E', letterSpacing: -0.3 }}>dilly</span>
             </div>
           ) : (
             <button key={i} onClick={() => { item.action(); onClose(); }}
               className="ctx-item"
               style={{
                 width: 'calc(100% - 8px)', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '7px 12px', border: 'none', background: 'transparent', cursor: 'pointer',
+                padding: '7px 12px', border: 'none', background: 'transparent', cursor: 'none',
                 textAlign: 'left', borderRadius: 4, margin: '0 4px', transition: 'background 100ms ease',
               }}>
               <span className="ctx-icon" style={{ opacity: 0.4, transition: 'opacity 100ms ease', display: 'flex', alignItems: 'center' }}><CtxIcon name={item.icon || ''} /></span>

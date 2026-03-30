@@ -99,19 +99,19 @@ export function DillyFace({ size }: DillyFaceProps) {
           cx={cx - 8 * s}
           cy={cy - 4 * s}
           r={2.8 * s}
-          fill="#C9A84C"
+          fill="#2B3A8E"
         />
         {/* Right eye */}
         <Circle
           cx={cx + 8 * s}
           cy={cy - 4 * s}
           r={2.8 * s}
-          fill="#C9A84C"
+          fill="#2B3A8E"
         />
         {/* Smile — bezier arc */}
         <AnimatedPath
           d={smilePath}
-          stroke="#C9A84C"
+          stroke="#2B3A8E"
           strokeWidth={2.2 * s}
           strokeLinecap="round"
           fill="none"

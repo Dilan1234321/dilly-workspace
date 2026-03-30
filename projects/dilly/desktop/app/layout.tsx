@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Dilly — Career Readiness, Measured',
+  title: 'Your Career Center',
   description: 'The most powerful internship matching engine for college students.',
 };
 
