@@ -8,9 +8,9 @@ import {
   Dimensions,
   PanResponder,
   Pressable,
-  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DillyFace } from './DillyFace';
 import { colors, API_BASE } from '../lib/tokens';
 import { getToken } from '../lib/auth';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
@@ -228,7 +228,7 @@ export default function SplashScreen({ onDismiss }: Props) {
         <RippleRing delay={1000} />
         <View style={ss.orbOuter}>
           <View style={ss.orbInner}>
-            <Image source={require('../assets/logo.png')} style={{ width: 120, height: 80 }} resizeMode="contain" />
+            <DillyFace size={156} />
           </View>
         </View>
       </Animated.View>
