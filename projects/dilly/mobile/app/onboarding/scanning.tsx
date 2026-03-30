@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authHeaders } from '../../lib/auth';
+import { authHeaders, apiFetch } from '../../lib/auth';
 import { pendingUpload, PENDING_UPLOAD_KEY } from './upload';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -352,6 +352,11 @@ export default function ScanningScreen() {
 
         await AsyncStorage.setItem(AUDIT_RESULT_KEY, JSON.stringify(payload));
         console.log('[scan] stored payload keys:', Object.keys(payload).join(', '));
+
+        // Sync parsed resume to editor base resume
+        if (res.ok) {
+          try { await apiFetch('/resume/sync-base', { method: 'POST' }); } catch {}
+        }
       } catch (e) {
         console.log('[scan] CATCH ERROR:', e);
         await AsyncStorage.setItem(AUDIT_RESULT_KEY, JSON.stringify({ error: true }));

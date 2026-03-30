@@ -360,6 +360,12 @@ export default function NewAuditScreen() {
         setLatestAudit(result);
         // Prepend to history
         setHistory(prev => [result, ...prev].slice(0, 20));
+
+        // Update base resume in the editor from the latest parsed resume
+        // This ensures the resume editor always reflects the most recent audit
+        try {
+          await apiFetch('/resume/sync-base', { method: 'POST' }).catch(() => null);
+        } catch {}
       } else {
         Alert.alert('Audit failed', result?.detail || result?.error || 'Something went wrong.');
       }

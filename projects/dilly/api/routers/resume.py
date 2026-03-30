@@ -1,14 +1,23 @@
 """
 Resume editor endpoints.
-GET  /resume/edited       — load user's saved edited resume (structured sections JSON)
-POST /resume/save         — save edited resume sections back to disk
-POST /resume/audit        — re-audit from the saved edited resume text (no file upload needed)
+GET  /resume/edited               — load user's saved edited resume (structured sections JSON)
+POST /resume/save                 — save edited resume sections back to disk
+POST /resume/audit                — re-audit from the saved edited resume text (no file upload needed)
+GET  /resume/variants             — list all resume variants (cohort tabs + job-tailored)
+POST /resume/variants             — create a new variant
+GET  /resume/variants/{id}        — load variant content
+PUT  /resume/variants/{id}        — save variant content
+PATCH /resume/variants/{id}       — rename variant
+DELETE /resume/variants/{id}      — delete variant
+POST /resume/generate             — AI-generate a job-tailored resume (uses Dilly Profile)
 """
 import asyncio
 import json
 import os
+import re as _re
 import sys
 import time
+import uuid as _uuid_mod
 
 _ROUTER_DIR = os.path.dirname(os.path.abspath(__file__))
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "..", ".."))
@@ -16,6 +25,7 @@ if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
 from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 
@@ -25,6 +35,7 @@ from projects.dilly.api.profile_store import get_profile_folder_path, ensure_pro
 router = APIRouter(tags=["resume"])
 
 _RESUME_EDITED_FILENAME = "resume_edited.json"
+_VARIANTS_MANIFEST_FILENAME = "resume_variants.json"
 _MAX_BULLET_LEN = 600
 _MAX_FIELD_LEN = 300
 _MAX_SECTIONS = 20
@@ -303,6 +314,111 @@ async def save_edited_resume(request: Request, body: SaveResumeRequest):
         saved_at=saved_at,
         section_count=len(body.sections),
     )
+
+
+@router.post("/resume/sync-base")
+async def sync_base_resume(request: Request):
+    """
+    Sync the base resume in the editor from the latest parsed resume text.
+    Called after each audit so the editor always reflects the most recent version.
+    Parses the profile txt into structured sections and saves as resume_edited.json.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    try:
+        from projects.dilly.api.dilly_profile_txt import (
+            get_dilly_profile_txt_content,
+            parse_structured_experience_from_profile_txt,
+        )
+        profile_txt = get_dilly_profile_txt_content(email, max_chars=15000) or ""
+        if not profile_txt.strip():
+            return {"ok": False, "reason": "No parsed resume found"}
+
+        # Parse structured experience from the profile text
+        experiences = parse_structured_experience_from_profile_txt(profile_txt)
+
+        # Build editor sections from the parsed data
+        import re
+        profile = ensure_profile_exists(email)
+
+        sections = []
+
+        # Contact section
+        name = (profile.get("name") or "").strip()
+        p_email = (profile.get("email") or email).strip()
+        linkedin = (profile.get("linkedin_url") or "").strip()
+        sections.append({
+            "key": "contact",
+            "label": "Contact",
+            "contact": {"name": name, "email": p_email, "phone": "", "location": "", "linkedin": linkedin},
+        })
+
+        # Education section
+        major = (profile.get("majors") or [None])[0] or profile.get("major") or ""
+        minor = (profile.get("minors") or [None])[0] or ""
+        if minor and minor.upper() in ("N/A", "NA", "N", "A"):
+            minor = ""
+        school = "University of Tampa" if profile.get("school_id") == "utampa" else ""
+        # Try to extract GPA from profile text
+        gpa_match = re.search(r"GPA[:\s]*([\d.]+)", profile_txt, re.IGNORECASE)
+        gpa = gpa_match.group(1) if gpa_match else ""
+        sections.append({
+            "key": "education",
+            "label": "Education",
+            "education": {
+                "id": str(__import__("uuid").uuid4())[:8],
+                "university": school, "major": major, "minor": minor,
+                "graduation": "", "location": "", "honors": "", "gpa": gpa,
+            },
+        })
+
+        # Experience sections
+        if experiences:
+            exp_entries = []
+            for exp in experiences[:10]:
+                bullets = [{"id": str(__import__("uuid").uuid4())[:8], "text": b} for b in (exp.get("bullets") or [])[:8]]
+                if not bullets:
+                    bullets = [{"id": str(__import__("uuid").uuid4())[:8], "text": ""}]
+                exp_entries.append({
+                    "id": str(__import__("uuid").uuid4())[:8],
+                    "company": exp.get("company", ""),
+                    "role": exp.get("role", ""),
+                    "date": exp.get("date", ""),
+                    "location": exp.get("location", ""),
+                    "bullets": bullets,
+                })
+            sections.append({
+                "key": "professional_experience",
+                "label": "Professional Experience",
+                "experiences": exp_entries,
+            })
+
+        # Skills section — extract from [SKILLS] block
+        skills_match = re.search(r"\[SKILLS\](.*?)(?:\[|$)", profile_txt, re.DOTALL | re.IGNORECASE)
+        if skills_match:
+            skills_text = skills_match.group(1).strip()
+            skill_lines = [line.strip().lstrip("-• ").strip() for line in skills_text.split("\n") if line.strip()]
+            sections.append({
+                "key": "skills",
+                "label": "Skills",
+                "simple": {"id": str(__import__("uuid").uuid4())[:8], "lines": skill_lines[:10] or [""]},
+            })
+
+        if not sections:
+            return {"ok": False, "reason": "Could not parse resume sections"}
+
+        saved_at = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
+        data = {"sections": sections, "source_audit_id": None, "saved_at": saved_at, "synced_from_audit": True}
+        _save_resume(email, data)
+        return {"ok": True, "section_count": len(sections), "saved_at": saved_at}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"ok": False, "reason": str(e)[:200]}
 
 
 @router.post("/resume/audit")
@@ -631,3 +747,826 @@ async def score_bullet(request: Request, body: BulletScoreRequest):
 
     # Limit hints to 2
     return BulletScoreResponse(score=score, label=label, hints=hints[:2])
+
+
+# ---------------------------------------------------------------------------
+# Resume Variants — manifest + per-variant content files
+# ---------------------------------------------------------------------------
+# Manifest: resume_variants.json  → { "variants": [ VariantMeta, ... ] }
+# Content:  resume_variant_{id}.json → { "sections": [...], "saved_at": "..." }
+
+
+class VariantMeta(BaseModel):
+    id: str
+    label: str
+    cohort: str
+    type: str = "cohort"           # "cohort" | "job"
+    job_title: Optional[str] = None
+    job_company: Optional[str] = None
+    created_at: str
+
+
+class CreateVariantRequest(BaseModel):
+    label: str
+    cohort: str
+    type: str = "cohort"
+    job_title: Optional[str] = None
+    job_company: Optional[str] = None
+    sections: Optional[List[ResumeSection]] = None  # seed content
+
+
+class RenameVariantRequest(BaseModel):
+    label: str
+
+
+class SaveVariantRequest(BaseModel):
+    sections: List[ResumeSection]
+
+
+def _variants_manifest_path(email: str) -> str:
+    folder = get_profile_folder_path(email)
+    return os.path.join(folder, _VARIANTS_MANIFEST_FILENAME) if folder else ""
+
+
+def _variant_content_path(email: str, variant_id: str) -> str:
+    folder = get_profile_folder_path(email)
+    return os.path.join(folder, f"resume_variant_{variant_id}.json") if folder else ""
+
+
+def _load_manifest(email: str) -> dict:
+    path = _variants_manifest_path(email)
+    if path and os.path.isfile(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"variants": []}
+
+
+def _save_manifest(email: str, manifest: dict) -> None:
+    path = _variants_manifest_path(email)
+    if not path:
+        return
+    folder = os.path.dirname(path)
+    os.makedirs(folder, exist_ok=True)
+    import tempfile
+    fd, tmp = tempfile.mkstemp(dir=folder, suffix=".tmp")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+def _load_variant_content(email: str, variant_id: str) -> dict | None:
+    path = _variant_content_path(email, variant_id)
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _save_variant_content(email: str, variant_id: str, sections: list) -> None:
+    path = _variant_content_path(email, variant_id)
+    if not path:
+        raise ValueError("Invalid email")
+    folder = os.path.dirname(path)
+    os.makedirs(folder, exist_ok=True)
+    import tempfile
+    fd, tmp = tempfile.mkstemp(dir=folder, suffix=".tmp")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump({"sections": sections, "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, f, separators=(",", ":"))
+    os.replace(tmp, path)
+
+
+# ---------------------------------------------------------------------------
+# Major / legacy cohort → 22 spec cohort label mapping
+# ---------------------------------------------------------------------------
+
+_MAJOR_TO_SPEC_COHORT: Dict[str, str] = {
+    "Computer Science": "Software Engineering & CS",
+    "Computer Information Systems": "Software Engineering & CS",
+    "Software Engineering": "Software Engineering & CS",
+    "Cybersecurity": "Cybersecurity & IT",
+    "Information Technology": "Cybersecurity & IT",
+    "Data Science": "Data Science & Analytics",
+    "Statistics": "Data Science & Analytics",
+    "Mathematics": "Physical Sciences & Math",
+    "Physics": "Physical Sciences & Math",
+    "Finance": "Finance & Accounting",
+    "Accounting": "Finance & Accounting",
+    "Economics": "Economics & Public Policy",
+    "Government and World Affairs": "Economics & Public Policy",
+    "Political Science": "Economics & Public Policy",
+    "Business Administration": "Management & Operations",
+    "International Business": "Management & Operations",
+    "Management": "Management & Operations",
+    "Marketing": "Marketing & Advertising",
+    "Advertising and Public Relations": "Marketing & Advertising",
+    "Biology": "Life Sciences & Research",
+    "Chemistry": "Life Sciences & Research",
+    "Biochemistry": "Life Sciences & Research",
+    "Forensic Science": "Life Sciences & Research",
+    "Marine Science": "Environmental & Sustainability",
+    "Environmental Science": "Environmental & Sustainability",
+    "Nursing": "Healthcare & Clinical",
+    "Health Sciences": "Healthcare & Clinical",
+    "Exercise Science": "Healthcare & Clinical",
+    "Kinesiology": "Healthcare & Clinical",
+    "Allied Health": "Healthcare & Clinical",
+    "Public Health": "Healthcare & Clinical",
+    "Psychology": "Social Sciences & Nonprofit",
+    "Sociology": "Social Sciences & Nonprofit",
+    "Criminal Justice": "Social Sciences & Nonprofit",
+    "Social Work": "Social Sciences & Nonprofit",
+    "History": "Social Sciences & Nonprofit",
+    "Philosophy": "Social Sciences & Nonprofit",
+    "Liberal Arts": "Social Sciences & Nonprofit",
+    "English": "Media & Communications",
+    "Journalism": "Media & Communications",
+    "Communication": "Media & Communications",
+    "Education": "Education & Teaching",
+    "Theatre Arts": "Design & Creative",
+    "Music": "Design & Creative",
+    "Digital Arts and Design": "Design & Creative",
+    "Sport Management": "Hospitality & Events",
+}
+
+_LEGACY_TO_SPEC_COHORT: Dict[str, str] = {
+    "Tech": "Software Engineering & CS",
+    "Business": "Finance & Accounting",
+    "Science": "Life Sciences & Research",
+    "Quantitative": "Data Science & Analytics",
+    "Health": "Healthcare & Clinical",
+    "Pre-Health": "Healthcare & Clinical",
+    "Social Science": "Social Sciences & Nonprofit",
+    "Humanities": "Media & Communications",
+    "Sport": "Hospitality & Events",
+    "Pre-Law": "Legal & Compliance",
+    "Finance": "Finance & Accounting",
+    "General": "General",
+}
+
+_SPEC_COHORT_LABELS = frozenset({
+    "Software Engineering & CS", "Data Science & Analytics", "Cybersecurity & IT",
+    "Finance & Accounting", "Marketing & Advertising", "Consulting & Strategy",
+    "Management & Operations", "Economics & Public Policy", "Entrepreneurship & Innovation",
+    "Healthcare & Clinical", "Life Sciences & Research", "Physical Sciences & Math",
+    "Social Sciences & Nonprofit", "Media & Communications", "Design & Creative",
+    "Legal & Compliance", "Human Resources & People", "Supply Chain & Logistics",
+    "Education & Teaching", "Real Estate & Construction", "Environmental & Sustainability",
+    "Hospitality & Events",
+})
+
+
+def _major_to_cohort_label(value: str) -> str:
+    """Map a major name or legacy cohort key to a 22-spec cohort label."""
+    if not value:
+        return "General"
+    c = _MAJOR_TO_SPEC_COHORT.get(value)
+    if c:
+        return c
+    c = _LEGACY_TO_SPEC_COHORT.get(value)
+    if c:
+        return c
+    if value in _SPEC_COHORT_LABELS:
+        return value
+    return "General"
+
+
+# ---------------------------------------------------------------------------
+# Parsed resume text → editor sections converter
+# ---------------------------------------------------------------------------
+
+def _split_parsed_text_blocks(text: str) -> Dict[str, str]:
+    """Split stored parsed resume text into a dict keyed by lowercase section label."""
+    if not text:
+        return {}
+    blocks: Dict[str, str] = {}
+    # Top-level name line before any section header
+    name_m = _re.match(r"Name:\s*(.+)", text.strip())
+    if name_m:
+        blocks["_name"] = name_m.group(1).strip()
+    # Split on [SECTION LABEL] lines
+    parts = _re.split(r"\n(\[[^\]]+\])\n", "\n" + text)
+    i = 0
+    while i < len(parts):
+        seg = parts[i].strip()
+        if seg.startswith("[") and seg.endswith("]"):
+            label = seg[1:-1].strip().lower()
+            content = parts[i + 1].strip() if i + 1 < len(parts) else ""
+            # Multiple blocks with same canonical key get merged
+            if label in blocks:
+                blocks[label] = blocks[label] + "\n\n" + content
+            else:
+                blocks[label] = content
+            i += 2
+        else:
+            i += 1
+    return blocks
+
+
+def _build_contact_section(content: str, name_hint: str) -> Dict[str, str]:
+    name = name_hint or ""
+    email = phone = location = linkedin = github = portfolio = ""
+    for line in content.split("\n"):
+        s = line.strip()
+        if not s or s.lower().startswith("cohort:"):
+            continue
+        for prefix, target in [
+            ("email:", "email"), ("phone:", "phone"), ("location:", "location"),
+            ("linkedin:", "linkedin"), ("github:", "github"), ("portfolio:", "portfolio"),
+        ]:
+            if s.lower().startswith(prefix):
+                val = s[len(prefix):].strip()
+                if target == "email":
+                    email = val
+                elif target == "phone":
+                    phone = val
+                elif target == "location":
+                    location = val
+                elif target == "linkedin":
+                    linkedin = val
+                elif target == "github":
+                    github = val
+                elif target == "portfolio":
+                    portfolio = val
+                break
+        else:
+            # Non-labeled line → name if not already set and looks like a name
+            if not name and "@" not in s and not _re.match(r"^\d", s):
+                name = s
+    return {
+        "name": name, "email": email, "phone": phone,
+        "location": location, "linkedin": linkedin,
+        "github": github, "portfolio": portfolio,
+    }
+
+
+def _build_education_entry(content: str) -> Dict[str, Any]:
+    university = major = minor = graduation = honors = gpa = location = ""
+    for line in content.split("\n"):
+        s = line.strip()
+        if not s:
+            continue
+        for prefix, key in [
+            ("university:", "university"), ("major(s):", "major"), ("major:", "major"),
+            ("minor(s):", "minor"), ("minor:", "minor"),
+            ("graduation date:", "graduation"), ("graduation:", "graduation"),
+            ("honors:", "honors"), ("gpa:", "gpa"), ("location:", "location"),
+        ]:
+            if s.lower().startswith(prefix):
+                val = s[len(prefix):].strip()
+                if val.lower() in ("n/a", "not honors", ""):
+                    val = ""
+                if key == "university":
+                    university = val
+                elif key == "major":
+                    major = val
+                elif key == "minor":
+                    minor = val
+                elif key == "graduation":
+                    graduation = val
+                elif key == "honors":
+                    honors = val
+                elif key == "gpa":
+                    gpa = val
+                elif key == "location":
+                    location = val
+                break
+    return {
+        "id": "edu_1", "university": university, "major": major, "minor": minor,
+        "graduation": graduation, "location": location, "honors": honors, "gpa": gpa,
+    }
+
+
+def _build_experience_entries(content: str) -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    try:
+        from dilly_core.structured_resume import _parse_experience_entries as _pee
+        raw = _pee(content)
+    except Exception:
+        raw = []
+    for i, e in enumerate(raw):
+        desc = e.get("description", "")
+        bullets = []
+        for ln in desc.split("\n"):
+            ln = ln.strip().lstrip("•").strip()
+            if ln:
+                bullets.append({"id": f"b{i}_{len(bullets)}", "text": ln})
+        if not bullets:
+            bullets = [{"id": f"b{i}_0", "text": ""}]
+        entries.append({
+            "id": f"exp_{i}",
+            "company": e.get("company", "") if e.get("company", "N/A") != "N/A" else "",
+            "role": e.get("role", "") if e.get("role", "N/A") != "N/A" else "",
+            "date": e.get("date", ""),
+            "location": e.get("location", "") if e.get("location", "N/A") != "N/A" else "",
+            "bullets": bullets,
+        })
+    return entries
+
+
+def _build_project_entries(content: str) -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    try:
+        from dilly_core.structured_resume import _parse_project_entries as _ppe
+        raw = _ppe(content)
+    except Exception:
+        raw = []
+    for i, e in enumerate(raw):
+        desc = e.get("description", "")
+        bullets = []
+        for ln in desc.split("\n"):
+            ln = ln.strip().lstrip("•").strip()
+            if ln:
+                bullets.append({"id": f"bp{i}_{len(bullets)}", "text": ln})
+        if not bullets:
+            bullets = [{"id": f"bp{i}_0", "text": ""}]
+        entries.append({
+            "id": f"proj_{i}",
+            "name": e.get("project_name", "") if e.get("project_name", "N/A") != "N/A" else "",
+            "date": e.get("date", "") if e.get("date", "N/A") != "N/A" else "",
+            "location": e.get("location", "") if e.get("location", "N/A") != "N/A" else "",
+            "bullets": bullets,
+        })
+    return entries
+
+
+def _build_simple_section(content: str, sid: str = "s1") -> Dict[str, Any]:
+    lines = [ln.strip().lstrip("•").strip() for ln in content.split("\n") if ln.strip()]
+    return {"id": sid, "lines": lines}
+
+
+def _parsed_text_to_editor_sections(text: str, profile: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Convert stored parsed resume labeled text → list of ResumeSection dicts
+    in the editor's JSON format. Used to seed variant content on first open.
+    """
+    blocks = _split_parsed_text_blocks(text)
+    name_hint = blocks.get("_name") or profile.get("name") or ""
+    sections: List[Dict[str, Any]] = []
+
+    # Contact
+    contact_raw = blocks.get("contact / top") or blocks.get("contact") or ""
+    sections.append({
+        "key": "contact", "label": "Contact",
+        "contact": _build_contact_section(contact_raw, name_hint),
+        "education": None, "experiences": None, "projects": None,
+        "simple": None, "leadership": None,
+    })
+
+    # Education
+    edu_raw = blocks.get("education") or ""
+    if edu_raw:
+        sections.append({
+            "key": "education", "label": "Education",
+            "contact": None,
+            "education": _build_education_entry(edu_raw),
+            "experiences": None, "projects": None, "simple": None, "leadership": None,
+        })
+
+    # Professional experience
+    for block_label, sec_key, sec_display in [
+        ("professional experience", "experience", "Experience"),
+        ("research", "experience", "Experience"),
+    ]:
+        raw = blocks.get(block_label) or ""
+        if raw:
+            entries = _build_experience_entries(raw)
+            if entries:
+                sections.append({
+                    "key": sec_key, "label": sec_display,
+                    "contact": None, "education": None,
+                    "experiences": entries,
+                    "projects": None, "simple": None, "leadership": None,
+                })
+
+    # Leadership / involvement
+    for block_label in ("campus involvement", "volunteer experience"):
+        raw = blocks.get(block_label) or ""
+        if raw:
+            entries = _build_experience_entries(raw)
+            if entries:
+                sections.append({
+                    "key": "leadership", "label": "Leadership & Activities",
+                    "contact": None, "education": None, "experiences": None,
+                    "projects": None, "simple": None,
+                    "leadership": entries,
+                })
+
+    # Projects
+    proj_raw = blocks.get("projects") or ""
+    if proj_raw:
+        entries = _build_project_entries(proj_raw)
+        if entries:
+            sections.append({
+                "key": "projects", "label": "Projects",
+                "contact": None, "education": None, "experiences": None,
+                "projects": entries, "simple": None, "leadership": None,
+            })
+
+    # Skills
+    skills_raw = blocks.get("skills") or ""
+    if skills_raw:
+        sections.append({
+            "key": "skills", "label": "Skills",
+            "contact": None, "education": None, "experiences": None,
+            "projects": None,
+            "simple": _build_simple_section(skills_raw, "skills_1"),
+            "leadership": None,
+        })
+
+    # Optional simple sections
+    for block_label, sec_key, sec_display in [
+        ("honors", "honors", "Honors"),
+        ("certifications", "certifications", "Certifications"),
+        ("summary objective", "summary", "Summary"),
+        ("relevant coursework", "coursework", "Relevant Coursework"),
+        ("publications presentations", "publications", "Publications"),
+    ]:
+        raw = blocks.get(block_label) or ""
+        if raw:
+            sections.append({
+                "key": sec_key, "label": sec_display,
+                "contact": None, "education": None, "experiences": None,
+                "projects": None,
+                "simple": _build_simple_section(raw, f"{sec_key}_1"),
+                "leadership": None,
+            })
+
+    return sections
+
+
+def _load_parsed_resume_for_email(email: str) -> Optional[str]:
+    """Load the user's stored parsed resume text file, if it exists."""
+    try:
+        from dilly_core.structured_resume import safe_filename_from_key, read_parsed_resume
+        parsed_dir = os.path.join(_WORKSPACE_ROOT, "projects", "dilly", "parsed_resumes")
+        filepath = os.path.join(parsed_dir, safe_filename_from_key(email))
+        if os.path.isfile(filepath):
+            return read_parsed_resume(filepath)
+    except Exception as exc:
+        sys.stderr.write(f"Dilly resume.py: failed to load parsed resume for {email!r}: {exc}\n")
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Variant bootstrapping
+# ---------------------------------------------------------------------------
+
+def _ensure_variants_bootstrapped(email: str, profile: Dict[str, Any]) -> dict:
+    """
+    If user has no variants yet, create one per major cohort + one per minor cohort,
+    each seeded with content from resume_edited.json or the parsed resume file.
+    """
+    manifest = _load_manifest(email)
+    if manifest["variants"]:
+        return manifest
+
+    # Determine ordered cohort list (primary → majors → minors, deduped)
+    majors: List[str] = profile.get("majors") or []
+    minors: List[str] = profile.get("minors") or []
+    primary_cohort: str = profile.get("cohort") or "General"
+
+    seen: set = set()
+    cohort_list: List[str] = []
+    for src in [primary_cohort] + majors + minors:
+        label = _major_to_cohort_label(src)
+        if label not in seen:
+            seen.add(label)
+            cohort_list.append(label)
+    if not cohort_list:
+        cohort_list = ["General"]
+
+    # Load seed content: resume_edited.json first, then parsed resume file
+    existing = _load_resume(email)
+    seed_sections: Optional[list] = (existing or {}).get("sections") or None
+    if not seed_sections:
+        parsed_text = _load_parsed_resume_for_email(email)
+        if parsed_text:
+            try:
+                seed_sections = _parsed_text_to_editor_sections(parsed_text, profile)
+            except Exception as exc:
+                sys.stderr.write(f"Dilly resume.py: parsed→editor conversion failed for {email!r}: {exc}\n")
+                seed_sections = None
+
+    # Create one variant per cohort, all seeded with the same base content
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    variants = []
+    for cohort in cohort_list:
+        safe_id = cohort.lower().replace(" ", "_").replace("&", "and").replace("/", "_")
+        variant_id = f"cohort_{safe_id}"
+        meta = {
+            "id": variant_id, "label": cohort, "cohort": cohort,
+            "type": "cohort", "job_title": None, "job_company": None, "created_at": now,
+        }
+        variants.append(meta)
+        if seed_sections:
+            _save_variant_content(email, variant_id, seed_sections)
+
+    manifest["variants"] = variants
+    _save_manifest(email, manifest)
+    return manifest
+
+
+@router.get("/resume/variants")
+async def list_variants(request: Request):
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
+    if not email:
+        raise errors.unauthorized()
+    profile = ensure_profile_exists(email)
+    manifest = await asyncio.to_thread(_ensure_variants_bootstrapped, email, profile)
+    return {"variants": manifest["variants"]}
+
+
+@router.post("/resume/variants")
+async def create_variant(request: Request, body: CreateVariantRequest):
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
+    if not email:
+        raise errors.unauthorized()
+    manifest = _load_manifest(email)
+    variant_id = _uuid_mod.uuid4().hex[:12]
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    meta = {
+        "id": variant_id, "label": body.label, "cohort": body.cohort,
+        "type": body.type, "job_title": body.job_title, "job_company": body.job_company,
+        "created_at": now,
+    }
+    manifest["variants"].append(meta)
+    await asyncio.to_thread(_save_manifest, email, manifest)
+    if body.sections:
+        sections_raw = [s.model_dump() for s in body.sections]
+        await asyncio.to_thread(_save_variant_content, email, variant_id, sections_raw)
+    return {"variant": meta}
+
+
+@router.get("/resume/variants/{variant_id}")
+async def get_variant_content(request: Request, variant_id: str):
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
+    if not email:
+        raise errors.unauthorized()
+    content = await asyncio.to_thread(_load_variant_content, email, variant_id)
+    return {"sections": (content or {}).get("sections") or [], "saved_at": (content or {}).get("saved_at")}
+
+
+@router.put("/resume/variants/{variant_id}")
+async def save_variant_content(request: Request, variant_id: str, body: SaveVariantRequest):
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
+    if not email:
+        raise errors.unauthorized()
+    # Verify variant exists
+    manifest = _load_manifest(email)
+    if not any(v["id"] == variant_id for v in manifest["variants"]):
+        raise errors.not_found("Variant not found.")
+    sections_raw = [s.model_dump() for s in body.sections]
+    await asyncio.to_thread(_save_variant_content, email, variant_id, sections_raw)
+    return {"ok": True, "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+
+
+@router.patch("/resume/variants/{variant_id}")
+async def rename_variant(request: Request, variant_id: str, body: RenameVariantRequest):
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
+    if not email:
+        raise errors.unauthorized()
+    manifest = _load_manifest(email)
+    updated = False
+    for v in manifest["variants"]:
+        if v["id"] == variant_id:
+            v["label"] = body.label[:80]
+            updated = True
+            break
+    if not updated:
+        raise errors.not_found("Variant not found.")
+    await asyncio.to_thread(_save_manifest, email, manifest)
+    return {"ok": True}
+
+
+@router.delete("/resume/variants/{variant_id}")
+async def delete_variant(request: Request, variant_id: str):
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
+    if not email:
+        raise errors.unauthorized()
+    manifest = _load_manifest(email)
+    before = len(manifest["variants"])
+    manifest["variants"] = [v for v in manifest["variants"] if v["id"] != variant_id]
+    if len(manifest["variants"]) == before:
+        raise errors.not_found("Variant not found.")
+    await asyncio.to_thread(_save_manifest, email, manifest)
+    # Delete content file
+    path = _variant_content_path(email, variant_id)
+    if path and os.path.isfile(path):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# AI Resume Generation
+# ---------------------------------------------------------------------------
+
+# Map job title keywords → cohort
+_TITLE_COHORT_MAP = [
+    (["software", "engineer", "developer", "swe", "fullstack", "backend", "frontend", "ios", "android",
+      "machine learning", "ml engineer", "ai engineer", "data engineer", "devops", "sre", "cloud",
+      "cybersecurity", "infosec", "it analyst", "systems", "firmware", "embedded"], "Tech"),
+    (["data scientist", "data analyst", "quantitative", "quant", "actuar", "statistician"], "Quantitative"),
+    (["investment banking", "investment bank", "private equity", "pe analyst", "trading", "hedge fund",
+      "goldman", "jp morgan", "morgan stanley", "bulge bracket", "ib analyst"], "Business"),
+    (["financial analyst", "finance", "accounting", "audit", "tax", "cpa", "controller",
+      "treasury", "equity research", "credit analyst"], "Business"),
+    (["marketing", "brand", "advertising", "pr ", "public relations", "growth", "content",
+      "social media", "seo", "product marketing"], "Business"),
+    (["consulting", "strategy", "operations", "business analyst", "management consultant",
+      "associate consultant", "mbb"], "Social Science"),
+    (["nurse", "nursing", "clinical", "patient care", "medical assistant", "pharmacy",
+      "physician", "healthcare", "hospital", "emt", "paramedic", "health care"], "Health"),
+    (["research", "lab", "biology", "chemistry", "biochem", "molecular", "neuroscience",
+      "ecology", "environmental scientist", "geologist"], "Science"),
+    (["journalist", "writer", "editor", "content creator", "media", "broadcast",
+      "communications", "public affairs", "copywriter"], "Humanities"),
+    (["athletic trainer", "sports", "recreation", "coaching", "fitness", "physical education",
+      "sport management", "espn", "nfl", "nba", "mlb"], "Sport"),
+]
+
+_COMPANY_FINANCE_KEYWORDS = [
+    "bank", "capital", "financial", "investments", "securities", "asset management",
+    "wealth management", "insurance", "raymond james", "edward jones", "charles schwab",
+    "fidelity", "vanguard", "blackrock", "pimco", "jpmorgan", "goldman", "morgan stanley",
+    "wells fargo", "citigroup", "bank of america", "ubs", "credit suisse", "barclays",
+]
+
+
+def _detect_cohort_from_job(title: str, company: str) -> str:
+    title_l = title.lower()
+    company_l = company.lower()
+    for keywords, cohort in _TITLE_COHORT_MAP:
+        if any(kw in title_l for kw in keywords):
+            # Tech role at a finance company → still Tech template, but note the company context
+            return cohort
+    # If no title match, fall back to company industry
+    if any(kw in company_l for kw in _COMPANY_FINANCE_KEYWORDS):
+        return "Business"
+    return "General"
+
+
+class GenerateResumeRequest(BaseModel):
+    job_title: str
+    job_company: str
+    job_description: Optional[str] = ""
+    cohort: Optional[str] = None       # override auto-detection
+    base_variant_id: Optional[str] = None  # which variant to use as source material
+
+
+@router.post("/resume/generate")
+async def generate_resume(request: Request, body: GenerateResumeRequest):
+    """
+    AI-generate a job-tailored resume. Uses the user's Dilly Profile + existing resume + JD.
+    Returns structured ResumeSection JSON.
+    """
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
+    if not email:
+        raise errors.unauthorized()
+
+    job_title = (body.job_title or "").strip()
+    job_company = (body.job_company or "").strip()
+    job_description = (body.job_description or "").strip()
+    if not job_title or not job_company:
+        raise errors.validation_error("job_title and job_company are required.")
+
+    cohort = body.cohort or _detect_cohort_from_job(job_title, job_company)
+
+    # Load existing resume (base variant or primary)
+    base_sections = []
+    if body.base_variant_id:
+        content = await asyncio.to_thread(_load_variant_content, email, body.base_variant_id)
+        if content:
+            base_sections = content.get("sections") or []
+    if not base_sections:
+        existing = await asyncio.to_thread(_load_resume, email)
+        if existing:
+            base_sections = existing.get("sections") or []
+
+    # Load Dilly Profile facts
+    profile_facts_text = ""
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        surface = await asyncio.to_thread(get_memory_surface, email)
+        facts = surface.get("items") or []
+        narrative = (surface.get("narrative") or "").strip()
+        if facts:
+            cat_labels = {
+                "achievement": "Achievements", "goal": "Goals", "target_company": "Target Companies",
+                "skill_unlisted": "Unlisted Skills (not currently on resume, CAN be added)",
+                "project_detail": "Additional Projects (not currently on resume, CAN be added)",
+                "motivation": "Motivations", "personality": "Personality",
+                "soft_skill": "Soft Skills", "hobby": "Interests",
+                "life_context": "Background", "company_culture_pref": "Work Style Preferences",
+                "strength": "Strengths", "weakness": "Growth Areas",
+            }
+            lines = []
+            grouped: dict[str, list] = {}
+            for f in facts:
+                cat = f.get("category", "other")
+                grouped.setdefault(cat, []).append(f)
+            for cat, items in grouped.items():
+                label = cat_labels.get(cat, cat.replace("_", " ").title())
+                entries = "; ".join(f"{i['label']}: {i['value']}" for i in items[:6])
+                lines.append(f"  {label}: {entries}")
+            profile_facts_text = "\n".join(lines)
+            if narrative:
+                profile_facts_text = f"NARRATIVE: {narrative}\n\nFACTS:\n{profile_facts_text}"
+    except Exception:
+        pass
+
+    # Serialize base resume as readable text for context
+    base_resume_json = json.dumps(base_sections, separators=(",", ":")) if base_sections else "[]"
+    # Truncate if too long
+    if len(base_resume_json) > 12000:
+        base_resume_json = base_resume_json[:12000] + "..."
+
+    # Finance company modifier for tech roles
+    company_l = job_company.lower()
+    is_finance_company = any(kw in company_l for kw in _COMPANY_FINANCE_KEYWORDS)
+    finance_note = ""
+    if cohort == "Tech" and is_finance_company:
+        finance_note = f"\nNOTE: {job_company} is a finance/banking firm. Even though this is a tech role, include GPA if ≥3.5, use a slightly more formal tone, and highlight any finance-domain knowledge."
+
+    system_prompt = f"""You are Dilly's resume generation AI. Your job is to create a tailored resume in structured JSON format.
+
+TARGET JOB:
+  Title: {job_title}
+  Company: {job_company}
+  Cohort/Template: {cohort}{finance_note}
+
+JOB DESCRIPTION:
+{job_description[:4000] if job_description else "(Not provided — tailor based on job title and company reputation.)"}
+
+STUDENT'S DILLY PROFILE:
+{profile_facts_text or "(No profile facts available — use base resume only)"}
+
+STUDENT'S CURRENT RESUME (structured JSON):
+{base_resume_json}
+
+INSTRUCTIONS:
+1. Rewrite the resume sections to be tailored specifically for this job at {job_company}.
+2. Match keywords from the job description in bullets where truthful.
+3. Reorder and emphasize experiences most relevant to this role.
+4. You MAY incorporate "Unlisted Skills" and "Additional Projects" from the Dilly Profile if they are relevant to this job.
+5. Keep ALL factual information accurate — do not invent companies, dates, degrees, or GPAs.
+6. Every bullet must start with a strong action verb and include a metric where possible.
+7. Use the {cohort} template conventions: {_get_cohort_tip(cohort)}
+8. Keep the resume to one page worth of content.
+9. Preserve the exact JSON structure of the input sections — same keys, same section types.
+
+Return ONLY valid JSON — a JSON array of resume section objects matching this exact schema:
+[
+  {{"key": "contact", "label": "Contact", "contact": {{"name": "", "email": "", "phone": "", "location": "", "linkedin": ""}}}},
+  {{"key": "education", "label": "Education", "education": {{"id": "", "university": "", "major": "", "minor": "", "graduation": "", "location": "", "honors": "", "gpa": ""}}}},
+  {{"key": "professional_experience", "label": "Experience", "experiences": [{{"id": "", "company": "", "role": "", "date": "", "location": "", "bullets": [{{"id": "", "text": ""}}]}}]}},
+  {{"key": "projects", "label": "Projects", "projects": [{{"id": "", "name": "", "date": "", "location": "", "tech": "", "bullets": [{{"id": "", "text": ""}}]}}]}},
+  {{"key": "skills", "label": "Skills", "simple": {{"id": "", "lines": [""]}}}}
+]
+Include only sections that have content. Do not include markdown, explanations, or any text outside the JSON array."""
+
+    async def stream_generate():
+        try:
+            import anthropic
+            client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+            async with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=4096,
+                system=system_prompt,
+                messages=[{"role": "user", "content": f"Generate a tailored resume for {job_title} at {job_company}. Return only the JSON array."}],
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        except Exception as e:
+            yield f"\n{{\"error\": \"{str(e)[:100]}\"}}"
+
+    return StreamingResponse(stream_generate(), media_type="text/plain")
+
+
+def _get_cohort_tip(cohort: str) -> str:
+    tips = {
+        "Tech": "left-aligned, Skills near top, GitHub link, no summary, Projects section required",
+        "Business": "centered header, Education first, GPA always shown, Leadership section, formal serif style",
+        "Social Science": "left-aligned, Leadership & Extracurriculars required, every bullet needs a metric",
+        "Science": "Research Experience is main section, list lab techniques explicitly as ATS keywords",
+        "Health": "Certifications near top, Clinical Experience section, GPA optional",
+        "Humanities": "Portfolio link critical, highlight published/bylined work",
+        "Sport": "SafeSport certification bolded if applicable, game-day roles included",
+        "Quantitative": "quantify everything, highlight analytical tools and methods",
+    }
+    return tips.get(cohort, "professional, concise, metric-driven bullets")
