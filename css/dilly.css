@@ -3610,3 +3610,327 @@ body.pricing-page .price-list li {
   background: linear-gradient(180deg, #fff 0%, #f0f2f8 100%);
   border-color: var(--border);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE POLISH — phenomenal on every screen
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Light-mode mobile nav slide-out ── */
+@media (max-width: 1023px) {
+  :root.light .nav-glass {
+    background: #fff !important;
+    border-left: 1px solid var(--border) !important;
+    box-shadow: -16px 0 48px rgba(0, 30, 80, 0.08) !important;
+  }
+
+  :root.light .nav-glass .nav-item {
+    color: var(--text);
+  }
+
+  :root.light .nav-glass .nav-item:hover {
+    background: var(--surface-2);
+    color: var(--navy);
+  }
+
+  :root.light .nav-glass .nav-item--signin {
+    color: var(--text-muted);
+    border-top-color: var(--border);
+  }
+
+  :root.light .nav-glass .nav-dropdown-panel {
+    border-left-color: var(--border);
+  }
+
+  :root.light .nav-glass .nav-dropdown-link {
+    color: var(--text-muted);
+  }
+
+  :root.light .nav-glass .nav-dropdown-link:hover {
+    color: var(--navy);
+  }
+
+  :root.light .nav-glass .nav-dropdown-label {
+    color: var(--text-muted);
+  }
+}
+
+/* ── Hero mobile ── */
+@media (max-width: 767px) {
+  .hero-fullbleed {
+    min-height: 85vh;
+    min-height: 85dvh;
+  }
+
+  .hero-content--fullbleed {
+    min-height: 85vh;
+    min-height: 85dvh;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .hero-title {
+    font-size: clamp(1.75rem, 8vw, 2.5rem) !important;
+    line-height: 1.15;
+  }
+
+  .hero-lead {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .hero-cta-cluster {
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .hero-cta-cluster .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* ── Section spacing mobile ── */
+@media (max-width: 767px) {
+  .section {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+
+  .section-inner {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .section-title {
+    font-size: clamp(1.35rem, 5.5vw, 1.75rem) !important;
+  }
+
+  .section-desc {
+    font-size: 0.9rem;
+  }
+
+  .section-eyebrow {
+    font-size: 0.65rem;
+  }
+}
+
+/* ── Persona tabs mobile ── */
+@media (max-width: 767px) {
+  .persona-tabs {
+    gap: 0.25rem !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.25rem;
+  }
+
+  .persona-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .persona-tab {
+    font-size: 0.7rem !important;
+    padding: 0.5rem 0.75rem !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .persona-card {
+    padding: 1.5rem 1rem !important;
+  }
+
+  .persona-card h3 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* ── Carousel mobile ── */
+@media (max-width: 767px) {
+  #carousel-prev,
+  #carousel-next {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 16px !important;
+  }
+
+  #carousel-prev {
+    left: 0.25rem !important;
+  }
+
+  #carousel-next {
+    right: 0.25rem !important;
+  }
+
+  .carousel-slide h3 {
+    font-size: 1rem !important;
+  }
+
+  .carousel-slide p {
+    font-size: 0.85rem !important;
+  }
+}
+
+/* ── Toolkit bento grid mobile ── */
+@media (max-width: 767px) {
+  .toolkit-bento {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .toolkit-card {
+    padding: 1.25rem !important;
+  }
+
+  .toolkit-watermark {
+    font-size: 18vw !important;
+  }
+
+  .toolkit-kpis {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+/* ── Feature page splits mobile ── */
+@media (max-width: 767px) {
+  .fp-split {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  .fp-split--reverse {
+    direction: ltr !important;
+  }
+
+  .fp-split--reverse > * {
+    direction: ltr !important;
+  }
+
+  .fp-split-visual {
+    min-height: auto !important;
+  }
+
+  .fp-split-visual img {
+    border-radius: var(--radius) !important;
+  }
+
+  .fp-h2 {
+    font-size: clamp(1.15rem, 4.5vw, 1.5rem) !important;
+  }
+
+  .fp-lead {
+    font-size: 0.9rem !important;
+  }
+
+  .fp-hero {
+    padding-top: 6rem !important;
+    padding-bottom: 2rem !important;
+  }
+
+  .fp-hero-title {
+    font-size: clamp(1.5rem, 7vw, 2rem) !important;
+  }
+
+  .fp-step-list li {
+    padding: 1.15rem 1rem 1.15rem 3.25rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  .fp-step-list li::before {
+    left: 0.85rem !important;
+    font-size: 0.85rem !important;
+  }
+}
+
+/* ── Pillars / 3-column grids mobile ── */
+@media (max-width: 767px) {
+  .pillars {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  .pillar {
+    padding: 1.25rem !important;
+  }
+}
+
+/* ── Pricing cards mobile ── */
+@media (max-width: 767px) {
+  .al-plan-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  .al-plan-card {
+    padding: 1.5rem !important;
+  }
+}
+
+/* ── FAQ mobile ── */
+@media (max-width: 767px) {
+  .faq-item summary {
+    padding: 1rem 2.5rem 1rem 1rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  .faq-item div {
+    padding: 0 1rem 1rem !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* ── Page hero mobile ── */
+@media (max-width: 767px) {
+  .page-hero {
+    padding: 6rem 1.25rem 2rem !important;
+  }
+
+  .page-hero h1 {
+    font-size: clamp(1.35rem, 6vw, 1.75rem) !important;
+  }
+}
+
+/* ── Quiz mobile ── */
+@media (max-width: 767px) {
+  .quiz-shell {
+    padding: 0 0.5rem !important;
+  }
+
+  .quiz-card {
+    padding: 1.5rem 1rem !important;
+  }
+
+  .quiz-opt {
+    font-size: 0.875rem !important;
+    padding: 0.85rem 1rem !important;
+  }
+}
+
+/* ── Global touch targets ── */
+@media (max-width: 767px) {
+  .btn,
+  button,
+  a.btn {
+    min-height: 44px;
+  }
+
+  /* Smooth scrolling and better tap feel */
+  * {
+    -webkit-tap-highlight-color: rgba(0, 40, 104, 0.06);
+  }
+}
+
+/* ── Footer mobile ── */
+@media (max-width: 767px) {
+  .site-footer {
+    padding: 2rem 1.25rem 1.5rem !important;
+  }
+
+  .footer-links {
+    gap: 0.75rem 1.25rem !important;
+    font-size: 0.7rem !important;
+  }
+}
