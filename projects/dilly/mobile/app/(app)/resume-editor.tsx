@@ -577,7 +577,7 @@ export default function ResumeEditorScreen() {
   const [sections, setSections]     = useState<ResumeSection[]>([]);
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
-  const [expanded, setExpanded]     = useState<string | null>(null);
+  const [expanded, setExpanded]     = useState<Set<string>>(new Set());
   const [hasChanges, setHasChanges] = useState(false);
   const [major, setMajor]           = useState('');
   const [bulletScores, setBulletScores] = useState<Record<string, number>>({});
@@ -671,7 +671,12 @@ export default function ResumeEditorScreen() {
 
   function toggleSection(key: string) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpanded(prev => prev === key ? null : key);
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
   function updateSection(key: string, updates: Partial<ResumeSection>) {
@@ -785,7 +790,7 @@ export default function ResumeEditorScreen() {
             {/* Sections as accordion */}
             {sections.map((sec, i) => {
               const comp = sectionCompleteness(sec);
-              const isOpen = expanded === sec.key;
+              const isOpen = expanded.has(sec.key);
 
               return (
                 <View key={sec.key}>
