@@ -1,508 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Find Your Path | Dilly</title>
-<meta name="description" content="Discover what Dilly can do for you, whether you are a student, employer, parent, or job seeker.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#080809;--s1:#0a0a0c;--s2:#0f0f12;--s3:#1a1a1f;--gold:#C9A84C;--gdim:rgba(201,168,76,.12);--green:#34C759;--coral:#FF453A;--t1:#f5f5f7;--t2:#a1a1a6;--t3:#636366;--bdr:rgba(255,255,255,.06)}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;overflow-x:hidden;line-height:1.6}
-
-nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(8,8,9,.85);border-bottom:1px solid var(--bdr);padding:16px 0;transition:padding .3s}
-.ni{max-width:1200px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-family:'Cinzel',serif;font-weight:700;font-size:18px;color:var(--t1);text-decoration:none}
-.nl{display:flex;gap:28px;align-items:center}.nl a{color:var(--t2);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s}.nl a:hover{color:var(--t1)}.nl a.act{color:var(--gold)}
-.nc{background:var(--gold);color:#1a1400;padding:9px 20px;border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:11px;letter-spacing:1px;text-decoration:none}
-.mm{display:none;background:0;border:0;color:var(--t1);font-size:24px;cursor:pointer}
-
-.ph{padding:160px 32px 40px;text-align:center;position:relative}
-.ph::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(201,168,76,.04) 0%,transparent 65%);pointer-events:none}
-.ph h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(28px,4vw,44px);margin-bottom:12px}
-.ph h1 .g{color:var(--gold)}
-.ph p{font-size:16px;color:var(--t2);max-width:480px;margin:0 auto;line-height:1.6}
-
-.quiz-wrap{max-width:520px;margin:40px auto 80px;padding:0 20px}
-.quiz-box{background:var(--s2);border:1px solid var(--bdr);border-radius:16px;padding:32px 28px}
-.quiz-box h3{font-family:'Cinzel',serif;font-weight:700;font-size:18px;margin-bottom:20px;text-align:center}
-.quiz-opts{display:flex;flex-direction:column;gap:8px}
-.quiz-opts button{padding:14px 18px;border-radius:12px;border:2px solid var(--bdr);background:var(--s1);color:var(--t1);font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;text-align:left;width:100%}
-.quiz-opts button:hover{border-color:var(--gold);background:var(--gdim);transform:translateX(4px)}
-.quiz-opts button:active{transform:translateX(2px)}
-.quiz-result{margin-top:20px;padding:24px;background:var(--s1);border-radius:12px;border:1px solid var(--bdr);display:none;text-align:left}
-.quiz-result .ri{font-size:2rem;margin-bottom:8px}
-.quiz-result .rh{font-family:'Cinzel',serif;font-weight:700;font-size:1.2rem;margin-bottom:12px}
-.quiz-result .rb{font-size:14px;color:var(--t2);line-height:1.7;margin-bottom:20px}
-.quiz-result .rb strong{color:var(--gold)}
-.quiz-cta{display:inline-block;padding:12px 24px;background:var(--gold);color:#1a1400;font-weight:700;font-size:14px;border-radius:12px;text-decoration:none;font-family:'Cinzel',serif;letter-spacing:0.5px;transition:all .2s}
-.quiz-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,168,76,.25)}
-.quiz-sec{display:inline-block;margin-top:12px;font-size:13px;color:var(--gold);text-decoration:none}
-.quiz-sec:hover{text-decoration:underline}
-.quiz-restart{margin-top:16px;background:0;border:0;font-size:13px;color:var(--t3);cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif}
-.quiz-restart:hover{color:var(--t2)}
-
-.prog-wrap{max-width:320px;margin:20px auto 0;display:none}
-.prog-top{display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:6px}
-.prog-bar{height:4px;border-radius:9999px;background:var(--s3);overflow:hidden}
-.prog-fill{height:100%;border-radius:9999px;background:var(--gold);transition:width .4s ease;width:0%}
-
-.back-btn{display:none;margin:16px auto 0;background:0;border:0;color:var(--t3);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:4px 12px;border-radius:6px;transition:color .2s}
-.back-btn:hover{color:var(--t2)}
-
-.browse-link{text-align:center;margin-top:24px}
-.browse-link a{color:var(--gold);font-size:13px;text-decoration:none}
-.browse-link a:hover{text-decoration:underline}
-
-footer{border-top:1px solid var(--bdr);padding:40px 32px;text-align:center;color:var(--t3);font-size:12px}
-footer .fl{display:flex;gap:20px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
-footer a{color:var(--t3);text-decoration:none;font-size:12px}footer a:hover{color:var(--t2)}
-
-@media(max-width:900px){.nl{display:none}.mm{display:block}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Your Path: Dilly</title>
+  <meta name="description" content="Answer a few questions and see how Dilly fits your goals.">
+  <link rel="stylesheet" href="css/dilly.css">
 </head>
-<body>
+<body data-nav-page="quiz">
+  <header class="page-hero" style="padding-top:6rem;padding-bottom:2rem">
+    <div class="site-nav site-nav--inner">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="images/dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Your resume</span>
+                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Search and track</span>
+                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Guidance</span>
+                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Decide</span>
+                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row">
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
+    <p class="section-eyebrow" style="margin-top:2rem">Find your path</p>
+    <h1 class="font-display" style="font-size:clamp(1.75rem,4vw,2.5rem);letter-spacing:0.06em">Dilly has something for everyone</h1>
+    <p style="color:var(--text-muted);max-width:32rem;margin:0.75rem auto 0">Let us narrow what to do first: three quick steps.</p>
+  </header>
 
-<nav><div class="ni">
-  <a href="index.html" class="logo">dilly</a>
-  <div class="nl">
-    <a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="signin.html">Sign in</a>
-    <a href="https://app.trydilly.com" class="nc" target="_blank" rel="noopener noreferrer">GET YOUR SCORE</a>
+  <div class="section-inner quiz-shell" data-quiz>
+    <div class="quiz-step is-active quiz-card">
+      <p class="section-eyebrow">Step 1</p>
+      <h2 class="font-display" style="font-size:1.25rem;letter-spacing:0.05em;margin-bottom:0.5rem">Which best describes you?</h2>
+      <p style="color:var(--text-muted);font-size:0.9rem">We will tailor the next question to your situation.</p>
+      <div class="quiz-options">
+        <button type="button" class="quiz-opt" data-next="1">College student applying to internships</button>
+        <button type="button" class="quiz-opt" data-next="1">Recent grad / full-time job search</button>
+        <button type="button" class="quiz-opt" data-next="1">Parent supporting a student</button>
+        <button type="button" class="quiz-opt" data-next="1">Recruiter or hiring manager</button>
+      </div>
+    </div>
+
+    <div class="quiz-step quiz-card">
+      <p class="section-eyebrow">Step 2</p>
+      <h2 class="font-display" style="font-size:1.25rem;letter-spacing:0.05em;margin-bottom:0.5rem">What do you want most right now?</h2>
+      <p style="color:var(--text-muted);font-size:0.9rem">Pick the outcome that matters this week.</p>
+      <div class="quiz-options">
+        <button type="button" class="quiz-opt" data-next="2">Know my real competitiveness vs. peers</button>
+        <button type="button" class="quiz-opt" data-next="2">Stop getting filtered by ATS</button>
+        <button type="button" class="quiz-opt" data-next="2">Match to specific roles and close gaps</button>
+        <button type="button" class="quiz-opt" data-next="2">Practice interviews with context on my resume</button>
+      </div>
+      <button type="button" class="quiz-back" data-quiz-back="0">← Back</button>
+    </div>
+
+    <div class="quiz-step quiz-card">
+      <p class="section-eyebrow">Step 3</p>
+      <h2 class="font-display" style="font-size:1.25rem;letter-spacing:0.05em;margin-bottom:0.75rem">Your starting path</h2>
+      <p style="color:var(--text-muted);line-height:1.75;margin-bottom:1.25rem">Based on typical users with those goals: start with a <strong style="color:var(--text)">resume audit</strong> to lock your Smart / Grit / Build baseline, then run an <strong style="color:var(--text)">ATS pass</strong> on your one-page, then open <strong style="color:var(--text)">target roles</strong> to read your Gap cards. That sequence takes under 10 minutes and gives Dilly the context to coach you well.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:0.75rem">
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Open Dilly: get my score</a>
+        <a class="btn btn-ghost" href="pricing.html">Compare plans</a>
+      </div>
+      <button type="button" class="quiz-back" data-quiz-back="1">← Back</button>
+      <p style="margin-top:1.5rem;font-size:0.85rem;color:var(--text-muted)"><a href="features.html" style="color:var(--gold);font-weight:600">Browse all features →</a></p>
+    </div>
   </div>
-  <button class="mm" onclick="let n=document.querySelector('.nl');n.style.display=n.style.display==='flex'?'none':'flex'">&#9776;</button>
-</div></nav>
 
-<div class="ph">
-  <h1 id="quiz-title">Find your <span class="g">path</span></h1>
-  <p id="quiz-subtitle">Dilly has something for everyone. Let us find what is right for you.</p>
-</div>
-
-<div class="quiz-wrap">
-  <div class="prog-wrap" id="prog-wrap">
-    <div class="prog-top"><span id="prog-label">Step 1</span><span id="prog-count"></span></div>
-    <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
-  </div>
-
-  <div class="quiz-box">
-    <h3 id="quiz-q">Which best describes you?</h3>
-    <div class="quiz-opts" id="quiz-opts"></div>
-    <div class="quiz-result" id="quiz-result"></div>
-  </div>
-
-  <button class="back-btn" id="back-btn" onclick="quizBack()">&#8592; Back</button>
-
-  <div class="browse-link"><a href="tracks.html">Browse all tracks</a></div>
-</div>
-
-<footer><div class="fl"><a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="tracks.html">Tracks</a><a href="quiz.html">Quiz</a><a href="signin.html">Sign in</a></div>
-<p>&copy; 2026 Dilly. The career center in your pocket.</p></footer>
-
-<script>
-(function() {
-  var answers = {};
-  var history = [];
-
-  var titleEl  = document.getElementById('quiz-title');
-  var subEl    = document.getElementById('quiz-subtitle');
-  var qEl      = document.getElementById('quiz-q');
-  var optsEl   = document.getElementById('quiz-opts');
-  var resEl    = document.getElementById('quiz-result');
-  var backEl   = document.getElementById('back-btn');
-  var progWrap = document.getElementById('prog-wrap');
-  var progFill = document.getElementById('prog-fill');
-  var progLabel= document.getElementById('prog-label');
-
-  function aiStepFor(resultKey, stepNum, totalSteps) {
-    return {
-      q: 'How familiar are you with AI tools?',
-      opts: [
-        { t: "I use ChatGPT, Copilot, or similar regularly", value: 'power' },
-        { t: "I have tried a few AI tools here and there",   value: 'casual' },
-        { t: "I have heard of them but have not really used any", value: 'aware' },
-        { t: "Not familiar at all",                           value: 'none' }
-      ],
-      next: function(v) { answers.ai_familiar = v; return resultKey; },
-      progress: { step: stepNum, total: totalSteps }
-    };
-  }
-
-  function aiBlurb() {
-    var m = {
-      power: 'Since you already use AI tools, you will feel right at home with Dilly. Think of it as your personal AI career advisor that actually knows your resume, your scores, and the job market.',
-      casual: 'You have tried some AI tools before, so Dilly will feel easy to pick up. It works like having a career advisor in your pocket that gives specific advice based on your actual profile.',
-      aware:  'Even if you have not used AI much yet, Dilly makes it simple. Just upload your resume and the AI does the rest: scoring, matching, and personalized advice.',
-      none:   'No AI experience needed. Dilly handles everything behind the scenes. You upload your resume, and it gives you a score, matches you to jobs, and tells you exactly what to work on.'
-    };
-    return m[answers.ai_familiar] || m.casual;
-  }
-
-  var steps = {
-    persona: {
-      q: 'Which best describes you?',
-      opts: [
-        { t: 'I am a college student',        value: 'student' },
-        { t: 'I hire or recruit people',       value: 'employer' },
-        { t: 'I am a parent of a student',     value: 'parent' },
-        { t: 'I am looking for a new job',     value: 'jobseeker' },
-        { t: 'I am currently employed',        value: 'employed' }
-      ],
-      next: function(v) {
-        answers.persona = v;
-        if (v === 'student')   return 'student_track';
-        if (v === 'employer')  return 'employer_pain';
-        if (v === 'parent')    return 'parent_year';
-        if (v === 'jobseeker') return 'jobseeker_exp';
-        if (v === 'employed')  return 'employed_happy';
-      },
-      total: null
-    },
-
-    student_track: {
-      q: 'What do you want to do after college?',
-      opts: [
-        { t: 'Doctor, nurse, dentist, or healthcare',  value: 'Pre-Health' },
-        { t: 'Lawyer or legal work',                   value: 'Pre-Law' },
-        { t: 'Software, data, or tech',                value: 'Tech' },
-        { t: 'Finance, banking, or accounting',        value: 'Finance' },
-        { t: 'Consulting or strategy',                 value: 'Consulting' },
-        { t: 'Business, marketing, or management',     value: 'Business' },
-        { t: 'Science or research',                    value: 'Science' },
-        { t: 'Media, journalism, or PR',               value: 'Communications' },
-        { t: 'Teaching or education',                  value: 'Education' },
-        { t: 'Art, film, music, or design',            value: 'Arts' },
-        { t: 'Humanities or languages',                value: 'Humanities' }
-      ],
-      next: function(v) { answers.track = v; return 'student_ai'; },
-      progress: { step: 1, total: 2 }
-    },
-    student_ai: aiStepFor('student_result', 2, 2),
-    student_result: {
-      result: function() {
-        var track = answers.track;
-        var slug = track.toLowerCase().replace(/\s+/g, '-');
-        return {
-          icon: '&#127919;',
-          headline: 'Your track: <strong>' + track + '</strong>',
-          body: 'Dilly scores your career readiness across Smart, Grit, and Build, all tailored to ' + track + '. You get matched to real internships, AI resume rewrites, and a career advisor available 24/7. All for $9.99/mo.<br><br>' + aiBlurb(),
-          cta: { text: 'Get Your Dilly Score', href: 'https://app.trydilly.com' },
-          secondary: { text: 'Learn more about ' + track, href: 'track-' + slug + '.html' }
-        };
-      }
-    },
-
-    employer_pain: {
-      q: 'What is the hardest part of hiring for you?',
-      opts: [
-        { t: 'Finding good entry-level talent',              value: 'finding' },
-        { t: 'Too many applicants, not enough good ones',    value: 'screening' },
-        { t: 'Hiring takes too long',                        value: 'speed' },
-        { t: 'Hard to judge soft skills',                    value: 'softskills' },
-        { t: 'Building a more diverse pipeline',             value: 'diversity' }
-      ],
-      next: function(v) { answers.pain = v; return 'employer_roles'; },
-      progress: { step: 1, total: 3 }
-    },
-    employer_roles: {
-      q: 'What kind of roles do you hire for?',
-      opts: [
-        { t: 'Engineering or tech',          value: 'tech' },
-        { t: 'Finance or accounting',        value: 'finance' },
-        { t: 'Business or operations',       value: 'business' },
-        { t: 'Marketing or communications',  value: 'marketing' },
-        { t: 'Healthcare or life sciences',  value: 'healthcare' },
-        { t: 'A mix of everything',          value: 'multiple' }
-      ],
-      next: function(v) { answers.roles = v; return 'employer_ai'; },
-      progress: { step: 2, total: 3 }
-    },
-    employer_ai: aiStepFor('employer_result', 3, 3),
-    employer_result: {
-      result: function() {
-        var painMap = {
-          finding:    'Dilly surfaces <strong>pre-scored candidates</strong> ranked by Smart, Grit, and Build so you see the strongest talent first.',
-          screening:  'Every candidate on Dilly has a <strong>readiness score</strong>. Filter by career field, minimum score, and dimension to cut screening time dramatically.',
-          speed:      'Skip the resume pile. Dilly\'s <strong>AI fit analysis</strong> matches candidates to your roles instantly, saving days in your pipeline.',
-          softskills: 'Dilly\'s <strong>Grit dimension</strong> measures leadership, initiative, and follow-through, the qualities that do not show up on a transcript.',
-          diversity:  'Dilly scores <strong>what students have actually done</strong>, not where they went to school. Find overlooked talent from every campus.'
-        };
-        return {
-          icon: '&#128202;',
-          headline: 'Dilly solves that.',
-          body: painMap[answers.pain] + '<br><br>Browse scored student profiles, export to your ATS, and find candidates already matched to your open ' + (answers.roles === 'multiple' ? 'roles' : answers.roles + ' roles') + '.<br><br>' + aiBlurb(),
-          cta: { text: 'Get Early Recruiter Access', href: 'recruiters.html' },
-          secondary: { text: 'See how scoring works', href: 'features.html' }
-        };
-      }
-    },
-
-    parent_year: {
-      q: 'What year is your child in?',
-      opts: [
-        { t: 'High school senior, heading to college', value: 'hs' },
-        { t: 'College freshman or sophomore',          value: 'underclass' },
-        { t: 'College junior or senior',               value: 'upperclass' },
-        { t: 'Just graduated',                         value: 'grad' }
-      ],
-      next: function(v) { answers.year = v; return 'parent_major'; },
-      progress: { step: 1, total: 4 }
-    },
-    parent_major: {
-      q: 'What are they studying (or planning to study)?',
-      opts: [
-        { t: 'Science, tech, engineering, or math', value: 'stem' },
-        { t: 'Business, finance, or economics',     value: 'business' },
-        { t: 'Healthcare or life sciences',          value: 'health' },
-        { t: 'Liberal arts or humanities',            value: 'liberal' },
-        { t: 'Not sure yet',                         value: 'unsure' }
-      ],
-      next: function(v) { answers.major = v; return 'parent_concern'; },
-      progress: { step: 2, total: 4 }
-    },
-    parent_concern: {
-      q: 'What worries you most?',
-      opts: [
-        { t: "They can not find internships or jobs",       value: 'jobs' },
-        { t: "Their resume needs work",                     value: 'resume' },
-        { t: "They do not know what they want to do",       value: 'direction' },
-        { t: "AI is changing everything too fast",          value: 'ai' },
-        { t: "Their school's career center is not enough",  value: 'career_center' }
-      ],
-      next: function(v) { answers.concern = v; return 'parent_ai'; },
-      progress: { step: 3, total: 4 }
-    },
-    parent_ai: aiStepFor('parent_result', 4, 4),
-    parent_result: {
-      result: function() {
-        var concernMap = {
-          jobs:          'Dilly matches your child to <strong>real internships from 58+ companies</strong> like Goldman Sachs, Stripe, and Cloudflare, ranked by their personal readiness score.',
-          resume:        'Dilly\'s AI reads their resume like a <strong>hiring manager</strong>, rewrites weak bullet points line by line, and checks formatting for 6 different ATS systems.',
-          direction:     'Dilly scores your child across <strong>22 career fields</strong> so they can see exactly where they are strongest and what to work on next.',
-          ai:            'Dilly\'s scoring system <strong>updates as the market changes</strong>. When employers start looking for new skills, the scoring adjusts. Your child stays ahead.',
-          career_center: 'Dilly is a <strong>personal career center available 24/7</strong> with no waitlists and no delays. AI advice that actually knows your child\'s resume and goals.'
-        };
-        var yearLabel = { hs: 'an incoming freshman', underclass: 'an underclassman', upperclass: 'an upperclassman', grad: 'a recent graduate' };
-        return {
-          icon: '&#128154;',
-          headline: 'Peace of mind for $9.99/mo.',
-          body: concernMap[answers.concern] + '<br><br>As ' + yearLabel[answers.year] + (answers.major !== 'unsure' ? ' studying ' + answers.major : '') + ', the earlier they start, the more time they have to close gaps before applications open.<br><br>' + aiBlurb(),
-          cta: { text: 'Gift Dilly to Your Student', href: 'https://app.trydilly.com' },
-          secondary: { text: 'Read more for parents', href: 'for-parents.html' }
-        };
-      }
-    },
-
-    jobseeker_exp: {
-      q: 'How long have you been working?',
-      opts: [
-        { t: 'Still in school or just graduated', value: 'new' },
-        { t: '1 to 3 years',                     value: 'early' },
-        { t: '3 to 7 years',                     value: 'mid' },
-        { t: '7+ years',                         value: 'senior' }
-      ],
-      next: function(v) {
-        answers.exp = v;
-        if (v === 'new') return 'student_track';
-        return 'jobseeker_industry';
-      },
-      progress: { step: 1, total: 4 }
-    },
-    jobseeker_industry: {
-      q: 'What field are you in or looking to get into?',
-      opts: [
-        { t: 'Tech or engineering',          value: 'tech' },
-        { t: 'Finance or consulting',        value: 'finance' },
-        { t: 'Healthcare or life sciences',  value: 'healthcare' },
-        { t: 'Business or marketing',        value: 'business' },
-        { t: 'Something else or switching',  value: 'other' }
-      ],
-      next: function(v) { answers.industry = v; return 'jobseeker_need'; },
-      progress: { step: 2, total: 4 }
-    },
-    jobseeker_need: {
-      q: 'What would help you the most right now?',
-      opts: [
-        { t: 'Finding the right opportunities', value: 'matching' },
-        { t: 'Making my resume stronger',       value: 'resume' },
-        { t: 'Practicing for interviews',       value: 'interview' },
-        { t: 'Knowing where I stand vs. others', value: 'value' },
-        { t: 'Figuring out a career change',    value: 'switch' }
-      ],
-      next: function(v) { answers.need = v; return 'jobseeker_ai'; },
-      progress: { step: 3, total: 4 }
-    },
-    jobseeker_ai: aiStepFor('jobseeker_result', 4, 4),
-    jobseeker_result: {
-      result: function() {
-        var needMap = {
-          matching:  'Dilly\'s AI matches you to roles based on your <strong>actual skills and experience</strong>, not just keywords. See where you are Ready, Almost, or have a Gap.',
-          resume:    'Get <strong>line-by-line AI rewrites</strong>, ATS scanning across 6 systems, and a score so you know exactly where your resume stands.',
-          interview: 'Dilly\'s AI advisor runs <strong>mock interviews tailored to your target roles</strong>. Practice anytime, day or night.',
-          value:     'Dilly scores you across <strong>Smart, Grit, and Build</strong> and benchmarks you against peers in your field so you know exactly where you stand.',
-          switch:    'Dilly scores you across <strong>22 career fields</strong>. See which ones your experience maps to best. You might be surprised.'
-        };
-        var expLabel = { early: '1 to 3 years', mid: '3 to 7 years', senior: '7+ years' };
-        return {
-          icon: '&#128640;',
-          headline: 'Dilly is expanding to professionals.',
-          body: needMap[answers.need] + '<br><br>With ' + expLabel[answers.exp] + ' in ' + (answers.industry === 'other' ? 'your field' : answers.industry) + ', you are exactly who we are building for next. Join the waitlist to get early access.<br><br>' + aiBlurb(),
-          cta: { text: 'Join the Waitlist', href: 'https://app.trydilly.com' },
-          secondary: { text: 'See what Dilly does today', href: 'features.html' }
-        };
-      }
-    },
-
-    employed_happy: {
-      q: 'How do you feel about your current job?',
-      opts: [
-        { t: 'I like it but want to grow',                         value: 'grow' },
-        { t: 'I am thinking about switching roles',                value: 'switch' },
-        { t: 'I want to future-proof my career',                  value: 'futureproof' },
-        { t: 'I am happy but curious what else is out there',      value: 'curious' }
-      ],
-      next: function(v) { answers.employed_feel = v; return 'employed_concern'; },
-      progress: { step: 1, total: 4 }
-    },
-    employed_concern: {
-      q: 'What is on your mind the most?',
-      opts: [
-        { t: 'AI might change or replace my role',                  value: 'ai_threat' },
-        { t: 'I need to learn new skills to stay competitive',      value: 'upskill' },
-        { t: 'I do not know how I compare to others in my field',   value: 'benchmark' },
-        { t: 'My resume is outdated',                               value: 'resume' },
-        { t: 'I want to explore completely different careers',       value: 'explore' }
-      ],
-      next: function(v) { answers.employed_concern = v; return 'employed_skills'; },
-      progress: { step: 2, total: 4 }
-    },
-    employed_skills: {
-      q: 'Which of these do you use at work?',
-      opts: [
-        { t: 'ChatGPT, Claude, or similar AI assistants',                          value: 'llm' },
-        { t: 'GitHub Copilot or AI coding tools',                                  value: 'copilot' },
-        { t: 'AI features in my existing software (like Notion AI, Canva AI)',     value: 'embedded' },
-        { t: 'I do not really use AI tools at work yet',                            value: 'none' }
-      ],
-      next: function(v) { answers.employed_tools = v; return 'employed_ai'; },
-      progress: { step: 3, total: 4 }
-    },
-    employed_ai: aiStepFor('employed_result', 4, 4),
-    employed_result: {
-      result: function() {
-        var feelMap = {
-          grow: 'You want to grow in your current role.',
-          switch: 'You are thinking about your next move.',
-          futureproof: 'You want to stay ahead of the curve.',
-          curious: 'You are exploring your options.'
-        };
-        var concernMap = {
-          ai_threat: 'AI is reshaping industries fast, and Dilly helps you understand <strong>exactly where you stand</strong>. Get scored across 22 career fields, see which skills are in demand, and know what to build next.',
-          upskill:   'Dilly scores your <strong>Smart, Grit, and Build</strong> across every career field that matches your background. See exactly which skills to develop to stay competitive.',
-          benchmark: 'Dilly gives you a <strong>quantified readiness score</strong> and benchmarks you against others in your field. No more guessing where you stand.',
-          resume:    'Dilly\'s AI gives you <strong>line-by-line resume rewrites</strong>, scans for ATS compatibility across 6 systems, and tells you exactly what to fix.',
-          explore:   'Dilly scores you across <strong>22 different career fields</strong>. Discover which ones your skills and experience already qualify you for.'
-        };
-        var toolBlurb = '';
-        if (answers.employed_tools === 'none') {
-          toolBlurb = 'You do not need to be an AI expert to use Dilly. It works behind the scenes to analyze your profile and give you clear, actionable next steps.';
-        } else {
-          toolBlurb = 'Since you already use AI tools at work, Dilly will feel natural. Think of it as an AI career advisor that knows your actual background and goals.';
-        }
-        return {
-          icon: '&#9889;',
-          headline: feelMap[answers.employed_feel] + ' Dilly can help.',
-          body: concernMap[answers.employed_concern] + '<br><br>' + toolBlurb + '<br><br>' + aiBlurb(),
-          cta: { text: 'Join the Waitlist', href: 'https://app.trydilly.com' },
-          secondary: { text: 'See how Dilly works', href: 'features.html' }
-        };
-      }
-    }
-  };
-
-  function render(stepKey) {
-    var step = steps[stepKey];
-    optsEl.innerHTML = '';
-    resEl.innerHTML = '';
-    resEl.style.display = 'none';
-
-    if (step.result) {
-      var r = step.result();
-      qEl.style.display = 'none';
-      optsEl.style.display = 'none';
-      progWrap.style.display = 'none';
-      backEl.style.display = 'block';
-      resEl.style.display = 'block';
-      resEl.innerHTML =
-        '<div class="ri">' + r.icon + '</div>' +
-        '<div class="rh">' + r.headline + '</div>' +
-        '<div class="rb">' + r.body + '</div>' +
-        '<a href="' + r.cta.href + '" target="_blank" rel="noopener noreferrer" class="quiz-cta">' + r.cta.text + '</a>' +
-        (r.secondary ? '<br><a href="' + r.secondary.href + '" class="quiz-sec">' + r.secondary.text + '</a>' : '') +
-        '<br><button class="quiz-restart" onclick="quizRestart()">Take the quiz again</button>';
-      titleEl.innerHTML = 'Your <span class="g">results</span>';
-      subEl.textContent = '';
-      return;
-    }
-
-    qEl.style.display = '';
-    optsEl.style.display = '';
-    qEl.textContent = step.q;
-
-    if (step.progress) {
-      progWrap.style.display = 'block';
-      progLabel.textContent = 'Step ' + step.progress.step + ' of ' + step.progress.total;
-      progFill.style.width = ((step.progress.step / step.progress.total) * 100) + '%';
-    } else {
-      progWrap.style.display = 'none';
-    }
-
-    backEl.style.display = history.length > 0 ? 'block' : 'none';
-
-    if (stepKey === 'persona') {
-      titleEl.innerHTML = 'Find your <span class="g">path</span>';
-      subEl.textContent = 'Dilly has something for everyone. Let us find what is right for you.';
-    } else if (answers.persona === 'student') {
-      titleEl.innerHTML = 'Find your <span class="g">track</span>';
-      subEl.textContent = 'Pick what you want to do and we will show you the best path.';
-    } else if (answers.persona === 'employer') {
-      titleEl.innerHTML = 'Better <span class="g">hiring</span> starts here';
-      subEl.textContent = 'Tell us about your challenges and we will show how Dilly helps.';
-    } else if (answers.persona === 'parent') {
-      titleEl.innerHTML = 'Support your <span class="g">student</span>';
-      subEl.textContent = 'A few questions about your child so we can show you how Dilly helps.';
-    } else if (answers.persona === 'jobseeker') {
-      titleEl.innerHTML = 'Level up your <span class="g">career</span>';
-      subEl.textContent = 'Tell us where you are and we will show what Dilly can do.';
-    } else if (answers.persona === 'employed') {
-      titleEl.innerHTML = 'Stay <span class="g">ahead</span> in your career';
-      subEl.textContent = 'A few quick questions so we can show you what Dilly offers.';
-    }
-
-    step.opts.forEach(function(o) {
-      var btn = document.createElement('button');
-      btn.textContent = o.t;
-      btn.onclick = function() {
-        btn.style.borderColor = 'var(--gold)';
-        btn.style.background = 'var(--gdim)';
-        setTimeout(function() {
-          history.push(stepKey);
-          render(step.next(o.value));
-        }, 150);
-      };
-      optsEl.appendChild(btn);
-    });
-  }
-
-  window.quizBack = function() { if (history.length > 0) render(history.pop()); };
-  window.quizRestart = function() { answers = {}; history = []; render('persona'); };
-  render('persona');
-
-  window.addEventListener('scroll', function() {
-    document.querySelector('nav').style.padding = window.scrollY > 50 ? '10px 0' : '16px 0';
-  });
-})();
-</script>
+  <footer class="site-footer">
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="features.html">Features</a>
+      <a href="pricing.html">Pricing</a>
+    </nav>
+    <p>Dilly · Find your path</p>
+  </footer>
+  <script src="js/dilly.js"></script>
 </body>
 </html>

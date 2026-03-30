@@ -1,241 +1,282 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Features — Dilly</title>
-<meta name="description" content="Resume scoring, AI coaching, ATS scanning, internship matching, and more. See every feature inside the Dilly app.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#080809;--s1:#0a0a0c;--s2:#0f0f12;--s3:#1a1a1f;--gold:#C9A84C;--gdim:rgba(201,168,76,.12);--green:#34C759;--coral:#FF453A;--amber:#FF9F0A;--blue:#0A84FF;--t1:#f5f5f7;--t2:#a1a1a6;--t3:#636366;--bdr:rgba(255,255,255,.06)}
-html{scroll-behavior:smooth}body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;overflow-x:hidden;line-height:1.6}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(8,8,9,.85);border-bottom:1px solid var(--bdr);padding:16px 0;transition:padding .3s}
-.ni{max-width:1200px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between}
-.logo{display:block}.logo img{height:26px;display:block}
-.nl{display:flex;gap:28px;align-items:center}.nl a{color:var(--t2);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s}.nl a:hover{color:var(--t1)}.nl a.act{color:var(--gold)}
-.nc{background:var(--gold);color:#1a1400;padding:9px 20px;border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:11px;letter-spacing:1px;text-decoration:none}
-.mm{display:none;background:0;border:0;color:var(--t1);font-size:24px;cursor:pointer}
-section{padding:100px 32px}.si{max-width:1200px;margin:0 auto}
-.sl{font-family:'Cinzel',serif;font-weight:700;font-size:10px;letter-spacing:3px;color:var(--gold);margin-bottom:10px}
-.st{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(26px,3.5vw,40px);line-height:1.2;margin-bottom:14px}
-.ss{font-size:15px;color:var(--t2);max-width:520px;line-height:1.7}
-.fu{opacity:0;transform:translateY(24px);transition:all .6s cubic-bezier(.16,1,.3,1)}.fu.v{opacity:1;transform:translateY(0)}
-.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}
-footer{border-top:1px solid var(--bdr);padding:40px 32px;text-align:center;color:var(--t3);font-size:12px}
-footer .fl{display:flex;gap:20px;justify-content:center;margin-bottom:12px}
-footer a{color:var(--t3);text-decoration:none;font-size:12px}footer a:hover{color:var(--t2)}
-
-/* Page hero */
-.ph{padding:160px 32px 80px;text-align:center;position:relative}
-.ph::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(201,168,76,.04) 0%,transparent 65%);pointer-events:none}
-.ph h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(32px,5vw,52px);margin-bottom:16px}
-.ph h1 .g{color:var(--gold)}
-.ph p{font-size:17px;color:var(--t2);max-width:560px;margin:0 auto;line-height:1.7}
-
-/* Feature row */
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:80px 0;border-bottom:1px solid var(--bdr)}
-.fr:last-child{border-bottom:0}
-.fr.rv{direction:rtl}.fr.rv>*{direction:ltr}
-.fr-text h3{font-family:'Cinzel',serif;font-weight:700;font-size:24px;margin-bottom:10px}
-.fr-text p{font-size:14px;color:var(--t2);line-height:1.7;margin-bottom:16px}
-.fr-text .tag{display:inline-flex;align-items:center;gap:6px;background:var(--gdim);border:1px solid rgba(201,168,76,.15);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--gold);font-weight:600;margin-right:6px;margin-bottom:6px}
-.fr-phones{display:flex;gap:14px;justify-content:center}
-.fr-phone{width:220px;border-radius:28px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.06)}
-.fr-phone img{width:100%;display:block}
-.fr-phone.tl{transform:rotate(-3deg) translateY(12px)}
-.fr-phone.tr{transform:rotate(3deg) translateY(12px)}
-
-/* Highlight box */
-.hbox{background:var(--s2);border:1px solid var(--bdr);border-radius:14px;padding:16px 20px;margin-top:16px;font-size:13px;color:var(--t2);line-height:1.7}
-.hbox strong{color:var(--gold)}
-
-/* CTA band */
-.cta-band{text-align:center;padding:80px 32px;background:radial-gradient(ellipse at center,rgba(201,168,76,.03) 0%,transparent 70%)}
-.cta-band h2{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(24px,3.5vw,38px);margin-bottom:16px}
-.cta-band p{color:var(--t2);font-size:15px;margin-bottom:28px}
-.bg{background:var(--gold);color:#1a1400;padding:16px 32px;border-radius:14px;font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:1px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 28px rgba(201,168,76,.2);transition:all .3s}
-.bg:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(201,168,76,.35)}
-
-@media(max-width:900px){
-.fr,.fr.rv{grid-template-columns:1fr;text-align:center;direction:ltr;gap:32px}
-.nl{display:none}.mm{display:block}
-.fr-phone{width:180px}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Features: Dilly</title>
+  <meta name="description" content="Resume intelligence, AI coaching, internship matching, and ATS scanning in one app.">
+  <link rel="stylesheet" href="css/dilly.css">
 </head>
-<body>
+<body class="feature-pro-page" data-nav-feature="overview" data-fp-layout="hub">
+  <header class="fp-hero fp-hero--hub" aria-label="Dilly features">
+    <div class="fp-hero__bg" aria-hidden="true"></div>
+    <div class="fp-hero__veil" aria-hidden="true"></div>
+    <div class="site-nav site-nav--inner">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="images/dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Your resume</span>
+                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Search and track</span>
+                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Guidance</span>
+                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Decide</span>
+                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row">
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
+    <div class="fp-hero__inner">
+      <p class="fp-kicker">Product library</p>
+      <h1 class="fp-title font-display">One system. Nine surfaces. Zero guesswork.</h1>
+      <p class="fp-lead">Dilly is not a loose bundle of tools. Resume scoring, editing, ATS checks, internship intelligence, pipeline, calendar, Ask Dilly, AI coach, and leaderboard all read the same underlying profile. Dive into any chapter below.</p>
+      <div class="fp-hero-actions">
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Open the app</a>
+        <a class="btn btn-ghost" href="quiz.html">Take the quiz</a>
+      </div>
+      <div class="fp-hero-metrics" aria-label="Platform highlights">
+        <div><span class="fp-metric-val">1</span><span class="fp-metric-label">Score language everywhere</span></div>
+        <div><span class="fp-metric-val">9</span><span class="fp-metric-label">Deep-dive feature pages</span></div>
+        <div><span class="fp-metric-val">∞</span><span class="fp-metric-label">Loops between modules</span></div>
+      </div>
+    </div>
+  </header>
 
-<nav><div class="ni">
-  <a href="index.html" class="logo"><img src="dillywordmark.png" alt="Dilly"></a>
-  <div class="nl">
-    <a href="features.html" class="act">Features</a><a href="index.html#pricing">Pricing</a><a href="index.html#faq">FAQ</a>
-  </div>
-  <button class="mm" onclick="let n=document.querySelector('.nl');n.style.display=n.style.display==='flex'?'none':'flex'">☰</button>
-</div></nav>
+  <section class="marquee-section" aria-label="Employers and tools">
+    <p class="marquee-label">Built for roles at companies like</p>
+    <div class="marquee">
+      <div class="marquee-track">
+        <span class="marquee-item">Stripe</span>
+        <span class="marquee-item">Airbnb</span>
+        <span class="marquee-item">Cloudflare</span>
+        <span class="marquee-item">Coinbase</span>
+        <span class="marquee-item">Pinterest</span>
+        <span class="marquee-item">Greenhouse</span>
+        <span class="marquee-item">Workday</span>
+        <span class="marquee-item">Lever</span>
+        <span class="marquee-item">Stripe</span>
+        <span class="marquee-item">Airbnb</span>
+        <span class="marquee-item">Cloudflare</span>
+        <span class="marquee-item">Coinbase</span>
+        <span class="marquee-item">Pinterest</span>
+        <span class="marquee-item">Greenhouse</span>
+        <span class="marquee-item">Workday</span>
+        <span class="marquee-item">Lever</span>
+      </div>
+    </div>
+  </section>
 
-<div class="ph">
-  <h1>Everything inside <span class="g">Dilly</span></h1>
-  <p>Resume intelligence, AI coaching, internship matching, ATS scanning — one app, one system, one score. Here's what you get.</p>
-</div>
+  <section class="fp-section">
+    <div class="fp-section-head">
+      <p class="section-eyebrow">Three motions</p>
+      <h2 class="section-title">How students move through Dilly</h2>
+      <p class="section-desc">Most people rotate through strengthen, search, and sharpen on repeat. Features map cleanly to each.</p>
+    </div>
+    <div class="fp-pillar-grid">
+      <article class="fp-pillar surface-panel">
+        <span class="fp-pillar-icon" aria-hidden="true">◆</span>
+        <h3>Strengthen</h3>
+        <p>Dilly Score, resume editor, and ATS scanner make the file defensible before you spam applications.</p>
+      </article>
+      <article class="fp-pillar surface-panel">
+        <span class="fp-pillar-icon" aria-hidden="true">◇</span>
+        <h3>Search</h3>
+        <p>Internship matching, tracker, and calendar keep browse-to-apply-to-interview coherent.</p>
+      </article>
+      <article class="fp-pillar surface-panel">
+        <span class="fp-pillar-icon" aria-hidden="true">◎</span>
+        <h3>Sharpen</h3>
+        <p>Ask Dilly, AI coach, and leaderboard add depth, practice, and relative benchmarks.</p>
+      </article>
+    </div>
+  </section>
 
-<section><div class="si">
+  <section class="fp-section fp-section--surface">
+    <div class="fp-split fp-split--reverse">
+      <div class="fp-split-visual" aria-hidden="true"></div>
+      <div class="fp-split-copy">
+        <h2 class="fp-h2">Why “one score” is the spine</h2>
+        <p>When every surface agrees on Smart, Grit, and Build, you stop translating between a resume grader, a job board, and a chatbot. Improvements in the editor show up in listings. Coach answers match your gap bars.</p>
+        <p>That integration is the product thesis: fewer tabs, fewer contradictions, faster iteration cycles while you still have semesters to work with.</p>
+        <ul class="fp-checklist">
+          <li>Shared dimensions across audit, jobs, and coach</li>
+          <li>Tracker and calendar inherit context from saved roles</li>
+          <li>Leaderboard reflects the same signals you are optimizing</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-<!-- 1. Resume Audit -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">CORE FEATURE</div>
-    <h3>Resume Audit & Dilly Score</h3>
-    <p>Upload your resume and get scored across three dimensions — Smart (academics & rigor), Grit (leadership & impact), and Build (proof & projects). Each dimension is 0-100, weighted by your career track. See exactly what's holding you back and what to improve first.</p>
-    <div class="tag">Smart · Grit · Build</div>
-    <div class="tag">0-100 per dimension</div>
-    <div class="hbox"><strong>Example:</strong> "Your Grit score is held back by vague verbs. Change 'assisted with' to 'supported 200+ visits/week' — quantify impact."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillynewaudit.png" alt="New Audit"></div>
-    <div class="fr-phone tr"><img src="dillyhome.png" alt="Home Screen"></div>
-  </div>
-</div>
+  <section class="fp-section">
+    <div class="fp-section-head">
+      <p class="section-eyebrow">First thirty days</p>
+      <h2 class="section-title">A realistic onboarding arc</h2>
+    </div>
+    <ol class="fp-step-list">
+      <li><strong>Week 1:</strong> Upload, score, ATS scan. Fix structural blockers before poetic edits.</li>
+      <li><strong>Week 2:</strong> Editor sprints on lowest bullets. Save five target roles; read gap labels honestly.</li>
+      <li><strong>Week 3:</strong> Promote two applications in tracker. Load deadlines into calendar. Run Ask Dilly on the top pick.</li>
+      <li><strong>Week 4:</strong> Coach mock block on behavioral gaps. Check leaderboard trend, not day noise.</li>
+    </ol>
+  </section>
 
-<!-- 2. Dilly AI -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">AI COACHING</div>
-    <h3>Dilly AI — Your Career Coach</h3>
-    <p>A floating AI chat that knows your resume, your scores, your applications, and your deadlines. Ask anything — "Am I ready for Stripe?" — and get specific advice based on your actual gaps. Coach mode for strategy, Practice mode for mock interviews.</p>
-    <div class="tag">Knows your full context</div>
-    <div class="tag">Mock interviews</div>
-    <div class="hbox"><strong>Example:</strong> "Your Build gap is the real problem — 16 points. Stripe wants interns who've shipped something real. Pick one project, get it to production in 4-6 weeks."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillyai.png" alt="AI Scores"></div>
-    <div class="fr-phone tr"><img src="dillyaiscores.png" alt="AI Gaps"></div>
-  </div>
-</div>
+  <section class="fp-section fp-section--surface">
+    <div class="fp-prose">
+      <h2 class="fp-h2">Built for the ratio that broke career centers</h2>
+      <p>Thousands of students per advisor means no one sees your file often enough to give line-level guidance. Dilly compresses repeated advisor moves into software: diagnose, prioritize, rehearse, and track.</p>
+      <p>These pages exist so you can read the philosophy behind each module before you commit attention in the app. Every chapter is long on purpose: you should feel the depth of the system, not just a feature bullet.</p>
+    </div>
+  </section>
 
-<!-- 3. Internships -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">JOB INTELLIGENCE</div>
-    <h3>Internship Matching with Gap Analysis</h3>
-    <p>97 real internships from Stripe, Airbnb, Cloudflare, Coinbase, Pinterest, and more. Each listing shows your readiness — Ready, Almost, or Gap — with Smart/Grit/Build bars comparing your scores to what the role requires. A gold personalized insight tells you exactly how to close your gaps.</p>
-    <div class="tag" style="color:var(--green);background:rgba(52,199,89,.1);border-color:rgba(52,199,89,.2)">Ready</div>
-    <div class="tag" style="color:var(--amber);background:rgba(255,159,10,.1);border-color:rgba(255,159,10,.2)">Almost</div>
-    <div class="tag" style="color:var(--coral);background:rgba(255,69,58,.1);border-color:rgba(255,69,58,.2)">Gap</div>
-    <div class="hbox"><strong>Example:</strong> "Your Build is 72, but Stripe wants 88 (16 point gap). They want shipped products, not tutorials. Deploy one project and you're competitive."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillyinternshiplist.png" alt="Listings"></div>
-    <div class="fr-phone tr"><img src="dillyinternships.png" alt="Stripe Gap"></div>
-  </div>
-</div>
+  <section class="fp-stats" aria-label="Platform facts">
+    <div class="fp-stats-inner">
+      <div><span class="fp-stat-num">9</span><span class="fp-stat-label">Dedicated product stories</span></div>
+      <div><span class="fp-stat-num">3</span><span class="fp-stat-label">Core dimensions</span></div>
+      <div><span class="fp-stat-num">6+</span><span class="fp-stat-label">ATS engines modeled</span></div>
+      <div><span class="fp-stat-num">1</span><span class="fp-stat-label">Pipeline from save to offer</span></div>
+    </div>
+  </section>
 
-<!-- 4. ATS Scanner -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">ATS INTELLIGENCE</div>
-    <h3>ATS Scanner — Pass the Robots</h3>
-    <p>Your resume gets rejected by ATS systems before a human ever sees it. Dilly scans against all 6 major systems — Greenhouse, Workday, iCIMS, Taleo, Lever, and SuccessFactors. See your score per system, what the ATS extracts from your resume, and exactly what formatting to fix.</p>
-    <div class="tag">6 ATS systems</div>
-    <div class="tag">Parse preview</div>
-    <div class="tag">Fix with Dilly</div>
-    <div class="hbox"><strong>Example:</strong> "Workday: 67%. Your two-column layout breaks parsing — merge into single column. Contact info in header — Taleo ignores headers, move to body."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillyats.png" alt="ATS Full"></div>
-  </div>
-</div>
+  <section class="fp-section">
+    <blockquote class="fp-quote">“Students do not need more tabs. They need one spine that stays honest from resume to interview.”<cite>Dilly product north star</cite></blockquote>
+  </section>
 
-<!-- 5. Resume Editor -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">EDITING</div>
-    <h3>Resume Editor with Live Scoring</h3>
-    <p>Every bullet point gets a score. See what "Good" looks like versus "Needs work" in real time. AI suggests specific rewrites — turning vague descriptions into quantified, impactful statements. Watch your overall score climb as you edit.</p>
-    <div class="tag">Per-bullet scores</div>
-    <div class="tag">AI rewrite suggestions</div>
-    <div class="hbox"><strong>Before:</strong> "Helped with patient care"<br><strong>After:</strong> "Supported 200+ patient visits/week — vitals, intake, EHR — reducing nurse admin load by ~15%"</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone"><img src="dillyresumeeditor.png" alt="Editor"></div>
-  </div>
-</div>
+  <section class="fp-section fp-section--surface">
+    <div class="section-inner">
+      <div class="section-head">
+        <p class="section-eyebrow">Explore</p>
+        <h2 class="section-title">Feature library</h2>
+        <p class="section-desc">Each tile opens a full scroll experience: hero, pillars, workflows, stats, and related modules.</p>
+      </div>
+      <div class="feature-grid">
+        <a class="feature-tile surface-panel" href="feature-dilly-score.html">
+          <span class="tag">Core</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">Dilly Score</h3>
+          <p>Smart, Grit, and Build: weighted 0–100 dimensions with track-aware signals so you know what to fix first.</p>
+          <div class="feature-meta"><span class="chip">Audit</span><span class="chip">Gap copy</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-resume-editor.html">
+          <span class="tag">Editing</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">Resume editor</h3>
+          <p>Per-bullet scoring, live feedback, and AI rewrites that push you toward quantified impact.</p>
+          <div class="feature-meta"><span class="chip">Live score</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-ats.html">
+          <span class="tag">ATS</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">ATS scanner</h3>
+          <p>Multi-system checks, parse preview, and concrete formatting fixes before a human sees your file.</p>
+          <div class="feature-meta"><span class="chip">6+ parsers</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-internships.html">
+          <span class="tag">Jobs</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">Internship matching</h3>
+          <p>Real listings with Ready, Almost, or Gap labels, <strong>Tailor resume</strong> on every card from your profile, and add-any-job when a posting is not in Dilly yet.</p>
+          <div class="feature-meta"><span class="chip">Tailor resume</span><span class="chip">Gap analysis</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-tracker.html">
+          <span class="tag">Pipeline</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">Application tracker</h3>
+          <p>Saved to Offer stages with entries that sync when you apply from inside Dilly.</p>
+          <div class="feature-meta"><span class="chip">CRM</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-calendar.html">
+          <span class="tag">Deadlines</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">Calendar and events</h3>
+          <p>Deadlines, interviews, and fairs in one grid with nudges so nothing slips.</p>
+          <div class="feature-meta"><span class="chip">Nudges</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-ask-dilly.html">
+          <span class="tag">Deep intel</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">Ask Dilly on any job</h3>
+          <p>Company-specific prompts and action plans generated from your real gap data.</p>
+          <div class="feature-meta"><span class="chip">Plans</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-ai-coach.html">
+          <span class="tag">AI</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">AI coach</h3>
+          <p>Chat that knows your resume, scores, applications, and deadlines. Strategy and mock interviews.</p>
+          <div class="feature-meta"><span class="chip">Context</span></div>
+        </a>
+        <a class="feature-tile surface-panel" href="feature-leaderboard.html">
+          <span class="tag">Competition</span>
+          <h3 class="font-display" style="font-size:1.05rem;letter-spacing:0.04em">Peer leaderboard</h3>
+          <p>Rankings by track, podium moments, weekly movement, and percentiles per dimension.</p>
+          <div class="feature-meta"><span class="chip">Social proof</span></div>
+        </a>
+      </div>
+    </div>
+  </section>
 
-<!-- 6. Leaderboard -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">COMPETITION</div>
-    <h3>Peer Leaderboard</h3>
-    <p>See where you rank against other students in your track. Podium display, weekly movement, percentiles by dimension. Know if you're in the top 10% or have work to do. The competitive pressure drives improvement.</p>
-    <div class="tag">Track-specific rankings</div>
-    <div class="tag">Weekly movement</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone"><img src="dillyrank.png" alt="Leaderboard"></div>
-  </div>
-</div>
+  <section class="cta-band">
+    <h2 class="font-display" style="letter-spacing:0.05em">Ready to see where you stand?</h2>
+    <p>Take the short quiz or start free in the app.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center">
+      <a class="btn btn-primary" href="quiz.html">Take the quiz</a>
+      <a class="btn btn-ghost" href="https://app.trydilly.com/">Start free</a>
+    </div>
+  </section>
 
-<!-- 7. Application Tracker -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">PIPELINE</div>
-    <h3>Internship Tracker</h3>
-    <p>Track every application from Saved to Applied to Interviewing to Offer. One tap to move between stages. See your full pipeline at a glance. When you apply from the Internships tab, it auto-creates the tracker entry.</p>
-    <div class="tag">Saved → Applied → Interviewing → Offer</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone"><img src="dillyinternshiptracker.png" alt="Tracker"></div>
-  </div>
-</div>
-
-<!-- 8. Calendar -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">DEADLINES</div>
-    <h3>Calendar & Events</h3>
-    <p>Never miss a deadline. Add application deadlines, interviews, career fairs, and events. Monthly grid view with upcoming events. Dilly nudges you when deadlines approach.</p>
-    <div class="tag">Deadlines</div>
-    <div class="tag">Interviews</div>
-    <div class="tag">Career fairs</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillycalendar.png" alt="Calendar"></div>
-    <div class="fr-phone tr"><img src="dillycalendarevent.png" alt="Event"></div>
-  </div>
-</div>
-
-<!-- 9. Ask Dilly per Job -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">DEEP INTELLIGENCE</div>
-    <h3>Ask Dilly About Any Job</h3>
-    <p>Tap "Ask Dilly" on any internship listing. Dilly auto-generates a prompt with your specific gaps for that role and gives you a detailed action plan — which skills to build, which projects to highlight, how to position your experience.</p>
-    <div class="tag">Auto-prompt from gap data</div>
-    <div class="tag">Company-specific advice</div>
-    <div class="hbox"><strong>Example:</strong> "For the Stripe SWE Intern role: your Smart is 9.75 points below their bar. Do 3-4 LeetCode mediums per week on arrays, graphs, dynamic programming. Practice reasoning out loud — Stripe rewards structural thinking."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="images/dilly-ai-stripe.png" alt="Stripe Advice"></div>
-    <div class="fr-phone tr"><img src="images/internships-cloudflare.png" alt="Cloudflare"></div>
-  </div>
-</div>
-
-</div></section>
-
-<div class="cta-band">
-  <h2>Ready to see where you stand?</h2>
-  <p>Take the 60-second quiz and get your estimated Dilly Score.</p>
-  <a href="index.html#quiz" class="bg">See My Estimated Score →</a>
-</div>
-
-<footer><div class="fl"><a href="features.html">Features</a><a href="index.html#pricing">Pricing</a><a href="about.html">About</a><a href="index.html#faq">FAQ</a></div>
-<p>© 2026 Dilly. The career center in your pocket.</p></footer>
-
-<script>
-const ob=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('v')})},{threshold:.1});
-document.querySelectorAll('.fu').forEach(el=>ob.observe(el));
-window.addEventListener('scroll',()=>{document.querySelector('nav').style.padding=window.scrollY>50?'10px 0':'16px 0'});
-</script>
+  <footer class="site-footer">
+    <nav class="footer-links" aria-label="Footer">
+      <a href="index.html">Home</a>
+      <a href="pricing.html">Pricing</a>
+      <a href="quiz.html">Quiz</a>
+    </nav>
+    <p>Dilly · Features</p>
+  </footer>
+  <script src="js/dilly.js"></script>
 </body>
 </html>
