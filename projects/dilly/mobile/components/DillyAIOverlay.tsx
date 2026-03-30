@@ -458,7 +458,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'rgba(8,8,9,0.97)' },
+  container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.b1, zIndex: 10 },
   wordmark: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   wordmarkDilly: { fontFamily: 'Cinzel_900Black', fontSize: 20, color: GOLD, letterSpacing: 2 },
@@ -468,11 +468,11 @@ const s = StyleSheet.create({
   modePill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   modePillActive: { backgroundColor: GOLD },
   modePillText: { fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1, color: colors.t3 },
-  modePillTextActive: { color: colors.bg },
+  modePillTextActive: { color: '#FFFFFF' },
   closeBtn: { zIndex: 20 },
   closeBtnCircle: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b2,
     alignItems: 'center', justifyContent: 'center',
   },
   messageList: { flex: 1 },
@@ -482,14 +482,14 @@ const s = StyleSheet.create({
   msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 4 },
   assistantBlock: { marginBottom: 8 },
   visualWrap: { paddingLeft: 14 },
-  userBubble: { backgroundColor: colors.s3, borderRadius: 18, borderBottomRightRadius: 4, paddingVertical: 10, paddingHorizontal: 14, maxWidth: '80%' },
-  assistantBubble: { backgroundColor: colors.s2, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 10, paddingHorizontal: 14, maxWidth: '80%', flexShrink: 1 },
+  userBubble: { backgroundColor: colors.golddim, borderRadius: 18, borderBottomRightRadius: 4, paddingVertical: 10, paddingHorizontal: 14, maxWidth: '80%' },
+  assistantBubble: { backgroundColor: colors.s1, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 10, paddingHorizontal: 14, maxWidth: '80%', flexShrink: 1, borderWidth: 1, borderColor: colors.b1 },
   msgText: { color: colors.t1, fontSize: 15, lineHeight: 22 },
   assistantDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD, marginBottom: 8, flexShrink: 0 },
-  typingBubble: { backgroundColor: colors.s2, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 16, height: 42, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  typingBubble: { backgroundColor: colors.s1, borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 16, height: 42, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.b1 },
   typingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD },
   inputBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.b1 },
-  input: { flex: 1, backgroundColor: colors.s2, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: colors.t1 },
+  input: { flex: 1, backgroundColor: colors.s1, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: colors.t1, borderWidth: 1, borderColor: colors.b1 },
   sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
 });
