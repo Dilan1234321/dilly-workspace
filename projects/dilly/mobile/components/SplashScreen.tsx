@@ -349,6 +349,6 @@ const ss = StyleSheet.create({
   },
   secondaryBtnText: {
     fontSize: 13, fontWeight: '500',
-    color: 'rgba(244,244,250,0.70)',
+    color: '#2B3A8E',
   },
 });
