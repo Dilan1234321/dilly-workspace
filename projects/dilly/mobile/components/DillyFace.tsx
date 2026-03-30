@@ -94,13 +94,6 @@ export function DillyFace({ size }: DillyFaceProps) {
       }}
     >
       <Svg width={size} height={size}>
-        {/* White background circle */}
-        <Circle
-          cx={cx}
-          cy={cy}
-          r={faceRadius}
-          fill="#FFFFFF"
-        />
         {/* Left eye */}
         <Circle
           cx={cx - 8 * s}
