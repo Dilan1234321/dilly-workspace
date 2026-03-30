@@ -12,6 +12,8 @@ import {
   Platform,
   Dimensions,
   TouchableOpacity,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -583,6 +585,10 @@ export default function ResumeEditorScreen() {
   const [initialScore, setInitialScore] = useState<number | null>(null);
   const [variants, setVariants]     = useState<any[]>([]);
   const [activeVariant, setActiveVariant] = useState<string | null>(null);
+  const [showTailor, setShowTailor] = useState(false);
+  const [tailorCompany, setTailorCompany] = useState('');
+  const [tailorRole, setTailorRole] = useState('');
+  const [tailoring, setTailoring] = useState(false);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -760,14 +766,33 @@ export default function ResumeEditorScreen() {
           </View>
         )}
 
-        {/* Overall strength */}
-        <FadeInView delay={60}>
-          <StrengthMeter score={overallScore} />
-        </FadeInView>
+        {/* Tailor for a job */}
+        <AnimatedPressable
+          style={rs.tailorBtn}
+          onPress={() => setShowTailor(true)}
+          scaleDown={0.97}
+        >
+          <Ionicons name="sparkles" size={14} color="#2B3A8E" />
+          <Text style={rs.tailorBtnText}>Tailor for a job</Text>
+        </AnimatedPressable>
 
         {/* Resume document */}
         <FadeInView delay={120}>
           <View style={rs.resumeDoc}>
+
+            {/* Floating score badge */}
+            <View style={rs.scoreBadgeWrap}>
+              <View style={rs.scoreBadgeRing}>
+                <View style={[rs.scoreBadgeProgress, {
+                  borderColor: sColor(overallScore),
+                  borderTopColor: 'transparent',
+                  transform: [{ rotate: `${(overallScore / 100) * 360}deg` }],
+                }]} />
+              </View>
+              <View style={[rs.scoreBadgeInner, { borderColor: sColor(overallScore) + '30' }]}>
+                <Text style={[rs.scoreBadgeNum, { color: sColor(overallScore) }]}>{overallScore}</Text>
+              </View>
+            </View>
 
             {/* Sections as accordion */}
             {sections.map((sec, i) => {
@@ -814,6 +839,86 @@ export default function ResumeEditorScreen() {
         </FadeInView>
 
       </ScrollView>
+
+      {/* Tailor modal */}
+      <Modal visible={showTailor} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowTailor(false)}>
+        <View style={rs.tailorOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
+            <View style={[rs.tailorCard, { paddingBottom: insets.bottom + 20 }]}>
+              <View style={rs.tailorHeader}>
+                <Text style={rs.tailorTitle}>Tailor Resume</Text>
+                <TouchableOpacity onPress={() => setShowTailor(false)} hitSlop={12}>
+                  <Ionicons name="close" size={20} color={colors.t2} />
+                </TouchableOpacity>
+              </View>
+              <Text style={rs.tailorSub}>Dilly will rewrite your resume bullets to match this role.</Text>
+              <TextInput
+                style={rs.tailorInput}
+                value={tailorCompany}
+                onChangeText={setTailorCompany}
+                placeholder="Company (e.g. Google)"
+                placeholderTextColor={colors.t3}
+                autoFocus
+              />
+              <TextInput
+                style={rs.tailorInput}
+                value={tailorRole}
+                onChangeText={setTailorRole}
+                placeholder="Role (e.g. Data Science Intern)"
+                placeholderTextColor={colors.t3}
+              />
+              <AnimatedPressable
+                style={[rs.tailorSubmitBtn, (!tailorCompany.trim() || !tailorRole.trim()) && { opacity: 0.4 }]}
+                onPress={async () => {
+                  if (!tailorCompany.trim() || !tailorRole.trim()) return;
+                  setTailoring(true);
+                  setShowTailor(false);
+                  try {
+                    const res = await apiFetch('/resume/variants', {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        job_company: tailorCompany.trim(),
+                        job_title: tailorRole.trim(),
+                        type: 'tailored',
+                      }),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      // Refresh variants and switch to new one
+                      const varRes = await apiFetch('/resume/variants').then(r => r.json());
+                      setVariants(varRes?.variants || []);
+                      if (data?.id) {
+                        setActiveVariant(data.id);
+                        const varData = await apiFetch(`/resume/variants/${data.id}`).then(r => r.json());
+                        if (varData?.resume?.sections) setSections(varData.resume.sections);
+                      }
+                    }
+                  } catch {
+                    Alert.alert('Error', 'Could not tailor resume. Try again.');
+                  } finally {
+                    setTailoring(false);
+                    setTailorCompany('');
+                    setTailorRole('');
+                  }
+                }}
+                scaleDown={0.97}
+                disabled={!tailorCompany.trim() || !tailorRole.trim()}
+              >
+                <Ionicons name="sparkles" size={14} color="#FFFFFF" />
+                <Text style={rs.tailorSubmitText}>Tailor my resume</Text>
+              </AnimatedPressable>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Tailoring in-progress overlay */}
+      {tailoring && (
+        <View style={rs.tailoringOverlay}>
+          <ActivityIndicator size="large" color="#2B3A8E" />
+          <Text style={rs.tailoringText}>Dilly is tailoring your resume for {tailorCompany}...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -851,10 +956,13 @@ const rs = StyleSheet.create({
   meterTicks: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   meterTick: { fontSize: 8, color: colors.t3 },
 
-  // Resume document
+  // Resume document (paper style)
   resumeDoc: {
-    backgroundColor: colors.s1, borderRadius: 16, borderWidth: 1, borderColor: colors.b1,
-    overflow: 'hidden', paddingVertical: 8,
+    backgroundColor: '#FFFFFF', borderRadius: 12,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 16, marginBottom: 20, position: 'relative' as const,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
   },
 
   // Section divider
@@ -964,4 +1072,58 @@ const rs = StyleSheet.create({
   variantChipActive: { backgroundColor: colors.golddim, borderColor: colors.goldbdr },
   variantChipText: { fontSize: 12, fontWeight: '600', color: colors.t2, maxWidth: 140 },
   variantChipTextActive: { color: colors.gold },
+
+  // Floating score badge
+  scoreBadgeWrap: {
+    position: 'absolute', top: -10, right: -10, zIndex: 10,
+    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
+  },
+  scoreBadgeRing: {
+    position: 'absolute', width: 44, height: 44,
+    borderRadius: 22, overflow: 'hidden',
+  },
+  scoreBadgeProgress: {
+    width: 44, height: 44, borderRadius: 22,
+    borderWidth: 3, borderColor: 'transparent',
+  },
+  scoreBadgeInner: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#FFFFFF', borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+  },
+  scoreBadgeNum: { fontFamily: 'Cinzel_700Bold', fontSize: 13 },
+
+  // Tailor button
+  tailorBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.golddim, borderRadius: 10,
+    paddingVertical: 10, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.goldbdr,
+  },
+  tailorBtnText: { fontSize: 13, fontWeight: '600', color: colors.gold },
+
+  // Tailor modal
+  tailorOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  tailorCard: { backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
+  tailorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  tailorTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 16, letterSpacing: 1, color: colors.t1 },
+  tailorSub: { fontSize: 12, color: colors.t2, marginBottom: 14, lineHeight: 18 },
+  tailorInput: {
+    backgroundColor: colors.s1, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+    padding: 14, fontSize: 14, color: colors.t1, marginBottom: 10,
+  },
+  tailorSubmitBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.gold, borderRadius: 12, paddingVertical: 14, marginTop: 6,
+  },
+  tailorSubmitText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
+
+  // Tailoring overlay
+  tailoringOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', zIndex: 50,
+  },
+  tailoringText: { fontSize: 14, color: colors.t2, marginTop: 16, textAlign: 'center', paddingHorizontal: 40 },
 });
