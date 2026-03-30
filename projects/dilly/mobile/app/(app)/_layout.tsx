@@ -77,25 +77,12 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="rank"
+        name="resume-editor"
         options={{
-          title: 'Rank',
+          title: 'Resume',
           tabBarIcon: ({ focused }) => (
             <Ionicons
-              name="bar-chart"
-              size={20}
-              color={focused ? colors.t1 : colors.t3}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="voice"
-        options={{
-          title: 'Dilly AI',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'chatbubble' : 'chatbubble-outline'}
+              name={focused ? 'document-text' : 'document-text-outline'}
               size={20}
               color={focused ? colors.t1 : colors.t3}
             />
@@ -144,7 +131,14 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="resume-editor"
+        name="rank"
+        options={{
+          href: null,
+          animation: 'fade',
+        }}
+      />
+      <Tabs.Screen
+        name="voice"
         options={{
           href: null,
           animation: 'fade',
