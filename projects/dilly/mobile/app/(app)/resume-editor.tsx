@@ -369,7 +369,7 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
     const scoreLabel = sLabel(score);
     openDillyOverlay({
       isPaid: true,
-      initialMessage: `Help me improve this resume bullet. It currently scores ${score}/100 (${scoreLabel}). Show me a rewritten version that would score higher, and explain what you changed and why. Use color to show the score change: current ${score} → new score.\n\nMy bullet: "${bullet.text}"`,
+      initialMessage: `Help me improve this resume bullet. It currently scores ${score}/100 (${scoreLabel}). Show me a rewritten version that would score higher, and explain what you changed and why. Do NOT use any emojis or special unicode characters.\n\nMy bullet: "${bullet.text}"`,
     });
   }
 
