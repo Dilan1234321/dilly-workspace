@@ -555,7 +555,7 @@ const s = StyleSheet.create({
   },
   dillyAvatar: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: '#1a1200',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: colors.goldbdr,
     alignItems: 'center',
