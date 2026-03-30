@@ -23,9 +23,9 @@
   --ink: #fafafa;
   --surface: #ffffff;
   --surface-2: #f6f7fb;
-  --border: rgba(0, 40, 104, 0.12);
-  --text: #1a1a22;
-  --text-muted: rgba(26, 26, 34, 0.65);
+  --border: rgba(0, 40, 104, 0.14);
+  --text: #111827;
+  --text-muted: rgba(17, 24, 39, 0.75);
   --shadow: 0 20px 60px rgba(0, 40, 104, 0.08);
   --slider-mask: linear-gradient(to right, transparent, #fafafa 12%, #fafafa 88%, transparent);
 }
@@ -279,12 +279,12 @@ img {
 }
 
 .nav-item {
-  padding: 0.45rem 0.7rem;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: none;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.92);
   border-radius: 6px;
   transition: color 0.2s ease, background 0.2s ease;
 }
@@ -2040,7 +2040,8 @@ img {
 }
 
 :root.light .nav-item {
-  color: rgba(0, 27, 68, 0.72);
+  color: rgba(0, 27, 68, 0.88);
+  font-weight: 600;
 }
 
 :root.light .nav-item:hover,
@@ -2050,7 +2051,7 @@ img {
 }
 
 :root.light .nav-item--signin {
-  color: rgba(0, 27, 68, 0.48);
+  color: rgba(0, 27, 68, 0.72);
 }
 
 :root.light .site-nav .nav-cta-row .btn-primary {
@@ -2069,7 +2070,9 @@ img {
 }
 
 :root.light .hero-fullbleed .nav-item {
-  color: rgba(255, 255, 255, 0.78);
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 :root.light .hero-fullbleed .nav-item:hover,
@@ -2079,7 +2082,7 @@ img {
 }
 
 :root.light .hero-fullbleed .nav-item--signin {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 :root.light .hero-fullbleed .site-nav .nav-cta-row .btn-primary {
