@@ -673,7 +673,7 @@ const s = StyleSheet.create({
   aiPromptArrow: {},
   chipRow: { gap: 8, paddingTop: 10 },
   chip: {
-    backgroundColor: colors.golddim, borderRadius: 20,
+    backgroundColor: colors.golddim, borderRadius: 8,
     paddingHorizontal: 14, paddingVertical: 8,
     borderWidth: 1, borderColor: colors.goldbdr,
   },
