@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   LayoutAnimation, UIManager, Platform, Alert, Modal,
-  TextInput, KeyboardAvoidingView,
+  TextInput, KeyboardAvoidingView, RefreshControl, Animated,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -73,10 +73,22 @@ const CATEGORY_ORDER = [
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
+function Skeleton({ width, height = 14, style }: { width: number | string; height?: number; style?: any }) {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.7, duration: 800, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return <Animated.View style={[{ width: width as any, height, borderRadius: 6, backgroundColor: '#E4E6F0', opacity }, style]} />;
+}
+
 export default function MyDillyProfileScreen() {
   const insets = useSafeAreaInsets();
   const [data, setData] = useState<MemorySurface | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -92,6 +104,12 @@ export default function MyDillyProfileScreen() {
   }, []);
 
   useEffect(() => { fetchData(); }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, [fetchData]);
 
   function toggleCategory(cat: string) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -158,8 +176,32 @@ export default function MyDillyProfileScreen() {
 
   if (loading) {
     return (
-      <View style={[s.container, s.center]}>
-        <Text style={s.loadingText}>Loading your profile...</Text>
+      <View style={s.container}>
+        <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+          <View style={{ width: 36 }} />
+          <Skeleton width={130} height={11} />
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={{ paddingHorizontal: spacing.xl, paddingTop: 16 }}>
+          {/* Narrative card skeleton */}
+          <View style={{ backgroundColor: colors.s2, borderRadius: 16, borderWidth: 1, borderColor: colors.goldbdr, padding: 16, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+              <Skeleton width={14} height={14} style={{ borderRadius: 7 }} />
+              <Skeleton width={120} height={10} />
+            </View>
+            <Skeleton width="100%" height={14} style={{ marginBottom: 6 }} />
+            <Skeleton width="90%" height={14} style={{ marginBottom: 6 }} />
+            <Skeleton width="70%" height={14} />
+          </View>
+          {/* Category list skeleton */}
+          {[1, 2, 3, 4].map(i => (
+            <View key={i} style={{ backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Skeleton width={28} height={28} style={{ borderRadius: 8 }} />
+              <Skeleton width={120} height={13} style={{ flex: 1 }} />
+              <Skeleton width={20} height={20} style={{ borderRadius: 10 }} />
+            </View>
+          ))}
+        </View>
       </View>
     );
   }
@@ -180,6 +222,7 @@ export default function MyDillyProfileScreen() {
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 36 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
       >
         {/* ── Narrative Card ─────────────────────────────────────────── */}
         <View style={s.narrativeCard}>

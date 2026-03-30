@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
-  Dimensions,
+  Dimensions, RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,6 +72,17 @@ function dimTagFromRec(rec: Rec): string {
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
+function Skeleton({ width, height = 14, style }: { width: number | string; height?: number; style?: any }) {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.7, duration: 800, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return <Animated.View style={[{ width: width as any, height, borderRadius: 6, backgroundColor: '#E4E6F0', opacity }, style]} />;
+}
+
 export default function ScoreDetailScreen() {
   const insets = useSafeAreaInsets();
   const [cohorts, setCohorts]           = useState<CohortEntry[]>([]);
@@ -79,6 +90,8 @@ export default function ScoreDetailScreen() {
   const [recs, setRecs]                 = useState<Rec[]>([]);
   const [peerAvgs, setPeerAvgs]         = useState<Record<string, number>>(PEER_AVG_FALLBACK);
   const [loading, setLoading]           = useState(true);
+  const [refreshing, setRefreshing]     = useState(false);
+  const [fetchKey, setFetchKey]         = useState(0);
   const [displayScore, setDisplayScore] = useState(0);
 
   // Legacy fallback (single score, no cohort_scores)
@@ -187,6 +200,12 @@ export default function ScoreDetailScreen() {
         setLoading(false);
       }
     })();
+  }, [fetchKey]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setFetchKey(k => k + 1);
+    setTimeout(() => setRefreshing(false), 1200);
   }, []);
 
   // ── Animate on cohort change ─────────────────────────────────────────────
@@ -254,8 +273,30 @@ export default function ScoreDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[s.container, s.center]}>
-        <Text style={s.loadingText}>Loading scores...</Text>
+      <View style={s.container}>
+        <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+          <View style={{ width: 36 }} />
+          <Skeleton width={90} height={11} />
+          <View style={{ width: 36 }} />
+        </View>
+        <View style={{ paddingHorizontal: spacing.xl, paddingTop: 16 }}>
+          {/* Hero score skeleton */}
+          <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+            <Skeleton width={100} height={72} style={{ borderRadius: 8, marginBottom: 8 }} />
+            <Skeleton width={140} height={13} style={{ marginBottom: 6 }} />
+            <Skeleton width={60} height={20} style={{ borderRadius: 10 }} />
+          </View>
+          {/* Dimension bars skeleton */}
+          {[1, 2, 3].map(i => (
+            <View key={i} style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Skeleton width={50} height={9} />
+                <Skeleton width={30} height={22} />
+              </View>
+              <Skeleton width="100%" height={8} style={{ borderRadius: 4 }} />
+            </View>
+          ))}
+        </View>
       </View>
     );
   }
@@ -289,7 +330,7 @@ export default function ScoreDetailScreen() {
           <Text style={s.headerTitle}>MY SCORES</Text>
           <View style={{ width: 36 }} />
         </View>
-        <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 36 }]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 36 }]} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}>
           {/* Hero */}
           <View style={s.heroSection}>
             <Text style={[s.heroScore, { color: scoreColor(legacyAudit.final_score) }]}>{displayScore}</Text>
@@ -320,6 +361,7 @@ export default function ScoreDetailScreen() {
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 36 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
       >
         {/* ── Cohort Pills ─────────────────────────────────────────────── */}
         <ScrollView

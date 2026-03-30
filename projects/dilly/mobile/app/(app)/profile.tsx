@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Animated,
   Easing,
   Share,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -158,14 +159,16 @@ export default function ProfileScreen() {
   const [loading,  setLoading]  = useState(true);
   const [showEdit, setShowEdit] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [celebrated, setCelebrated] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [profileRes, auditRaw] = await Promise.all([
+        const [profileRes, auditRaw, appsRes] = await Promise.all([
           apiFetch('/profile').then(r => r.json()),
           apiFetch('/audit/latest').then(r => r.json()),
+          apiFetch('/applications').then(r => r.json()).catch(() => null),
         ]);
 
         setProfile(profileRes ?? {});
@@ -185,6 +188,8 @@ export default function ProfileScreen() {
           has_audit: auditRaw?.has_audit !== false && auditObj?.final_score != null,
           final_score: auditObj?.final_score ?? calculated ?? undefined,
           scores: { smart: smart ?? 0, grit: grit ?? 0, build: build ?? 0 },
+          _auditCount: auditRaw?.audit_count ?? (auditObj?.final_score ? 1 : 0),
+          _jobsApplied: (appsRes?.applications || []).filter((a: any) => a.status === 'applied' || a.status === 'interviewing' || a.status === 'offer').length,
         });
 
         // Photo
@@ -211,6 +216,12 @@ export default function ProfileScreen() {
     })();
   }, [refreshKey]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setRefreshKey(k => k + 1);
+    setTimeout(() => setRefreshing(false), 1200);
+  }, []);
+
   // \u2500\u2500 Derived \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const p = profile;
@@ -235,8 +246,8 @@ export default function ProfileScreen() {
   const earnedCount  = achievements.filter(a => a.earned).length;
 
   // \u2500\u2500 Activity stats (placeholder counts \u2014 wire to real API later) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  const auditCount = hasAudit ? 1 : 0; // TODO: pull from audit history
-  const jobsApplied = 0; // TODO: pull from applications
+  const auditCount = (audit as any)._auditCount ?? (hasAudit ? 1 : 0);
+  const jobsApplied = (audit as any)._jobsApplied ?? 0;
 
   async function handleShare() {
     try {
@@ -265,6 +276,7 @@ export default function ProfileScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[ps.scroll, { paddingBottom: insets.bottom + 40 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
       >
 
         {/* \u2500\u2500 Hero \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}

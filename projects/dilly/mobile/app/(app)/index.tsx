@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   AppState,
+  RefreshControl,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -84,6 +85,17 @@ function ProfilePhoto({ name, photoUri, size = 32 }: { name: string; photoUri: s
 
 // \u2500\u2500 Screen \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
+function Skeleton({ width, height = 14, style }: { width: number | string; height?: number; style?: any }) {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.7, duration: 800, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return <Animated.View style={[{ width: width as any, height, borderRadius: 6, backgroundColor: '#E4E6F0', opacity }, style]} />;
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [profile, setProfile]     = useState<Profile>({});
@@ -96,6 +108,7 @@ export default function HomeScreen() {
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const barAnim   = useRef(new Animated.Value(0)).current;
 
+  const [refreshing, setRefreshing] = useState(false);
   const { celebrate, CelebrationPortal } = useCelebration();
 
   // Auth guard: if token is gone (sign-out), redirect away from app screens
@@ -206,6 +219,12 @@ export default function HomeScreen() {
     })();
   }, [profileRefreshKey]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setProfileRefreshKey(k => k + 1);
+    setTimeout(() => setRefreshing(false), 1200);
+  }, []);
+
   // \u2500\u2500 Animate score \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   useEffect(() => {
@@ -291,11 +310,49 @@ export default function HomeScreen() {
     extrapolate: 'clamp',
   });
 
+  if (loading) {
+    return (
+      <View style={[s.container]}>
+        <ScrollView contentContainerStyle={[s.scroll, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 40 }]}>
+          {/* Header skeleton */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <Skeleton width={36} height={36} style={{ borderRadius: 18 }} />
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Skeleton width={100} height={16} style={{ marginBottom: 6 }} />
+              <Skeleton width={160} height={12} />
+            </View>
+          </View>
+          {/* Score card skeleton */}
+          <View style={{ backgroundColor: colors.s2, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.b1 }}>
+            <Skeleton width={90} height={10} style={{ marginBottom: 14 }} />
+            <Skeleton width={70} height={48} style={{ marginBottom: 10 }} />
+            <Skeleton width="100%" height={8} style={{ borderRadius: 4, marginBottom: 14 }} />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <Skeleton width={60} height={36} style={{ borderRadius: 8 }} />
+              <Skeleton width={60} height={36} style={{ borderRadius: 8 }} />
+              <Skeleton width={60} height={36} style={{ borderRadius: 8 }} />
+            </View>
+          </View>
+          {/* Grid tiles skeleton */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={[s.container]}>
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
       >
 
         {/* \u2500\u2500 Header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}

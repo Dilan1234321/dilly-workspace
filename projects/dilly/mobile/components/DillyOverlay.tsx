@@ -505,7 +505,7 @@ const s = StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(8,8,9,0.96)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
     flex: 1,
   },
 

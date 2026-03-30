@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -286,6 +287,8 @@ export default function InternshipTrackerScreen() {
 
   const [apps, setApps]             = useState<Application[]>([]);
   const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchKey, setFetchKey]     = useState(0);
   const [showAdd, setShowAdd]       = useState(false);
   const [filterStatus, setFilterStatus] = useState<AppStatus | 'all'>('all');
   const [profile, setProfile]       = useState<Record<string, any>>({});
@@ -302,6 +305,12 @@ export default function InternshipTrackerScreen() {
       } catch {}
       finally { setLoading(false); }
     })();
+  }, [fetchKey]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setFetchKey(k => k + 1);
+    setTimeout(() => setRefreshing(false), 1200);
   }, []);
 
   const filtered = useMemo(() => {
@@ -410,7 +419,7 @@ export default function InternshipTrackerScreen() {
         </View>
       </FadeInView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ts.scroll, { paddingBottom: insets.bottom + 80 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ts.scroll, { paddingBottom: insets.bottom + 80 }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}>
 
         {/* Pipeline summary */}
         <FadeInView delay={60}>
