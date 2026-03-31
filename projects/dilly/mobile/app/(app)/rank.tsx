@@ -166,7 +166,7 @@ export default function RankScreen() {
       >
         {/* ── Header ───────────────────────────────────────────────────── */}
         <Text style={s.eyebrow}>RANK</Text>
-        <Text style={s.subEyebrow}>{data.track} cohort · UTampa</Text>
+        <Text style={s.subEyebrow}>{data.track} cohort</Text>
 
         {/* Your rank */}
         <View style={s.rankHero}>

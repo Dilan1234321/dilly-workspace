@@ -268,7 +268,7 @@ export default function HomeScreen() {
   const p = profile as any;
   const firstName = p.name?.trim().split(/\s+/)[0] || p.first_name || '';
   const cohort    = p.track || p.cohort || 'General';
-  const school    = p.school_id === 'utampa' ? 'UTampa' : 'UTampa';
+  const school    = p.school_name || p.school_id || '';
 
   const hasAudit    = audit.has_audit === true && audit.final_score !== undefined;
   const finalScore  = audit.final_score ?? 0;
@@ -380,7 +380,7 @@ export default function HomeScreen() {
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
               {cohort ? (
-                <Text style={s.headerCohort}>{cohort} cohort · {school}</Text>
+                <Text style={s.headerCohort}>{cohort} cohort{school ? ` · ${school}` : ''}</Text>
               ) : null}
             </View>
             <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>

@@ -258,14 +258,8 @@ export default function ScanningScreen() {
     hasCalledApi.current = true;
 
     (async () => {
-      // Temporary connectivity test
-      fetch(`${API_BASE}/health`)
-        .then(r => console.log('[network] health check status:', r.status))
-        .catch(e => console.log('[network] health check FAILED:', e.message));
-
       try {
         const headers = await authHeaders();
-        console.log('[scan] auth headers present:', Object.keys(headers).join(', ') || 'NONE');
         const formData = new FormData();
 
         // Resolve file: prefer module-level (same JS session), fall back to AsyncStorage
@@ -281,15 +275,9 @@ export default function ScanningScreen() {
               fileUri      = p.uri      ?? null;
               fileName     = p.name     ?? null;
               fileMimeType = p.mimeType ?? null;
-              console.log('[scan] file recovered from AsyncStorage');
-            } catch { /* ignore */ }
+              } catch { /* ignore */ }
           }
         }
-
-        // ── DIAGNOSTIC LOG 1: file ──────────────────────────────────────
-        console.log('[scan] file uri:', fileUri);
-        console.log('[scan] file name:', fileName);
-        console.log('[scan] file mimeType:', fileMimeType);
 
         // Attach file if present
         if (fileUri && fileName) {
@@ -298,8 +286,6 @@ export default function ScanningScreen() {
             name: fileName,
             type: fileMimeType ?? 'application/pdf',
           } as any);
-        } else {
-          console.log('[scan] WARNING: no file to attach — API will reject');
         }
 
         // Attach profile params
@@ -311,14 +297,6 @@ export default function ScanningScreen() {
           AsyncStorage.getItem(ONBOARDING_KEYS.track),
           AsyncStorage.getItem(ONBOARDING_KEYS.target),
         ]);
-
-        // ── DIAGNOSTIC LOG 2: formData fields ───────────────────────────
-        console.log('[scan] majorsRaw:', majorsRaw);
-        console.log('[scan] preProf:', preProf);
-        console.log('[scan] indTarget:', indTarget);
-        console.log('[scan] cohortVal:', cohortVal);
-        console.log('[scan] track:', track);
-        console.log('[scan] appTarget:', appTarget);
 
         if (majorsRaw) {
           try {
@@ -334,31 +312,25 @@ export default function ScanningScreen() {
         if (track)      formData.append('track',                  track);
         if (appTarget)  formData.append('application_target',     appTarget);
 
-        console.log('[scan] firing POST /audit/first-run');
         const res = await fetch(`${API_BASE}/audit/first-run`, {
           method:  'POST',
           headers: { ...headers },
           body:    formData,
         });
 
-        // ── DIAGNOSTIC LOG 3: API response ──────────────────────────────
-        console.log('[scan] API status:', res.status);
         const result = await res.json();
-        console.log('[scan] API response:', JSON.stringify(result, null, 2));
 
         const payload = res.ok
           ? result
           : { error: true, status: res.status, detail: result.detail };
 
         await AsyncStorage.setItem(AUDIT_RESULT_KEY, JSON.stringify(payload));
-        console.log('[scan] stored payload keys:', Object.keys(payload).join(', '));
 
         // Sync parsed resume to editor base resume
         if (res.ok) {
           try { await apiFetch('/resume/sync-base', { method: 'POST' }); } catch {}
         }
-      } catch (e) {
-        console.log('[scan] CATCH ERROR:', e);
+      } catch {
         await AsyncStorage.setItem(AUDIT_RESULT_KEY, JSON.stringify({ error: true }));
       }
 

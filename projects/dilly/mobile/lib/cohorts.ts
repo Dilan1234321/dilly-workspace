@@ -301,7 +301,7 @@ export const COHORT_META: Record<string, {
     label: 'Finance & Accounting',
     description: 'Scored against Goldman Sachs, JP Morgan, Deloitte criteria.',
     emphasis: 'Grit carries the most weight (40%). GPA screens are real.',
-    color: '#C9A84C',
+    color: '#2B3A8E',
   },
   'Marketing & Advertising': {
     label: 'Marketing & Advertising',
@@ -313,7 +313,7 @@ export const COHORT_META: Record<string, {
     label: 'Consulting & Strategy',
     description: 'Scored against McKinsey, BCG, Bain criteria.',
     emphasis: 'Grit carries the most weight (45%). Highest bar (85).',
-    color: '#C9A84C',
+    color: '#2B3A8E',
   },
   'Management & Operations': {
     label: 'Management & Operations',

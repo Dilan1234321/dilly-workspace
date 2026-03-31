@@ -61,5 +61,5 @@ export const radius = {
   full: 999,
 };
 
-// localhost works for iOS Simulator (shares Mac network stack); use LAN IP for real devices
+// Development: localhost for Simulator. Production: set via EAS environment variables.
 export const API_BASE = 'http://localhost:8000';

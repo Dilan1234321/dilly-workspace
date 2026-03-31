@@ -77,9 +77,9 @@ export const COHORT_COLORS: Record<string, string> = {
   'Chemical & Biomedical Engineering':  '#5E5CE6',
   'Industrial & Systems Engineering':   '#FF9F0A',
   // Business
-  'Finance & Accounting':               '#C9A84C',
+  'Finance & Accounting':               '#2B3A8E',
   'Marketing & Advertising':            '#FF6B8A',
-  'Consulting & Strategy':              '#C9A84C',
+  'Consulting & Strategy':              '#2B3A8E',
   'Management & Operations':            '#34C759',
   'Economics & Public Policy':          '#5E5CE6',
   'Entrepreneurship & Innovation':      '#FF9F0A',
