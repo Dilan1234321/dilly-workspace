@@ -804,6 +804,61 @@ async def audit_resume_v2(
                 write_dilly_profile_txt(email)
             except Exception:
                 pass
+            # Sync audit scores to PostgreSQL so GET /profile returns them immediately
+            try:
+                import psycopg2, psycopg2.extras, json as _json
+                _scores = full_audit_dict.get("scores") or {}
+                _track = full_audit_dict.get("detected_track") or result.track
+                _smart = float(_scores.get("smart", 0))
+                _grit = float(_scores.get("grit", 0))
+                _build = float(_scores.get("build", 0))
+                _dilly = float(full_audit_dict.get("final_score", 0))
+                _cohort_scores = {
+                    _track: {
+                        "smart": _smart,
+                        "grit": _grit,
+                        "build": _build,
+                        "level": "primary",
+                    }
+                } if _track else {}
+                _pw = os.environ.get("DILLY_DB_PASSWORD", "")
+                if not _pw:
+                    try: _pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
+                    except: pass
+                _conn = psycopg2.connect(
+                    host=os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+                    database="dilly", user="dilly_admin", password=_pw, sslmode="require"
+                )
+                _cur = _conn.cursor()
+                _cur.execute("""
+                    INSERT INTO students (
+                        email, name, track, cohort_scores,
+                        overall_smart, overall_grit, overall_build, overall_dilly_score,
+                        latest_audit_id, has_run_first_audit
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                    ON CONFLICT (email) DO UPDATE SET
+                        name = CASE WHEN EXCLUDED.name <> '' THEN EXCLUDED.name ELSE students.name END,
+                        track = COALESCE(EXCLUDED.track, students.track),
+                        cohort_scores = EXCLUDED.cohort_scores,
+                        overall_smart = EXCLUDED.overall_smart,
+                        overall_grit = EXCLUDED.overall_grit,
+                        overall_build = EXCLUDED.overall_build,
+                        overall_dilly_score = EXCLUDED.overall_dilly_score,
+                        latest_audit_id = EXCLUDED.latest_audit_id,
+                        has_run_first_audit = TRUE
+                """, (
+                    email,
+                    full_audit_dict.get("candidate_name") or "",
+                    _track or None,
+                    _json.dumps(_cohort_scores),
+                    _smart, _grit, _build, _dilly,
+                    audit_id,
+                ))
+                _conn.commit()
+                _conn.close()
+            except Exception:
+                pass
             response = response.model_copy(update={"id": audit_id}) if hasattr(response, "model_copy") else response
         except Exception:
             pass
