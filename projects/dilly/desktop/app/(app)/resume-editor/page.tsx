@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '@/lib/api';
+import { getProfileInterests, ALL_COHORTS } from '@/lib/cohorts';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 import { useRightPanel } from '@/app/(app)/layout';
 
@@ -950,10 +951,11 @@ function UnsavedModal({ label, onSave, onDiscard, onCancel }: {
 ═══════════════════════════════════════ */
 type OverviewSort = 'cohort' | 'company' | 'date' | 'name';
 
-function ResumeOverview({ variants, dirtySet, activeId, onSelect, onClose, sort, setSort, onContextMenu }: {
+function ResumeOverview({ variants, dirtySet, activeId, hiddenIds, onSelect, onClose, sort, setSort, onContextMenu }: {
   variants: VariantMeta[];
   dirtySet: Set<string>;
   activeId: string;
+  hiddenIds: Set<string>;
   onSelect: (id: string) => void;
   onClose: () => void;
   sort: OverviewSort;
@@ -1022,23 +1024,26 @@ function ResumeOverview({ variants, dirtySet, activeId, onSelect, onClose, sort,
             const isActive = v.id === activeId;
             const isJob = v.type === 'job';
             const isDirty = dirtySet.has(v.id);
+            const isHidden = hiddenIds.has(v.id);
             const subtitle = isJob
               ? [v.job_title, v.job_company].filter(Boolean).join(' @ ')
               : v.cohort;
             return (
               <button key={v.id} onClick={() => onSelect(v.id)}
                 onContextMenu={e => { e.preventDefault(); e.stopPropagation(); onContextMenu(e, v.id); }}
+                title={isHidden ? 'Hidden from tabs — click to reopen' : undefined}
                 style={{
                   textAlign: 'left', width: '100%', padding: '8px 10px', cursor: 'pointer',
                   background: isActive ? `${tc}10` : 'transparent',
                   border: isActive ? `1px solid ${tc}25` : '1px solid transparent',
                   borderRadius: 8, transition: 'all 0.12s',
+                  opacity: isHidden ? 0.5 : 1,
                 }}
-                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'var(--surface-1)'; } }}
-                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; } }}>
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'var(--surface-1)'; e.currentTarget.style.opacity = '1'; } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.opacity = isHidden ? '0.5' : '1'; } }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {/* Color dot */}
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: tc, flexShrink: 0 }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: isHidden ? 'var(--text-3)' : tc, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <p style={{
@@ -1050,12 +1055,18 @@ function ResumeOverview({ variants, dirtySet, activeId, onSelect, onClose, sort,
                       {isDirty && (
                         <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
                       )}
+                      {isHidden && (
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                          <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                      )}
                     </div>
                     <p style={{
                       fontSize: 10, color: 'var(--text-3)', margin: '1px 0 0',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {subtitle}
+                      {isHidden ? 'Hidden · click to reopen' : subtitle}
                     </p>
                   </div>
                   {isJob && (
@@ -1169,30 +1180,7 @@ interface VariantMeta {
 /* ═══════════════════════════════════════
    COHORT CONSTANTS
 ═══════════════════════════════════════ */
-const ALL_COHORTS = [
-  'Software Engineering & CS',
-  'Data Science & Analytics',
-  'Cybersecurity & IT',
-  'Finance & Accounting',
-  'Marketing & Advertising',
-  'Consulting & Strategy',
-  'Management & Operations',
-  'Economics & Public Policy',
-  'Entrepreneurship & Innovation',
-  'Healthcare & Clinical',
-  'Life Sciences & Research',
-  'Physical Sciences & Math',
-  'Social Sciences & Nonprofit',
-  'Media & Communications',
-  'Design & Creative',
-  'Legal & Compliance',
-  'Human Resources & People',
-  'Supply Chain & Logistics',
-  'Education & Teaching',
-  'Real Estate & Construction',
-  'Environmental & Sustainability',
-  'Hospitality & Events',
-];
+// ALL_COHORTS imported from @/lib/cohorts — single source of truth
 
 /* ═══════════════════════════════════════
    TAB RENAME INLINE
@@ -1742,6 +1730,13 @@ export default function ResumeEditorPage() {
   const [tailorError, setTailorError] = useState<{ company: string; reason: string } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [hiddenVariantIds, setHiddenVariantIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem('dilly_hidden_variants') || '[]')); } catch { return new Set(); }
+  });
+  useEffect(() => {
+    localStorage.setItem('dilly_hidden_variants', JSON.stringify(Array.from(hiddenVariantIds)));
+  }, [hiddenVariantIds]);
   const [showOverview, setShowOverview] = useState(false);
   const [overviewSort, setOverviewSort] = useState<OverviewSort>('cohort');
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -1767,7 +1762,7 @@ export default function ResumeEditorPage() {
         const scores = profileData?.cohort_scores ?? {};
         const cohortKeys = Object.keys(scores).filter(k => k !== 'General');
         setUserCohorts(cohortKeys.length > 0 ? cohortKeys : (profileData?.cohort ? [profileData.cohort] : []));
-        setUserInterests(profileData?.interests ?? []);
+        setUserInterests(getProfileInterests(profileData));
         const vList: VariantMeta[] = varData?.variants ?? [];
         setVariants(vList);
         if (vList.length > 0) {
@@ -1982,7 +1977,21 @@ export default function ResumeEditorPage() {
     const remaining = variants.filter(v => v.id !== id);
     setVariants(remaining);
     setDirtyVariants(prev => { const s = new Set(prev); s.delete(id); return s; });
-    if (activeVariantId === id) setActiveVariantId(remaining[0]?.id ?? null);
+    setHiddenVariantIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    if (activeVariantId === id) {
+      const nextVisible = remaining.find(v => !hiddenVariantIds.has(v.id));
+      setActiveVariantId((nextVisible ?? remaining[0])?.id ?? null);
+    }
+  }
+
+  function handleHideVariant(id: string) {
+    const visibleIds = variants.filter(v => !hiddenVariantIds.has(v.id)).map(v => v.id);
+    if (visibleIds.length <= 1) return; // keep at least one tab visible
+    setHiddenVariantIds(prev => new Set(Array.from(prev).concat(id)));
+    if (activeVariantId === id) {
+      const nextVisible = visibleIds.find(vid => vid !== id);
+      if (nextVisible) setActiveVariantId(nextVisible);
+    }
   }
 
   async function handleDuplicate(id: string) {
@@ -2202,7 +2211,7 @@ export default function ResumeEditorPage() {
 
         {/* Variant tabs — overflow hidden clips only the tabs, + is outside */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, overflow: 'hidden', minWidth: 0 }}>
-          {variants.map(v => {
+          {variants.filter(v => !hiddenVariantIds.has(v.id)).map(v => {
             const isActive = v.id === activeVariantId;
             const isJob = v.type === 'job';
             const isDirty = dirtyVariants.has(v.id);
@@ -2231,10 +2240,11 @@ export default function ResumeEditorPage() {
                 {isDirty && isActive && (
                   <span title="Unsaved changes" style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
                 )}
-                {variants.length > 1 && (
-                  <button onClick={e => { e.stopPropagation(); handleDeleteVariant(v.id); }}
+                {variants.filter(vv => !hiddenVariantIds.has(vv.id)).length > 1 && (
+                  <button onClick={e => { e.stopPropagation(); handleHideVariant(v.id); }}
+                    title="Hide tab (right-click to delete)"
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 10, lineHeight: 1, padding: '0 0 0 2px', opacity: isActive ? 0.7 : 0.3 }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
                     onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}>✕</button>
                 )}
               </div>
@@ -2458,10 +2468,17 @@ export default function ResumeEditorPage() {
             variants={variants}
             dirtySet={dirtyVariants}
             activeId={activeVariantId}
+            hiddenIds={hiddenVariantIds}
             sort={overviewSort}
             setSort={setOverviewSort}
             onClose={() => setShowOverview(false)}
-            onSelect={id => { trySwitch(id); }}
+            onSelect={id => {
+              // Un-hide if it was hidden, then switch to it
+              if (hiddenVariantIds.has(id)) {
+                setHiddenVariantIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+              }
+              trySwitch(id);
+            }}
             onContextMenu={openContextMenu}
           />
         )}
