@@ -12,7 +12,7 @@ import {
   Cinzel_700Bold,
   Cinzel_900Black,
 } from '@expo-google-fonts/cinzel';
-import { View, StyleSheet, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Image } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -90,12 +90,11 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
         ls.content,
         { opacity: exitOpacity, transform: [{ translateY: exitTranslateY }] },
       ]}>
-        <Animated.Text style={[
-          ls.wordmark,
+        <Animated.View style={[
           { opacity: wordmarkOpacity, transform: [{ translateY: wordmarkTranslateY }] },
         ]}>
-          Dilly
-        </Animated.Text>
+          <Image source={require('../assets/logo.png')} style={ls.logoImage} resizeMode="contain" />
+        </Animated.View>
         <Animated.Text style={[
           ls.tagline,
           { opacity: taglineOpacity, transform: [{ translateY: taglineTranslateY }] },
@@ -224,6 +223,10 @@ export default function RootLayout() {
 const ls = StyleSheet.create({
   root:    { flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   content: { alignItems: 'center' },
+  logoImage: {
+    width: 180,
+    height: 60,
+  },
   wordmark: {
     fontFamily:    'Cinzel_900Black',
     fontSize:      52,
