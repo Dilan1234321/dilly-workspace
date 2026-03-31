@@ -4115,3 +4115,36 @@ body.pricing-page .price-list li {
     display: none;
   }
 }
+
+/* Coach hero text visibility fix for light mode */
+:root.light [data-fp-layout="coach"] .fp-hero__inner {
+  color: var(--navy-deep);
+}
+:root.light [data-fp-layout="coach"] .fp-kicker {
+  color: var(--gold);
+}
+:root.light [data-fp-layout="coach"] .fp-title {
+  color: var(--navy-deep);
+}
+:root.light [data-fp-layout="coach"] .fp-lead {
+  color: rgba(0, 27, 68, 0.78);
+}
+:root.light [data-fp-layout="coach"] .fp-metric-val {
+  color: var(--gold);
+}
+:root.light [data-fp-layout="coach"] .fp-metric-label {
+  color: rgba(0, 27, 68, 0.55);
+}
+:root.light [data-fp-layout="coach"] .fp-hero-metrics {
+  border-top-color: rgba(0, 27, 68, 0.12);
+}
+:root.light [data-fp-layout="coach"] .btn-ghost {
+  color: var(--navy-deep);
+  border-color: rgba(0, 27, 68, 0.3);
+}
+:root.light [data-fp-layout="coach"] .coach-face-col p {
+  color: rgba(0, 27, 68, 0.7);
+}
+:root.light [data-fp-layout="coach"] .coach-face-col p:first-of-type {
+  color: var(--navy-deep);
+}
