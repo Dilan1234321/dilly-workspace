@@ -935,7 +935,7 @@ export default function OnboardingPage() {
             {currentStep === 'industry' && <button onClick={saveIndustryTarget} disabled={!canContinue.industry || saving} style={ctaBtn(!canContinue.industry || saving)}>{saving ? 'Saving...' : 'Continue'}</button>}
             {currentStep === 'anticipation' && <button onClick={goNext} style={ctaBtn(false)}>Let&apos;s go</button>}
             {currentStep === 'upload' && <button onClick={() => { if (resumeFile) { goNext(); setTimeout(runFirstAudit, 300); } else { setSkippedResume(true); goNext(); } }} style={ctaBtn(false)}>{resumeFile ? 'Scan my resume' : 'Skip for now'}</button>}
-            {currentStep === 'results' && <button onClick={finishOnboarding} disabled={saving} style={ctaBtn(saving)}>{saving ? 'Loading...' : 'Enter the Career Center →'}</button>}
+            {currentStep === 'results' && <button onClick={finishOnboarding} disabled={saving} style={ctaBtn(saving)}>{saving ? 'Loading...' : 'Enter your Career Center →'}</button>}
           </div>
         )}
       </div>
