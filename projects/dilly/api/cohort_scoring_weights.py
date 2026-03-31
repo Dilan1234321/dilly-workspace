@@ -1,5 +1,5 @@
 """
-22-Cohort Scoring Weights — Research-backed Smart / Grit / Build weights
+43-Cohort Scoring Weights — Research-backed Smart / Grit / Build weights
 and recruiter bar thresholds for Dilly's career scoring engine.
 
 Sources: Web research conducted March 2026 across top employer hiring
@@ -833,6 +833,453 @@ COHORT_SCORING_WEIGHTS: dict[str, dict] = {
         "certifications": ["Six Sigma Green Belt", "Six Sigma Black Belt", "APICS CSCP", "Lean Manufacturing"],
         "competition_level": "moderate",
     },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 28. Agriculture & Food Science
+    # ─────────────────────────────────────────────────────────────────────
+    # Cargill, USDA, Monsanto/Bayer Crop Science, ADM. Mix of academic
+    # (agronomy, soil science) and practical (farm management, equipment).
+    # FFA experience matters. Research on crop yields and sustainability
+    # is valued. Field experience and applied research dominate hiring.
+    "agriculture_food_science": {
+        "label": "Agriculture & Food Science",
+        "smart": 30,
+        "grit": 35,
+        "build": 35,
+        "recruiter_bar": 68,
+        "reference_benchmark": "Cargill / USDA entry-level agronomist bar",
+        "reference_company": "Cargill",
+        "gpa_screen": "3.0+ preferred for research roles",
+        "acceptance_rate": "~10-15% for top agribusiness programs",
+        "key_proof_points": [
+            "FFA or 4-H leadership and competition awards",
+            "Crop yield or sustainability research projects",
+            "Farm management or agribusiness internship",
+            "Soil science or agronomy fieldwork",
+            "Equipment operation and precision agriculture tech",
+        ],
+        "certifications": ["Certified Crop Adviser (CCA)", "HACCP", "ServSafe"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 29. Architecture & Urban Planning
+    # ─────────────────────────────────────────────────────────────────────
+    # Gensler, SOM, AECOM, HOK. Portfolio is critical (like design).
+    # Academic rigor matters (5-year accredited B.Arch programs). ARE exam
+    # path. Studio projects and internship hours (IDP/AXP) required for
+    # licensure. Build-heavy because portfolio and studio work dominate.
+    "architecture_urban_planning": {
+        "label": "Architecture & Urban Planning",
+        "smart": 25,
+        "grit": 25,
+        "build": 50,
+        "recruiter_bar": 74,
+        "reference_benchmark": "Gensler / SOM junior designer bar",
+        "reference_company": "Gensler",
+        "gpa_screen": "3.0+ for competitive firms",
+        "acceptance_rate": "~5-10% for top architecture firms",
+        "key_proof_points": [
+            "Design portfolio with 4-6 studio projects",
+            "AXP/IDP internship hours logged toward licensure",
+            "Revit, AutoCAD, Rhino, Grasshopper proficiency",
+            "Competition entries or awards (AIA, ULI)",
+            "Urban planning or community design charrette experience",
+        ],
+        "certifications": ["ARE (Architect Registration Exam)", "LEED AP", "AICP (for planning track)"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 30. Performing Arts & Film
+    # ─────────────────────────────────────────────────────────────────────
+    # Netflix, Disney, A24, Broadway, regional theaters, film studios.
+    # Reel/portfolio/performance credits are everything. Academic
+    # credentials are less important. Festival selections, productions
+    # directed or acted in, and union membership (SAG-AFTRA) matter.
+    # Extremely build-heavy — shipped creative work is the currency.
+    "performing_arts_film": {
+        "label": "Performing Arts & Film",
+        "smart": 10,
+        "grit": 30,
+        "build": 60,
+        "recruiter_bar": 70,
+        "reference_benchmark": "Netflix / A24 entry-level production bar",
+        "reference_company": "Netflix",
+        "gpa_screen": None,  # Credits and reel matter, not GPA
+        "acceptance_rate": "~2-5% for top film/theater programs; <1% for studio roles",
+        "key_proof_points": [
+            "Demo reel or performance credits",
+            "Festival selections or competition awards",
+            "Productions directed, acted in, or crewed",
+            "Union membership (SAG-AFTRA, IATSE)",
+            "Student film or theater leadership roles",
+        ],
+        "certifications": ["SAG-AFTRA membership", "IATSE membership", "Final Cut / Avid / DaVinci Resolve"],
+        "competition_level": "very_high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 31. Foreign Languages & Linguistics
+    # ─────────────────────────────────────────────────────────────────────
+    # State Department, UN, translation firms, international organizations.
+    # DLPT scores, interpreter certifications, and immersion experience
+    # are primary signals. Academic rigor (linguistics research) combined
+    # with practical fluency proof. Bilingual candidates in high-demand
+    # languages (Arabic, Mandarin, Russian) have strong advantage.
+    "foreign_languages_linguistics": {
+        "label": "Foreign Languages & Linguistics",
+        "smart": 35,
+        "grit": 30,
+        "build": 35,
+        "recruiter_bar": 72,
+        "reference_benchmark": "State Department / UN interpreter bar",
+        "reference_company": "U.S. State Department",
+        "gpa_screen": "3.0+ for government language programs",
+        "acceptance_rate": "~10-15% for State Dept fellowships",
+        "key_proof_points": [
+            "DLPT score or equivalent proficiency certification",
+            "Immersion experience (study abroad, Peace Corps)",
+            "Interpreter or translation work samples",
+            "Linguistics research or published papers",
+            "Fluency in 2+ languages with documented proficiency",
+        ],
+        "certifications": ["ATA Certified Translator", "State Dept DLPT", "ACTFL OPI certification"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 32. Religious Studies & Ministry
+    # ─────────────────────────────────────────────────────────────────────
+    # Seminaries, chaplaincy programs, faith-based nonprofits. Community
+    # leadership, pastoral care, and theology GPA are the primary signals.
+    # Grit-heavy — leadership, service orientation, and interpersonal
+    # skills dominate over technical or academic proof.
+    "religious_studies_ministry": {
+        "label": "Religious Studies & Ministry",
+        "smart": 30,
+        "grit": 45,
+        "build": 25,
+        "recruiter_bar": 62,
+        "reference_benchmark": "Top seminary / chaplaincy program admission bar",
+        "reference_company": "Duke Divinity School",
+        "gpa_screen": "3.0+ preferred for competitive seminaries",
+        "acceptance_rate": "~20-30% for top seminary programs",
+        "key_proof_points": [
+            "Community or congregational leadership roles",
+            "Pastoral care or chaplaincy volunteer hours",
+            "Theology coursework and GPA",
+            "Mission trips or faith-based service projects",
+            "Public speaking and teaching experience",
+        ],
+        "certifications": ["CPE (Clinical Pastoral Education)", "Ordination credentials", "Board Certified Chaplain"],
+        "competition_level": "low",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 33. Aviation & Transportation
+    # ─────────────────────────────────────────────────────────────────────
+    # Delta, United, FedEx, FAA. FAA certifications (PPL, instrument
+    # rating) and logged flight hours are the hard gates. Build-heavy
+    # because certifications and flight time are non-negotiable proof.
+    # Airline cadet programs are the primary pipeline for new pilots.
+    "aviation_transportation": {
+        "label": "Aviation & Transportation",
+        "smart": 25,
+        "grit": 30,
+        "build": 45,
+        "recruiter_bar": 72,
+        "reference_benchmark": "Delta / United cadet program bar",
+        "reference_company": "Delta Air Lines",
+        "gpa_screen": "2.5+ minimum; 3.0+ for competitive cadet programs",
+        "acceptance_rate": "~5-10% for airline cadet programs",
+        "key_proof_points": [
+            "FAA Private Pilot License (PPL) or higher",
+            "Instrument rating and logged flight hours",
+            "Aviation internship or FBO experience",
+            "FAA written exam scores",
+            "Leadership in aviation clubs or organizations",
+        ],
+        "certifications": ["FAA PPL", "Instrument Rating", "Commercial Pilot License (CPL)", "FAA Part 107 (drone)"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 34. Criminal Justice & Public Safety
+    # ─────────────────────────────────────────────────────────────────────
+    # FBI, DEA, US Marshals, state/local law enforcement. Physical
+    # fitness, leadership, and community service are primary signals.
+    # Background investigations matter. Academy training is the entry
+    # point. Grit-heavy — resilience, integrity, and service dominate.
+    "criminal_justice_public_safety": {
+        "label": "Criminal Justice & Public Safety",
+        "smart": 25,
+        "grit": 45,
+        "build": 30,
+        "recruiter_bar": 68,
+        "reference_benchmark": "FBI / DEA special agent entry bar",
+        "reference_company": "FBI",
+        "gpa_screen": "3.0+ for federal agencies; 2.5+ for local",
+        "acceptance_rate": "~5% (FBI), ~10-15% (local law enforcement)",
+        "key_proof_points": [
+            "Physical fitness test scores (PFT)",
+            "Leadership roles in student organizations",
+            "Community service and volunteer hours",
+            "Criminal justice internship or ride-along",
+            "Clean background and drug screening",
+        ],
+        "certifications": ["CPR/First Aid", "FEMA ICS certifications", "State POST certification"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 35. Library & Information Science
+    # ─────────────────────────────────────────────────────────────────────
+    # Library of Congress, academic libraries, digital archives. MLS
+    # preparation, cataloging/metadata experience, and digital literacy
+    # are the primary signals. Balanced across all three dimensions.
+    "library_information_science": {
+        "label": "Library & Information Science",
+        "smart": 35,
+        "grit": 30,
+        "build": 35,
+        "recruiter_bar": 64,
+        "reference_benchmark": "Library of Congress / top academic library bar",
+        "reference_company": "Library of Congress",
+        "gpa_screen": "3.0+ for competitive MLS programs",
+        "acceptance_rate": "~25-35% for top MLS programs",
+        "key_proof_points": [
+            "Library internship or work-study experience",
+            "Cataloging, metadata, or digital archiving projects",
+            "Information literacy instruction experience",
+            "Database management and digital tools proficiency",
+            "Community programming and outreach",
+        ],
+        "certifications": ["MLS/MLIS (in progress)", "Digital Archives Specialist", "Metadata certification"],
+        "competition_level": "low",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 36. Culinary Arts & Food Service
+    # ─────────────────────────────────────────────────────────────────────
+    # CIA (Culinary Institute of America), Michelin restaurants, hotel
+    # food programs. Kitchen experience, stages/externships, and food
+    # safety certifications are non-negotiable. Build-heavy — hands-on
+    # cooking skill and kitchen time are the currency.
+    "culinary_arts_food_service": {
+        "label": "Culinary Arts & Food Service",
+        "smart": 10,
+        "grit": 40,
+        "build": 50,
+        "recruiter_bar": 66,
+        "reference_benchmark": "CIA / Michelin restaurant entry bar",
+        "reference_company": "Culinary Institute of America",
+        "gpa_screen": None,  # Kitchen skill matters, not GPA
+        "acceptance_rate": "~20-30% for top culinary programs",
+        "key_proof_points": [
+            "Kitchen experience (line cook, prep, pastry)",
+            "Stage or externship at recognized restaurant",
+            "Food safety and sanitation certifications",
+            "Culinary competition awards",
+            "Menu development or recipe creation portfolio",
+        ],
+        "certifications": ["ServSafe Manager", "ACF Certified Culinarian", "HACCP"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 37. Fashion & Apparel
+    # ─────────────────────────────────────────────────────────────────────
+    # LVMH, Nike, Vogue, PVH, Kering. Portfolio, runway shows, design
+    # competitions, and brand internships are primary signals. Extremely
+    # build-heavy — creative output and industry exposure dominate.
+    "fashion_apparel": {
+        "label": "Fashion & Apparel",
+        "smart": 10,
+        "grit": 30,
+        "build": 60,
+        "recruiter_bar": 72,
+        "reference_benchmark": "LVMH / Nike design entry bar",
+        "reference_company": "LVMH",
+        "gpa_screen": None,  # Portfolio is the only screen
+        "acceptance_rate": "~3-5% for top fashion house internships",
+        "key_proof_points": [
+            "Fashion design portfolio with collection work",
+            "Runway shows or design competition participation",
+            "Brand internship at recognized label",
+            "Textile and pattern-making proficiency",
+            "Fashion week or trade show exposure",
+        ],
+        "certifications": ["CLO 3D certification", "Adobe Creative Suite", "Textile science credential"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 38. Journalism & Broadcasting
+    # ─────────────────────────────────────────────────────────────────────
+    # NYT, WSJ, CNN, NPR, AP. Published clips, broadcast reels, and
+    # editor experience are primary signals. Separate from general
+    # media/comms — more specific to investigative reporting, beat
+    # coverage, and broadcast production. Build-heavy but grit matters
+    # for deadline-driven, high-pressure newsroom culture.
+    "journalism_broadcasting": {
+        "label": "Journalism & Broadcasting",
+        "smart": 20,
+        "grit": 35,
+        "build": 45,
+        "recruiter_bar": 72,
+        "reference_benchmark": "NYT / CNN entry-level reporter bar",
+        "reference_company": "New York Times",
+        "gpa_screen": None,  # Published work matters, not GPA
+        "acceptance_rate": "~2-5% for top masthead fellowships/internships",
+        "key_proof_points": [
+            "Published clips at recognized outlets",
+            "Broadcast reel with on-air or production work",
+            "Student newspaper or campus media editor role",
+            "Investigative or enterprise reporting samples",
+            "AP Style and CMS proficiency",
+        ],
+        "certifications": ["Google News Initiative", "AP Style certification", "Broadcast journalism credential"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 39. Public Administration & Government
+    # ─────────────────────────────────────────────────────────────────────
+    # Federal agencies, state government, city management. Policy
+    # analysis, public speaking, and government internships are primary
+    # signals. Grit-heavy — public service orientation, leadership, and
+    # persistence through bureaucratic processes matter.
+    "public_administration_government": {
+        "label": "Public Administration & Government",
+        "smart": 30,
+        "grit": 40,
+        "build": 30,
+        "recruiter_bar": 70,
+        "reference_benchmark": "Federal PMF / state government analyst bar",
+        "reference_company": "Office of Management and Budget",
+        "gpa_screen": "3.0+ for Presidential Management Fellowship",
+        "acceptance_rate": "~5-10% for PMF; ~15-20% for state programs",
+        "key_proof_points": [
+            "Government internship (federal, state, or local)",
+            "Policy analysis or research papers",
+            "Public speaking and legislative testimony",
+            "Community organizing or civic engagement",
+            "Grant writing or program evaluation",
+        ],
+        "certifications": ["Certified Public Manager (CPM)", "PMP", "FEMA certifications"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 40. Veterinary & Animal Science
+    # ─────────────────────────────────────────────────────────────────────
+    # Top vet schools, animal hospitals, USDA APHIS. Clinical hours,
+    # animal handling, and GRE/GPA screens are the hard gates. Smart-
+    # heavy because pre-vet academic requirements are rigorous.
+    "veterinary_animal_science": {
+        "label": "Veterinary & Animal Science",
+        "smart": 40,
+        "grit": 30,
+        "build": 30,
+        "recruiter_bar": 76,
+        "reference_benchmark": "Top vet school admission / USDA APHIS bar",
+        "reference_company": "Cornell Veterinary",
+        "gpa_screen": 3.4,  # Pre-vet GPA screens are rigorous
+        "acceptance_rate": "~10-15% for top vet schools",
+        "key_proof_points": [
+            "500+ clinical or animal handling hours",
+            "Veterinary hospital or clinic experience",
+            "Animal science research with faculty",
+            "GRE scores in competitive range",
+            "Large and small animal experience diversity",
+        ],
+        "certifications": ["Veterinary Technician (CVT)", "USDA APHIS accreditation", "Fear Free certification"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 41. Pharmacy & Pharmaceutical Science
+    # ─────────────────────────────────────────────────────────────────────
+    # CVS Health, Walgreens, Pfizer, FDA. PCAT prep, pharmacy internship
+    # hours, and compounding experience are primary signals. Smart-heavy
+    # due to rigorous pre-pharmacy academic requirements and PCAT.
+    "pharmacy_pharmaceutical": {
+        "label": "Pharmacy & Pharmaceutical Science",
+        "smart": 45,
+        "grit": 25,
+        "build": 30,
+        "recruiter_bar": 78,
+        "reference_benchmark": "Top PharmD program admission / Pfizer entry bar",
+        "reference_company": "Pfizer",
+        "gpa_screen": 3.3,  # Pre-pharmacy GPA screens are strict
+        "acceptance_rate": "~15-25% for top PharmD programs",
+        "key_proof_points": [
+            "PCAT score in competitive range",
+            "Pharmacy internship hours (300+ preferred)",
+            "Compounding or clinical rotation experience",
+            "Pharmaceutical research or lab work",
+            "Patient counseling and medication therapy management",
+        ],
+        "certifications": ["Pharmacy Technician (CPhT)", "Immunization delivery", "PCAT"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 42. Nursing & Patient Care
+    # ─────────────────────────────────────────────────────────────────────
+    # Mayo Clinic, Cleveland Clinic, HCA, Kaiser Permanente. NCLEX prep,
+    # clinical rotations, and patient care hours are the hard gates.
+    # Grit-heavy — resilience, compassion, and ability to perform under
+    # pressure in clinical settings are paramount.
+    "nursing_patient_care": {
+        "label": "Nursing & Patient Care",
+        "smart": 30,
+        "grit": 40,
+        "build": 30,
+        "recruiter_bar": 72,
+        "reference_benchmark": "Mayo Clinic / Cleveland Clinic new-grad RN bar",
+        "reference_company": "Mayo Clinic",
+        "gpa_screen": 3.0,  # BSN programs screen at 3.0+
+        "acceptance_rate": "~15-25% for top nursing residency programs",
+        "key_proof_points": [
+            "NCLEX-RN preparation and practice scores",
+            "500+ clinical rotation hours across specialties",
+            "Patient care technician or CNA experience",
+            "Simulation lab performance evaluations",
+            "Healthcare volunteer hours and leadership",
+        ],
+        "certifications": ["BLS/ACLS", "CNA", "NCLEX-RN (in progress)", "Specialty nursing certifications"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 43. Dental & Oral Health
+    # ─────────────────────────────────────────────────────────────────────
+    # Top dental schools, private practices, community health. DAT prep,
+    # shadowing hours, manual dexterity, and patient interaction are
+    # primary signals. Smart-heavy due to rigorous pre-dental academic
+    # requirements and DAT scoring.
+    "dental_oral_health": {
+        "label": "Dental & Oral Health",
+        "smart": 40,
+        "grit": 30,
+        "build": 30,
+        "recruiter_bar": 78,
+        "reference_benchmark": "Top dental school admission bar",
+        "reference_company": "UCSF School of Dentistry",
+        "gpa_screen": 3.5,  # Pre-dental GPA screens are very strict
+        "acceptance_rate": "~5-10% for top dental schools",
+        "key_proof_points": [
+            "DAT score in competitive range (20+ AA)",
+            "100+ dental shadowing hours across specialties",
+            "Manual dexterity demonstration (wire bending, wax-up)",
+            "Patient interaction in clinical or volunteer setting",
+            "Dental research or community oral health outreach",
+        ],
+        "certifications": ["DAT", "Dental Assisting (CDA)", "Radiology certification"],
+        "competition_level": "very_high",
+    },
 }
 
 
@@ -866,7 +1313,7 @@ def get_reference(cohort_key: str) -> tuple[str, str]:
 
 
 def list_cohort_keys() -> list[str]:
-    """Return all 27 cohort keys."""
+    """Return all 43 cohort keys."""
     return list(COHORT_SCORING_WEIGHTS.keys())
 
 
@@ -923,6 +1370,27 @@ WEIGHTS_SUMMARY = """
 | 20 | Real Estate & Construction         |  20   |  40  |  40   |  70 | CBRE             | moderate      |
 | 21 | Environmental & Sustainability     |  30   |  35  |  35   |  68 | EPA              | moderate      |
 | 22 | Hospitality & Events               |  10   |  50  |  40   |  62 | Marriott         | low           |
+| 23 | Mechanical & Aerospace Eng.        |  35   |  25  |  40   |  76 | Boeing           | high          |
+| 24 | Electrical & Computer Eng.         |  35   |  20  |  45   |  78 | Intel            | very_high     |
+| 25 | Civil & Environmental Eng.         |  30   |  30  |  40   |  72 | AECOM            | moderate      |
+| 26 | Chemical & Biomedical Eng.         |  40   |  25  |  35   |  78 | Pfizer           | high          |
+| 27 | Industrial & Systems Eng.          |  25   |  35  |  40   |  74 | Amazon           | moderate      |
+| 28 | Agriculture & Food Science         |  30   |  35  |  35   |  68 | Cargill          | moderate      |
+| 29 | Architecture & Urban Planning      |  25   |  25  |  50   |  74 | Gensler          | high          |
+| 30 | Performing Arts & Film             |  10   |  30  |  60   |  70 | Netflix          | very_high     |
+| 31 | Foreign Languages & Linguistics    |  35   |  30  |  35   |  72 | State Dept       | moderate      |
+| 32 | Religious Studies & Ministry       |  30   |  45  |  25   |  62 | Duke Divinity    | low           |
+| 33 | Aviation & Transportation          |  25   |  30  |  45   |  72 | Delta            | high          |
+| 34 | Criminal Justice & Public Safety   |  25   |  45  |  30   |  68 | FBI              | moderate      |
+| 35 | Library & Information Science      |  35   |  30  |  35   |  64 | Library of Cong. | low           |
+| 36 | Culinary Arts & Food Service       |  10   |  40  |  50   |  66 | CIA (Culinary)   | moderate      |
+| 37 | Fashion & Apparel                  |  10   |  30  |  60   |  72 | LVMH             | high          |
+| 38 | Journalism & Broadcasting          |  20   |  35  |  45   |  72 | New York Times   | high          |
+| 39 | Public Administration & Govt       |  30   |  40  |  30   |  70 | OMB              | moderate      |
+| 40 | Veterinary & Animal Science        |  40   |  30  |  30   |  76 | Cornell Vet      | high          |
+| 41 | Pharmacy & Pharmaceutical          |  45   |  25  |  30   |  78 | Pfizer           | high          |
+| 42 | Nursing & Patient Care             |  30   |  40  |  30   |  72 | Mayo Clinic      | moderate      |
+| 43 | Dental & Oral Health               |  40   |  30  |  30   |  78 | UCSF Dentistry   | very_high     |
 +----+------------------------------------+-------+------+-------+-----+------------------+---------------+
 """
 

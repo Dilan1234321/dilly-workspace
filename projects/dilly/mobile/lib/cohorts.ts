@@ -16,6 +16,28 @@ export const MAJOR_TO_COHORTS: Record<string, string[]> = {
   'Information Technology':          ['Cybersecurity & IT', 'Software Engineering & CS'],
   'Data Science':                    ['Data Science & Analytics', 'Software Engineering & CS'],
 
+  // Engineering
+  'Mechanical Engineering':          ['Mechanical & Aerospace Engineering'],
+  'Aerospace Engineering':           ['Mechanical & Aerospace Engineering'],
+  'Aeronautical Engineering':        ['Mechanical & Aerospace Engineering'],
+  'Mechanical and Aerospace Engineering': ['Mechanical & Aerospace Engineering'],
+  'Electrical Engineering':          ['Electrical & Computer Engineering'],
+  'Computer Engineering':            ['Electrical & Computer Engineering', 'Software Engineering & CS'],
+  'Electrical and Computer Engineering': ['Electrical & Computer Engineering'],
+  'Civil Engineering':               ['Civil & Environmental Engineering'],
+  'Structural Engineering':          ['Civil & Environmental Engineering'],
+  'Construction Engineering':        ['Civil & Environmental Engineering'],
+  'Environmental Engineering':       ['Civil & Environmental Engineering', 'Environmental & Sustainability'],
+  'Chemical Engineering':            ['Chemical & Biomedical Engineering'],
+  'Biomedical Engineering':          ['Chemical & Biomedical Engineering', 'Healthcare & Clinical'],
+  'Bioengineering':                  ['Chemical & Biomedical Engineering'],
+  'Biomolecular Engineering':        ['Chemical & Biomedical Engineering'],
+  'Materials Science':               ['Chemical & Biomedical Engineering', 'Mechanical & Aerospace Engineering'],
+  'Industrial Engineering':          ['Industrial & Systems Engineering', 'Management & Operations'],
+  'Systems Engineering':             ['Industrial & Systems Engineering'],
+  'Operations Research':             ['Industrial & Systems Engineering'],
+  'Nuclear Engineering':             ['Physical Sciences & Math', 'Mechanical & Aerospace Engineering'],
+
   // Business
   'Finance':                         ['Finance & Accounting', 'Consulting & Strategy'],
   'Accounting':                      ['Finance & Accounting'],
@@ -33,15 +55,15 @@ export const MAJOR_TO_COHORTS: Record<string, string[]> = {
   'Physics':                         ['Physical Sciences & Math'],
   'Environmental Science':           ['Environmental & Sustainability', 'Life Sciences & Research'],
   'Marine Science':                  ['Life Sciences & Research', 'Environmental & Sustainability'],
-  'Forensic Science':                ['Life Sciences & Research', 'Legal & Compliance'],
+  'Forensic Science':                ['Criminal Justice & Public Safety', 'Life Sciences & Research'],
 
   // Quantitative
   'Mathematics':                     ['Physical Sciences & Math', 'Data Science & Analytics'],
   'Statistics':                      ['Data Science & Analytics', 'Physical Sciences & Math'],
 
   // Health
-  'Nursing':                         ['Healthcare & Clinical'],
-  'Health Sciences':                 ['Healthcare & Clinical'],
+  'Nursing':                         ['Nursing & Patient Care'],
+  'Health Sciences':                 ['Nursing & Patient Care', 'Healthcare & Clinical'],
   'Exercise Science':                ['Healthcare & Clinical'],
   'Kinesiology':                     ['Healthcare & Clinical'],
   'Allied Health':                   ['Healthcare & Clinical'],
@@ -51,38 +73,156 @@ export const MAJOR_TO_COHORTS: Record<string, string[]> = {
   'Psychology':                      ['Social Sciences & Nonprofit', 'Human Resources & People'],
   'Sociology':                       ['Social Sciences & Nonprofit'],
   'Political Science':               ['Social Sciences & Nonprofit', 'Economics & Public Policy', 'Legal & Compliance'],
-  'Criminal Justice':                ['Legal & Compliance', 'Social Sciences & Nonprofit'],
+  'Criminal Justice':                ['Criminal Justice & Public Safety', 'Legal & Compliance'],
   'Government and World Affairs':    ['Economics & Public Policy', 'Social Sciences & Nonprofit'],
-  'Social Work':                     ['Social Sciences & Nonprofit'],
+  'Social Work':                     ['Social Sciences & Nonprofit', 'Nursing & Patient Care'],
   'History':                         ['Social Sciences & Nonprofit', 'Education & Teaching'],
   'Philosophy':                      ['Legal & Compliance', 'Social Sciences & Nonprofit'],
 
   // Humanities
   'English':                         ['Media & Communications', 'Education & Teaching'],
-  'Journalism':                      ['Media & Communications'],
+  'Journalism':                      ['Journalism & Broadcasting', 'Media & Communications'],
   'Communication':                   ['Media & Communications', 'Marketing & Advertising'],
   'Liberal Arts':                    ['Social Sciences & Nonprofit', 'Education & Teaching'],
   'Education':                       ['Education & Teaching'],
-  'Theatre Arts':                    ['Design & Creative', 'Media & Communications'],
-  'Music':                           ['Design & Creative'],
+  'Theatre Arts':                    ['Performing Arts & Film', 'Design & Creative'],
+  'Music':                           ['Performing Arts & Film'],
   'Digital Arts and Design':         ['Design & Creative', 'Marketing & Advertising'],
 
   // Sport
   'Sport Management':                ['Hospitality & Events', 'Marketing & Advertising'],
 
-  // Engineering
-  'Mechanical Engineering':          ['Mechanical & Aerospace Engineering'],
-  'Aerospace Engineering':           ['Mechanical & Aerospace Engineering'],
-  'Electrical Engineering':          ['Electrical & Computer Engineering'],
-  'Computer Engineering':            ['Electrical & Computer Engineering', 'Software Engineering & CS'],
-  'Civil Engineering':               ['Civil & Environmental Engineering'],
-  'Chemical Engineering':            ['Chemical & Biomedical Engineering'],
-  'Biomedical Engineering':          ['Chemical & Biomedical Engineering', 'Healthcare & Clinical'],
-  'Industrial Engineering':          ['Industrial & Systems Engineering', 'Management & Operations'],
-  'Systems Engineering':             ['Industrial & Systems Engineering'],
-  'Environmental Engineering':       ['Civil & Environmental Engineering', 'Environmental & Sustainability'],
-  'Materials Science':               ['Chemical & Biomedical Engineering', 'Mechanical & Aerospace Engineering'],
-  'Nuclear Engineering':             ['Physical Sciences & Math', 'Mechanical & Aerospace Engineering'],
+  // Agriculture & Food
+  'Agriculture':                     ['Agriculture & Food Science'],
+  'Agribusiness':                    ['Agriculture & Food Science', 'Management & Operations'],
+  'Agricultural Economics':          ['Agriculture & Food Science', 'Economics & Public Policy'],
+  'Agronomy':                        ['Agriculture & Food Science'],
+  'Animal Science':                  ['Veterinary & Animal Science', 'Agriculture & Food Science'],
+  'Food Science':                    ['Agriculture & Food Science', 'Chemical & Biomedical Engineering'],
+  'Horticulture':                    ['Agriculture & Food Science', 'Environmental & Sustainability'],
+  'Natural Resources':               ['Environmental & Sustainability', 'Agriculture & Food Science'],
+  'Forestry':                        ['Environmental & Sustainability'],
+  'Wildlife Management':             ['Environmental & Sustainability', 'Life Sciences & Research'],
+
+  // Architecture
+  'Architecture':                    ['Architecture & Urban Planning'],
+  'Landscape Architecture':          ['Architecture & Urban Planning', 'Environmental & Sustainability'],
+  'Urban Planning':                  ['Architecture & Urban Planning', 'Public Administration & Government'],
+  'Interior Architecture':           ['Architecture & Urban Planning', 'Design & Creative'],
+  'Interior Design':                 ['Design & Creative', 'Architecture & Urban Planning'],
+
+  // Performing Arts & Film
+  'Dance':                           ['Performing Arts & Film'],
+  'Music Performance':               ['Performing Arts & Film'],
+  'Film':                            ['Performing Arts & Film', 'Media & Communications'],
+  'Cinema':                          ['Performing Arts & Film', 'Media & Communications'],
+  'Film Production':                 ['Performing Arts & Film'],
+  'Acting':                          ['Performing Arts & Film'],
+  'Musical Theatre':                 ['Performing Arts & Film'],
+  'Music Composition':               ['Performing Arts & Film'],
+  'Music Education':                 ['Performing Arts & Film', 'Education & Teaching'],
+  'Photography':                     ['Design & Creative', 'Performing Arts & Film'],
+
+  // Languages & Linguistics
+  'Linguistics':                     ['Foreign Languages & Linguistics'],
+  'French':                          ['Foreign Languages & Linguistics'],
+  'Spanish':                         ['Foreign Languages & Linguistics'],
+  'German':                          ['Foreign Languages & Linguistics'],
+  'Chinese':                         ['Foreign Languages & Linguistics'],
+  'Japanese':                        ['Foreign Languages & Linguistics'],
+  'Arabic':                          ['Foreign Languages & Linguistics'],
+  'Russian':                         ['Foreign Languages & Linguistics'],
+  'Italian':                         ['Foreign Languages & Linguistics'],
+  'Portuguese':                      ['Foreign Languages & Linguistics'],
+  'Korean':                          ['Foreign Languages & Linguistics'],
+  'American Sign Language':          ['Foreign Languages & Linguistics'],
+  'Comparative Literature':          ['Foreign Languages & Linguistics', 'Media & Communications'],
+  'Translation':                     ['Foreign Languages & Linguistics'],
+  'Classics':                        ['Foreign Languages & Linguistics', 'Education & Teaching'],
+
+  // Religious Studies
+  'Religious Studies':               ['Religious Studies & Ministry', 'Social Sciences & Nonprofit'],
+  'Theology':                        ['Religious Studies & Ministry'],
+  'Divinity':                        ['Religious Studies & Ministry'],
+  'Biblical Studies':                ['Religious Studies & Ministry'],
+  'Ministry':                        ['Religious Studies & Ministry'],
+  'Pastoral Studies':                ['Religious Studies & Ministry'],
+
+  // Aviation
+  'Aviation':                        ['Aviation & Transportation'],
+  'Aviation Management':             ['Aviation & Transportation', 'Management & Operations'],
+  'Aeronautics':                     ['Aviation & Transportation', 'Mechanical & Aerospace Engineering'],
+  'Air Traffic Management':          ['Aviation & Transportation'],
+  'Flight Science':                  ['Aviation & Transportation'],
+
+  // Criminal Justice & Public Safety
+  'Criminology':                     ['Criminal Justice & Public Safety', 'Social Sciences & Nonprofit'],
+  'Fire Science':                    ['Criminal Justice & Public Safety'],
+  'Homeland Security':               ['Criminal Justice & Public Safety', 'Public Administration & Government'],
+  'Emergency Management':            ['Criminal Justice & Public Safety', 'Public Administration & Government'],
+  'Corrections':                     ['Criminal Justice & Public Safety'],
+
+  // Library & Information Science
+  'Library Science':                 ['Library & Information Science'],
+  'Information Science':             ['Library & Information Science', 'Cybersecurity & IT'],
+  'Archival Studies':                ['Library & Information Science'],
+
+  // Culinary
+  'Culinary Arts':                   ['Culinary Arts & Food Service'],
+  'Baking and Pastry':               ['Culinary Arts & Food Service'],
+  'Food Service Management':         ['Culinary Arts & Food Service', 'Hospitality & Events'],
+  'Restaurant Management':           ['Culinary Arts & Food Service', 'Hospitality & Events'],
+
+  // Fashion
+  'Fashion Design':                  ['Fashion & Apparel', 'Design & Creative'],
+  'Fashion Merchandising':           ['Fashion & Apparel', 'Marketing & Advertising'],
+  'Textile Design':                  ['Fashion & Apparel', 'Design & Creative'],
+  'Apparel Design':                  ['Fashion & Apparel'],
+
+  // Journalism
+  'Broadcast Journalism':            ['Journalism & Broadcasting'],
+  'Investigative Journalism':        ['Journalism & Broadcasting'],
+  'Sports Journalism':               ['Journalism & Broadcasting', 'Hospitality & Events'],
+  'Photojournalism':                 ['Journalism & Broadcasting', 'Design & Creative'],
+
+  // Public Administration
+  'Public Administration':           ['Public Administration & Government'],
+  'Public Policy':                   ['Public Administration & Government', 'Economics & Public Policy'],
+  'Government':                      ['Public Administration & Government', 'Economics & Public Policy'],
+  'International Affairs':           ['Public Administration & Government', 'Economics & Public Policy'],
+  'Diplomacy':                       ['Public Administration & Government', 'Foreign Languages & Linguistics'],
+  'Nonprofit Management':            ['Public Administration & Government', 'Social Sciences & Nonprofit'],
+
+  // Veterinary & Animal
+  'Veterinary Science':              ['Veterinary & Animal Science'],
+  'Veterinary Technology':           ['Veterinary & Animal Science'],
+  'Equine Science':                  ['Veterinary & Animal Science', 'Agriculture & Food Science'],
+  'Zoology':                         ['Veterinary & Animal Science', 'Life Sciences & Research'],
+
+  // Pharmacy
+  'Pharmacy':                        ['Pharmacy & Pharmaceutical Science'],
+  'Pharmaceutical Science':          ['Pharmacy & Pharmaceutical Science', 'Chemical & Biomedical Engineering'],
+  'Pharmacology':                    ['Pharmacy & Pharmaceutical Science', 'Life Sciences & Research'],
+
+  // Nursing
+  'Registered Nursing':              ['Nursing & Patient Care'],
+  'Nursing Administration':          ['Nursing & Patient Care', 'Healthcare & Clinical'],
+  'Nurse Practitioner':              ['Nursing & Patient Care'],
+
+  // Dental
+  'Dental Hygiene':                  ['Dental & Oral Health'],
+  'Dental Science':                  ['Dental & Oral Health'],
+  'Oral Biology':                    ['Dental & Oral Health', 'Life Sciences & Research'],
+
+  // Additional mappings for existing majors that were too narrow
+  'Anthropology':                    ['Social Sciences & Nonprofit'],
+  'Geography':                       ['Social Sciences & Nonprofit', 'Environmental & Sustainability'],
+  'Urban Studies':                   ['Public Administration & Government', 'Social Sciences & Nonprofit'],
+  'International Relations':         ['Public Administration & Government', 'Economics & Public Policy'],
+  'Graphic Design':                  ['Design & Creative', 'Marketing & Advertising'],
+  'Art History':                     ['Design & Creative', 'Education & Teaching'],
+  'Fine Arts':                       ['Design & Creative', 'Performing Arts & Film'],
+  'Studio Art':                      ['Design & Creative'],
 };
 
 // ── Pre-professional → Cohort override ──────────────────────────────────────
@@ -300,6 +440,102 @@ export const COHORT_META: Record<string, {
     description: 'Scored against Amazon Ops, GE, Toyota criteria.',
     emphasis: 'Build carries the most weight (40%). Process improvement proof.',
     color: '#FF9F0A',
+  },
+  'Agriculture & Food Science': {
+    label: 'Agriculture & Food Science',
+    description: 'Scored against Cargill, USDA, Bayer Crop Science criteria.',
+    emphasis: 'Balanced Smart and Build (30/35 each).',
+    color: '#34C759',
+  },
+  'Architecture & Urban Planning': {
+    label: 'Architecture & Urban Planning',
+    description: 'Scored against Gensler, SOM, AECOM criteria.',
+    emphasis: 'Build carries the most weight (50%). Portfolio is critical.',
+    color: '#2B3A8E',
+  },
+  'Performing Arts & Film': {
+    label: 'Performing Arts & Film',
+    description: 'Scored against Netflix, Disney, Broadway criteria.',
+    emphasis: 'Build carries the most weight (60%). Reel/portfolio is everything.',
+    color: '#FF6B8A',
+  },
+  'Foreign Languages & Linguistics': {
+    label: 'Foreign Languages & Linguistics',
+    description: 'Scored against State Dept, UN, international org criteria.',
+    emphasis: 'Balanced across all three dimensions.',
+    color: '#5E5CE6',
+  },
+  'Religious Studies & Ministry': {
+    label: 'Religious Studies & Ministry',
+    description: 'Scored against seminary and chaplaincy criteria.',
+    emphasis: 'Grit carries the most weight (45%).',
+    color: '#FF9F0A',
+  },
+  'Aviation & Transportation': {
+    label: 'Aviation & Transportation',
+    description: 'Scored against Delta, United, FAA criteria.',
+    emphasis: 'Build carries the most weight (45%). Certifications critical.',
+    color: '#2B3A8E',
+  },
+  'Criminal Justice & Public Safety': {
+    label: 'Criminal Justice & Public Safety',
+    description: 'Scored against FBI, DEA, law enforcement criteria.',
+    emphasis: 'Grit carries the most weight (45%).',
+    color: '#FF453A',
+  },
+  'Library & Information Science': {
+    label: 'Library & Information Science',
+    description: 'Scored against Library of Congress, academic library criteria.',
+    emphasis: 'Balanced Smart and Build (35 each).',
+    color: '#5E5CE6',
+  },
+  'Culinary Arts & Food Service': {
+    label: 'Culinary Arts & Food Service',
+    description: 'Scored against CIA, Michelin restaurant criteria.',
+    emphasis: 'Build carries the most weight (50%). Kitchen experience critical.',
+    color: '#FF9F0A',
+  },
+  'Fashion & Apparel': {
+    label: 'Fashion & Apparel',
+    description: 'Scored against LVMH, Nike, Vogue criteria.',
+    emphasis: 'Build carries the most weight (60%). Portfolio is everything.',
+    color: '#FF6B8A',
+  },
+  'Journalism & Broadcasting': {
+    label: 'Journalism & Broadcasting',
+    description: 'Scored against NYT, WSJ, CNN, NPR criteria.',
+    emphasis: 'Build carries the most weight (45%). Published clips required.',
+    color: '#FF6B8A',
+  },
+  'Public Administration & Government': {
+    label: 'Public Administration & Government',
+    description: 'Scored against federal agency, state government criteria.',
+    emphasis: 'Grit carries the most weight (40%).',
+    color: '#5E5CE6',
+  },
+  'Veterinary & Animal Science': {
+    label: 'Veterinary & Animal Science',
+    description: 'Scored against top vet school, USDA APHIS criteria.',
+    emphasis: 'Smart carries the most weight (40%). GPA screens are real.',
+    color: '#34C759',
+  },
+  'Pharmacy & Pharmaceutical Science': {
+    label: 'Pharmacy & Pharmaceutical Science',
+    description: 'Scored against CVS Health, Pfizer, FDA criteria.',
+    emphasis: 'Smart carries the most weight (45%). PCAT prep matters.',
+    color: '#5E5CE6',
+  },
+  'Nursing & Patient Care': {
+    label: 'Nursing & Patient Care',
+    description: 'Scored against Mayo Clinic, Cleveland Clinic criteria.',
+    emphasis: 'Grit carries the most weight (40%). Clinical hours critical.',
+    color: '#FF453A',
+  },
+  'Dental & Oral Health': {
+    label: 'Dental & Oral Health',
+    description: 'Scored against top dental school criteria.',
+    emphasis: 'Smart carries the most weight (40%). DAT prep matters.',
+    color: '#5E5CE6',
   },
 };
 
