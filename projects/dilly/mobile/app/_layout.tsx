@@ -224,8 +224,8 @@ const ls = StyleSheet.create({
   root:    { flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   content: { alignItems: 'center' },
   logoImage: {
-    width: 180,
-    height: 60,
+    width: 260,
+    height: 90,
   },
   wordmark: {
     fontFamily:    'Cinzel_900Black',
