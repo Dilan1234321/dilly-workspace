@@ -4091,3 +4091,27 @@ body.pricing-page .price-list li {
 :root.light .compare-section {
   background: var(--surface-2);
 }
+
+/* ── Coach hero: two-column with Dilly face ── */
+@media (min-width: 768px) {
+  [data-fp-layout="coach"] .fp-hero__inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 3rem;
+    align-items: center;
+  }
+
+  [data-fp-layout="coach"] .coach-face-col {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-fp-layout="coach"] .coach-face-col {
+    display: none;
+  }
+}

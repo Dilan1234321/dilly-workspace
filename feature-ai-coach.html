@@ -80,35 +80,26 @@
       </div>
     </div>
     <div class=”fp-hero__inner”>
-      <div style=”display:flex;align-items:center;gap:clamp(2rem,5vw,4rem);width:100%”>
-        <div style=”flex:1;min-width:0”>
-          <p class=”fp-kicker”>Coach &amp; compete</p>
-          <h1 class=”fp-title font-display”>Talk to a coach that already read your resume</h1>
-          <p class=”fp-lead”>Floating chat with your resume, Smart / Grit / Build scores, saved roles, tracker stages, and calendar pressure in view. Ask “what do I fix first?” and get an answer that matches your real profile, not a template.</p>
-          <div class=”fp-hero-actions”>
-            <a class=”btn btn-primary” href=”https://app.trydilly.com/”>Open coach</a>
-            <a class=”btn btn-ghost” href=”feature-ask-dilly.html”>Job-specific Ask Dilly</a>
-          </div>
-          <div class=”fp-hero-metrics” aria-label=”Coach highlights”>
-            <div><span class=”fp-metric-val”>Context</span><span class=”fp-metric-label”>Resume + apps + dates</span></div>
-            <div><span class=”fp-metric-val”>Modes</span><span class=”fp-metric-label”>Strategy &amp; mock interview</span></div>
-            <div><span class=”fp-metric-val”>Honest</span><span class=”fp-metric-label”>Tied to gap data</span></div>
-          </div>
+      <p class=”fp-kicker”>Coach &amp; compete</p>
+      <h1 class=”fp-title font-display”>Talk to a coach that already read your resume</h1>
+      <p class=”fp-lead”>Floating chat with your resume, Smart / Grit / Build scores, saved roles, tracker stages, and calendar pressure in view. Ask “what do I fix first?” and get an answer that matches your real profile, not a template.</p>
+      <div class=”fp-hero-actions”>
+        <a class=”btn btn-primary” href=”https://app.trydilly.com/”>Open coach</a>
+        <a class=”btn btn-ghost” href=”feature-ask-dilly.html”>Job-specific Ask Dilly</a>
+      </div>
+      <div class=”fp-hero-metrics” aria-label=”Coach highlights”>
+        <div><span class=”fp-metric-val”>Context</span><span class=”fp-metric-label”>Resume + apps + dates</span></div>
+        <div><span class=”fp-metric-val”>Modes</span><span class=”fp-metric-label”>Strategy &amp; mock interview</span></div>
+        <div><span class=”fp-metric-val”>Honest</span><span class=”fp-metric-label”>Tied to gap data</span></div>
+      </div>
+      <div class=”coach-face-col”>
+        <div style=”width:180px;height:180px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,0.15),0 16px 48px rgba(0,0,0,0.2),0 0 60px rgba(201,168,76,0.2);display:flex;align-items:center;justify-content:center”>
+          <canvas id=”dilly-face” width=”140” height=”140”></canvas>
         </div>
-        <div id=”dilly-hero-face” style=”flex-shrink:0;display:flex;flex-direction:column;align-items:center”>
-          <div style=”width:180px;height:180px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,0.15),0 16px 48px rgba(0,0,0,0.2),0 0 60px rgba(201,168,76,0.2);display:flex;align-items:center;justify-content:center”>
-            <canvas id=”dilly-face” width=”140” height=”140”></canvas>
-          </div>
-          <p style=”margin-top:0.75rem;font-family:Cinzel,serif;font-size:0.8rem;font-weight:700;color:#fff;letter-spacing:0.08em”>dilly</p>
-          <p style=”margin-top:0.1rem;font-size:0.65rem;color:rgba(255,255,255,0.65)”>Your career advisor</p>
-        </div>
+        <p style=”margin-top:0.75rem;font-family:Cinzel,serif;font-size:0.8rem;font-weight:700;color:#fff;letter-spacing:0.08em”>dilly</p>
+        <p style=”margin-top:0.1rem;font-size:0.65rem;color:rgba(255,255,255,0.65)”>Your career advisor</p>
       </div>
     </div>
-    <style>
-      @media (max-width: 767px) {
-        #dilly-hero-face { display: none !important; }
-      }
-    </style>
   </header>
 
   <script>
