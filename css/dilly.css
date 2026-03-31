@@ -4148,3 +4148,20 @@ body.pricing-page .price-list li {
 :root.light [data-fp-layout="coach"] .coach-face-col p:first-of-type {
   color: var(--navy-deep);
 }
+
+/* Smart / Grit / Build meter bars - light mode */
+:root.light .toolkit-meter-seg {
+  border-color: rgba(0, 40, 104, 0.12);
+}
+:root.light .toolkit-meter-seg--smart {
+  background: linear-gradient(180deg, rgba(40, 120, 220, 0.18), rgba(40, 120, 220, 0.06));
+  color: #1a5ca8;
+}
+:root.light .toolkit-meter-seg--grit {
+  background: linear-gradient(180deg, rgba(201, 148, 26, 0.2), rgba(201, 148, 26, 0.06));
+  color: #8a6510;
+}
+:root.light .toolkit-meter-seg--build {
+  background: linear-gradient(180deg, rgba(34, 150, 80, 0.15), rgba(34, 150, 80, 0.05));
+  color: #1a7a3a;
+}
