@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI coach: Dilly</title>
+  <meta name="description" content="Context-aware AI career coaching with mock interviews and strategy mode.">
+  <link rel="stylesheet" href="css/dilly.css">
+</head>
+<body class="feature-pro-page" data-nav-feature="coach" data-fp-layout="coach">
+  <div class="site-nav site-nav--inner">
+    <a class="logo-lockup" href="index.html">
+      <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+    </a>
+    <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav-glass" aria-label="Primary">
+      <ul>
+        <li class="nav-dropdown">
+          <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+          <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+            <div class="nav-dropdown-inner">
+              <div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+          <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+            <div class="nav-dropdown-inner">
+              <div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+          <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+            <div class="nav-dropdown-inner">
+              <div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+          <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+            <div class="nav-dropdown-inner">
+              <div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Decide</span>
+                <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li><a class="nav-item" href="faq.html">FAQ</a></li>
+        <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+        <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+      </ul>
+    </nav>
+    <div class="nav-cta-row">
+      <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+    </div>
+  </div>
+
+  <!-- Dilly face hero -->
+  <section style="background:#fff;min-height:80vh;display:flex;align-items:center;justify-content:flex-start;padding:6rem clamp(2rem,6vw,6rem) 4rem;gap:clamp(2rem,4vw,5rem);flex-wrap:wrap;border-bottom:1px solid rgba(0,0,0,0.06)">
+    <div style="display:inline-flex;flex-direction:column;align-items:center;gap:1rem;flex-shrink:0">
+      <div style="width:min(520px,72vw);height:min(520px,72vw);border-radius:50%;background:#f5f6ff;border:1.5px solid rgba(43,58,142,0.12);box-shadow:0 8px 40px rgba(43,58,142,0.12),0 2px 8px rgba(0,0,0,0.05);display:flex;align-items:center;justify-content:center;overflow:hidden">
+        <canvas id="dilly-face" width="520" height="520" style="display:block;width:100%;height:100%"></canvas>
+      </div>
+      <p style="font-size:0.68rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2B3A8E;opacity:0.5;margin:0">Dilly · AI Advisor</p>
+    </div>
+    <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:1.5rem">
+      <h1 style="font-family:Cinzel,Georgia,serif;font-size:clamp(3rem,7vw,6rem);font-weight:700;line-height:1.05;letter-spacing:0.02em;color:#001b44;margin:0">Meet Dilly.</h1>
+      <p style="font-size:clamp(1.05rem,2vw,1.35rem);line-height:1.75;color:rgba(26,26,34,0.72);margin:0">The career advisor that actually knows you. Not a chatbot. Not a template. A system that reads your resume, maps your gaps to real internships, benchmarks you against your peers — and tells you exactly what to fix, in what order, and why.</p>
+      <p style="font-size:clamp(1rem,1.8vw,1.2rem);line-height:1.75;color:rgba(26,26,34,0.55);margin:0">Every student who has ever been passed over for a role they were qualified for deserved better guidance. Dilly is that guidance — context-aware, brutally honest, and built entirely around you.</p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.5rem">
+        <a href="https://app.trydilly.com/" style="display:inline-flex;align-items:center;padding:0.85rem 1.75rem;background:#002868;color:#fff;font-family:Montserrat,sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;border-radius:10px;text-decoration:none">Talk to Dilly</a>
+        <a href="quiz.html" style="display:inline-flex;align-items:center;padding:0.85rem 1.75rem;background:transparent;color:#002868;font-family:Montserrat,sans-serif;font-weight:700;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;border-radius:10px;text-decoration:none;border:1.5px solid rgba(0,40,104,0.25)">Take the quiz</a>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  (function(){
+    var c=document.getElementById(‘dilly-face’);if(!c)return;
+    var ctx=c.getContext(‘2d’),W=c.width,H=c.height,NAVY=’#2B3A8E’,MX=14;
+    var pos={x:0,y:0},vel={x:0,y:0},tgt={x:0,y:0},sm=0.35,st=0.35,raf;
+    function pT(){var a=Math.random()*Math.PI*2,d=(0.72+Math.random()*0.28)*MX;tgt.x=Math.cos(a)*d;tgt.y=Math.sin(a)*d}
+    function pS(){st=0.15+Math.random()*0.45}
+    function draw(){
+      vel.x+=((tgt.x-pos.x)*0.06-vel.x)*0.2;vel.y+=((tgt.y-pos.y)*0.06-vel.y)*0.2;
+      pos.x+=vel.x;pos.y+=vel.y;sm+=(st-sm)*0.04;
+      var s=(W*0.44/2)/19;ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2+pos.x,H/2+pos.y);
+      ctx.fillStyle=NAVY;ctx.beginPath();ctx.arc(-8*s,-4*s,2.8*s,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(8*s,-4*s,2.8*s,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.moveTo(-8*s,5*s);ctx.quadraticCurveTo(0,5*s+sm*9*s,8*s,5*s);
+      ctx.strokeStyle=NAVY;ctx.lineWidth=2.2*s;ctx.lineCap=’round’;ctx.stroke();
+      ctx.restore();raf=requestAnimationFrame(draw)
+    }
+    pT();pS();setInterval(pT,2600);setInterval(pS,2200);raf=requestAnimationFrame(draw);
+  })();
+  </script>
+
+  <!-- ── SCREENSHOT ── -->
+  <section style=”background:#f6f7fb;padding:5rem 1.5rem”>
+    <div style=”max-width:720px;margin:0 auto”>
+      <img src=”coach-screenshot.png” alt=”Dilly AI coach” style=”width:100%;display:block;border-radius:16px;box-shadow:0 32px 80px rgba(0,20,60,0.15)”>
+    </div>
+  </section>
+
+  <!-- ── DILLY KNOWS YOU ── -->
+  <section style=”background:#001b44;padding:clamp(5rem,10vw,8rem) clamp(1.5rem,6vw,5rem)”>
+    <div style=”max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:clamp(3rem,6vw,6rem);align-items:center”>
+      <div>
+        <p style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#fdb913;margin:0 0 1.2rem”>Context-aware intelligence</p>
+        <h2 style=”font-family:Cinzel,Georgia,serif;font-size:clamp(2.2rem,4vw,3.5rem);font-weight:700;line-height:1.1;color:#fff;margin:0 0 1.75rem”>Dilly doesn’t guess.<br>It knows.</h2>
+        <p style=”font-size:clamp(1rem,1.6vw,1.2rem);line-height:1.8;color:rgba(255,255,255,0.65);margin:0 0 1.25rem”>Every answer Dilly gives is built on a complete picture of who you are: your resume, your Dilly Score across seven dimensions, every job you’ve saved, your application pipeline, your deadlines, and how you compare to every student in your major and cohort.</p>
+        <p style=”font-size:clamp(1rem,1.6vw,1.2rem);line-height:1.8;color:rgba(255,255,255,0.65);margin:0”>Generic AI gives you generic advice. Dilly gives you <em style=”color:#fdb913;font-style:normal;font-weight:600”>your</em> advice — grounded in your actual gaps, your real timeline, and the exact roles you’re chasing.</p>
+      </div>
+      <div style=”display:flex;flex-direction:column;gap:1.25rem”>
+        <div style=”background:rgba(255,255,255,0.05);border:1px solid rgba(253,185,19,0.2);border-left:3px solid #fdb913;border-radius:12px;padding:1.5rem 1.75rem”>
+          <p style=”font-family:Montserrat,sans-serif;font-size:0.65rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#fdb913;margin:0 0 0.6rem”>Your Dilly Score</p>
+          <p style=”font-size:0.95rem;line-height:1.7;color:rgba(255,255,255,0.8);margin:0”>Build: 61 &nbsp;·&nbsp; Grit: 74 &nbsp;·&nbsp; Leadership: 58 &nbsp;·&nbsp; Impact: 69</p>
+        </div>
+        <div style=”background:rgba(255,255,255,0.05);border:1px solid rgba(253,185,19,0.2);border-left:3px solid #fdb913;border-radius:12px;padding:1.5rem 1.75rem”>
+          <p style=”font-family:Montserrat,sans-serif;font-size:0.65rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#fdb913;margin:0 0 0.6rem”>Peer benchmark</p>
+          <p style=”font-size:0.95rem;line-height:1.7;color:rgba(255,255,255,0.8);margin:0”>Top 34% in Data Science · University of Tampa · Class of 2026</p>
+        </div>
+        <div style=”background:rgba(255,255,255,0.05);border:1px solid rgba(253,185,19,0.2);border-left:3px solid #fdb913;border-radius:12px;padding:1.5rem 1.75rem”>
+          <p style=”font-family:Montserrat,sans-serif;font-size:0.65rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#fdb913;margin:0 0 0.6rem”>Saved roles</p>
+          <p style=”font-size:0.95rem;line-height:1.7;color:rgba(255,255,255,0.8);margin:0”>Stripe · Palantir · Citadel — all read, scored, and factored in</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CONVERSATION EXAMPLE ── -->
+  <section style=”background:#0a1628;padding:clamp(5rem,10vw,8rem) clamp(1.5rem,6vw,5rem)”>
+    <div style=”max-width:860px;margin:0 auto”>
+      <div style=”text-align:center;margin-bottom:4rem”>
+        <p style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#fdb913;margin:0 0 1rem”>Real answers. Real context.</p>
+        <h2 style=”font-family:Cinzel,Georgia,serif;font-size:clamp(2rem,3.5vw,3rem);font-weight:700;color:#fff;margin:0”>This is what a real coaching session looks like</h2>
+      </div>
+      <!-- Chat thread -->
+      <div style=”display:flex;flex-direction:column;gap:1.25rem”>
+        <!-- User message -->
+        <div style=”display:flex;justify-content:flex-end”>
+          <div style=”max-width:70%;background:#2B3A8E;border-radius:18px 18px 4px 18px;padding:1.1rem 1.4rem”>
+            <p style=”font-size:0.95rem;line-height:1.65;color:#fff;margin:0”>I have a Stripe internship interview in three weeks. What should I focus on?</p>
+          </div>
+        </div>
+        <!-- Dilly response -->
+        <div style=”display:flex;gap:1rem;align-items:flex-start”>
+          <div style=”width:36px;height:36px;border-radius:50%;background:#f5f6ff;border:1.5px solid rgba(43,58,142,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center”>
+            <span style=”font-size:0.6rem;font-weight:800;color:#2B3A8E;letter-spacing:0.05em”>D</span>
+          </div>
+          <div style=”background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px 18px 18px 18px;padding:1.4rem 1.6rem;flex:1”>
+            <p style=”font-size:0.9rem;line-height:1.75;color:rgba(255,255,255,0.85);margin:0 0 1rem”>Based on your resume and score, here’s what matters most right before this interview:</p>
+            <p style=”font-size:0.9rem;line-height:1.75;color:rgba(255,255,255,0.85);margin:0 0 0.75rem”><strong style=”color:#fdb913”>1. Your Build score is 61 — that’s the gap Stripe will find.</strong> Their interns ship. Your current resume doesn’t show that. You need one project with a real production URL and measurable impact in the bullet. You have time to add it if you start this week.</p>
+            <p style=”font-size:0.9rem;line-height:1.75;color:rgba(255,255,255,0.85);margin:0 0 0.75rem”><strong style=”color:#fdb913”>2. Your Grit score is 74 — that’s your strongest angle.</strong> Stripe’s behavioral bar is high. Lead with a story that shows you pushed through a hard technical problem without being told to. Your research assistant role has the raw material — we need to sharpen the bullet.</p>
+            <p style=”font-size:0.9rem;line-height:1.75;color:rgba(255,255,255,0.85);margin:0”>Want me to run a mock behavioral round right now using Stripe’s known question patterns?</p>
+          </div>
+        </div>
+        <!-- User -->
+        <div style=”display:flex;justify-content:flex-end”>
+          <div style=”max-width:70%;background:#2B3A8E;border-radius:18px 18px 4px 18px;padding:1.1rem 1.4rem”>
+            <p style=”font-size:0.95rem;line-height:1.65;color:#fff;margin:0”>Yes, let’s do it.</p>
+          </div>
+        </div>
+        <!-- Dilly -->
+        <div style=”display:flex;gap:1rem;align-items:flex-start”>
+          <div style=”width:36px;height:36px;border-radius:50%;background:#f5f6ff;border:1.5px solid rgba(43,58,142,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center”>
+            <span style=”font-size:0.6rem;font-weight:800;color:#2B3A8E;letter-spacing:0.05em”>D</span>
+          </div>
+          <div style=”background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:4px 18px 18px 18px;padding:1.4rem 1.6rem;flex:1”>
+            <p style=”font-size:0.9rem;line-height:1.75;color:rgba(255,255,255,0.85);margin:0 0 0.75rem”>Good. Starting practice mode. I’ll probe the weak spots after each answer.</p>
+            <p style=”font-size:0.95rem;line-height:1.75;color:#fdb913;font-style:italic;margin:0”>”Tell me about a time you had to learn something technically difficult under a tight deadline — and how you made sure you didn’t drop the ball.”</p>
+          </div>
+        </div>
+      </div>
+      <p style=”text-align:center;margin-top:2.5rem;font-size:0.8rem;font-family:Montserrat,sans-serif;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.3)”>Illustrative conversation · Scores and context are real when you’re signed in</p>
+    </div>
+  </section>
+
+  <!-- ── THREE MODES ── -->
+  <section style=”background:#fff;padding:clamp(5rem,10vw,8rem) clamp(1.5rem,6vw,5rem)”>
+    <div style=”max-width:1100px;margin:0 auto”>
+      <div style=”text-align:center;margin-bottom:4rem”>
+        <p style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#2B3A8E;margin:0 0 1rem”>Everything Dilly does for you</p>
+        <h2 style=”font-family:Cinzel,Georgia,serif;font-size:clamp(2rem,3.5vw,3rem);font-weight:700;color:#001b44;margin:0”>One advisor. Three superpowers.</h2>
+      </div>
+      <div style=”display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem”>
+        <div style=”background:#f6f7fb;border-radius:20px;padding:2.5rem;border:1px solid rgba(0,27,68,0.08)”>
+          <div style=”width:48px;height:48px;background:#001b44;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem”>
+            <span style=”color:#fdb913;font-size:1.4rem”>◇</span>
+          </div>
+          <h3 style=”font-family:Cinzel,Georgia,serif;font-size:1.3rem;font-weight:700;color:#001b44;margin:0 0 0.9rem”>Coach Mode</h3>
+          <p style=”font-size:0.95rem;line-height:1.8;color:rgba(26,26,34,0.65);margin:0 0 1.25rem”>Your strategic brain trust. Dilly maps the semester, prioritizes your gaps, builds your narrative, and tells you exactly which role to focus on and why — based on your actual score and your actual pipeline.</p>
+          <ul style=”list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.55rem”>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Semester-long planning and prioritization</li>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Offer negotiation and timeline strategy</li>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Gap identification tied to real role requirements</li>
+          </ul>
+        </div>
+        <div style=”background:#f6f7fb;border-radius:20px;padding:2.5rem;border:1px solid rgba(0,27,68,0.08)”>
+          <div style=”width:48px;height:48px;background:#001b44;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem”>
+            <span style=”color:#fdb913;font-size:1.4rem”>▶</span>
+          </div>
+          <h3 style=”font-family:Cinzel,Georgia,serif;font-size:1.3rem;font-weight:700;color:#001b44;margin:0 0 0.9rem”>Practice Mode</h3>
+          <p style=”font-size:0.95rem;line-height:1.8;color:rgba(26,26,34,0.65);margin:0 0 1.25rem”>Live mock interviews that don’t let you off the hook. Dilly asks the follow-up. Dilly probes the weak answer. And when you’re done, it tells you exactly which dimension you need to shore up before the real thing.</p>
+          <ul style=”list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.55rem”>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Behavioral, technical, and case-style drills</li>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Follow-up questions that expose weak answers</li>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Post-session score feedback tied to your dimensions</li>
+          </ul>
+        </div>
+        <div style=”background:#f6f7fb;border-radius:20px;padding:2.5rem;border:1px solid rgba(0,27,68,0.08)”>
+          <div style=”width:48px;height:48px;background:#001b44;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem”>
+            <span style=”color:#fdb913;font-size:1.4rem”>∞</span>
+          </div>
+          <h3 style=”font-family:Cinzel,Georgia,serif;font-size:1.3rem;font-weight:700;color:#001b44;margin:0 0 0.9rem”>Persistent Memory</h3>
+          <p style=”font-size:0.95rem;line-height:1.8;color:rgba(26,26,34,0.65);margin:0 0 1.25rem”>Every session builds on the last. Dilly remembers what you’ve worked on, what you’ve fixed, what you’re afraid of, and what your biggest opportunity still is. No re-explaining yourself. Ever.</p>
+          <ul style=”list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.55rem”>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Full conversation history across sessions</li>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Updates live when your resume or scores change</li>
+            <li style=”font-size:0.875rem;color:rgba(26,26,34,0.7);display:flex;gap:0.6rem;align-items:flex-start”><span style=”color:#fdb913;flex-shrink:0;margin-top:0.1rem”>✓</span>Tracks your progress week over week</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── STATS ── -->
+  <section style=”background:#001b44;padding:clamp(4rem,8vw,6rem) clamp(1.5rem,6vw,5rem)”>
+    <div style=”max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;text-align:center”>
+      <div>
+        <div style=”font-family:Cinzel,Georgia,serif;font-size:clamp(3rem,6vw,5rem);font-weight:700;color:#fdb913;line-height:1”>7</div>
+        <div style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-top:0.75rem”>Score dimensions<br>Dilly reads</div>
+      </div>
+      <div>
+        <div style=”font-family:Cinzel,Georgia,serif;font-size:clamp(3rem,6vw,5rem);font-weight:700;color:#fdb913;line-height:1”>43</div>
+        <div style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-top:0.75rem”>Student cohorts<br>benchmarked against</div>
+      </div>
+      <div>
+        <div style=”font-family:Cinzel,Georgia,serif;font-size:clamp(3rem,6vw,5rem);font-weight:700;color:#fdb913;line-height:1”>0</div>
+        <div style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-top:0.75rem”>Times you’ll re-explain<br>your background</div>
+      </div>
+      <div>
+        <div style=”font-family:Cinzel,Georgia,serif;font-size:clamp(2.5rem,5vw,4rem);font-weight:700;color:#fdb913;line-height:1”>Live</div>
+        <div style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-top:0.75rem”>Context updates when<br>your resume changes</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── VS EVERYTHING ELSE ── -->
+  <section style=”background:#fff;padding:clamp(5rem,10vw,8rem) clamp(1.5rem,6vw,5rem)”>
+    <div style=”max-width:1000px;margin:0 auto”>
+      <div style=”text-align:center;margin-bottom:4rem”>
+        <p style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#2B3A8E;margin:0 0 1rem”>Why Dilly is different</p>
+        <h2 style=”font-family:Cinzel,Georgia,serif;font-size:clamp(2rem,3.5vw,3rem);font-weight:700;color:#001b44;margin:0”>Everything else is guessing.<br>Dilly is reading.</h2>
+      </div>
+      <div style=”overflow-x:auto”>
+        <table style=”width:100%;border-collapse:collapse;min-width:560px”>
+          <thead>
+            <tr>
+              <th style=”text-align:left;padding:1rem 1.25rem;font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.4);border-bottom:1px solid rgba(0,0,0,0.08)”></th>
+              <th style=”padding:1rem 1.25rem;font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.4);border-bottom:1px solid rgba(0,0,0,0.08);text-align:center”>ChatGPT</th>
+              <th style=”padding:1rem 1.25rem;font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.4);border-bottom:1px solid rgba(0,0,0,0.08);text-align:center”>Career center</th>
+              <th style=”padding:1rem 1.25rem;font-family:Montserrat,sans-serif;font-size:0.75rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#2B3A8E;border-bottom:2px solid #fdb913;text-align:center;background:#f6f8ff;border-radius:8px 8px 0 0”>Dilly</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style=”border-bottom:1px solid rgba(0,0,0,0.06)”>
+              <td style=”padding:1rem 1.25rem;font-size:0.9rem;color:rgba(26,26,34,0.75);font-weight:500”>Reads your actual resume</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>Sometimes</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;background:#f6f8ff;font-size:1.1rem;color:#2B3A8E;font-weight:800”>✓</td>
+            </tr>
+            <tr style=”border-bottom:1px solid rgba(0,0,0,0.06)”>
+              <td style=”padding:1rem 1.25rem;font-size:0.9rem;color:rgba(26,26,34,0.75);font-weight:500”>Benchmarks you against peers</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;background:#f6f8ff;font-size:1.1rem;color:#2B3A8E;font-weight:800”>✓</td>
+            </tr>
+            <tr style=”border-bottom:1px solid rgba(0,0,0,0.06)”>
+              <td style=”padding:1rem 1.25rem;font-size:0.9rem;color:rgba(26,26,34,0.75);font-weight:500”>Knows your target companies</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;background:#f6f8ff;font-size:1.1rem;color:#2B3A8E;font-weight:800”>✓</td>
+            </tr>
+            <tr style=”border-bottom:1px solid rgba(0,0,0,0.06)”>
+              <td style=”padding:1rem 1.25rem;font-size:0.9rem;color:rgba(26,26,34,0.75);font-weight:500”>Runs mock interviews on your weaknesses</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:rgba(26,26,34,0.4);font-size:0.85rem”>Generic only</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:rgba(26,26,34,0.4);font-size:0.85rem”>If you’re lucky</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;background:#f6f8ff;font-size:1.1rem;color:#2B3A8E;font-weight:800”>✓</td>
+            </tr>
+            <tr style=”border-bottom:1px solid rgba(0,0,0,0.06)”>
+              <td style=”padding:1rem 1.25rem;font-size:0.9rem;color:rgba(26,26,34,0.75);font-weight:500”>Available at 2am before your interview</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#2B3A8E;font-size:1.1rem”>✓</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;background:#f6f8ff;font-size:1.1rem;color:#2B3A8E;font-weight:800”>✓</td>
+            </tr>
+            <tr>
+              <td style=”padding:1rem 1.25rem;font-size:0.9rem;color:rgba(26,26,34,0.75);font-weight:500”>Remembers everything across sessions</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;color:#ccc;font-size:1.1rem”>—</td>
+              <td style=”padding:1rem 1.25rem;text-align:center;background:#f6f8ff;border-radius:0 0 8px 8px;font-size:1.1rem;color:#2B3A8E;font-weight:800”>✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── QUOTE PULL ── -->
+  <section style=”background:#f6f7fb;padding:clamp(4rem,8vw,7rem) clamp(1.5rem,6vw,5rem);text-align:center”>
+    <div style=”max-width:760px;margin:0 auto”>
+      <p style=”font-family:Cinzel,Georgia,serif;font-size:clamp(1.4rem,3vw,2.2rem);font-weight:400;line-height:1.6;color:#001b44;margin:0 0 2rem”>”Your Build gap is the real problem: 16 points below your cohort average. Stripe wants interns who have shipped something real. Pick one project, get it to production in four to six weeks. Everything else is secondary.”</p>
+      <p style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#2B3A8E;opacity:0.5”>Dilly · AI Advisor · Example coaching response</p>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ── -->
+  <section style=”background:#001b44;padding:clamp(5rem,10vw,8rem) clamp(1.5rem,6vw,5rem)”>
+    <div style=”max-width:1000px;margin:0 auto”>
+      <div style=”text-align:center;margin-bottom:4.5rem”>
+        <p style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#fdb913;margin:0 0 1rem”>How it works</p>
+        <h2 style=”font-family:Cinzel,Georgia,serif;font-size:clamp(2rem,3.5vw,3rem);font-weight:700;color:#fff;margin:0”>From zero to offer-ready in one semester</h2>
+      </div>
+      <div style=”display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2.5rem;counter-reset:steps”>
+        <div style=”text-align:center”>
+          <div style=”width:56px;height:56px;border-radius:50%;border:2px solid #fdb913;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-family:Cinzel,Georgia,serif;font-size:1.5rem;font-weight:700;color:#fdb913”>1</div>
+          <h4 style=”font-family:Cinzel,Georgia,serif;font-size:1.05rem;font-weight:700;color:#fff;margin:0 0 0.75rem”>Upload your resume</h4>
+          <p style=”font-size:0.875rem;line-height:1.75;color:rgba(255,255,255,0.5);margin:0”>Dilly reads every bullet, scores you across seven dimensions, and places you in your peer cohort. Instantly.</p>
+        </div>
+        <div style=”text-align:center”>
+          <div style=”width:56px;height:56px;border-radius:50%;border:2px solid #fdb913;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-family:Cinzel,Georgia,serif;font-size:1.5rem;font-weight:700;color:#fdb913”>2</div>
+          <h4 style=”font-family:Cinzel,Georgia,serif;font-size:1.05rem;font-weight:700;color:#fff;margin:0 0 0.75rem”>Save your target roles</h4>
+          <p style=”font-size:0.875rem;line-height:1.75;color:rgba(255,255,255,0.5);margin:0”>Add the internships and jobs you want. Dilly cross-references your scores against what each role actually requires.</p>
+        </div>
+        <div style=”text-align:center”>
+          <div style=”width:56px;height:56px;border-radius:50%;border:2px solid #fdb913;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-family:Cinzel,Georgia,serif;font-size:1.5rem;font-weight:700;color:#fdb913”>3</div>
+          <h4 style=”font-family:Cinzel,Georgia,serif;font-size:1.05rem;font-weight:700;color:#fff;margin:0 0 0.75rem”>Start a thread</h4>
+          <p style=”font-size:0.875rem;line-height:1.75;color:rgba(255,255,255,0.5);margin:0”>Ask Dilly anything. It already knows everything — your scores, your pipeline, your deadline. No setup. Just questions.</p>
+        </div>
+        <div style=”text-align:center”>
+          <div style=”width:56px;height:56px;border-radius:50%;border:2px solid #fdb913;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-family:Cinzel,Georgia,serif;font-size:1.5rem;font-weight:700;color:#fdb913”>4</div>
+          <h4 style=”font-family:Cinzel,Georgia,serif;font-size:1.05rem;font-weight:700;color:#fff;margin:0 0 0.75rem”>Watch your score climb</h4>
+          <p style=”font-size:0.875rem;line-height:1.75;color:rgba(255,255,255,0.5);margin:0”>Fix what Dilly identifies. Update your resume. Your score updates live. Your rank in the leaderboard moves. You get closer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FINAL CTA ── -->
+  <section style=”background:linear-gradient(135deg,#001b44 0%,#002868 60%,#0a1628 100%);padding:clamp(6rem,12vw,10rem) clamp(1.5rem,6vw,5rem);text-align:center;position:relative;overflow:hidden”>
+    <div style=”position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 80%,rgba(253,185,19,0.08) 0%,transparent 70%);pointer-events:none”></div>
+    <div style=”position:relative;max-width:700px;margin:0 auto”>
+      <p style=”font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#fdb913;margin:0 0 1.5rem”>The advisor that actually knows you</p>
+      <h2 style=”font-family:Cinzel,Georgia,serif;font-size:clamp(2.5rem,5vw,4.5rem);font-weight:700;line-height:1.1;color:#fff;margin:0 0 1.5rem”>Your career deserves better than a guess.</h2>
+      <p style=”font-size:clamp(1rem,1.8vw,1.25rem);line-height:1.8;color:rgba(255,255,255,0.6);margin:0 0 3rem”>Talk to Dilly today. Bring your resume, your target companies, your biggest question. Dilly’s already done the homework.</p>
+      <div style=”display:flex;flex-wrap:wrap;gap:1rem;justify-content:center”>
+        <a href=”https://app.trydilly.com/” style=”display:inline-flex;align-items:center;padding:1.1rem 2.5rem;background:#fdb913;color:#001b44;font-family:Montserrat,sans-serif;font-weight:800;font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;border-radius:12px;text-decoration:none;box-shadow:0 8px 30px rgba(253,185,19,0.3)”>Talk to Dilly — it’s free</a>
+        <a href=”quiz.html” style=”display:inline-flex;align-items:center;padding:1.1rem 2.5rem;background:transparent;color:#fff;font-family:Montserrat,sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;border-radius:12px;text-decoration:none;border:1.5px solid rgba(255,255,255,0.25)”>Take the quiz first</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class=”site-footer”>
+    <nav class=”footer-links” aria-label=”Footer”>
+      <a href=”index.html”>Home</a>
+      <a href=”features.html”>Features</a>
+      <a href=”pricing.html”>Pricing</a>
+      <a href=”quiz.html”>Quiz</a>
+    </nav>
+    <p>Dilly · AI coach</p>
+  </footer>
+  <script src=”dilly.js”></script>
+</body>
+</html>
