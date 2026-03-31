@@ -23,11 +23,33 @@
   const navGlass = document.querySelector(".nav-glass");
 
   if (menuToggle && navGlass) {
+    // Create overlay backdrop for closing menu on tap-outside
+    var menuOverlay = document.createElement("div");
+    menuOverlay.className = "menu-overlay";
+    document.body.appendChild(menuOverlay);
+
+    function closeMenu() {
+      navGlass.classList.remove("is-open");
+      menuToggle.classList.remove("is-open");
+      menuToggle.setAttribute("aria-expanded", "false");
+      menuOverlay.classList.remove("is-visible");
+      document.body.style.overflow = "";
+      navGlass.querySelectorAll(".nav-dropdown.is-open").forEach(function (d) {
+        d.classList.remove("is-open");
+        var b = d.querySelector(".nav-item--dropdown");
+        if (b) b.setAttribute("aria-expanded", "false");
+      });
+    }
+
     menuToggle.addEventListener("click", function () {
       const open = navGlass.classList.toggle("is-open");
       menuToggle.classList.toggle("is-open", open);
       menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      menuOverlay.classList.toggle("is-visible", open);
+      document.body.style.overflow = open ? "hidden" : "";
     });
+
+    menuOverlay.addEventListener("click", closeMenu);
 
     navGlass.querySelectorAll("a").forEach(function (link) {
       link.addEventListener("click", function () {

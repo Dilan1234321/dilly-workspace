@@ -437,6 +437,16 @@ img {
     z-index: 3000;
   }
 
+  /* Invisible bridge so mouse can travel from nav item to dropdown */
+  .nav-dropdown-panel::before {
+    content: "";
+    position: absolute;
+    top: -0.75rem;
+    left: 0;
+    right: 0;
+    height: 0.75rem;
+  }
+
   .nav-dropdown:hover .nav-dropdown-panel,
   .nav-dropdown:focus-within .nav-dropdown-panel {
     opacity: 1;
@@ -493,6 +503,25 @@ img {
   background: #fafafc;
   border-color: rgba(0, 40, 104, 0.12);
   box-shadow: 0 24px 48px rgba(0, 27, 68, 0.12);
+}
+
+:root.light .nav-dropdown-panel {
+  background: #fff;
+  border-color: var(--border);
+  box-shadow: 0 24px 48px rgba(0, 27, 68, 0.10);
+}
+
+:root.light .nav-dropdown-label {
+  color: var(--text-muted);
+}
+
+:root.light .nav-dropdown-link {
+  color: rgba(0, 27, 68, 0.82);
+}
+
+:root.light .nav-dropdown-link:hover {
+  color: var(--navy-deep);
+  background: rgba(0, 40, 104, 0.05);
 }
 
 .menu-toggle {
@@ -892,7 +921,7 @@ img {
 
 .section-head {
   text-align: center;
-  max-width: 40rem;
+  max-width: 52rem;
   margin: 0 auto 3rem;
 }
 
@@ -2311,7 +2340,7 @@ img {
 
 .fp-section-head {
   text-align: center;
-  max-width: 40rem;
+  max-width: 52rem;
   margin: 0 auto 2.75rem;
 }
 
@@ -3609,6 +3638,25 @@ body.pricing-page .price-list li {
 :root.light body.pricing-page .al-cta {
   background: linear-gradient(180deg, #fff 0%, #f0f2f8 100%);
   border-color: var(--border);
+}
+
+/* ── Menu overlay backdrop ── */
+.menu-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 4999;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.menu-overlay.is-visible {
+  display: block;
+}
+
+:root.light .menu-overlay {
+  background: rgba(0, 20, 60, 0.15);
 }
 
 /* ═══════════════════════════════════════════════════════════════
