@@ -673,6 +673,166 @@ COHORT_SCORING_WEIGHTS: dict[str, dict] = {
         ],
         "competition_level": "low",
     },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 23. Mechanical & Aerospace Engineering
+    # ─────────────────────────────────────────────────────────────────────
+    # Boeing, Lockheed Martin, SpaceX, Tesla, GE Aerospace. GPA screens
+    # are real (3.0+ minimum, 3.5+ for top tier like SpaceX). FE exam
+    # passage is a strong signal. Senior design projects, SAE/ASME
+    # competitions, and co-op experience are critical. CAD proficiency
+    # (SolidWorks, CATIA, NX) is non-negotiable. Hands-on prototyping
+    # and manufacturing experience differentiates. SpaceX acceptance
+    # rate <1%. Boeing hires ~3,000 interns/year from 100K+ applicants.
+    "mechanical_aerospace_engineering": {
+        "label": "Mechanical & Aerospace Engineering",
+        "smart": 35,
+        "grit": 25,
+        "build": 40,
+        "recruiter_bar": 76,
+        "reference_benchmark": "Boeing / SpaceX new-grad engineering bar",
+        "reference_company": "Boeing",
+        "gpa_screen": 3.0,  # 3.5+ for SpaceX/top tier
+        "acceptance_rate": "<1% (SpaceX), ~3% (Boeing internships)",
+        "key_proof_points": [
+            "Senior design project with tangible deliverable",
+            "SAE/ASME/AIAA competition team experience",
+            "Co-op or internship at recognized manufacturer",
+            "CAD proficiency (SolidWorks, CATIA, NX)",
+            "FE exam passage or preparation",
+            "Hands-on prototyping or machine shop experience",
+        ],
+        "certifications": ["FE (Fundamentals of Engineering)", "SolidWorks CSWA/CSWP", "Six Sigma Green Belt"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 24. Electrical & Computer Engineering
+    # ─────────────────────────────────────────────────────────────────────
+    # Intel, Qualcomm, Texas Instruments, NVIDIA, Apple. Hardware/firmware
+    # roles require deep academic foundation (circuit design, signals,
+    # embedded systems). GPA screens at 3.2+ for most semiconductor
+    # companies. Lab work and project portfolios (PCB design, FPGA
+    # implementations, embedded projects) are critical proof. Intel
+    # ISEF participation and IEEE student branch leadership valued.
+    # NVIDIA acceptance rate <2% for hardware roles.
+    "electrical_computer_engineering": {
+        "label": "Electrical & Computer Engineering",
+        "smart": 35,
+        "grit": 20,
+        "build": 45,
+        "recruiter_bar": 78,
+        "reference_benchmark": "Intel / NVIDIA hardware engineering bar",
+        "reference_company": "Intel",
+        "gpa_screen": 3.2,  # Semiconductor companies screen rigorously
+        "acceptance_rate": "<2% (NVIDIA), ~3% (Intel internships)",
+        "key_proof_points": [
+            "PCB design or FPGA implementation projects",
+            "Embedded systems projects with real hardware",
+            "Circuit design and simulation portfolio",
+            "Lab coursework with documented results",
+            "IEEE or robotics club leadership",
+            "Internship at semiconductor or hardware company",
+        ],
+        "certifications": ["FE (Fundamentals of Engineering)", "Certified LabVIEW Developer", "Altium Designer Certification"],
+        "competition_level": "very_high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 25. Civil & Environmental Engineering
+    # ─────────────────────────────────────────────────────────────────────
+    # AECOM, Bechtel, Jacobs, Fluor. PE licensure path is the career
+    # backbone — FE exam passage before graduation is strongly expected.
+    # AutoCAD Civil 3D, Revit, and GIS proficiency required. Field
+    # experience (surveying, construction site observation) valued.
+    # Infrastructure projects and sustainability design increasingly
+    # important. More stable hiring than other engineering fields.
+    # AECOM hires ~2,000 interns globally.
+    "civil_environmental_engineering": {
+        "label": "Civil & Environmental Engineering",
+        "smart": 30,
+        "grit": 30,
+        "build": 40,
+        "recruiter_bar": 72,
+        "reference_benchmark": "AECOM / Bechtel entry-level bar",
+        "reference_company": "AECOM",
+        "gpa_screen": 3.0,  # Standard across major firms
+        "acceptance_rate": "~5-8% (top firms), moderate overall",
+        "key_proof_points": [
+            "FE exam passage (strongly expected before graduation)",
+            "AutoCAD Civil 3D / Revit / GIS proficiency",
+            "Senior capstone with real client or municipality",
+            "Field experience (surveying, site observation)",
+            "ASCE student chapter leadership",
+            "Sustainability or green infrastructure projects",
+        ],
+        "certifications": ["FE (Fundamentals of Engineering)", "LEED Green Associate", "GIS Certificate"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 26. Chemical & Biomedical Engineering
+    # ─────────────────────────────────────────────────────────────────────
+    # Pfizer, J&J, Medtronic, Dow, ExxonMobil. Chemical engineering
+    # roles require strong academic foundation (thermodynamics, transport
+    # phenomena, reaction kinetics). Biomedical roles need FDA regulatory
+    # knowledge and medical device design. GPA screens at 3.2+ for
+    # pharma/biotech. Lab research experience is critical. Co-ops are
+    # common and almost expected (especially at Dow, ExxonMobil).
+    # Pfizer R&D acceptance rate <3%.
+    "chemical_biomedical_engineering": {
+        "label": "Chemical & Biomedical Engineering",
+        "smart": 40,
+        "grit": 25,
+        "build": 35,
+        "recruiter_bar": 78,
+        "reference_benchmark": "Pfizer R&D / Medtronic entry-level bar",
+        "reference_company": "Pfizer",
+        "gpa_screen": 3.2,  # Pharma/biotech screen rigorously
+        "acceptance_rate": "<3% (Pfizer R&D), ~5% (major pharma internships)",
+        "key_proof_points": [
+            "Research experience with publications or presentations",
+            "Process design or simulation projects (Aspen, COMSOL)",
+            "Lab skills (GMP, analytical chemistry, bioprocessing)",
+            "Co-op at recognized chemical or pharmaceutical company",
+            "FDA regulatory awareness (for biomedical track)",
+            "Medical device prototyping or design control",
+        ],
+        "certifications": ["FE (Fundamentals of Engineering)", "Six Sigma Green Belt", "Lean Manufacturing"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 27. Industrial & Systems Engineering
+    # ─────────────────────────────────────────────────────────────────────
+    # Amazon, GE, Toyota, Deloitte (operations consulting). ISE is the
+    # bridge between engineering and business — optimization, lean/six
+    # sigma, supply chain modeling, data analytics. Employers value
+    # quantified process improvements. Six Sigma certification is a
+    # major differentiator. Amazon Operations hires heavily from ISE.
+    # Consulting firms recruit ISE for operations practices. GPA
+    # screen at 3.0+ standard, 3.5+ for consulting.
+    "industrial_systems_engineering": {
+        "label": "Industrial & Systems Engineering",
+        "smart": 25,
+        "grit": 35,
+        "build": 40,
+        "recruiter_bar": 74,
+        "reference_benchmark": "Amazon Operations / GE entry-level bar",
+        "reference_company": "Amazon",
+        "gpa_screen": 3.0,  # 3.5+ for consulting track
+        "acceptance_rate": "~3-5% (Amazon Ops), ~8% (GE internships)",
+        "key_proof_points": [
+            "Quantified process improvement projects",
+            "Lean/Six Sigma project with documented savings",
+            "Supply chain or logistics optimization work",
+            "Simulation modeling (Arena, AnyLogic, Python)",
+            "Data analytics with business impact",
+            "IIE/IISE student chapter or case competition",
+        ],
+        "certifications": ["Six Sigma Green Belt", "Six Sigma Black Belt", "APICS CSCP", "Lean Manufacturing"],
+        "competition_level": "moderate",
+    },
 }
 
 
@@ -706,7 +866,7 @@ def get_reference(cohort_key: str) -> tuple[str, str]:
 
 
 def list_cohort_keys() -> list[str]:
-    """Return all 22 cohort keys."""
+    """Return all 27 cohort keys."""
     return list(COHORT_SCORING_WEIGHTS.keys())
 
 

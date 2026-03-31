@@ -69,6 +69,20 @@ export const MAJOR_TO_COHORTS: Record<string, string[]> = {
 
   // Sport
   'Sport Management':                ['Hospitality & Events', 'Marketing & Advertising'],
+
+  // Engineering
+  'Mechanical Engineering':          ['Mechanical & Aerospace Engineering'],
+  'Aerospace Engineering':           ['Mechanical & Aerospace Engineering'],
+  'Electrical Engineering':          ['Electrical & Computer Engineering'],
+  'Computer Engineering':            ['Electrical & Computer Engineering', 'Software Engineering & CS'],
+  'Civil Engineering':               ['Civil & Environmental Engineering'],
+  'Chemical Engineering':            ['Chemical & Biomedical Engineering'],
+  'Biomedical Engineering':          ['Chemical & Biomedical Engineering', 'Healthcare & Clinical'],
+  'Industrial Engineering':          ['Industrial & Systems Engineering', 'Management & Operations'],
+  'Systems Engineering':             ['Industrial & Systems Engineering'],
+  'Environmental Engineering':       ['Civil & Environmental Engineering', 'Environmental & Sustainability'],
+  'Materials Science':               ['Chemical & Biomedical Engineering', 'Mechanical & Aerospace Engineering'],
+  'Nuclear Engineering':             ['Physical Sciences & Math', 'Mechanical & Aerospace Engineering'],
 };
 
 // ── Pre-professional → Cohort override ──────────────────────────────────────
@@ -255,6 +269,36 @@ export const COHORT_META: Record<string, {
     label: 'Hospitality & Events',
     description: 'Scored against Marriott, top live events criteria.',
     emphasis: 'Grit carries the most weight (50%).',
+    color: '#FF9F0A',
+  },
+  'Mechanical & Aerospace Engineering': {
+    label: 'Mechanical & Aerospace Engineering',
+    description: 'Scored against Boeing, SpaceX, Tesla criteria.',
+    emphasis: 'Build carries the most weight (40%). FE exam and CAD matter.',
+    color: '#2B3A8E',
+  },
+  'Electrical & Computer Engineering': {
+    label: 'Electrical & Computer Engineering',
+    description: 'Scored against Intel, NVIDIA, Qualcomm criteria.',
+    emphasis: 'Build carries the most weight (45%). Hardware portfolio critical.',
+    color: '#2B3A8E',
+  },
+  'Civil & Environmental Engineering': {
+    label: 'Civil & Environmental Engineering',
+    description: 'Scored against AECOM, Bechtel criteria.',
+    emphasis: 'Build carries the most weight (40%). FE exam strongly expected.',
+    color: '#34C759',
+  },
+  'Chemical & Biomedical Engineering': {
+    label: 'Chemical & Biomedical Engineering',
+    description: 'Scored against Pfizer, Medtronic, Dow criteria.',
+    emphasis: 'Smart carries the most weight (40%). Research and lab skills critical.',
+    color: '#5E5CE6',
+  },
+  'Industrial & Systems Engineering': {
+    label: 'Industrial & Systems Engineering',
+    description: 'Scored against Amazon Ops, GE, Toyota criteria.',
+    emphasis: 'Build carries the most weight (40%). Process improvement proof.',
     color: '#FF9F0A',
   },
 };
