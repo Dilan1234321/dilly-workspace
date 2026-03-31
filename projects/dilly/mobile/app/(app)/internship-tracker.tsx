@@ -335,12 +335,12 @@ export default function InternshipTrackerScreen() {
         setApps(prev => [data.application, ...prev]);
       }
     } catch {
-      Alert.alert('Error', 'Could not add application.');
+      Alert.alert('Error', 'Could not save this application. Check your connection and try again.');
     }
   }
 
   async function handleStatusChange(id: string, status: AppStatus) {
-    // Optimistic update
+    const previousApps = [...apps];
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     try {
       await apiFetch(`/applications/${id}`, {
@@ -348,7 +348,8 @@ export default function InternshipTrackerScreen() {
         body: JSON.stringify({ status }),
       });
     } catch {
-      Alert.alert('Error', 'Could not update status.');
+      setApps(previousApps);
+      Alert.alert('Error', 'Status update failed. Your change was not saved.');
     }
   }
 

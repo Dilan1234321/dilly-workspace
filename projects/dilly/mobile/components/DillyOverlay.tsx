@@ -24,7 +24,7 @@ import { useDillyOverlayState } from '../hooks/useDillyOverlay';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 
-// TODO: POST /chat endpoint needed — remove mock once live
+// Legacy overlay — DillyAIOverlay.tsx is the active chat component
 const MOCK_COACHING_RESPONSE =
   'Your Grit score is holding you back the most right now. ' +
   'A 61 tells me your resume shows effort — but not sustained, quantified impact. ' +
@@ -261,7 +261,7 @@ export default function DillyOverlay() {
     setGlowState('thinking');
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
 
-    // TODO: POST /chat endpoint needed — swap mock for real streaming
+    // Legacy mock response — DillyAIOverlay handles real chat
     await new Promise(r => setTimeout(r, 800));
 
     const withAssistant: Message[] = [...history, { role: 'assistant', content: '' }];
@@ -485,7 +485,7 @@ export default function DillyOverlay() {
               {/* Unlock CTA */}
               <TouchableOpacity
                 style={s.unlockBtn}
-                onPress={() => {}} // TODO: paywall
+                onPress={() => {}}
                 activeOpacity={0.85}
               >
                 <Text style={s.unlockBtnText}>Unlock Dilly — $9.99/mo</Text>

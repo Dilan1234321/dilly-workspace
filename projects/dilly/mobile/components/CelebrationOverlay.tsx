@@ -209,7 +209,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
     const ctaTimer = setTimeout(() => setCtaVisible(true), 3000);
 
     // ── Face scale pulse (excitement) ─────────────────────────────────────────
-    // TODO: DillyFace needs excitement prop — using container scale pulse instead
+    // Container scale pulse for celebration effect
     faceLoop.current = Animated.loop(
       Animated.sequence([
         Animated.timing(faceScale, { toValue: 1.08, duration: 400, useNativeDriver: true }),

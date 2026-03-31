@@ -30,8 +30,7 @@ export default function PaywallModal() {
   if (!paywallVisible) return null;
 
   function handleSubscribe() {
-    // TODO: Connect to RevenueCat
-    // For now, just dismiss
+    // Payments integration pending — dismiss for now
     dismissPaywall();
   }
 

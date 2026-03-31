@@ -250,7 +250,7 @@ export default function SettingsScreen() {
     try {
       await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify(patch) });
     } catch {
-      Alert.alert('Error', 'Could not save.');
+      Alert.alert('Error', 'Could not save your preference. Check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -685,9 +685,7 @@ export default function SettingsScreen() {
                 Alert.alert('Coming soon', 'Calendar export will be available soon.');
               }} />
               <Divider />
-              <LinkRow label="LinkedIn sync" icon="logo-linkedin" onPress={() => Alert.alert('Coming Soon', 'This feature is in development.')} badge="SOON" />
-              <Divider />
-              <LinkRow label="Email parsing" icon="mail-outline" onPress={() => Alert.alert('Coming Soon', 'This feature is in development.')} badge="SOON" />
+              {/* LinkedIn sync and Email parsing hidden until ready */}
             </View>
           </FadeInView>
         </View>

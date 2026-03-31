@@ -294,7 +294,7 @@ export default function NewAuditScreen() {
       setFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType || 'application/pdf', size: asset.size || 0 });
       setUseEditor(false);
     } catch {
-      Alert.alert('Error', 'Could not pick file.');
+      Alert.alert('Error', 'Could not access your files. Please try again.');
     }
   }
 
@@ -367,14 +367,14 @@ export default function NewAuditScreen() {
           await apiFetch('/resume/sync-base', { method: 'POST' }).catch(() => null);
         } catch {}
       } else {
-        Alert.alert('Audit failed', result?.detail || result?.error || 'Something went wrong.');
+        Alert.alert('Audit Failed', result?.detail || result?.error || 'Resume audit failed. Please try uploading again.');
       }
 
       setPhase('done');
     } catch (e: any) {
       if (scanTimer.current) clearTimeout(scanTimer.current);
       setPhase('idle');
-      Alert.alert('Error', e.message || 'Audit failed.');
+      Alert.alert('Error', e.message || 'Resume audit failed. Please try uploading again.');
     }
   }
 
