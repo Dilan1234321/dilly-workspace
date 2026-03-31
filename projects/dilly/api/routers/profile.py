@@ -383,6 +383,32 @@ async def update_profile(request: Request, body: dict = Body(...)):
             index_candidate_after_audit(email, profile=p, audit=latest_audit, resume_text=None)
         except Exception:
             pass
+        if data.get("onboarding_complete") == True:
+            try:
+                import psycopg2
+                _pw = os.environ.get("DILLY_DB_PASSWORD", "")
+                if not _pw:
+                    try: _pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
+                    except: pass
+                _conn = psycopg2.connect(
+                    host=os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+                    database="dilly", user="dilly_admin", password=_pw, sslmode="require"
+                )
+                _cur = _conn.cursor()
+                _name = (p or {}).get("name") or (p or {}).get("full_name") or ""
+                # Only guarantee the row exists — never overwrite scores here.
+                # Scores are written by audit.py after the resume scan; overwriting
+                # them with zeroes (file-based profile has no scores) was the bug.
+                _cur.execute(
+                    """INSERT INTO students (email, name)
+                       VALUES (%s, %s)
+                       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name""",
+                    (email, _name)
+                )
+                _conn.commit()
+                _conn.close()
+            except Exception:
+                pass
         return p
     except ValueError as e:
         raise errors.validation_error(str(e))
