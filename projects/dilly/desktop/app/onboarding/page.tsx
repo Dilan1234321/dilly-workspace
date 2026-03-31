@@ -799,7 +799,7 @@ export default function OnboardingPage() {
               <span style={{ fontSize: 80, fontWeight: 900, color: '#111', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{animatedScore}</span>
               <span style={{ fontSize: 22, color: '#9ca3af' }}>/100</span>
             </div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 32 }}>Scored in the <strong style={{ color: cohortColor }}>{cohortInfo.label}</strong></p>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 32 }}>Scored in the <strong style={{ color: cohortColor }}>{cohortInfo.label}</strong> cohort</p>
 
             <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
               {(['smart', 'grit', 'build'] as const).map(dim => (
@@ -810,15 +810,6 @@ export default function OnboardingPage() {
               ))}
             </div>
 
-            <div style={{ padding: '16px 20px', borderRadius: 14, background: 'white', border: '1.5px solid #e5e5e5', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ filter: 'blur(3px)', opacity: 0.35 }}>
-                <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6 }}>Dilly found 4 specific improvements that could raise your score by 12+ points...</p>
-              </div>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16 }}>🔒</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: BLUE }}>Unlock in the Career Center</span>
-              </div>
-            </div>
           </div>
         );
       }
