@@ -116,6 +116,29 @@ async def auth_verify_code(request: Request, body: AuthVerifyCodeRequest):
         ensure_profile_exists(email)
     except Exception:
         pass
+    # Guarantee a students row exists from the moment email is verified
+    try:
+        import psycopg2, os as _os
+        _pw = _os.environ.get("DILLY_DB_PASSWORD", "")
+        if not _pw:
+            try: _pw = open(_os.path.expanduser("~/.dilly_db_pass")).read().strip()
+            except: pass
+        _school_info = get_school_from_email(email) or {}
+        _conn = psycopg2.connect(
+            host=_os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+            database="dilly", user="dilly_admin", password=_pw, sslmode="require"
+        )
+        _cur = _conn.cursor()
+        _cur.execute(
+            """INSERT INTO students (email, school, school_id)
+               VALUES (%s, %s, %s)
+               ON CONFLICT (email) DO NOTHING""",
+            (email, _school_info.get("name") or "", _school_info.get("id") or "")
+        )
+        _conn.commit()
+        _conn.close()
+    except Exception:
+        pass
     user = get_session(session_token)
     return {
         "token": session_token,

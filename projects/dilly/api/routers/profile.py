@@ -402,9 +402,14 @@ async def update_profile(request: Request, body: dict = Body(...)):
             index_candidate_after_audit(email, profile=p, audit=latest_audit, resume_text=None)
         except Exception:
             pass
-        if data.get("onboarding_complete") == True:
+        # Sync all profile fields to the students table whenever relevant fields are patched.
+        # Rules: never touch score columns here — scores are owned by audit.py.
+        _SYNC_TRIGGER = frozenset({"name", "majors", "minors", "goals", "industry_target",
+                                    "onboarding_complete", "has_run_first_audit",
+                                    "pre_professional_track", "application_target"})
+        if any(f in data for f in _SYNC_TRIGGER):
             try:
-                import psycopg2
+                import psycopg2, json as _json
                 _pw = os.environ.get("DILLY_DB_PASSWORD", "")
                 if not _pw:
                     try: _pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
@@ -414,15 +419,63 @@ async def update_profile(request: Request, body: dict = Body(...)):
                     database="dilly", user="dilly_admin", password=_pw, sslmode="require"
                 )
                 _cur = _conn.cursor()
-                _name = (p or {}).get("name") or (p or {}).get("full_name") or ""
-                # Only guarantee the row exists — never overwrite scores here.
-                # Scores are written by audit.py after the resume scan; overwriting
-                # them with zeroes (file-based profile has no scores) was the bug.
+                _prof = p or {}
+                _name = _prof.get("name") or _prof.get("full_name") or ""
+                _name_parts = _name.strip().split(None, 1)
+                _first = _name_parts[0] if _name_parts else ""
+                _last = _name_parts[1] if len(_name_parts) > 1 else ""
+                _majors = _prof.get("majors") or []
+                _major = _majors[0] if _majors else None
+                _minors = _prof.get("minors") or []
+                _goals = _prof.get("goals") or []
+                _industry = _prof.get("industry_target") or None
+                _track = _prof.get("pre_professional_track") or None
+                _career_goal = _prof.get("application_target") or None
+                _ob_complete = bool(_prof.get("onboarding_complete")) if "onboarding_complete" in _prof else None
+                _has_audit = bool(_prof.get("has_run_first_audit")) if "has_run_first_audit" in _prof else None
+                try:
+                    from projects.dilly.api.schools import get_school_from_email as _gse
+                    _si = _gse(email) or {}
+                    _school = _si.get("name") or ""
+                    _school_id = _si.get("id") or ""
+                except Exception:
+                    _school = ""; _school_id = ""
                 _cur.execute(
-                    """INSERT INTO students (email, name)
-                       VALUES (%s, %s)
-                       ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name""",
-                    (email, _name)
+                    """INSERT INTO students (
+                           email, name, first_name, last_name,
+                           school, school_id, major, majors, minors,
+                           interests, track, industry_target, career_goal,
+                           onboarding_complete, has_run_first_audit
+                       ) VALUES (
+                           %s, %s, %s, %s,
+                           %s, %s, %s, %s, %s,
+                           %s, %s, %s, %s,
+                           %s, %s
+                       )
+                       ON CONFLICT (email) DO UPDATE SET
+                           name = CASE WHEN EXCLUDED.name <> '' THEN EXCLUDED.name ELSE students.name END,
+                           first_name = CASE WHEN EXCLUDED.first_name <> '' THEN EXCLUDED.first_name ELSE students.first_name END,
+                           last_name = CASE WHEN EXCLUDED.last_name <> '' THEN EXCLUDED.last_name ELSE students.last_name END,
+                           school = CASE WHEN EXCLUDED.school <> '' THEN EXCLUDED.school ELSE students.school END,
+                           school_id = CASE WHEN EXCLUDED.school_id <> '' THEN EXCLUDED.school_id ELSE students.school_id END,
+                           major = COALESCE(EXCLUDED.major, students.major),
+                           majors = COALESCE(EXCLUDED.majors, students.majors),
+                           minors = COALESCE(EXCLUDED.minors, students.minors),
+                           interests = COALESCE(EXCLUDED.interests, students.interests),
+                           track = COALESCE(EXCLUDED.track, students.track),
+                           industry_target = COALESCE(EXCLUDED.industry_target, students.industry_target),
+                           career_goal = COALESCE(EXCLUDED.career_goal, students.career_goal),
+                           onboarding_complete = COALESCE(EXCLUDED.onboarding_complete, students.onboarding_complete),
+                           has_run_first_audit = COALESCE(EXCLUDED.has_run_first_audit, students.has_run_first_audit)""",
+                    (
+                        email, _name, _first, _last,
+                        _school, _school_id, _major,
+                        _json.dumps(_majors) if _majors else None,
+                        _json.dumps(_minors) if _minors else None,
+                        _json.dumps(_goals) if _goals else None,
+                        _track, _industry, _career_goal,
+                        _ob_complete, _has_audit,
+                    )
                 )
                 _conn.commit()
                 _conn.close()
