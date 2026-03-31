@@ -302,9 +302,9 @@ function BulletScoreBar({ score, previousScore }: { score: BulletScore | null; p
 
 // ── Inline editable field (resume-style) ──────────────────────────────────────
 
-function InlineField({ value, onChangeText, placeholder, style, bold, large, muted }: {
+function InlineField({ value, onChangeText, placeholder, style, bold, large, muted, onFocus: onFocusProp }: {
   value: string; onChangeText: (t: string) => void; placeholder?: string;
-  style?: any; bold?: boolean; large?: boolean; muted?: boolean;
+  style?: any; bold?: boolean; large?: boolean; muted?: boolean; onFocus?: () => void;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -321,7 +321,7 @@ function InlineField({ value, onChangeText, placeholder, style, bold, large, mut
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={colors.t3 + '60'}
-      onFocus={() => setFocused(true)}
+      onFocus={() => { setFocused(true); onFocusProp?.(); }}
       onBlur={() => setFocused(false)}
       multiline
     />
@@ -428,7 +428,23 @@ function ContactPreview({ contact, onChange }: { contact: ContactSection; onChan
         <Text style={rs.contactSep}>|</Text>
         <InlineField value={contact.location} onChangeText={v => set('location', v)} placeholder="Tampa, FL" muted style={{ flex: 1 }} />
         <Text style={rs.contactSep}>|</Text>
-        <InlineField value={contact.linkedin} onChangeText={v => set('linkedin', v)} placeholder="linkedin.com/in/you" muted style={{ flex: 1 }} />
+        <InlineField
+          value={contact.linkedin}
+          onChangeText={v => {
+            // Auto-prefix linkedin.com/in/ if user starts typing a username
+            if (v && !v.startsWith('linkedin.com/in/') && !v.startsWith('http') && v !== 'l' && v.length > 0) {
+              set('linkedin', 'linkedin.com/in/' + v);
+            } else {
+              set('linkedin', v);
+            }
+          }}
+          onFocus={() => {
+            if (!contact.linkedin) set('linkedin', 'linkedin.com/in/');
+          }}
+          placeholder="linkedin.com/in/you"
+          muted
+          style={{ flex: 1 }}
+        />
       </View>
     </View>
   );
