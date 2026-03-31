@@ -401,7 +401,8 @@ export default function OnboardingPage() {
       const res = await fetch(`${API_BASE}/auth/send-verification-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setSendError(data?.detail || 'Something went wrong. Please try again.');
+        const det = data?.detail;
+        setSendError(typeof det === 'string' ? det : det?.message || 'Something went wrong. Please try again.');
         return;
       }
       if (data?.dev_code) { setDevCode(data.dev_code); setCode(data.dev_code); }
