@@ -4096,17 +4096,24 @@ body.pricing-page .price-list li {
 @media (min-width: 768px) {
   [data-fp-layout="coach"] .fp-hero__inner {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr 220px;
     column-gap: 3rem;
     align-items: center;
   }
 
+  [data-fp-layout="coach"] .fp-hero__inner > .fp-kicker { grid-column: 1; }
+  [data-fp-layout="coach"] .fp-hero__inner > .fp-title { grid-column: 1; }
+  [data-fp-layout="coach"] .fp-hero__inner > .fp-lead { grid-column: 1; }
+  [data-fp-layout="coach"] .fp-hero__inner > .fp-hero-actions { grid-column: 1; }
+  [data-fp-layout="coach"] .fp-hero__inner > .fp-hero-metrics { grid-column: 1; }
+
   [data-fp-layout="coach"] .coach-face-col {
     grid-column: 2;
-    grid-row: 1 / -1;
+    grid-row: 1 / 6;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
   }
 }
 
