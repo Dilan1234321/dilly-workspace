@@ -95,6 +95,38 @@
     </div>
   </header>
 
+  <!-- Animated Dilly face -->
+  <section class="section" style="background:#fff;padding:3rem 1.5rem 4rem;text-align:center">
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div style="width:clamp(160px,18vw,240px);height:clamp(160px,18vw,240px);border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(0,40,104,0.06),0 20px 60px rgba(0,40,104,0.08),0 0 80px rgba(201,168,76,0.15);display:flex;align-items:center;justify-content:center">
+        <canvas id="dilly-face" width="180" height="180"></canvas>
+      </div>
+      <p style="margin-top:1rem;font-family:Cinzel,serif;font-size:0.9rem;font-weight:700;color:var(--navy-deep);letter-spacing:0.08em">dilly</p>
+      <p style="margin-top:0.2rem;font-size:0.75rem;color:var(--text-muted)">Your career advisor. Always on.</p>
+    </div>
+  </section>
+
+  <script>
+  (function(){
+    var c=document.getElementById('dilly-face');if(!c)return;
+    var ctx=c.getContext('2d'),W=c.width,H=c.height,NAVY='#2B3A8E',MX=14;
+    var pos={x:0,y:0},vel={x:0,y:0},tgt={x:0,y:0},sm=0.35,st=0.35,raf;
+    function pT(){var a=Math.random()*Math.PI*2,d=(0.72+Math.random()*0.28)*MX;tgt.x=Math.cos(a)*d;tgt.y=Math.sin(a)*d}
+    function pS(){st=0.15+Math.random()*0.45}
+    function draw(){
+      vel.x+=((tgt.x-pos.x)*0.06-vel.x)*0.2;vel.y+=((tgt.y-pos.y)*0.06-vel.y)*0.2;
+      pos.x+=vel.x;pos.y+=vel.y;sm+=(st-sm)*0.04;
+      var s=(W*0.44/2)/19;ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2+pos.x,H/2+pos.y);
+      ctx.fillStyle=NAVY;ctx.beginPath();ctx.arc(-8*s,-4*s,2.8*s,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(8*s,-4*s,2.8*s,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.moveTo(-8*s,5*s);ctx.quadraticCurveTo(0,5*s+sm*9*s,8*s,5*s);
+      ctx.strokeStyle=NAVY;ctx.lineWidth=2.2*s;ctx.lineCap='round';ctx.stroke();
+      ctx.restore();raf=requestAnimationFrame(draw)
+    }
+    pT();pS();setInterval(pT,2600);setInterval(pS,2200);raf=requestAnimationFrame(draw);
+  })();
+  </script>
+
   <section class="fp-section">
     <div class="fp-section-head">
       <p class="section-eyebrow">Modes</p>
