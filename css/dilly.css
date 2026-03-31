@@ -3982,3 +3982,85 @@ body.pricing-page .price-list li {
     font-size: 0.7rem !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT MODE: CTA band, footer, dropdown panels, mobile nav
+   ═══════════════════════════════════════════════════════════════ */
+
+:root.light .cta-band {
+  background: linear-gradient(160deg, #f0f2f8, #e8ebf4);
+  border-color: var(--border);
+}
+
+:root.light .cta-band h2 {
+  color: var(--navy-deep);
+}
+
+:root.light .cta-band p {
+  color: var(--text-muted);
+}
+
+:root.light .site-footer {
+  background: #f4f6fa;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+}
+
+:root.light .site-footer a {
+  color: var(--text-muted);
+}
+
+:root.light .site-footer a:hover {
+  color: var(--navy-deep);
+}
+
+:root.light .nav-dropdown-panel {
+  background: #fff;
+  border-color: var(--border);
+  box-shadow: 0 24px 48px rgba(0, 27, 68, 0.10);
+}
+
+:root.light .nav-dropdown-label {
+  color: var(--text-muted);
+}
+
+:root.light .nav-dropdown-link {
+  color: rgba(0, 27, 68, 0.82);
+}
+
+:root.light .nav-dropdown-link:hover {
+  color: var(--navy-deep);
+  background: rgba(0, 40, 104, 0.05);
+}
+
+:root.light .btn-ghost {
+  color: var(--navy-deep);
+  border-color: rgba(0, 40, 104, 0.25);
+}
+
+:root.light .btn-ghost:hover {
+  background: rgba(0, 40, 104, 0.06);
+}
+
+:root.light .fp-quote {
+  background: #f4f6fa;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+:root.light .fp-quote cite {
+  color: var(--text-muted);
+}
+
+:root.light .fp-next-card:hover {
+  box-shadow: 0 20px 40px rgba(0, 27, 68, 0.08);
+}
+
+:root.light .persona-card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+:root.light .compare-section {
+  background: var(--surface-2);
+}
