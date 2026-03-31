@@ -56,14 +56,18 @@ function ATSScoreCard({ system, score, issues, onFix }: {
           <Text style={ss.systemStrictness}>{system.strictness} parsing</Text>
         </View>
         <View style={[ss.scoreBadge, { backgroundColor: color + '15', borderColor: color + '30' }]}>
-          <Text style={[ss.scoreBadgeText, { color }]}>{score}%</Text>
+          <Text style={[ss.scoreBadgeText, { color }]}>{score > 0 ? `${score}%` : 'N/A'}</Text>
         </View>
       </View>
 
       {/* Score bar */}
-      <View style={ss.scoreBar}>
-        <View style={[ss.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
-      </View>
+      {score > 0 ? (
+        <View style={ss.scoreBar}>
+          <View style={[ss.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
+        </View>
+      ) : (
+        <Text style={{ fontSize: 11, color: colors.t3, marginTop: 4 }}>Score unavailable</Text>
+      )}
 
       {expanded && (
         <View style={ss.scoreCardExpanded}>
@@ -206,7 +210,7 @@ export default function ATSScreen() {
           if (scanRes.ok) {
             setCompanyScanData(scanData);
           }
-        } catch {}
+        } catch { Alert.alert('Scan Error', 'Could not scan this company. Try again.'); }
         finally { setCompanyScanLoading(false); }
       }
     } catch {
@@ -257,7 +261,7 @@ export default function ATSScreen() {
       const v = vendors[sys.key] || {};
       return {
         system: sys,
-        score: v.score ?? v.overall_score ?? Math.floor(Math.random() * 30 + 65), // fallback for demo
+        score: v.score ?? v.overall_score ?? 0,
         issues: v.issues || v.warnings || [],
       };
     });

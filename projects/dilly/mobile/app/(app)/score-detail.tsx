@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
-  Dimensions, RefreshControl,
+  Dimensions, RefreshControl, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -195,7 +195,7 @@ export default function ScoreDetailScreen() {
           });
         }
       } catch {
-        // leave empty
+        Alert.alert('Error', 'Could not load scores. Pull down to refresh.');
       } finally {
         setLoading(false);
       }
@@ -266,8 +266,8 @@ export default function ScoreDetailScreen() {
         activeScores[d] < activeScores[w] ? d : w, 'smart' as const)
     : 'build';
 
-  const visRecs = recs.slice(0, 2);
-  const hasLocked = recs.length > 2;
+  const visRecs = recs;
+  const hasLocked = false;
 
   // ── Loading ──────────────────────────────────────────────────────────────
 

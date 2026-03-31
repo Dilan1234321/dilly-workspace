@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,7 +108,7 @@ function buildFallback(profile: any, audit: any): RankData {
 export default function RankScreen() {
   const insets = useSafeAreaInsets();
   const [data, setData] = useState<RankData | null>(null);
-  const { celebrate, CelebrationPortal } = useCelebration();
+  const { CelebrationPortal } = useCelebration();
 
   useEffect(() => {
     (async () => {
@@ -120,22 +120,35 @@ export default function RankScreen() {
         const audit = auditRes?.audit ?? auditRes;
         const rankData = buildFallback(profileRes, audit);
         setData(rankData);
-
-        // TODO: needs previousRank from API
-        const previousRank: number | null = null;
-        if (rankData.your_rank <= 10 && previousRank !== null && previousRank > 10) {
-          celebrate('top-10');
-        }
       } catch {
-        setData(buildFallback({}, null));
+        setData({
+          track: '',
+          your_rank: 0,
+          rank_change: 0,
+          entries: [],
+          weakest_dim: '',
+          pts_to_next: 0,
+          activity: [],
+        });
       }
     })();
-  }, [celebrate]);
+  }, []);
 
   if (!data) {
     return (
       <View style={[s.container, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={{ color: colors.t3, fontSize: 12 }}>Loading…</Text>
+      </View>
+    );
+  }
+
+  if (data.entries.length === 0) {
+    return (
+      <View style={[s.container, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }]}>
+        <Ionicons name="podium-outline" size={48} color={colors.t3} style={{ marginBottom: 16 }} />
+        <Text style={{ fontFamily: 'Cinzel_700Bold', fontSize: 16, color: colors.t1, marginBottom: 8 }}>No leaderboard data</Text>
+        <Text style={{ fontSize: 14, color: colors.t2, textAlign: 'center', lineHeight: 20 }}>Leaderboard data unavailable. Pull down to refresh.</Text>
+        <CelebrationPortal />
       </View>
     );
   }
@@ -223,7 +236,7 @@ export default function RankScreen() {
             <Text style={s.lockText}>See the full leaderboard</Text>
             <TouchableOpacity
               style={s.lockBtn}
-              onPress={() => alert('Payments coming soon')}
+              onPress={() => Alert.alert('Coming Soon', 'Payments are in development.')}
               activeOpacity={0.8}
             >
               <Text style={s.lockBtnText}>Unlock Dilly →</Text>
