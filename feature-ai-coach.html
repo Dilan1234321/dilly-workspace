@@ -9,80 +9,28 @@
 </head>
 <body class="feature-pro-page" data-nav-feature="coach" data-fp-layout="coach">
   <style>
-    .coach-hero {
-      background: #fff;
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-    }
-    .coach-hero-body {
-      flex: 1;
+    .fp-hero--coach { background: #fff !important; }
+    .fp-hero--coach .fp-hero__bg,
+    .fp-hero--coach .fp-hero__veil { display: none !important; }
+    .fp-hero--coach .fp-hero__inner {
       display: grid;
       grid-template-columns: 1fr 1fr;
       align-items: center;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 6rem 2rem 3rem;
       gap: 3rem;
+      text-align: left;
     }
-    .coach-hero-text { max-width: 520px; }
-    .coach-hero-text .fp-kicker {
-      color: var(--gold);
-      font-size: 0.7rem;
-      letter-spacing: 0.3em;
-      text-transform: uppercase;
-      margin-bottom: 0.75rem;
-    }
-    .coach-hero-text h1 {
-      font-family: “Cinzel”, serif;
-      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-      font-weight: 700;
-      color: var(--navy-deep);
-      letter-spacing: 0.03em;
-      line-height: 1.2;
-      margin-bottom: 1rem;
-    }
-    .coach-hero-text .fp-lead {
-      color: var(--text-muted);
-      font-size: 1rem;
-      line-height: 1.7;
-      margin-bottom: 1.5rem;
-    }
-    .coach-hero-text .fp-hero-actions {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      margin-bottom: 2rem;
-    }
-    .coach-hero-text .fp-hero-metrics {
-      display: flex;
-      gap: 2rem;
-      flex-wrap: wrap;
-    }
-    .coach-hero-text .fp-hero-metrics div { text-align: left; }
-    .coach-hero-text .fp-metric-val {
-      display: block;
-      font-family: “Cinzel”, serif;
-      font-weight: 700;
-      font-size: 1rem;
-      color: var(--gold);
-      letter-spacing: 0.06em;
-    }
-    .coach-hero-text .fp-metric-label {
-      display: block;
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-top: 0.15rem;
-    }
+    .fp-hero--coach .fp-title { color: var(--navy-deep); }
+    .fp-hero--coach .fp-lead { color: var(--text-muted); }
+    .fp-hero--coach .fp-kicker { color: var(--gold); }
+    .fp-hero--coach .fp-hero-metrics { justify-content: flex-start; }
+    .fp-hero--coach .fp-metric-val { color: var(--gold); }
+    .fp-hero--coach .fp-metric-label { color: var(--text-muted); }
 
-    .coach-hero-face {
+    .dilly-face-wrap {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      position: relative;
     }
     .dilly-face-circle {
       width: clamp(200px, 22vw, 300px);
@@ -96,10 +44,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
-    }
-    .dilly-face-circle canvas {
-      display: block;
     }
     .dilly-face-label {
       text-align: center;
@@ -115,24 +59,23 @@
       margin-top: 0.25rem;
       font-size: 0.75rem;
       color: var(--text-muted);
-      letter-spacing: 0.04em;
     }
 
     @media (max-width: 767px) {
-      .coach-hero-body {
+      .fp-hero--coach .fp-hero__inner {
         grid-template-columns: 1fr;
-        padding: 5.5rem 1.25rem 2rem;
         text-align: center;
       }
-      .coach-hero-text { max-width: 100%; }
-      .coach-hero-text .fp-hero-actions { justify-content: center; }
-      .coach-hero-text .fp-hero-metrics { justify-content: center; }
-      .coach-hero-face { order: -1; }
+      .dilly-face-wrap { order: -1; }
       .dilly-face-circle { width: 180px; height: 180px; }
+      .fp-hero--coach .fp-hero-actions { justify-content: center; }
+      .fp-hero--coach .fp-hero-metrics { justify-content: center; }
     }
   </style>
 
-  <header class=”coach-hero” aria-label=”AI coach”>
+  <header class=”fp-hero fp-hero--coach” aria-label=”AI coach”>
+    <div class=”fp-hero__bg” aria-hidden=”true”></div>
+    <div class=”fp-hero__veil” aria-hidden=”true”></div>
     <div class=”site-nav site-nav--inner”>
       <a class=”logo-lockup” href=”index.html”>
         <img class=”logo-wordmark” src=”dilly-wordmark.png” alt=”Dilly” width=”260” height=”76” decoding=”async”>
@@ -202,10 +145,10 @@
       </div>
     </div>
 
-    <div class=”coach-hero-body”>
-      <div class=”coach-hero-text”>
+    <div class=”fp-hero__inner”>
+      <div>
         <p class=”fp-kicker”>Coach &amp; compete</p>
-        <h1>Talk to a coach that already read your resume</h1>
+        <h1 class=”fp-title font-display”>Talk to a coach that already read your resume</h1>
         <p class=”fp-lead”>Floating chat with your resume, Smart / Grit / Build scores, saved roles, tracker stages, and calendar pressure in view. Ask “what do I fix first?” and get an answer that matches your real profile, not a template.</p>
         <div class=”fp-hero-actions”>
           <a class=”btn btn-primary” href=”https://app.trydilly.com/”>Open coach</a>
@@ -218,14 +161,12 @@
         </div>
       </div>
 
-      <div class=”coach-hero-face”>
-        <div>
-          <div class=”dilly-face-circle”>
-            <canvas id=”dilly-face” width=”200” height=”200”></canvas>
-          </div>
-          <p class=”dilly-face-label”>dilly</p>
-          <p class=”dilly-face-sub”>Your career advisor</p>
+      <div class=”dilly-face-wrap”>
+        <div class=”dilly-face-circle”>
+          <canvas id=”dilly-face” width=”200” height=”200”></canvas>
         </div>
+        <p class=”dilly-face-label”>dilly</p>
+        <p class=”dilly-face-sub”>Your career advisor</p>
       </div>
     </div>
   </header>
