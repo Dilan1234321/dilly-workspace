@@ -1,5 +1,5 @@
 """
-Shared dependencies for Meridian API routers.
+Shared dependencies for Dilly API routers.
 Use these for auth, rate limiting, and recruiter checks.
 All raises use api.errors so the response has a stable `code` for the frontend.
 """
@@ -67,8 +67,7 @@ def require_subscribed(request: Request) -> dict:
         raise errors.unauthorized("Sign in to run audits.")
     if getattr(request.state, "first_run_bypass", False):
         return user
-    if not user.get("subscribed"):
-        raise errors.forbidden("Subscribe to run audits. $9.99/month.")
+    # Subscription check disabled during development — all users treated as paid
     return user
 
 

@@ -156,7 +156,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   // ── Send a message (used by both manual input and auto-prompt) ──────────────
 
   const sendMessageWithText = useCallback(async (text: string, currentMessages: Message[]) => {
-    if (!canSendAIMessage) { showPaywall('ai_limit'); return; }
+    // Paid user — no limits
     await incrementAIMessage();
     const userMsg: Message = { id: ++_msgId, role: 'user', content: text };
     const apiHistory = [...currentMessages, userMsg].map(m => ({ role: m.role, content: m.content }));

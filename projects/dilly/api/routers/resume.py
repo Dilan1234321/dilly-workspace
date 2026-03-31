@@ -429,8 +429,7 @@ async def audit_from_edited_resume(request: Request, body: ResumeAuditRequest = 
     Requires subscription (same as /audit/v2).
     """
     user = deps.require_auth(request)
-    if not user.get("subscribed"):
-        raise errors.forbidden("Subscribe to run audits. $9.99/month.")
+    # Subscription check disabled during development — all users treated as paid
     email = user.get("email") or ""
     if not email:
         raise errors.unauthorized()

@@ -574,17 +574,7 @@ export default function HomeScreen() {
         </FadeInView>
 
         {/* \u2500\u2500 Unlock Dilly card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
-        <FadeInView delay={400}>
-          <View style={s.unlockCard}>
-            <Text style={s.unlockTitle}>Unlock Dilly · $9.99/mo</Text>
-            <Text style={s.unlockSub}>
-              Unlimited audits, AI coaching, leaderboard rank, and job matching.
-            </Text>
-            <AnimatedPressable style={s.unlockBtn} onPress={() => Alert.alert('Coming soon', 'Payments are not yet available.')} scaleDown={0.97}>
-              <Text style={s.unlockBtnText}>Unlock Dilly →</Text>
-            </AnimatedPressable>
-          </View>
-        </FadeInView>
+        {/* Unlock card hidden — paid experience */}
 
       </ScrollView>
 

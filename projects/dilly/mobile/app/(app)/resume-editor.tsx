@@ -815,7 +815,7 @@ export default function ResumeEditorScreen() {
                     <View style={rs.sectionDividerLine} />
                     <View style={rs.sectionDividerLabel}>
                       <Ionicons name={sectionIcon(sec.key) as any} size={11} color={GOLD} />
-                      <Text style={rs.sectionDividerText}>{sec.label.toUpperCase()}</Text>
+                      <Text style={rs.sectionDividerText}>{(sec.label || sec.key.replace(/_/g, ' ')).toUpperCase()}</Text>
                       <CompletionDot filled={comp.filled} total={comp.total} />
                     </View>
                     <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={12} color={colors.t3} />
