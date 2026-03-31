@@ -591,6 +591,7 @@ export default function ResumeEditorScreen() {
   const insets = useSafeAreaInsets();
 
   const [sections, setSections]     = useState<ResumeSection[]>([]);
+  const [baseSections, setBaseSections] = useState<ResumeSection[]>([]);
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
   const [expanded, setExpanded]     = useState<Set<string>>(new Set());
@@ -629,6 +630,7 @@ export default function ResumeEditorScreen() {
         }
         if (resumeRes?.resume?.sections?.length) {
           setSections(resumeRes.resume.sections);
+          setBaseSections(resumeRes.resume.sections);
         } else {
           setSections([
             { key: 'contact', label: 'Contact', contact: { name: profileRes?.name || '', email: profileRes?.email || '', phone: '', location: '', linkedin: profileRes?.linkedin_url || '' } },
@@ -864,7 +866,7 @@ export default function ResumeEditorScreen() {
               {/* Base resume card — always first, larger */}
               <AnimatedPressable
                 style={[rs.bentoCardLarge, !activeVariant && rs.bentoCardSelected]}
-                onPress={() => { setActiveVariant(null); setShowGrid(false); }}
+                onPress={() => { setActiveVariant(null); setSections(baseSections); setExpanded(new Set()); setShowGrid(false); }}
                 scaleDown={0.96}
               >
                 <View style={rs.bentoCardIcon}>
@@ -886,8 +888,9 @@ export default function ResumeEditorScreen() {
                     onPress={() => {
                       setActiveVariant(v.id);
                       setShowGrid(false);
+                      setExpanded(new Set());
                       apiFetch(`/resume/variants/${v.id}`).then(r => r.json()).then(data => {
-                        if (data?.resume?.sections) setSections(data.resume.sections);
+                        if (data?.resume?.sections?.length) setSections(data.resume.sections);
                       }).catch(() => {});
                     }}
                     scaleDown={0.96}
