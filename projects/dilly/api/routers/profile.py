@@ -566,16 +566,61 @@ async def delete_profile_photo_endpoint(request: Request):
 
 @router.post("/account/delete")
 async def delete_account(request: Request):
-    """Permanently delete the current user's account: profile data and auth. Requires sign-in."""
+    """
+    Permanently delete the current user's account. Wipes EVERYTHING:
+    - Profile folder (profile.json, audits.json, applications, resume, photos)
+    - PostgreSQL: profile_facts, students row
+    - Parsed resume text files
+    - Auth: user record + all sessions
+    This is irreversible. The user is gone.
+    """
+    import traceback
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     if not email:
-        raise errors.validation_error( "Email required.")
+        raise errors.validation_error("Email required.")
+
+    # 1. Delete profile folder (profile.json, audits, applications, photos, resume)
     from projects.dilly.api.profile_store import delete_account_data
-    from projects.dilly.api.auth_store import delete_user_and_sessions
     delete_account_data(email)
+
+    # 2. Delete from PostgreSQL (profile_facts, students, push_tokens)
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM profile_facts WHERE LOWER(email) = LOWER(%s)", (email,))
+            cur.execute("DELETE FROM students WHERE LOWER(email) = LOWER(%s)", (email,))
+            try:
+                cur.execute("DELETE FROM push_tokens WHERE LOWER(email) = LOWER(%s)", (email,))
+            except Exception:
+                pass
+    except Exception:
+        traceback.print_exc()
+
+    # 3. Delete parsed resume text files
+    try:
+        _WS = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", ".."))
+        safe_email = email.replace("/", "_").replace("\\", "_")
+        txt_path = os.path.join(_WS, "memory", "dilly_profile_txt", f"{safe_email}.txt")
+        if os.path.isfile(txt_path):
+            os.remove(txt_path)
+        parsed_dir = os.path.join(_WS, "projects", "dilly", "parsed_resumes")
+        if os.path.isdir(parsed_dir):
+            for f in os.listdir(parsed_dir):
+                if email in f.lower():
+                    try:
+                        os.remove(os.path.join(parsed_dir, f))
+                    except Exception:
+                        pass
+    except Exception:
+        traceback.print_exc()
+
+    # 4. Delete auth: user record + all sessions
+    from projects.dilly.api.auth_store import delete_user_and_sessions
     delete_user_and_sessions(email)
-    return {"ok": True}
+
+    return {"ok": True, "deleted": email}
 
 
 @router.post("/profile/parent-invite")
