@@ -308,6 +308,8 @@ export default function OnboardingPage() {
 
   const [auditResult, setAuditResult] = useState<{ final_score: number; scores: { smart: number; grit: number; build: number } } | null>(null);
   const [animatedScore, setAnimatedScore] = useState(0);
+  const [animatedBars, setAnimatedBars] = useState({ smart: 0, grit: 0, build: 0 });
+  const [barNums, setBarNums] = useState({ smart: 0, grit: 0, build: 0 });
   const [saving, setSaving] = useState(false);
   const [skippedResume, setSkippedResume] = useState(false);
 
@@ -340,6 +342,28 @@ export default function OnboardingPage() {
     let frame = 0;
     const interval = setInterval(() => { frame++; setAnimatedScore(Math.round((frame / 50) * target)); if (frame >= 50) clearInterval(interval); }, 25);
     return () => clearInterval(interval);
+  }, [currentStep, auditResult]);
+
+  useEffect(() => {
+    if (currentStep !== 'results' || !auditResult) return;
+    const dims = ['smart', 'grit', 'build'] as const;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    dims.forEach((dim, i) => {
+      timers.push(setTimeout(() => {
+        const target = auditResult.scores[dim];
+        let f = 0;
+        const steps = 40;
+        const iv = setInterval(() => {
+          f++;
+          const pct = Math.min(f / steps, 1);
+          const eased = 1 - Math.pow(1 - pct, 3);
+          setAnimatedBars(prev => ({ ...prev, [dim]: eased * target }));
+          setBarNums(prev => ({ ...prev, [dim]: Math.round(eased * target) }));
+          if (f >= steps) clearInterval(iv);
+        }, 18);
+      }, 300 + i * 180));
+    });
+    return () => timers.forEach(clearTimeout);
   }, [currentStep, auditResult]);
 
   /* ── Navigation ── */
@@ -792,24 +816,53 @@ export default function OnboardingPage() {
 
         const scores = auditResult.scores;
         const cohortColor = COHORT_COLORS[cohort] ?? BLUE;
+        const dimColors: Record<string, string> = { smart: '#3B4CC0', grit: '#059669', build: '#d97706' };
+        const dimDesc: Record<string, string> = {
+          smart: 'Resume quality & presentation',
+          grit: 'Experience depth & consistency',
+          build: 'Projects, skills & output',
+        };
+        const bestDim = (['smart', 'grit', 'build'] as const).reduce((a, b) => scores[a] >= scores[b] ? a : b);
+        const bestScore = scores[bestDim];
+        const pctile = bestScore >= 90 ? 'top 5%' : bestScore >= 80 ? 'top 15%' : bestScore >= 70 ? 'top 25%' : bestScore >= 60 ? 'top 40%' : 'above average';
         return (
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0 8px' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>Your Dilly Score</p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 8 }}>
-              <span style={{ fontSize: 80, fontWeight: 900, color: '#111', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{animatedScore}</span>
-              <span style={{ fontSize: 22, color: '#9ca3af' }}>/100</span>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Your Dilly Score</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 76, fontWeight: 900, color: '#111', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{animatedScore}</span>
+              <span style={{ fontSize: 20, color: '#9ca3af' }}>/100</span>
             </div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 32 }}>Scored in the <strong style={{ color: cohortColor }}>{cohortInfo.label}</strong> cohort</p>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Scored in the <strong style={{ color: cohortColor }}>{cohortInfo.label}</strong> cohort</p>
 
-            <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
-              {(['smart', 'grit', 'build'] as const).map(dim => (
-                <div key={dim} style={{ flex: 1, padding: '16px 12px', borderRadius: 14, background: 'white', border: '1.5px solid #e5e5e5', textAlign: 'center' }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{dim}</p>
-                  <p style={{ fontSize: 28, fontWeight: 800, color: '#111' }}>{scores[dim]}</p>
-                </div>
-              ))}
+            {/* Animated bars */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
+              {(['smart', 'grit', 'build'] as const).map(dim => {
+                const color = dimColors[dim];
+                const pct = Math.min(animatedBars[dim], 100);
+                return (
+                  <div key={dim}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                      <div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#111', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{dim}</span>
+                        <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 8 }}>{dimDesc[dim]}</span>
+                      </div>
+                      <span style={{ fontSize: 18, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', minWidth: 32, textAlign: 'right' }}>{barNums[dim]}</span>
+                    </div>
+                    <div style={{ height: 8, borderRadius: 99, background: '#f0eeea', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 99, background: color, width: `${pct}%`, transition: 'width 18ms linear', boxShadow: pct > 0 ? `0 0 8px ${color}55` : 'none' }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
+            {/* Wow callout */}
+            <div style={{ padding: '14px 18px', borderRadius: 12, background: `${dimColors[bestDim]}0d`, border: `1.5px solid ${dimColors[bestDim]}25`, display: 'flex', gap: 12, alignItems: 'center' }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>✦</span>
+              <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>
+                Your <strong style={{ color: dimColors[bestDim] }}>{bestDim.charAt(0).toUpperCase() + bestDim.slice(1)}</strong> score puts you in the <strong>{pctile}</strong> of the {cohortInfo.label} cohort. That&apos;s a real edge.
+              </p>
+            </div>
           </div>
         );
       }
