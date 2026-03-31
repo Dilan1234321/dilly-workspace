@@ -289,7 +289,8 @@ export default function ScanningScreen() {
         }
 
         // Attach profile params
-        const [majorsRaw, preProf, indTarget, cohortVal, track, appTarget] = await Promise.all([
+        const [nameRaw, majorsRaw, preProf, indTarget, cohortVal, track, appTarget] = await Promise.all([
+          AsyncStorage.getItem(ONBOARDING_KEYS.name),
           AsyncStorage.getItem(ONBOARDING_KEYS.majors),
           AsyncStorage.getItem(ONBOARDING_KEYS.preProf),
           AsyncStorage.getItem(ONBOARDING_KEYS.indTarget),
@@ -298,6 +299,7 @@ export default function ScanningScreen() {
           AsyncStorage.getItem(ONBOARDING_KEYS.target),
         ]);
 
+        if (nameRaw)    formData.append('name',                   nameRaw);
         if (majorsRaw) {
           try {
             const majorList: string[] = JSON.parse(majorsRaw);

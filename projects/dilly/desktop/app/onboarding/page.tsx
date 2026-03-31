@@ -442,7 +442,7 @@ export default function OnboardingPage() {
     setSaving(true);
     const target = TARGET_OPTIONS.find(t => t.key === targetKey);
     try {
-      await fetch(`${API_BASE}/profile`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name: fullName, majors, minors, pre_professional_track: preProf && preProf !== 'None / Not applicable' ? preProf : null, application_target: target?.apiValue ?? 'exploring' }) });
+      await fetch(`${API_BASE}/profile`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name: fullName, major: majors[0] || '', majors, minors, pre_professional_track: preProf && preProf !== 'None / Not applicable' ? preProf : null, application_target: target?.apiValue ?? 'exploring', track: cohort, cohort }) });
     } catch { /* continue */ }
     finally { setSaving(false); }
     goNext();

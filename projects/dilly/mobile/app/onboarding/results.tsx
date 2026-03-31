@@ -164,7 +164,7 @@ export default function ResultsScreen() {
   async function handleEnter() {
     if (completing) return;
     setCompleting(true);
-    try { await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify({ onboarding_complete: true }) }); } catch {}
+    try { await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify({ onboarding_complete: true, has_run_first_audit: true }) }); } catch {}
     await AsyncStorage.setItem('dilly_has_onboarded', 'true');
     await AsyncStorage.removeItem('dilly_audit_result');
     router.replace('/(app)');
