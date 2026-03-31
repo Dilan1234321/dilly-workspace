@@ -8,81 +8,11 @@
   <link rel="stylesheet" href="css/dilly.css">
 </head>
 <body class="feature-pro-page" data-nav-feature="coach" data-fp-layout="coach">
-  <header>
-    <div class=”site-nav site-nav--inner”>
-      <a class=”logo-lockup” href=”index.html”>
-        <img class=”logo-wordmark” src=”dilly-wordmark.png” alt=”Dilly” width=”260” height=”76” decoding=”async”>
-      </a>
-      <button type=”button” class=”menu-toggle” aria-label=”Open menu” aria-expanded=”false”><span></span><span></span><span></span></button>
-      <nav class=”nav-glass” aria-label=”Primary”>
-        <ul>
-          <li class=”nav-dropdown”>
-            <button type=”button” class=”nav-item nav-item--dropdown” aria-expanded=”false” aria-haspopup=”true”>Resume &amp; AI</button>
-            <div class=”nav-dropdown-panel” role=”region” aria-label=”Resume and AI”>
-              <div class=”nav-dropdown-inner”>
-                <div class=”nav-dropdown-col”>
-                  <span class=”nav-dropdown-label”>Your resume</span>
-                  <a href=”features.html” class=”nav-dropdown-link” data-nav-feature=”overview”>All features</a>
-                  <a href=”feature-dilly-score.html” class=”nav-dropdown-link” data-nav-feature=”score”>Dilly Score</a>
-                  <a href=”feature-resume-editor.html” class=”nav-dropdown-link” data-nav-feature=”editor”>Resume editor</a>
-                  <a href=”feature-ats.html” class=”nav-dropdown-link” data-nav-feature=”ats”>ATS scanner</a>
-                </div>
-              </div>
-            </div>
-          </li>
-          <li class=”nav-dropdown”>
-            <button type=”button” class=”nav-item nav-item--dropdown” aria-expanded=”false” aria-haspopup=”true”>Jobs &amp; pipeline</button>
-            <div class=”nav-dropdown-panel” role=”region” aria-label=”Jobs and pipeline”>
-              <div class=”nav-dropdown-inner”>
-                <div class=”nav-dropdown-col”>
-                  <span class=”nav-dropdown-label”>Search and track</span>
-                  <a href=”feature-internships.html” class=”nav-dropdown-link” data-nav-feature=”internships”>Internship matching</a>
-                  <a href=”feature-tracker.html” class=”nav-dropdown-link” data-nav-feature=”tracker”>Application tracker</a>
-                  <a href=”feature-calendar.html” class=”nav-dropdown-link” data-nav-feature=”calendar”>Calendar and events</a>
-                  <a href=”feature-ask-dilly.html” class=”nav-dropdown-link” data-nav-feature=”ask-dilly”>Ask Dilly on any job</a>
-                </div>
-              </div>
-            </div>
-          </li>
-          <li class=”nav-dropdown”>
-            <button type=”button” class=”nav-item nav-item--dropdown” aria-expanded=”false” aria-haspopup=”true”>Coach &amp; compete</button>
-            <div class=”nav-dropdown-panel” role=”region” aria-label=”Coach and compete”>
-              <div class=”nav-dropdown-inner”>
-                <div class=”nav-dropdown-col”>
-                  <span class=”nav-dropdown-label”>Guidance</span>
-                  <a href=”feature-ai-coach.html” class=”nav-dropdown-link” data-nav-feature=”coach”>AI coach</a>
-                  <a href=”feature-leaderboard.html” class=”nav-dropdown-link” data-nav-feature=”leaderboard”>Peer leaderboard</a>
-                </div>
-              </div>
-            </div>
-          </li>
-          <li class=”nav-dropdown”>
-            <button type=”button” class=”nav-item nav-item--dropdown” aria-expanded=”false” aria-haspopup=”true”>Pricing &amp; plans</button>
-            <div class=”nav-dropdown-panel” role=”region” aria-label=”Pricing and plans”>
-              <div class=”nav-dropdown-inner”>
-                <div class=”nav-dropdown-col”>
-                  <span class=”nav-dropdown-label”>Decide</span>
-                  <a href=”pricing.html” class=”nav-dropdown-link”>View plans</a>
-                  <a href=”index.html#compare” class=”nav-dropdown-link”>Compare tools</a>
-                </div>
-              </div>
-            </div>
-          </li>
-          <li><a class=”nav-item” href=”faq.html”>FAQ</a></li>
-          <li><a class=”nav-item” href=”quiz.html”>Quiz</a></li>
-          <li><a class=”nav-item nav-item--signin” href=”signin.html”>Sign in</a></li>
-        </ul>
-      </nav>
-      <div class=”nav-cta-row”>
-        <a class=”btn btn-primary” href=”https://app.trydilly.com/”>Start free</a>
-      </div>
-    </div>
-  </header>
 
   <!-- ── DILLY FACE ── -->
-  <section style="background:#fff;padding:5rem clamp(1.5rem,6vw,5rem);border-bottom:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column;align-items:center;gap:1.5rem">
-    <div style="width:min(340px,60vw);height:min(340px,60vw);border-radius:50%;background:#f5f6ff;border:1.5px solid rgba(43,58,142,0.12);box-shadow:0 8px 40px rgba(43,58,142,0.12);display:flex;align-items:center;justify-content:center;overflow:hidden">
-      <canvas id="dilly-face" width="340" height="340" style="display:block;width:100%;height:100%"></canvas>
+  <section style="background:#fff;min-height:95vh;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem">
+    <div style="width:min(480px,72vw);height:min(480px,72vw);border-radius:50%;background:#f5f6ff;border:1.5px solid rgba(43,58,142,0.12);box-shadow:0 8px 40px rgba(43,58,142,0.12);display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <canvas id="dilly-face" width="480" height="480" style="display:block;width:100%;height:100%"></canvas>
     </div>
     <p style="font-family:Montserrat,sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2B3A8E;opacity:0.5;margin:0">Dilly · AI Advisor</p>
   </section>
