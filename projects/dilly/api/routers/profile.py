@@ -65,6 +65,25 @@ async def get_profile(request: Request):
         except Exception:
             pass
 
+        # Re-derive cohort from majors/track whenever the stored cohort is a legacy
+        # short name (or missing).  This transparently upgrades existing users to the
+        # unified 22-cohort system on their next login — no migration script needed.
+        try:
+            from projects.dilly.api.cohort_config import LEGACY_COHORT_ALIASES, assign_cohort
+            stored_cohort = profile.get("cohort")
+            if stored_cohort in LEGACY_COHORT_ALIASES or not stored_cohort:
+                _majors = profile.get("majors") or (
+                    [profile["major"]] if profile.get("major") else []
+                )
+                _pre_prof = profile.get("pre_professional_track") or profile.get("track")
+                new_cohort = assign_cohort(_majors, _pre_prof)
+                if new_cohort != stored_cohort:
+                    from projects.dilly.api.profile_store import save_profile
+                    save_profile(email, {"cohort": new_cohort})
+                    profile["cohort"] = new_cohort
+        except Exception:
+            pass
+
         return profile
     except ValueError as e:
         raise errors.validation_error(str(e))
@@ -133,7 +152,7 @@ async def update_profile(request: Request, body: dict = Body(...)):
     """Update current user's profile. Merges with existing. Only allowed fields are updated."""
     user = deps.require_auth(request)
     email = user.get("email") or ""
-    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "meridian_profile_privacy", "meridian_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level"}
+    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level"}
     data = {k: v for k, v in (body or {}).items() if k in allowed}
     if "majors" in data:
         raw = data["majors"]
@@ -351,15 +370,15 @@ async def update_profile(request: Request, body: dict = Body(...)):
                 related = {}
             out.append({"id": item.get("id") or "", "text": text, "type": t, "related_to": related, "ts": item.get("ts")})
         data["decision_log"] = out
-    if "meridian_profile_privacy" in data:
-        raw = data["meridian_profile_privacy"]
+    if "dilly_profile_privacy" in data:
+        raw = data["dilly_profile_privacy"]
         if isinstance(raw, dict):
             valid_keys = {"scores", "activity", "applications", "experience"}
-            data["meridian_profile_privacy"] = {k: bool(v) for k, v in raw.items() if k in valid_keys}
+            data["dilly_profile_privacy"] = {k: bool(v) for k, v in raw.items() if k in valid_keys}
         else:
-            data.pop("meridian_profile_privacy", None)
-    if "meridian_profile_visible_to_recruiters" in data:
-        data["meridian_profile_visible_to_recruiters"] = bool(data["meridian_profile_visible_to_recruiters"])
+            data.pop("dilly_profile_privacy", None)
+    if "dilly_profile_visible_to_recruiters" in data:
+        data["dilly_profile_visible_to_recruiters"] = bool(data["dilly_profile_visible_to_recruiters"])
     if not data:
         from projects.dilly.api.profile_store import get_profile as get_prof, get_profile_slug
         p = get_prof(email) or {}
@@ -610,23 +629,23 @@ async def parent_summary(token: str = ""):
     }
 
 
-@router.get("/profile/meridian")
-async def get_meridian_profile(request: Request):
-    """Full Meridian profile (aggregated). Auth required. For student self-view."""
+@router.get("/profile/dilly")
+async def get_dilly_profile(request: Request):
+    """Full Dilly profile (aggregated). Auth required. For student self-view."""
     user = deps.require_auth(request)
     email = user.get("email") or ""
     if not email:
         raise errors.unauthorized()
     try:
-        from projects.dilly.api.meridian_profile_aggregator import aggregate_meridian_profile
-        return aggregate_meridian_profile(email, for_recruiter=False)
+        from projects.dilly.api.dilly_profile_aggregator import aggregate_dilly_profile
+        return aggregate_dilly_profile(email, for_recruiter=False)
     except Exception:
-        raise errors.internal("Could not load Meridian profile.")
+        raise errors.internal("Could not load Dilly profile.")
 
 
-@router.get("/profile/public/{slug}/meridian")
-async def get_public_meridian_profile(slug: str):
-    """Public full Meridian profile. No auth. Respects privacy toggles. Shareable link."""
+@router.get("/profile/public/{slug}/dilly")
+async def get_public_dilly_profile(slug: str):
+    """Public full Dilly profile. No auth. Respects privacy toggles. Shareable link."""
     from projects.dilly.api.profile_store import get_profile_by_slug
     profile = get_profile_by_slug(slug)
     if not profile:
@@ -635,14 +654,14 @@ async def get_public_meridian_profile(slug: str):
     if not email:
         raise errors.not_found("Profile not found.")
     try:
-        from projects.dilly.api.meridian_profile_aggregator import aggregate_meridian_profile
-        data = aggregate_meridian_profile(email, for_recruiter=True)
+        from projects.dilly.api.dilly_profile_aggregator import aggregate_dilly_profile
+        data = aggregate_dilly_profile(email, for_recruiter=True)
         return JSONResponse(
             content=data,
             headers={"Cache-Control": "no-store, no-cache, private, max-age=0"},
         )
     except Exception:
-        raise errors.internal("Could not load Meridian profile.")
+        raise errors.internal("Could not load Dilly profile.")
 
 
 @router.get("/profile/public/{slug}")
@@ -793,7 +812,7 @@ async def streak_checkin(request: Request):
 @router.get("/profile/export")
 async def export_profile_data(request: Request):
     """
-    Download all your Meridian data as JSON.
+    Download all your Dilly data as JSON.
     Includes: profile, audits, applications, deadlines, resume text.
     Usable export so you feel in control. No data dump.
     """
@@ -829,7 +848,7 @@ async def export_profile_data(request: Request):
     # Resume text
     resume_text = load_parsed_resume_for_voice(email, max_chars=100000) or ""
 
-    # Meridian profile txt (full context)
+    # Dilly profile txt (full context)
     from dilly_core.structured_resume import safe_filename_from_key
     _profile_txt_dir = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_profile_txt")
     profile_txt_path = os.path.join(_profile_txt_dir, safe_filename_from_key(email))
@@ -855,7 +874,7 @@ async def export_profile_data(request: Request):
     return JSONResponse(
         content=payload,
         headers={
-            "Content-Disposition": f'attachment; filename="meridian-export-{time.strftime("%Y%m%d")}.json"',
+            "Content-Disposition": f'attachment; filename="dilly-export-{time.strftime("%Y%m%d")}.json"',
         },
     )
 

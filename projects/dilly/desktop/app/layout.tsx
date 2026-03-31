@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             var saved = localStorage.getItem('dilly_theme');
-            var dark = saved ? saved === 'dark' : true;
+            var dark = saved ? saved === 'dark' : false;
             if (dark) document.documentElement.classList.add('dark');
           })();
         `}} />

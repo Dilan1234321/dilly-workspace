@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import { GlobalMenuProvider } from '@/components/layout/GlobalMenu';
@@ -87,8 +87,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [panelOpen, setPanelOpen] = useState(true);
   const triggerIdRef = useRef(0);
 
-  // Auth gate: redirect to onboarding if no token
-  useEffect(() => {
+  // Auth gate: useLayoutEffect runs before paint — no loading flash, no hydration mismatch
+  useLayoutEffect(() => {
     const token = getToken();
     if (!token) {
       router.replace('/onboarding');

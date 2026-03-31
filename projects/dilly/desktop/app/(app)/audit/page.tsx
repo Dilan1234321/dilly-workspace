@@ -56,6 +56,20 @@ const DIM = {
 
 type DimKey = keyof typeof DIM;
 
+/** Safe renderer: converts **bold** markers to <strong> without dangerouslySetInnerHTML */
+function BoldText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('**') && part.endsWith('**')
+          ? <strong key={i}>{part.slice(2, -2)}</strong>
+          : <span key={i}>{part}</span>
+      )}
+    </>
+  );
+}
+
 function tierInfo(score: number) {
   if (score >= 85) return { label: 'Elite', color: '#34C759' };
   if (score >= 70) return { label: 'Strong', color: '#FF9F0A' };
@@ -87,7 +101,8 @@ export default function AuditPage() {
   useEffect(() => {
     setLoading(true);
     apiFetch('/audit/history')
-      .then((h: HistoryItem[]) => {
+      .then((res: { audits: HistoryItem[] } | HistoryItem[]) => {
+        const h: HistoryItem[] = Array.isArray(res) ? res : (res as any).audits || [];
         setHistory(h);
         if (h.length > 0) {
           // Load most recent audit
@@ -124,7 +139,7 @@ export default function AuditPage() {
       const result: AuditResult = await res.json();
       setAudit(result);
       // Refresh history
-      apiFetch('/audit/history').then(setHistory).catch(() => {});
+      apiFetch('/audit/history').then((res: any) => setHistory(Array.isArray(res) ? res : res.audits || [])).catch(() => {});
       if (result.id) setSelectedHistoryId(result.id);
       // Sync parsed resume to editor as a new variant
       try {
@@ -392,9 +407,9 @@ export default function AuditPage() {
               borderRadius: 14, padding: '18px 24px',
               background: 'rgba(59,76,192,0.04)', border: '1px solid rgba(59,76,192,0.12)',
             }}>
-              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)', lineHeight: 1.55, margin: 0 }}
-                dangerouslySetInnerHTML={{ __html: audit.dilly_take.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}
-              />
+              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)', lineHeight: 1.55, margin: 0 }}>
+                <BoldText text={audit.dilly_take} />
+              </p>
               {audit.strongest_signal_sentence && (
                 <p style={{ fontSize: 12, color: '#2B3A8E', marginTop: 10, fontWeight: 500, margin: '10px 0 0' }}>
                   {audit.strongest_signal_sentence}

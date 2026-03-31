@@ -12,7 +12,7 @@ import uuid
 from typing import Any, Dict, List
 
 _ROUTER_DIR = os.path.dirname(os.path.abspath(__file__))
-# Four levels up: routers -> api -> meridian -> projects -> workspace root (same as api/*.py)
+# Four levels up: routers -> api -> dilly -> projects -> workspace root (same as api/*.py)
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "..", ".."))
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
@@ -102,7 +102,7 @@ def _write_audit_log(entry: dict) -> None:
     try:
         log_dir = os.path.join(_WORKSPACE_ROOT, "memory")
         os.makedirs(log_dir, exist_ok=True)
-        log_path = os.path.join(log_dir, "meridian_audit_log.jsonl")
+        log_path = os.path.join(log_dir, "dilly_audit_log.jsonl")
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
     except Exception:
@@ -127,7 +127,7 @@ def _temp_extension(filename: str) -> str:
 def _build_audit_supplementary_context(profile: dict) -> str | None:
     """
     Build a short text block from Voice-captured data for injection into the LLM auditor.
-    Includes beyond_resume items (skills/tools/experiences told to Meridian) and experience_expansion
+    Includes beyond_resume items (skills/tools/experiences told to Dilly) and experience_expansion
     (per-role deep-dive data). Returned as a string or None if nothing captured.
     """
     if not profile or not isinstance(profile, dict):
@@ -147,19 +147,19 @@ def _build_audit_supplementary_context(profile: dict) -> str | None:
             if text:
                 by_type[t].append(text)
         if by_type["person"]:
-            parts.append("People (mentioned to Meridian): " + "; ".join(by_type["person"][:15]))
+            parts.append("People (mentioned to Dilly): " + "; ".join(by_type["person"][:15]))
         if by_type["company"]:
-            parts.append("Companies (mentioned to Meridian): " + "; ".join(by_type["company"][:15]))
+            parts.append("Companies (mentioned to Dilly): " + "; ".join(by_type["company"][:15]))
         if by_type["event"]:
-            parts.append("Dates/deadlines (mentioned to Meridian): " + "; ".join(by_type["event"][:10]))
+            parts.append("Dates/deadlines (mentioned to Dilly): " + "; ".join(by_type["event"][:10]))
         if by_type["skill"]:
-            parts.append("Skills (mentioned to Meridian, not on resume): " + "; ".join(by_type["skill"][:20]))
+            parts.append("Skills (mentioned to Dilly, not on resume): " + "; ".join(by_type["skill"][:20]))
         if by_type["project"]:
-            parts.append("Projects (mentioned to Meridian): " + "; ".join(by_type["project"][:10]))
+            parts.append("Projects (mentioned to Dilly): " + "; ".join(by_type["project"][:10]))
         if by_type["experience"]:
-            parts.append("Experiences (mentioned to Meridian): " + "; ".join(by_type["experience"][:10]))
+            parts.append("Experiences (mentioned to Dilly): " + "; ".join(by_type["experience"][:10]))
         if by_type["other"]:
-            parts.append("Other info (mentioned to Meridian): " + "; ".join(by_type["other"][:8]))
+            parts.append("Other info (mentioned to Dilly): " + "; ".join(by_type["other"][:8]))
 
     expansion = profile.get("experience_expansion")
     if isinstance(expansion, list) and expansion:
@@ -208,7 +208,7 @@ async def audit_resume(request: Request, file: UploadFile = File(...)):
         raise errors.validation_error(ERR_FILE_TYPE)
     ext = _temp_extension(file.filename)
     temp_dir = tempfile.gettempdir()
-    temp_path = os.path.join(temp_dir, f"meridian_audit_{uuid.uuid4().hex}{ext}")
+    temp_path = os.path.join(temp_dir, f"dilly_audit_{uuid.uuid4().hex}{ext}")
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     if os.path.getsize(temp_path) > MAX_UPLOAD_BYTES:
@@ -302,7 +302,7 @@ async def audit_resume_v2(
         raise errors.validation_error(ERR_FILE_TYPE)
     ext = _temp_extension(file.filename)
     temp_dir = tempfile.gettempdir()
-    temp_path = os.path.join(temp_dir, f"meridian_audit_{uuid.uuid4().hex}{ext}")
+    temp_path = os.path.join(temp_dir, f"dilly_audit_{uuid.uuid4().hex}{ext}")
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     if os.path.getsize(temp_path) > MAX_UPLOAD_BYTES:
@@ -414,26 +414,26 @@ async def audit_resume_v2(
                         f.write(normalized)
                     structured_text = normalized
                     _parsed_resume_path = filepath
-                    sys.stderr.write(f"Meridian: saved parsed resume -> {filepath}\n")
+                    sys.stderr.write(f"Dilly: saved parsed resume -> {filepath}\n")
                 else:
                     written = write_parsed_resume(parsed, file_key, base_dir=_parsed_resumes_dir, display_name_override=_existing_name)
                     structured_text = build_structured_resume_text(parsed, display_name_override=_existing_name)
                     _parsed_resume_path = written
-                    sys.stderr.write(f"Meridian: saved parsed resume -> {written}\n")
+                    sys.stderr.write(f"Dilly: saved parsed resume -> {written}\n")
             else:
                 written = write_parsed_resume(parsed, file_key, base_dir=_parsed_resumes_dir, display_name_override=_existing_name)
                 structured_text = build_structured_resume_text(parsed, display_name_override=_existing_name)
                 _parsed_resume_path = written
-                sys.stderr.write(f"Meridian: saved parsed resume -> {written}\n")
+                sys.stderr.write(f"Dilly: saved parsed resume -> {written}\n")
             if _old_path_to_remove and os.path.isfile(_old_path_to_remove):
                 try:
                     os.remove(_old_path_to_remove)
-                    sys.stderr.write(f"Meridian: removed old parsed resume (migrated to login key) -> {_old_path_to_remove}\n")
+                    sys.stderr.write(f"Dilly: removed old parsed resume (migrated to login key) -> {_old_path_to_remove}\n")
                 except Exception:
                     pass
         except Exception as e:
             import traceback
-            sys.stderr.write(f"Meridian: failed to save parsed resume (key={file_key!r}): {e}\n")
+            sys.stderr.write(f"Dilly: failed to save parsed resume (key={file_key!r}): {e}\n")
             traceback.print_exc()
         text_for_audit = (structured_text or text_for_audit) if use_llm and structured_text else text_for_audit
         edge_err = _validate_resume_for_audit(text_for_audit, parsed)
@@ -530,7 +530,7 @@ async def audit_resume_v2(
                 from dilly_core.structured_resume import update_parsed_resume_cohort
                 update_parsed_resume_cohort(_parsed_resume_path, result.track)
             except Exception as e:
-                sys.stderr.write(f"Meridian: failed to update cohort in parsed resume: {e}\n")
+                sys.stderr.write(f"Dilly: failed to update cohort in parsed resume: {e}\n")
         print(f"[DEBUG audit-v2] SCORES — smart: {result.smart_score}, grit: {result.grit_score}, build: {result.build_score}, final: {result.final_score}")
         print(f"[DEBUG audit-v2] track: {result.track}, candidate_name: {result.candidate_name}")
         scores = {
@@ -634,7 +634,7 @@ async def audit_resume_v2(
         raw_logs = [
             f"Processed {file.filename}",
             f"Track: {result.track}",
-            "LLM Auditor (MTS)." if use_llm and is_llm_available() else "Meridian Core V6.5 + Vantage Alpha.",
+            "LLM Auditor (MTS)." if use_llm and is_llm_available() else "Dilly Core V6.5 + Vantage Alpha.",
             recs_source,
         ]
         if result.track == "Pre-Health":
@@ -1072,7 +1072,7 @@ async def audit_from_text(request: Request, body: dict = Body(...)):
         evidence=evidence,
         evidence_quotes=evidence_quotes if evidence_quotes else None,
         recommendations=recs,
-        raw_logs=["Imported from text", f"Track: {result.track}", "LLM Auditor (MTS)." if use_llm and is_llm_available() else "Meridian Core.", "Recommendations from rule engine + benchmark"],
+        raw_logs=["Imported from text", f"Track: {result.track}", "LLM Auditor (MTS)." if use_llm and is_llm_available() else "Dilly Core.", "Recommendations from rule engine + benchmark"],
         dilly_take=getattr(result, "dilly_take", None),
         strongest_signal_sentence=strongest_signal_sentence,
         consistency_findings=consistency_findings if consistency_findings else None,
@@ -1136,8 +1136,8 @@ async def get_audit_history(request: Request):
         summaries = []
         for a in audits:
             s = {k: a[k] for k in _SUMMARY_KEYS if k in a}
-            if "dilly_take" not in s and a.get("meridian_take"):
-                s["dilly_take"] = a["meridian_take"]
+            if "dilly_take" not in s and a.get("dilly_take"):
+                s["dilly_take"] = a["dilly_take"]
             summaries.append(s)
         return {"audits": summaries}
     except Exception:
@@ -1305,7 +1305,7 @@ async def get_snapshot(request: Request, audit_id: str):
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="400" height="{360 + n * 22}" viewBox="0 0 400 {360 + n * 22}" overflow="hidden">
   <defs><linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient></defs>
   <rect width="400" height="{360 + n * 22}" rx="20" fill="url(#bg)"/>
-  <text x="24" y="36" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" font-weight="600" letter-spacing="1.5">MERIDIAN SNAPSHOT</text>
+  <text x="24" y="36" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" font-weight="600" letter-spacing="1.5">DILLY SNAPSHOT</text>
   <text x="24" y="66" font-family="system-ui,sans-serif" font-size="22" fill="#e2e8f0" font-weight="700">{name}</text>
   <text x="24" y="88" font-family="system-ui,sans-serif" font-size="13" fill="#64748b">{track} Track</text>
   <circle cx="340" cy="64" r="32" fill="{fsc}" fill-opacity="0.12" stroke="{fsc}" stroke-width="2"/>
@@ -1326,7 +1326,7 @@ async def get_snapshot(request: Request, audit_id: str):
   {findings_svg}
   <text x="200" y="{340 + n * 22}" font-family="system-ui,sans-serif" font-size="9" fill="#475569" text-anchor="middle">trydilly.com · Share your score</text>
 </svg>"""
-    return Response(content=svg, media_type="image/svg+xml", headers={"Content-Disposition": "attachment; filename=meridian-snapshot.svg"})
+    return Response(content=svg, media_type="image/svg+xml", headers={"Content-Disposition": "attachment; filename=dilly-snapshot.svg"})
 
 
 @router.post("/snapshot")
@@ -1348,7 +1348,7 @@ async def post_snapshot(request: Request, body: dict = Body(...)):
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="400" height="{360 + n * 22}" viewBox="0 0 400 {360 + n * 22}" overflow="hidden">
   <defs><linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient></defs>
   <rect width="400" height="{360 + n * 22}" rx="20" fill="url(#bg)"/>
-  <text x="24" y="36" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" font-weight="600" letter-spacing="1.5">MERIDIAN SNAPSHOT</text>
+  <text x="24" y="36" font-family="system-ui,sans-serif" font-size="10" fill="#64748b" font-weight="600" letter-spacing="1.5">DILLY SNAPSHOT</text>
   <text x="24" y="66" font-family="system-ui,sans-serif" font-size="22" fill="#e2e8f0" font-weight="700">{name}</text>
   <text x="24" y="88" font-family="system-ui,sans-serif" font-size="13" fill="#64748b">{track} Track</text>
   <circle cx="340" cy="64" r="32" fill="{fsc}" fill-opacity="0.12" stroke="{fsc}" stroke-width="2"/>
@@ -1369,7 +1369,7 @@ async def post_snapshot(request: Request, body: dict = Body(...)):
   {findings_svg}
   <text x="200" y="{340 + n * 22}" font-family="system-ui,sans-serif" font-size="9" fill="#475569" text-anchor="middle">trydilly.com · Share your score</text>
 </svg>"""
-    return Response(content=svg, media_type="image/svg+xml", headers={"Content-Disposition": "attachment; filename=meridian-snapshot.svg"})
+    return Response(content=svg, media_type="image/svg+xml", headers={"Content-Disposition": "attachment; filename=dilly-snapshot.svg"})
 
 
 @router.get("/leaderboard/{track}")
@@ -1572,7 +1572,7 @@ async def get_peer_cohort_stats(request: Request, track: str = ""):
     return stats
 
 
-_EXPLAIN_DELTA_SYSTEM = """You are a top-level job consultant or career advisor. Given two Meridian audit results (before and after), write a short explainer (2-5 sentences) that tells them why their Smart, Grit, and Build scores changed. Be specific. Write in second person. Output the explainer only. Never use em dashes."""
+_EXPLAIN_DELTA_SYSTEM = """You are a top-level job consultant or career advisor. Given two Dilly audit results (before and after), write a short explainer (2-5 sentences) that tells them why their Smart, Grit, and Build scores changed. Be specific. Write in second person. Output the explainer only. Never use em dashes."""
 
 
 def _explain_score_delta(previous: dict, current: dict) -> str | None:
@@ -1633,7 +1633,7 @@ async def get_scoring_guidelines(request: Request, track: str = ""):
     return guide
 
 
-_READY_CHECK_SYSTEM = """You are a senior career strategist. Given a student's Meridian audit data (scores, findings, track) and a target company or role, assess their readiness.
+_READY_CHECK_SYSTEM = """You are a senior career strategist. Given a student's Dilly audit data (scores, findings, track) and a target company or role, assess their readiness.
 Return a JSON object with exactly these fields:
 - "verdict": one of "ready", "not_yet", or "stretch"
 - "summary": one sentence explaining the verdict
@@ -1860,7 +1860,7 @@ async def _career_playbook_core(request: Request, body: dict) -> dict:
     bullets_s = [str(b).strip() for b in bullets if isinstance(b, (str, int)) and str(b).strip()]
 
     structured = (audit.get("structured_text") or audit.get("resume_text") or "")[:7500]
-    take = (audit.get("meridian_take") or audit.get("dilly_take") or "")[:1400]
+    take = (audit.get("dilly_take") or audit.get("meridian_take") or "")[:1400]
     findings = audit.get("audit_findings") or []
     findings_s = [str(f)[:320] for f in findings[:10] if f]
     evidence = audit.get("evidence") or {}
@@ -1914,7 +1914,7 @@ async def _career_playbook_core(request: Request, body: dict) -> dict:
         if pparts:
             user_lines.append("PEER_PERCENTILES (raw dimension values from audit): " + ", ".join(pparts))
     if take:
-        user_lines.extend(["", "MERIDIAN_SUMMARY:", take])
+        user_lines.extend(["", "DILLY_SUMMARY:", take])
     if strongest:
         user_lines.extend(["", "STRONGEST_SIGNAL:", strongest])
     if findings_s:
@@ -1941,7 +1941,7 @@ async def _career_playbook_core(request: Request, body: dict) -> dict:
         user_lines.extend(["", "STRUCTURED_RESUME_TEXT (cite only from here; do not invent employers, titles, or metrics not present):", structured])
     user_content = "\n".join(line for line in user_lines if line is not None)
 
-    system = """You are Dilly (Meridian Careers). The student tapped "View Full Playbook" on Get Hired. They expect a long, personal brief: not generic advice, but a playbook that feels written for them after reading their resume and audit.
+    system = """You are Dilly (Dilly Careers). The student tapped "View Full Playbook" on Get Hired. They expect a long, personal brief: not generic advice, but a playbook that feels written for them after reading their resume and audit.
 
 Output ONLY valid JSON (no markdown fences) with this exact structure:
 {
@@ -1961,7 +1961,7 @@ Rules:
 - Produce exactly len(GENERIC_TRACK_PLAYBOOK_BULLETS) items in deep_dive, in the same order as the bullets listed (if 3 bullets, 3 deep_dive objects). Each theme should clearly map to that bullet.
 - resume_signals: 3-5 items when possible; if resume text is missing, return [] and say in opening that they should paste or re-audit.
 - Never invent employers, job titles, internships, GPAs, or metrics not present in context. If unsure, speak in conditional language ("If you add X...") or recommend they quantify in their next edit.
-- Use MERIDIAN_SUMMARY and AUDIT_FINDINGS as authoritative voice about their profile.
+- Use DILLY_SUMMARY and AUDIT_FINDINGS as authoritative voice about their profile.
 - No em dashes. Avoid clichés ("synergy"). Sound like a sharp mentor who read their file twice.
 """
 
@@ -2013,7 +2013,7 @@ async def audit_batch(request: Request, files: list[UploadFile] = File(...), coh
     results = []
     for up in files:
         ext = ".pdf" if (up.filename or "").lower().endswith(".pdf") else ".docx"
-        temp_path = os.path.join(tempfile.gettempdir(), f"meridian_batch_{uuid.uuid4().hex}{ext}")
+        temp_path = os.path.join(tempfile.gettempdir(), f"dilly_batch_{uuid.uuid4().hex}{ext}")
         try:
             with open(temp_path, "wb") as buf:
                 shutil.copyfileobj(up.file, buf)

@@ -19,9 +19,34 @@ type StepId =
   | 'youarein' | 'anticipation' | 'upload' | 'scanning' | 'results';
 
 const COHORT_COLORS: Record<string, string> = {
-  Tech: '#2B3A8E', Business: '#2B3A8E', Science: '#16a34a', Quantitative: '#7c3aed',
-  Health: '#0284c7', 'Social Science': '#d97706', Humanities: '#db2777',
-  Sport: '#ea580c', 'Pre-Health': '#0284c7', 'Pre-Law': '#7c3aed', General: '#2B3A8E',
+  'Software Engineering & CS':          '#2B3A8E',
+  'Data Science & Analytics':           '#7C3AED',
+  'Cybersecurity & IT':                 '#0F766E',
+  'Mechanical & Aerospace Engineering': '#1D4ED8',
+  'Electrical & Computer Engineering':  '#0369A1',
+  'Civil & Environmental Engineering':  '#92400E',
+  'Chemical & Biomedical Engineering':  '#0F766E',
+  'Industrial & Systems Engineering':   '#B45309',
+  'Finance & Accounting':               '#2B3A8E',
+  'Marketing & Advertising':            '#DB2777',
+  'Consulting & Strategy':              '#7C3AED',
+  'Management & Operations':            '#0369A1',
+  'Economics & Public Policy':          '#1D4ED8',
+  'Entrepreneurship & Innovation':      '#EA580C',
+  'Healthcare & Clinical':              '#0284C7',
+  'Life Sciences & Research':           '#16A34A',
+  'Physical Sciences & Math':           '#5E5CE6',
+  'Social Sciences & Nonprofit':        '#D97706',
+  'Media & Communications':             '#DB2777',
+  'Design & Creative':                  '#E11D48',
+  'Legal & Compliance':                 '#1E3A8A',
+  'Human Resources & People':           '#0369A1',
+  'Supply Chain & Logistics':           '#B45309',
+  'Education & Teaching':               '#16A34A',
+  'Real Estate & Construction':         '#B45309',
+  'Environmental & Sustainability':     '#16A34A',
+  'Hospitality & Events':               '#EA580C',
+  General:                              '#2B3A8E',
 };
 
 /* ── Skeleton atom ── */
@@ -284,6 +309,7 @@ export default function OnboardingPage() {
   const [auditResult, setAuditResult] = useState<{ final_score: number; scores: { smart: number; grit: number; build: number } } | null>(null);
   const [animatedScore, setAnimatedScore] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [skippedResume, setSkippedResume] = useState(false);
 
   /* ── Derived ── */
   const cohort = detectCohort(majors, preProf);
@@ -319,15 +345,19 @@ export default function OnboardingPage() {
   /* ── Navigation ── */
   function goNext() {
     setDirection(1);
-    let next = stepIdx + 1;
-    if (allSteps[next] === 'industry' && !showIndustry) next++;
-    setStepIdx(next);
+    setStepIdx(prev => {
+      let next = prev + 1;
+      if (allSteps[next] === 'industry' && !showIndustry) next++;
+      return next;
+    });
   }
   function goPrev() {
     setDirection(-1);
-    let prev = stepIdx - 1;
-    if (allSteps[prev] === 'industry' && !showIndustry) prev--;
-    if (prev >= 0) setStepIdx(prev);
+    setStepIdx(prev => {
+      let p = prev - 1;
+      if (allSteps[p] === 'industry' && !showIndustry) p--;
+      return p >= 0 ? p : prev;
+    });
   }
 
   const visibleSteps = allSteps.filter(s => s !== 'industry' || showIndustry);
@@ -388,9 +418,20 @@ export default function OnboardingPage() {
     setSaving(true);
     const target = TARGET_OPTIONS.find(t => t.key === targetKey);
     try {
-      await fetch(`${API_BASE}/profile`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name: fullName, majors, minors, pre_professional: preProf && preProf !== 'None / Not applicable' ? preProf : null, application_target: target?.apiValue ?? 'exploring', goals: interests }) });
+      await fetch(`${API_BASE}/profile`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ name: fullName, majors, minors, pre_professional_track: preProf && preProf !== 'None / Not applicable' ? preProf : null, application_target: target?.apiValue ?? 'exploring' }) });
     } catch { /* continue */ }
     finally { setSaving(false); }
+    goNext();
+  }
+
+  async function saveInterests() {
+    // Save interests as goals — fire-and-forget, don't block navigation
+    const t = token || (typeof window !== 'undefined' ? localStorage.getItem('dilly_token') : null);
+    fetch(`${API_BASE}/profile`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+      body: JSON.stringify({ goals: interests }),
+    }).catch(() => {});
     goNext();
   }
 
@@ -403,8 +444,12 @@ export default function OnboardingPage() {
   }
 
   async function runFirstAudit() {
+    const startedAt = Date.now();
     setScanStep(0); setScanDone(false); setScanError('');
-    [1200, 2400, 3600, 4800].forEach((ms, i) => setTimeout(() => setScanStep(i + 1), ms));
+    const animTimers = [1200, 2400, 3600, 4800].map((ms, i) => setTimeout(() => setScanStep(i + 1), ms));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+    let succeeded = false;
     try {
       const t = token || localStorage.getItem('dilly_token');
       const fd = new FormData();
@@ -413,21 +458,40 @@ export default function OnboardingPage() {
       fd.append('majors', JSON.stringify(majors));
       fd.append('track', cohort);
       fd.append('application_target', TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'exploring');
-      const res = await fetch(`${API_BASE}/audit/first-run`, { method: 'POST', headers: t ? { Authorization: `Bearer ${t}` } : {}, body: fd });
+      const res = await fetch(`${API_BASE}/audit/first-run`, { method: 'POST', headers: t ? { Authorization: `Bearer ${t}` } : {}, body: fd, signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setAuditResult({ final_score: data.final_score ?? 0, scores: data.scores ?? { smart: 0, grit: 0, build: 0 } });
-    } catch { setScanError('Something went wrong. You can retry from the dashboard.'); }
-    await new Promise(r => setTimeout(r, 6000));
+      succeeded = true;
+    } catch {
+      clearTimeout(timeoutId);
+      animTimers.forEach(clearTimeout);
+      setScanError('Something went wrong analyzing your resume. Tap retry or continue without scanning.');
+      return; // Stop here — user must retry or skip manually
+    }
+    if (!succeeded) return;
+    // Wait until the step animation has fully played out (all 5 steps shown), then advance
+    const ANIM_DURATION = 5400; // last step at 4800ms + 600ms hold
+    const remaining = Math.max(0, ANIM_DURATION - (Date.now() - startedAt));
+    await new Promise(r => setTimeout(r, remaining));
+    setScanStep(5);
     setScanDone(true);
-    setTimeout(() => goNext(), 600);
+    setTimeout(() => goNext(), 400);
   }
 
   async function finishOnboarding() {
     setSaving(true);
     try {
       const t = token || localStorage.getItem('dilly_token');
-      await fetch(`${API_BASE}/profile`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify({ onboarding_complete: true }) });
+      await fetch(`${API_BASE}/profile`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+        body: JSON.stringify({
+          onboarding_complete: true,
+          has_run_first_audit: !!auditResult,
+        }),
+      });
     } catch { /* proceed */ }
     router.replace('/home');
   }
@@ -688,13 +752,45 @@ export default function OnboardingPage() {
                 );
               })}
             </div>
-            {scanError && <p style={{ fontSize: 13, color: '#ef4444', marginTop: 24 }}>{scanError}</p>}
+            {scanError && (
+              <div style={{ marginTop: 24, textAlign: 'center' }}>
+                <p style={{ fontSize: 13, color: '#ef4444', marginBottom: 16 }}>{scanError}</p>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                  <button onClick={() => runFirstAudit()} style={{ padding: '10px 22px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: BLUE, color: 'white', border: 'none', cursor: 'pointer' }}>Retry</button>
+                  <button onClick={() => { setSkippedResume(true); goNext(); }} style={{ padding: '10px 22px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: 'white', color: '#6b7280', border: '1.5px solid #e5e5e5', cursor: 'pointer' }}>Continue without scan</button>
+                </div>
+              </div>
+            )}
           </div>
         );
       }
 
       case 'results': {
-        const scores = auditResult?.scores ?? { smart: 0, grit: 0, build: 0 };
+        // Skipped or failed scan
+        if (!auditResult) {
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0 8px' }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>You&apos;re all set</p>
+              <h2 style={{ fontSize: 32, fontWeight: 900, color: '#111', lineHeight: 1.1, marginBottom: 12 }}>Your profile is ready.</h2>
+              <p style={{ fontSize: 15, color: '#6b7280', lineHeight: 1.65, marginBottom: 32 }}>
+                You skipped the resume scan. Upload your resume from the Career Center anytime to get your Dilly Score and see exactly what to fix.
+              </p>
+              <div style={{ padding: '16px 20px', borderRadius: 14, background: 'white', border: '1.5px solid #e5e5e5' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#111', marginBottom: 6 }}>What you get when you upload:</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {['Smart, Grit, and Build scores benchmarked against your cohort', 'Exact resume red flags recruiters see', 'Prioritized fixes ranked by impact'].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: BLUE, flexShrink: 0 }}>{i + 1}</span>
+                      <p style={{ fontSize: 13, color: '#374151', margin: 0, lineHeight: 1.5 }}>{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const scores = auditResult.scores;
         const cohortColor = COHORT_COLORS[cohort] ?? BLUE;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', padding: '0 8px' }}>
@@ -753,7 +849,7 @@ export default function OnboardingPage() {
         {/* Top bar */}
         {!isFullScreen && (
           <div style={{ padding: '24px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <img src="/dilly-logo.png" alt="dilly" style={{ height: 28, objectFit: 'contain' }} />
+            <span style={{ fontWeight: 800, fontSize: 20, color: BLUE, letterSpacing: -0.5 }}>dilly</span>
             <div style={{ display: 'flex', gap: 6 }}>
               {visibleSteps.filter(s => s !== 'youarein').map((s, i) => {
                 const vIdx = visibleSteps.indexOf(currentStep);
@@ -791,10 +887,10 @@ export default function OnboardingPage() {
             {currentStep === 'welcome' && <button onClick={sendVerificationCode} disabled={!canContinue.welcome} style={ctaBtn(!canContinue.welcome)}>{sendingCode ? 'Sending...' : 'Continue'}</button>}
             {currentStep === 'verify' && <button onClick={verifyCode} disabled={!canContinue.verify} style={ctaBtn(!canContinue.verify)}>{verifying ? 'Verifying...' : 'Verify'}</button>}
             {currentStep === 'profile' && <button onClick={saveProfile} disabled={!canContinue.profile || saving} style={ctaBtn(!canContinue.profile || saving)}>{saving ? 'Saving...' : 'Continue'}</button>}
-            {currentStep === 'interests' && <button onClick={goNext} style={ctaBtn(false)}>{interests.length === 0 ? 'Skip for now' : `Continue (${interests.length})`}</button>}
+            {currentStep === 'interests' && <button onClick={saveInterests} style={ctaBtn(false)}>{interests.length === 0 ? 'Skip for now' : `Continue (${interests.length})`}</button>}
             {currentStep === 'industry' && <button onClick={saveIndustryTarget} disabled={!canContinue.industry || saving} style={ctaBtn(!canContinue.industry || saving)}>{saving ? 'Saving...' : 'Continue'}</button>}
             {currentStep === 'anticipation' && <button onClick={goNext} style={ctaBtn(false)}>Let&apos;s go</button>}
-            {currentStep === 'upload' && <button onClick={() => { goNext(); setTimeout(runFirstAudit, 300); }} style={ctaBtn(false)}>{resumeFile ? 'Scan my resume' : 'Skip for now'}</button>}
+            {currentStep === 'upload' && <button onClick={() => { if (resumeFile) { goNext(); setTimeout(runFirstAudit, 300); } else { setSkippedResume(true); goNext(); } }} style={ctaBtn(false)}>{resumeFile ? 'Scan my resume' : 'Skip for now'}</button>}
             {currentStep === 'results' && <button onClick={finishOnboarding} disabled={saving} style={ctaBtn(saving)}>{saving ? 'Loading...' : 'Enter the Career Center →'}</button>}
           </div>
         )}

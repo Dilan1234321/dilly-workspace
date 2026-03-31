@@ -7,8 +7,8 @@ const NAV = [
   { href: '/home', label: 'Career Center', d: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c0 2 3 4 6 4s6-2 6-4v-5M2 10v5' },
   { href: '/jobs', label: 'Jobs', d: 'M2 7.5A2.5 2.5 0 014.5 5h15A2.5 2.5 0 0122 7.5v9a2.5 2.5 0 01-2.5 2.5h-15A2.5 2.5 0 012 16.5v-9z M16 5V3.5A1.5 1.5 0 0014.5 2h-5A1.5 1.5 0 008 3.5V5' },
   { href: '/tracker', label: 'Tracker', d: 'M3 3h5v18H3V3zm7 0h5v12h-5V3zm7 0h5v7h-5V3z' },
+  { href: '/outcomes', label: 'Outcomes', d: 'M22 12h-4l-3 9L9 3l-3 9H2' },
   { href: '/scores', label: 'Scores', d: 'M18 20V10M12 20V4M6 20v-6' },
-  { href: '/calendar', label: 'Calendar', d: 'M3 6a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6z M16 2v4M8 2v4M3 10h18' },
   { href: '/leaderboard', label: 'Board', d: 'M6 9H4.5a2.5 2.5 0 010-5H6m12 5h1.5a2.5 2.5 0 000-5H18M18 2H6v7a6 6 0 1012 0V2zM4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22m7-7.34V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22' },
 ];
 
@@ -16,6 +16,7 @@ const NAV_TOOLS = [
   { href: '/resume-editor', label: 'Resume Editor', d: 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM14 2v6h6M16 13H8M16 17H8M10 9H8' },
   { href: '/ats', label: 'ATS Scan', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 14l2 2 4-4' },
   { href: '/audit', label: 'Audit', d: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z' },
+  { href: '/calendar', label: 'Calendar', d: 'M3 6a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6z M16 2v4M8 2v4M3 10h18' },
 ];
 
 const BOTTOM = [
