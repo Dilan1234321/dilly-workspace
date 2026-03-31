@@ -81,8 +81,9 @@
     </div>
     <style>
       .coach-hero-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        flex-direction: unset !important;
         align-items: center;
         gap: 2rem;
       }
@@ -99,7 +100,7 @@
         justify-content: center;
       }
       @media (max-width: 767px) {
-        .coach-hero-grid { grid-template-columns: 1fr; }
+        .coach-hero-grid { grid-template-columns: 1fr !important; }
         .dilly-face-col { order: -1; }
         .coach-hero-grid .fp-kicker,
         .coach-hero-grid .fp-title,
