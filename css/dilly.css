@@ -3640,6 +3640,33 @@ body.pricing-page .price-list li {
   border-color: var(--border);
 }
 
+:root.light body.pricing-page .al-cta-lead {
+  color: var(--text-muted);
+}
+
+:root.light body.pricing-page .al-cta-foot {
+  color: var(--text-muted);
+}
+
+:root.light body.pricing-page .al-btn-outline--light {
+  border-color: rgba(0, 40, 104, 0.25);
+  color: var(--navy-deep);
+}
+
+:root.light body.pricing-page .al-btn-outline--light:hover {
+  background: rgba(0, 40, 104, 0.06);
+}
+
+:root.light body.pricing-page .al-btn-solid {
+  background: var(--gold);
+  color: var(--navy-deep);
+}
+
+:root.light body.pricing-page .al-btn-solid:hover {
+  background: var(--navy);
+  color: #fff;
+}
+
 /* ── Menu overlay backdrop ── */
 .menu-overlay {
   display: none;
