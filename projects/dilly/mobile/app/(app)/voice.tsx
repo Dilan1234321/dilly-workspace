@@ -35,12 +35,11 @@ export default function VoiceScreen() {
         const grit  = auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
         const build = auditObj?.scores?.build ?? snapshot?.build ?? null;
 
-        const techWeights = { smart: 0.20, grit: 0.30, build: 0.50 };
-        const finalScore = auditObj?.final_score ?? (
-          smart != null && grit != null && build != null
-            ? Math.round(smart * techWeights.smart + grit * techWeights.grit + build * techWeights.build)
-            : null
-        );
+        const finalScore = auditObj?.final_score
+          || profileRes?.overall_dilly_score
+          || (smart != null && grit != null && build != null
+            ? Math.round((smart + grit + build) / 3)
+            : null);
 
         const cohort    = p.track || p.cohort || 'General';
         const firstName = p.name?.trim().split(/\s+/)[0] || p.first_name || 'there';

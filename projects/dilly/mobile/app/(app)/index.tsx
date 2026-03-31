@@ -162,10 +162,11 @@ export default function HomeScreen() {
         const grit  = auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
         const build = auditObj?.scores?.build ?? snapshot?.build ?? null;
 
-        const techWeights = { smart: 0.20, grit: 0.30, build: 0.50 };
-        const calculated = (smart != null && grit != null && build != null)
-          ? Math.round(smart * techWeights.smart + grit * techWeights.grit + build * techWeights.build)
-          : null;
+        const calculated = auditObj?.final_score
+          || profileRes?.overall_dilly_score
+          || (smart != null && grit != null && build != null
+            ? Math.round((smart + grit + build) / 3)
+            : null);
 
         setProfile(profileRes ?? {});
 

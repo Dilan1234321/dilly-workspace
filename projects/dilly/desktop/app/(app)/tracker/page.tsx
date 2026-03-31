@@ -1,8 +1,9 @@
 'use client';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { apiFetch } from '@/lib/api';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 
 /* ── Types ───────────────────────────────────────────── */
@@ -71,14 +72,66 @@ const NUDGE_COLORS: Record<string, { accent: string; bg: string; border: string 
 };
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const STORAGE_KEY = 'dilly_tracker';
+
+export function saveTrackerApps(appsToSave: Application[]) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appsToSave)); } catch {}
+}
+
+export function addToTracker(company: string, role: string, jobUrl?: string): 'saved' | 'duplicate' | 'error' {
+  if (typeof window === 'undefined') return 'error';
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const apps: Application[] = raw ? JSON.parse(raw) : DEMO;
+    if (apps.some(a => a.company === company && a.role === role)) return 'duplicate';
+    const updated = [...apps, { id: Date.now().toString(), company, role, status: 'saved' as Status, job_url: jobUrl }];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    return 'saved';
+  } catch { return 'error'; }
+}
+
 export default function TrackerPage() {
-  const [apps, setApps] = useState<Application[]>(DEMO);
+  const [apps, setApps] = useState<Application[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; app: Application } | null>(null);
+
+  // Load from API first, fall back to localStorage, then DEMO
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await apiFetch('/applications');
+        const apiApps = data?.applications || [];
+        if (apiApps.length > 0) {
+          setApps(apiApps);
+          setLoaded(true);
+          return;
+        }
+      } catch {}
+      // Fallback to localStorage
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) { setApps(JSON.parse(raw)); setLoaded(true); return; }
+      } catch {}
+      setApps(DEMO);
+      setLoaded(true);
+    })();
+  }, []);
   const [confetti, setConfetti] = useState(false);
   const [quickAdd, setQuickAdd] = useState('');
   const quickRef = useRef<HTMLInputElement>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Persist to both localStorage (instant) and API (durable)
+  useEffect(() => {
+    if (!loaded) return;
+    saveTrackerApps(apps);
+    // Sync to API in background
+    apiFetch('/applications/sync', {
+      method: 'POST',
+      body: JSON.stringify({ applications: apps }),
+    }).catch(() => {});
+  }, [apps, loaded]);
 
   function handleDragEnd(event: any) {
     setActiveId(null);

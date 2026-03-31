@@ -60,7 +60,7 @@ function scoreColor(n: number) {
 
 function cohortFinal(s: CohortScore): number {
   if (s.final && s.final > 0) return Math.round(s.final);
-  return Math.round(s.smart * 0.20 + s.grit * 0.30 + s.build * 0.50);
+  return Math.round((s.smart + s.grit + s.build) / 3);
 }
 
 function dimTagFromRec(rec: Rec): string {
