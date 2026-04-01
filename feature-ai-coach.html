@@ -326,6 +326,16 @@
 
       <div class="coach-panel" data-panel="0">
         <div class="panel-inner">
+          <p class="panel-eyebrow">Your career advisor</p>
+          <h2 class="panel-title" style="font-size:clamp(3rem,5.5vw,5.2rem);margin-bottom:1.5rem">Meet<br>Dilly.</h2>
+          <p class="panel-body">No advisor has ever read your resume this carefully. Dilly knows your scores, your gaps, your deadlines, and your saved roles before you say a word. Every answer is built from your actual data, not a generic template.</p>
+          <p class="panel-body" style="margin-top:1.25rem">Mock interviews that push back. Strategy that spans your whole semester. A thread that remembers every session. Dilly does not guess. It advises.</p>
+          <a href="https://app.trydilly.com/" style="display:inline-block;margin-top:2rem;background:#2B3A8E;color:#fff;font-family:inherit;font-size:0.85rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;padding:0.9rem 2.25rem;border-radius:100px">Start talking to Dilly &rarr;</a>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="1">
+        <div class="panel-inner">
           <p class="panel-num">01 / 04</p>
           <p class="panel-eyebrow">Knows you before you speak</p>
           <h2 class="panel-title">The Resume<br>Reader</h2>
@@ -333,7 +343,7 @@
         </div>
       </div>
 
-      <div class="coach-panel" data-panel="1">
+      <div class="coach-panel" data-panel="2">
         <div class="panel-inner">
           <p class="panel-num">02 / 04</p>
           <p class="panel-eyebrow">Pressure that builds you</p>
@@ -342,7 +352,7 @@
         </div>
       </div>
 
-      <div class="coach-panel" data-panel="2">
+      <div class="coach-panel" data-panel="3">
         <div class="panel-inner">
           <p class="panel-num">03 / 04</p>
           <p class="panel-eyebrow">The long game</p>
@@ -351,7 +361,7 @@
         </div>
       </div>
 
-      <div class="coach-panel" data-panel="3">
+      <div class="coach-panel" data-panel="4">
         <div class="panel-inner">
           <p class="panel-num">04 / 04</p>
           <p class="panel-eyebrow">Every session, remembered</p>
@@ -365,10 +375,11 @@
 
   <!-- ── NAVIGATION DOTS ── -->
   <nav id="coach-dots" aria-label="Panel navigation">
-    <button class="coach-dot active" data-target="0" aria-label="Panel 1"></button>
-    <button class="coach-dot" data-target="1" aria-label="Panel 2"></button>
-    <button class="coach-dot" data-target="2" aria-label="Panel 3"></button>
-    <button class="coach-dot" data-target="3" aria-label="Panel 4"></button>
+    <button class="coach-dot active" data-target="0" aria-label="Meet Dilly"></button>
+    <button class="coach-dot" data-target="1" aria-label="Panel 1"></button>
+    <button class="coach-dot" data-target="2" aria-label="Panel 2"></button>
+    <button class="coach-dot" data-target="3" aria-label="Panel 3"></button>
+    <button class="coach-dot" data-target="4" aria-label="Panel 4"></button>
   </nav>
 
   <!-- ── END / LOGO ── -->
@@ -467,7 +478,7 @@
     var panels   = document.querySelectorAll('.coach-panel');
     var inners   = document.querySelectorAll('.panel-inner');
     var dots     = document.querySelectorAll('.coach-dot');
-    var modeMap  = ['reading', 'interview', 'strategy', 'memory'];
+    var modeMap  = ['memory', 'reading', 'interview', 'strategy', 'memory'];
     var active   = -1;
 
     function activate(idx) {
