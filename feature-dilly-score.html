@@ -6,11 +6,346 @@
   <title>Dilly Score: Dilly</title>
   <meta name="description" content="Career readiness scoring across Smart, Grit, and Build with track-aware weights.">
   <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      background: #060e1c !important;
+      color: #f4f4f8 !important;
+    }
+
+    html {
+      scroll-snap-type: y mandatory;
+      overflow-y: scroll;
+    }
+
+    /* ── NAVBAR override: dark on the score page ── */
+    /* site-nav--inner is position:fixed in dilly.css, so target it directly */
+    body[data-nav-feature="score"] .site-nav--inner {
+      background: rgba(6,14,28,0.92) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    }
+
+    body[data-nav-feature="score"] .site-nav--inner .logo-wordmark { filter: brightness(0) invert(1); }
+    body[data-nav-feature="score"] .site-nav--inner .nav-item,
+    body[data-nav-feature="score"] .site-nav--inner .nav-item--dropdown { color: rgba(255,255,255,0.75); }
+    body[data-nav-feature="score"] .site-nav--inner .nav-item--signin { color: rgba(255,255,255,0.55); }
+    body[data-nav-feature="score"] .site-nav--inner .menu-toggle span { background: rgba(255,255,255,0.8); }
+
+    /* Wrapper header: 0-height spacer so scroll-snap panels start at y=0 */
+    .score-nav { padding: 0; min-height: 0; border: none; }
+
+    /* ── SPLIT LAYOUT ── */
+    #score-layout { display: block; }
+
+    /* LEFT 44%: fixed radar */
+    #radar-col {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 44%;
+      height: calc(100vh - 64px);
+      background: #060e1c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      border-right: 1px solid rgba(255,255,255,0.04);
+    }
+
+    #radar-svg {
+      width: min(340px, 80%);
+      height: min(340px, 80%);
+      overflow: visible;
+    }
+
+    /* Composite score below radar */
+    #composite-wrap {
+      margin-top: 1.5rem;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+
+    #composite-wrap.visible { opacity: 1; }
+
+    #composite-num {
+      font-size: clamp(2.8rem, 4vw, 4.2rem);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    #composite-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-top: 0.3rem;
+    }
+
+    /* ── RIGHT: scrolling panels ── */
+    #panels-col { margin-left: 44%; }
+
+    .score-panel {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      padding: 3rem 4.5rem;
+      background: #060e1c;
+      border-left: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .sp-inner {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .sp-inner.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .sp-eyebrow {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .sp-eyebrow--smart { color: #7b9fff; }
+    .sp-eyebrow--grit  { color: #a78bff; }
+    .sp-eyebrow--build { color: #5ecfb0; }
+    .sp-eyebrow--intro { color: rgba(255,255,255,0.4); }
+
+    .sp-title {
+      font-size: clamp(2.2rem, 3.8vw, 3.8rem);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .sp-body {
+      font-size: clamp(0.88rem, 1.15vw, 1rem);
+      color: rgba(255,255,255,0.5);
+      line-height: 1.75;
+      max-width: 400px;
+    }
+
+    /* Live score counter badge */
+    .sp-score-badge {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.35rem;
+    }
+
+    .sp-score-num {
+      font-size: clamp(3rem, 5vw, 5.5rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .sp-score-num--smart { color: #7b9fff; text-shadow: 0 0 28px rgba(123,159,255,0.6); }
+    .sp-score-num--grit  { color: #a78bff; text-shadow: 0 0 28px rgba(167,139,255,0.6); }
+    .sp-score-num--build { color: #5ecfb0; text-shadow: 0 0 28px rgba(94,207,176,0.6); }
+
+    .sp-score-denom {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* ── DOTS ── */
+    #score-dots {
+      position: fixed;
+      right: 1.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 300;
+    }
+
+    .score-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(255,255,255,0.18);
+      transition: background 0.35s, transform 0.35s;
+    }
+
+    .score-dot.active {
+      background: #fff;
+      transform: scale(1.6);
+    }
+
+    /* ── END ── */
+    #score-end {
+      height: 100vh;
+      scroll-snap-align: start;
+      margin-left: 44%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #060e1c;
+      border-left: 1px solid rgba(255,255,255,0.04);
+      gap: 2rem;
+    }
+
+    #score-end img {
+      width: min(200px, 50%);
+      filter: brightness(0) invert(1);
+      opacity: 0.7;
+    }
+
+    .end-cta {
+      display: inline-block;
+      background: #fff;
+      color: #060e1c;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 1rem 2.75rem;
+      border-radius: 100px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      html { scroll-snap-type: none; overflow: hidden; height: 100%; }
+      body { overflow: hidden; height: 100%; }
+
+      #score-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 64px);
+        overflow: hidden;
+      }
+
+      #radar-col {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 100%;
+        height: 30%;
+        min-height: 0;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding: 0.5rem;
+        flex-direction: row;
+        gap: 1rem;
+      }
+
+      #radar-svg {
+        width: min(110px, 28vw);
+        height: min(110px, 28vw);
+      }
+
+      #composite-wrap {
+        margin-top: 0;
+        text-align: left;
+      }
+
+      #composite-num { font-size: clamp(2rem, 9vw, 3rem); }
+
+      #panels-col {
+        display: flex;
+        flex-direction: row;
+        overflow-x: scroll;
+        overflow-y: visible;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        height: 70%;
+        margin-left: 0;
+        flex-shrink: 0;
+      }
+
+      .score-panel {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        min-height: unset;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        padding: 1.75rem 1.5rem 3.5rem;
+        align-items: flex-start;
+        overflow-y: auto;
+        box-sizing: border-box;
+      }
+
+      .sp-inner {
+        opacity: 1;
+        transform: none;
+        max-width: 100%;
+      }
+
+      .sp-title { font-size: clamp(1.7rem, 7vw, 2.5rem) !important; }
+
+      #score-dots {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        right: auto;
+        gap: 6px;
+        height: auto;
+      }
+
+      #score-dots .score-dot {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 7px !important;
+        height: 7px !important;
+        min-width: 7px;
+        min-height: 7px;
+        max-width: 7px;
+        max-height: 7px;
+        flex-shrink: 0;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      #score-end {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        margin-left: 0;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
+    }
+  </style>
 </head>
-<body class="feature-pro-page" data-nav-feature="score" data-fp-layout="score">
-  <header class="fp-hero fp-hero--score" aria-label="Dilly Score">
-    <div class="fp-hero__bg" aria-hidden="true"></div>
-    <div class="fp-hero__veil" aria-hidden="true"></div>
+<body data-nav-feature="score">
+
+  <!-- ── NAVBAR ── -->
+  <header class="score-nav">
     <div class="site-nav site-nav--inner">
       <a class="logo-lockup" href="index.html">
         <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
@@ -79,141 +414,328 @@
         <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
       </div>
     </div>
-    <div class="fp-hero__inner">
-      <p class="fp-kicker">Resume &amp; AI</p>
-      <h1 class="fp-title font-display">The score that tells you where you really stand</h1>
-      <p class="fp-lead">Smart, Grit, and Build break your resume into signals employers actually read. No vague “out of 10.” No single number hiding a weak dimension. You see the full picture, weighted for your track, with fixes in plain English.</p>
-      <div class="fp-hero-actions">
-        <a class="btn btn-primary" href="https://app.trydilly.com/">Get your score</a>
-        <a class="btn btn-ghost" href="quiz.html">Preview with the quiz</a>
-      </div>
-      <div class="fp-hero-metrics" aria-label="Score highlights">
-        <div><span class="fp-metric-val">3</span><span class="fp-metric-label">Dimensions scored 0, 100</span></div>
-        <div><span class="fp-metric-val">Track</span><span class="fp-metric-label">Weights follow your path</span></div>
-        <div><span class="fp-metric-val">Live</span><span class="fp-metric-label">Updates as you edit</span></div>
-      </div>
-    </div>
   </header>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Inside the audit</p>
-      <h2 class="section-title">Three lenses, one story</h2>
-      <p class="section-desc">Recruiters skim for rigor, impact, and proof. Dilly scores each separately so you know whether the problem is your GPA line, your verbs, or your projects.</p>
-    </div>
-    <div class="fp-pillar-grid">
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">◎</span>
-        <h3>Smart</h3>
-        <p>Coursework, rigor, and academic signals that match competitive applicants in your field. See if you are underselling depth or missing obvious credentials.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">◇</span>
-        <h3>Grit</h3>
-        <p>Leadership, ownership, and quantified impact. Vague bullets tank this score fast. Dilly points to the lines that need numbers, scope, and outcomes.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">▣</span>
-        <h3>Build</h3>
-        <p>Proof you can ship: projects, internships, research, clinical hours, portfolios. This is where “almost competitive” becomes “shortlisted.”</p>
-      </article>
-    </div>
-  </section>
+  <!-- ── SPLIT LAYOUT ── -->
+  <div id="score-layout">
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-split">
-      <div class="fp-split-visual"><img src="carousel-score.png" alt="Dilly Score dashboard" style="width:100%;border-radius:var(--radius);display:block"></div>
-      <div class="fp-split-copy">
-        <h2 class="fp-h2">From upload to action plan</h2>
-        <p>Upload once. Dilly parses structure and content, maps signals to your track, and returns dimension scores plus ranked reasons. You are not left with a PDF and a shrug.</p>
-        <p>Every weak signal ties to a concrete edit: swap a verb, add a metric, surface a project, or reorder a section so the skim hits the right beats in the first six seconds.</p>
-        <ul class="fp-checklist">
-          <li>Gap summary per dimension with example rewrites</li>
-          <li>Comparison hooks for internship readiness later in the app</li>
-          <li>History as you iterate so you can see movement week over week</li>
-        </ul>
+    <!-- LEFT: radar -->
+    <div id="radar-col">
+      <svg id="radar-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-teal" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Grid circles -->
+        <circle cx="200" cy="200" r="35"  fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="70"  fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="105" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="140" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+
+        <!-- Axis lines -->
+        <!-- Smart: top (200, 60) -->
+        <line x1="200" y1="200" x2="200" y2="57" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <!-- Grit: bottom-right (321, 270) -->
+        <line x1="200" y1="200" x2="322" y2="270" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <!-- Build: bottom-left (79, 270) -->
+        <line x1="200" y1="200" x2="78" y2="270" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+        <!-- Axis tick marks at 100% -->
+        <circle cx="200" cy="60"  r="3" fill="rgba(255,255,255,0.15)"/>
+        <circle cx="321" cy="270" r="3" fill="rgba(255,255,255,0.15)"/>
+        <circle cx="79"  cy="270" r="3" fill="rgba(255,255,255,0.15)"/>
+
+        <!-- Score polygon (filled dynamically) -->
+        <polygon id="radar-poly"
+          points="200,200 200,200 200,200"
+          fill="rgba(100,130,255,0.12)"
+          stroke="rgba(100,130,255,0.5)"
+          stroke-width="1.5"
+          stroke-linejoin="round"
+          filter="url(#glow-blue)"/>
+
+        <!-- Glow polygon overlay (softer, wider blur) -->
+        <polygon id="radar-poly-glow"
+          points="200,200 200,200 200,200"
+          fill="none"
+          stroke="rgba(100,130,255,0.25)"
+          stroke-width="6"
+          stroke-linejoin="round"
+          style="filter:blur(8px)"/>
+
+        <!-- Vertex dots (shown when axis is active) -->
+        <circle id="dot-smart" cx="200" cy="200" r="5" fill="#7b9fff" opacity="0" filter="url(#glow-blue)"/>
+        <circle id="dot-grit"  cx="200" cy="200" r="5" fill="#a78bff" opacity="0" filter="url(#glow-purple)"/>
+        <circle id="dot-build" cx="200" cy="200" r="5" fill="#5ecfb0" opacity="0" filter="url(#glow-teal)"/>
+
+        <!-- Axis labels -->
+        <text x="200" y="42" text-anchor="middle" fill="rgba(123,159,255,0.7)" font-size="11" font-weight="700" letter-spacing="2" font-family="inherit">SMART</text>
+        <text x="342" y="284" text-anchor="start"  fill="rgba(167,139,255,0.7)" font-size="11" font-weight="700" letter-spacing="2" font-family="inherit">GRIT</text>
+        <text x="58"  y="284" text-anchor="end"    fill="rgba(94,207,176,0.7)"  font-size="11" font-weight="700" letter-spacing="2" font-family="inherit">BUILD</text>
+      </svg>
+
+      <div id="composite-wrap">
+        <div id="composite-num">68</div>
+        <div id="composite-label">Dilly Score</div>
       </div>
     </div>
-  </section>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Flow</p>
-      <h2 class="section-title">How it feels in the product</h2>
-      <p class="section-desc">A guided path from blank anxiety to a prioritized list of edits.</p>
+    <!-- RIGHT: panels -->
+    <div id="panels-col">
+
+      <!-- Panel 0: intro -->
+      <div class="score-panel" data-panel="0">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--intro">Dilly Score</p>
+          <h2 class="sp-title">Your career DNA,<br>rendered live.</h2>
+          <p class="sp-body">Three dimensions. One number. Dilly reads your resume, grades each axis, and shows you exactly where you stand against every role you care about.</p>
+        </div>
+      </div>
+
+      <!-- Panel 1: Smart -->
+      <div class="score-panel" data-panel="1">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--smart">Dimension 01</p>
+          <h2 class="sp-title">Smart</h2>
+          <div class="sp-score-badge">
+            <span class="sp-score-num sp-score-num--smart" id="counter-smart">0</span>
+            <span class="sp-score-denom">/100</span>
+          </div>
+          <p class="sp-body">Academic sharpness, analytical thinking, and domain knowledge relative to the role. Pulled from your coursework, GPA signals, certifications, and the depth of your bullet points.</p>
+        </div>
+      </div>
+
+      <!-- Panel 2: Grit -->
+      <div class="score-panel" data-panel="2">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--grit">Dimension 02</p>
+          <h2 class="sp-title">Grit</h2>
+          <div class="sp-score-badge">
+            <span class="sp-score-num sp-score-num--grit" id="counter-grit">0</span>
+            <span class="sp-score-denom">/100</span>
+          </div>
+          <p class="sp-body">Drive, persistence, and proof that you follow through. Dilly looks for volume of experience, leadership roles, side projects, and evidence of doing hard things without being told to.</p>
+        </div>
+      </div>
+
+      <!-- Panel 3: Build -->
+      <div class="score-panel" data-panel="3">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--build">Dimension 03</p>
+          <h2 class="sp-title">Build</h2>
+          <div class="sp-score-badge">
+            <span class="sp-score-num sp-score-num--build" id="counter-build">0</span>
+            <span class="sp-score-denom">/100</span>
+          </div>
+          <p class="sp-body">Tangible output. Code shipped, models built, campaigns run, products launched. The Build score rewards proof of work over claims of skill. A high Build score is rare and hard to fake.</p>
+        </div>
+      </div>
+
+      <!-- Panel 4: combined -->
+      <div class="score-panel" data-panel="4">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--intro">Your score</p>
+          <h2 class="sp-title">One number.<br>Every role.</h2>
+          <p class="sp-body">Dilly combines Smart, Grit, and Build with track-aware weights. A finance role weighs Smart and Grit higher. A product role weights Build. The same profile scores differently across tracks, which is exactly how hiring works.</p>
+        </div>
+      </div>
+
     </div>
-    <ol class="fp-step-list">
-      <li><strong>Upload</strong> your resume in PDF or DOCX. Dilly normalizes layout noise so scoring focuses on substance.</li>
-      <li><strong>Review</strong> Smart, Grit, and Build with short explanations. Tap any dimension to drill into bullets that dragged it down.</li>
-      <li><strong>Prioritize</strong> the top fixes Dilly ranks by lift versus effort. Small wins surface first so momentum builds.</li>
-      <li><strong>Re-score</strong> after edits in the resume editor or a fresh upload. Watch the needle move on the dimensions that matter for your goals.</li>
-    </ol>
-  </section>
+  </div>
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-prose">
-      <h2 class="fp-h2">Why a multi-axis score beats one “strength” meter</h2>
-      <p>A single score tells you nothing about whether you are weak on proof versus weak on story. Students with the same headline number often need opposite strategies. Dilly separates those threads so you do not optimize the wrong thing.</p>
-      <p>When you open a real internship listing, those same dimensions power Ready, Almost, and Gap. The score you build on the resume page is the same language you will see next to roles you care about.</p>
-      <p>That continuity is the point: fewer surprises, less guesswork, and a clear line from diagnosis on the page to strategy in applications.</p>
-    </div>
-  </section>
+  <!-- ── DOTS ── -->
+  <nav id="score-dots" aria-label="Panel navigation">
+    <button class="score-dot active" data-target="0" aria-label="Intro"></button>
+    <button class="score-dot" data-target="1" aria-label="Smart"></button>
+    <button class="score-dot" data-target="2" aria-label="Grit"></button>
+    <button class="score-dot" data-target="3" aria-label="Build"></button>
+    <button class="score-dot" data-target="4" aria-label="Combined"></button>
+  </nav>
 
-  <section class="fp-stats" aria-label="By the numbers">
-    <div class="fp-stats-inner">
-      <div><span class="fp-stat-num">0, 100</span><span class="fp-stat-label">Granular per dimension, not pass or fail</span></div>
-      <div><span class="fp-stat-num">6 sec</span><span class="fp-stat-label">Average recruiter skim Dilly optimizes toward</span></div>
-      <div><span class="fp-stat-num">3×</span><span class="fp-stat-label">Typical callback lift after targeted edits</span></div>
-      <div><span class="fp-stat-num">1</span><span class="fp-stat-label">Score system across resume, jobs, and coach</span></div>
-    </div>
-  </section>
+  <!-- ── END ── -->
+  <div id="score-end">
+    <img src="dilly-wordmark.png" alt="Dilly">
+    <a href="https://app.trydilly.com/" class="end-cta">See your Dilly Score &rarr;</a>
+  </div>
 
-  <section class="fp-section">
-    <blockquote class="fp-quote">“Your Grit score is held back by vague verbs. Change ‘assisted with’ to ‘supported 200+ visits/week’ to quantify impact.”<cite>Example insight</cite></blockquote>
-  </section>
+  <script>
+  (function () {
+    var SMART = 74, GRIT = 88, BUILD = 41;
+    /* radar geometry */
+    var CX = 200, CY = 200, R = 140;
+    /* axis unit vectors (SVG coords, y-down) */
+    /* Smart: up    */ var SX = 0,                           SY = -1;
+    /* Grit:  BR    */ var GX = Math.sin(Math.PI * 2 / 3),  GY = Math.cos(Math.PI * 2 / 3);
+    /* Build: BL    */ var BX = -Math.sin(Math.PI * 2 / 3), BY = Math.cos(Math.PI * 2 / 3);
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-section-head">
-      <h2 class="section-title">Keep exploring</h2>
-      <p class="section-desc">Scores connect to editing, jobs, and coaching in one loop.</p>
-    </div>
-    <div class="fp-next-grid">
-      <a class="fp-next-card" href="feature-resume-editor.html">
-        <span class="fp-next-tag">Edit</span>
-        <h3>Resume editor</h3>
-        <p>Live bullet scoring and rewrites while you fix what the audit flagged.</p>
-      </a>
-      <a class="fp-next-card" href="feature-internships.html">
-        <span class="fp-next-tag">Jobs</span>
-        <h3>Internship matching</h3>
-        <p>See the same dimensions against real listings and gap bars per role.</p>
-      </a>
-      <a class="fp-next-card" href="feature-ai-coach.html">
-        <span class="fp-next-tag">Coach</span>
-        <h3>AI coach</h3>
-        <p>Ask what to tackle first with full context from your scores and apps.</p>
-      </a>
-    </div>
-  </section>
+    var poly      = document.getElementById('radar-poly');
+    var polyGlow  = document.getElementById('radar-poly-glow');
+    var dotSmart  = document.getElementById('dot-smart');
+    var dotGrit   = document.getElementById('dot-grit');
+    var dotBuild  = document.getElementById('dot-build');
+    var cntSmart  = document.getElementById('counter-smart');
+    var cntGrit   = document.getElementById('counter-grit');
+    var cntBuild  = document.getElementById('counter-build');
+    var compWrap  = document.getElementById('composite-wrap');
+    var compNum   = document.getElementById('composite-num');
 
-  <section class="cta-band">
-    <h2 class="font-display" style="letter-spacing:0.05em">Ready to see the breakdown?</h2>
-    <p>Start free in the app or take the quiz for a guided preview of your path.</p>
-    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center">
-      <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
-      <a class="btn btn-ghost" href="quiz.html">Take the quiz</a>
-    </div>
-  </section>
+    /* current animated values */
+    var curSmart = 0, curGrit = 0, curBuild = 0;
+    var tgtSmart = 0, tgtGrit = 0, tgtBuild = 0;
+    var rafId = null;
 
-  <footer class="site-footer">
-    <nav class="footer-links" aria-label="Footer">
-      <a href="index.html">Home</a>
-      <a href="features.html">Features</a>
-      <a href="pricing.html">Pricing</a>
-      <a href="quiz.html">Quiz</a>
-    </nav>
-    <p>Dilly · Dilly Score</p>
-  </footer>
+    function pt(ux, uy, score) {
+      var t = score / 100;
+      return (CX + R * t * ux).toFixed(2) + ',' + (CY + R * t * uy).toFixed(2);
+    }
+
+    function updateSVG() {
+      var pts = pt(SX, SY, curSmart) + ' ' + pt(GX, GY, curGrit) + ' ' + pt(BX, BY, curBuild);
+      poly.setAttribute('points', pts);
+      polyGlow.setAttribute('points', pts);
+
+      dotSmart.setAttribute('cx', (CX + R * (curSmart / 100) * SX).toFixed(2));
+      dotSmart.setAttribute('cy', (CY + R * (curSmart / 100) * SY).toFixed(2));
+      dotGrit.setAttribute('cx',  (CX + R * (curGrit  / 100) * GX).toFixed(2));
+      dotGrit.setAttribute('cy',  (CY + R * (curGrit  / 100) * GY).toFixed(2));
+      dotBuild.setAttribute('cx', (CX + R * (curBuild / 100) * BX).toFixed(2));
+      dotBuild.setAttribute('cy', (CY + R * (curBuild / 100) * BY).toFixed(2));
+
+      cntSmart.textContent = Math.round(curSmart);
+      cntGrit.textContent  = Math.round(curGrit);
+      cntBuild.textContent = Math.round(curBuild);
+    }
+
+    function ease(cur, tgt) {
+      var diff = tgt - cur;
+      if (Math.abs(diff) < 0.2) return tgt;
+      return cur + diff * 0.07;
+    }
+
+    function tick() {
+      curSmart = ease(curSmart, tgtSmart);
+      curGrit  = ease(curGrit,  tgtGrit);
+      curBuild = ease(curBuild, tgtBuild);
+      updateSVG();
+
+      var done = Math.abs(curSmart - tgtSmart) < 0.2 &&
+                 Math.abs(curGrit  - tgtGrit)  < 0.2 &&
+                 Math.abs(curBuild - tgtBuild) < 0.2;
+      if (!done) { rafId = requestAnimationFrame(tick); }
+      else {
+        curSmart = tgtSmart; curGrit = tgtGrit; curBuild = tgtBuild;
+        updateSVG();
+      }
+    }
+
+    function animateTo(s, g, b) {
+      tgtSmart = s; tgtGrit = g; tgtBuild = b;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    var panels  = Array.from(document.querySelectorAll('.score-panel'));
+    var inners  = Array.from(document.querySelectorAll('.sp-inner'));
+    var dots    = Array.from(document.querySelectorAll('.score-dot'));
+    var active  = -1;
+
+    /* dot opacity driven by how far each axis is filled */
+    function updateDotOpacity() {
+      dotSmart.setAttribute('opacity', curSmart > 2 ? 1 : 0);
+      dotGrit.setAttribute('opacity',  curGrit  > 2 ? 1 : 0);
+      dotBuild.setAttribute('opacity', curBuild > 2 ? 1 : 0);
+    }
+
+    /* patch tick to also update dot opacity */
+    var _tick = tick;
+    function tickFull() {
+      curSmart = ease(curSmart, tgtSmart);
+      curGrit  = ease(curGrit,  tgtGrit);
+      curBuild = ease(curBuild, tgtBuild);
+      updateSVG();
+      updateDotOpacity();
+      var done = Math.abs(curSmart - tgtSmart) < 0.2 &&
+                 Math.abs(curGrit  - tgtGrit)  < 0.2 &&
+                 Math.abs(curBuild - tgtBuild) < 0.2;
+      if (!done) { rafId = requestAnimationFrame(tickFull); }
+      else {
+        curSmart = tgtSmart; curGrit = tgtGrit; curBuild = tgtBuild;
+        updateSVG(); updateDotOpacity();
+      }
+    }
+
+    function animateToFull(s, g, b) {
+      tgtSmart = s; tgtGrit = g; tgtBuild = b;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tickFull);
+    }
+
+    var stateMap = [
+      [0, 0, 0],
+      [SMART, 0, 0],
+      [SMART, GRIT, 0],
+      [SMART, GRIT, BUILD],
+      [SMART, GRIT, BUILD]
+    ];
+
+    function activate(idx) {
+      if (idx === active) return;
+      active = idx;
+      dots.forEach(function (d, i)   { d.classList.toggle('active', i === idx); });
+      inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
+      var s = stateMap[idx];
+      animateToFull(s[0], s[1], s[2]);
+      if (idx === 4 || idx === 5) {
+        compWrap.classList.add('visible');
+      } else {
+        compWrap.classList.remove('visible');
+      }
+    }
+
+    var isMobile = window.innerWidth <= 780;
+    var panelsCol = document.getElementById('panels-col');
+
+    if (isMobile) {
+      panelsCol.addEventListener('scroll', function () {
+        var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
+        idx = Math.max(0, Math.min(idx, panels.length - 1));
+        activate(idx);
+      });
+    } else {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) activate(parseInt(entry.target.dataset.panel, 10));
+        });
+      }, { threshold: 0.5 });
+      panels.forEach(function (p) { observer.observe(p); });
+    }
+
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        var idx = parseInt(dot.dataset.target, 10);
+        if (isMobile) {
+          panelsCol.scrollTo({ left: idx * panelsCol.clientWidth, behavior: 'smooth' });
+        } else {
+          panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    activate(0);
+  }());
+  </script>
+
   <script src="dilly.js"></script>
 </body>
 </html>

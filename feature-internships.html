@@ -4,8 +4,191 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Internship matching: Dilly</title>
-  <meta name="description" content="Internship listings with Ready, Almost, and Gap analysis. Tailor resume on every card from your real experience, or add any job with title and description.">
+  <meta name="description" content="Internship listings with Ready, Almost, and Gap analysis. Watch Dilly sort your matches live — Ready roles rise, Gap roles fade.">
   <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* ── SORT DEMO SECTION ── */
+    .sort-section {
+      height: 280vh;
+      position: relative;
+      background: #060e1c;
+    }
+
+    .sort-sticky {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #060e1c;
+    }
+
+    .sort-header {
+      padding: 1.75rem 2rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .sort-header-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .sort-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+    }
+
+    .sort-headline {
+      font-size: clamp(1.1rem, 2.2vw, 1.5rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .sort-legend {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    .legend-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.3rem 0.75rem;
+      border-radius: 100px;
+      text-transform: uppercase;
+    }
+
+    .legend-pill--ready  { background: rgba(34,197,94,0.18); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .legend-pill--almost { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+    .legend-pill--gap    { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.22); }
+
+    .sort-cards-wrap {
+      flex: 1;
+      position: relative;
+      padding: 0 2rem 2rem;
+      overflow: hidden;
+    }
+
+    /* Job card */
+    .jc {
+      position: absolute;
+      left: 2rem;
+      right: 2rem;
+      height: 62px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0 1rem 0 0.875rem;
+      transition: box-shadow 0.4s ease;
+      will-change: transform, opacity;
+    }
+
+    .jc--ready  { border-color: rgba(34,197,94,0.2); }
+    .jc--almost { border-color: rgba(251,191,36,0.15); }
+    .jc--gap    { border-color: rgba(239,68,68,0.1); }
+
+    .jc-badge {
+      flex-shrink: 0;
+      width: 68px;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 0.3rem 0;
+      border-radius: 6px;
+    }
+
+    .jc-badge--ready  { background: rgba(34,197,94,0.18); color: #4ade80; }
+    .jc-badge--almost { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .jc-badge--gap    { background: rgba(239,68,68,0.12);  color: #f87171; }
+
+    .jc-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .jc-company {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .jc-role {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.4);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 0.1rem;
+    }
+
+    .jc-dims {
+      flex-shrink: 0;
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .jc-dim {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .jc-dim--s { background: rgba(123,159,255,0.12); color: #7b9fff; }
+    .jc-dim--g { background: rgba(167,139,255,0.12); color: #a78bff; }
+    .jc-dim--b { background: rgba(94,207,176,0.12);  color: #5ecfb0; }
+
+    .sort-progress-wrap {
+      padding: 0 2rem 1rem;
+      flex-shrink: 0;
+    }
+
+    .sort-progress-bar {
+      height: 2px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .sort-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7b9fff, #5ecfb0);
+      border-radius: 2px;
+      transition: width 0.1s;
+    }
+
+    /* ── MOBILE ADJUSTMENTS ── */
+    @media (max-width: 780px) {
+      .sort-header { padding: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+      .sort-legend { gap: 0.4rem; }
+      .legend-pill { font-size: 0.6rem; padding: 0.25rem 0.5rem; }
+      .sort-cards-wrap { padding: 0 0.75rem 1rem; }
+      .jc { left: 0.75rem; right: 0.75rem; height: 58px; }
+      .jc-dims { display: none; }
+    }
+  </style>
 </head>
 <body class="feature-pro-page" data-nav-feature="internships" data-fp-layout="jobs">
   <header class="fp-hero fp-hero--jobs" aria-label="Internship matching">
@@ -95,6 +278,34 @@
     </div>
   </header>
 
+  <!-- ── SORT DEMO ── -->
+  <section class="sort-section" id="sort-demo" aria-label="Live sorting demo">
+    <div class="sort-sticky">
+      <div class="sort-header">
+        <div class="sort-header-copy">
+          <p class="sort-eyebrow">Live demo</p>
+          <p class="sort-headline">Scroll to watch Dilly rank your matches</p>
+        </div>
+        <div class="sort-legend">
+          <span class="legend-pill legend-pill--ready">Ready</span>
+          <span class="legend-pill legend-pill--almost">Almost</span>
+          <span class="legend-pill legend-pill--gap">Gap</span>
+        </div>
+      </div>
+
+      <div class="sort-cards-wrap" id="sort-cards-wrap">
+        <!-- Cards rendered by JS -->
+      </div>
+
+      <div class="sort-progress-wrap">
+        <div class="sort-progress-bar">
+          <div class="sort-progress-fill" id="sort-progress-fill"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── INFO SECTIONS ── -->
   <section class="fp-section">
     <div class="fp-section-head">
       <p class="section-eyebrow">Intelligence</p>
@@ -125,8 +336,8 @@
       <div class="fp-split-copy">
         <p class="section-eyebrow">One tap</p>
         <h2 class="fp-h2">Tailor resume on every job card</h2>
-        <p>Each listing includes a <strong>Tailor resume</strong> action. Dilly already learned your real experience when you uploaded or built your resume, internships, projects, courses, leadership, and uses that truth to generate a version of your resume aimed at <em>that</em> role’s signals.</p>
-        <p>No blank ChatGPT prompt. No inventing jobs you did not do. You get the strongest honest framing of what you actually did, aligned to the posting you are looking at, then open it in the live editor to tweak bullets or run ATS.</p>
+        <p>Each listing includes a <strong>Tailor resume</strong> action. Dilly uses your real experience to generate a version of your resume aimed at that role's signals.</p>
+        <p>No blank prompt. No invented jobs. The strongest honest framing of what you actually did, aligned to the posting you are looking at.</p>
         <ul class="fp-checklist">
           <li>Grounded in your profile: history and bullets Dilly already knows</li>
           <li>Fast draft you refine, not a generic template</li>
@@ -140,44 +351,7 @@
   <section class="fp-section">
     <div class="fp-prose">
       <h2 class="fp-h2">Job not in Dilly yet? Add it yourself</h2>
-      <p>If a role is not in our listings, enter <strong>company</strong>, <strong>job title</strong>, and <strong>job description</strong>. Dilly builds a tailored resume for that posting the same way: from your real experience, not filler. Use it for niche roles, referrals, or jobs you found on LinkedIn or a company careers page.</p>
-    </div>
-  </section>
-
-  <section class="fp-section fp-section--surface">
-    <div class="fp-split fp-split--reverse">
-      <div class="fp-split-visual"><img src="carousel-jobs.png" alt="Dilly gap analysis" style="width:100%;border-radius:var(--radius);display:block"></div>
-      <div class="fp-split-copy">
-        <h2 class="fp-h2">From “I want that job” to a plan</h2>
-        <p>Scrolling listings without structure creates anxiety. Dilly anchors each role to your actual profile so ambition turns into sequence: fix Build, then re-run, then apply.</p>
-        <p>Saved roles feed your tracker and calendar. Deadlines and follow-ups stay attached to the same card so context does not live in three apps.</p>
-        <ul class="fp-checklist">
-          <li>Save and compare roles side by side</li>
-          <li>Tap <strong>Tailor resume</strong>, then refine in the editor with the gap summary in mind</li>
-          <li>Open Ask Dilly for company-specific prompts</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Journey</p>
-      <h2 class="section-title">Typical loop</h2>
-    </div>
-    <ol class="fp-step-list">
-      <li><strong>Filter</strong> by track, location, or employer type. Start where you are willing to invest real prep time.</li>
-      <li><strong>Open</strong> a listing. Read fit label plus dimension bars. Tap <strong>Tailor resume</strong> for a draft aligned to that JD, or note the largest gap first.</li>
-      <li><strong>Act</strong> on suggested fixes: refine the tailored draft in the editor, ship a small project for Build, or start a coach thread for strategy.</li>
-      <li><strong>Apply</strong> when the label moves to your risk tolerance. Track the stage in the pipeline automatically.</li>
-    </ol>
-  </section>
-
-  <section class="fp-section fp-section--surface">
-    <div class="fp-prose">
-      <h2 class="fp-h2">Why dimension bars beat a percentage match</h2>
-      <p>Percentages feel precise but hide tradeoffs. You might be “82%” with a hollow Build score that still loses to a candidate with shipped work. Dilly keeps the dimensions visible so you invest where recruiters actually compare.</p>
-      <p>The same scores power your resume audit, so you are not learning a new rubric every screen.</p>
+      <p>If a role is not in our listings, enter <strong>company</strong>, <strong>job title</strong>, and <strong>job description</strong>. Dilly builds a tailored resume for that posting the same way: from your real experience, not filler.</p>
     </div>
   </section>
 
@@ -191,7 +365,7 @@
   </section>
 
   <section class="fp-section">
-    <blockquote class="fp-quote">“Your Build is 72, but Stripe wants 88 (16 point gap). They want shipped products, not tutorials. Deploy one project and you are competitive.”<cite>Example gap read</cite></blockquote>
+    <blockquote class="fp-quote">"Your Build is 72, but Stripe wants 88 (16 point gap). They want shipped products, not tutorials. Deploy one project and you are competitive."<cite>Example gap read</cite></blockquote>
   </section>
 
   <section class="fp-section fp-section--surface">
@@ -204,10 +378,10 @@
         <h3>Application tracker</h3>
         <p>Move saved roles through stages with less spreadsheet pain.</p>
       </a>
-      <a class="fp-next-card" href="feature-calendar.html">
-        <span class="fp-next-tag">Time</span>
-        <h3>Calendar</h3>
-        <p>Deadlines and interviews on one grid.</p>
+      <a class="fp-next-card" href="feature-ask-dilly.html">
+        <span class="fp-next-tag">AI</span>
+        <h3>Ask Dilly</h3>
+        <p>Gap-driven action plans on any role in seconds.</p>
       </a>
       <a class="fp-next-card" href="feature-dilly-score.html">
         <span class="fp-next-tag">Base</span>
@@ -235,6 +409,135 @@
     </nav>
     <p>Dilly · Internship matching</p>
   </footer>
+
+  <script>
+  (function () {
+    /* ── CARD DATA ── */
+    var CARDS = [
+      { co: 'Goldman Sachs',    role: 'Summer Analyst, Investment Banking',  status: 'ready',  s: 82, g: 79, b: 68 },
+      { co: 'Citadel',          role: 'Quantitative Research Intern',         status: 'gap',    s: 61, g: 55, b: 47 },
+      { co: 'Morgan Stanley',   role: 'Technology Associate Program',         status: 'almost', s: 76, g: 73, b: 64 },
+      { co: 'Blackstone',       role: 'Private Equity Summer Analyst',        status: 'gap',    s: 59, g: 62, b: 38 },
+      { co: 'JPMorgan Chase',   role: 'Technology Analyst Intern',            status: 'ready',  s: 80, g: 82, b: 91 },
+      { co: 'BCG',              role: 'Strategy Consulting Intern',           status: 'almost', s: 74, g: 77, b: 61 },
+      { co: 'Google',           role: 'Product Analytics Intern',             status: 'ready',  s: 83, g: 71, b: 88 },
+      { co: 'McKinsey & Co',    role: 'Business Analyst Intern',              status: 'almost', s: 71, g: 80, b: 59 },
+    ];
+
+    /* sorted order: ready first (0,4,6), then almost (2,5,7), then gap (1,3) */
+    var SORTED_ORDER = [0, 4, 6, 2, 5, 7, 1, 3];
+    /* sortedRankOf[cardIdx] = rank in sorted list */
+    var sortedRankOf = {};
+    SORTED_ORDER.forEach(function (cardIdx, rank) { sortedRankOf[cardIdx] = rank; });
+
+    var CARD_H = 70; /* card height + gap */
+
+    /* ── RENDER CARDS ── */
+    var wrap = document.getElementById('sort-cards-wrap');
+    var cardEls = [];
+
+    CARDS.forEach(function (d, i) {
+      var el = document.createElement('div');
+      el.className = 'jc jc--' + d.status;
+      el.dataset.status = d.status;
+      el.innerHTML =
+        '<span class="jc-badge jc-badge--' + d.status + '">' + d.status.charAt(0).toUpperCase() + d.status.slice(1) + '</span>' +
+        '<div class="jc-body">' +
+          '<div class="jc-company">' + d.co + '</div>' +
+          '<div class="jc-role">' + d.role + '</div>' +
+        '</div>' +
+        '<div class="jc-dims">' +
+          '<span class="jc-dim jc-dim--s">S&thinsp;' + d.s + '</span>' +
+          '<span class="jc-dim jc-dim--g">G&thinsp;' + d.g + '</span>' +
+          '<span class="jc-dim jc-dim--b">B&thinsp;' + d.b + '</span>' +
+        '</div>';
+      wrap.appendChild(el);
+      cardEls.push(el);
+      /* initial absolute position */
+      el.style.transform = 'translateY(' + (i * CARD_H) + 'px)';
+      el.style.top = '0';
+    });
+
+    /* ── SCROLL ANIMATION ── */
+    var section = document.getElementById('sort-demo');
+    var progressFill = document.getElementById('sort-progress-fill');
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
+
+    var isMobile = window.innerWidth <= 780;
+
+    function updateSort() {
+      var rect = section.getBoundingClientRect();
+      var scrollable = section.offsetHeight - window.innerHeight;
+      var scrolled = -rect.top;
+      var rawT = Math.max(0, Math.min(1, scrolled / scrollable));
+      var t = easeInOut(rawT);
+
+      progressFill.style.width = (rawT * 100) + '%';
+
+      cardEls.forEach(function (card, i) {
+        var initY = i * CARD_H;
+        var sortedY = sortedRankOf[i] * CARD_H;
+        var y = lerp(initY, sortedY, t);
+
+        var status = card.dataset.status;
+        var lift = (status === 'ready') ? lerp(0, -3, t) : 0;
+        card.style.transform = 'translateY(' + (y + lift) + 'px)';
+
+        if (status === 'gap') {
+          card.style.opacity = String(Math.round(lerp(100, 30, t)) / 100);
+        }
+        if (status === 'ready' && t > 0.4) {
+          var glow = Math.min((t - 0.4) / 0.6, 1);
+          card.style.boxShadow = '0 0 ' + Math.round(glow * 18) + 'px rgba(34,197,94,' + (glow * 0.25).toFixed(2) + ')';
+          card.style.borderColor = 'rgba(34,197,94,' + (0.2 + glow * 0.35).toFixed(2) + ')';
+        } else if (status === 'ready') {
+          card.style.boxShadow = '';
+          card.style.borderColor = '';
+        }
+      });
+    }
+
+    /* mobile: auto-sort after scroll into view */
+    if (isMobile) {
+      var sorted = false;
+      var io = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting && !sorted) {
+          sorted = true;
+          var start = null;
+          var DURATION = 1200;
+          function step(ts) {
+            if (!start) start = ts;
+            var rawT = Math.min((ts - start) / DURATION, 1);
+            var t = easeInOut(rawT);
+            cardEls.forEach(function (card, i) {
+              var initY = i * CARD_H;
+              var sortedY = sortedRankOf[i] * CARD_H;
+              var y = lerp(initY, sortedY, t);
+              var status = card.dataset.status;
+              var lift = (status === 'ready') ? lerp(0, -3, t) : 0;
+              card.style.transform = 'translateY(' + (y + lift) + 'px)';
+              if (status === 'gap') card.style.opacity = String(Math.round(lerp(100, 30, t)) / 100);
+              if (status === 'ready' && t > 0.4) {
+                var glow = Math.min((t - 0.4) / 0.6, 1);
+                card.style.boxShadow = '0 0 ' + Math.round(glow * 18) + 'px rgba(34,197,94,' + (glow * 0.25).toFixed(2) + ')';
+                card.style.borderColor = 'rgba(34,197,94,' + (0.2 + glow * 0.35).toFixed(2) + ')';
+              }
+            });
+            progressFill.style.width = (rawT * 100) + '%';
+            if (rawT < 1) requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        }
+      }, { threshold: 0.4 });
+      io.observe(section);
+    } else {
+      window.addEventListener('scroll', updateSort, { passive: true });
+      updateSort();
+    }
+  }());
+  </script>
   <script src="dilly.js"></script>
 </body>
 </html>
