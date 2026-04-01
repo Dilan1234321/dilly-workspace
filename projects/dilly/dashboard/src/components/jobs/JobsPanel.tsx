@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { LoaderOne } from "@/components/ui/loader-one";
 import { JOBS_VARS } from "@/components/jobs/jobsTokens";
 import { JobsHeader } from "@/components/jobs/JobsHeader";
@@ -59,15 +59,10 @@ export function JobsPanel({ userEmail, subscribed, initialFilter, embedded }: Jo
   }, [initialFilter]);
 
   const loadJobs = useCallback(async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
     setFetching(true);
     setLoadError(null);
     try {
-      const res = await fetch(`${API_BASE}/jobs/page`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
+      const res = await dilly.fetch("/jobs/page", { cache: "no-store" });
       if (!res.ok) throw new Error("jobs-page");
       const data = (await res.json()) as JobsPageData;
       setPayload(data);
@@ -145,12 +140,10 @@ export function JobsPanel({ userEmail, subscribed, initialFilter, embedded }: Jo
 
   const markApplied = (job: JobMatch) => {
     setAppliedOverrides((prev) => ({ ...prev, [job.id]: true }));
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
     const today = new Date().toISOString().slice(0, 10);
-    void fetch(`${API_BASE}/applications`, {
+    void dilly.fetch("/applications", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         company: job.company ?? "Unknown",
         role: job.title ?? "Position",

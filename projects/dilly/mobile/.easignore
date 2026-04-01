@@ -1,0 +1,27 @@
+# Dependencies (EAS installs these fresh)
+node_modules/
+
+# Build artifacts
+.expo/
+dist/
+build/
+ios/
+android/
+web-build/
+
+# Dev files
+.git/
+.claude/
+__tests__/
+*.test.*
+*.spec.*
+
+# Large files
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+
+# OS junk
+.DS_Store
+Thumbs.db

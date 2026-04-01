@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
+import { useProfile } from '../layout';
 
 interface CohortScore {
   cohort: string; level: string; field: string;
@@ -9,8 +10,9 @@ interface CohortScore {
 }
 
 export default function ScoresPage() {
-  const [cohorts, setCohorts] = useState<CohortScore[]>([]);
-  const [overall, setOverall] = useState({ smart: 0, grit: 0, build: 0, dilly: 0 });
+  const { profile } = useProfile();
+  const cohorts = Object.values(profile.cohort_scores || {}) as CohortScore[];
+  const overall = { smart: profile.overall_smart || 0, grit: profile.overall_grit || 0, build: profile.overall_build || 0, dilly: profile.overall_dilly_score || 0 };
   const [stats, setStats] = useState<any>(null);
   const [hoveredCohort, setHoveredCohort] = useState<string | null>(null);
   const [simAdjust, setSimAdjust] = useState({ smart: 0, grit: 0, build: 0 });
@@ -20,14 +22,7 @@ export default function ScoresPage() {
   const [canvasSize, setCanvasSize] = useState(600);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch('/profile').then(p => {
-        const cs = Object.values(p.cohort_scores || {}) as CohortScore[];
-        setCohorts(cs);
-        setOverall({ smart: p.overall_smart || 0, grit: p.overall_grit || 0, build: p.overall_build || 0, dilly: p.overall_dilly_score || 0 });
-      }),
-      apiFetch('/v2/internships/stats').then(setStats),
-    ]);
+    dilly.get('/v2/internships/stats').then(setStats).catch(() => {});
   }, []);
 
   // Resize canvas to fit container

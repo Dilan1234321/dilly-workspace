@@ -6,8 +6,10 @@ import { GlobalMenuProvider } from '@/components/layout/GlobalMenu';
 import RightPanel from '@/components/layout/RightPanel';
 import JobDetail from '@/components/jobs/JobDetail';
 
-import { getToken } from '@/lib/auth';
+import { getToken, clearToken } from '@/lib/auth';
+import { dilly } from '@/lib/dilly';
 import { CustomCursor } from '@/components/layout/CustomCursor';
+import type { AppProfile } from '@dilly/api';
 
 interface RightPanelState {
   mode: 'chat' | 'job';
@@ -29,6 +31,12 @@ export interface ResumeHighlight {
   bulletIndex: number;
 }
 
+export interface AtsFixCtx {
+  vendor: string;
+  vendorKey: string;
+  issues: string[];
+}
+
 const RightPanelContext = createContext<{
   state: RightPanelState;
   showJob: (job: any) => void;
@@ -48,6 +56,8 @@ const RightPanelContext = createContext<{
   endJobImport: () => void;
   panelOpen: boolean;
   togglePanel: () => void;
+  atsFixCtx: AtsFixCtx | null;
+  setAtsFixCtx: (ctx: AtsFixCtx | null) => void;
 }>({
   state: { mode: 'chat', job: null },
   showJob: () => {},
@@ -67,15 +77,34 @@ const RightPanelContext = createContext<{
   endJobImport: () => {},
   panelOpen: true,
   togglePanel: () => {},
+  atsFixCtx: null,
+  setAtsFixCtx: () => {},
 });
 
 export function useRightPanel() {
   return useContext(RightPanelContext);
 }
 
+// ─── Profile Context ──────────────────────────────────────────────────────────
+// Single source of truth for the logged-in user's profile across all app pages.
+// Fetched once when the app shell mounts; every page reads from here — no per-page fetches.
+
+const ProfileContext = createContext<{
+  profile: AppProfile;
+  setProfile: (p: AppProfile) => void;
+  refreshProfile: () => Promise<void>;
+} | null>(null);
+
+export function useProfile() {
+  const ctx = useContext(ProfileContext);
+  if (!ctx) throw new Error('useProfile must be used inside AppLayout');
+  return ctx;
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
+  const [profile, setProfile] = useState<AppProfile | null>(null);
   const [panelState, setPanelState] = useState<RightPanelState>({ mode: 'chat', job: null });
   const [resumeCoachCtx, setResumeCoachCtx] = useState<ResumeCoachCtx | null>(null);
   const [resumeHighlight, setResumeHighlight] = useState<ResumeHighlight | null>(null);
@@ -85,17 +114,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [jobImportTrigger, setJobImportTrigger] = useState<{ company: string; title: string; description: string; id: number } | null>(null);
   const [showJobImportForm, setShowJobImportForm] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [atsFixCtx, setAtsFixCtx] = useState<AtsFixCtx | null>(null);
   const triggerIdRef = useRef(0);
 
-  // Auth gate: useLayoutEffect runs before paint — no loading flash, no hydration mismatch
+  // Phase 1 — sync token check before first paint (useLayoutEffect: no flash)
   useLayoutEffect(() => {
-    const token = getToken();
-    if (!token) {
+    if (!getToken()) {
       router.replace('/onboarding');
     } else {
       setAuthChecked(true);
     }
   }, [router]);
+
+  // Phase 2 — fetch profile once after token confirmed
+  const refreshProfile = useCallback(async () => {
+    const p = await dilly.getProfile() as AppProfile;
+    setProfile(p);
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked) return;
+    dilly.getProfile()
+      .then((p) => setProfile(p as AppProfile))
+      .catch(() => {
+        // Profile fetch failed (network, 5xx, etc.) — clear token and go to onboarding.
+        // 401s are already handled by dilly's onUnauthorized before reaching here.
+        clearToken();
+        router.replace('/onboarding');
+      });
+  }, [authChecked, router]);
 
   // Clear coach context and highlights when navigating away from resume editor
   const pathname = usePathname();
@@ -143,8 +190,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const hideRightPanel = pathname === '/scores';
 
-  // Don't render app shell until auth is confirmed
-  if (!authChecked) {
+  // Hold rendering until token is confirmed AND profile is loaded
+  if (!authChecked || !profile) {
     return (
       <div className="flex h-screen items-center justify-center" style={{ background: 'var(--surface-0)' }}>
         <div className="text-center">
@@ -155,6 +202,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <ProfileContext.Provider value={{ profile, setProfile, refreshProfile }}>
     <GlobalMenuProvider>
     <RightPanelContext.Provider value={{
       state: panelState,
@@ -175,6 +223,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       endJobImport,
       panelOpen,
       togglePanel,
+      atsFixCtx,
+      setAtsFixCtx,
     }}>
       <CustomCursor />
       <div className="dilly-app-shell flex h-screen overflow-hidden">
@@ -260,6 +310,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     </RightPanelContext.Provider>
     </GlobalMenuProvider>
+    </ProfileContext.Provider>
   );
 }
 

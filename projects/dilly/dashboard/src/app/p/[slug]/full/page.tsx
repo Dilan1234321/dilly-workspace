@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { API_BASE } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
 type DillyProfile = {
@@ -43,7 +43,7 @@ export default function PublicDillyProfilePage() {
       setLoading(false);
       return;
     }
-    fetch(`${API_BASE}/profile/public/${slug}/dilly`)
+    dilly.fetch(`/profile/public/${slug}/dilly`)
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => setProfile(p ?? null))
       .catch(() => setProfile(null))

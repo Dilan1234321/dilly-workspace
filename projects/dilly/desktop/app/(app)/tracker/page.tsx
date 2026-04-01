@@ -3,7 +3,7 @@ import { useState, useRef, useMemo, useEffect } from 'react';
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 
 /* ── Types ───────────────────────────────────────────── */
@@ -100,7 +100,7 @@ export default function TrackerPage() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await apiFetch('/applications');
+        const data = await dilly.get('/applications');
         const apiApps = data?.applications || [];
         if (apiApps.length > 0) {
           setApps(apiApps);
@@ -127,10 +127,7 @@ export default function TrackerPage() {
     if (!loaded) return;
     saveTrackerApps(apps);
     // Sync to API in background
-    apiFetch('/applications/sync', {
-      method: 'POST',
-      body: JSON.stringify({ applications: apps }),
-    }).catch(() => {});
+    dilly.post('/applications/sync', { applications: apps }).catch(() => {});
   }, [apps, loaded]);
 
   function handleDragEnd(event: any) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { AUTH_TOKEN_KEY, API_BASE } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { AppProfileHeader } from "@/components/career-center";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Button } from "@/components/ui/button";
@@ -38,15 +38,7 @@ export default function DillyProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    fetch(`${API_BASE}/profile/dilly`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
+    dilly.get<DillyProfile>("/profile/dilly")
       .then((p) => setProfile(p ?? null))
       .catch(() => setProfile(null))
       .finally(() => setLoading(false));

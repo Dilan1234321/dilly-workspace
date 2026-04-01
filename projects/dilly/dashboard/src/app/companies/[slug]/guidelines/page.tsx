@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { API_BASE } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { LoaderOne } from "@/components/ui/loader-one";
 import { Button } from "@/components/ui/button";
 
@@ -35,7 +35,7 @@ export default function CompanyGuidelinesPage() {
     }
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE}/companies/${encodeURIComponent(slug)}/guidelines`)
+    dilly.fetch(`/companies/${encodeURIComponent(slug)}/guidelines`)
       .then((res) => {
         if (!res.ok) {
           if (res.status === 404) setError("Company not found.");

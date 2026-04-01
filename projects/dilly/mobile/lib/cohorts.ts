@@ -1,8 +1,17 @@
 /**
- * Unified 22-Cohort System
+ * Mobile cohort system — intentionally richer than @dilly/api cohort utilities.
  *
- * Every cohort is both a scoring cohort AND a resume template cohort.
- * No more dual namespace — one cohort drives scoring, matching, templates, and AI.
+ * Key divergences from @dilly/api (by design, not accident):
+ *   - MAJOR_TO_COHORTS  (plural)  → maps one major to MULTIPLE cohorts
+ *     vs @dilly/api MAJOR_TO_COHORT (singular) → maps one major to ONE cohort
+ *   - PRE_PROF_TO_COHORTS (plural) → same multi-cohort pattern
+ *   - detectCohorts() (plural)    → returns ALL matching cohorts for a user
+ *     vs @dilly/api detectCohort() (singular) → returns ONE best-fit cohort
+ *   - COHORT_META — per-cohort descriptions, scoring emphasis, colors (mobile-only)
+ *
+ * Do NOT "fix" the plural naming — it carries semantic meaning.
+ * Add new cohort metadata entries here; add new cohort names to
+ * packages/dilly-api/src/constants.ts (ALL_COHORTS must stay in sync).
  */
 
 // ── Major → Cohort mapping ──────────────────────────────────────────────────

@@ -5,14 +5,13 @@ import Link from "next/link";
 import { AppProfileHeader } from "@/components/career-center";
 import { ProfilePhotoWithFrame } from "@/components/ProfilePhotoWithFrame";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   PROFILE_CACHE_KEY_BASE,
   SCHOOL_NAME_KEY,
   profilePhotoCacheKey,
   getCareerCenterReturnPath,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { getProfileFrame } from "@/lib/profileFrame";
 import { getEffectiveCohortLabel, PRE_PROFESSIONAL_TRACKS } from "@/lib/trackDefinitions";
 
@@ -103,7 +102,7 @@ function readEmailForCachedProfile(): string | null {
     /* ignore */
   }
   try {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = localStorage.getItem("dilly_auth_token");
     if (!token) return null;
     const parts = token.split(".");
     if (parts.length < 2) return null;
@@ -154,7 +153,7 @@ export default function ProfileDetailsPage({ onBack, onOpenSettings }: { onBack?
 
   /** Hydrate from localStorage before paint so we don’t flash full-screen loader when cache exists. */
   useLayoutEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const token = localStorage.getItem("dilly_auth_token");
     if (!token) {
       setLoading(false);
       setError(true);
@@ -168,14 +167,7 @@ export default function ProfileDetailsPage({ onBack, onOpenSettings }: { onBack?
   }, []);
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
-      return;
-    }
-
-    fetch(`${API_BASE}/profile/dilly`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    dilly.fetch("/profile/dilly")
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => {
         if (p) setProfile(p);
@@ -184,9 +176,7 @@ export default function ProfileDetailsPage({ onBack, onOpenSettings }: { onBack?
       .catch(() => setError(true))
       .finally(() => setLoading(false));
 
-    fetch(`${API_BASE}/profile/photo`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    dilly.fetch("/profile/photo")
       .then((r) => (r.ok ? r.blob() : null))
       .then((blob) => {
         if (blob && blob.size > 0) {

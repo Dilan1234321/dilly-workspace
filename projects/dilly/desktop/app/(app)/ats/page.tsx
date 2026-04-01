@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
 import { getToken } from '@/lib/auth';
+import { useRightPanel } from '@/app/(app)/layout';
 
 /* ── Types ─────────────────────────────────────────── */
 interface ChecklistItem {
@@ -217,7 +218,7 @@ export default function ATSPage() {
     setCompanySearching(true);
     const t = setTimeout(async () => {
       try {
-        const data = await apiFetch(`/ats-company-lookup?company=${encodeURIComponent(companySearch.trim())}`);
+        const data = await dilly.get(`/ats-company-lookup?company=${encodeURIComponent(companySearch.trim())}`);
         if (data.vendor_key) { setCompanyResult(data); setCompanyNotFound(false); }
         else { setCompanyResult(null); setCompanyNotFound(true); }
       } catch { setCompanyResult(null); setCompanyNotFound(true); }
@@ -243,7 +244,7 @@ export default function ATSPage() {
     } catch {
       // Fall back to GET
       try {
-        const data = await apiFetch('/ats/scan');
+        const data = await dilly.get('/ats/scan');
         setResult(normalizeResult(data));
       } catch { /* stay on upload UI */ }
     } finally {
@@ -259,7 +260,7 @@ export default function ATSPage() {
       setInitialLoading(false);
       scanWithText(editorText);
     } else {
-      apiFetch('/ats/scan')
+      dilly.get('/ats/scan')
         .then((data: any) => setResult(normalizeResult(data)))
         .catch(() => {})
         .finally(() => setInitialLoading(false));
@@ -269,7 +270,7 @@ export default function ATSPage() {
   const runScan = useCallback(async () => {
     setScanning(true);
     try {
-      const data = await apiFetch('/ats/scan');
+      const data = await dilly.get('/ats/scan');
       setResult(normalizeResult(data));
     } catch {
       // Stay on upload UI
@@ -614,7 +615,7 @@ export default function ATSPage() {
           {tab === 'issues' && <IssuesTab issues={result.issues} />}
           {tab === 'checklist' && <ChecklistTab items={result.checklist} />}
           {tab === 'keywords' && <KeywordsTab keywords={result.keywords} stats={result.keyword_stats} placement={result.keyword_placement_pct} commentary={result.dilly_keyword_commentary} />}
-          {tab === 'vendors' && <VendorsTab vendors={result.vendors} commentary={result.dilly_vendor_commentary} />}
+          {tab === 'vendors' && <VendorsTab vendors={result.vendors} commentary={result.dilly_vendor_commentary} issues={result.issues} />}
           {tab === 'fixes' && <FixesTab fixes={result.quick_fixes} />}
         </div>
       </div>
@@ -766,7 +767,34 @@ function KeywordsTab({ keywords, stats, placement, commentary }: {
   );
 }
 
-function VendorsTab({ vendors, commentary }: { vendors: Vendor[]; commentary?: string }) {
+function VendorsTab({ vendors, commentary, issues }: { vendors: Vendor[]; commentary?: string; issues: Issue[] }) {
+  const { showChat, fireProactiveCoach, setAtsFixCtx } = useRightPanel();
+
+  function handleFixWithDilly(v: Vendor) {
+    const vendorKey = v.name.toLowerCase().replace(/\s+/g, '');
+    const tips = VENDOR_TIPS[vendorKey] || VENDOR_TIPS.default;
+    const issueList = issues.map(i => i.title).filter(Boolean);
+
+    const prompt = [
+      `User clicked "Fix with Dilly" for ${v.name} on the ATS Vendors tab.`,
+      `Their resume scored ${v.score}/100 on ${v.name} (status: ${v.status === 'fail' ? 'fails to parse' : 'risky'}).`,
+      `${v.name} is ${tips.strictness} — ${tips.summary}`,
+      issueList.length ? `Resume issues detected: ${issueList.slice(0, 6).join('; ')}.` : '',
+      `Explain the specific fixes they need to make for ${v.name} in a concise, practical way. Reference their actual issues. Then ask: "Want me to open your Resume Editor so we can apply these fixes?"`,
+    ].filter(Boolean).join(' ');
+
+    sessionStorage.setItem('dilly_ats_fix', JSON.stringify({
+      vendor: v.name,
+      vendorKey,
+      issues: issueList,
+      tips: tips.actions,
+    }));
+
+    setAtsFixCtx({ vendor: v.name, vendorKey, issues: issueList });
+    showChat();
+    fireProactiveCoach(prompt);
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {commentary && (
@@ -796,6 +824,21 @@ function VendorsTab({ vendors, commentary }: { vendors: Vendor[]; commentary?: s
               <p style={{ fontSize: 10, color: '#34C759', marginTop: 8 }}>
                 ✓ {v.companies.slice(0, 3).join(' · ')}
               </p>
+            )}
+            {(v.status === 'risky' || v.status === 'fail') && (
+              <button
+                onClick={() => handleFixWithDilly(v)}
+                style={{
+                  marginTop: 10, width: '100%', padding: '7px 0', borderRadius: 6, border: 'none',
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+                  background: 'rgba(59,76,192,0.07)', color: '#2B3A8E', cursor: 'pointer',
+                  transition: 'background 150ms ease',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.14)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.07)'; }}
+              >
+                ✦ Fix with Dilly
+              </button>
             )}
           </Card>
         ))}

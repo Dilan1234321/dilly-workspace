@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import DillyAvatar from './DillyAvatar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -106,7 +106,8 @@ function TypingDots() {
 
 export default function RightPanel({ initialMessage }: { initialMessage?: string }) {
   const pathname = usePathname();
-  const { resumeCoachCtx, proactiveCoachTrigger, clearProactiveCoachTrigger, setResumeHighlight, fireJobImport, showJobImportForm } = useRightPanel();
+  const router = useRouter();
+  const { resumeCoachCtx, proactiveCoachTrigger, clearProactiveCoachTrigger, setResumeHighlight, fireJobImport, showJobImportForm, atsFixCtx, setAtsFixCtx } = useRightPanel();
   const isCoachMode = !!resumeCoachCtx;
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -344,11 +345,28 @@ export default function RightPanel({ initialMessage }: { initialMessage?: string
 
   const send = useCallback(async (text: string) => {
     if (!text.trim() || loading) return;
+
+    // ATS fix: if user says "yes" while an ATS fix is pending, navigate to resume editor
+    if (atsFixCtx) {
+      const lower = text.trim().toLowerCase().replace(/[!.?]+$/, '');
+      const affirmative = /^(yes|yeah|yep|yup|sure|ok|okay|please|do it|let'?s go?|absolutely|go|sounds good|yes please|take me there|open it)$/.test(lower);
+      if (affirmative) {
+        sessionStorage.setItem('dilly_ats_fix', JSON.stringify({
+          vendor: atsFixCtx.vendor,
+          vendorKey: atsFixCtx.vendorKey,
+          issues: atsFixCtx.issues,
+        }));
+        setAtsFixCtx(null);
+        router.push('/resume-editor?ats_fix=1');
+        return;
+      }
+    }
+
     const userMsg: Message = { role: 'user', content: text.trim(), ts: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     await streamCall(text.trim(), [...messages, userMsg]);
-  }, [loading, messages, streamCall]);
+  }, [loading, messages, streamCall, atsFixCtx, setAtsFixCtx, router]);
 
   // Keep stable refs so the proactive timeout can read the latest values
   // without being cancelled when clearProactiveCoachTrigger() causes a re-render.
@@ -456,9 +474,9 @@ export default function RightPanel({ initialMessage }: { initialMessage?: string
           <span style={{ fontWeight: 800, fontSize: 36, color: '#2B3A8E', letterSpacing: -1.5, lineHeight: 1, marginBottom: 28 }}>dilly</span>
 
           <div style={{
-            width: 100, height: 100, borderRadius: '50%', background: '#0f0f1a',
+            width: 100, height: 100, borderRadius: '50%', background: '#ffffff',
             display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-            boxShadow: '0 0 0 1px rgba(201,168,76,0.18), 0 0 24px rgba(201,168,76,0.08)',
+            boxShadow: '0 0 0 1px rgba(59,76,192,0.12), 0 4px 20px rgba(59,76,192,0.08)',
           }}>
             <DillyAvatar size={76} />
           </div>
@@ -505,7 +523,7 @@ export default function RightPanel({ initialMessage }: { initialMessage?: string
       >
         {hasMessages && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, opacity: 0.7 }}>
-            <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#0f0f1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#ffffff', border: '1px solid rgba(59,76,192,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <DillyAvatar size={14} />
             </div>
             <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', letterSpacing: 0.3, flex: 1 }}>

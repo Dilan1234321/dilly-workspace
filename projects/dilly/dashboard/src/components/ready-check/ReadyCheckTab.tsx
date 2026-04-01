@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppProfileHeader } from "@/components/career-center";
 import { CompanyInput } from "@/components/ready-check/CompanyInput";
 import { VerdictLoadingScreen } from "@/components/ready-check/VerdictLoadingScreen";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { MemoryItem, ReadyCheck } from "@/types/dilly";
 
 export function ReadyCheckTab({
@@ -16,20 +16,14 @@ export function ReadyCheckTab({
   initialCompany?: string | null;
 }) {
   const router = useRouter();
-  const token = useMemo(
-    () => (typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null),
-    [],
-  );
   const [company, setCompany] = useState(initialCompany || "");
   const [chips, setChips] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-    fetch(`${API_BASE}/memory`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
+    dilly.get<{ items: MemoryItem[] }>("/memory")
       .then((data) => {
-        const items = Array.isArray(data?.items) ? (data.items as MemoryItem[]) : [];
+        const items = Array.isArray(data?.items) ? data.items : [];
         const targets = items
           .filter((item) => item.category === "target_company")
           .map((item) => item.value || item.label)
@@ -40,7 +34,7 @@ export function ReadyCheckTab({
       })
       .catch(() => setChips([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, []);
 
   // Reset company when initialCompany changes
   useEffect(() => {
@@ -48,17 +42,13 @@ export function ReadyCheckTab({
   }, [initialCompany]);
 
   const submit = async () => {
-    if (!token || !company.trim()) return;
+    if (!company.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/ready-check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ company: company.trim() }),
-      });
-      if (!res.ok) return;
-      const row = (await res.json()) as ReadyCheck;
+      const row = await dilly.post<ReadyCheck>("/ready-check", { company: company.trim() });
       router.push(`/ready-check/${row.id}`);
+    } catch {
+      // ignore submit errors
     } finally {
       setLoading(false);
     }

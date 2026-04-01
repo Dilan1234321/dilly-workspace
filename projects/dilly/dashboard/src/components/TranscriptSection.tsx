@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { LoaderOne } from "@/components/ui/loader-one";
+import { dilly } from "@/lib/dilly";
 
 const GPA_LIST_THRESHOLD = 3.5;
 
@@ -48,11 +49,9 @@ type ProfileWithTranscript = {
 type Props = {
   appProfile: ProfileWithTranscript | null;
   onProfileUpdated: () => void;
-  apiBase: string;
-  authTokenKey: string;
 };
 
-export function TranscriptSection({ appProfile, onProfileUpdated, apiBase, authTokenKey }: Props) {
+export function TranscriptSection({ appProfile, onProfileUpdated }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -82,13 +81,11 @@ export function TranscriptSection({ appProfile, onProfileUpdated, apiBase, authT
     }
     setUploadError(null);
     setUploading(true);
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(authTokenKey) : null;
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch(`${apiBase}/profile/transcript`, {
+      const res = await dilly.fetch("/profile/transcript", {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
       const data = await res.json().catch(() => ({}));
@@ -109,9 +106,8 @@ export function TranscriptSection({ appProfile, onProfileUpdated, apiBase, authT
     if (!confirm("Remove your transcript? Dilly will stop using it for GPA and course data.")) return;
     setDeleting(true);
     setUploadError(null);
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(authTokenKey) : null;
     try {
-      const res = await fetch(`${apiBase}/profile/transcript`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await dilly.fetch("/profile/transcript", { method: "DELETE" });
       if (res.ok) onProfileUpdated();
     } finally {
       setDeleting(false);

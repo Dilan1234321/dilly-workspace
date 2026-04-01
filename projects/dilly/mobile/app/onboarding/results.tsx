@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ export default function ResultsScreen() {
   async function handleEnter() {
     if (completing) return;
     setCompleting(true);
-    try { await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify({ onboarding_complete: true, has_run_first_audit: true }) }); } catch {}
+    try { await dilly.patch('/profile', { onboarding_complete: true, has_run_first_audit: true }); } catch {}
     await AsyncStorage.setItem('dilly_has_onboarded', 'true');
     await AsyncStorage.removeItem('dilly_audit_result');
     router.replace('/(app)');

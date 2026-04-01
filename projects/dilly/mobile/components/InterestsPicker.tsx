@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { apiFetch } from '../lib/auth';
+import { dilly } from '../lib/dilly';
 import { colors } from '../lib/tokens';
 import AnimatedPressable from './AnimatedPressable';
 
@@ -32,7 +32,7 @@ export default function InterestsPicker({ selected, onChange, autoPopulated = []
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiFetch('/interests/list');
+        const res = await dilly.fetch('/interests/list');
         const data = await res.json();
         setAllInterests(data.interests || []);
       } catch {

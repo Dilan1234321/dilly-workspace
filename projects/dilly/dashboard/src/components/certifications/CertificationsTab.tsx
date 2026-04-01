@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
-  fetchWithTimeout,
-} from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { AuditV2 } from "@/types/dilly";
 import type { CertificationsPageData } from "@/types/certifications";
 import { fetchCertificationsFromApi, buildCertificationsPageDataFromAudit } from "@/lib/certificationsPageData";
@@ -80,11 +76,6 @@ export function CertificationsTab({
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      setLoading(false);
-      return;
-    }
     const uid = (userId || "").trim();
     if (!uid) {
       setLoading(false);
@@ -98,6 +89,11 @@ export function CertificationsTab({
 
     (async () => {
       try {
+        const token = typeof localStorage !== "undefined" ? localStorage.getItem("dilly_auth_token") : null;
+        if (!token) {
+          setLoading(false);
+          return;
+        }
         const apiData = await fetchCertificationsFromApi(uid, token);
         if (cancelled) return;
         if (apiData) {
@@ -105,11 +101,7 @@ export function CertificationsTab({
           return;
         }
 
-        const histRes = await fetchWithTimeout(
-          `${API_BASE}/audit/history`,
-          { headers: { Authorization: `Bearer ${token}` } },
-          28_000,
-        );
+        const histRes = await dilly.fetch("/audit/history");
         const histJson = histRes.ok ? await histRes.json() : null;
         const list = Array.isArray(histJson?.audits) ? histJson.audits : Array.isArray(histJson) ? histJson : [];
         const sorted = [...list]
@@ -121,11 +113,7 @@ export function CertificationsTab({
           setEmptyReason("no_audit");
           return;
         }
-        const fullRes = await fetchWithTimeout(
-          `${API_BASE}/audit/history/${encodeURIComponent(latestId)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-          35_000,
-        );
+        const fullRes = await dilly.fetch(`/audit/history/${encodeURIComponent(latestId)}`);
         if (!fullRes.ok) {
           setData(null);
           setEmptyReason("no_audit");

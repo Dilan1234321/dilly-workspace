@@ -1,0 +1,217 @@
+/* Scoped chrome — import once at app root alongside globals. */
+.dilly-profile-chrome {
+  --dpc-gold: #c9a84c;
+  --dpc-gold-soft: rgba(201, 168, 76, 0.85);
+  --dpc-blue: #3b4cc0;
+  --dpc-text: var(--dpc-text-fallback, #1a1a1a);
+  --dpc-muted: var(--dpc-muted-fallback, #6b6b6b);
+  --dpc-subtle: var(--dpc-subtle-fallback, #a0a0a0);
+  --dpc-border: var(--dpc-border-fallback, rgba(0, 0, 0, 0.08));
+  --dpc-surface: var(--dpc-surface-fallback, #f8f8fa);
+}
+
+.dark .dilly-profile-chrome {
+  --dpc-text-fallback: #f5f5f7;
+  --dpc-muted-fallback: #98989f;
+  --dpc-subtle-fallback: #636366;
+  --dpc-border-fallback: rgba(255, 255, 255, 0.08);
+  --dpc-surface-fallback: #2c2c2e;
+}
+
+.dilly-profile-chrome__hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding-bottom: 1.75rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--dpc-border);
+}
+
+.dilly-profile-chrome__identity {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.dilly-profile-chrome__avatar {
+  width: 168px;
+  height: 168px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 3px solid var(--dpc-border);
+  background: var(--dpc-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dilly-profile-chrome__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dilly-profile-chrome__avatar-initial {
+  font-size: 3.5rem;
+  font-weight: 600;
+  color: var(--dpc-subtle);
+}
+
+.dilly-profile-chrome__name {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
+  font-weight: 700;
+  color: var(--dpc-text);
+  margin: 0 0 0.5rem;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
+.dilly-profile-chrome__majors {
+  font-size: 1.05rem;
+  color: var(--dpc-muted);
+  margin: 0 0 0.2rem;
+  line-height: 1.45;
+}
+
+.dilly-profile-chrome__majors .dilly-profile-chrome__lbl {
+  font-weight: 700;
+  color: var(--dpc-blue);
+}
+
+.dilly-profile-chrome__minors {
+  font-size: 0.95rem;
+  color: var(--dpc-muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.dilly-profile-chrome__minors .dilly-profile-chrome__lbl {
+  font-weight: 700;
+  color: var(--dpc-gold-soft);
+}
+
+.dilly-profile-chrome__school {
+  font-size: 0.82rem;
+  color: var(--dpc-subtle);
+  margin: 0.65rem 0 0;
+}
+
+/* Cohort strip — recruiter te-score-block family */
+.dilly-profile-chrome__cohorts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: stretch;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: min(100%, 420px);
+}
+
+.dilly-profile-chrome__cohort-card {
+  min-width: 108px;
+  padding: 1.1rem 0.85rem 1.2rem;
+  border-radius: 14px;
+  border: 2px solid var(--cb-border, var(--dpc-border));
+  background: var(--cb-bg, var(--dpc-surface));
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.dilly-profile-chrome__cohort-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.dark .dilly-profile-chrome__cohort-card:hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.dilly-profile-chrome__cohort-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dpc-subtle);
+  margin: 0 0 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dilly-profile-chrome__cohort-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.1rem, 3.5vw, 2.85rem);
+  font-weight: 700;
+  font-style: italic;
+  font-variant-numeric: oldstyle-nums;
+  font-feature-settings: 'onum' 1;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--cb-color, var(--dpc-gold));
+}
+
+/* S/G/B row */
+.dilly-profile-chrome__sgb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.dilly-profile-chrome__sgb-block {
+  flex: 1;
+  min-width: 120px;
+  padding: 1.25rem 1.35rem;
+  border-radius: 14px;
+  border: 2px solid var(--sb-border, var(--dpc-border));
+  background: var(--sb-bg, var(--dpc-surface));
+  text-align: center;
+}
+
+.dilly-profile-chrome__sgb-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dpc-subtle);
+  margin: 0 0 0.4rem;
+}
+
+.dilly-profile-chrome__sgb-value {
+  font-size: 2.15rem;
+  font-weight: 700;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-variant-numeric: oldstyle-nums;
+  font-feature-settings: 'onum' 1;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--sb-color, var(--dpc-text));
+}
+
+@media (min-width: 1280px) {
+  .dilly-profile-chrome__cohort-card {
+    min-width: 122px;
+    padding: 1.25rem 1rem 1.35rem;
+  }
+}
+
+@keyframes dpcFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dilly-profile-chrome .animate-fade-in {
+  animation: dpcFadeUp 0.45s ease-out both;
+}

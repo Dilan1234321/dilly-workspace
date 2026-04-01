@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { CohortPulse, UserCohortPulse } from "@/types/dilly";
 
 type PulseWithCohort = UserCohortPulse & { cohort: CohortPulse };
@@ -22,7 +22,7 @@ export function CohortPulseCard({ pulse, onHidden }: { pulse: PulseWithCohort; o
   const trackLabel = (pulse.cohort.track || "your track").toUpperCase();
   const gap = Math.max(0, pulse.user_percentile - 25);
 
-  const userRow = useMemo(() => {
+  const userRow = (() => {
     if (pulse.user_score_change > 2) {
       return {
         text: `+${Math.round(pulse.user_score_change)} pts this week`,
@@ -42,17 +42,12 @@ export function CohortPulseCard({ pulse, onHidden }: { pulse: PulseWithCohort; o
       text: `Flat at ${Math.round(dimScore)} ${dim[0].toUpperCase()}${dim.slice(1)} · 7 days`,
       color: "var(--t2)",
     };
-  }, [pulse.cohort.top_improvement_dimension, pulse.user_build, pulse.user_grit, pulse.user_score_change, pulse.user_smart]);
+  })();
 
   const patchSeen = useCallback(async () => {
     if (seenSent) return;
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
     try {
-      await fetch(`${API_BASE}/cohort-pulse/${pulse.id}/seen`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await dilly.patch(`/cohort-pulse/${pulse.id}/seen`, {});
       setSeenSent(true);
     } catch {
       // ignore seen errors; card remains functional
@@ -60,13 +55,8 @@ export function CohortPulseCard({ pulse, onHidden }: { pulse: PulseWithCohort; o
   }, [pulse.id, seenSent]);
 
   const patchActed = useCallback(async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
     try {
-      await fetch(`${API_BASE}/cohort-pulse/${pulse.id}/acted`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await dilly.patch(`/cohort-pulse/${pulse.id}/acted`, {});
     } catch {
       // ignore acted errors
     }
@@ -165,4 +155,3 @@ export function CohortPulseCard({ pulse, onHidden }: { pulse: PulseWithCohort; o
     </div>
   );
 }
-

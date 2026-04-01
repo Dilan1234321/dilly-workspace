@@ -20,7 +20,8 @@ import Animated, {
   Easing,
   interpolateColor,
 } from 'react-native-reanimated';
-import { apiFetch, getToken } from '../../lib/auth';
+import { getToken } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -267,8 +268,8 @@ export default function NewAuditScreen() {
     (async () => {
       try {
         const [latestRes, historyRes] = await Promise.all([
-          apiFetch('/audit/latest').then(r => r.json()),
-          apiFetch('/audit/history').then(r => r.json()),
+          dilly.get('/audit/latest'),
+          dilly.get('/audit/history'),
         ]);
         const latest = latestRes?.audit;
         if (latest) setLatestAudit(latest);
@@ -325,7 +326,7 @@ export default function NewAuditScreen() {
 
       if (useEditor) {
         // Audit from saved editor resume
-        const res = await apiFetch('/resume/audit', {
+        const res = await dilly.fetch('/resume/audit', {
           method: 'POST',
           body: JSON.stringify({}),
         });
@@ -364,7 +365,7 @@ export default function NewAuditScreen() {
         // Update base resume in the editor from the latest parsed resume
         // This ensures the resume editor always reflects the most recent audit
         try {
-          await apiFetch('/resume/sync-base', { method: 'POST' }).catch(() => null);
+          await dilly.post('/resume/sync-base').catch(() => null);
         } catch {}
       } else {
         Alert.alert('Audit Failed', result?.detail || result?.error || 'Resume audit failed. Please try uploading again.');

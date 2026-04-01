@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, apiFetchBlob } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
+import { useProfile } from '../layout';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 import { saveSnapshot, getDailyHistory, getMilestone, type ScoreSnapshot } from '@/lib/score-history';
 
@@ -250,25 +251,23 @@ function ScoreHistoryChart({ history, currentScore }: { history: ScoreSnapshot[]
 }
 
 export default function HomePage() {
-  const [profile, setProfile] = useState<any>(null);
+  const { profile } = useProfile();
+  const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [topJobs, setTopJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<ScoreSnapshot[]>([]);
-  const router = useRouter();
 
   useEffect(() => {
+    // Profile is already in context — just save snapshot and load secondary data
+    saveSnapshot(profile.overall_smart || 0, profile.overall_grit || 0, profile.overall_build || 0, profile.overall_dilly_score || 0);
+    setHistory(getDailyHistory());
+
     Promise.all([
-      apiFetch('/profile').then(p => {
-        setProfile(p);
-        saveSnapshot(p.overall_smart || 0, p.overall_grit || 0, p.overall_build || 0, p.overall_dilly_score || 0);
-        setHistory(getDailyHistory());
-        return p;
-      }),
-      apiFetchBlob('/profile/photo').then(b => { if (b) setPhotoUrl(URL.createObjectURL(b)); }).catch(() => {}),
-      apiFetch('/v2/internships/stats').then(setStats),
-      apiFetch('/v2/internships/feed?readiness=ready&limit=8').then(d => {
+      dilly.blob('/profile/photo').then(b => { if (b) setPhotoUrl(URL.createObjectURL(b)); }).catch(() => {}),
+      dilly.get('/v2/internships/stats').then(setStats).catch(() => {}),
+      dilly.get('/v2/internships/feed?readiness=ready&limit=8').then((d: any) => {
         const usStates = /^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i;
         const intl = /argentina|colombia|poland|ireland|london|berlin|paris|tokyo|singapore|sydney|mumbai|india|israel|amsterdam|dublin|hong kong|brazil|mexico|uk|europe|emea|apac|latam|germany|france|italy|spain/i;
         const filtered = (d.listings || []).filter((l: any) => {
@@ -277,15 +276,13 @@ export default function HomePage() {
           return l.work_mode === 'remote' || usStates.test(st) || (!ci && !st);
         });
         setTopJobs(filtered.slice(0, 6).map((l: any) => ({ id: l.id, title: l.title, company: l.company, location: [l.location_city, l.location_state].filter(Boolean).join(', ') })));
-      }),
+      }).catch(() => {}),
     ]).finally(() => setLoading(false));
-  }, []);
+  }, [profile]);
 
-  if (loading) return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="skeleton" style={{ width: 40, height: 40, borderRadius: 20 }} /></div>;
-
-  const cohorts = (Object.values(profile?.cohort_scores || {}) as any[]).sort((a: any, b: any) => b.dilly_score - a.dilly_score);
-  const fullName = profile?.name || 'Student';
-  const name = fullName;
+  const cohorts = (Object.values(profile.cohort_scores || {}) as any[]).sort((a: any, b: any) => b.dilly_score - a.dilly_score);
+  const fullName = profile.name;
+  const name = fullName ?? '';
   const smart = Math.round(profile?.overall_smart || 0);
   const grit = Math.round(profile?.overall_grit || 0);
   const build = Math.round(profile?.overall_build || 0);
@@ -330,7 +327,7 @@ export default function HomePage() {
               )}
             </div>
 
-            <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>{profile?.school || 'University of Tampa'}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>{profile.school}</p>
           </div>
         </div>
 

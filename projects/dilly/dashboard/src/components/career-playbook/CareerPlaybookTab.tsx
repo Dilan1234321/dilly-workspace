@@ -3,12 +3,10 @@
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useState } from "react";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   DILLY_PLAYBOOK_VOICE_PROMPT_KEY,
   DILLY_OPEN_OVERLAY_KEY,
-  fetchWithTimeout,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { getEffectiveCohortLabel, getPlaybookForTrack, getTrackTips } from "@/lib/trackDefinitions";
 import type { AppProfile, AuditV2, CareerPlaybookDeepDive, CareerPlaybookPayload, CareerPlaybookSignal } from "@/types/dilly";
 import { hapticLight } from "@/lib/haptics";
@@ -145,20 +143,13 @@ export function CareerPlaybookTab({
   const [trackLabel, setTrackLabel] = useState("");
 
   const loadPlaybook = useCallback(async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      setErr("Sign in again to load your playbook.");
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setErr(null);
     setData(null);
-    const getTimeoutMs = 28_000;
     try {
       const [profRes, histRes] = await Promise.all([
-        fetchWithTimeout(`${API_BASE}/profile`, { headers: { Authorization: `Bearer ${token}` } }, getTimeoutMs),
-        fetchWithTimeout(`${API_BASE}/audit/history`, { headers: { Authorization: `Bearer ${token}` } }, getTimeoutMs),
+        dilly.fetch("/profile"),
+        dilly.fetch("/audit/history"),
       ]);
       const profile = profRes.ok ? ((await profRes.json()) as AppProfile & Record<string, unknown>) : {};
       const histJson = histRes.ok ? await histRes.json() : null;
@@ -172,11 +163,7 @@ export function CareerPlaybookTab({
         setLoading(false);
         return;
       }
-      const fullRes = await fetchWithTimeout(
-        `${API_BASE}/audit/history/${encodeURIComponent(latestId)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-        35_000,
-      );
+      const fullRes = await dilly.fetch(`/audit/history/${encodeURIComponent(latestId)}`);
       if (!fullRes.ok) {
         setErr("Could not load your latest audit.");
         setLoading(false);
@@ -208,20 +195,9 @@ export function CareerPlaybookTab({
         track_tips: tips,
         effective_track: eff,
       };
-      const rawBody = JSON.stringify(body);
-      const postHeaders = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-      const PLAYBOOK_POST_MS = 75_000;
-      let playRes = await fetchWithTimeout(
-        `${API_BASE}/audit/career-playbook`,
-        { method: "POST", headers: postHeaders, body: rawBody },
-        PLAYBOOK_POST_MS,
-      );
+      let playRes = await dilly.post("/audit/career-playbook", body);
       if (playRes.status === 404) {
-        playRes = await fetchWithTimeout(
-          `${API_BASE}/career-playbook`,
-          { method: "POST", headers: postHeaders, body: rawBody },
-          PLAYBOOK_POST_MS,
-        );
+        playRes = await dilly.post("/career-playbook", body);
       }
       if (!playRes.ok) {
         if (playRes.status === 404) {

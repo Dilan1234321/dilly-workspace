@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { JobMatch } from "@/types/jobsPage";
 
 type Props = {
@@ -29,13 +29,11 @@ export function ApplyModal({ job, onClose, onSent }: Props) {
   if (!job) return null;
 
   const send = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
     setSending(true);
     try {
-      const res = await fetch(`${API_BASE}/apply-through-dilly`, {
+      const res = await dilly.fetch("/apply-through-dilly", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ job_id: job.id, note: note.trim() || undefined }),
       });
       if (res.ok) {

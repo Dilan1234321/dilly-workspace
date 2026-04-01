@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
 function AuthVerifyContent() {
@@ -15,13 +15,13 @@ function AuthVerifyContent() {
       setStatus("fail");
       return;
     }
-    fetch(`${API_BASE}/auth/verify?token=${encodeURIComponent(token)}`)
+    dilly.fetch(`/auth/verify?token=${encodeURIComponent(token)}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         const sessionToken = data?.token;
         if (sessionToken) {
           try {
-            localStorage.setItem(AUTH_TOKEN_KEY, sessionToken);
+            localStorage.setItem("dilly_auth_token", sessionToken);
           } catch {
             /* ignore */
           }

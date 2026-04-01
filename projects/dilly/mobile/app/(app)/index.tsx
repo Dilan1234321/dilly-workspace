@@ -14,7 +14,8 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch, getToken } from '../../lib/auth';
+import { getToken } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { DillyFace } from '../../components/DillyFace';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import useCelebration from '../../hooks/useCelebration';
@@ -140,8 +141,8 @@ export default function HomeScreen() {
       }
       try {
         const [profileRaw, auditRawRes] = await Promise.all([
-          apiFetch('/profile'),
-          apiFetch('/audit/latest'),
+          dilly.fetch('/profile'),
+          dilly.fetch('/audit/latest'),
         ]);
         // If API returns 401, token is invalid — redirect to login
         if (profileRaw.status === 401 || profileRaw.status === 403) {
@@ -210,7 +211,7 @@ export default function HomeScreen() {
             celebrate('first-audit');
           }
         }
-        apiFetch('/audit/history').then(r => r.json()).then(data => {
+        dilly.get('/audit/history').then(data => {
           const audits = (data?.audits || []).map((a: any) => ({
             score: a.final_score || 0,
             date: a.ts ? new Date(a.ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
@@ -219,7 +220,7 @@ export default function HomeScreen() {
           setAuditHistory(audits);
         }).catch(() => {});
 
-        apiFetch('/v2/internships/feed?readiness=ready&limit=3').then(r => r.json()).then(data => {
+        dilly.get('/v2/internships/feed?readiness=ready&limit=3').then(data => {
           setTopJobs((data?.listings || []).slice(0, 3));
         }).catch(() => {});
       } catch {

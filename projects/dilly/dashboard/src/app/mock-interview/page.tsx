@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE, AUTH_TOKEN_KEY, auditStorageKey, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
+import { auditStorageKey, getCareerCenterReturnPath } from "@/lib/dillyUtils";
 import { AppProfileHeader } from "@/components/career-center";
 import type { AuditV2 } from "@/types/dilly";
 
@@ -111,11 +112,7 @@ export default function MockInterviewPage() {
 
   // Load audit and profile context
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) { router.replace("/"); return; }
-    // Fetch user email then load audit
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.ok ? r.json() : null)
+    dilly.get<{ email: string }>("/auth/me")
       .then((user) => {
         if (!user?.email) return;
         const cached = localStorage.getItem(auditStorageKey(user.email));
@@ -123,17 +120,15 @@ export default function MockInterviewPage() {
           try { setAudit(JSON.parse(cached)); } catch {}
         }
         // Also try to get profile for target label
-        fetch(`${API_BASE}/profile`, { headers: { Authorization: `Bearer ${token}` } })
-          .then((r) => r.ok ? r.json() : null)
+        dilly.get<{ application_target_label?: string }>("/profile")
           .then((profile) => {
             if (profile?.application_target_label) setTargetRole(profile.application_target_label);
           }).catch(() => {});
-      }).catch(() => {});
+      })
+      .catch(() => { router.replace("/"); });
   }, [router]);
 
   const startSession = useCallback(async () => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
     setLoading(true);
     setHistory([]);
     setQuestionIndex(0);
@@ -144,9 +139,9 @@ export default function MockInterviewPage() {
     setSessionContext(ctx);
 
     try {
-      const r = await fetch(`${API_BASE}/voice/mock-interview`, {
+      const res = await dilly.fetch("/voice/mock-interview", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question_index: 0,
           answer: null,
@@ -155,13 +150,13 @@ export default function MockInterviewPage() {
           history: [],
         }),
       });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({}));
-        alert(err.error || "Failed to start session. Try again.");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error || "Failed to start session. Try again.");
         setLoading(false);
         return;
       }
-      const data: TurnResult = await r.json();
+      const data: TurnResult = await res.json();
       setCurrentQuestion(data.next_question);
       setSessionState("question");
     } catch {
@@ -172,8 +167,7 @@ export default function MockInterviewPage() {
   }, [audit, targetRole]);
 
   const submitAnswer = useCallback(async () => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token || !answer.trim()) return;
+    if (!answer.trim()) return;
     setLoading(true);
     setSessionState("answering");
 
@@ -190,9 +184,9 @@ export default function MockInterviewPage() {
     const newIndex = questionIndex + 1;
 
     try {
-      const r = await fetch(`${API_BASE}/voice/mock-interview`, {
+      const res = await dilly.fetch("/voice/mock-interview", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question_index: newIndex,
           answer: answer.trim(),
@@ -201,12 +195,12 @@ export default function MockInterviewPage() {
           history: newHistory.slice(-4).map((h) => ({ q: h.q, a: h.a })),
         }),
       });
-      if (!r.ok) {
+      if (!res.ok) {
         setLoading(false);
         setSessionState("question");
         return;
       }
-      const data: TurnResult = await r.json();
+      const data: TurnResult = await res.json();
 
       // Update history with scores
       const updatedTurn: HistoryTurn = {

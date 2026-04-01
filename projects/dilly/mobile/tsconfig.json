@@ -1,6 +1,14 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "paths": {
+      "@dilly/api": [
+        "../packages/dilly-api/src/index.ts"
+      ],
+      "@dilly/api/*": [
+        "../packages/dilly-api/src/*"
+      ]
+    }
   }
 }

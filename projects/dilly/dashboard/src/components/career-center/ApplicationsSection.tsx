@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { TWENTY_X_MOMENTS, formatTwentyXCompact } from "@/lib/twentyXMoments";
 
 type AppStatus = "saved" | "applied" | "interviewing" | "offer" | "rejected";
@@ -253,14 +253,9 @@ export function ApplicationsSection() {
   }, []);
 
   const loadApps = useCallback(async () => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
     try {
-      const r = await fetch(`${API_BASE}/applications`, { headers: { Authorization: `Bearer ${token}` } });
-      if (r.ok) {
-        const d = await r.json();
-        setApplications(d.applications ?? []);
-      }
+      const d = await dilly.get<{ applications: Application[] }>("/applications");
+      setApplications(d.applications ?? []);
     } catch {}
     setLoading(false);
   }, []);
@@ -282,44 +277,30 @@ export function ApplicationsSection() {
   }, [showAdd]);
 
   const handleAdd = async (data: Partial<Application>) => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    const r = await fetch(`${API_BASE}/applications`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(data),
-    });
-    if (r.ok) {
-      const d = await r.json();
-      setApplications((prev) => [d.application, ...prev]);
+    try {
+      const r = await dilly.post<{ application: Application }>("/applications", data);
+      setApplications((prev) => [r.application, ...prev]);
       setShowAdd(false);
       showToast(`${data.company} added`);
-    }
+    } catch {}
   };
 
   const handleStatusChange = async (id: string, status: AppStatus) => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    const r = await fetch(`${API_BASE}/applications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status }),
-    });
-    if (r.ok) {
-      const d = await r.json();
-      setApplications((prev) => prev.map((a) => (a.id === id ? d.application : a)));
+    try {
+      const r = await dilly.patch<{ application: Application }>(`/applications/${id}`, { status });
+      setApplications((prev) => prev.map((a) => (a.id === id ? r.application : a)));
       showToast(`Moved to ${STATUS_LABELS[status]}`);
-    }
+    } catch {}
   };
 
   const handleDelete = async (id: string) => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    const r = await fetch(`${API_BASE}/applications/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-    if (r.ok) {
-      setApplications((prev) => prev.filter((a) => a.id !== id));
-      showToast("Removed");
-    }
+    try {
+      const res = await dilly.fetch(`/applications/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setApplications((prev) => prev.filter((a) => a.id !== id));
+        showToast("Removed");
+      }
+    } catch {}
   };
 
   const handlePrepWithVoice = (app: Application) => {

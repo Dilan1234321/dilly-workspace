@@ -4,8 +4,8 @@ import JobCard from '@/components/jobs/JobCard';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 import CohortStrip from '@/components/jobs/CohortStrip';
 import ContextMenu from '@/components/ui/ContextMenu';
-import { useRightPanel } from '../layout';
-import { apiFetch } from '@/lib/api';
+import { useRightPanel, useProfile } from '../layout';
+import { dilly } from '@/lib/dilly';
 import { getAutomationRisk } from '@/lib/automation-risk';
 
 function pickRecommended(jobs: any[]): any[] {
@@ -33,13 +33,14 @@ export default function JobsPage() {
   const [cohortFilter, setCohortFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
-  const [cohortScores, setCohortScores] = useState<any[]>([]);
+  const { profile } = useProfile();
+  const cohortScores = Object.values(profile.cohort_scores || {}) as any[];
   const [cohortMatchCounts, setCohortMatchCounts] = useState<Record<string, number>>({});
   const [recommended, setRecommended] = useState<any[]>([]);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; job: any } | null>(null);
   const { showJob } = useRightPanel();
 
-  useEffect(() => { loadJobs(); loadStats(); loadProfile(); }, [tab, readinessFilter, cohortFilter]);
+  useEffect(() => { loadJobs(); loadStats(); }, [tab, readinessFilter, cohortFilter]);
   useEffect(() => { const t = setTimeout(() => loadJobs(), 250); return () => clearTimeout(t); }, [search]);
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export default function JobsPage() {
       if (search) params.set('search', search);
       if (readinessFilter) params.set('readiness', readinessFilter);
       if (cohortFilter) params.set('cohort', cohortFilter);
-      const data = await apiFetch('/v2/internships/feed?' + params);
+      const data = await dilly.get('/v2/internships/feed?' + params);
       const listings = data.listings || [];
       const usStates = /^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i;
       const intlWords = /argentina|colombia|poland|warszawa|ireland|london|berlin|paris|tokyo|singapore|sydney|mumbai|bangalore|india|israel|amsterdam|dublin|munich|stockholm|hong kong|brazil|mexico|united kingdom|uk|europe|emea|apac|latam|germany|france|italy|spain|netherlands/i;
@@ -98,13 +99,7 @@ export default function JobsPage() {
     setLoading(false);
   }
 
-  async function loadStats() { try { setStats(await apiFetch('/v2/internships/stats')); } catch {} }
-  async function loadProfile() {
-    try {
-      const p = await apiFetch('/profile');
-      setCohortScores(Object.values(p.cohort_scores || {}) as any[]);
-    } catch {}
-  }
+  async function loadStats() { try { setStats(await dilly.get('/v2/internships/stats')); } catch {} }
 
   function handleContext(e: React.MouseEvent, job: any) { setCtxMenu({ x: e.clientX, y: e.clientY, job }); }
 
@@ -195,7 +190,13 @@ export default function JobsPage() {
         {/* Cohort strip */}
         {cohortScores.length > 0 && (
           <div className="mb-4">
-            <CohortStrip cohorts={cohortScores} activeCohort={cohortFilter} onSelect={setCohortFilter} matchCounts={cohortMatchCounts} />
+            <CohortStrip
+            cohorts={cohortScores}
+            activeCohorts={cohortFilter ? new Set([cohortFilter]) : new Set()}
+            onToggle={(c) => setCohortFilter(cohortFilter === c ? null : c)}
+            onClearAll={() => setCohortFilter(null)}
+            matchCounts={cohortMatchCounts}
+          />
           </div>
         )}
 

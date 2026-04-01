@@ -1,13 +1,14 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, Modal, ScrollView, TextInput, TouchableOpacity,
+  View, Text, Image, Modal, ScrollView, TextInput, TouchableOpacity,
   StyleSheet, Animated, Easing, Dimensions, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, API_BASE } from '../lib/tokens';
-import { getToken, apiFetch } from '../lib/auth';
+import { getToken } from '../lib/auth';
+import { dilly } from '../lib/dilly';
 import RichText from './RichText';
 import { DillyVisual, VisualPayload } from './DillyVisuals';
 import { useSubscription } from '../hooks/useSubscription';
@@ -257,7 +258,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       // Fetch rich context and proactive message
       (async () => {
         try {
-          const res = await apiFetch('/ai/context');
+          const res = await dilly.fetch('/ai/context');
           if (res.ok) {
             const data = await res.json();
             setRichContext(data.context);
@@ -364,8 +365,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
           {/* Header */}
           <View style={[s.header, { paddingTop: insets.top + 10 }]}>
             <View style={s.wordmark}>
-              <Text style={s.wordmarkDilly}>DILLY</Text>
-              <View style={s.aiBadge}><Text style={s.aiBadgeText}>AI</Text></View>
+              <Image source={require('../assets/logo.png')} style={s.wordmarkLogo} resizeMode="contain" />
+              <Text style={s.wordmarkAI}>AI</Text>
             </View>
             <View style={s.modePills}>
               {(['coaching', 'practice'] as ChatMode[]).map(m => (
@@ -379,7 +380,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
             <TouchableOpacity
               onPress={async () => {
                 try {
-                  const res = await apiFetch('/voice/history?limit=20');
+                  const res = await dilly.fetch('/voice/history?limit=20');
                   if (res.ok) { const data = await res.json(); setHistory(data?.items || []); }
                 } catch {}
                 setShowHistory(true);
@@ -508,9 +509,8 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.b1, zIndex: 10 },
   wordmark: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  wordmarkDilly: { fontFamily: 'Cinzel_900Black', fontSize: 20, color: GOLD, letterSpacing: 2 },
-  aiBadge: { backgroundColor: colors.idim, borderWidth: 1, borderColor: colors.ibdr, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2 },
-  aiBadgeText: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1, color: colors.indigo },
+  wordmarkLogo: { height: 28, width: 80 },
+  wordmarkAI: { fontFamily: 'Cinzel_900Black', fontSize: 28, color: GOLD, letterSpacing: 2, lineHeight: 28 },
   modePills: { flexDirection: 'row', gap: 4, marginRight: 10 },
   modePill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   modePillActive: { backgroundColor: GOLD },

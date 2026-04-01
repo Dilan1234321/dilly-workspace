@@ -1,22 +1,21 @@
-import { apiFetch } from './api';
+import { dilly } from './dilly';
 
 export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('dilly_token');
+  return dilly.tokenProvider.getToken() as string | null;
 }
 
 export function setToken(token: string) {
-  localStorage.setItem('dilly_token', token);
+  dilly.tokenProvider.setToken(token);
 }
 
 export function clearToken() {
-  localStorage.removeItem('dilly_token');
+  dilly.tokenProvider.clearToken();
 }
 
-export function isAuthenticated(): boolean {
-  return !!getToken();
+export async function isAuthenticated(): Promise<boolean> {
+  return dilly.isAuthenticated();
 }
 
 export async function fetchProfile() {
-  return apiFetch('/profile');
+  return dilly.getProfile();
 }

@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { authHeaders, apiFetch } from '../../lib/auth';
+import { authHeaders } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { pendingUpload, PENDING_UPLOAD_KEY } from './upload';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -330,7 +331,7 @@ export default function ScanningScreen() {
 
         // Sync parsed resume to editor base resume
         if (res.ok) {
-          try { await apiFetch('/resume/sync-base', { method: 'POST' }); } catch {}
+          try { await dilly.post('/resume/sync-base'); } catch {}
         }
       } catch {
         await AsyncStorage.setItem(AUDIT_RESULT_KEY, JSON.stringify({ error: true }));

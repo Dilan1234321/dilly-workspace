@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { AppProfileHeader } from "@/components/career-center";
-import { API_BASE, AUTH_TOKEN_KEY, AUTH_USER_CACHE_KEY, AUTH_USER_CACHE_MAX_AGE_MS, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
+import { AUTH_USER_CACHE_KEY, AUTH_USER_CACHE_MAX_AGE_MS, getCareerCenterReturnPath } from "@/lib/dillyUtils";
 import { hapticLight, hapticSuccess } from "@/lib/haptics";
 import { useToast } from "@/hooks/useToast";
 
@@ -89,12 +90,6 @@ export default function TemplatesPage() {
   const [user, setUser] = useState<{ email: string; subscribed: boolean } | null>(null);
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
-      setAuthLoading(false);
-      router.replace("/");
-      return;
-    }
     try {
       const raw = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(AUTH_USER_CACHE_KEY) : null;
       if (raw) {
@@ -106,8 +101,7 @@ export default function TemplatesPage() {
       }
     } catch { /* ignore */ }
 
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+    dilly.get<{ email?: string; subscribed?: boolean }>("/auth/me")
       .then((data) => {
         const u = { email: data?.email ?? "", subscribed: !!data?.subscribed };
         setUser(u);
@@ -158,15 +152,14 @@ export default function TemplatesPage() {
     setLoading(true);
     setResult(null);
     try {
-      const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-      const res = await fetch(`${API_BASE}${ENDPOINTS[type]}`, {
+      const res = await dilly.fetch(ENDPOINTS[type], {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const data = res.ok ? await res.json() : null;
       if (!res.ok) {
-        toast(data?.error || "Failed to generate", "error");
+        toast((data as { error?: string })?.error || "Failed to generate", "error");
         return;
       }
       setResult(data);
@@ -220,7 +213,6 @@ export default function TemplatesPage() {
           const config = TEMPLATE_CONFIG[type];
           const isOpen = activeCard === type;
           const hasResult = result && activeCard === type;
-          const isFirst = idx === 0;
 
           return (
             <div

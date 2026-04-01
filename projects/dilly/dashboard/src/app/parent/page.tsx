@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { LoadingScreen } from "@/components/ui/loading-screen";
-import { API_BASE } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 
 type ParentSummary = {
   student_name: string;
@@ -27,11 +27,7 @@ function ParentView() {
       setError("Missing link. Your student can generate a new invite link in Settings → Share with parent.");
       return;
     }
-    fetch(`${API_BASE}/parent/summary?token=${encodeURIComponent(token)}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Invalid or expired link.");
-        return r.json();
-      })
+    dilly.get<ParentSummary>(`/parent/summary?token=${encodeURIComponent(token)}`)
       .then(setSummary)
       .catch(() => setError("Invalid or expired link. Ask your student to generate a new link in Settings."));
   }, [token]);
@@ -40,7 +36,7 @@ function ParentView() {
     return (
       <div className="m-app min-h-screen flex flex-col items-center justify-center p-6">
         <div className="max-w-[375px] text-center">
-          <h1 className="text-lg font-semibold text-[var(--m-text)] mb-2">Couldn’t load progress</h1>
+          <h1 className="text-lg font-semibold text-[var(--m-text)] mb-2">Couldn't load progress</h1>
           <p className="text-sm text-[var(--m-text-3)] mb-4">{error}</p>
           <Link href="/" className="text-sm text-[var(--dilly-primary)] hover:underline">Go to Dilly</Link>
         </div>
@@ -106,11 +102,11 @@ function ParentView() {
             </>
           ) : (
             <div className="m-rounded-card p-4" style={{ backgroundColor: "var(--m-surface-2)", border: "1px solid var(--m-border)" }}>
-              <p className="text-sm text-[var(--m-text-3)]">No audit yet. When {name} runs a resume audit, you’ll see scores and status here.</p>
+              <p className="text-sm text-[var(--m-text-3)]">No audit yet. When {name} runs a resume audit, you'll see scores and status here.</p>
             </div>
           )}
           <p className="text-center text-[11px] text-[var(--m-text-4)]">
-            Dilly · We don’t sell your data. <Link href="https://trydilly.com/for-parents.html" className="underline">For parents</Link>
+            Dilly · We don't sell your data. <Link href="https://trydilly.com/for-parents.html" className="underline">For parents</Link>
           </p>
         </div>
       </main>

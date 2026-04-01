@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_BASE, AUTH_TOKEN_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
+import { getCareerCenterReturnPath } from "@/lib/dillyUtils";
 import { getSchoolFromEmail } from "@/lib/schools";
 import { LoadingScreen } from "@/components/ui/loading-screen";
-import { LoaderOne } from "@/components/ui/loader-one";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -60,14 +60,7 @@ export default function CompaniesPage() {
   }, [companies, searchQuery, industryFilter]);
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
-      setAuthLoading(false);
-      router.replace("/");
-      return;
-    }
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+    dilly.get<{ email?: string; subscribed?: boolean }>("/auth/me")
       .then((data) => {
         const u = { email: data?.email ?? "", subscribed: !!data?.subscribed };
         setUser(u);
@@ -79,9 +72,10 @@ export default function CompaniesPage() {
   }, [router]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/companies`)
+    // Companies endpoint is public — use dilly.fetch to get raw Response without auth requirement
+    dilly.fetch("/companies", { method: "GET" })
       .then((res) => (res.ok ? res.json() : { companies: [] }))
-      .then((data) => setCompanies(Array.isArray(data?.companies) ? data.companies : []))
+      .then((data: { companies?: CompanyListItem[] }) => setCompanies(Array.isArray(data?.companies) ? data.companies : []))
       .catch(() => setCompanies([]))
       .finally(() => setLoading(false));
   }, []);

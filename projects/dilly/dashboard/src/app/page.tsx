@@ -46,8 +46,6 @@ import { LoaderOne } from "@/components/ui/loader-one";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_MAX_AGE_MS,
   PENDING_VOICE_KEY,
@@ -72,7 +70,6 @@ import {
   auditStorageKey,
   stashAuditForReportHandoff,
   copyTextSync,
-  fetchWithTimeout,
   minimalAuditFromHistorySummary,
   type AuditHistorySummaryRow,
   voiceStorageKey,
@@ -100,6 +97,7 @@ import {
   readLastAtsScoreCache,
   writeLastAtsScoreCache,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { getProfileFrame } from "@/lib/profileFrame";
 import { DEFAULT_VOICE_AVATAR_INDEX, VOICE_AVATAR_OPTIONS, getVoiceAvatarUrl } from "@/lib/voiceAvatars";
 import { VoiceAvatar, VoiceAvatarButton } from "@/components/VoiceAvatarButton";
@@ -1138,11 +1136,10 @@ function Dashboard() {
     setInterviewPrepEvidenceOpen(false);
     setGapScanOpen(true);
     setGapScanLoading(true);
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
     try {
-      const res = await fetch(`${API_BASE}/voice/gap-scan`, {
+      const res = await dilly.fetch(`/voice/gap-scan`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ context: buildVoiceContext() }),
       });
       const data = res.ok ? await res.json() : null;
@@ -1161,7 +1158,6 @@ function Dashboard() {
     setInterviewPrepEvidenceOpen(true);
     setInterviewPrepEvidenceLoading(true);
     setInterviewPrepEvidence(null);
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
     const displayAudit = viewingAudit ?? audit ?? savedAuditForCenter;
     if (!displayAudit) {
       setInterviewPrepEvidenceOpen(false);
@@ -1170,9 +1166,9 @@ function Dashboard() {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE}/interview-prep`, {
+      const res = await dilly.fetch(`/interview-prep`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ audit: displayAudit }),
       });
       const data = res.ok ? await res.json() : null;
@@ -1190,12 +1186,11 @@ function Dashboard() {
     setCoverLetterOpen(true);
     setCoverLetterLoading(true);
     setCoverLetterResult(null);
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
     const displayAudit = viewingAudit ?? audit ?? savedAuditForCenter;
     try {
-      const res = await fetch(`${API_BASE}/generate-lines`, {
+      const res = await dilly.fetch(`/generate-lines`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ audit: displayAudit ?? {}, target: appProfile?.application_target ?? "" }),
       });
       const data = res.ok ? await res.json() : null;
@@ -1328,14 +1323,13 @@ function Dashboard() {
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get("token");
       if (urlToken) {
-        localStorage.setItem(AUTH_TOKEN_KEY, urlToken);
+        localStorage.setItem("dilly_auth_token", urlToken);
         window.history.replaceState({}, "", "/");
       }
     } catch { /* ignore */ }
 
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
 
-    if (!token) {
+    if (!localStorage.getItem("dilly_auth_token")) {
       hasRedirected.current = true;
       window.location.replace("http://localhost:3001/onboarding/welcome");
       return;
@@ -1353,11 +1347,11 @@ function Dashboard() {
     } catch { /* ignore */ }
 
     // Token exists — validate it
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch(`/auth/me`)
       .then(async (res) => {
         if (res.status === 401) {
           // Expired — clear and redirect to re-auth
-          localStorage.removeItem(AUTH_TOKEN_KEY);
+          localStorage.removeItem("dilly_auth_token");
           try { sessionStorage.removeItem(AUTH_USER_CACHE_KEY); } catch { /* ignore */ }
           hasRedirected.current = true;
           window.location.replace("http://localhost:3001/onboarding/verify?returning=true");
@@ -1435,9 +1429,8 @@ function Dashboard() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("subscription") !== "success") return;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!localStorage.getItem("dilly_auth_token")) return;
+    dilly.fetch(`/auth/me`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) setUser({ email: data?.email ?? "", subscribed: true });
@@ -1458,8 +1451,7 @@ function Dashboard() {
       setProfileFetchDone(true);
       return;
     }
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
+    if (!localStorage.getItem("dilly_auth_token")) {
       setProfileFetchDone(true);
       return;
     }
@@ -1504,7 +1496,7 @@ function Dashboard() {
     } catch { /* ignore */ }
 
     const ac = new AbortController();
-    fetch(`${API_BASE}/profile`, { headers: { Authorization: `Bearer ${token}` }, signal: ac.signal })
+    dilly.fetch(`/profile`, { signal: ac.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data === "object") {
@@ -1573,9 +1565,8 @@ function Dashboard() {
             setApplicationTarget(profile.application_target);
           }
           // Auto check-in for streak (fire-and-forget — no blocking)
-          fetch(`${API_BASE}/streak/checkin`, {
+          dilly.fetch(`/streak/checkin`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
           }).then((r) => r.ok ? r.json() : null).then((d) => {
             if (d) {
               setAppProfile((prev) => prev ? { ...prev, streak: { current_streak: d.streak, longest_streak: d.longest_streak, last_checkin: d.today } } : prev);
@@ -1698,12 +1689,10 @@ function Dashboard() {
         persistVoiceSessionRecap(recap);
         setVoiceRecapNonce((n) => n + 1);
       }
-      const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
       const convId = latestVoiceConvIdRef.current;
-      if (token && convId) {
-        fetch(`${API_BASE}/memory/session-capture/${encodeURIComponent(convId)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+      if (convId) {
+        dilly.fetch(`/memory/session-capture/${encodeURIComponent(convId)}`, {
+          })
           .then((r) => (r.ok ? r.json() : null))
           .then((d) => {
             const cap = d?.capture as SessionCapture | undefined;
@@ -1719,9 +1708,8 @@ function Dashboard() {
         // Fetch latest conversation output for the post-session card
         const dismissedKey = `conv_output_dismissed_${convId}`;
         if (typeof localStorage !== "undefined" && !localStorage.getItem(dismissedKey)) {
-          fetch(`${API_BASE}/voice/history/${encodeURIComponent(convId)}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
+          dilly.fetch(`/voice/history/${encodeURIComponent(convId)}`, {
+            })
             .then((r) => (r.ok ? r.json() : null))
             .then((d) => {
               if (d && Array.isArray(d.summary_lines) && d.summary_lines.length > 0) {
@@ -1737,9 +1725,8 @@ function Dashboard() {
 
   useEffect(() => {
     if (!user?.subscribed) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    fetch(`${API_BASE}/memory`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!localStorage.getItem("dilly_auth_token")) return;
+    dilly.fetch(`/memory`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         setMemoryItems(Array.isArray(d?.items) ? (d.items as MemoryItem[]) : []);
@@ -1800,9 +1787,8 @@ function Dashboard() {
   useEffect(() => {
     const needsPulse = mainAppTab === "center";
     if (!needsPulse || !user?.subscribed) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    fetch(`${API_BASE}/cohort-pulse/current`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!localStorage.getItem("dilly_auth_token")) return;
+    dilly.fetch(`/cohort-pulse/current`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const row = d && typeof d === "object" ? (d as UserCohortPulse & { cohort: CohortPulse }) : null;
@@ -1815,9 +1801,8 @@ function Dashboard() {
   useEffect(() => {
     const needsNudges = mainAppTab === "center" || mainAppTab === "voice" || voiceOverlayOpen;
     if (!needsNudges || !user?.subscribed) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    fetch(`${API_BASE}/voice/proactive-nudges`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!localStorage.getItem("dilly_auth_token")) return;
+    dilly.fetch(`/voice/proactive-nudges`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const lines = Array.isArray(d?.proactive_lines) ? d.proactive_lines : [];
@@ -1829,11 +1814,11 @@ function Dashboard() {
         setProactiveLines([]);
         setProactiveNudges(null);
       });
-    fetch(`${API_BASE}/habits`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch(`/habits`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setHabits(d && typeof d === "object" ? d : null))
       .catch(() => setHabits(null));
-    fetch(`${API_BASE}/applications`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch(`/applications`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const rows =
@@ -1900,10 +1885,9 @@ function Dashboard() {
     const isReturningUser = appProfile?.voice_onboarding_done === true || auditHistory.length > 0;
     if (!voiceActive || !user?.email || !appProfile || isReturningUser || voiceMessages.length > 0) return;
     if (voiceOnboardingFetchedRef.current) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
+    if (!localStorage.getItem("dilly_auth_token")) return;
     voiceOnboardingFetchedRef.current = true;
-    fetch(`${API_BASE}/voice/onboarding-state`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch(`/voice/onboarding-state`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         const topic = typeof data?.conversation_topic === "string" ? data.conversation_topic : undefined;
@@ -2212,11 +2196,9 @@ function Dashboard() {
       }
     } catch { /* ignore */ }
 
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
+    if (!localStorage.getItem("dilly_auth_token")) return;
     let revoked = false;
-    fetch(`${API_BASE}/profile/photo`, {
-      headers: { Authorization: `Bearer ${token}` },
+    dilly.fetch(`/profile/photo`, {
       cache: "no-store",
     })
       .then((res) => {
@@ -2280,13 +2262,12 @@ function Dashboard() {
       setAuditHistoryLoading(false);
       return;
     }
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
+    if (!localStorage.getItem("dilly_auth_token")) {
       setAuditHistoryLoading(false);
       return;
     }
     setAuditHistoryLoading(true);
-    fetchWithTimeout(`${API_BASE}/audit/history`, { headers: { Authorization: `Bearer ${token}` } }, 15000)
+    dilly.fetch(`/audit/history`)
       .then((res) => (res.ok ? res.json() : { audits: [] }))
       .then((data) => {
         setAuditHistory(Array.isArray(data?.audits) ? data.audits : []);
@@ -2305,9 +2286,8 @@ function Dashboard() {
       setAtsPeerPercentile(null);
       return;
     }
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    fetch(`${API_BASE}/ats-score/history`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!localStorage.getItem("dilly_auth_token")) return;
+    dilly.fetch(`/ats-score/history`)
       .then((res) => (res.ok ? res.json() : { scores: [] }))
       .then((data) => {
         const scores = Array.isArray(data?.scores) ? data.scores : [];
@@ -2339,9 +2319,8 @@ function Dashboard() {
       setDoorEligibility(null);
       return;
     }
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    fetch(`${API_BASE}/door-eligibility`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!localStorage.getItem("dilly_auth_token")) return;
+    dilly.fetch(`/door-eligibility`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && Array.isArray(data.doors)) {
@@ -2360,8 +2339,7 @@ function Dashboard() {
   // After login (or refresh): restore the latest audit. History list already includes scores — paint that first so we never hang on “Loading your previous audit…” if GET /audit/history/{id} is slow or stuck; then fetch full detail with a timeout.
   useEffect(() => {
     if (!user?.email || auditHistory.length === 0) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
+    if (!localStorage.getItem("dilly_auth_token")) return;
     const latest = auditHistory[0];
     const latestId = latest?.id?.trim();
 
@@ -2382,7 +2360,7 @@ function Dashboard() {
 
     const hydrateFromServer = () => {
       if (!latestId) return;
-      fetchWithTimeout(`${API_BASE}/audit/history/${encodeURIComponent(latestId)}`, { headers: { Authorization: `Bearer ${token}` } }, 20000)
+      dilly.fetch(`/audit/history/${encodeURIComponent(latestId)}`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           const full = data?.audit;
@@ -2446,14 +2424,13 @@ function Dashboard() {
     };
     const newUnlocks = computeNewUnlocks(ctx);
     if (Object.keys(newUnlocks).length === 0) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
+    if (!localStorage.getItem("dilly_auth_token")) return;
     const merged = Object.fromEntries(
       Object.entries({ ...(appProfile.achievements ?? {}), ...newUnlocks }).filter(([, v]) => v != null)
     ) as ProfileAchievements;
-    fetch(`${API_BASE}/profile`, {
+    dilly.fetch(`/profile`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json"},
       body: JSON.stringify({ achievements: merged }),
     })
       .then((res) => {
@@ -2467,10 +2444,9 @@ function Dashboard() {
     if (!user?.email || !user?.subscribed) return;
     if (mainAppTab !== "center" && mainAppTab !== "hiring") return;
     if (recommendedJobs.length > 0) return; // already loaded, don't refetch
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
+    if (!localStorage.getItem("dilly_auth_token")) return;
     setJobsLoading(true);
-    fetch(`${API_BASE}/jobs/recommended?limit=15&offset=0`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch(`/jobs/recommended?limit=15&offset=0`)
       .then((res) => (res.ok ? res.json() : { jobs: [] }))
       .then((data) => {
         const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
@@ -2488,9 +2464,8 @@ function Dashboard() {
     const auditT = savedAuditForCenter?.detected_track ?? audit?.detected_track;
     const track = getEffectiveCohortLabel(auditT, appProfile?.track);
     if (!track) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    fetch(`${API_BASE}/peer-cohort-stats?track=${encodeURIComponent(track)}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!localStorage.getItem("dilly_auth_token")) return;
+    dilly.fetch(`/peer-cohort-stats?track=${encodeURIComponent(track)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data.cohort_n === "number" && data.cohort_n > 0 && data.avg) setCohortStats(data as typeof cohortStats);
@@ -2596,11 +2571,10 @@ function Dashboard() {
       } catch { /* ignore */ }
       return next;
     });
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (token) {
-      fetch(`${API_BASE}/profile`, {
+    if (localStorage.getItem("dilly_auth_token")) {
+      dilly.fetch(`/profile`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json"},
         body: JSON.stringify({ voice_avatar_index: idx }),
       }).catch(() => { /* ignore */ });
     }
@@ -2611,11 +2585,10 @@ function Dashboard() {
     if (!user?.email) return;
     try { localStorage.setItem(voiceStorageKey("memory", user.email), JSON.stringify(voiceMemory)); } catch {}
     const saveToProfile = (appProfile as { voice_save_to_profile?: boolean })?.voice_save_to_profile !== false;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (token && voiceMemory.length > 0 && saveToProfile) {
-      fetch(`${API_BASE}/profile`, {
+    if (voiceMemory.length > 0 && saveToProfile) {
+      dilly.fetch(`/profile`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json"},
         body: JSON.stringify({ voice_memory: voiceMemory.slice(-10) }),
       }).catch(() => { /* ignore */ });
     }
@@ -2623,18 +2596,16 @@ function Dashboard() {
 
   const signOut = async () => {
     try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
-        await fetch(`${API_BASE}/auth/logout`, {
+      if (localStorage.getItem("dilly_auth_token")) {
+        await dilly.fetch(`/auth/logout`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
         });
       }
     } catch {
       // API call failed — still log out client side
     }
     try {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem("dilly_auth_token");
       localStorage.removeItem(VOICE_MESSAGES_KEY);
       localStorage.removeItem(VOICE_CONVOS_KEY);
       localStorage.removeItem(ONBOARDING_STEP_KEY);
@@ -2793,10 +2764,8 @@ function Dashboard() {
     }
     setProgressExplainerLoading(true);
     setProgressExplainer(null);
-    const authToken = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
     const explainHeaders: Record<string, string> = { "Content-Type": "application/json" };
-    if (authToken) explainHeaders.Authorization = `Bearer ${authToken}`;
-    fetch(`${API_BASE}/audit/explain-delta`, {
+    dilly.fetch(`/audit/explain-delta`, {
       method: "POST",
       headers: explainHeaders,
       body: JSON.stringify({ previous: lastAudit, current: audit }),
@@ -2809,8 +2778,7 @@ function Dashboard() {
 
   // ── Leaderboard load callbacks (used by inline Rank tab) ──────────────────
   const loadLeaderboard = useCallback(async (opts?: { force?: boolean }) => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
+    if (!localStorage.getItem("dilly_auth_token")) return;
     const rawTrack = auditHistory[0]?.detected_track?.trim() || appProfile?.track?.trim() || null;
     if (!rawTrack) return;
     const track = coerceLeaderboardTrackForApi(rawTrack, "Humanities");
@@ -2833,8 +2801,7 @@ function Dashboard() {
     try {
       const params = new URLSearchParams({ track });
       if (forceRefresh) params.set("refresh", "true");
-      const res = await fetch(`${API_BASE}/leaderboard-dashboard?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await dilly.fetch(`/leaderboard-dashboard?${params}`, {
         cache: "no-store",
         signal: controller.signal,
       });
@@ -2860,8 +2827,7 @@ function Dashboard() {
   }, [auditHistory, appProfile?.track]);
 
   const loadGlobalLeaderboard = useCallback(async (opts?: { force?: boolean }) => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
+    if (!localStorage.getItem("dilly_auth_token")) return;
     const wk = isoWeekBucketUTC();
     if (!opts?.force) {
       try {
@@ -2879,7 +2845,7 @@ function Dashboard() {
       let res: Response | null = null;
       try {
         for (const path of ["/leaderboard-dashboard/global", "/leaderboard/page/global"] as const) {
-          const r = await fetch(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: controller.signal });
+          const r = await dilly.fetch(`${path}`, { cache: "no-store", signal: controller.signal });
           if (r.ok || r.status !== 404) { res = r; break; }
           res = r;
         }
@@ -2956,8 +2922,7 @@ function Dashboard() {
         return next;
       });
     }, 280);
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
+    if (!localStorage.getItem("dilly_auth_token")) {
       setError("Sign in to run audit.");
       setLoading(false);
       if (progressIntervalRef.current) {
@@ -2967,9 +2932,9 @@ function Dashboard() {
       return;
     }
     try {
-      const res = await fetch(`${API_BASE}/audit/from-text`, {
+      const res = await dilly.fetch(`/audit/from-text`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json"},
         body: JSON.stringify({ text }),
       });
       if (progressIntervalRef.current) {
@@ -2997,7 +2962,7 @@ function Dashboard() {
         else setReviewSubView("home");
       }
       try {
-        const res = await fetch(`${API_BASE}/audit/history`, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await dilly.fetch(`/audit/history`);
         if (res.ok) {
           const { audits } = await res.json();
           setAuditHistory(Array.isArray(audits) ? audits : []);
@@ -3073,11 +3038,9 @@ function Dashboard() {
     formData.append("application_target", effectiveTarget);
 
     const headers: Record<string, string> = {};
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (token) headers.Authorization = `Bearer ${token}`;
 
     try {
-      const res = await fetch(`${API_BASE}/audit/v2`, {
+      const res = await dilly.fetch(`/audit/v2`, {
         method: "POST",
         headers,
         body: formData,
@@ -3103,7 +3066,7 @@ function Dashboard() {
               ? err.error
               : "We couldn't complete the audit. Try Again.";
         if (res.status === 401) {
-          try { localStorage.removeItem(AUTH_TOKEN_KEY); } catch { /* ignore */ }
+          try { localStorage.removeItem("dilly_auth_token"); } catch { /* ignore */ }
           setUser(null);
         }
         throw new Error(msg);
@@ -3163,10 +3126,10 @@ function Dashboard() {
       }
       // Dilly notification after new audit
       showVoiceNotification("I noted your new audit. Ask me about your scores or what to do next.");
-      if (token && effectiveTarget) {
-        fetch(`${API_BASE}/profile`, {
+      if (effectiveTarget) {
+        dilly.fetch(`/profile`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers: { "Content-Type": "application/json"},
           body: JSON.stringify({ application_target: effectiveTarget }),
         }).catch(() => {});
       }
@@ -3229,12 +3192,11 @@ function Dashboard() {
 
   const saveProfile = async (data: Partial<Pick<AppProfile, "name" | "major" | "majors" | "minors" | "preProfessional" | "track" | "goals" | "career_goal" | "deadlines" | "target_school" | "profile_background_color" | "profile_tagline" | "profile_theme" | "profile_bio" | "linkedin_url" | "job_locations" | "job_location_scope" | "share_card_metric" | "got_interview_at" | "got_offer_at" | "outcome_story_consent" | "outcome_prompt_dismissed_at" | "application_target" | "application_target_label">>): Promise<boolean> => {
     setProfileSaveError(null);
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return false;
+    if (!localStorage.getItem("dilly_auth_token")) return false;
     try {
-      const res = await fetch(`${API_BASE}/profile`, {
+      const res = await dilly.fetch(`/profile`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json"},
         body: JSON.stringify(data),
       });
       if (!res.ok) {
@@ -3316,8 +3278,7 @@ function Dashboard() {
   const shareCardAchievements = appProfile?.share_card_achievements ?? [];
 
   const toggleStickerShareCard = (id: string) => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token || !isUnlocked(id as AchievementId, achievements)) return;
+    if (!localStorage.getItem("dilly_auth_token") || !isUnlocked(id as AchievementId, achievements)) return;
     hapticLight();
     let next = [...shareCardAchievements];
     const idx = next.indexOf(id);
@@ -3328,9 +3289,9 @@ function Dashboard() {
     } else {
       next = [next[1], next[2], id];
     }
-    fetch(`${API_BASE}/profile`, {
+    dilly.fetch(`/profile`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json"},
       body: JSON.stringify({ share_card_achievements: next }),
     }).then(() => {
       setAppProfile((prev) => (prev ? { ...prev, share_card_achievements: next } : prev));
@@ -3412,18 +3373,16 @@ function Dashboard() {
           imageSrc={photoCropImageSrc}
           onComplete={async (blob) => {
             setProfilePhotoUploading(true);
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
             try {
               const fd = new FormData();
               const file = new File([blob], "profile.jpg", { type: "image/jpeg" });
               fd.append("file", file);
-              const res = await fetch(`${API_BASE}/profile/photo`, {
+              const res = await dilly.fetch(`/profile/photo`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
                 body: fd,
               });
               if (res.ok) {
-                const photoRes = await fetch(`${API_BASE}/profile/photo`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+                const photoRes = await dilly.fetch(`/profile/photo`, { cache: "no-store" });
                 if (photoRes.ok) {
                   const newBlob = await photoRes.blob();
                   const objUrl = URL.createObjectURL(newBlob);
@@ -3653,9 +3612,8 @@ function Dashboard() {
                             )}
                             {profilePhotoUrl && (
                               <Button type="button" variant="outline" size="sm" onClick={async () => {
-                                const token = localStorage.getItem(AUTH_TOKEN_KEY);
                                 try {
-                                  const res = await fetch(`${API_BASE}/profile/photo`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+                                  const res = await dilly.fetch(`/profile/photo`, { method: "DELETE" });
                                   if (res.ok) {
                                     try { localStorage.removeItem(profilePhotoCacheKey(user?.email)); } catch {}
                                     setProfilePhotoUrl((u) => { if (u && u.startsWith("blob:")) URL.revokeObjectURL(u); return null; });
@@ -4649,11 +4607,10 @@ function Dashboard() {
                                 const next = shareCardAchievements.filter((_, i) => i !== slot);
                                 setAppProfile((prev) => (prev ? { ...prev, share_card_achievements: next } : prev));
                                 setShareCardDeselectingSlot(null);
-                                const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-                                if (token) {
-                                  fetch(`${API_BASE}/profile`, {
+                                if (localStorage.getItem("dilly_auth_token")) {
+                                  dilly.fetch(`/profile`, {
                                     method: "PATCH",
-                                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                    headers: { "Content-Type": "application/json"},
                                     body: JSON.stringify({ share_card_achievements: next }),
                                   }).catch(() => toast("Couldn’t update card", "error"));
                                 }
@@ -4720,11 +4677,10 @@ function Dashboard() {
                                     setShareCardAddingSlot(slot);
                                     setAppProfile((prev) => (prev ? { ...prev, share_card_achievements: next } : prev));
                                     setAchievementPickerClosing(true);
-                                    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-                                    if (token) {
-                                      fetch(`${API_BASE}/profile`, {
+                                    if (localStorage.getItem("dilly_auth_token")) {
+                                      dilly.fetch(`/profile`, {
                                         method: "PATCH",
-                                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                        headers: { "Content-Type": "application/json"},
                                         body: JSON.stringify({ share_card_achievements: next }),
                                       }).catch(() => toast("Couldn't update card", "error"));
                                     }
@@ -5359,9 +5315,8 @@ function Dashboard() {
                             )}
                             {profilePhotoUrl && (
                               <Button type="button" variant="outline" size="sm" onClick={async () => {
-                                const token = localStorage.getItem(AUTH_TOKEN_KEY);
                                 try {
-                                  const res = await fetch(`${API_BASE}/profile/photo`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+                                  const res = await dilly.fetch(`/profile/photo`, { method: "DELETE" });
                                   if (res.ok) {
                                     try { localStorage.removeItem(profilePhotoCacheKey(user?.email)); } catch {}
                                     setProfilePhotoUrl((u) => { if (u && u.startsWith("blob:")) URL.revokeObjectURL(u); return null; });
@@ -5517,12 +5472,10 @@ function Dashboard() {
                       <TranscriptSection
                         appProfile={appProfile}
                         onProfileUpdated={() => {
-                          fetch(`${API_BASE}/profile`, { headers: { Authorization: `Bearer ${typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : ""}` } })
+                          dilly.fetch(`/profile`)
                             .then((r) => (r.ok ? r.json() : null))
                             .then((d) => { if (d && typeof d === "object") setAppProfile((prev) => ({ ...prev, transcript_uploaded_at: d.transcript_uploaded_at ?? null, transcript_gpa: typeof d.transcript_gpa === "number" ? d.transcript_gpa : null, transcript_bcpm_gpa: typeof d.transcript_bcpm_gpa === "number" ? d.transcript_bcpm_gpa : null, transcript_courses: Array.isArray(d.transcript_courses) ? d.transcript_courses : [], transcript_honors: Array.isArray(d.transcript_honors) ? d.transcript_honors : [], transcript_major: d.transcript_major ?? null, transcript_minor: d.transcript_minor ?? null, transcript_warnings: Array.isArray(d.transcript_warnings) ? d.transcript_warnings : [] })); });
                         }}
-                        apiBase={API_BASE}
-                        authTokenKey={AUTH_TOKEN_KEY}
                       />
                       <div className="flex gap-2 pt-2">
                         <button type="submit" disabled={editProfileSaving} className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "var(--blue)", color: "#fff" }}>{editProfileSaving ? "Saving…" : "Save"}</button>
@@ -5599,12 +5552,11 @@ function Dashboard() {
                   const ids = (pendingSessionCaptureCard?.items ?? []).map((item) => item.id);
                   setPendingSessionCaptureCard(null);
                   if (ids.length === 0) return;
-                  const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-                  if (!token) return;
+                  if (!localStorage.getItem("dilly_auth_token")) return;
                   try {
-                    await fetch(`${API_BASE}/memory/items/mark-seen`, {
+                    await dilly.fetch(`/memory/items/mark-seen`, {
                       method: "PATCH",
-                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                      headers: { "Content-Type": "application/json"},
                       body: JSON.stringify({ item_ids: ids }),
                     });
                     setMemoryItems((prev) => prev.map((row) => (ids.includes(row.id) ? { ...row, shown_to_user: true } : row)));
@@ -6743,7 +6695,6 @@ function Dashboard() {
               setVoiceFollowUpSuggestions([]);
               setVoiceLoading(true);
               setVoiceStreamingText("");
-              const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
               const convIdForMock = convId;
               const mockVoiceFinally = () => {
                 setVoiceLoading(false);
@@ -6763,7 +6714,7 @@ function Dashboard() {
 
               if (voiceMockInterviewSession?.awaitingAnswer) {
                 const sess = voiceMockInterviewSession;
-                if (!token) {
+                if (!localStorage.getItem("dilly_auth_token")) {
                   toast("Sign in to continue.", "error");
                   mockVoiceFinally();
                   return;
@@ -6785,11 +6736,10 @@ function Dashboard() {
                 try {
                   const newHistory = [...sess.history, { q: sess.currentQuestion, a: text }];
                   const newIndex = sess.questionIndex + 1;
-                  const res = await fetch(`${API_BASE}/voice/mock-interview`, {
+                  const res = await dilly.fetch(`/voice/mock-interview`, {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({
                       question_index: newIndex,
@@ -6802,7 +6752,7 @@ function Dashboard() {
                   if (latestVoiceConvIdRef.current !== convIdForMock) return;
                   if (res.status === 401) {
                     try {
-                      localStorage.removeItem(AUTH_TOKEN_KEY);
+                      localStorage.removeItem("dilly_auth_token");
                     } catch {
                       /* ignore */
                     }
@@ -6915,7 +6865,7 @@ function Dashboard() {
               }
 
               if (!voiceMockInterviewSession && wantsMockInterview(text)) {
-                if (!token) {
+                if (!localStorage.getItem("dilly_auth_token")) {
                   toast("Sign in to continue.", "error");
                   mockVoiceFinally();
                   return;
@@ -6940,11 +6890,10 @@ function Dashboard() {
                   appProfile?.application_target_label ?? undefined,
                 );
                 try {
-                  const res = await fetch(`${API_BASE}/voice/mock-interview`, {
+                  const res = await dilly.fetch(`/voice/mock-interview`, {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({
                       question_index: 0,
@@ -6957,7 +6906,7 @@ function Dashboard() {
                   if (latestVoiceConvIdRef.current !== convIdForMock) return;
                   if (res.status === 401) {
                     try {
-                      localStorage.removeItem(AUTH_TOKEN_KEY);
+                      localStorage.removeItem("dilly_auth_token");
                     } catch {
                       /* ignore */
                     }
@@ -7070,13 +7019,13 @@ function Dashboard() {
               };
               setVoiceScreenContext(null); // Option C: only the next message gets screen context
               try {
-                const res = await fetch(`${API_BASE}/voice/stream`, {
+                const res = await dilly.fetch(`/voice/stream`, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(payload),
                 });
                 if (res.status === 401) {
-                  try { localStorage.removeItem(AUTH_TOKEN_KEY); } catch {}
+                  try { localStorage.removeItem("dilly_auth_token"); } catch {}
                   setVoiceStreamingText("");
                   setUser(null);
                   toast("Session expired — sign in again to keep chatting.", "error");
@@ -7084,9 +7033,9 @@ function Dashboard() {
                 }
                 if (!res.ok || !res.body) {
                   // Fallback to non-streaming
-                  const fb = await fetch(`${API_BASE}/voice/chat`, {
+                  const fb = await dilly.fetch(`/voice/chat`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                   });
                   const data = fb.ok ? await fb.json() : null;
@@ -7273,11 +7222,10 @@ function Dashboard() {
             const handleBulletRewrite = async (instruction?: string) => {
               if (!bulletInput.trim() || bulletLoading) return;
               setBulletLoading(true);
-              const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
               try {
-                const res = await fetch(`${API_BASE}/voice/rewrite-bullet`, {
+                const res = await dilly.fetch(`/voice/rewrite-bullet`, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ bullet: bulletInput.trim(), instruction: instruction || undefined, context: buildVoiceContext() }),
                 });
                 const data = res.ok ? await res.json() : null;
@@ -7314,11 +7262,10 @@ function Dashboard() {
               if (rating === "up") voiceLastLikedRef.current = true;
               const msg = voiceMessages[msgIndex];
               const prevUserMsg = voiceMessages[msgIndex - 1];
-              const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
               try {
-                await fetch(`${API_BASE}/voice/feedback`, {
+                await dilly.fetch(`/voice/feedback`, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     rating,
                     message_id: `${activeVoiceConvId ?? "unknown"}-${msgIndex}`,
@@ -7337,11 +7284,10 @@ function Dashboard() {
               setVoiceCompanyInput("");
               setVoiceCompanyPanelOpen(false);
               if (!company.trim()) { setFirmDeadlines([]); return; }
-              const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
               try {
-                const res = await fetch(`${API_BASE}/voice/firm-deadlines`, {
+                const res = await dilly.fetch(`/voice/firm-deadlines`, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                  headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ firm: company.trim(), application_target: appProfile?.application_target || "" }),
                 });
                 const data = res.ok ? await res.json() : null;
@@ -8173,12 +8119,11 @@ function Dashboard() {
                           e.preventDefault();
                           const note = voiceRememberNote.trim();
                           if (!note) return;
-                          const token = localStorage.getItem(AUTH_TOKEN_KEY);
-                          if (!token) return;
+                          if (!localStorage.getItem("dilly_auth_token")) return;
                           const notes = [...((appProfile as { voice_notes?: string[] })?.voice_notes ?? []), note].slice(-20);
-                          fetch(`${API_BASE}/profile`, {
+                          dilly.fetch(`/profile`, {
                             method: "PATCH",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            headers: { "Content-Type": "application/json"},
                             body: JSON.stringify({ voice_notes: notes }),
                           }).then((res) => {
                             if (res.ok) return res.json();
@@ -8194,13 +8139,12 @@ function Dashboard() {
                       <Button size="sm" onClick={async () => {
                         const note = voiceRememberNote.trim();
                         if (!note) return;
-                        const token = localStorage.getItem(AUTH_TOKEN_KEY);
-                        if (!token) return;
+                        if (!localStorage.getItem("dilly_auth_token")) return;
                         const notes = [...((appProfile as { voice_notes?: string[] })?.voice_notes ?? []), note].slice(-20);
                         try {
-                          const res = await fetch(`${API_BASE}/profile`, {
+                          const res = await dilly.fetch(`/profile`, {
                             method: "PATCH",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                            headers: { "Content-Type": "application/json"},
                             body: JSON.stringify({ voice_notes: notes }),
                           });
                           if (res.ok) {

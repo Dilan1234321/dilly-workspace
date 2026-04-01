@@ -5,7 +5,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import useCelebration from '../../hooks/useCelebration';
 
@@ -114,8 +114,8 @@ export default function RankScreen() {
     (async () => {
       try {
         const [profileRes, auditRes] = await Promise.all([
-          apiFetch('/profile').then(r => r.json()),
-          apiFetch('/audit/latest').then(r => r.json()),
+          dilly.get('/profile'),
+          dilly.get('/audit/latest'),
         ]);
         const audit = auditRes?.audit ?? auditRes;
         const rankData = buildFallback(profileRes, audit);

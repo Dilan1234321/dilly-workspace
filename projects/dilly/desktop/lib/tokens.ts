@@ -1,11 +1,8 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+/**
+ * Desktop design tokens — color palette re-exported from @dilly/api (single source of truth).
+ * Add new colors to packages/dilly-api/src/constants.ts, not here.
+ */
+export { colors } from "@dilly/api";
 
-export const colors = {
-  blue: '#2B3A8E',
-  blueLight: '#3B4CC0',
-  blueDark: '#1E2D6E',
-  ready: '#34C759',
-  almost: '#FF9F0A',
-  gap: '#FF453A',
-  info: '#0A84FF',
-} as const;
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";

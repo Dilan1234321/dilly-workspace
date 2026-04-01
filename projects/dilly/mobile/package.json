@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@dilly/api": "file:./packages/dilly-api",
     "@expo-google-fonts/cinzel": "^0.4.2",
     "@expo-google-fonts/playfair-display": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",

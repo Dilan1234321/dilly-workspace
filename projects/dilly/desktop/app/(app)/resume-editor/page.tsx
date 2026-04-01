@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
 import { getProfileInterests, ALL_COHORTS } from '@/lib/cohorts';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
-import { useRightPanel } from '@/app/(app)/layout';
+import { useRightPanel, useProfile } from '@/app/(app)/layout';
 
 /* ═══════════════════════════════════════
    TYPES
@@ -245,7 +245,7 @@ function useBulletScore(text: string): BulletScore | null {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       try {
-        const res = await apiFetch('/resume/bullet-score', { method: 'POST', body: JSON.stringify({ bullet: text }) });
+        const res = await dilly.post('/resume/bullet-score', { bullet: text });
         if (res.ok) {
           const data = await res.json();
           scoreCache.set(text, data);
@@ -1396,11 +1396,8 @@ function JobFitPanel({ variant }: { variant: VariantMeta }) {
     const description = typeof window !== 'undefined'
       ? (localStorage.getItem(`dilly_jd_${variant.id}`) || '') : '';
     Promise.all([
-      apiFetch('/jd-dilly-scores', {
-        method: 'POST',
-        body: JSON.stringify({ job_description: description, job_title: variant.job_title || '' }),
-      }).catch(() => null),
-      apiFetch('/profile').catch(() => null),
+      dilly.post('/jd-dilly-scores', { job_description: description, job_title: variant.job_title || '' }).catch(() => null),
+      dilly.get('/profile').catch(() => null),
     ]).then(([jd, profile]) => {
       if (!jd || !profile) { setError(true); setLoading(false); return; }
       setScores({
@@ -1545,7 +1542,7 @@ function JobImportModal({ onClose, onSubmit }: {
   const setters: Record<string, (v: string) => void> = {
     company: setCompany, title: setTitle, description: setDescription,
   };
-  const canContinue = cur.optional || values[cur.id].trim().length > 0;
+  const canContinue = ('optional' in cur && cur.optional) || values[cur.id].trim().length > 0;
 
   useEffect(() => {
     const el = cur.type === 'input' ? inputRef.current : textareaRef.current;
@@ -1603,12 +1600,12 @@ function JobImportModal({ onClose, onSubmit }: {
         {/* Step content */}
         <div style={{ padding: '22px 22px 24px' }} onKeyDown={onKey}>
           <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{cur.question}</p>
-          {cur.optional && (
+          {('optional' in cur && cur.optional) && (
             <p style={{ margin: '0 0 12px', fontSize: 11, color: 'var(--text-3)' }}>
               The more detail you give, the better your resume will be. You can also skip this.
             </p>
           )}
-          {!cur.optional && <div style={{ marginBottom: 12 }} />}
+          {!('optional' in cur && cur.optional) && <div style={{ marginBottom: 12 }} />}
 
           {cur.type === 'input' ? (
             <input
@@ -1664,7 +1661,7 @@ function JobImportModal({ onClose, onSubmit }: {
             >
               {isLast ? 'Generate resume →' : 'Continue →'}
             </button>
-            {cur.optional && (
+            {('optional' in cur && cur.optional) && (
               <button onClick={() => next(true)}
                 style={{ height: 40, paddingInline: 14, borderRadius: 9, fontSize: 12, fontWeight: 500, border: '1px solid var(--border-main)', background: 'none', color: 'var(--text-3)', cursor: 'pointer' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-2)')}
@@ -1688,6 +1685,7 @@ function JobImportModal({ onClose, onSubmit }: {
 ═══════════════════════════════════════ */
 export default function ResumeEditorPage() {
   const { showChat, setResumeCoachCtx, fireProactiveCoach, jobImportTrigger, clearJobImportTrigger, startJobImport } = useRightPanel();
+  const { profile } = useProfile();
   const pendingJobRef = useRef<{ company: string; title: string; description: string } | null>(null);
   // Read from sessionStorage once at module init time (before any effects can clear it in Strict Mode).
   // This runs synchronously during render, so it's immune to the double-effect problem.
@@ -1706,6 +1704,23 @@ export default function ResumeEditorPage() {
       }
     } catch { /* ignore */ }
   }
+
+  // ATS fix mode — read once at render time (same Strict Mode immunity as pendingJobRef)
+  const atsFix = useRef<{ vendor: string; vendorKey: string; issues: string[]; tips: string[] } | null>(null);
+  if (atsFix.current === null) {
+    try {
+      const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      if (p.get('ats_fix') === '1') {
+        const stored = typeof window !== 'undefined' ? sessionStorage.getItem('dilly_ats_fix') : null;
+        if (stored) {
+          sessionStorage.removeItem('dilly_ats_fix');
+          atsFix.current = JSON.parse(stored);
+        }
+      }
+    } catch { /* ignore */ }
+  }
+  const [atsBanner, setAtsBanner] = useState<typeof atsFix.current>(null);
+  const [atsApplying, setAtsApplying] = useState(false);
 
   const [variants, setVariants] = useState<VariantMeta[]>([]);
   const [activeVariantId, setActiveVariantId] = useState<string | null>(null);
@@ -1754,20 +1769,17 @@ export default function ResumeEditorPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [varData, profileData] = await Promise.all([
-          apiFetch('/resume/variants'),
-          apiFetch('/profile').catch(() => null),
-        ]);
-        if (profileData?.cohort) setPrimaryCohort(profileData.cohort);
-        const scores = profileData?.cohort_scores ?? {};
+        const varData = await dilly.get('/resume/variants');
+        if (profile?.cohort) setPrimaryCohort(profile.cohort);
+        const scores = profile?.cohort_scores ?? {};
         const cohortKeys = Object.keys(scores).filter(k => k !== 'General');
-        setUserCohorts(cohortKeys.length > 0 ? cohortKeys : (profileData?.cohort ? [profileData.cohort] : []));
-        setUserInterests(getProfileInterests(profileData));
+        setUserCohorts(cohortKeys.length > 0 ? cohortKeys : (profile?.cohort ? [profile.cohort] : []));
+        setUserInterests(getProfileInterests(profile));
         const vList: VariantMeta[] = varData?.variants ?? [];
         setVariants(vList);
         if (vList.length > 0) {
           setActiveVariantId(vList[0].id);
-          const contentData = await apiFetch(`/resume/variants/${vList[0].id}`);
+          const contentData = await dilly.get(`/resume/variants/${vList[0].id}`);
           const initialSections = contentData?.sections ?? [];
           setSectionsByVariant({ [vList[0].id]: initialSections });
           setSavedSnapshots({ [vList[0].id]: JSON.stringify(initialSections) });
@@ -1775,18 +1787,15 @@ export default function ResumeEditorPage() {
         } else {
           // No variants yet — try to import parsed resume from onboarding/audit
           try {
-            const editedData = await apiFetch('/resume/edited');
+            const editedData = await dilly.get('/resume/edited');
             const parsedSections = editedData?.resume?.sections ?? editedData?.sections ?? [];
             if (parsedSections.length > 0) {
-              const cohortLabel = profileData?.cohort || 'Base Resume';
-              const newVar = await apiFetch('/resume/variants', {
-                method: 'POST',
-                body: JSON.stringify({ label: cohortLabel, cohort: profileData?.cohort || 'General' }),
-              });
+              const cohortLabel = profile?.cohort || 'Base Resume';
+              const newVar = await dilly.post('/resume/variants', { label: cohortLabel, cohort: profile?.cohort || 'General' });
               const varId = newVar?.variant?.id;
               if (varId) {
-                await apiFetch(`/resume/variants/${varId}`, { method: 'PUT', body: JSON.stringify({ sections: parsedSections }) });
-                setVariants([{ id: varId, label: cohortLabel, cohort: profileData?.cohort || 'General' }]);
+                await dilly.put(`/resume/variants/${varId}`, { sections: parsedSections });
+                setVariants([{ id: varId, label: cohortLabel, cohort: profile?.cohort || 'General', type: 'cohort', created_at: new Date().toISOString() }]);
                 setActiveVariantId(varId);
                 setSectionsByVariant({ [varId]: parsedSections });
                 setSavedSnapshots({ [varId]: JSON.stringify(parsedSections) });
@@ -1805,12 +1814,12 @@ export default function ResumeEditorPage() {
       }
     }
     load();
-  }, []);
+  }, [profile]);
 
   /* Load variant content when switching tabs */
   useEffect(() => {
     if (!activeVariantId || loadedVariants.has(activeVariantId)) return;
-    apiFetch(`/resume/variants/${activeVariantId}`).then((data) => {
+    dilly.get(`/resume/variants/${activeVariantId}`).then((data) => {
       const sects = data?.sections ?? [];
       setSectionsByVariant(prev => ({ ...prev, [activeVariantId]: sects }));
       setSavedSnapshots(prev => ({ ...prev, [activeVariantId]: JSON.stringify(sects) }));
@@ -1908,7 +1917,7 @@ export default function ResumeEditorPage() {
   const doSave = useCallback(async (variantId: string, sects: ResumeSection[]) => {
     setSaving(true);
     try {
-      await apiFetch(`/resume/variants/${variantId}`, { method: 'PUT', body: JSON.stringify({ sections: sects }) });
+      await dilly.put(`/resume/variants/${variantId}`, { sections: sects });
       const snap = JSON.stringify(sects);
       setSavedSnapshots(prev => ({ ...prev, [variantId]: snap }));
       setDirtyVariants(prev => { const s = new Set(prev); s.delete(variantId); return s; });
@@ -1936,10 +1945,7 @@ export default function ResumeEditorPage() {
     setShowAddMenu(false);
     const seed = activeVariantId ? (sectionsByVariant[activeVariantId] ?? []) : [];
     try {
-      const data = await apiFetch('/resume/variants', {
-        method: 'POST',
-        body: JSON.stringify({ label: newCohort, cohort: newCohort, type: 'cohort', sections: seed }),
-      });
+      const data = await dilly.post<any>('/resume/variants', { label: newCohort, cohort: newCohort, type: 'cohort', sections: seed });
       const newVariant: VariantMeta = data.variant;
       setVariants(prev => [...prev, newVariant]);
       setSectionsByVariant(prev => ({ ...prev, [newVariant.id]: seed }));
@@ -1957,10 +1963,7 @@ export default function ResumeEditorPage() {
       { key: 'skills', label: 'Skills', simple: { id: 'skills_1', lines: [] } },
     ];
     try {
-      const data = await apiFetch('/resume/variants', {
-        method: 'POST',
-        body: JSON.stringify({ label: cohort, cohort, type: 'cohort', sections: blankSections }),
-      });
+      const data = await dilly.post<any>('/resume/variants', { label: cohort, cohort, type: 'cohort', sections: blankSections });
       const newVariant: VariantMeta = data.variant;
       setVariants(prev => [...prev, newVariant]);
       setSectionsByVariant(prev => ({ ...prev, [newVariant.id]: blankSections }));
@@ -1973,7 +1976,7 @@ export default function ResumeEditorPage() {
 
   async function handleDeleteVariant(id: string) {
     if (variants.length <= 1) return; // can't delete last
-    await apiFetch(`/resume/variants/${id}`, { method: 'DELETE' });
+    await dilly.delete(`/resume/variants/${id}`);
     const remaining = variants.filter(v => v.id !== id);
     setVariants(remaining);
     setDirtyVariants(prev => { const s = new Set(prev); s.delete(id); return s; });
@@ -1999,16 +2002,13 @@ export default function ResumeEditorPage() {
     if (!variant) return;
     const sects = sectionsByVariant[id] ?? [];
     try {
-      const data = await apiFetch('/resume/variants', {
-        method: 'POST',
-        body: JSON.stringify({
-          label: `${variant.label} (copy)`,
-          cohort: variant.cohort,
-          type: variant.type,
-          job_title: variant.job_title,
-          job_company: variant.job_company,
-          sections: sects,
-        }),
+      const data = await dilly.post<any>('/resume/variants', {
+        label: `${variant.label} (copy)`,
+        cohort: variant.cohort,
+        type: variant.type,
+        job_title: variant.job_title,
+        job_company: variant.job_company,
+        sections: sects,
       });
       const newVariant: VariantMeta = data.variant;
       setVariants(prev => [...prev, newVariant]);
@@ -2039,7 +2039,7 @@ export default function ResumeEditorPage() {
 
   async function handleRename(id: string, newLabel: string) {
     setRenamingId(null);
-    await apiFetch(`/resume/variants/${id}`, { method: 'PATCH', body: JSON.stringify({ label: newLabel }) });
+    await dilly.patch(`/resume/variants/${id}`, { label: newLabel });
     setVariants(prev => prev.map(v => v.id === id ? { ...v, label: newLabel } : v));
   }
 
@@ -2089,10 +2089,7 @@ export default function ResumeEditorPage() {
       }
       const sections: ResumeSection[] = JSON.parse(jsonMatch[0]);
 
-      const varData = await apiFetch('/resume/variants', {
-        method: 'POST',
-        body: JSON.stringify({ label: `${company} – ${title}`, cohort: 'General', type: 'job', job_title: title, job_company: company, sections }),
-      });
+      const varData = await dilly.post<any>('/resume/variants', { label: `${company} – ${title}`, cohort: 'General', type: 'job', job_title: title, job_company: company, sections });
       setJobGenerating(false);
       if (varData?.variant) {
         // Persist description so JobFitPanel can score this role later
@@ -2176,6 +2173,15 @@ export default function ResumeEditorPage() {
       allRedElements.forEach(el => { el.style.display = el.dataset.prevDisplay ?? ''; delete el.dataset.prevDisplay; });
     }
   }
+
+  // Initialize ATS fix banner from ref after mount (one time)
+  useEffect(() => {
+    if (atsFix.current) {
+      setAtsBanner(atsFix.current);
+      atsFix.current = null;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
@@ -2423,6 +2429,97 @@ export default function ResumeEditorPage() {
         </div>
       )}
 
+      {/* ATS Fix banner */}
+      {atsBanner && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 20px',
+          background: 'rgba(59,76,192,0.05)', borderBottom: '1px solid rgba(59,76,192,0.18)',
+          flexShrink: 0,
+        }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(59,76,192,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2B3A8E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#2B3A8E', margin: 0 }}>
+              ATS Fix Mode — {atsBanner.vendor}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-2)', margin: '3px 0 8px', lineHeight: 1.5 }}>
+              Your resume needs fixes for {atsBanner.vendor}. Click &ldquo;Apply ATS Fixes&rdquo; to auto-rewrite your bullets for better compatibility.
+            </p>
+            {atsBanner.tips?.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 8 }}>
+                {atsBanner.tips.slice(0, 3).map((tip: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 10, color: '#2B3A8E', marginTop: 1 }}>→</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}>{tip}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              disabled={atsApplying}
+              onClick={async () => {
+                if (!atsBanner || atsApplying) return;
+                setAtsApplying(true);
+                try {
+                  const bullets: string[] = [];
+                  sections.forEach(s => {
+                    (s.experiences ?? s.leadership ?? []).forEach((exp: any) => {
+                      exp.bullets?.forEach((b: any) => { if (b.text?.trim()) bullets.push(b.text.trim()); });
+                    });
+                    s.projects?.forEach((p: any) => {
+                      p.bullets?.forEach((b: any) => { if (b.text?.trim()) bullets.push(b.text.trim()); });
+                    });
+                  });
+                  const data = await dilly.post('/ats-rewrite', {
+                    bullets,
+                    issues: atsBanner.issues,
+                    track: cohort,
+                  });
+                  const rewrites: { original: string; rewritten: string }[] = data.rewrites ?? data.results ?? [];
+                  if (rewrites.length > 0 && activeVariantId) {
+                    const rewriteMap = new Map(rewrites.map(r => [r.original.trim(), r.rewritten.trim()]));
+                    const updated = sections.map(s => ({
+                      ...s,
+                      experiences: (s.experiences ?? []).map((exp: any) => ({
+                        ...exp,
+                        bullets: exp.bullets.map((b: any) => ({ ...b, text: rewriteMap.get(b.text.trim()) ?? b.text })),
+                      })),
+                      leadership: (s.leadership ?? []).map((exp: any) => ({
+                        ...exp,
+                        bullets: exp.bullets.map((b: any) => ({ ...b, text: rewriteMap.get(b.text.trim()) ?? b.text })),
+                      })),
+                      projects: (s.projects ?? []).map((p: any) => ({
+                        ...p,
+                        bullets: p.bullets.map((b: any) => ({ ...b, text: rewriteMap.get(b.text.trim()) ?? b.text })),
+                      })),
+                    }));
+                    setSectionsByVariant(prev => ({ ...prev, [activeVariantId]: updated }));
+                    setAtsBanner(null);
+                  }
+                } catch { /* silent — rewrites are best-effort */ }
+                finally { setAtsApplying(false); }
+              }}
+              style={{
+                padding: '6px 14px', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                background: '#2B3A8E', color: '#fff', border: 'none', cursor: atsApplying ? 'default' : 'pointer',
+                opacity: atsApplying ? 0.6 : 1, transition: 'opacity 150ms',
+              }}
+            >
+              {atsApplying ? 'Applying...' : '✦ Apply ATS Fixes'}
+            </button>
+          </div>
+          <button onClick={() => setAtsBanner(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 16, lineHeight: 1, padding: 4, flexShrink: 0, marginTop: -2 }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-1)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}>
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Main split */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* LEFT: Resume paper preview */}
@@ -2467,7 +2564,7 @@ export default function ResumeEditorPage() {
           <ResumeOverview
             variants={variants}
             dirtySet={dirtyVariants}
-            activeId={activeVariantId}
+            activeId={activeVariantId ?? ''}
             hiddenIds={hiddenVariantIds}
             sort={overviewSort}
             setSort={setOverviewSort}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { apiFetch } from '../lib/auth';
+import { dilly } from '../lib/dilly';
 
 // expo-device and expo-notifications require native modules that aren't available
 // in Expo Go or the iOS Simulator. Lazy-import to avoid crashing at module load.
@@ -33,7 +33,7 @@ export function usePushNotifications() {
       if (token) {
         setExpoPushToken(token);
         // Send token to our API
-        apiFetch('/v2/push/register', {
+        dilly.fetch('/v2/push/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ push_token: token, platform: Platform.OS }),

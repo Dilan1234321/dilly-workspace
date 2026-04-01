@@ -6,8 +6,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { executeAction } from "./context";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+import { API_BASE } from "../tokens";
 
 export function buildTools(authToken: string) {
   const exec = (action: string, data: Record<string, unknown>) =>

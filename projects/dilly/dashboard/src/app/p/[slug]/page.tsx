@@ -5,7 +5,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import html2canvas from "html2canvas";
 import { Button } from "@/components/ui/button";
 import { LoaderOne } from "@/components/ui/loader-one";
-import { API_BASE, toPunchyFindings, scoreColor as scoreColorFromUtils } from "@/lib/dillyUtils";
+import { toPunchyFindings, scoreColor as scoreColorFromUtils } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { AuditV2 } from "@/types/dilly";
 
 type PublicProfile = {
@@ -118,7 +119,7 @@ function SixSecondProfilePage() {
       setError("Invalid profile");
       return;
     }
-    fetch(`${API_BASE}/profile/public/${slug}`, { cache: "no-store" })
+    dilly.fetch(`/profile/public/${slug}`)
       .then((res) => {
         if (!res.ok) throw new Error("Profile not found");
         return res.json();
@@ -217,7 +218,7 @@ function SixSecondProfilePage() {
           <div className="shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-slate-200 bg-slate-100 flex items-center justify-center">
             {slug && !photoError ? (
               <img
-                src={`${API_BASE}/profile/public/${slug}/photo`}
+                src={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/profile/public/${slug}/photo`}
                 alt=""
                 className="w-full h-full object-cover"
                 onError={() => setPhotoError(true)}

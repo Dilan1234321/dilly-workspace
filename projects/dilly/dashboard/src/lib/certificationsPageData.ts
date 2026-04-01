@@ -2,7 +2,7 @@ import { estimateBuildDeltaForCert } from "@/lib/certificationBuildEstimate";
 import { getCertificationsForTrack, type CertificationEntry } from "@/lib/certificationsHub";
 import type { AuditV2 } from "@/types/dilly";
 import type { Certification, CertificationsPageData, CertificationShieldColor } from "@/types/certifications";
-import { API_BASE, fetchWithTimeout } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 
 const SHIELD_ROTATION: CertificationShieldColor[] = ["green", "amber", "blue", "indigo"];
 
@@ -143,16 +143,12 @@ function normalizeApiPageData(raw: unknown): CertificationsPageData | null {
 /**
  * Try GET /certifications?uid=…; returns null if missing or invalid.
  */
-export async function fetchCertificationsFromApi(uid: string, token: string | null): Promise<CertificationsPageData | null> {
+export async function fetchCertificationsFromApi(uid: string, _token?: string | null): Promise<CertificationsPageData | null> {
   if (!uid.trim()) return null;
   try {
-    const res = await fetchWithTimeout(
-      `${API_BASE}/certifications?uid=${encodeURIComponent(uid)}`,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        cache: "no-store",
-      },
-      22_000,
+    const res = await dilly.fetch(
+      `/certifications?uid=${encodeURIComponent(uid)}`,
+      { cache: "no-store" },
     );
     if (!res.ok) return null;
     const data = await res.json();

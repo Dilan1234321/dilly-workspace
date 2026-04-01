@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { SplashState } from "@/lib/launch/splashStates";
 import { SPLASH } from "@/lib/launch/splashConfig";
 
@@ -39,7 +39,6 @@ export function useSplashState(sequenceT0: number | null): UseSplashStateResult 
     if (sequenceT0 === null) return;
     settled.current = false;
     let cancelled = false;
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
 
     const mark = (payload: SplashState) => {
       if (settled.current || cancelled) return;
@@ -49,13 +48,8 @@ export function useSplashState(sequenceT0: number | null): UseSplashStateResult 
     };
 
     const run = async () => {
-      if (!token) return;
       try {
-        const res = await fetch(`${API_BASE}/profile/splash-state`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error(String(res.status));
-        const j = (await res.json()) as SplashState;
+        const j = await dilly.get<SplashState>("/profile/splash-state");
         if (cancelled) return;
         mark(j);
       } catch {

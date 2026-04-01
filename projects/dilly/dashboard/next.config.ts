@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['@dilly/api'],
   /** Monorepo: avoid inferring workspace root from a parent lockfile; keeps Turbopack + tsconfig stable. */
   turbopack: {
     root: path.join(__dirname),

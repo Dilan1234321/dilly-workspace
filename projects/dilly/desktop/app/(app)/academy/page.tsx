@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { apiFetch } from '@/lib/api';
+import { useState } from 'react';
+import { dilly } from '@/lib/dilly';
+import { useProfile } from '../layout';
 import { InterestsPicker } from '@/components/ui/InterestsPicker';
 import { getCohortColor } from '@/lib/cohorts';
 
@@ -31,24 +32,17 @@ const COHORT_TIPS: Record<string, string> = {
 };
 
 export default function AcademyPage() {
-  const [interests, setInterests] = useState<string[]>([]);
+  const { profile } = useProfile();
+  const [interests, setInterests] = useState<string[]>(profile.interests ?? []);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    apiFetch('/profile').then(p => {
-      setInterests(p?.interests ?? []);
-      setLoaded(true);
-    }).catch(() => setLoaded(true));
-  }, []);
 
   async function handleChange(next: string[]) {
     setInterests(next);
     setSaving(true);
     setSaved(false);
     try {
-      await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify({ interests: next }) });
+      await dilly.patch('/profile', { interests: next });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch { /* silent */ }
@@ -85,15 +79,7 @@ export default function AcademyPage() {
           <p className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-3)' }}>
             Select fields you&apos;re interested in
           </p>
-          {loaded ? (
-            <InterestsPicker selected={interests} onChange={handleChange} />
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="h-[30px] rounded-full animate-pulse" style={{ width: 80 + (i % 5) * 20, background: 'var(--surface-1)' }} />
-              ))}
-            </div>
-          )}
+          <InterestsPicker selected={interests} onChange={handleChange} />
         </div>
 
         {/* Tips for selected interests */}
@@ -121,7 +107,7 @@ export default function AcademyPage() {
           </div>
         )}
 
-        {interests.length === 0 && loaded && (
+        {interests.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(59,76,192,0.08)' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B3A8E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

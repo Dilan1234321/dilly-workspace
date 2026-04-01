@@ -7,14 +7,13 @@ import { Playfair_Display } from "next/font/google";
 import { ChevronRight, FileText, Lightbulb } from "lucide-react";
 import { hapticLight } from "@/lib/haptics";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   DILLY_OPEN_OVERLAY_KEY,
   stashAuditForReportHandoff,
   setCareerCenterReturnPath,
   minimalAuditFromHistorySummary,
   type AuditHistorySummaryRow,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { AuditV2 } from "@/types/dilly";
 import type { ScorePageData } from "@/types/scorePage";
 import { readScorePageCache, SCORE_PAGE_CACHE_KEY, scorePayloadLooksEmpty } from "@/types/scorePage";
@@ -67,13 +66,13 @@ function defaultScoreData(): ScorePageData {
 }
 
 async function tryHydrateScorePageFromAudits(
-  token: string,
+  _token: string,
   subscribed: boolean,
   current: ScorePageData,
 ): Promise<ScorePageData> {
   if (!scorePayloadLooksEmpty(current)) return current;
   try {
-    const h = await fetch(`${API_BASE}/audit/history`, { headers: { Authorization: `Bearer ${token}` } });
+    const h = await dilly.fetch("/audit/history");
     if (!h.ok) return current;
     const j = (await h.json()) as { audits?: unknown[] };
     const audits = Array.isArray(j?.audits) ? j.audits : [];
@@ -102,7 +101,7 @@ async function tryHydrateScorePageFromAudits(
     ) {
       return current;
     }
-    const prof = await fetch(`${API_BASE}/profile`, { headers: { Authorization: `Bearer ${token}` } })
+    const prof = await dilly.fetch("/profile")
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
     const displayName = (prof?.name || minimal.candidate_name || "").trim() || "there";
@@ -169,12 +168,10 @@ async function tryHydrateScorePageFromAudits(
   }
 }
 
-async function fetchLatestAuditForStash(token: string, auditId: string | null | undefined): Promise<void> {
+async function fetchLatestAuditForStash(_token: string, auditId: string | null | undefined): Promise<void> {
   if (!auditId?.trim()) return;
   try {
-    const res = await fetch(`${API_BASE}/audit/history/${encodeURIComponent(auditId.trim())}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await dilly.fetch(`/audit/history/${encodeURIComponent(auditId.trim())}`);
     const data = await res.json().catch(() => ({}));
     const a = data?.audit as AuditV2 | undefined;
     if (a?.scores) stashAuditForReportHandoff(a);
@@ -183,22 +180,19 @@ async function fetchLatestAuditForStash(token: string, auditId: string | null | 
   }
 }
 
-async function fetchScorePayload(token: string, subscribed: boolean, auditId?: string | null): Promise<ScorePageData> {
+async function fetchScorePayload(_token: string, subscribed: boolean, auditId?: string | null): Promise<ScorePageData> {
   const id = auditId?.trim() ?? "";
   const url = id
-    ? `${API_BASE}/profile/score-page/audit/${encodeURIComponent(id)}`
-    : `${API_BASE}/profile/score-page`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
+    ? `/profile/score-page/audit/${encodeURIComponent(id)}`
+    : `/profile/score-page`;
+  const res = await dilly.fetch(url);
   if (!res.ok) {
     if (res.status === 404) throw new Error("audit-not-found");
     throw new Error("score-page");
   }
   let payload = (await res.json()) as ScorePageData;
   if (!auditId?.trim()) {
-    payload = await tryHydrateScorePageFromAudits(token, subscribed, payload);
+    payload = await tryHydrateScorePageFromAudits(_token, subscribed, payload);
   }
   return payload;
 }
@@ -214,15 +208,9 @@ function ScorePageInner() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
-      setUser(null);
-      setAuthLoading(false);
-      return;
-    }
     let subscribed = false;
     try {
-      const me = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+      const me = await dilly.fetch("/auth/me");
       if (!me.ok) throw new Error("auth");
       const u = await me.json();
       subscribed = !!u?.subscribed;
@@ -234,7 +222,7 @@ function ScorePageInner() {
     }
 
     try {
-      const payload = await fetchScorePayload(token, subscribed, null);
+      const payload = await fetchScorePayload("", subscribed, null);
       setData(payload);
       setBaselineData(payload);
       setLookbackError(null);
@@ -247,9 +235,9 @@ function ScorePageInner() {
       } catch {
         /* ignore */
       }
-      void fetchLatestAuditForStash(token, payload.latest_audit_id);
+      void fetchLatestAuditForStash("", payload.latest_audit_id);
     } catch {
-      const fromAudits = await tryHydrateScorePageFromAudits(token, subscribed, defaultScoreData());
+      const fromAudits = await tryHydrateScorePageFromAudits("", subscribed, defaultScoreData());
       if (!scorePayloadLooksEmpty(fromAudits)) {
         setData(fromAudits);
         setBaselineData(fromAudits);
@@ -263,7 +251,7 @@ function ScorePageInner() {
         } catch {
           /* ignore */
         }
-        void fetchLatestAuditForStash(token, fromAudits.latest_audit_id);
+        void fetchLatestAuditForStash("", fromAudits.latest_audit_id);
       } else {
         setLoadError("Could not load your score. Pull to refresh or try again.");
         setData((d) => d ?? defaultScoreData());
@@ -275,8 +263,7 @@ function ScorePageInner() {
 
   const pickAudit = useCallback(
     async (rawAuditId: string) => {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (!token || !baselineData) return;
+      if (!baselineData) return;
       const auditId = String(rawAuditId ?? "").trim();
       if (!auditId) return;
       hapticLight();
@@ -290,9 +277,9 @@ function ScorePageInner() {
       setLookbackError(null);
       try {
         const subscribed = user?.subscribed ?? false;
-        const payload = await fetchScorePayload(token, subscribed, auditId);
+        const payload = await fetchScorePayload("", subscribed, auditId);
         setData(payload);
-        void fetchLatestAuditForStash(token, payload.latest_audit_id);
+        void fetchLatestAuditForStash("", payload.latest_audit_id);
       } catch (e) {
         const msg =
           e instanceof Error && e.message === "audit-not-found"
@@ -331,8 +318,7 @@ function ScorePageInner() {
     const id = data?.latest_audit_id?.trim();
     if (!id) return;
     hapticLight();
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (token) await fetchLatestAuditForStash(token, id);
+    await fetchLatestAuditForStash("", id);
     router.push(`/audit/${encodeURIComponent(id)}`);
   };
 

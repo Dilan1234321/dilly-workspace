@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
+import { useProfile } from '../layout';
+import { dilly } from '@/lib/dilly';
 import { clearToken } from '@/lib/auth';
 import { InterestsPicker } from '@/components/ui/InterestsPicker';
 
@@ -80,44 +81,38 @@ const SHORTCUTS = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Record<string, any> | null>(null);
+  const { profile, setProfile } = useProfile();
   const [dark, setDark] = useState(true);
   const [activeSection, setActiveSection] = useState('account');
   const [saving, setSaving] = useState(false);
-  const [notifEnabled, setNotifEnabled] = useState(true);
+  const [notifEnabled, setNotifEnabled] = useState(profile?.notification_prefs?.enabled !== false);
   const [deadlineReminders, setDeadlineReminders] = useState(true);
-  const [leaderboardOptIn, setLeaderboardOptIn] = useState(true);
+  const [leaderboardOptIn, setLeaderboardOptIn] = useState(profile?.leaderboard_opt_in !== false);
   const [giftCode, setGiftCode] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [interests, setInterests] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>(profile?.interests ?? []);
   const [interestsSaving, setInterestsSaving] = useState(false);
   const [interestsSaved, setInterestsSaved] = useState(false);
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains('dark'));
-    apiFetch('/profile').then(p => {
-      setProfile(p);
-      setNotifEnabled(p?.notification_prefs?.enabled !== false);
-      setLeaderboardOptIn(p?.leaderboard_opt_in !== false);
-      setInterests(p?.interests ?? []);
-    }).catch(() => {});
   }, []);
 
   async function saveInterests(next: string[]) {
     setInterests(next);
     setInterestsSaving(true);
     setInterestsSaved(false);
-    try { await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify({ interests: next }) }); setInterestsSaved(true); setTimeout(() => setInterestsSaved(false), 2000); }
+    try { await dilly.patch('/profile', { interests: next }); setInterestsSaved(true); setTimeout(() => setInterestsSaved(false), 2000); }
     catch { /* ignore */ }
     finally { setInterestsSaving(false); }
   }
 
   const save = async (data: Record<string, unknown>) => {
     setSaving(true);
-    try { const p = await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify(data) }); setProfile(p); }
+    try { const p = await dilly.patch('/profile', data); setProfile(p); }
     catch { /* ignore */ }
     finally { setSaving(false); }
   };

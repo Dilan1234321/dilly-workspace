@@ -4,16 +4,14 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSchoolFromEmail } from "@/lib/schools";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_MAX_AGE_MS,
   auditStorageKey,
-  fetchWithTimeout,
   writeLastAtsScoreCache,
   minimalAuditFromHistorySummary,
   type AuditHistorySummaryRow,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { AuditV2 } from "@/types/dilly";
 import type { ATSResult } from "./types";
 
@@ -291,27 +289,7 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsScanError, setAtsScanError] = useState<string | null>(null);
 
-  const tokenRef = useRef<string | null>(null);
-
   const theme = useMemo(() => ({ primary: school?.theme?.primary ?? "#C8102E" }), [school]);
-
-  /** Always use a timeout — raw fetch can hang for minutes if the API is down, proxy stalls, or the connection never completes. */
-  const fetchAuthed = useCallback(async (path: string, init?: RequestInit, timeoutMs: number = 75_000) => {
-    if (!tokenRef.current) throw new Error("Not authenticated.");
-    return fetchWithTimeout(
-      `${API_BASE}${path}`,
-      {
-        ...init,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${tokenRef.current}`,
-          ...(init?.headers || {}),
-        },
-        cache: "no-store",
-      },
-      timeoutMs
-    );
-  }, []);
 
   const buildScanBody = useCallback(async () => {
     const fromAudit = {
@@ -321,7 +299,7 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
       page_count: displayAudit?.page_count ?? undefined,
     };
     if (fromAudit.raw_text || fromAudit.parsed_text) return fromAudit;
-    const resumeRes = await fetchAuthed("/resume-text", undefined, 30_000);
+    const resumeRes = await dilly.fetch("/resume-text");
     if (!resumeRes.ok) {
       return fromAudit;
     }
@@ -333,18 +311,11 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
       track: displayAudit?.detected_track || "",
       page_count: displayAudit?.page_count ?? undefined,
     };
-  }, [displayAudit?.detected_track, displayAudit?.page_count, displayAudit?.resume_text, displayAudit?.structured_text, fetchAuthed]);
+  }, [displayAudit?.detected_track, displayAudit?.page_count, displayAudit?.resume_text, displayAudit?.structured_text]);
 
-  // Before paint: token + cached user + cached audit (same pattern as main app) so /ats doesn’t flash a full-screen loader.
+  // Before paint: cached user + cached audit (same pattern as main app) so /ats doesn’t flash a full-screen loader.
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    tokenRef.current = token;
-    if (!token) {
-      setAuthLoading(false);
-      router.replace("/");
-      return;
-    }
     try {
       const raw = localStorage.getItem(AUTH_USER_CACHE_KEY);
       if (!raw) return;
@@ -371,14 +342,11 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    tokenRef.current = token;
-    if (!token) return;
     let cancelled = false;
     const loadUser = async () => {
       const now = Date.now();
       try {
-        const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+        const res = await dilly.fetch("/auth/me");
         if (!res.ok) throw new Error("Auth failed");
         const me = await res.json();
         const meUser = { email: me.email as string, subscribed: !!me.subscribed };
@@ -411,14 +379,7 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
       setAuditLoading(true);
       let historyRows: Array<{ id?: string; final_score?: number; ts?: number; scores?: AuditV2["scores"] }> = [];
       try {
-        const historyRes = await fetchWithTimeout(
-          `${API_BASE}/audit/history`,
-          {
-            headers: { Authorization: `Bearer ${tokenRef.current}`, "Content-Type": "application/json" },
-            cache: "no-store",
-          },
-          15000
-        );
+        const historyRes = await dilly.fetch("/audit/history");
         if (!historyRes.ok) throw new Error("History unavailable");
         const historyData = await historyRes.json();
         const rows: typeof historyRows =
@@ -468,14 +429,7 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         if (canMinimal) applyMinimal();
-        const fullRes = await fetchWithTimeout(
-          `${API_BASE}/audit/history/${encodeURIComponent(latestId)}`,
-          {
-            headers: { Authorization: `Bearer ${tokenRef.current}`, "Content-Type": "application/json" },
-            cache: "no-store",
-          },
-          20000
-        );
+        const fullRes = await dilly.fetch(`/audit/history/${encodeURIComponent(latestId)}`);
         if (!fullRes.ok) throw new Error("Audit unavailable");
         const fullData = await fullRes.json();
         const audit = (fullData?.item || fullData?.audit || fullData) as AuditV2;
@@ -509,7 +463,7 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
     };
     loadAudit();
     return () => { cancelled = true; };
-  }, [authLoading, fetchAuthed, user]);
+  }, [authLoading, user]);
 
   const runScan = useCallback(async (opts?: { force?: boolean }) => {
     if (!displayAudit?.id) {
@@ -527,11 +481,8 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
 
       // History + analysis in parallel (saves one RTT). Vendor sim reuses analysis payload (no duplicate run_ats_analysis).
       const [historyBeforeRes, analysisRes] = await Promise.all([
-        fetchAuthed("/ats-score/history", undefined, 25_000),
-        fetchAuthed("/ats-analysis-from-audit", {
-          method: "POST",
-          body: JSON.stringify(scanBody),
-        }, 95_000),
+        dilly.fetch("/ats-score/history"),
+        dilly.fetch("/ats-analysis-from-audit", { method: "POST", body: JSON.stringify(scanBody) }),
       ]);
 
       const historyBeforeData = historyBeforeRes.ok ? await historyBeforeRes.json() : { points: [] };
@@ -553,16 +504,16 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
 
       // Record + enrich in parallel; history fetch after record so the new point is included.
       const [, vendorRes, densityRes, rewritesRes] = await Promise.all([
-        fetchAuthed("/ats-score/record", {
+        dilly.fetch("/ats-score/record", {
           method: "POST",
           body: JSON.stringify({ score: Math.round(analysis?.score || 0), audit_id: displayAudit.id }),
-        }, 25_000),
-        fetchAuthed("/ats-vendor-sim", {
+        }),
+        dilly.fetch("/ats-vendor-sim", {
           method: "POST",
           body: JSON.stringify({ ...scanBody, ats_analysis: analysis }),
-        }, 75_000),
-        fetchAuthed("/ats-keyword-density", { method: "POST", body: JSON.stringify(scanBody) }, 75_000),
-        fetchAuthed("/ats-rewrite", {
+        }),
+        dilly.fetch("/ats-keyword-density", { method: "POST", body: JSON.stringify(scanBody) }),
+        dilly.fetch("/ats-rewrite", {
           method: "POST",
           body: JSON.stringify({
             bullets: rewriteBullets,
@@ -570,10 +521,10 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
             track: scanBody.track,
             use_llm: false,
           }),
-        }, 75_000),
+        }),
       ]);
 
-      const historyAfterRes = await fetchAuthed("/ats-score/history", undefined, 25_000);
+      const historyAfterRes = await dilly.fetch("/ats-score/history");
 
       const vendor = vendorRes.ok ? ((await vendorRes.json()) as RawVendorSim) : null;
       const density = densityRes.ok ? ((await densityRes.json()) as RawKwDensity) : null;
@@ -608,7 +559,7 @@ export function ATSProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setAtsLoading(false);
     }
-  }, [atsLoading, buildScanBody, displayAudit?.id, fetchAuthed]);
+  }, [atsLoading, buildScanBody, displayAudit?.id]);
 
   useEffect(() => {
     if (authLoading || auditLoading) return;

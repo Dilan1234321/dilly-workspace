@@ -15,7 +15,8 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch, clearAuth } from '../../lib/auth';
+import { clearAuth } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -211,7 +212,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiFetch('/profile');
+        const res = await dilly.fetch('/profile');
         const data = await res.json();
         const p = data ?? {};
         setProfile(p);
@@ -248,7 +249,7 @@ export default function SettingsScreen() {
   async function saveProfile(patch: Record<string, any>) {
     setSaving(true);
     try {
-      await apiFetch('/profile', { method: 'PATCH', body: JSON.stringify(patch) });
+      await dilly.patch('/profile', patch);
     } catch {
       Alert.alert('Error', 'Could not save your preference. Check your connection and try again.');
     } finally {
@@ -284,7 +285,7 @@ export default function SettingsScreen() {
               text: 'Yes, delete everything', style: 'destructive',
               onPress: async () => {
                 try {
-                  const res = await apiFetch('/account/delete', { method: 'POST' });
+                  const res = await dilly.post('/account/delete');
                   if (!res.ok) throw new Error();
                   await clearAuth();
                   router.replace('/');
@@ -781,7 +782,7 @@ export default function SettingsScreen() {
                     icon="paper-plane-outline"
                     onPress={async () => {
                       try {
-                        await apiFetch('/profile/parent-invite', { method: 'POST' });
+                        await dilly.post('/profile/parent-invite');
                         Alert.alert('Sent', `Invite sent to ${parentEmail}`);
                       } catch {
                         Alert.alert('Error', 'Could not send invite.');

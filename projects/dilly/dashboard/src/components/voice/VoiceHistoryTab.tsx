@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppProfileHeader } from "@/components/career-center";
 import { ConversationHistoryList } from "@/components/voice/ConversationHistoryList";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { ConversationOutput } from "@/types/dilly";
 
 export function VoiceHistoryTab({ onBack }: { onBack: () => void }) {
@@ -12,15 +12,13 @@ export function VoiceHistoryTab({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async (q: string) => {
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
     try {
       const params = new URLSearchParams({ limit: "50" });
       if (q) params.set("search", q);
-      const res = await fetch(`${API_BASE}/voice/history?${params}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await dilly.get<{ items: ConversationOutput[] }>(`/voice/history?${params}`);
       setItems(data.items || []);
+    } catch {
+      // ignore load errors
     } finally {
       setLoading(false);
     }

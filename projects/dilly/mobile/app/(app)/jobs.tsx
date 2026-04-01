@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -365,7 +365,7 @@ function InterestsSetupCard({ profile, onComplete }: { profile: Record<string, a
     }
     setSaving(true);
     try {
-      await apiFetch('/profile', {
+      await dilly.fetch('/profile', {
         method: 'PATCH',
         body: JSON.stringify({ interests, education_level: 'Undergraduate' }),
       });
@@ -443,8 +443,8 @@ export default function JobsScreen() {
     (async () => {
       try {
         const [auditRes, profileRes] = await Promise.all([
-          apiFetch('/audit/latest').then(r => r.json()),
-          apiFetch('/profile').then(r => r.json()),
+          dilly.get('/audit/latest'),
+          dilly.get('/profile'),
         ]);
         const p = profileRes || {};
         setProfile(p);
@@ -472,7 +472,7 @@ export default function JobsScreen() {
       if (search.trim()) params.set('q', search.trim());
       if (filterCompany) params.set('company', filterCompany);
       if (filterReadiness !== 'all') params.set('readiness', filterReadiness === 'close' ? 'almost' : filterReadiness);
-      const res = await apiFetch(`/v2/internships/feed?${params.toString()}`);
+      const res = await dilly.fetch(`/v2/internships/feed?${params.toString()}`);
       const data = await res.json();
       const parsed = (data.listings || []).map((l: any) => {
         // Map v2 response to existing Listing shape
@@ -546,9 +546,9 @@ export default function JobsScreen() {
   // Apply + Track
   async function handleApply(listing: Listing) {
     if (listing.url) Linking.openURL(listing.url);
-    try { await apiFetch(`/v2/internships/save?internship_id=${listing.id}`, { method: 'POST' }); } catch {}
+    try { await dilly.post(`/v2/internships/save?internship_id=${listing.id}`); } catch {}
     try {
-      await apiFetch('/applications', {
+      await dilly.fetch('/applications', {
         method: 'POST',
         body: JSON.stringify({
           company: listing.company, role: listing.title, status: 'applied',
@@ -567,7 +567,7 @@ export default function JobsScreen() {
     // Reload profile to get updated interests
     (async () => {
       try {
-        const res = await apiFetch('/profile');
+        const res = await dilly.fetch('/profile');
         const p = await res.json();
         setProfile(p || {});
       } catch {}

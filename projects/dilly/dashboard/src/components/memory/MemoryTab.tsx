@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppProfileHeader } from "@/components/career-center";
 import { AddMemorySheet } from "@/components/memory/AddMemorySheet";
 import { MemoryPanel } from "@/components/memory/MemoryPanel";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { MemoryCategory, MemoryItem } from "@/types/dilly";
 
 type MemoryResponse = {
@@ -22,10 +22,6 @@ export function MemoryTab({
   /** Called when a memory item action requires navigating to another tab. */
   onNavigate?: (tab: string) => void;
 }) {
-  const token = useMemo(
-    () => (typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null),
-    [],
-  );
   const [loading, setLoading] = useState(true);
   const [narrative, setNarrative] = useState<string | null>(null);
   const [narrativeUpdated, setNarrativeUpdated] = useState("recently");
@@ -35,15 +31,14 @@ export function MemoryTab({
   const [editingItem, setEditingItem] = useState<MemoryItem | null>(null);
 
   const load = async () => {
-    if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/memory`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return;
-      const data = (await res.json()) as MemoryResponse;
+      const data = await dilly.get<MemoryResponse>("/memory");
       setNarrative(data.narrative ?? null);
       setNarrativeUpdated(data.narrative_updated_relative || "recently");
       setItems(Array.isArray(data.items) ? data.items : []);
+    } catch {
+      // ignore load errors
     } finally {
       setLoading(false);
     }
@@ -52,7 +47,7 @@ export function MemoryTab({
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, []);
 
   const openAdd = (category: MemoryCategory) => {
     setEditingItem(null);
@@ -67,41 +62,34 @@ export function MemoryTab({
   };
 
   const submitSheet = async ({ label, value }: { label: string; value: string }) => {
-    if (!token) return;
     if (editingItem) {
-      const res = await fetch(`${API_BASE}/memory/items/${editingItem.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ label, value }),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      try {
+        const data = await dilly.patch<{ item: MemoryItem }>(`/memory/items/${editingItem.id}`, { label, value });
         const row = data?.item as MemoryItem;
         setItems((prev) => prev.map((x) => (x.id === row.id ? row : x)));
+      } catch {
+        // ignore patch errors
       }
     } else {
-      const res = await fetch(`${API_BASE}/memory/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ category: sheetCategory, label, value }),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      try {
+        const data = await dilly.post<{ item: MemoryItem }>("/memory/items", { category: sheetCategory, label, value });
         const row = data?.item as MemoryItem;
         setItems((prev) => [row, ...prev]);
+      } catch {
+        // ignore post errors
       }
     }
     setSheetOpen(false);
   };
 
   const deleteItem = async (item: MemoryItem) => {
-    if (!token) return;
-    const res = await fetch(`${API_BASE}/memory/items/${item.id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      setItems((prev) => prev.filter((x) => x.id !== item.id));
+    try {
+      const res = await dilly.fetch(`/memory/items/${item.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setItems((prev) => prev.filter((x) => x.id !== item.id));
+      }
+    } catch {
+      // ignore delete errors
     }
   };
 

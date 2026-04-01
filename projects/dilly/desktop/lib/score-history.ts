@@ -1,7 +1,7 @@
 // Score history — snapshots stored in localStorage.
 // Each time the profile loads, we save a snapshot. The chart reads these back.
 
-const STORAGE_KEY = 'dilly_score_history';
+import { DILLY_SCORE_HISTORY_KEY as STORAGE_KEY } from '@dilly/api';
 const MAX_SNAPSHOTS = 60; // ~2 months of daily use
 
 export interface ScoreSnapshot {

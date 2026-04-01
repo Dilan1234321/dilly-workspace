@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiFetch } from '../lib/auth';
+import { dilly } from '../lib/dilly';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   // Check subscription status from backend
   const refresh = useCallback(async () => {
     try {
-      const res = await apiFetch('/profile');
+      const res = await dilly.fetch('/profile');
       const profile = await res.json();
 
       // Backend can set a 'subscribed' flag on the profile
@@ -83,7 +83,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
       // Count audits from history
       try {
-        const auditRes = await apiFetch('/audit/history');
+        const auditRes = await dilly.fetch('/audit/history');
         const auditData = await auditRes.json();
         setAuditsUsed((auditData?.audits || []).length);
       } catch {}

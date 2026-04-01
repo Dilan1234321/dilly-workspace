@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -83,10 +83,7 @@ export default function ConversationHistory({ onClose, onOpenConversation }: { o
   const handleRename = useCallback(async (convId: string, newTitle: string) => {
     if (!newTitle.trim()) { setRenaming(null); return; }
     try {
-      await apiFetch(`/voice/history/${encodeURIComponent(convId)}/rename`, {
-        method: 'PATCH',
-        body: JSON.stringify({ session_title: newTitle.trim() }),
-      });
+      await dilly.patch(`/voice/history/${encodeURIComponent(convId)}/rename`, { session_title: newTitle.trim() });
       setItems(prev => prev.map(i => i.conv_id === convId ? { ...i, session_title: newTitle.trim() } : i));
     } catch { /* silently fail — title stays as-is */ }
     setRenaming(null);
@@ -94,7 +91,7 @@ export default function ConversationHistory({ onClose, onOpenConversation }: { o
 
   const handleDelete = useCallback(async (convId: string) => {
     try {
-      await apiFetch(`/voice/history/${encodeURIComponent(convId)}`, { method: 'DELETE' });
+      await dilly.delete(`/voice/history/${encodeURIComponent(convId)}`);
       setItems(prev => prev.filter(i => i.conv_id !== convId));
     } catch { /* silently fail */ }
   }, []);
@@ -103,7 +100,7 @@ export default function ConversationHistory({ onClose, onOpenConversation }: { o
     try {
       setLoading(true);
       const qs = q ? `?limit=50&search=${encodeURIComponent(q)}` : '?limit=50';
-      const data = await apiFetch(`/voice/history${qs}`);
+      const data = await dilly.get(`/voice/history${qs}`);
       setItems(data.items ?? data ?? []);
     } catch {
       setItems([]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 
 /**
  * Persist latest push token to profile.
@@ -9,15 +9,10 @@ import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
  * - "apns:<token>"
  */
 export async function registerPushToken(pushToken: string | null): Promise<boolean> {
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-  if (!token) return false;
   try {
-    const res = await fetch(`${API_BASE}/profile`, {
+    const res = await dilly.fetch("/profile", {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ push_token: pushToken }),
     });
     return res.ok;

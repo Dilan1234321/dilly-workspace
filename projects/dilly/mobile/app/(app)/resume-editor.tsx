@@ -28,7 +28,7 @@ import Animated, {
   Easing,
   interpolateColor,
 } from 'react-native-reanimated';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -347,7 +347,7 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
       return;
     }
     try {
-      const res = await apiFetch('/resume/bullet-score', {
+      const res = await dilly.fetch('/resume/bullet-score', {
         method: 'POST',
         body: JSON.stringify({ bullet: text }),
       });
@@ -613,9 +613,9 @@ export default function ResumeEditorScreen() {
     (async () => {
       try {
         const [resumeRes, profileRes, auditRes] = await Promise.all([
-          apiFetch('/resume/edited').then(r => r.json()),
-          apiFetch('/profile').then(r => r.json()),
-          apiFetch('/audit/latest').then(r => r.json()).catch(() => null),
+          dilly.get('/resume/edited'),
+          dilly.get('/profile'),
+          dilly.get('/audit/latest').catch(() => null),
         ]);
         setMajor(profileRes?.majors?.[0] || profileRes?.major || '');
 
@@ -653,7 +653,7 @@ export default function ResumeEditorScreen() {
       }
 
       // Fetch resume variants
-      apiFetch('/resume/variants').then(r => r.json()).then(data => {
+      dilly.get('/resume/variants').then(data => {
         setVariants(data?.variants || []);
       }).catch(() => {});
     })();
@@ -714,7 +714,7 @@ export default function ResumeEditorScreen() {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await apiFetch('/resume/save', { method: 'POST', body: JSON.stringify({ sections }) });
+      const res = await dilly.post('/resume/save', { sections });
       if (!res.ok) throw new Error();
       setHasChanges(false);
       Alert.alert('Saved', 'Your resume has been saved.');
@@ -889,7 +889,7 @@ export default function ResumeEditorScreen() {
                       setActiveVariant(v.id);
                       setShowGrid(false);
                       setExpanded(new Set());
-                      apiFetch(`/resume/variants/${v.id}`).then(r => r.json()).then(data => {
+                      dilly.get(`/resume/variants/${v.id}`).then(data => {
                         if (data?.resume?.sections?.length) setSections(data.resume.sections);
                       }).catch(() => {});
                     }}
@@ -958,7 +958,7 @@ export default function ResumeEditorScreen() {
                   setTailoring(true);
                   setShowTailor(false);
                   try {
-                    const res = await apiFetch('/resume/variants', {
+                    const res = await dilly.fetch('/resume/variants', {
                       method: 'POST',
                       body: JSON.stringify({
                         job_company: tailorCompany.trim(),
@@ -969,11 +969,11 @@ export default function ResumeEditorScreen() {
                     if (res.ok) {
                       const data = await res.json();
                       // Refresh variants and switch to new one
-                      const varRes = await apiFetch('/resume/variants').then(r => r.json());
+                      const varRes = await dilly.get('/resume/variants');
                       setVariants(varRes?.variants || []);
                       if (data?.id) {
                         setActiveVariant(data.id);
-                        const varData = await apiFetch(`/resume/variants/${data.id}`).then(r => r.json());
+                        const varData = await dilly.get(`/resume/variants/${data.id}`);
                         if (varData?.resume?.sections) setSections(varData.resume.sections);
                       }
                     }

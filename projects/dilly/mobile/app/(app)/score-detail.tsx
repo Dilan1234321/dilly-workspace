@@ -6,7 +6,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -116,8 +116,8 @@ export default function ScoreDetailScreen() {
     (async () => {
       try {
         const [profileRes, auditRaw] = await Promise.all([
-          apiFetch('/profile').then(r => r.json()),
-          apiFetch('/audit/latest').then(r => r.json()),
+          dilly.get('/profile'),
+          dilly.get('/audit/latest'),
         ]);
 
         const p = profileRes as any;

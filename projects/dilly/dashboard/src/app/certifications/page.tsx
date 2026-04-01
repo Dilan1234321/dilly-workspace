@@ -3,14 +3,12 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_MAX_AGE_MS,
   DILLY_OPEN_OVERLAY_KEY,
-  fetchWithTimeout,
   setCareerCenterReturnPath,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { AuditV2 } from "@/types/dilly";
 import type { CertificationsPageData } from "@/types/certifications";
 import { fetchCertificationsFromApi, buildCertificationsPageDataFromAudit } from "@/lib/certificationsPageData";
@@ -102,7 +100,7 @@ function CertificationsPageInner() {
   }, []);
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    const token = typeof localStorage !== "undefined" ? localStorage.getItem("dilly_auth_token") : null;
     if (!token) {
       setUser({ email: "", subscribed: false });
       setAuthLoading(false);
@@ -122,7 +120,7 @@ function CertificationsPageInner() {
       /* ignore */
     }
 
-    fetchWithTimeout(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } }, 15_000)
+    dilly.fetch("/auth/me")
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((d) => {
         const u = { email: d?.email ?? "", subscribed: !!d?.subscribed, id: typeof d?.id === "string" ? d.id : undefined };
@@ -138,11 +136,6 @@ function CertificationsPageInner() {
 
   useEffect(() => {
     if (authLoading || !user?.subscribed) return;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      setLoading(false);
-      return;
-    }
     const uid = (user.id || user.email || "").trim();
     if (!uid) {
       setLoading(false);
@@ -156,18 +149,15 @@ function CertificationsPageInner() {
 
     (async () => {
       try {
-        const apiData = await fetchCertificationsFromApi(uid, token);
+        const token = typeof localStorage !== "undefined" ? localStorage.getItem("dilly_auth_token") : null;
+        const apiData = await fetchCertificationsFromApi(uid, token ?? "");
         if (cancelled) return;
         if (apiData) {
           setData(apiData);
           return;
         }
 
-        const histRes = await fetchWithTimeout(
-          `${API_BASE}/audit/history`,
-          { headers: { Authorization: `Bearer ${token}` } },
-          28_000,
-        );
+        const histRes = await dilly.fetch("/audit/history");
         const histJson = histRes.ok ? await histRes.json() : null;
         const list = Array.isArray(histJson?.audits) ? histJson.audits : Array.isArray(histJson) ? histJson : [];
         const sorted = [...list]
@@ -179,11 +169,7 @@ function CertificationsPageInner() {
           setEmptyReason("no_audit");
           return;
         }
-        const fullRes = await fetchWithTimeout(
-          `${API_BASE}/audit/history/${encodeURIComponent(latestId)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-          35_000,
-        );
+        const fullRes = await dilly.fetch(`/audit/history/${encodeURIComponent(latestId)}`);
         if (!fullRes.ok) {
           setData(null);
           setEmptyReason("no_audit");
@@ -275,9 +261,9 @@ function CertificationsPageInner() {
             </p>
             <p style={{ fontSize: 12, color: "var(--t2)", lineHeight: 1.55, marginBottom: 16 }}>
               {emptyReason === "no_track"
-                ? "We couldn’t detect a track from your profile, so certifications can’t be matched yet."
+                ? "We couldn't detect a track from your profile, so certifications can't be matched yet."
                 : emptyReason === "no_certs"
-                  ? "We don’t have hub certifications for your track yet. Check back later."
+                  ? "We don't have hub certifications for your track yet. Check back later."
                   : "This page shows picks when your profile includes resume scores and a track."}
             </p>
             <button

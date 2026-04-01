@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import CompanyLogo from './CompanyLogo';
 import { useRightPanel } from '@/app/(app)/layout';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
 
 /** Decode HTML entities + strip tags via the browser's own parser.
  *  Runs two passes to handle double-encoded HTML (entities that decode into tags). */
@@ -39,14 +40,24 @@ interface Job {
 
 export default function JobDetail({ job }: { job: Job }) {
   const { fireProactiveCoach } = useRightPanel();
+  const router = useRouter();
   const [fullDescription, setFullDescription] = useState<string | null>(null);
   const [descLoading, setDescLoading] = useState(false);
+
+  function tailorResume() {
+    sessionStorage.setItem('dilly_tailor_job', JSON.stringify({
+      company: job.company,
+      title: job.title,
+      description: fullDescription || job.description || '',
+    }));
+    router.push('/resume-editor?auto_generate=1');
+  }
 
   useEffect(() => {
     setFullDescription(null);
     if (!job.id) return;
     setDescLoading(true);
-    apiFetch(`/v2/internships/${job.id}`)
+    dilly.get(`/v2/internships/${job.id}`)
       .then((data: { description?: string }) => {
         if (data?.description) setFullDescription(data.description);
       })
@@ -145,7 +156,16 @@ export default function JobDetail({ job }: { job: Job }) {
         )}
       </div>
 
-      <div className="p-4 border-t border-border-main">
+      <div className="p-4 border-t border-border-main flex flex-col gap-2">
+        <button
+          onClick={tailorResume}
+          className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold tracking-wide transition-all duration-150 active:scale-[0.98]"
+          style={{ background: 'rgba(59,76,192,0.08)', border: '1px solid rgba(59,76,192,0.2)', color: '#2B3A8E' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.14)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.08)'; }}
+        >
+          ✦ Tailor resume for this role
+        </button>
         <div className="flex gap-2.5">
           {job.apply_url && (
             <a href={job.apply_url} target="_blank" rel="noopener noreferrer"

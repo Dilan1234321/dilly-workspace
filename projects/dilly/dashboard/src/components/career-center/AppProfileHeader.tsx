@@ -3,13 +3,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_MAX_AGE_MS,
   PROFILE_CACHE_KEY_BASE,
   SCHOOL_NAME_KEY,
   profilePhotoCacheKey,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 
 type AppProfileHeaderProps = {
   /** Override name (avoids reading from cache). */
@@ -54,40 +54,42 @@ export function AppProfileHeader({
   const [photoUrl, setPhotoUrl] = useState<string | null>(photoProp || null);
 
   useEffect(() => {
-    try {
-      let email: string | null = null;
-      const raw = sessionStorage.getItem(AUTH_USER_CACHE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.email && typeof parsed.ts === "number" && Date.now() - parsed.ts < AUTH_USER_CACHE_MAX_AGE_MS) {
-          email = parsed.email;
-        }
-      }
-      if (!email) {
-        const token = localStorage.getItem(AUTH_TOKEN_KEY);
-        if (!token) return;
-      }
-
-      if (email) {
-        if (nameProp === undefined) {
-          const cached = localStorage.getItem(`${PROFILE_CACHE_KEY_BASE}_${email}`);
-          if (cached) {
-            const p = JSON.parse(cached);
-            if (p?.name) setName(p.name);
-            if (p?.track) setTrack(p.track);
+    void (async () => {
+      try {
+        let email: string | null = null;
+        const raw = sessionStorage.getItem(AUTH_USER_CACHE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.email && typeof parsed.ts === "number" && Date.now() - parsed.ts < AUTH_USER_CACHE_MAX_AGE_MS) {
+            email = parsed.email;
           }
         }
-        if (photoProp === undefined) {
-          const photo = localStorage.getItem(profilePhotoCacheKey(email));
-          if (photo && photo.startsWith("data:image/")) setPhotoUrl(photo);
+        if (!email) {
+          const isAuth = await dilly.isAuthenticated();
+          if (!isAuth) return;
         }
-      }
 
-      if (nameProp === undefined) {
-        const sn = localStorage.getItem(SCHOOL_NAME_KEY);
-        if (sn) setSchoolName(sn);
-      }
-    } catch { /* ignore */ }
+        if (email) {
+          if (nameProp === undefined) {
+            const cached = localStorage.getItem(`${PROFILE_CACHE_KEY_BASE}_${email}`);
+            if (cached) {
+              const p = JSON.parse(cached);
+              if (p?.name) setName(p.name);
+              if (p?.track) setTrack(p.track);
+            }
+          }
+          if (photoProp === undefined) {
+            const photo = localStorage.getItem(profilePhotoCacheKey(email));
+            if (photo && photo.startsWith("data:image/")) setPhotoUrl(photo);
+          }
+        }
+
+        if (nameProp === undefined) {
+          const sn = localStorage.getItem(SCHOOL_NAME_KEY);
+          if (sn) setSchoolName(sn);
+        }
+      } catch { /* ignore */ }
+    })();
   }, [nameProp, photoProp]);
 
   useEffect(() => { if (nameProp !== undefined) setName(nameProp || ""); }, [nameProp]);

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { AppProfileHeader } from "@/components/career-center";
 import { ActionItemsList } from "@/components/actions/ActionItemsList";
 import { VoiceAvatar } from "@/components/VoiceAvatarButton";
-import { API_BASE, AUTH_TOKEN_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { ActionItem } from "@/types/dilly";
 
 export default function ActionsPage() {
@@ -13,14 +14,12 @@ export default function ActionsPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/actions`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await dilly.get<{ undone: ActionItem[]; completed: ActionItem[] }>("/actions");
       setUndone(data.undone || []);
       setCompleted(data.completed || []);
+    } catch {
+      // ignore errors
     } finally {
       setLoading(false);
     }
@@ -29,13 +28,7 @@ export default function ActionsPage() {
   useEffect(() => { load(); }, [load]);
 
   const patchAction = useCallback(async (id: string, patch: Record<string, unknown>) => {
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    await fetch(`${API_BASE}/actions/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+    await dilly.patch(`/actions/${id}`, patch);
     load();
   }, [load]);
 

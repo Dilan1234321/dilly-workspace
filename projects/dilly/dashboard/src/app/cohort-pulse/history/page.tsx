@@ -1,27 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppProfileHeader } from "@/components/career-center";
 import { PulseHistoryList } from "@/components/cohort-pulse/PulseHistoryList";
 import { PulseTrendChart } from "@/components/cohort-pulse/PulseTrendChart";
-import { API_BASE, AUTH_TOKEN_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { CohortPulse, UserCohortPulse } from "@/types/dilly";
 
 type PulseWithCohort = UserCohortPulse & { cohort: CohortPulse };
 type ScorePoint = { week_start: string; user_score: number; cohort_avg_score: number };
 
 export default function CohortPulseHistoryPage() {
-  const token = useMemo(
-    () => (typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null),
-    []
-  );
   const [items, setItems] = useState<PulseWithCohort[]>([]);
   const [scoreHistory, setScoreHistory] = useState<ScorePoint[]>([]);
 
   useEffect(() => {
-    if (!token) return;
-    fetch(`${API_BASE}/cohort-pulse/history?limit=8`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
+    dilly.get<{ items: PulseWithCohort[]; score_history: ScorePoint[] }>("/cohort-pulse/history?limit=8")
       .then((data) => {
         const rows = Array.isArray(data?.items) ? (data.items as PulseWithCohort[]) : [];
         const history = Array.isArray(data?.score_history) ? (data.score_history as ScorePoint[]) : [];
@@ -32,7 +27,7 @@ export default function CohortPulseHistoryPage() {
         setItems([]);
         setScoreHistory([]);
       });
-  }, [token]);
+  }, []);
 
   const first = items[0];
   const subtitle = first ? `${(first.cohort.track || "Track").toUpperCase()} · ${(first.cohort.school_id || "School").toUpperCase()}` : "Your cohort trend";
@@ -63,4 +58,3 @@ export default function CohortPulseHistoryPage() {
     </div>
   );
 }
-

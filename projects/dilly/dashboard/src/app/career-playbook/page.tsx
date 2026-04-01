@@ -4,15 +4,13 @@ import type { CSSProperties } from "react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_MAX_AGE_MS,
   DILLY_OPEN_OVERLAY_KEY,
   DILLY_PLAYBOOK_VOICE_PROMPT_KEY,
-  fetchWithTimeout,
   setCareerCenterReturnPath,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { getEffectiveCohortLabel, getPlaybookForTrack, getTrackTips } from "@/lib/trackDefinitions";
 import type { AppProfile, AuditV2, CareerPlaybookDeepDive, CareerPlaybookPayload, CareerPlaybookSignal } from "@/types/dilly";
 import { BottomNav, CareerCenterTabIcon, JobsTabIcon, RankTabIcon, type MainAppTabKey } from "@/components/career-center";
@@ -22,7 +20,7 @@ import { LoadingScreen } from "@/components/ui/loading-screen";
 
 function formatPlaybookHttpError(status: number, bodyText: string): string {
   if (status === 404) {
-    return "We couldn’t reach the playbook service. It may not be deployed on this API yet—redeploy the backend, or ask your host to expose POST /audit/career-playbook. You can still use the Job search checklist on Get Hired.";
+    return "We couldn't reach the playbook service. It may not be deployed on this API yet—redeploy the backend, or ask your host to expose POST /audit/career-playbook. You can still use the Job search checklist on Get Hired.";
   }
   const trimmed = bodyText.trim().slice(0, 400);
   if (!trimmed) return "Could not build your playbook. Try again.";
@@ -162,7 +160,7 @@ function CareerPlaybookInner() {
   }, []);
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    const token = typeof localStorage !== "undefined" ? localStorage.getItem("dilly_auth_token") : null;
     if (!token) {
       setUser({ email: "", subscribed: false });
       setAuthLoading(false);
@@ -182,7 +180,7 @@ function CareerPlaybookInner() {
       /* ignore */
     }
 
-    fetchWithTimeout(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } }, 15_000)
+    dilly.fetch("/auth/me")
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((d) => {
         const u = { email: d?.email ?? "", subscribed: !!d?.subscribed, id: typeof d?.id === "string" ? d.id : undefined };
@@ -201,20 +199,13 @@ function CareerPlaybookInner() {
       setLoading(false);
       return;
     }
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      setErr("Sign in again to load your playbook.");
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setErr(null);
     setData(null);
-    const getTimeoutMs = 28_000;
     try {
       const [profRes, histRes] = await Promise.all([
-        fetchWithTimeout(`${API_BASE}/profile`, { headers: { Authorization: `Bearer ${token}` } }, getTimeoutMs),
-        fetchWithTimeout(`${API_BASE}/audit/history`, { headers: { Authorization: `Bearer ${token}` } }, getTimeoutMs),
+        dilly.fetch("/profile"),
+        dilly.fetch("/audit/history"),
       ]);
       const profile = profRes.ok ? ((await profRes.json()) as AppProfile & Record<string, unknown>) : {};
       const histJson = histRes.ok ? await histRes.json() : null;
@@ -228,11 +219,7 @@ function CareerPlaybookInner() {
         setLoading(false);
         return;
       }
-      const fullRes = await fetchWithTimeout(
-        `${API_BASE}/audit/history/${encodeURIComponent(latestId)}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-        35_000,
-      );
+      const fullRes = await dilly.fetch(`/audit/history/${encodeURIComponent(latestId)}`);
       if (!fullRes.ok) {
         setErr("Could not load your latest audit.");
         setLoading(false);
@@ -264,21 +251,10 @@ function CareerPlaybookInner() {
         track_tips: tips,
         effective_track: eff,
       };
-      const rawBody = JSON.stringify(body);
-      const postHeaders = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
       /** Prefer /audit/career-playbook so gateways that only forward /audit/* still work. */
-      const PLAYBOOK_POST_MS = 75_000;
-      let playRes = await fetchWithTimeout(
-        `${API_BASE}/audit/career-playbook`,
-        { method: "POST", headers: postHeaders, body: rawBody },
-        PLAYBOOK_POST_MS,
-      );
+      let playRes = await dilly.post("/audit/career-playbook", body);
       if (playRes.status === 404) {
-        playRes = await fetchWithTimeout(
-          `${API_BASE}/career-playbook`,
-          { method: "POST", headers: postHeaders, body: rawBody },
-          PLAYBOOK_POST_MS,
-        );
+        playRes = await dilly.post("/career-playbook", body);
       }
       if (!playRes.ok) {
         if (playRes.status === 404) {

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import CompanyLogo from './CompanyLogo';
 import { getAutomationRisk } from '@/lib/automation-risk';
 
@@ -17,6 +18,17 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
   onContext: (e: React.MouseEvent, j: Job) => void;
 }) {
   const [tipVisible, setTipVisible] = useState(false);
+  const router = useRouter();
+
+  function tailorResume(e: React.MouseEvent) {
+    e.stopPropagation();
+    sessionStorage.setItem('dilly_tailor_job', JSON.stringify({
+      company: job.company,
+      title: job.title,
+      description: job.description || '',
+    }));
+    router.push('/resume-editor?auto_generate=1');
+  }
   const rc: Record<string, { color: string; label: string }> = {
     ready: { color: '#34C759', label: 'Ready' },
     almost: { color: '#FF9F0A', label: 'Almost' },
@@ -66,7 +78,8 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
         </div>
       )}
 
-      {/* Automation risk badge */}
+      {/* Bottom row: automation risk + tailor button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
       <div style={{ position: 'relative' }}>
         <button
           onClick={e => { e.stopPropagation(); setTipVisible(v => !v); }}
@@ -103,6 +116,23 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Tailor resume CTA */}
+      <button
+        onClick={tailorResume}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '2px 8px', borderRadius: 4, flexShrink: 0,
+          background: 'rgba(59,76,192,0.06)', border: '1px solid rgba(59,76,192,0.18)',
+          cursor: 'pointer', transition: 'all 150ms ease',
+          fontSize: 9, fontWeight: 700, color: '#2B3A8E', letterSpacing: 0.3, textTransform: 'uppercase' as const,
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.12)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.06)'; }}
+      >
+        ✦ Tailor resume
+      </button>
       </div>
     </button>
   );

@@ -5,24 +5,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppProfileHeader } from "@/components/career-center";
 import { CompanyInput } from "@/components/ready-check/CompanyInput";
 import { VerdictLoadingScreen } from "@/components/ready-check/VerdictLoadingScreen";
-import { API_BASE, AUTH_TOKEN_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
+import { getCareerCenterReturnPath } from "@/lib/dillyUtils";
 import type { MemoryItem, ReadyCheck } from "@/types/dilly";
 
 function ReadyCheckNewInner() {
   const router = useRouter();
   const search = useSearchParams();
-  const token = useMemo(
-    () => (typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null),
-    []
-  );
   const [company, setCompany] = useState(search.get("company") || "");
   const [chips, setChips] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-    fetch(`${API_BASE}/memory`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
+    dilly.get<{ items?: MemoryItem[] }>("/memory")
       .then((data) => {
         const items = Array.isArray(data?.items) ? (data.items as MemoryItem[]) : [];
         const targets = items
@@ -35,23 +30,19 @@ function ReadyCheckNewInner() {
       })
       .catch(() => setChips([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, []);
 
   const submit = async () => {
-    if (!token || !company.trim()) return;
+    if (!company.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/ready-check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          company: company.trim(),
-          follow_up: search.get("follow_up") || undefined,
-        }),
+      const row = await dilly.post<ReadyCheck>("/ready-check", {
+        company: company.trim(),
+        follow_up: search.get("follow_up") || undefined,
       });
-      if (!res.ok) return;
-      const row = (await res.json()) as ReadyCheck;
       router.push(`/ready-check/${row.id}${search.get("follow_up") ? `?follow_up=${encodeURIComponent(search.get("follow_up") || "")}` : ""}`);
+    } catch {
+      // ignore
     } finally {
       setLoading(false);
     }
@@ -93,4 +84,3 @@ export default function ReadyCheckNewPage() {
     </Suspense>
   );
 }
-

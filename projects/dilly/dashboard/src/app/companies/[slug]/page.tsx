@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
-import { API_BASE, AUTH_TOKEN_KEY, scoreColor, PENDING_VOICE_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { scoreColor, PENDING_VOICE_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { getSchoolFromEmail } from "@/lib/schools";
 import { getCertificationsForTrack } from "@/lib/certificationsHub";
 import type { TrackKey } from "@/lib/trackDefinitions";
@@ -68,13 +69,13 @@ export default function CompanyDetailPage() {
   const theme = { primary: school?.theme?.primary ?? "#C8102E" };
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    const token = typeof localStorage !== "undefined" ? localStorage.getItem("dilly_auth_token") : null;
     if (!token) {
       setAuthLoading(false);
       router.replace("/");
       return;
     }
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch("/auth/me")
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((d) => {
         const u = { email: d?.email ?? "", subscribed: !!d?.subscribed };
@@ -88,11 +89,9 @@ export default function CompanyDetailPage() {
 
   useEffect(() => {
     if (!slug || !user?.subscribed) return;
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE}/companies/${encodeURIComponent(slug)}`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch(`/companies/${encodeURIComponent(slug)}`)
       .then((res) => {
         if (!res.ok) {
           if (res.status === 404) setError("Company not found.");
@@ -205,7 +204,7 @@ export default function CompanyDetailPage() {
             )}
           </div>
           {!your_scores && (
-            <p className="text-xs text-slate-500 mt-2">Your scores vs this bar appear when they’re on your profile.</p>
+            <p className="text-xs text-slate-500 mt-2">Your scores vs this bar appear when they're on your profile.</p>
           )}
         </section>
 

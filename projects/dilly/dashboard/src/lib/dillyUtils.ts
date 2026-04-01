@@ -1,27 +1,47 @@
 /**
  * Dilly dashboard utilities: score colors, badge/snapshot SVG, punchy findings, storage keys.
+ *
+ * Storage key constants live in @dilly/api — re-exported here for backward compat.
+ * Import new code from "@dilly/api" directly; these re-exports will slim down over time.
  */
 
 import type { AuditV2, DimensionKey, Rec } from "@/types/dilly";
+import {
+  getScoreBand,
+  DILLY_AUDIT_REPORT_HANDOFF_KEY,
+  DILLY_LAST_ATS_SCORE_KEY,
+  DILLY_STORAGE_KEY_BASE,
+} from "@dilly/api";
 import { ACHIEVEMENT_DEFINITIONS } from "@/lib/achievements";
 
+// ─── Storage keys — single source of truth is @dilly/api/src/storage-keys.ts ─
+export {
+  AUTH_TOKEN_KEY,
+  AUTH_USER_CACHE_KEY,
+  AUTH_USER_CACHE_MAX_AGE_MS,
+  DILLY_AUDIT_REPORT_HANDOFF_KEY,
+  DILLY_EXPAND_JOB_SEARCH_VOICE_PROMPT_KEY,
+  DILLY_JOB_GAP_VOICE_PROMPT_KEY,
+  DILLY_LAST_ATS_SCORE_KEY,
+  DILLY_LEADERBOARD_REFRESH_KEY,
+  DILLY_LEADERBOARD_VOICE_PROMPT_KEY,
+  DILLY_OPEN_OVERLAY_KEY,
+  DILLY_PLAYBOOK_VOICE_PROMPT_KEY,
+  DILLY_SCORE_GAP_VOICE_PROMPT_KEY,
+  DILLY_STORAGE_KEY_BASE,
+  ONBOARDING_STEP_KEY,
+  PENDING_VOICE_KEY,
+  PROFILE_CACHE_KEY_BASE,
+  RECRUITER_API_KEY_STORAGE,
+  SCHOOL_NAME_KEY,
+  SCHOOL_STORAGE_KEY,
+  VOICE_CONVOS_KEY,
+  VOICE_FROM_AUDIT_ID_KEY,
+  VOICE_FROM_CERT_HANDOFF_KEY,
+  VOICE_MESSAGES_KEY,
+} from "@dilly/api";
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-export const SCHOOL_STORAGE_KEY = "dilly_school";
-export const SCHOOL_NAME_KEY = "dilly_school_name";
-export const AUTH_TOKEN_KEY = "dilly_auth_token";
-/** Short-lived cache for /auth/me so returning from Jobs/ATS/Settings shows app immediately; revalidated in background. */
-export const AUTH_USER_CACHE_KEY = "dilly_auth_user";
-export const AUTH_USER_CACHE_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
-export const PROFILE_CACHE_KEY_BASE = "dilly_profile_cache";
-
-/** Recruiter UI: localStorage key for recruiter API key (X-Recruiter-API-Key). */
-export const RECRUITER_API_KEY_STORAGE = "dilly_recruiter_api_key";
-
-export const DILLY_STORAGE_KEY_BASE = "dilly_last_audit";
-
-/** Client cache for latest ATS readiness score (0–100) so Score tab shows last scan even before /ats-score/history refetches. */
-export const DILLY_LAST_ATS_SCORE_KEY = "dilly_last_ats_score";
 
 export type LastAtsScoreCache = { score: number; ts: number; audit_id?: string | null };
 
@@ -57,44 +77,6 @@ export function writeLastAtsScoreCache(entry: LastAtsScoreCache): void {
     /* ignore */
   }
 }
-export const ONBOARDING_STEP_KEY = "dilly_onboarding_step";
-export const VOICE_MESSAGES_KEY = "dilly_voice_messages";
-export const VOICE_CONVOS_KEY = "dilly_voice_convos";
-export const PENDING_VOICE_KEY = "dilly_pending_voice_prompt";
-
-/** Set to "1" before navigating to `/` so the main app opens the Dilly overlay (e.g. from a standalone shell). Consumed once on home. */
-export const DILLY_OPEN_OVERLAY_KEY = "dilly_open_overlay";
-
-/** User message auto-send when opening Voice from /score gap CTA (`/voice?context=score_gap&…`). Consumed on home with overlay. */
-export const DILLY_SCORE_GAP_VOICE_PROMPT_KEY = "dilly_score_gap_voice_prompt";
-
-/** Set to "1" after a new audit so `/leaderboard` refetches with `?refresh=true` once. */
-export const DILLY_LEADERBOARD_REFRESH_KEY = "dilly_leaderboard_refresh";
-
-/** Auto-send when opening Voice from leaderboard move-up CTA (`/voice?context=leaderboard&…`). Consumed on home with overlay. */
-export const DILLY_LEADERBOARD_VOICE_PROMPT_KEY = "dilly_leaderboard_voice_prompt";
-
-/** From Jobs page close-gap CTA (`/voice?context=job_gap&…`). Consumed on home with overlay. */
-export const DILLY_JOB_GAP_VOICE_PROMPT_KEY = "dilly_job_gap_voice_prompt";
-
-/** From Jobs page when every listed role is applied (`/voice?context=expand_job_search`). */
-export const DILLY_EXPAND_JOB_SEARCH_VOICE_PROMPT_KEY = "dilly_expand_job_search_voice_prompt";
-
-/** User message to auto-send when overlay opens from `/career-playbook` (consumed once; not cleared by login scrub). */
-export const DILLY_PLAYBOOK_VOICE_PROMPT_KEY = "dilly_playbook_voice_prompt";
-
-/** Set to audit id before navigating home so Voice opens with audit-report context (consumed with overlay). */
-export const VOICE_FROM_AUDIT_ID_KEY = "dilly_voice_from_audit_id";
-
-/**
- * JSON handoff for certification resume help: { cert_id, name?, provider?, source?: "cert_landing" }.
- * Set before `/voice?context=cert&id=…`; consumed when the home overlay opens.
- */
-export const VOICE_FROM_CERT_HANDOFF_KEY = "dilly_voice_cert_handoff";
-
-/** Full `AuditV2` JSON: set before `router.push`/`replace` to `/audit/[id]` so the report page paints without a loading skeleton. Consumed once when ids match. */
-export const DILLY_AUDIT_REPORT_HANDOFF_KEY = "dilly_audit_report_handoff";
-
 export function stashAuditForReportHandoff(audit: AuditV2 | null | undefined): void {
   if (typeof window === "undefined" || !audit?.scores) return;
   const id = String(audit.id || "").trim();
@@ -339,10 +321,14 @@ export function profilePhotoCacheKey(email?: string | null): string {
   return email ? `dilly_profile_photo_${email}` : "dilly_profile_photo";
 }
 
+/**
+ * @deprecated Use `getScoreBand(score)` from `@dilly/api` instead.
+ * This wrapper is kept for backward-compat with existing dashboard code
+ * and delegates to the shared score system.
+ */
 export function scoreColor(score: number): { color: string; bg: string; label: string } {
-  if (score >= 70) return { color: "#22c55e", bg: "rgba(34,197,94,0.12)", label: "Strong" };
-  if (score >= 50) return { color: "#eab308", bg: "rgba(234,179,8,0.10)", label: "Average" };
-  return { color: "#ef4444", bg: "rgba(239,68,68,0.10)", label: "Needs work" };
+  const { color, bg, label } = getScoreBand(score);
+  return { color, bg, label };
 }
 
 export type ShareCardOptions = {

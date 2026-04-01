@@ -11,7 +11,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -41,8 +41,10 @@ function scoreColor(s: number): string { return s >= 85 ? GREEN : s >= 70 ? AMBE
 
 // ── Score Card ────────────────────────────────────────────────────────────────
 
-function ATSScoreCard({ system, score, issues, onFix }: {
-  system: typeof ATS_SYSTEMS[0]; score: number; issues: string[]; onFix: (system: string, issue: string) => void;
+function ATSScoreCard({ system, score, issues, onFix, onFixInEditor }: {
+  system: typeof ATS_SYSTEMS[0]; score: number; issues: string[];
+  onFix: (system: string, issue: string, score?: number) => void;
+  onFixInEditor: (system: string, issues: string[]) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const color = scoreColor(score);
@@ -84,6 +86,10 @@ function ATSScoreCard({ system, score, issues, onFix }: {
                   </AnimatedPressable>
                 </View>
               ))}
+              <AnimatedPressable style={ss.applyEditorBtn} onPress={() => onFixInEditor(system.name, issues)} scaleDown={0.97}>
+                <Ionicons name="create-outline" size={13} color="#FFFFFF" />
+                <Text style={ss.applyEditorBtnText}>Apply Fixes in Editor</Text>
+              </AnimatedPressable>
             </>
           ) : (
             <View style={ss.allGoodRow}>
@@ -158,7 +164,7 @@ export default function ATSScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiFetch('/profile');
+        const res = await dilly.fetch('/profile');
         const p = await res.json();
         setProfile(p || {});
       } catch {}
@@ -169,7 +175,7 @@ export default function ATSScreen() {
   async function runScan() {
     setLoading(true);
     try {
-      const res = await apiFetch('/ats/scan');
+      const res = await dilly.fetch('/ats/scan');
       const data = await res.json();
 
       if (!res.ok) {
@@ -197,7 +203,7 @@ export default function ATSScreen() {
     setCompanyLoading(true);
     setCompanyScanData(null);
     try {
-      const res = await apiFetch(`/ats-company-lookup?company=${encodeURIComponent(companySearch.trim())}`);
+      const res = await dilly.fetch(`/ats-company-lookup?company=${encodeURIComponent(companySearch.trim())}`);
       const data = await res.json();
       setCompanyResult(data);
 
@@ -205,7 +211,7 @@ export default function ATSScreen() {
       if (data.vendor_key) {
         setCompanyScanLoading(true);
         try {
-          const scanRes = await apiFetch('/ats/scan');
+          const scanRes = await dilly.fetch('/ats/scan');
           const scanData = await scanRes.json();
           if (scanRes.ok) {
             setCompanyScanData(scanData);
@@ -227,7 +233,7 @@ export default function ATSScreen() {
     }
     setMatchLoading(true);
     try {
-      const res = await apiFetch('/ats-check', {
+      const res = await dilly.fetch('/ats-check', {
         method: 'POST',
         body: JSON.stringify({ job_description: jdText }),
       });
@@ -239,18 +245,48 @@ export default function ATSScreen() {
     finally { setMatchLoading(false); }
   }
 
-  // Fix with Dilly
-  function fixWithDilly(system: string, issue: string) {
+  // Fix with Dilly — opens AI overlay with full vendor context
+  function fixWithDilly(systemName: string, issue: string, score?: number) {
     const p = profile as any;
     const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
+    const sys = ATS_SYSTEMS.find(s => s.name === systemName);
+    const scoreNote = score != null ? ` (current score: ${score}/100)` : '';
+    const strictness = sys ? `${sys.strictness} parsing` : '';
+
+    // Store context for resume editor navigation
+    const vendorKey = systemName.toLowerCase().replace(/\s+/g, '');
+    const atsFixData = JSON.stringify({ vendor: systemName, vendorKey, issues: [issue] });
+
     openDillyOverlay({
       name: firstName,
       cohort: p.track || 'General',
       score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
-      referenceCompany: system,
+      referenceCompany: systemName,
       isPaid: true,
-      initialMessage: `My resume has an ATS compatibility issue with ${system}: "${issue}". How should I fix this to make my resume parse correctly? Give me specific formatting changes to make.`,
+      initialMessage: [
+        `My resume has an ATS compatibility issue with ${systemName}${scoreNote}.`,
+        strictness ? `${systemName} uses ${strictness}.` : '',
+        `The specific issue: "${issue}".`,
+        `Explain exactly what I need to fix in my resume to improve my ${systemName} score. Be specific and actionable.`,
+        `Then ask me if I want to go to my Resume Editor to apply these fixes.`,
+        `[ATS_FIX_CTX:${atsFixData}]`,
+      ].filter(Boolean).join(' '),
     });
+  }
+
+  // Navigate to resume editor with ATS fix context
+  function openEditorWithFix(systemName: string, issues: string[]) {
+    const vendorKey = systemName.toLowerCase().replace(/\s+/g, '');
+    const sys = ATS_SYSTEMS.find(s => s.name === systemName);
+    // Store context — mobile uses a simple key since no sessionStorage
+    // We pass it via query params and global state
+    const fixData = encodeURIComponent(JSON.stringify({
+      vendor: systemName,
+      vendorKey,
+      issues,
+      tips: [],
+    }));
+    router.push(`/resume-editor?ats_fix=1&ats_data=${fixData}`);
   }
 
   // Build mock scan results for display when we have vendor sim data

@@ -1,9 +1,19 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from './tokens';
-
-const TOKEN_KEY = 'dilly_auth_token';
-const USER_KEY  = 'dilly_user';
+import {
+  AUTH_TOKEN_KEY as TOKEN_KEY,
+  AUTH_USER_KEY as USER_KEY,
+  AUDIT_RESULT_KEY,
+  ONBOARDING_NAME_KEY,
+  ONBOARDING_COHORT_KEY,
+  ONBOARDING_TRACK_KEY,
+  ONBOARDING_MAJORS_KEY,
+  ONBOARDING_PRE_PROF_KEY,
+  ONBOARDING_TARGET_KEY,
+  ONBOARDING_INDUSTRY_TARGET_KEY,
+  PENDING_UPLOAD_KEY,
+} from '@dilly/api';
 
 // Write to both SecureStore (production) and AsyncStorage (dev fallback)
 export async function setToken(token: string): Promise<void> {
@@ -22,7 +32,7 @@ export async function getToken(): Promise<string | null> {
   return AsyncStorage.getItem(TOKEN_KEY);
 }
 
-// Clears auth tokens and session data. Preserves dilly_has_onboarded so returning
+// Clears auth tokens and session data. Preserves HAS_ONBOARDED_KEY so returning
 // users go to verify screen instead of full onboarding.
 export async function clearAuth(): Promise<void> {
   await Promise.all([
@@ -30,16 +40,16 @@ export async function clearAuth(): Promise<void> {
     SecureStore.deleteItemAsync(USER_KEY).catch(() => null),
     AsyncStorage.removeItem(TOKEN_KEY),
     AsyncStorage.removeItem(USER_KEY),
-    AsyncStorage.removeItem('dilly_audit_result'),
-    AsyncStorage.removeItem('dilly_onboarding_name'),
-    AsyncStorage.removeItem('dilly_onboarding_cohort'),
-    AsyncStorage.removeItem('dilly_onboarding_track'),
-    AsyncStorage.removeItem('dilly_onboarding_majors'),
-    AsyncStorage.removeItem('dilly_onboarding_pre_prof'),
-    AsyncStorage.removeItem('dilly_onboarding_target'),
-    AsyncStorage.removeItem('dilly_onboarding_industry_target'),
-    AsyncStorage.removeItem('dilly_pending_upload'),
-    // NOTE: dilly_has_onboarded is intentionally NOT cleared
+    AsyncStorage.removeItem(AUDIT_RESULT_KEY),
+    AsyncStorage.removeItem(ONBOARDING_NAME_KEY),
+    AsyncStorage.removeItem(ONBOARDING_COHORT_KEY),
+    AsyncStorage.removeItem(ONBOARDING_TRACK_KEY),
+    AsyncStorage.removeItem(ONBOARDING_MAJORS_KEY),
+    AsyncStorage.removeItem(ONBOARDING_PRE_PROF_KEY),
+    AsyncStorage.removeItem(ONBOARDING_TARGET_KEY),
+    AsyncStorage.removeItem(ONBOARDING_INDUSTRY_TARGET_KEY),
+    AsyncStorage.removeItem(PENDING_UPLOAD_KEY),
+    // NOTE: HAS_ONBOARDED_KEY ("dilly_has_onboarded") is intentionally NOT cleared
   ]);
 }
 

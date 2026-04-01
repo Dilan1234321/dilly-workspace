@@ -14,7 +14,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import EditProfileModal from '../../components/EditProfileModal';
 
@@ -166,9 +166,9 @@ export default function ProfileScreen() {
     (async () => {
       try {
         const [profileRes, auditRaw, appsRes] = await Promise.all([
-          apiFetch('/profile').then(r => r.json()),
-          apiFetch('/audit/latest').then(r => r.json()),
-          apiFetch('/applications').then(r => r.json()).catch(() => null),
+          dilly.get('/profile'),
+          dilly.get('/audit/latest'),
+          dilly.get('/applications').catch(() => null),
         ]);
 
         setProfile(profileRes ?? {});

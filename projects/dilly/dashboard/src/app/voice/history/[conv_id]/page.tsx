@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppProfileHeader } from "@/components/career-center";
 import { ActionItemCard } from "@/components/actions/ActionItemCard";
-import { API_BASE, AUTH_TOKEN_KEY } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { ConversationOutput } from "@/types/dilly";
 
 const TOPIC_COLORS: Record<string, string> = {
@@ -28,14 +28,12 @@ export default function VoiceHistoryDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token || !convId) return;
+    if (!convId) return;
     try {
-      const res = await fetch(`${API_BASE}/voice/history/${encodeURIComponent(convId)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      setOutput(await res.json());
+      const data = await dilly.get<ConversationOutput>(`/voice/history/${encodeURIComponent(convId)}`);
+      setOutput(data);
+    } catch {
+      // ignore errors
     } finally {
       setLoading(false);
     }
@@ -44,13 +42,7 @@ export default function VoiceHistoryDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   const patchAction = useCallback(async (id: string, patch: Record<string, unknown>) => {
-    const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) return;
-    await fetch(`${API_BASE}/actions/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+    await dilly.patch(`/actions/${id}`, patch);
     load();
   }, [load]);
 

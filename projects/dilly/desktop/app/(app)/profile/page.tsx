@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ export default function DillyProfilePage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const json = await apiFetch('/memory');
+      const json = await dilly.get('/memory');
       setData(json);
     } catch {} finally {
       setLoading(false);
@@ -94,10 +94,7 @@ export default function DillyProfilePage() {
   async function saveEdit(id: string) {
     if (!editLabel.trim()) return;
     try {
-      await apiFetch(`/memory/items/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ label: editLabel.trim(), value: editValue.trim() || editLabel.trim(), confidence: 'high' }),
-      });
+      await dilly.patch(`/memory/items/${id}`, { label: editLabel.trim(), value: editValue.trim() || editLabel.trim(), confidence: 'high' });
       setData(prev => {
         if (!prev) return prev;
         const items = prev.items.map(i => i.id === id ? { ...i, label: editLabel.trim(), value: editValue.trim() || editLabel.trim(), confidence: 'high' } : i);
@@ -116,7 +113,7 @@ export default function DillyProfilePage() {
   async function deleteFact(id: string) {
     if (!confirm('Remove this fact? Dilly will forget it.')) return;
     try {
-      await apiFetch(`/memory/items/${id}`, { method: 'DELETE' });
+      await dilly.delete(`/memory/items/${id}`);
       setData(prev => {
         if (!prev) return prev;
         const items = prev.items.filter(i => i.id !== id);
@@ -133,15 +130,12 @@ export default function DillyProfilePage() {
   async function handleAddFact() {
     if (!addingTo || !addLabel.trim()) return;
     try {
-      await apiFetch('/memory/items', {
-        method: 'POST',
-        body: JSON.stringify({
-          category: addingTo,
-          label: addLabel.trim().slice(0, 80),
-          value: addValue.trim() || addLabel.trim(),
-          source: 'profile',
-          confidence: 'high',
-        }),
+      await dilly.post('/memory/items', {
+        category: addingTo,
+        label: addLabel.trim().slice(0, 80),
+        value: addValue.trim() || addLabel.trim(),
+        source: 'profile',
+        confidence: 'high',
       });
       setAddLabel('');
       setAddValue('');

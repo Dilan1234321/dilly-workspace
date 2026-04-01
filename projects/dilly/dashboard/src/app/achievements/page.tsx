@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { AUTH_TOKEN_KEY, API_BASE, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import { AppProfileHeader } from "@/components/career-center";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { AchievementSticker } from "@/components/AchievementSticker";
@@ -25,15 +26,7 @@ export default function AchievementsPage() {
   const [unlocking, setUnlocking] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    fetch(`${API_BASE}/profile`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
+    dilly.get("/profile")
       .then((p) => {
         setProfile(p ?? null);
       })
@@ -46,48 +39,27 @@ export default function AchievementsPage() {
 
   const handleManualUnlock = async (id: AchievementId) => {
     if (!MANUAL_UNLOCK_IDS.includes(id) || isUnlocked(id, achievements)) return;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
     setUnlocking(id);
     const updated = {
       ...achievements,
       [id]: { unlockedAt: Date.now() / 1000 },
     };
-    if (id === "first_application") {
-      const payload: Record<string, unknown> = {
-        achievements: updated,
-        first_application_at: Date.now() / 1000,
-      };
-      await fetch(`${API_BASE}/profile`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-    } else if (id === "first_interview") {
-      const payload: Record<string, unknown> = {
-        achievements: updated,
-        first_interview_at: Date.now() / 1000,
-      };
-      await fetch(`${API_BASE}/profile`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      await fetch(`${API_BASE}/profile`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ achievements: updated }),
-      });
+    try {
+      if (id === "first_application") {
+        await dilly.patch("/profile", {
+          achievements: updated,
+          first_application_at: Date.now() / 1000,
+        });
+      } else if (id === "first_interview") {
+        await dilly.patch("/profile", {
+          achievements: updated,
+          first_interview_at: Date.now() / 1000,
+        });
+      } else {
+        await dilly.patch("/profile", { achievements: updated });
+      }
+    } catch {
+      // ignore patch errors
     }
     setProfile((prev) =>
       prev ? { ...prev, achievements: updated } : { achievements: updated }
@@ -96,8 +68,7 @@ export default function AchievementsPage() {
   };
 
   const toggleShareCard = (id: string) => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token || !isUnlocked(id as AchievementId, achievements)) return;
+    if (!isUnlocked(id as AchievementId, achievements)) return;
     let next = [...shareCard];
     const idx = next.indexOf(id);
     if (idx >= 0) {
@@ -107,14 +78,7 @@ export default function AchievementsPage() {
     } else {
       next = [next[1], next[2], id];
     }
-    fetch(`${API_BASE}/profile`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ share_card_achievements: next }),
-    }).then(() => {
+    dilly.patch("/profile", { share_card_achievements: next }).then(() => {
       setProfile((prev) =>
         prev ? { ...prev, share_card_achievements: next } : prev
       );

@@ -13,7 +13,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -418,7 +418,7 @@ export default function CalendarScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await apiFetch('/profile');
+        const res = await dilly.fetch('/profile');
         const data = await res.json();
         const deadlines = data?.deadlines || [];
         const mapped: CalendarEvent[] = deadlines
@@ -449,7 +449,7 @@ export default function CalendarScreen() {
         notes: e.notes || '',
         completedAt: e.completedAt || null,
       }));
-      await apiFetch('/profile', {
+      await dilly.fetch('/profile', {
         method: 'PATCH',
         body: JSON.stringify({ deadlines }),
       });

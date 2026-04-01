@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
-  AUTH_TOKEN_KEY,
   DILLY_OPEN_OVERLAY_KEY,
   PENDING_VOICE_KEY,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import {
   SPLASH_FADE_OUT_MS,
   SPLASH_GHOST_FADE_OUT_MS,
@@ -47,14 +47,16 @@ export function AppLaunchSequence() {
   // No sessionStorage gate — the splash plays every single time.
   useEffect(() => {
     if (!mounted || !pathname) return;
-    try {
-      if (!localStorage.getItem(AUTH_TOKEN_KEY)) return;
-      if (skipLaunchPath(pathname)) return;
-      setSequenceT0(performance.now());
-      setActive(true);
-    } catch {
-      /* ignore */
-    }
+    dilly.isAuthenticated().then((authed) => {
+      try {
+        if (!authed) return;
+        if (skipLaunchPath(pathname)) return;
+        setSequenceT0(performance.now());
+        setActive(true);
+      } catch {
+        /* ignore */
+      }
+    });
   }, [mounted, pathname]);
 
   const finish = useCallback((nav: () => void, ms: number) => {

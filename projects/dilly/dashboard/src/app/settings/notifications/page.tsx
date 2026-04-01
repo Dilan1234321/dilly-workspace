@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE, AUTH_TOKEN_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
+import { getCareerCenterReturnPath } from "@/lib/dillyUtils";
 import { AppProfileHeader } from "@/components/career-center";
 import { NotificationToggleRow } from "@/components/settings/NotificationToggleRow";
 import { QuietHoursPicker } from "@/components/settings/QuietHoursPicker";
@@ -30,17 +31,14 @@ export default function NotificationSettingsPage() {
   const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFS);
   const [history, setHistory] = useState<NotificationHistoryItem[]>([]);
 
-  const token = useMemo(() => (typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null), []);
-
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!token) return;
       setLoading(true);
       try {
         const [prefsRes, historyRes] = await Promise.all([
-          fetch(`${API_BASE}/notifications/preferences`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/notifications/history?limit=7`, { headers: { Authorization: `Bearer ${token}` } }),
+          dilly.fetch("/notifications/preferences"),
+          dilly.fetch("/notifications/history?limit=7"),
         ]);
         if (!cancelled && prefsRes.ok) {
           const p = await prefsRes.json();
@@ -65,18 +63,14 @@ export default function NotificationSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, []);
 
   const patchPrefs = async (patch: Partial<NotificationPreferences>) => {
-    if (!token) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/notifications/preferences`, {
+      const res = await dilly.fetch("/notifications/preferences", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
       if (res.ok) {
@@ -94,18 +88,10 @@ export default function NotificationSettingsPage() {
   };
 
   const openHistoryItem = async (item: NotificationHistoryItem) => {
-    if (!token) return;
     hapticLight();
     if (!item.opened) {
       try {
-        await fetch(`${API_BASE}/notifications/opened`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ notification_id: item.id }),
-        });
+        await dilly.post("/notifications/opened", { notification_id: item.id });
         setHistory((prev) => prev.map((row) => (row.id === item.id ? { ...row, opened: true } : row)));
       } catch {
         // Ignore opened tracking failures.
@@ -167,4 +153,3 @@ export default function NotificationSettingsPage() {
     </div>
   );
 }
-

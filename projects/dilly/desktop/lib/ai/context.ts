@@ -2,7 +2,7 @@
  * Fetches rich student context from the Python API for the AI coach.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+import { API_BASE } from "../tokens";
 
 export interface RichContext {
   name: string;

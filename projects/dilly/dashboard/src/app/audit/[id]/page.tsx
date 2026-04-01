@@ -3,8 +3,6 @@
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_MAX_AGE_MS,
   auditScrollStorageKey,
@@ -14,6 +12,7 @@ import {
   getCareerCenterReturnPath,
   setCareerCenterReturnPath,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { AuditV2 } from "@/types/dilly";
 import { buildAuditReportViewModel } from "@/lib/auditReportViewModel";
 import { BottomNav, CareerCenterTabIcon, JobsTabIcon, RankTabIcon, type MainAppTabKey } from "@/components/career-center";
@@ -160,11 +159,6 @@ function AuditReportPageInner() {
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) {
-      router.replace("/");
-      return;
-    }
     const cached = readCachedSubscribedUser();
     if (cached) setUser((prev) => prev ?? cached);
   }, [router]);
@@ -208,13 +202,7 @@ function AuditReportPageInner() {
   }, [auditId, user?.email]);
 
   useEffect(() => {
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
-      router.replace("/");
-      return;
-    }
-
-    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+    dilly.fetch("/auth/me")
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
         const u = { email: data?.email ?? "", subscribed: !!data?.subscribed };
@@ -226,8 +214,6 @@ function AuditReportPageInner() {
 
   useEffect(() => {
     if (!user?.subscribed || !auditId) return;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
 
     let cancelled = false;
     const showBlockingLoading = !hasVmRef.current;
@@ -240,8 +226,8 @@ function AuditReportPageInner() {
     (async () => {
       try {
         const [histRes, auditRes] = await Promise.all([
-          fetch(`${API_BASE}/audit/history`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/audit/history/${encodeURIComponent(auditId)}`, { headers: { Authorization: `Bearer ${token}` } }),
+          dilly.fetch("/audit/history"),
+          dilly.fetch(`/audit/history/${encodeURIComponent(auditId)}`),
         ]);
 
         if (!auditRes.ok) {

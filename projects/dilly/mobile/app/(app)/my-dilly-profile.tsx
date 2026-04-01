@@ -7,7 +7,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -93,7 +93,7 @@ export default function MyDillyProfileScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await apiFetch('/memory');
+      const res = await dilly.fetch('/memory');
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -128,7 +128,7 @@ export default function MyDillyProfileScreen() {
       {
         text: 'Remove', style: 'destructive', onPress: async () => {
           try {
-            await apiFetch(`/memory/items/${id}`, { method: 'DELETE' });
+            await dilly.delete(`/memory/items/${id}`);
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             setData(prev => {
               if (!prev) return prev;
@@ -407,7 +407,7 @@ export default function MyDillyProfileScreen() {
         onAdd={async (label, value) => {
           if (!addCategory) return;
           try {
-            const res = await apiFetch('/memory/items', {
+            const res = await dilly.fetch('/memory/items', {
               method: 'POST',
               body: JSON.stringify({
                 category: addCategory,

@@ -6,14 +6,12 @@ import { LoadingScreen } from "@/components/ui/loading-screen";
 import { AppProfileHeader, CareerCenterMinibar } from "@/components/career-center";
 import { useDillyVoiceNotification } from "@/context/DillyVoiceNotificationContext";
 import {
-  API_BASE,
-  AUTH_TOKEN_KEY,
   AUTH_USER_CACHE_KEY,
   auditStorageKey,
-  fetchWithTimeout,
   getCareerCenterReturnPath,
   safeUuid,
 } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
 import type { AuditV2 } from "@/types/dilly";
 
 // ─── Bullet Score types ───────────────────────────────────────────────────────
@@ -525,12 +523,7 @@ function BulletRow({
     }
     scoreTimerRef.current = setTimeout(async () => {
       try {
-        const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-        const r = await fetch(`${API_BASE}/resume/bullet-score`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ bullet: bullet.text.trim() }),
-        });
+        const r = await dilly.post("/resume/bullet-score", { bullet: bullet.text.trim() });
         if (r.ok) {
           const d = await r.json();
           setBulletScore(d);
@@ -1202,13 +1195,6 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
       return () => { cancelled = true; };
     }
 
-    const token = typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
-    if (!token) {
-      router.replace("/?tab=center");
-      setInitializing(false);
-      return;
-    }
-
     // 1. Instant path: parse from locally-cached audit (no network)
     try {
       let email: string | null = null;
@@ -1240,20 +1226,7 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
     // 2. Background: try server-saved resume (may have newer edits), then /audit/latest
     const loadFromApi = async () => {
       try {
-        const fetchWithTimeout = async (url: string, timeoutMs = 5000) => {
-          const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-          try {
-            return await fetch(url, {
-              headers: { Authorization: `Bearer ${token}` },
-              signal: ctrl.signal,
-            });
-          } finally {
-            clearTimeout(timer);
-          }
-        };
-
-        const res = await fetchWithTimeout(`${API_BASE}/resume/edited`, 5000);
+        const res = await dilly.fetch("/resume/edited");
         if (!cancelled && res.ok) {
           const data = await res.json();
           if (data.resume?.sections?.length > 0) {
@@ -1263,7 +1236,7 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
           }
         }
         // Fallback: pull latest full audit directly (single call)
-        const latestRes = await fetchWithTimeout(`${API_BASE}/audit/latest`, 6000);
+        const latestRes = await dilly.fetch("/audit/latest");
         if (!cancelled && latestRes.ok) {
           const full = await latestRes.json();
           const a = full?.audit as AuditV2 | undefined;
@@ -1291,22 +1264,12 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
 
   const doSave = useCallback(async (currentSections: ResumeSection[], opts?: { silent?: boolean }): Promise<boolean> => {
     const silent = !!opts?.silent;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return false;
     if (currentSections.length === 0) return false;
     if (!silent) setSaving(true);
     try {
-      const res = await fetchWithTimeout(
-        `${API_BASE}/resume/save`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ sections: currentSections, source_audit_id: sourceAuditIdRef.current }),
-        },
-        45_000
+      const res = await dilly.post(
+        "/resume/save",
+        { sections: currentSections, source_audit_id: sourceAuditIdRef.current }
       );
       if (res.ok) {
         setDirty(false);
@@ -1349,9 +1312,6 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
   };
 
   const handleAudit = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
-
     // Save first, then audit
     setSaving(true);
     const savedOk = await doSave(sections, { silent: true });
@@ -1366,11 +1326,7 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
     showToast("Running audit on your edited resume...", "info");
 
     try {
-      const res = await fetch(`${API_BASE}/resume/audit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({}),
-      });
+      const res = await dilly.post("/resume/audit", {});
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         showToast(err.error || "Audit failed. Try again.", "error");
@@ -1380,9 +1336,7 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
       const auditResult: AuditV2 = await res.json();
 
       // Store audit in localStorage (same key as normal audit flow)
-      const userRes = await fetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const userRes = await dilly.fetch("/auth/me");
       if (userRes.ok) {
         const user = await userRes.json();
         localStorage.setItem(auditStorageKey(user.email), JSON.stringify(auditResult));

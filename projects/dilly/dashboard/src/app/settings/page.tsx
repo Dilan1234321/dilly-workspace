@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AUTH_TOKEN_KEY, API_BASE, PROFILE_CACHE_KEY_BASE, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
+import { PROFILE_CACHE_KEY_BASE, getCareerCenterReturnPath } from "@/lib/dillyUtils";
 import { AppProfileHeader } from "@/components/career-center";
 import { isSoundEnabled, setSoundEnabled } from "@/lib/sounds";
 import { PROFILE_THEMES, PROFILE_THEME_IDS, type ProfileThemeId } from "@/lib/profileThemes";
@@ -84,10 +85,13 @@ export default function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
-    fetch(`${API_BASE}/profile`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
+    dilly.get<{
+      custom_tagline?: string | null;
+      profile_tagline?: string | null;
+      profile_bio?: string | null;
+      career_goal?: string | null;
+      parent_email?: string | null;
+    }>("/profile")
       .then((p) => {
         setProfile(p ?? null);
         setCustomTagline(p?.custom_tagline ?? "");
@@ -100,20 +104,11 @@ export default function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
   }, []);
 
   const saveProfile = async (data: Record<string, unknown>) => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE}/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        const p = await res.json();
-        setProfile(p);
-        toast("Saved", "success");
-      }
+      const p = await dilly.patch<typeof profile>("/profile", data);
+      setProfile(p);
+      toast("Saved", "success");
     } catch {
       toast("Could not save", "error");
     } finally {
@@ -132,11 +127,9 @@ export default function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const handleExport = async () => {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return;
     setExportLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/profile/export`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await dilly.fetch("/profile/export");
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition");
@@ -206,11 +199,7 @@ export default function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
 
   const handleLogOut = () => {
     try {
-      const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (token) {
-        fetch(`${API_BASE}/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
-      }
-      localStorage.removeItem(AUTH_TOKEN_KEY);
+      dilly.logout();
       try {
         const keys = Object.keys(localStorage);
         for (const k of keys) {
@@ -803,13 +792,15 @@ export default function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
                   className="rounded-[18px] text-white"
                   style={{ background: "var(--blue)" }}
                   onClick={async () => {
-                    const t = localStorage.getItem(AUTH_TOKEN_KEY);
-                    if (!t) return;
-                    const res = await fetch(`${API_BASE}/profile/parent-invite`, { method: "POST", headers: { Authorization: `Bearer ${t}` } });
-                    if (!res.ok) return;
-                    const j = await res.json();
-                    setParentInviteLink(j.invite_link ?? null);
-                    if (j.invite_link) navigator.clipboard.writeText(j.invite_link).then(() => toast("Link copied", "success"));
+                    try {
+                      const res = await dilly.fetch("/profile/parent-invite", { method: "POST" });
+                      if (!res.ok) return;
+                      const j = await res.json();
+                      setParentInviteLink(j.invite_link ?? null);
+                      if (j.invite_link) navigator.clipboard.writeText(j.invite_link).then(() => toast("Link copied", "success"));
+                    } catch {
+                      // ignore
+                    }
                   }}
                 >
                   {parentInviteLink ? "Copy link again" : "Generate invite link"}
@@ -839,13 +830,11 @@ export default function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
                     style={{ background: "var(--blue)" }}
                     disabled={!giftCode.trim() || redeemLoading}
                     onClick={async () => {
-                      const t = localStorage.getItem(AUTH_TOKEN_KEY);
-                      if (!t) { toast("Sign in first", "error"); return; }
                       setRedeemLoading(true);
                       try {
-                        const res = await fetch(`${API_BASE}/auth/redeem-gift`, {
+                        const res = await dilly.fetch("/auth/redeem-gift", {
                           method: "POST",
-                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+                          headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ code: giftCode.trim() }),
                         });
                         const j = await res.json().catch(() => ({}));
@@ -1058,20 +1047,12 @@ export default function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
                         style={{ background: "var(--coral)" }}
                         disabled={deleteAccountLoading}
                         onClick={async () => {
-                          const token = localStorage.getItem(AUTH_TOKEN_KEY);
-                          if (!token) {
-                            toast("You are not signed in.", "error");
-                            return;
-                          }
                           setDeleteAccountLoading(true);
                           try {
-                            const res = await fetch(`${API_BASE}/account/delete`, {
-                              method: "POST",
-                              headers: { Authorization: `Bearer ${token}` },
-                            });
+                            const res = await dilly.fetch("/account/delete", { method: "POST" });
                             if (res.ok) {
                               try {
-                                localStorage.removeItem(AUTH_TOKEN_KEY);
+                                localStorage.removeItem("dilly_auth_token");
                                 const keysToRemove: string[] = [];
                                 for (let i = 0; i < localStorage.length; i++) {
                                   const k = localStorage.key(i);

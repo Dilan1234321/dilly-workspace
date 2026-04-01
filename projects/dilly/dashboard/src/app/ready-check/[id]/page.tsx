@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AppProfileHeader } from "@/components/career-center";
 import { DeltaView } from "@/components/ready-check/DeltaView";
@@ -9,7 +9,8 @@ import { RoadmapSection } from "@/components/ready-check/RoadmapSection";
 import { TimelineNote } from "@/components/ready-check/TimelineNote";
 import { VerdictHeader } from "@/components/ready-check/VerdictHeader";
 import { VerdictSummaryCard } from "@/components/ready-check/VerdictSummaryCard";
-import { API_BASE, AUTH_TOKEN_KEY, getCareerCenterReturnPath } from "@/lib/dillyUtils";
+import { dilly } from "@/lib/dilly";
+import { getCareerCenterReturnPath } from "@/lib/dillyUtils";
 import type { ReadyCheck, ReadyCheckAction } from "@/types/dilly";
 
 function actionDestination(check: ReadyCheck, action: ReadyCheckAction): string {
@@ -33,37 +34,31 @@ export default function ReadyCheckDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const search = useSearchParams();
-  const token = useMemo(
-    () => (typeof localStorage !== "undefined" ? localStorage.getItem(AUTH_TOKEN_KEY) : null),
-    []
-  );
   const [check, setCheck] = useState<ReadyCheck | null>(null);
   const [previous, setPrevious] = useState<ReadyCheck | null>(null);
 
   useEffect(() => {
-    if (!token || !params.id) return;
-    fetch(`${API_BASE}/ready-check/${params.id}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((row) => setCheck((row as ReadyCheck) || null))
+    if (!params.id) return;
+    dilly.get<ReadyCheck>(`/ready-check/${params.id}`)
+      .then((row) => setCheck(row || null))
       .catch(() => setCheck(null));
-  }, [params.id, token]);
+  }, [params.id]);
 
   useEffect(() => {
     const prevId = search.get("follow_up");
-    if (!token || !prevId) return;
-    fetch(`${API_BASE}/ready-check/${encodeURIComponent(prevId)}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((row) => setPrevious((row as ReadyCheck) || null))
+    if (!prevId) return;
+    dilly.get<ReadyCheck>(`/ready-check/${encodeURIComponent(prevId)}`)
+      .then((row) => setPrevious(row || null))
       .catch(() => setPrevious(null));
-  }, [search, token]);
+  }, [search]);
 
   const markActionDone = async (action: ReadyCheckAction) => {
-    if (!token || !check) return;
-    await fetch(`${API_BASE}/ready-check/${check.id}/actions/${action.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ completed: true }),
-    });
+    if (!check) return;
+    try {
+      await dilly.patch(`/ready-check/${check.id}/actions/${action.id}`, { completed: true });
+    } catch {
+      // ignore
+    }
     setCheck((prev) =>
       prev
         ? {
@@ -141,4 +136,3 @@ export default function ReadyCheckDetailPage() {
     </div>
   );
 }
-

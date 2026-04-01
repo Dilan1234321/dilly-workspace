@@ -16,6 +16,12 @@ const CATEGORY_LABELS: Record<MemoryCategory, string> = {
   interview: "Interviews",
   strength: "Strengths",
   weakness: "Weaknesses",
+  skill: "Skills",
+  interest: "Interests",
+  experience: "Experiences",
+  feedback: "Feedback",
+  context: "Context",
+  other: "Other",
 };
 
 const CATEGORY_ADD_LABEL: Record<MemoryCategory, string> = {
@@ -31,6 +37,12 @@ const CATEGORY_ADD_LABEL: Record<MemoryCategory, string> = {
   interview: "interview memory",
   strength: "strength",
   weakness: "weakness",
+  skill: "skill",
+  interest: "interest",
+  experience: "experience",
+  feedback: "feedback",
+  context: "context",
+  other: "note",
 };
 
 export function MemorySection({

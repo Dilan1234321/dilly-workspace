@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DillyFace } from '../../components/DillyFace';
 import DillyAIOverlay, { StudentContext } from '../../components/DillyAIOverlay';
 import { colors } from '../../lib/tokens';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 
 const COHORT_BARS: Record<string, { bar: number; company: string }> = {
   Tech:    { bar: 75, company: 'Google' },
@@ -23,8 +23,8 @@ export default function VoiceScreen() {
     (async () => {
       try {
         const [profileRes, auditRaw] = await Promise.all([
-          apiFetch('/profile').then(r => r.json()),
-          apiFetch('/audit/latest').then(r => r.json()),
+          dilly.get('/profile'),
+          dilly.get('/audit/latest'),
         ]);
 
         const p        = profileRes ?? {};

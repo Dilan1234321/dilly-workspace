@@ -1,4 +1,6 @@
-const DIRECT_API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+import { API_BASE as DIRECT_API_BASE } from './tokens';
+import { DESKTOP_AUTH_TOKEN_KEY } from '@dilly/api';
+
 const TEST_TOKEN = process.env.NEXT_PUBLIC_TEST_TOKEN || '';
 
 /** In the browser, route through Next.js rewrite proxy to avoid cross-origin issues (Safari). */
@@ -9,7 +11,7 @@ function getApiBase(): string {
 
 function getToken(): string {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('dilly_token') || TEST_TOKEN;
+    return localStorage.getItem(DESKTOP_AUTH_TOKEN_KEY) || TEST_TOKEN;
   }
   return TEST_TOKEN;
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { apiFetch } from '@/lib/api';
+import { dilly } from '@/lib/dilly';
 import { getToken } from '@/lib/auth';
 import { getScoreColor } from '@/lib/scores';
 
@@ -100,7 +100,7 @@ export default function AuditPage() {
   // Load history on mount
   useEffect(() => {
     setLoading(true);
-    apiFetch('/audit/history')
+    dilly.get('/audit/history')
       .then((res: { audits: HistoryItem[] } | HistoryItem[]) => {
         const h: HistoryItem[] = Array.isArray(res) ? res : (res as any).audits || [];
         setHistory(h);
@@ -116,7 +116,7 @@ export default function AuditPage() {
 
   const loadAudit = useCallback((id: string) => {
     setLoading(true);
-    apiFetch(`/audit/history/${id}`)
+    dilly.get(`/audit/history/${id}`)
       .then((a: AuditResult) => { setAudit(a); setSelectedHistoryId(id); })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -139,21 +139,18 @@ export default function AuditPage() {
       const result: AuditResult = await res.json();
       setAudit(result);
       // Refresh history
-      apiFetch('/audit/history').then((res: any) => setHistory(Array.isArray(res) ? res : res.audits || [])).catch(() => {});
+      dilly.get('/audit/history').then((res: any) => setHistory(Array.isArray(res) ? res : res.audits || [])).catch(() => {});
       if (result.id) setSelectedHistoryId(result.id);
       // Sync parsed resume to editor as a new variant
       try {
-        const editedData = await apiFetch('/resume/edited');
+        const editedData = await dilly.get('/resume/edited');
         const parsedSections = editedData?.resume?.sections ?? editedData?.sections ?? [];
         if (parsedSections.length > 0) {
           const label = `${result.detected_track || 'Audit'} — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-          const newVar = await apiFetch('/resume/variants', {
-            method: 'POST',
-            body: JSON.stringify({ label, cohort: result.detected_track || 'General' }),
-          });
+          const newVar = await dilly.post<any>('/resume/variants', { label, cohort: result.detected_track || 'General' });
           const varId = newVar?.variant?.id;
           if (varId) {
-            await apiFetch(`/resume/variants/${varId}`, { method: 'PUT', body: JSON.stringify({ sections: parsedSections }) });
+            await dilly.put(`/resume/variants/${varId}`, { sections: parsedSections });
           }
         }
       } catch { /* resume sync is best-effort */ }

@@ -15,7 +15,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { apiFetch } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -297,8 +297,8 @@ export default function InternshipTrackerScreen() {
     (async () => {
       try {
         const [appsRes, profileRes] = await Promise.all([
-          apiFetch('/applications').then(r => r.json()),
-          apiFetch('/profile').then(r => r.json()),
+          dilly.get('/applications'),
+          dilly.get('/profile'),
         ]);
         setApps(appsRes?.applications || []);
         setProfile(profileRes || {});
@@ -326,7 +326,7 @@ export default function InternshipTrackerScreen() {
 
   async function handleAdd(company: string, role: string, notes: string) {
     try {
-      const res = await apiFetch('/applications', {
+      const res = await dilly.fetch('/applications', {
         method: 'POST',
         body: JSON.stringify({ company, role, status: 'saved', notes: notes || undefined }),
       });
@@ -343,7 +343,7 @@ export default function InternshipTrackerScreen() {
     const previousApps = [...apps];
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     try {
-      await apiFetch(`/applications/${id}`, {
+      await dilly.fetch(`/applications/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       });
@@ -360,7 +360,7 @@ export default function InternshipTrackerScreen() {
         text: 'Remove', style: 'destructive',
         onPress: async () => {
           setApps(prev => prev.filter(a => a.id !== id));
-          try { await apiFetch(`/applications/${id}`, { method: 'DELETE' }); } catch {}
+          try { await dilly.delete(`/applications/${id}`); } catch {}
         },
       },
     ]);

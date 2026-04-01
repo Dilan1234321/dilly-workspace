@@ -17,7 +17,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, API_BASE } from '../lib/tokens';
-import { apiFetch, getToken } from '../lib/auth';
+import { getToken } from '../lib/auth';
+import { dilly } from '../lib/dilly';
 import * as ImagePicker from 'expo-image-picker';
 
 const GOLD = '#2B3A8E';
@@ -220,7 +221,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
         style: 'destructive',
         onPress: async () => {
           try {
-            await apiFetch('/profile/photo', { method: 'DELETE' });
+            await dilly.delete('/profile/photo');
             setLocalPhoto(null);
             onSaved();
           } catch {
@@ -258,7 +259,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
       if (leaderboardOptIn !== (profile.leaderboard_opt_in !== false)) body.leaderboard_opt_in = leaderboardOptIn;
 
       if (Object.keys(body).length > 0) {
-        const res = await apiFetch('/profile', {
+        const res = await dilly.fetch('/profile', {
           method: 'PATCH',
           body: JSON.stringify(body),
         });
