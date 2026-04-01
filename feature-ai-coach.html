@@ -268,8 +268,8 @@
       }
 
       #coach-dots {
-        display: flex;
-        flex-direction: row;
+        display: flex !important;
+        flex-direction: row !important;
         align-items: center;
         position: fixed;
         bottom: 1rem;
@@ -278,11 +278,32 @@
         top: auto;
         right: auto;
         gap: 6px;
+        height: auto;
       }
 
       #coach-dots .coach-dot {
-        width: 7px;
-        height: 7px;
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 7px !important;
+        height: 7px !important;
+        min-width: 7px;
+        min-height: 7px;
+        max-width: 7px;
+        max-height: 7px;
+        flex-shrink: 0;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      /* Shrink oversized Meet Dilly heading on mobile */
+      .coach-panel .panel-title {
+        font-size: clamp(1.6rem, 7vw, 2.4rem) !important;
+        margin-bottom: 0.75rem !important;
+      }
+
+      .coach-panel {
+        padding: 1.5rem 1.5rem 3.5rem;
       }
 
       #coach-end {
