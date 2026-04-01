@@ -3,15 +3,348 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Application tracker: Dilly</title>
-  <meta name="description" content="Pipeline from saved roles through offer with auto-created entries when you apply.">
+  <title>Application Tracker: Dilly</title>
+  <meta name="description" content="Your full internship pipeline — from saved to offer — in one place. Auto-entries, deadline nudges, and zero spreadsheets.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f6ff;
+      color: #0d0d0d;
+      overflow-x: hidden;
+    }
+    body { overflow-x: hidden; }
+
+    /* ── TOP BAR (nav + mini header) ── */
+    #tk-topbar {
+      background: #fff;
+      border-bottom: 1px solid rgba(43,58,142,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 200;
+    }
+
+    /* ── APP HEADER ── */
+    #tk-appbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
+      border-bottom: 1px solid rgba(43,58,142,0.06);
+      background: #fff;
+    }
+
+    #tk-appbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    #tk-app-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #0d0d0d;
+      letter-spacing: -0.01em;
+    }
+
+    #tk-app-sub {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: rgba(43,58,142,0.45);
+      letter-spacing: 0.04em;
+    }
+
+    #tk-stats-row {
+      display: flex;
+      gap: 1.75rem;
+      align-items: center;
+    }
+
+    .tk-stat {
+      text-align: center;
+    }
+    .tk-stat-val {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #2B3A8E;
+      line-height: 1;
+    }
+    .tk-stat-label {
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.4);
+      margin-top: 0.15rem;
+    }
+
+    #tk-add-btn {
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.45rem 1.1rem;
+      border-radius: 100px;
+      border: none;
+      background: #2B3A8E;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #tk-add-btn:hover { opacity: 0.85; }
+
+    /* hint banner */
+    #tk-hint {
+      padding: 0.55rem clamp(1rem, 3vw, 2.5rem);
+      background: rgba(43,58,142,0.04);
+      border-bottom: 1px solid rgba(43,58,142,0.06);
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: rgba(43,58,142,0.5);
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── BOARD ── */
+    #tk-board {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 2.5rem;
+      overflow-x: auto;
+      min-height: calc(100vh - 200px);
+      align-items: flex-start;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── COLUMN ── */
+    .tk-col {
+      flex: 0 0 220px;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .tk-col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.25rem 0.5rem;
+    }
+
+    .tk-col-name {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(0,0,0,0.45);
+    }
+
+    .tk-col-count {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: rgba(0,0,0,0.25);
+    }
+
+    /* ── CARD ── */
+    .tk-card {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.09);
+      border-radius: 12px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s, border-color 0.18s;
+      position: relative;
+      user-select: none;
+    }
+    .tk-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(43,58,142,0.1);
+      border-color: rgba(43,58,142,0.2);
+    }
+    .tk-card:active { transform: translateY(0); }
+
+    /* advance hint on hover */
+    .tk-card::after {
+      content: attr(data-next-label);
+      position: absolute;
+      bottom: 0.6rem;
+      right: 0.75rem;
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .tk-card:hover::after { opacity: 1; }
+
+    /* moving animation */
+    .tk-card.moving {
+      animation: cardPop 0.38s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes cardPop {
+      0%   { transform: scale(0.94); opacity: 0.6; }
+      60%  { transform: scale(1.03); }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+
+    .tk-card-company {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #0d0d0d;
+      margin-bottom: 0.2rem;
+      letter-spacing: -0.01em;
+    }
+
+    .tk-card-role {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.45);
+      margin-bottom: 0.65rem;
+      line-height: 1.35;
+    }
+
+    .tk-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .tk-card-track {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.45);
+    }
+
+    .tk-card-badge {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.22rem 0.55rem;
+      border-radius: 100px;
+    }
+
+    /* badge colours per stage */
+    .tk-badge-saved      { background: rgba(43,58,142,0.08);  color: #2B3A8E; }
+    .tk-badge-applied    { background: rgba(234,179,8,0.12);  color: #92400e; }
+    .tk-badge-screening  { background: rgba(59,130,246,0.12); color: #1d4ed8; }
+    .tk-badge-interview  { background: rgba(168,85,247,0.12); color: #7e22ce; }
+    .tk-badge-offer      { background: rgba(22,163,74,0.12);  color: #15803d; }
+
+    /* deadline pill */
+    .tk-card-deadline {
+      font-size: 0.58rem;
+      font-weight: 700;
+      color: rgba(0,0,0,0.28);
+      margin-top: 0.4rem;
+    }
+    .tk-card-deadline.urgent { color: #dc2626; }
+
+    /* offer card glow */
+    .tk-col--offer .tk-card {
+      border-color: rgba(22,163,74,0.25);
+      background: linear-gradient(135deg, #fff 0%, rgba(22,163,74,0.03) 100%);
+    }
+    .tk-col--offer .tk-card:hover {
+      box-shadow: 0 6px 24px rgba(22,163,74,0.14);
+    }
+
+    /* empty column placeholder */
+    .tk-col-empty {
+      border: 1.5px dashed rgba(43,58,142,0.12);
+      border-radius: 12px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: rgba(43,58,142,0.22);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── TOAST ── */
+    #tk-toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: #0d0d0d;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.65rem 1.5rem;
+      border-radius: 100px;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 500;
+    }
+    #tk-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── BOTTOM CTA ── */
+    #tk-cta {
+      background: #2B3A8E;
+      padding: 5rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+    }
+    #tk-cta h2 {
+      font-size: clamp(1.9rem, 4vw, 3.5rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.9rem;
+    }
+    #tk-cta p {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.75;
+      max-width: 44ch;
+      margin: 0 auto 2.25rem;
+    }
+    .tk-btn {
+      display: inline-block;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.9rem 2.25rem;
+      border-radius: 100px;
+      transition: opacity 0.2s;
+    }
+    .tk-btn:hover { opacity: 0.85; }
+    .tk-btn--white { background: #fff; color: #2B3A8E; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      #tk-stats-row { display: none; }
+      #tk-hint { font-size: 0.6rem; }
+      .tk-col { flex: 0 0 185px; min-width: 185px; }
+    }
+  </style>
 </head>
-<body class="feature-pro-page" data-nav-feature="tracker" data-fp-layout="tracker">
-  <header class="fp-hero fp-hero--tracker" aria-label="Application tracker">
-    <div class="fp-hero__bg" aria-hidden="true"></div>
-    <div class="fp-hero__veil" aria-hidden="true"></div>
-    <div class="site-nav site-nav--inner">
+<body>
+
+  <!-- ── NAV + APPBAR ── -->
+  <div id="tk-topbar">
+    <div class="site-nav site-nav--inner" style="background:#fff;">
       <a class="logo-lockup" href="index.html">
         <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
       </a>
@@ -21,53 +354,45 @@
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Your resume</span>
-                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
-                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
-                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
-                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link">ATS scanner</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Search and track</span>
-                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
-                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
-                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
-                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link">Ask Dilly on any job</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Guidance</span>
-                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
-                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link">Peer leaderboard</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Decide</span>
-                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
-                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Decide</span>
+                <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+              </div></div>
             </div>
           </li>
           <li><a class="nav-item" href="faq.html">FAQ</a></li>
@@ -79,138 +404,230 @@
         <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
       </div>
     </div>
-    <div class="fp-hero__inner">
-      <p class="fp-kicker">Jobs &amp; pipeline</p>
-      <h1 class="fp-title font-display">Your search, organized like a real search</h1>
-      <p class="fp-lead">Saved → Applied → Interviewing → Offer. Cards carry company context, gap notes, and dates. Apply from Dilly and the tracker can log it for you so nothing lives only in your head.</p>
-      <div class="fp-hero-actions">
-        <a class="btn btn-primary" href="https://app.trydilly.com/">Open tracker</a>
-        <a class="btn btn-ghost" href="feature-internships.html">Find roles to add</a>
-      </div>
-      <div class="fp-hero-metrics" aria-label="Tracker highlights">
-        <div><span class="fp-metric-val">Stages</span><span class="fp-metric-label">Clear pipeline semantics</span></div>
-        <div><span class="fp-metric-val">Auto</span><span class="fp-metric-label">Entries from in-app apply</span></div>
-        <div><span class="fp-metric-val">Notes</span><span class="fp-metric-label">Interview prep per card</span></div>
-      </div>
-    </div>
-  </header>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Structure</p>
-      <h2 class="section-title">Built for volume without chaos</h2>
-      <p class="section-desc">When you are firing twenty apps a week, tabs and sticky notes collapse. Dilly keeps one board that still makes sense in November.</p>
+    <!-- app header -->
+    <div id="tk-appbar">
+      <div id="tk-appbar-left">
+        <div>
+          <div id="tk-app-title">My Pipeline</div>
+          <div id="tk-app-sub">Spring 2025 &middot; Finance</div>
+        </div>
+      </div>
+      <div id="tk-stats-row">
+        <div class="tk-stat">
+          <div class="tk-stat-val" id="tk-stat-total">8</div>
+          <div class="tk-stat-label">Tracked</div>
+        </div>
+        <div class="tk-stat">
+          <div class="tk-stat-val" id="tk-stat-applied">4</div>
+          <div class="tk-stat-label">Applied</div>
+        </div>
+        <div class="tk-stat">
+          <div class="tk-stat-val" id="tk-stat-active">3</div>
+          <div class="tk-stat-label">Active</div>
+        </div>
+        <div class="tk-stat">
+          <div class="tk-stat-val" id="tk-stat-offers">1</div>
+          <div class="tk-stat-label">Offers</div>
+        </div>
+      </div>
+      <button id="tk-add-btn" type="button">+ Add role</button>
     </div>
-    <div class="fp-pillar-grid">
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">▦</span>
-        <h3>Board view</h3>
-        <p>Scan stage health at a glance. Drag cards forward when you hear back, backward when a role reopens next season.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">∞</span>
-        <h3>Linked listings</h3>
-        <p>Jump back to the original gap analysis and job copy without hunting your history.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">✧</span>
-        <h3>Momentum</h3>
-        <p>Lightweight reminders when a stage goes quiet too long. Nudges respect exam weeks and break mode.</p>
-      </article>
-    </div>
-  </section>
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-split">
-      <div class="fp-split-visual"><img src="fp-tracker.png" alt="Dilly application tracker" style="width:100%;border-radius:var(--radius);display:block"></div>
-      <div class="fp-split-copy">
-        <h2 class="fp-h2">Less retyping, fewer lost URLs</h2>
-        <p>Manual CRMs die because data entry hurts. Dilly biases toward flows where the system captures metadata when you act: save from browse, apply in product, promote on response.</p>
-        <p>Notes stay on the card: recruiter names, question themes, follow-up promises. Before the next interview, open the card instead of your camera roll of screenshots.</p>
-        <ul class="fp-checklist">
-          <li>Attach outcomes without rebuilding rows</li>
-          <li>Calendar hooks for next steps (see Calendar feature)</li>
-          <li>Coach can reference active pipeline when you ask what to prioritize</li>
-        </ul>
+    <div id="tk-hint">Click any card to advance it through your pipeline &rarr;</div>
+  </div>
+
+  <!-- ── KANBAN BOARD ── -->
+  <div id="tk-board" role="region" aria-label="Application pipeline">
+
+    <div class="tk-col" data-stage="0" id="col-saved">
+      <div class="tk-col-header">
+        <span class="tk-col-name">Saved</span>
+        <span class="tk-col-count" id="cnt-saved"></span>
       </div>
     </div>
-  </section>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Rhythm</p>
-      <h2 class="section-title">How students actually use it</h2>
+    <div class="tk-col" data-stage="1" id="col-applied">
+      <div class="tk-col-header">
+        <span class="tk-col-name">Applied</span>
+        <span class="tk-col-count" id="cnt-applied"></span>
+      </div>
     </div>
-    <ol class="fp-step-list">
-      <li><strong>Save</strong> interesting roles during browse sessions. Tag urgency if you are time-boxing effort.</li>
-      <li><strong>Promote</strong> to Applied when you submit. Add submission date for your own sanity.</li>
-      <li><strong>Log</strong> interviews: format, panel, homework. Link prep docs in notes if you want.</li>
-      <li><strong>Close</strong> wins and losses cleanly. Archive rejections so open loops do not clutter the board.</li>
-    </ol>
-  </section>
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-prose">
-      <h2 class="fp-h2">Why pipeline visibility changes strategy</h2>
-      <p>When everything is “I applied somewhere,” you cannot allocate prep. Seeing five roles stuck in Applied with no movement tells you to fix materials before you add ten more.</p>
-      <p>Tracker plus score plus listings is the triangle: know where you aimed, what you sent, and how strong it was.</p>
+    <div class="tk-col" data-stage="2" id="col-screening">
+      <div class="tk-col-header">
+        <span class="tk-col-name">Screening</span>
+        <span class="tk-col-count" id="cnt-screening"></span>
+      </div>
     </div>
-  </section>
 
-  <section class="fp-stats" aria-label="Tracker stats">
-    <div class="fp-stats-inner">
-      <div><span class="fp-stat-num">4+</span><span class="fp-stat-label">Stages from save to offer</span></div>
-      <div><span class="fp-stat-num">Less</span><span class="fp-stat-label">Spreadsheet duplication</span></div>
-      <div><span class="fp-stat-num">Linked</span><span class="fp-stat-label">To listings and calendar</span></div>
-      <div><span class="fp-stat-num">Focus</span><span class="fp-stat-label">Surface stale cards early</span></div>
+    <div class="tk-col" data-stage="3" id="col-interview">
+      <div class="tk-col-header">
+        <span class="tk-col-name">Interview</span>
+        <span class="tk-col-count" id="cnt-interview"></span>
+      </div>
     </div>
-  </section>
 
-  <section class="fp-section">
-    <blockquote class="fp-quote">“Treat the tracker like a lightweight deal desk: if a card has not moved in two weeks, either follow up or deprioritize. Your time is the scarce resource.”<cite>Workflow tip</cite></blockquote>
-  </section>
-
-  <section class="fp-section fp-section--surface">
-    <div class="fp-section-head">
-      <h2 class="section-title">Explore more</h2>
+    <div class="tk-col tk-col--offer" data-stage="4" id="col-offer">
+      <div class="tk-col-header">
+        <span class="tk-col-name">Offer</span>
+        <span class="tk-col-count" id="cnt-offer"></span>
+      </div>
     </div>
-    <div class="fp-next-grid">
-      <a class="fp-next-card" href="feature-calendar.html">
-        <span class="fp-next-tag">Dates</span>
-        <h3>Calendar</h3>
-        <p>Deadlines and screens on one timeline.</p>
-      </a>
-      <a class="fp-next-card" href="feature-internships.html">
-        <span class="fp-next-tag">Browse</span>
-        <h3>Internships</h3>
-        <p>Fill the board with scored roles.</p>
-      </a>
-      <a class="fp-next-card" href="feature-ask-dilly.html">
-        <span class="fp-next-tag">Intel</span>
-        <h3>Ask Dilly</h3>
-        <p>Prep per card with gap-aware prompts.</p>
-      </a>
-    </div>
+
+  </div>
+
+  <!-- toast -->
+  <div id="tk-toast" role="status" aria-live="polite"></div>
+
+  <!-- ── CTA ── -->
+  <section id="tk-cta">
+    <h2>Every application.<br>One place.</h2>
+    <p>Dilly auto-entries roles from your saved jobs, tracks every deadline, and nudges you before things go cold.</p>
+    <a href="https://app.trydilly.com/" class="tk-btn tk-btn--white">Start tracking free &rarr;</a>
   </section>
 
-  <section class="cta-band">
-    <h2 class="font-display" style="letter-spacing:0.05em">Give your search a backbone</h2>
-    <p>Start tracking in Dilly and stop losing roles in browser history.</p>
-    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center">
-      <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
-      <a class="btn btn-ghost" href="features.html">All features</a>
-    </div>
-  </section>
+  <script>
+  (function () {
 
-  <footer class="site-footer">
-    <nav class="footer-links" aria-label="Footer">
-      <a href="index.html">Home</a>
-      <a href="features.html">Features</a>
-      <a href="pricing.html">Pricing</a>
-      <a href="quiz.html">Quiz</a>
-    </nav>
-    <p>Dilly · Application tracker</p>
-  </footer>
+    var STAGES   = ['saved', 'applied', 'screening', 'interview', 'offer'];
+    var STAGE_LABELS = ['Saved', 'Applied', 'Screening', 'Interview', 'Offer'];
+    var NEXT_LABELS  = ['→ Applied', '→ Screening', '→ Interview', '→ Offer', '✓ Done'];
+
+    var CARDS = [
+      { id: 0, company: 'Goldman Sachs',    role: 'Investment Banking Analyst',  track: 'Finance',    stage: 0, deadline: 'Deadline Dec 1',  urgent: false },
+      { id: 1, company: 'Citadel',          role: 'Quantitative Research Intern',track: 'Finance',    stage: 0, deadline: 'Deadline Nov 15', urgent: true  },
+      { id: 2, company: 'Morgan Stanley',   role: 'Sales & Trading Intern',      track: 'Finance',    stage: 1, deadline: null,              urgent: false },
+      { id: 3, company: 'BlackRock',        role: 'Portfolio Management Intern', track: 'Finance',    stage: 1, deadline: null,              urgent: false },
+      { id: 4, company: 'JPMorgan',         role: 'Corporate Finance Intern',    track: 'Finance',    stage: 2, deadline: null,              urgent: false },
+      { id: 5, company: 'McKinsey',         role: 'Business Analyst Intern',     track: 'Consulting', stage: 3, deadline: null,              urgent: false },
+      { id: 6, company: 'BCG',              role: 'Strategy Intern',             track: 'Consulting', stage: 3, deadline: null,              urgent: false },
+      { id: 7, company: 'Blackstone',       role: 'Private Equity Intern',       track: 'Finance',    stage: 4, deadline: null,              urgent: false },
+    ];
+
+    var colEls = {
+      0: document.getElementById('col-saved'),
+      1: document.getElementById('col-applied'),
+      2: document.getElementById('col-screening'),
+      3: document.getElementById('col-interview'),
+      4: document.getElementById('col-offer'),
+    };
+
+    var cntEls = {
+      0: document.getElementById('cnt-saved'),
+      1: document.getElementById('cnt-applied'),
+      2: document.getElementById('cnt-screening'),
+      3: document.getElementById('cnt-interview'),
+      4: document.getElementById('cnt-offer'),
+    };
+
+    var toastEl   = document.getElementById('tk-toast');
+    var toastTimer;
+
+    function badgeClass (stage) {
+      return ['tk-badge-saved','tk-badge-applied','tk-badge-screening','tk-badge-interview','tk-badge-offer'][stage];
+    }
+
+    function makeCard (card) {
+      var el = document.createElement('div');
+      el.className = 'tk-card';
+      el.dataset.id = card.id;
+      el.dataset.nextLabel = card.stage < 4 ? NEXT_LABELS[card.stage] : '';
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', card.company + ' — ' + card.role + '. Click to advance.');
+
+      var badge = '<span class="tk-card-badge ' + badgeClass(card.stage) + '">' + STAGE_LABELS[card.stage] + '</span>';
+      var deadline = card.deadline
+        ? '<div class="tk-card-deadline' + (card.urgent ? ' urgent' : '') + '">' + (card.urgent ? '⚠ ' : '') + card.deadline + '</div>'
+        : '';
+
+      el.innerHTML =
+        '<div class="tk-card-company">' + card.company + '</div>' +
+        '<div class="tk-card-role">' + card.role + '</div>' +
+        '<div class="tk-card-footer">' +
+          '<span class="tk-card-track">' + card.track + '</span>' +
+          badge +
+        '</div>' +
+        deadline;
+
+      el.addEventListener('click', function () { advanceCard(card); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); advanceCard(card); }
+      });
+      return el;
+    }
+
+    function advanceCard (card) {
+      if (card.stage >= 4) {
+        showToast(card.company + ' offer confirmed. 🎉');
+        return;
+      }
+      card.stage++;
+      renderBoard();
+      updateStats();
+      var msg = card.company + ' moved to ' + STAGE_LABELS[card.stage];
+      if (card.stage === 4) msg = '🎉 ' + card.company + ' offer received!';
+      showToast(msg);
+    }
+
+    function renderBoard () {
+      /* clear card contents from each col (keep header) */
+      Object.values(colEls).forEach(function (col) {
+        Array.from(col.querySelectorAll('.tk-card, .tk-col-empty')).forEach(function (el) { el.remove(); });
+      });
+
+      var counts = {0:0, 1:0, 2:0, 3:0, 4:0};
+
+      CARDS.forEach(function (card) {
+        var el = makeCard(card);
+        colEls[card.stage].appendChild(el);
+        /* pop animation on first render skip */
+        if (el._justMoved) { el.classList.add('moving'); el._justMoved = false; }
+        counts[card.stage]++;
+      });
+
+      /* empty placeholders */
+      Object.keys(colEls).forEach(function (stage) {
+        if (counts[stage] === 0) {
+          var ph = document.createElement('div');
+          ph.className = 'tk-col-empty';
+          ph.textContent = 'None yet';
+          colEls[stage].appendChild(ph);
+        }
+        cntEls[stage].textContent = counts[stage] || '';
+      });
+    }
+
+    function updateStats () {
+      var total   = CARDS.length;
+      var applied = CARDS.filter(function(c) { return c.stage >= 1; }).length;
+      var active  = CARDS.filter(function(c) { return c.stage >= 2 && c.stage <= 3; }).length;
+      var offers  = CARDS.filter(function(c) { return c.stage === 4; }).length;
+      document.getElementById('tk-stat-total').textContent   = total;
+      document.getElementById('tk-stat-applied').textContent = applied;
+      document.getElementById('tk-stat-active').textContent  = active;
+      document.getElementById('tk-stat-offers').textContent  = offers;
+    }
+
+    function showToast (msg) {
+      clearTimeout(toastTimer);
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+    }
+
+    /* add role button — hint only */
+    document.getElementById('tk-add-btn').addEventListener('click', function () {
+      showToast('In the real app, Dilly auto-imports roles you save.');
+    });
+
+    renderBoard();
+    updateStats();
+
+  }());
+  </script>
+
   <script src="dilly.js"></script>
 </body>
 </html>
