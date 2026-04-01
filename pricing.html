@@ -186,6 +186,11 @@
       transition: opacity 0.3s;
     }
 
+    .p-mod-tag--free {
+      background: rgba(251,191,36,0.13);
+      color: #f5b942;
+    }
+
     .p-mod.selected .p-mod-tag { opacity: 1; }
 
     /* ── PLAN OUTPUT ── */
@@ -524,7 +529,7 @@
       <p class="p-modules-label">Select the tools you want</p>
       <div class="p-modules-grid" id="modules-grid">
 
-        <button class="p-mod" data-mod="resume" type="button" aria-pressed="false">
+        <button class="p-mod" data-mod="resume" data-tier="pro" type="button" aria-pressed="false">
           <div class="p-mod-check" aria-hidden="true"></div>
           <span class="p-mod-icon" aria-hidden="true">📄</span>
           <div class="p-mod-name">Resume Tailoring</div>
@@ -532,23 +537,23 @@
           <span class="p-mod-tag">Pro only</span>
         </button>
 
-        <button class="p-mod" data-mod="score" type="button" aria-pressed="false">
+        <button class="p-mod" data-mod="score" data-tier="free" type="button" aria-pressed="false">
           <div class="p-mod-check" aria-hidden="true"></div>
           <span class="p-mod-icon" aria-hidden="true">🧬</span>
           <div class="p-mod-name">Dilly Score</div>
           <div class="p-mod-desc">Smart · Grit · Build across 22 fields, weighted to your track. See where you actually stand.</div>
-          <span class="p-mod-tag">Pro only</span>
+          <span class="p-mod-tag p-mod-tag--free">Free (basic)</span>
         </button>
 
-        <button class="p-mod" data-mod="coach" type="button" aria-pressed="false">
+        <button class="p-mod" data-mod="coach" data-tier="free" type="button" aria-pressed="false">
           <div class="p-mod-check" aria-hidden="true"></div>
           <span class="p-mod-icon" aria-hidden="true">🤖</span>
           <div class="p-mod-name">AI Coach</div>
           <div class="p-mod-desc">Personalized strategy sessions on your gaps, goals, and next moves. Not generic chatbot advice.</div>
-          <span class="p-mod-tag">Pro only</span>
+          <span class="p-mod-tag p-mod-tag--free">Free (3/week)</span>
         </button>
 
-        <button class="p-mod" data-mod="ats" type="button" aria-pressed="false">
+        <button class="p-mod" data-mod="ats" data-tier="pro" type="button" aria-pressed="false">
           <div class="p-mod-check" aria-hidden="true"></div>
           <span class="p-mod-icon" aria-hidden="true">🔍</span>
           <div class="p-mod-name">ATS Scanner</div>
@@ -556,15 +561,15 @@
           <span class="p-mod-tag">Pro only</span>
         </button>
 
-        <button class="p-mod" data-mod="jobs" type="button" aria-pressed="false">
+        <button class="p-mod" data-mod="jobs" data-tier="free" type="button" aria-pressed="false">
           <div class="p-mod-check" aria-hidden="true"></div>
           <span class="p-mod-icon" aria-hidden="true">🎯</span>
           <div class="p-mod-name">Job Matching</div>
-          <div class="p-mod-desc">Ready / Almost / Gap on every listing. See the delta before you spend the application.</div>
-          <span class="p-mod-tag">Pro only</span>
+          <div class="p-mod-desc">Browse 22 fields free. Pro adds Ready / Almost / Gap scoring on every listing.</div>
+          <span class="p-mod-tag p-mod-tag--free">Free (listings)</span>
         </button>
 
-        <button class="p-mod" data-mod="compete" type="button" aria-pressed="false">
+        <button class="p-mod" data-mod="compete" data-tier="pro" type="button" aria-pressed="false">
           <div class="p-mod-check" aria-hidden="true"></div>
           <span class="p-mod-icon" aria-hidden="true">📊</span>
           <div class="p-mod-name">Leaderboard</div>
@@ -665,15 +670,21 @@
 
   <script>
   (function () {
-    var MSGS = [
-      'Select the tools that matter to you',
-      'One tool selected — Free plan covers the basics',
-      'Two tools — Free plan covers the basics, Pro covers everything',
-      'Three tools selected — all three are Pro only',
-      'Four tools — Dilly Pro covers all of this',
-      'Five tools — everything but one is Pro only',
-      'All six selected — Pro gives you every single one'
-    ];
+    function getMsg(total, freeCount, proCount) {
+      if (total === 0) return 'Select the tools that matter to you';
+      if (total === 6) return 'All six selected — Pro gives you every single one';
+      if (proCount === 0) {
+        return freeCount === 1
+          ? 'That one\u2019s included free \u2014 no card needed'
+          : 'All ' + freeCount + ' included in the free plan \u2014 no card needed';
+      }
+      if (freeCount === 0) {
+        return proCount === 1
+          ? 'That one\u2019s Pro only \u2014 $9.99/mo gets you in'
+          : 'All ' + proCount + ' are Pro only \u2014 upgrade to unlock';
+      }
+      return freeCount + ' free \u00b7 ' + proCount + ' Pro only \u2014 upgrade to get everything';
+    }
 
     var selected = 0;
     var mods = Array.from(document.querySelectorAll('.p-mod'));
@@ -686,8 +697,11 @@
         mod.setAttribute('aria-pressed', isOn ? 'true' : 'false');
         selected += isOn ? 1 : -1;
 
+        var freeSel = mods.filter(function (m) { return m.classList.contains('selected') && m.dataset.tier === 'free'; }).length;
+        var proSel  = mods.filter(function (m) { return m.classList.contains('selected') && m.dataset.tier === 'pro';  }).length;
+
         countEl.textContent = selected + ' of 6 selected';
-        msgEl.textContent = MSGS[selected] || MSGS[MSGS.length - 1];
+        msgEl.textContent = getMsg(selected, freeSel, proSel);
         msgEl.classList.toggle('lit', selected >= 3);
 
         /* scroll plan cards into view if not already */
