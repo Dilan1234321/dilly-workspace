@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Animated,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -210,6 +212,7 @@ export default function VerifyScreen() {
   // Returning user — email entry step
   if (isReturning && returningStep === 'email') {
     return (
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -256,12 +259,17 @@ export default function VerifyScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+      </KeyboardAvoidingView>
     );
   }
 
   const activeEmail = isReturning ? returningEmail.trim() : email;
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {!isReturning && <ProgressBar step={1} />}
 
@@ -375,6 +383,7 @@ export default function VerifyScreen() {
         </View>
       </ScrollView>
     </View>
+    </KeyboardAvoidingView>
   );
 }
 
