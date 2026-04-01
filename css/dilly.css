@@ -3678,6 +3678,7 @@ body.pricing-page .price-list li {
 
 .menu-overlay.is-visible {
   display: block;
+  pointer-events: none;
 }
 
 :root.light .menu-overlay {

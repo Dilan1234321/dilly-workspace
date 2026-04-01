@@ -49,7 +49,22 @@
       document.body.style.overflow = open ? "hidden" : "";
     });
 
-    menuOverlay.addEventListener("click", closeMenu);
+    // Close on tap outside nav (pointer-events:none on overlay, so use document touchstart)
+    document.addEventListener("touchstart", function (e) {
+      if (navGlass.classList.contains("is-open") &&
+          !navGlass.contains(e.target) &&
+          !menuToggle.contains(e.target)) {
+        closeMenu();
+      }
+    }, { passive: true });
+    // Desktop fallback: close on click outside
+    document.addEventListener("click", function (e) {
+      if (navGlass.classList.contains("is-open") &&
+          !navGlass.contains(e.target) &&
+          !menuToggle.contains(e.target)) {
+        closeMenu();
+      }
+    });
 
     navGlass.querySelectorAll("a").forEach(function (link) {
       link.addEventListener("click", function () {
