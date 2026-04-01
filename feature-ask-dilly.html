@@ -4,13 +4,513 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ask Dilly on any job: Dilly</title>
-  <meta name="description" content="Company-specific prompts and action plans built from your gap analysis.">
+  <meta name="description" content="Context-aware prep, questions, and action plans built from your gap analysis.">
   <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      scroll-snap-type: y mandatory;
+      overflow-y: scroll;
+      background: #fff;
+    }
+
+    /* ── SPLIT LAYOUT ── */
+    #ask-layout { display: block; }
+
+    /* LEFT 40%: fixed job card column */
+    #job-col {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 40%;
+      height: calc(100vh - 64px);
+      background: #f5f4f0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 2rem 2.25rem;
+      overflow: hidden;
+      z-index: 5;
+      border-right: 1px solid rgba(43,58,142,0.09);
+    }
+
+    /* Job card */
+    .job-card {
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid rgba(43,58,142,0.1);
+      padding: 1.5rem 1.5rem 1.25rem;
+      box-shadow: 0 2px 24px rgba(43,58,142,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .job-card-header {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 0.875rem;
+    }
+
+    .job-logo {
+      width: 44px;
+      height: 44px;
+      background: #0a1628;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    .job-meta { flex: 1; min-width: 0; }
+
+    .job-company {
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.55;
+      margin-bottom: 0.2rem;
+    }
+
+    .job-title {
+      font-size: min(0.95rem, 1.9vw);
+      font-weight: 800;
+      color: #0d0d0d;
+      line-height: 1.25;
+    }
+
+    .job-badge {
+      display: inline-block;
+      padding: 0.25rem 0.65rem;
+      border-radius: 100px;
+      font-size: 0.59rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: 2px;
+    }
+
+    .job-badge--almost {
+      background: rgba(43,58,142,0.09);
+      color: #2B3A8E;
+    }
+
+    /* Gap bars */
+    .gap-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .gap-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .gap-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      color: #0d0d0d;
+      opacity: 0.45;
+      width: 5.5rem;
+      flex-shrink: 0;
+    }
+
+    .gap-bar-track {
+      flex: 1;
+      height: 3px;
+      background: rgba(43,58,142,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .gap-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    .gap-bar-fill--strong { background: #2B3A8E;              width: 78%; }
+    .gap-bar-fill--almost { background: #6B7ECC;              width: 54%; }
+    .gap-bar-fill--gap    { background: rgba(43,58,142,0.28); width: 27%; }
+
+    .gap-tag {
+      font-size: 0.57rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      width: 3.5rem;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .gap-tag--strong { color: #2B3A8E; }
+    .gap-tag--almost { color: #6B7ECC; }
+    .gap-tag--gap    { color: rgba(43,58,142,0.38); }
+
+    .job-card-footer {
+      font-size: 0.62rem;
+      color: rgba(13,13,13,0.3);
+      font-weight: 500;
+      border-top: 1px solid rgba(43,58,142,0.07);
+      padding-top: 0.75rem;
+    }
+
+    /* Active indicator */
+    .ask-active {
+      margin-top: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ask-active-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #2B3A8E;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .ask-active-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.65;
+    }
+
+    /* ── RIGHT: scrolling chat panels ── */
+    #chat-col { margin-left: 40%; }
+
+    .chat-panel {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      padding: 3rem 4.5rem;
+      border-left: 1px solid rgba(43,58,142,0.06);
+    }
+
+    .chat-inner {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .chat-inner.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Panel counter */
+    .chat-num {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.3);
+    }
+
+    /* Intro panel */
+    .chat-intro-eyebrow {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.6;
+    }
+
+    .chat-intro-title {
+      font-size: clamp(2.4rem, 4vw, 4rem);
+      font-weight: 800;
+      color: #0d0d0d;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+    }
+
+    .chat-intro-body {
+      font-size: clamp(0.88rem, 1.2vw, 1.05rem);
+      color: rgba(13,13,13,0.5);
+      line-height: 1.7;
+      max-width: 380px;
+    }
+
+    /* Chat messages */
+    .msg {
+      display: flex;
+      flex-direction: column;
+      max-width: 86%;
+    }
+
+    .msg--user  { align-self: flex-end;   align-items: flex-end;   }
+    .msg--dilly { align-self: flex-start; align-items: flex-start; }
+
+    .msg-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(13,13,13,0.35);
+      margin-bottom: 0.3rem;
+    }
+
+    .msg-bubble {
+      padding: 0.875rem 1.1rem;
+      border-radius: 14px;
+      font-size: clamp(0.83rem, 1.1vw, 0.96rem);
+      line-height: 1.65;
+    }
+
+    .msg--user .msg-bubble {
+      background: #2B3A8E;
+      color: #fff;
+      border-radius: 14px 14px 4px 14px;
+    }
+
+    .msg--dilly .msg-bubble {
+      background: #f5f4f0;
+      color: #0d0d0d;
+      border: 1px solid rgba(43,58,142,0.08);
+      border-radius: 4px 14px 14px 14px;
+    }
+
+    /* Typewriter cursor */
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: #2B3A8E;
+      vertical-align: text-bottom;
+      margin-left: 1px;
+      animation: blink 0.8s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0; }
+    }
+
+    /* ── DOTS ── */
+    #ask-dots {
+      position: fixed;
+      right: 1.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 300;
+    }
+
+    .ask-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(43,58,142,0.18);
+      transition: background 0.35s, transform 0.35s;
+    }
+
+    .ask-dot.active {
+      background: #2B3A8E;
+      transform: scale(1.6);
+    }
+
+    /* ── END ── */
+    #ask-end {
+      height: 100vh;
+      scroll-snap-align: start;
+      margin-left: 40%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f5f4f0;
+      border-left: 1px solid rgba(43,58,142,0.06);
+      gap: 2rem;
+    }
+
+    #ask-end img {
+      width: min(220px, 55%);
+      opacity: 0.85;
+    }
+
+    .end-cta {
+      display: inline-block;
+      background: #2B3A8E;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 1rem 2.75rem;
+      border-radius: 100px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      html { scroll-snap-type: none; overflow: hidden; height: 100%; }
+      body { overflow: hidden; height: 100%; }
+
+      #ask-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 64px);
+        overflow: hidden;
+      }
+
+      /* TOP 30%: compact job card */
+      #job-col {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 100%;
+        height: 30%;
+        min-height: 0;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0.875rem 1rem;
+        border-right: none;
+        border-bottom: 1px solid rgba(43,58,142,0.09);
+        overflow: hidden;
+      }
+
+      .job-card {
+        gap: 0.5rem;
+        padding: 0.875rem;
+        border-radius: 12px;
+        box-shadow: none;
+      }
+
+      .job-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        font-size: 0.6rem;
+      }
+
+      .job-title { font-size: 0.82rem; }
+
+      .gap-list,
+      .job-card-footer { display: none; }
+
+      .ask-active { display: none; }
+
+      /* BOTTOM 70%: horizontal swipe panels */
+      #chat-col {
+        display: flex;
+        flex-direction: row;
+        overflow-x: scroll;
+        overflow-y: visible;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        height: 70%;
+        margin-left: 0;
+        flex-shrink: 0;
+      }
+
+      .chat-panel {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        min-height: unset;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        padding: 1.75rem 1.5rem 3.5rem;
+        align-items: flex-start;
+        overflow-y: auto;
+        box-sizing: border-box;
+      }
+
+      .chat-inner {
+        opacity: 1;
+        transform: none;
+        max-width: 100%;
+      }
+
+      .chat-intro-title {
+        font-size: clamp(1.7rem, 7vw, 2.5rem) !important;
+      }
+
+      .msg { max-width: 92%; }
+
+      .msg-bubble { font-size: 0.85rem; }
+
+      #ask-dots {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        right: auto;
+        gap: 6px;
+        height: auto;
+      }
+
+      #ask-dots .ask-dot {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 7px !important;
+        height: 7px !important;
+        min-width: 7px;
+        min-height: 7px;
+        max-width: 7px;
+        max-height: 7px;
+        flex-shrink: 0;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      #ask-end {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        margin-left: 0;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
+    }
+  </style>
 </head>
-<body class="feature-pro-page" data-nav-feature="ask-dilly" data-fp-layout="ask">
-  <header class="fp-hero fp-hero--ask" aria-label="Ask Dilly on any job">
-    <div class="fp-hero__bg" aria-hidden="true"></div>
-    <div class="fp-hero__veil" aria-hidden="true"></div>
+<body data-nav-feature="ask-dilly">
+
+  <!-- ── NAVBAR ── -->
+  <header class="page-hero" style="padding:0;min-height:0;background:#fff;position:sticky;top:0;z-index:200">
     <div class="site-nav site-nav--inner">
       <a class="logo-lockup" href="index.html">
         <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
@@ -79,138 +579,213 @@
         <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
       </div>
     </div>
-    <div class="fp-hero__inner">
-      <p class="fp-kicker">Jobs &amp; pipeline</p>
-      <h1 class="fp-title font-display">Job-specific intelligence, not generic prompts</h1>
-      <p class="fp-lead">Ask Dilly reads the same gap data you saw on the listing. It generates company-aware questions, practice angles, and week-by-week actions so prep attaches to the role you actually want.</p>
-      <div class="fp-hero-actions">
-        <a class="btn btn-primary" href="https://app.trydilly.com/">Try Ask Dilly</a>
-        <a class="btn btn-ghost" href="feature-ai-coach.html">Open full coach</a>
-      </div>
-      <div class="fp-hero-metrics" aria-label="Ask Dilly highlights">
-        <div><span class="fp-metric-val">Gap</span><span class="fp-metric-label">Grounded in your bars</span></div>
-        <div><span class="fp-metric-val">Prompts</span><span class="fp-metric-label">Auto-suggested openers</span></div>
-        <div><span class="fp-metric-val">Plan</span><span class="fp-metric-label">Checklist you can execute</span></div>
-      </div>
-    </div>
   </header>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Depth</p>
-      <h2 class="section-title">Go past the fit label</h2>
-      <p class="section-desc">Ready, Almost, and Gap are summaries. Ask Dilly unpacks them into narrative: what to say in interviews, what to prove in follow-ups, what to fix on the resume for the next similar role.</p>
-    </div>
-    <div class="fp-pillar-grid">
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">?</span>
-        <h3>Smart questions</h3>
-        <p>Openers that reference team type, product surface, and your weakest dimension so practice time is not wasted on trivia.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">☰</span>
-        <h3>Story arcs</h3>
-        <p>Link projects and internships into a coherent arc for this employer. Helps when your resume is honest but scattered.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">✓</span>
-        <h3>Execution list</h3>
-        <p>Concrete tasks with rough time boxes: research, outreach, code, or polish. Built to survive a busy week.</p>
-      </article>
-    </div>
-  </section>
+  <!-- ── SPLIT LAYOUT ── -->
+  <div id="ask-layout">
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-split">
-      <div class="fp-split-visual"><img src="carousel-jobs.png" alt="Ask Dilly on a job" style="width:100%;border-radius:var(--radius);display:block"></div>
-      <div class="fp-split-copy">
-        <h2 class="fp-h2">Stays tied to the card you saved</h2>
-        <p>Open Ask Dilly from a listing or a tracker card. Context travels: company, role family, gap numbers, and your latest resume snapshot.</p>
-        <p>When you promote a card to Interviewing, revisit Ask Dilly for a tighter loop: new prompts, tougher follow-ups, stress tests on weak bullets.</p>
-        <ul class="fp-checklist">
-          <li>Company-specific angles without manual prompt engineering</li>
-          <li>Handoff to AI coach for extended back-and-forth</li>
-          <li>Feeds back into editor tasks when copy needs to change</li>
+    <!-- LEFT: fixed job card -->
+    <div id="job-col">
+      <div class="job-card">
+        <div class="job-card-header">
+          <div class="job-logo">GS</div>
+          <div class="job-meta">
+            <p class="job-company">Goldman Sachs</p>
+            <p class="job-title">Summer Analyst, Investment Banking</p>
+          </div>
+          <span class="job-badge job-badge--almost">Almost</span>
+        </div>
+        <ul class="gap-list">
+          <li class="gap-item">
+            <span class="gap-label">Communication</span>
+            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--strong"></div></div>
+            <span class="gap-tag gap-tag--strong">Strong</span>
+          </li>
+          <li class="gap-item">
+            <span class="gap-label">Technical</span>
+            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--almost"></div></div>
+            <span class="gap-tag gap-tag--almost">Almost</span>
+          </li>
+          <li class="gap-item">
+            <span class="gap-label">Modeling</span>
+            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--gap"></div></div>
+            <span class="gap-tag gap-tag--gap">Gap</span>
+          </li>
         </ul>
+        <div class="job-card-footer">Saved 3 days ago &middot; Summer 2025</div>
+      </div>
+      <div class="ask-active">
+        <div class="ask-active-dot"></div>
+        <span class="ask-active-label">Ask Dilly active</span>
       </div>
     </div>
-  </section>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Session</p>
-      <h2 class="section-title">How a prep block might run</h2>
+    <!-- RIGHT: chat panels -->
+    <div id="chat-col">
+
+      <!-- Panel 0: intro -->
+      <div class="chat-panel" data-panel="0">
+        <div class="chat-inner">
+          <p class="chat-intro-eyebrow">Ask Dilly</p>
+          <h2 class="chat-intro-title">Prep that starts<br>from your gaps.</h2>
+          <p class="chat-intro-body">No generic prompts. Every question and plan is grounded in your actual gap data for this specific role.</p>
+        </div>
+      </div>
+
+      <!-- Panel 1 -->
+      <div class="chat-panel" data-panel="1">
+        <div class="chat-inner">
+          <p class="chat-num">01 / 04</p>
+          <div class="msg msg--user">
+            <p class="msg-label">You</p>
+            <div class="msg-bubble">Where should I focus first?</div>
+          </div>
+          <div class="msg msg--dilly">
+            <p class="msg-label">Dilly</p>
+            <div class="msg-bubble" id="dilly-1"><span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2 -->
+      <div class="chat-panel" data-panel="2">
+        <div class="chat-inner">
+          <p class="chat-num">02 / 04</p>
+          <div class="msg msg--user">
+            <p class="msg-label">You</p>
+            <div class="msg-bubble">What first-round questions should I expect?</div>
+          </div>
+          <div class="msg msg--dilly">
+            <p class="msg-label">Dilly</p>
+            <div class="msg-bubble" id="dilly-2"><span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3 -->
+      <div class="chat-panel" data-panel="3">
+        <div class="chat-inner">
+          <p class="chat-num">03 / 04</p>
+          <div class="msg msg--user">
+            <p class="msg-label">You</p>
+            <div class="msg-bubble">How do I handle the modeling gap if it comes up?</div>
+          </div>
+          <div class="msg msg--dilly">
+            <p class="msg-label">Dilly</p>
+            <div class="msg-bubble" id="dilly-3"><span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 4 -->
+      <div class="chat-panel" data-panel="4">
+        <div class="chat-inner">
+          <p class="chat-num">04 / 04</p>
+          <div class="msg msg--user">
+            <p class="msg-label">You</p>
+            <div class="msg-bubble">Build me a four-week plan.</div>
+          </div>
+          <div class="msg msg--dilly">
+            <p class="msg-label">Dilly</p>
+            <div class="msg-bubble" id="dilly-4"><span class="cursor"></span></div>
+          </div>
+        </div>
+      </div>
+
     </div>
-    <ol class="fp-step-list">
-      <li><strong>Open</strong> Ask Dilly on a target role after you understand the gap bars.</li>
-      <li><strong>Run</strong> suggested prompts: motivation, conflict, technical depth, business sense.</li>
-      <li><strong>Capture</strong> bullets you want to say aloud. Paste strong lines back into the editor if they belong on the page.</li>
-      <li><strong>Schedule</strong> a coach session for mock mode when your checklist is mostly done.</li>
-    </ol>
-  </section>
+  </div>
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-prose">
-      <h2 class="fp-h2">Why context beats a blank chat box</h2>
-      <p>General models give polished nonsense. Ask Dilly is constrained by your real scores and the role’s implied bar, so answers skew actionable instead of theatrical.</p>
-      <p>It is the bridge between browsing listings and doing disciplined prep: faster than building prompts from scratch, richer than rereading the JD for the tenth time.</p>
-    </div>
-  </section>
+  <!-- ── DOTS ── -->
+  <nav id="ask-dots" aria-label="Panel navigation">
+    <button class="ask-dot active" data-target="0" aria-label="Intro"></button>
+    <button class="ask-dot" data-target="1" aria-label="Focus first"></button>
+    <button class="ask-dot" data-target="2" aria-label="First round"></button>
+    <button class="ask-dot" data-target="3" aria-label="Modeling gap"></button>
+    <button class="ask-dot" data-target="4" aria-label="Four-week plan"></button>
+  </nav>
 
-  <section class="fp-stats" aria-label="Ask Dilly stats">
-    <div class="fp-stats-inner">
-      <div><span class="fp-stat-num">Role</span><span class="fp-stat-label">Aware prompts</span></div>
-      <div><span class="fp-stat-num">Gap</span><span class="fp-stat-label">Anchored plans</span></div>
-      <div><span class="fp-stat-num">Fast</span><span class="fp-stat-label">Spin up prep in minutes</span></div>
-      <div><span class="fp-stat-num">Linked</span><span class="fp-stat-label">Coach + editor + tracker</span></div>
-    </div>
-  </section>
+  <!-- ── END ── -->
+  <div id="ask-end">
+    <img src="dilly-wordmark.png" alt="Dilly">
+    <a href="https://app.trydilly.com/" class="end-cta">Ask Dilly on a real role &rarr;</a>
+  </div>
 
-  <section class="fp-section">
-    <blockquote class="fp-quote">“If the model does not know your Build gap, it will flatter you. Ask Dilly starts from the gap so flattery is not on the menu.”<cite>Product principle</cite></blockquote>
-  </section>
+  <script>
+  (function () {
+    var panels  = Array.from(document.querySelectorAll('.chat-panel'));
+    var inners  = Array.from(document.querySelectorAll('.chat-inner'));
+    var dots    = Array.from(document.querySelectorAll('.ask-dot'));
+    var active  = -1;
+    var typed   = {};
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-section-head">
-      <h2 class="section-title">Explore more</h2>
-    </div>
-    <div class="fp-next-grid">
-      <a class="fp-next-card" href="feature-ai-coach.html">
-        <span class="fp-next-tag">Chat</span>
-        <h3>AI coach</h3>
-        <p>Longer threads and mock interviews.</p>
-      </a>
-      <a class="fp-next-card" href="feature-internships.html">
-        <span class="fp-next-tag">Browse</span>
-        <h3>Internships</h3>
-        <p>Where Ask Dilly attaches first.</p>
-      </a>
-      <a class="fp-next-card" href="feature-resume-editor.html">
-        <span class="fp-next-tag">Edit</span>
-        <h3>Resume editor</h3>
-        <p>Turn insights into line changes.</p>
-      </a>
-    </div>
-  </section>
+    var REPLIES = {
+      1: "Financial Modeling is your biggest risk here. Goldman's Superday tests LBO and DCF under real time pressure. Before anything else, build two models from scratch this week. Your communication score is strong, which gives you runway, but it will not cover a blank when they ask you to walk through a deal.",
+      2: "Expect behavioral-heavy rounds with one or two technical anchors. They will ask why Goldman and not another bank. Make sure your answer names a specific deal, team, or person you researched. Your technical gap means you should not volunteer modeling as a strength. Lead with communication and teamwork stories instead.",
+      3: "Redirect, do not hide. Name the specific model you built and what you learned from it. Goldman respects honesty about learning edges more than polished deflection. What you cannot afford is looking surprised by a basic DCF question. Run through the mechanics this week until they feel automatic.",
+      4: "Week 1: Build one LBO and one DCF, cold email two Goldman alumni. Week 2: Run a behavioral mock with a peer, sharpen your Goldman story. Week 3: Technical dry run, review two recent Goldman deals. Week 4: Full Superday simulation with someone who will push back. Four weeks is enough if you protect your mornings."
+    };
 
-  <section class="cta-band">
-    <h2 class="font-display" style="letter-spacing:0.05em">Prep with your real gaps in frame</h2>
-    <p>Pick a saved role and let Dilly structure the work.</p>
-    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center">
-      <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
-      <a class="btn btn-ghost" href="features.html">All features</a>
-    </div>
-  </section>
+    function typewrite(el, text) {
+      var i = 0;
+      el.innerHTML = '<span class="cursor"></span>';
+      var cursor = el.querySelector('.cursor');
+      function step() {
+        if (i < text.length) {
+          cursor.insertAdjacentText('beforebegin', text[i]);
+          i++;
+          setTimeout(step, 20);
+        } else {
+          if (cursor) cursor.remove();
+        }
+      }
+      setTimeout(step, 350);
+    }
 
-  <footer class="site-footer">
-    <nav class="footer-links" aria-label="Footer">
-      <a href="index.html">Home</a>
-      <a href="features.html">Features</a>
-      <a href="pricing.html">Pricing</a>
-      <a href="quiz.html">Quiz</a>
-    </nav>
-    <p>Dilly · Ask Dilly</p>
-  </footer>
+    function activate(idx) {
+      if (idx === active) return;
+      active = idx;
+      dots.forEach(function (d, i)    { d.classList.toggle('active', i === idx); });
+      inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
+      if (REPLIES[idx] && !typed[idx]) {
+        typed[idx] = true;
+        var el = document.getElementById('dilly-' + idx);
+        if (el) typewrite(el, REPLIES[idx]);
+      }
+    }
+
+    var isMobile = window.innerWidth <= 780;
+    var chatCol  = document.getElementById('chat-col');
+
+    if (isMobile) {
+      chatCol.addEventListener('scroll', function () {
+        var idx = Math.round(chatCol.scrollLeft / chatCol.clientWidth);
+        idx = Math.max(0, Math.min(idx, panels.length - 1));
+        activate(idx);
+      });
+    } else {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) activate(parseInt(entry.target.dataset.panel, 10));
+        });
+      }, { threshold: 0.5 });
+      panels.forEach(function (p) { observer.observe(p); });
+    }
+
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        var idx = parseInt(dot.dataset.target, 10);
+        if (isMobile) {
+          chatCol.scrollTo({ left: idx * chatCol.clientWidth, behavior: 'smooth' });
+        } else {
+          panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    activate(0);
+  }());
+  </script>
+
   <script src="dilly.js"></script>
 </body>
 </html>
