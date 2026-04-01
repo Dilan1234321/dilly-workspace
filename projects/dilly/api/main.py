@@ -12,7 +12,7 @@ from typing import Any, Dict, List
 
 # Allow "projects.dilly.*" imports when run from projects/meridian/api (uvicorn main:app)
 _API_DIR = os.path.dirname(os.path.abspath(__file__))
-_WORKSPACE_ROOT = os.path.normpath(os.path.join(_API_DIR, "..", "..", ".."))
+_WORKSPACE_ROOT = os.path.normpath(os.path.join(_API_DIR, ".."))
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 os.chdir(_WORKSPACE_ROOT)  # so paths like projects/meridian/... resolve

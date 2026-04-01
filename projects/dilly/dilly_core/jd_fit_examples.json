@@ -1,0 +1,50 @@
+[
+  {
+    "track": "Tech",
+    "jd_excerpt": "Software Engineer Intern. BS in Computer Science or related. Strong programming skills in Python, Java, or JavaScript. Experience with web development, APIs, or cloud platforms. Portfolio or GitHub preferred.",
+    "smart_min": 78,
+    "grit_min": 82,
+    "build_min": 78,
+    "signals": ["CS degree and programming skills stressed", "Portfolio/GitHub shows ownership", "Web/API/cloud experience expected"]
+  },
+  {
+    "track": "Tech",
+    "jd_excerpt": "Machine Learning Engineer. MS or PhD in CS, stats, or related. 2+ years building ML models. Published research or shipped products. Python, TensorFlow/PyTorch.",
+    "smart_min": 85,
+    "grit_min": 80,
+    "build_min": 85,
+    "signals": ["Advanced degree and research bar", "Shipped products and ownership", "Concrete ML stack required"]
+  },
+  {
+    "track": "Pre-Health",
+    "jd_excerpt": "Pre-med applicant. Strong GPA, MCAT. Clinical experience (shadowing, scribing, EMT). Research experience. Community service.",
+    "smart_min": 88,
+    "grit_min": 78,
+    "build_min": 72,
+    "signals": ["GPA/MCAT and academic rigor", "Clinical and research expected", "Community service as proof"]
+  },
+  {
+    "track": "Finance",
+    "jd_excerpt": "Investment Banking Analyst. Excel, financial modeling. CFA progress a plus. Strong analytical and communication skills. Prior finance internship preferred.",
+    "smart_min": 82,
+    "grit_min": 85,
+    "build_min": 78,
+    "signals": ["Modeling and CFA signal rigor", "Analytical and client skills", "Prior internship as proof"]
+  },
+  {
+    "track": "Consulting",
+    "jd_excerpt": "Management Consulting Summer Analyst. Structured problem-solving. Client-facing experience. Case competitions or strategy projects. Strong GPA.",
+    "smart_min": 82,
+    "grit_min": 86,
+    "build_min": 76,
+    "signals": ["Problem-solving and GPA bar", "Client impact and leadership", "Case comps and projects as proof"]
+  },
+  {
+    "track": "Science",
+    "jd_excerpt": "Research Assistant. Lab experience. Data analysis skills. Interest in publications. 2+ years in a lab preferred.",
+    "smart_min": 84,
+    "grit_min": 78,
+    "build_min": 72,
+    "signals": ["Lab and data analysis rigor", "Publication interest", "Sustained lab experience"]
+  }
+]
