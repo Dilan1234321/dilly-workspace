@@ -9,7 +9,7 @@ import os
 logger = logging.getLogger(__name__)
 
 # Resend "from" - override with env; must be verified in Resend dashboard
-DEFAULT_FROM = "Dilly <onboarding@resend.dev>"
+DEFAULT_FROM = "Dilly <noreply@trydilly.com>"
 
 
 def send_verification_email(to_email: str, code: str, school: dict | None) -> tuple[bool, str | None]:
