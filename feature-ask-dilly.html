@@ -106,61 +106,107 @@
       color: #2B3A8E;
     }
 
-    /* Gap bars */
-    .gap-list {
+    /* ── DIMENSION BARS (Smart / Grit / Build) ── */
+    .dim-list {
       list-style: none;
       padding: 0;
       margin: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.65rem;
+      gap: 0.7rem;
     }
 
-    .gap-item {
+    .dim-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .dim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .dim-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: #0d0d0d;
+      opacity: 0.5;
+      letter-spacing: 0.04em;
+    }
+
+    .dim-scores {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: rgba(13,13,13,0.4);
+    }
+
+    .dim-scores strong {
+      color: #2B3A8E;
+      font-weight: 800;
+    }
+
+    .dim-track {
+      position: relative;
+      height: 5px;
+      background: rgba(43,58,142,0.1);
+      border-radius: 3px;
+    }
+
+    .dim-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 3px;
+      background: #2B3A8E;
+    }
+
+    /* requirement marker line */
+    .dim-req {
+      position: absolute;
+      top: -3px;
+      width: 2px;
+      height: 11px;
+      background: rgba(43,58,142,0.45);
+      border-radius: 1px;
+      transform: translateX(-50%);
+    }
+
+    /* ── SKILL NUMBERS (Communication / Technical / Modeling) ── */
+    .skill-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .skill-item {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 0.5rem;
     }
 
-    .gap-label {
-      font-size: 0.62rem;
+    .skill-name {
+      font-size: 0.6rem;
       font-weight: 600;
-      color: #0d0d0d;
-      opacity: 0.45;
-      width: 5.5rem;
-      flex-shrink: 0;
+      color: rgba(13,13,13,0.4);
     }
 
-    .gap-bar-track {
-      flex: 1;
-      height: 3px;
-      background: rgba(43,58,142,0.1);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .gap-bar-fill {
-      height: 100%;
-      border-radius: 2px;
-    }
-
-    .gap-bar-fill--strong { background: #2B3A8E;              width: 78%; }
-    .gap-bar-fill--almost { background: #6B7ECC;              width: 54%; }
-    .gap-bar-fill--gap    { background: rgba(43,58,142,0.28); width: 27%; }
-
-    .gap-tag {
-      font-size: 0.57rem;
+    .skill-val {
+      font-size: 0.6rem;
       font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      width: 3.5rem;
-      text-align: right;
-      flex-shrink: 0;
+      color: rgba(43,58,142,0.55);
+      white-space: nowrap;
     }
 
-    .gap-tag--strong { color: #2B3A8E; }
-    .gap-tag--almost { color: #6B7ECC; }
-    .gap-tag--gap    { color: rgba(43,58,142,0.38); }
+    .skill-val .skill-you {
+      color: #2B3A8E;
+    }
 
     .job-card-footer {
       font-size: 0.62rem;
@@ -595,31 +641,53 @@
           </div>
           <span class="job-badge job-badge--almost">Almost</span>
         </div>
-        <ul class="gap-list">
-          <li class="gap-item">
-            <span class="gap-label">Communication</span>
-            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--strong"></div></div>
-            <span class="gap-tag gap-tag--strong">Strong</span>
+        <!-- Smart / Grit / Build: dual-marker bars -->
+        <ul class="dim-list">
+          <li class="dim-item">
+            <div class="dim-header">
+              <span class="dim-label">Smart</span>
+              <span class="dim-scores"><strong>74</strong> &rarr; needs 85</span>
+            </div>
+            <div class="dim-track">
+              <div class="dim-fill" style="width:74%"></div>
+              <div class="dim-req"  style="left:85%"></div>
+            </div>
           </li>
-          <li class="gap-item">
-            <span class="gap-label">Technical</span>
-            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--almost"></div></div>
-            <span class="gap-tag gap-tag--almost">Almost</span>
+          <li class="dim-item">
+            <div class="dim-header">
+              <span class="dim-label">Grit</span>
+              <span class="dim-scores"><strong>88</strong> &rarr; needs 80</span>
+            </div>
+            <div class="dim-track">
+              <div class="dim-fill" style="width:88%"></div>
+              <div class="dim-req"  style="left:80%"></div>
+            </div>
           </li>
-          <li class="gap-item">
-            <span class="gap-label">Modeling</span>
-            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--gap"></div></div>
-            <span class="gap-tag gap-tag--gap">Gap</span>
+          <li class="dim-item">
+            <div class="dim-header">
+              <span class="dim-label">Build</span>
+              <span class="dim-scores"><strong>41</strong> &rarr; needs 78</span>
+            </div>
+            <div class="dim-track">
+              <div class="dim-fill" style="width:41%;background:rgba(43,58,142,0.32)"></div>
+              <div class="dim-req"  style="left:78%"></div>
+            </div>
           </li>
-          <li class="gap-item">
-            <span class="gap-label">Smart Grit</span>
-            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--strong"></div></div>
-            <span class="gap-tag gap-tag--strong">Strong</span>
+        </ul>
+
+        <!-- Communication / Technical / Modeling: score numbers -->
+        <ul class="skill-list">
+          <li class="skill-item">
+            <span class="skill-name">Communication</span>
+            <span class="skill-val"><span class="skill-you">79</span> &rarr; needs 82</span>
           </li>
-          <li class="gap-item">
-            <span class="gap-label">Build</span>
-            <div class="gap-bar-track"><div class="gap-bar-fill gap-bar-fill--almost"></div></div>
-            <span class="gap-tag gap-tag--almost">Almost</span>
+          <li class="skill-item">
+            <span class="skill-name">Technical</span>
+            <span class="skill-val"><span class="skill-you">61</span> &rarr; needs 75</span>
+          </li>
+          <li class="skill-item">
+            <span class="skill-name">Modeling</span>
+            <span class="skill-val"><span class="skill-you">38</span> &rarr; needs 70</span>
           </li>
         </ul>
         <div class="job-card-footer">Saved 3 days ago &middot; Summer 2025</div>
