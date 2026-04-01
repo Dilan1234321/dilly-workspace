@@ -5,12 +5,320 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resume editor: Dilly</title>
   <meta name="description" content="Live per-bullet scoring and AI rewrites on your resume.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      scroll-snap-type: y mandatory;
+      overflow-x: hidden;
+    }
+
+    body { overflow-x: hidden; }
+
+    /* ── SPLIT LAYOUT ── */
+    #editor-layout { display: block; }
+
+    /* LEFT 40%: fixed before-resume */
+    #before-col {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 40%;
+      height: calc(100vh - 64px);
+      background: #f5f4f0;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem 2.25rem 1.5rem;
+      overflow: hidden;
+      z-index: 5;
+      border-right: 1px solid rgba(43,58,142,0.09);
+    }
+
+    /* Score display */
+    #score-display { margin-bottom: 1.25rem; flex-shrink: 0; }
+
+    #score-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.45;
+      margin-bottom: 0.2rem;
+    }
+
+    #score-val {
+      font-size: clamp(2.4rem, 3.5vw, 3.2rem);
+      font-weight: 800;
+      color: #2B3A8E;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    #score-track {
+      height: 3px;
+      background: rgba(43,58,142,0.12);
+      border-radius: 2px;
+      margin-top: 0.5rem;
+      overflow: hidden;
+    }
+
+    #score-fill {
+      height: 100%;
+      background: #2B3A8E;
+      border-radius: 2px;
+      width: 42%;
+      transition: width 0.9s cubic-bezier(0.22,1,0.36,1);
+    }
+
+    /* Resume mockup */
+    #resume-mock {
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .rm-name {
+      font-size: min(1rem, 2.2vw);
+      font-weight: 800;
+      color: #0d0d0d;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.1rem;
+    }
+
+    .rm-contact {
+      font-size: min(0.58rem, 1.3vw);
+      color: #aaa;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+
+    .rm-section-label {
+      font-size: min(0.56rem, 1.2vw);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      border-bottom: 1px solid rgba(43,58,142,0.14);
+      padding-bottom: 0.2rem;
+      margin-bottom: 0.6rem;
+      margin-top: 0.85rem;
+    }
+
+    .rm-role-title {
+      font-size: min(0.65rem, 1.4vw);
+      font-weight: 700;
+      color: #444;
+      margin-bottom: 0.12rem;
+    }
+
+    .rm-bullet {
+      font-size: min(0.62rem, 1.35vw);
+      color: #bbb;
+      line-height: 1.55;
+      padding: 0.18rem 0.5rem 0.18rem 0.65rem;
+      border-left: 2px solid transparent;
+      margin-bottom: 0.6rem;
+      border-radius: 0 3px 3px 0;
+      transition: color 0.5s ease, border-color 0.5s ease, background 0.5s ease, font-weight 0.3s ease;
+    }
+
+    .rm-bullet.active {
+      color: #2B3A8E;
+      border-left-color: #2B3A8E;
+      background: rgba(43,58,142,0.06);
+      font-weight: 600;
+    }
+
+    .rm-bullet.improved {
+      color: #1a1a1a;
+      border-left-color: rgba(43,58,142,0.25);
+      background: transparent;
+      font-weight: 500;
+    }
+
+    /* RIGHT 60%: scrolling panels */
+    #panels-col { margin-left: 40%; }
+
+    .editor-panel {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      padding: 3rem clamp(2.5rem, 6vw, 6rem) 3rem clamp(1.5rem, 3vw, 3rem);
+      background: #fff;
+      border-left: 1px solid rgba(43,58,142,0.07);
+    }
+
+    .ep-inner {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1);
+      width: 100%;
+    }
+
+    .ep-inner.visible { opacity: 1; transform: translateY(0); }
+
+    .ep-num {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.38;
+      margin-bottom: 0.6rem;
+    }
+
+    .ep-category {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      margin-bottom: 1.75rem;
+    }
+
+    .ep-before {
+      font-size: clamp(1rem, 1.55vw, 1.25rem);
+      color: #ccc;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+      text-decoration: line-through;
+      text-decoration-color: rgba(43,58,142,0.25);
+    }
+
+    .ep-arrow {
+      display: block;
+      font-size: 1.2rem;
+      color: rgba(43,58,142,0.3);
+      margin-bottom: 1rem;
+    }
+
+    .ep-after {
+      font-size: clamp(1rem, 1.55vw, 1.25rem);
+      color: #0d0d0d;
+      line-height: 1.75;
+      font-weight: 600;
+      margin-bottom: 1.75rem;
+      min-height: 4em;
+    }
+
+    .ep-after .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: #2B3A8E;
+      vertical-align: text-bottom;
+      margin-left: 1px;
+      animation: blink 0.75s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .ep-delta {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(43,58,142,0.08);
+      color: #2B3A8E;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.35rem 0.9rem;
+      border-radius: 100px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .ep-delta.show { opacity: 1; }
+
+    /* ── DOTS ── */
+    #editor-dots {
+      position: fixed;
+      right: 1.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 300;
+    }
+
+    .editor-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(43,58,142,0.18);
+      transition: background 0.35s, transform 0.35s;
+    }
+
+    .editor-dot.active {
+      background: #2B3A8E;
+      transform: scale(1.6);
+    }
+
+    /* ── END ── */
+    #editor-end {
+      height: 100vh;
+      scroll-snap-align: start;
+      margin-left: 40%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      background: #f5f4f0;
+    }
+
+    #editor-end img { width: clamp(180px, 24vw, 300px); opacity: 0.88; }
+
+    .end-cta {
+      display: inline-block;
+      background: #2B3A8E;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 1rem 2.75rem;
+      border-radius: 100px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      html { scroll-snap-type: none; }
+      #before-col {
+        position: relative;
+        top: auto;
+        width: 100%;
+        height: auto;
+        max-height: 340px;
+        border-right: none;
+        border-bottom: 1px solid rgba(43,58,142,0.09);
+      }
+      #panels-col { margin-left: 0; }
+      .editor-panel { height: auto; min-height: 80vh; padding: 3rem 1.75rem; }
+      .ep-inner { opacity: 1; transform: none; }
+      #editor-dots { display: none; }
+      #editor-end { margin-left: 0; height: 80vh; }
+    }
+  </style>
 </head>
-<body class="feature-pro-page" data-nav-feature="editor" data-fp-layout="editor">
-  <header class="fp-hero fp-hero--editor" aria-label="Resume editor">
-    <div class="fp-hero__bg" aria-hidden="true"></div>
-    <div class="fp-hero__veil" aria-hidden="true"></div>
+<body class="feature-pro-page" data-nav-feature="editor">
+
+  <!-- ── NAVBAR ── -->
+  <header class="page-hero" style="padding:0;min-height:0;background:#fff;position:sticky;top:0;z-index:200">
     <div class="site-nav site-nav--inner">
       <a class="logo-lockup" href="index.html">
         <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
@@ -79,139 +387,231 @@
         <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
       </div>
     </div>
-    <div class="fp-hero__inner">
-      <p class="fp-kicker">Resume &amp; AI</p>
-      <h1 class="fp-title font-display">Edit like every bullet is being graded, because it is</h1>
-      <p class="fp-lead">The editor is not a blank page. It is a live workshop: per-bullet scores, before-and-after examples, and AI rewrites tuned to quantified impact. You watch Smart, Grit, and Build respond as you type.</p>
-      <div class="fp-hero-actions">
-        <a class="btn btn-primary" href="https://app.trydilly.com/">Open the editor</a>
-        <a class="btn btn-ghost" href="feature-dilly-score.html">See how scoring works</a>
-      </div>
-      <div class="fp-hero-metrics" aria-label="Editor highlights">
-        <div><span class="fp-metric-val">Live</span><span class="fp-metric-label">Scores update per bullet</span></div>
-        <div><span class="fp-metric-val">AI</span><span class="fp-metric-label">Rewrite suggestions in context</span></div>
-        <div><span class="fp-metric-val">Sync</span><span class="fp-metric-label">Same signals as jobs &amp; coach</span></div>
-      </div>
-    </div>
   </header>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">What you get</p>
-      <h2 class="section-title">Feedback you can ship</h2>
-      <p class="section-desc">Not red underlines for grammar alone. Structural hints, stronger verbs, and numbers where recruiters expect them.</p>
-    </div>
-    <div class="fp-pillar-grid">
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">✎</span>
-        <h3>Per-bullet grades</h3>
-        <p>Each line gets a clear signal: strong, middling, or needs work, with a short reason tied to skim patterns and your track.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">⇄</span>
-        <h3>Rewrite paths</h3>
-        <p>AI suggests tighter phrasing, quantified outcomes, and reordering so the best proof lands above the fold.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">↻</span>
-        <h3>Iteration loop</h3>
-        <p>Save versions, compare movement on your Dilly Score, and jump back to ATS checks when layout changes.</p>
-      </article>
-    </div>
-  </section>
+  <!-- ── SPLIT LAYOUT ── -->
+  <div id="editor-layout">
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-split fp-split--reverse">
-      <div class="fp-split-visual"><img src="carousel-resume.png" alt="Dilly resume editor" style="width:100%;border-radius:var(--radius);display:block"></div>
-      <div class="fp-split-copy">
-        <h2 class="fp-h2">Before and after, side by side</h2>
-        <p>Generic advice says “add metrics.” Dilly shows what good looks like for your bullet: scope, cadence, outcome, and role clarity in one pass.</p>
-        <p>Students often fixate on summary statements while experience lines stay fluffy. The editor drags attention to the lines that move Grit and Build the fastest.</p>
-        <ul class="fp-checklist">
-          <li>Inline examples from high-performing bullets in similar tracks</li>
-          <li>Warnings when a change might confuse ATS parsers</li>
-          <li>Quick jump to internship gap view after a save</li>
-        </ul>
+    <!-- LEFT: fixed resume (before) -->
+    <div id="before-col">
+      <div id="score-display">
+        <p id="score-label">Dilly Score</p>
+        <div id="score-val">42</div>
+        <div id="score-track"><div id="score-fill"></div></div>
+      </div>
+
+      <div id="resume-mock">
+        <p class="rm-name">Alex Kim</p>
+        <p class="rm-contact">alex.kim@email.com &nbsp;·&nbsp; Tampa, FL &nbsp;·&nbsp; linkedin.com/in/alexkim</p>
+
+        <p class="rm-section-label">Experience</p>
+        <p class="rm-role-title">Student Volunteer &nbsp;&middot;&nbsp; Tampa General Hospital</p>
+        <div class="rm-bullet" id="rb-0">Helped with patient care</div>
+
+        <p class="rm-role-title">Team Member &nbsp;&middot;&nbsp; Senior Design Project</p>
+        <div class="rm-bullet" id="rb-1">Worked on a team project</div>
+
+        <p class="rm-role-title">Intern &nbsp;&middot;&nbsp; SalesForce Solutions</p>
+        <div class="rm-bullet" id="rb-2">Assisted manager with tasks</div>
+
+        <p class="rm-section-label">Leadership</p>
+        <p class="rm-role-title">Social Media Chair &nbsp;&middot;&nbsp; Pre-Med Club</p>
+        <div class="rm-bullet" id="rb-3">Did some marketing</div>
+
+        <p class="rm-section-label">Volunteer</p>
+        <p class="rm-role-title">Event Volunteer &nbsp;&middot;&nbsp; Food For Tampa Bay</p>
+        <div class="rm-bullet" id="rb-4">Helped at nonprofit</div>
       </div>
     </div>
-  </section>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Workflow</p>
-      <h2 class="section-title">How a session typically runs</h2>
+    <!-- RIGHT: scrolling panels -->
+    <div id="panels-col">
+
+      <div class="editor-panel" data-panel="0">
+        <div class="ep-inner">
+          <p class="ep-category">Resume editor</p>
+          <h2 style="font-family:Montserrat,sans-serif;font-size:clamp(2.4rem,4.5vw,4rem);font-weight:800;line-height:1.0;letter-spacing:-0.025em;color:#0d0d0d;margin-bottom:1.5rem">Every bullet<br>is being graded.</h2>
+          <p style="font-size:clamp(1rem,1.35vw,1.18rem);line-height:1.85;color:#444;max-width:48ch;margin-bottom:1rem">Dilly reads each line and scores it in real time. Weak verbs, missing numbers, vague scope: it catches all of it.</p>
+          <p style="font-size:clamp(1rem,1.35vw,1.18rem);line-height:1.85;color:#444;max-width:48ch">Watch what happens when a resume full of generic bullets goes through the editor. Five rewrites. Scroll down to see each one.</p>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="1">
+        <div class="ep-inner">
+          <p class="ep-num">01 / 05</p>
+          <p class="ep-category">Experience</p>
+          <p class="ep-before">Helped with patient care</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-0"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-0">+13 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="2">
+        <div class="ep-inner">
+          <p class="ep-num">02 / 05</p>
+          <p class="ep-category">Project</p>
+          <p class="ep-before">Worked on a team project</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-1"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-1">+12 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="3">
+        <div class="ep-inner">
+          <p class="ep-num">03 / 05</p>
+          <p class="ep-category">Internship</p>
+          <p class="ep-before">Assisted manager with tasks</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-2"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-2">+9 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="4">
+        <div class="ep-inner">
+          <p class="ep-num">04 / 05</p>
+          <p class="ep-category">Leadership</p>
+          <p class="ep-before">Did some marketing</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-3"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-3">+8 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="5">
+        <div class="ep-inner">
+          <p class="ep-num">05 / 05</p>
+          <p class="ep-category">Volunteer</p>
+          <p class="ep-before">Helped at nonprofit</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-4"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-4">+7 pts</div>
+        </div>
+      </div>
+
     </div>
-    <ol class="fp-step-list">
-      <li><strong>Open</strong> a section (experience, projects, leadership). Dilly highlights the lowest-scoring bullets first.</li>
-      <li><strong>Apply</strong> a suggested rewrite or type your own. Scores refresh as soon as you pause.</li>
-      <li><strong>Compare</strong> overall dimension movement in the score strip. If Build barely budged, you know you need proof, not polish.</li>
-      <li><strong>Ship</strong> to PDF or run the ATS scanner to confirm parsers still read you cleanly.</li>
-    </ol>
-  </section>
+  </div>
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-prose">
-      <h2 class="fp-h2">Why live scoring changes behavior</h2>
-      <p>Static templates make you guess. Live scoring closes the loop: you feel which edits matter. That feedback density is how students build intuition fast without a human reviewer on call.</p>
-      <p>The same editor feeds your coach and your job matches. You are not maintaining three different versions of “what good looks like.”</p>
-      <p>From a listing, <strong>Tailor resume</strong> drops a job-specific draft here, built from your real experience, so you refine and score instead of starting from zero. Found a role outside Dilly? Add company, title, and description and get the same tailored pass.</p>
-    </div>
-  </section>
+  <!-- ── DOTS ── -->
+  <nav id="editor-dots" aria-label="Panel navigation">
+    <button class="editor-dot active" data-target="0" aria-label="Intro"></button>
+    <button class="editor-dot" data-target="1" aria-label="Bullet 1"></button>
+    <button class="editor-dot" data-target="2" aria-label="Bullet 2"></button>
+    <button class="editor-dot" data-target="3" aria-label="Bullet 3"></button>
+    <button class="editor-dot" data-target="4" aria-label="Bullet 4"></button>
+    <button class="editor-dot" data-target="5" aria-label="Bullet 5"></button>
+  </nav>
 
-  <section class="fp-stats" aria-label="Editor facts">
-    <div class="fp-stats-inner">
-      <div><span class="fp-stat-num">Real time</span><span class="fp-stat-label">No export-and-wait cycle</span></div>
-      <div><span class="fp-stat-num">Bullets</span><span class="fp-stat-label">Graded individually, not page-level only</span></div>
-      <div><span class="fp-stat-num">ATS aware</span><span class="fp-stat-label">Nudges when format fights parsers</span></div>
-      <div><span class="fp-stat-num">One doc</span><span class="fp-stat-label">Single source for score, jobs, coach</span></div>
-    </div>
-  </section>
+  <!-- ── END / LOGO ── -->
+  <div id="editor-end">
+    <img src="dilly-wordmark.png" alt="Dilly">
+    <a href="https://app.trydilly.com/" class="end-cta">Open the editor &rarr;</a>
+  </div>
 
-  <section class="fp-section">
-    <blockquote class="fp-quote"><strong>Before:</strong> “Helped with patient care.” <strong>After:</strong> “Supported 200+ patient visits/week (vitals, intake, EHR), reducing nurse admin load by ~15%.”<cite>Rewrite pattern</cite></blockquote>
-  </section>
+  <script>
+  (function () {
+    var SCORES = [42, 55, 67, 76, 84, 91];
+    var AFTERS = [
+      'Supported 200+ patient visits weekly across vitals, intake, and EHR documentation, reducing nurse admin time by 15%',
+      'Led 4-person team to deliver inventory management app adopted by 3 local businesses within 8 weeks of launch',
+      'Owned weekly reporting pipeline for 12-person sales team, cutting prep time from 4 hours to 45 minutes',
+      'Grew club Instagram from 200 to 2,400 followers in 6 months through consistent content strategy and weekly story series',
+      'Coordinated 30 volunteers across 8 community events, collectively raising $14,000 for local food bank programs'
+    ];
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-section-head">
-      <h2 class="section-title">Explore more</h2>
-    </div>
-    <div class="fp-next-grid">
-      <a class="fp-next-card" href="feature-ats.html">
-        <span class="fp-next-tag">Parse</span>
-        <h3>ATS scanner</h3>
-        <p>Validate layout and extraction after big edits.</p>
-      </a>
-      <a class="fp-next-card" href="feature-dilly-score.html">
-        <span class="fp-next-tag">Score</span>
-        <h3>Dilly Score</h3>
-        <p>See the dimensions your bullets ultimately feed.</p>
-      </a>
-      <a class="fp-next-card" href="feature-ai-coach.html">
-        <span class="fp-next-tag">Ask</span>
-        <h3>AI coach</h3>
-        <p>Go deeper on strategy when rewrites stall.</p>
-      </a>
-    </div>
-  </section>
+    var scoreVal  = document.getElementById('score-val');
+    var scoreFill = document.getElementById('score-fill');
+    var panels    = document.querySelectorAll('.editor-panel');
+    var inners    = document.querySelectorAll('.ep-inner');
+    var dots      = document.querySelectorAll('.editor-dot');
+    var bullets   = [0,1,2,3,4].map(function(i){ return document.getElementById('rb-'+i); });
+    var typed     = [false,false,false,false,false];
+    var current   = -1;
 
-  <section class="cta-band">
-    <h2 class="font-display" style="letter-spacing:0.05em">Start editing with signal</h2>
-    <p>Open the app and bring a rough draft. Dilly will show you where to press first.</p>
-    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center">
-      <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
-      <a class="btn btn-ghost" href="features.html">All features</a>
-    </div>
-  </section>
+    function animateScore(target) {
+      var from = parseInt(scoreVal.textContent, 10);
+      var t0 = null;
+      var dur = 900;
+      (function step(ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min((ts - t0) / dur, 1);
+        var e = 1 - Math.pow(1 - p, 3);
+        var v = Math.round(from + (target - from) * e);
+        scoreVal.textContent = v;
+        scoreFill.style.width = v + '%';
+        if (p < 1) requestAnimationFrame(step);
+      })(performance.now());
+    }
 
-  <footer class="site-footer">
-    <nav class="footer-links" aria-label="Footer">
-      <a href="index.html">Home</a>
-      <a href="features.html">Features</a>
-      <a href="pricing.html">Pricing</a>
-      <a href="quiz.html">Quiz</a>
-    </nav>
-    <p>Dilly · Resume editor</p>
-  </footer>
+    function typewrite(el, text, onDone) {
+      el.innerHTML = '<span class="cursor"></span>';
+      var cursor = el.querySelector('.cursor');
+      var i = 0;
+      (function tick() {
+        if (i < text.length) {
+          el.insertBefore(document.createTextNode(text[i++]), cursor);
+          setTimeout(tick, 20 + Math.random() * 20);
+        } else {
+          cursor.remove();
+          if (onDone) onDone();
+        }
+      })();
+    }
+
+    function activate(idx) {
+      if (idx === current) return;
+      current = idx;
+
+      dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+      inners.forEach(function(inn, i) { inn.classList.toggle('visible', i === idx); });
+      animateScore(SCORES[Math.min(idx, SCORES.length - 1)]);
+
+      var bi = idx - 1;
+      bullets.forEach(function(b, i) {
+        b.classList.remove('active', 'improved');
+        if (i < bi) b.classList.add('improved');
+        else if (i === bi) b.classList.add('active');
+      });
+
+      if (bi >= 0 && bi < 5 && !typed[bi]) {
+        typed[bi] = true;
+        var afterEl  = document.getElementById('after-' + bi);
+        var deltaEl  = document.getElementById('delta-' + bi);
+        if (afterEl) {
+          setTimeout(function() {
+            typewrite(afterEl, AFTERS[bi], function() {
+              if (deltaEl) deltaEl.classList.add('show');
+              if (bullets[bi]) {
+                bullets[bi].textContent = AFTERS[bi];
+                bullets[bi].classList.remove('active');
+                bullets[bi].classList.add('improved');
+              }
+            });
+          }, 450);
+        }
+      }
+    }
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) activate(parseInt(e.target.dataset.panel, 10));
+      });
+    }, { threshold: 0.5 });
+
+    panels.forEach(function(p) { observer.observe(p); });
+
+    dots.forEach(function(dot) {
+      dot.addEventListener('click', function() {
+        panels[parseInt(dot.dataset.target, 10)].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    activate(0);
+  }());
+  </script>
+
   <script src="dilly.js"></script>
 </body>
 </html>
