@@ -297,21 +297,101 @@
 
     /* ── MOBILE ── */
     @media (max-width: 780px) {
-      html { scroll-snap-type: none; }
+      html { scroll-snap-type: none; overflow: hidden; height: 100%; }
+      body { overflow: hidden; height: 100%; }
+
+      #editor-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 64px);
+        overflow: hidden;
+      }
+
+      /* TOP 30%: score + resume preview */
       #before-col {
         position: relative;
-        top: auto;
         width: 100%;
-        height: auto;
-        max-height: 340px;
+        height: 30%;
+        min-height: 0;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: #f5f4f0;
         border-right: none;
         border-bottom: 1px solid rgba(43,58,142,0.09);
+        overflow: hidden;
+        box-sizing: border-box;
       }
-      #panels-col { margin-left: 0; }
-      .editor-panel { height: auto; min-height: 80vh; padding: 3rem 1.75rem; }
+
+      #score-display {
+        flex-shrink: 0;
+        padding: 0;
+      }
+
+      .resume-mockup {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        transform: scale(0.7);
+        transform-origin: top left;
+      }
+
+      /* BOTTOM 70%: horizontal scroll panels */
+      #panels-col {
+        display: flex;
+        flex-direction: row;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        height: 70%;
+        margin-left: 0;
+        flex-shrink: 0;
+        background: #fff;
+      }
+
+      .editor-panel {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        min-height: unset;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        padding: 2rem 1.75rem 4rem;
+        overflow-y: auto;
+        box-sizing: border-box;
+      }
+
       .ep-inner { opacity: 1; transform: none; }
-      #editor-dots { display: none; }
-      #editor-end { margin-left: 0; height: 80vh; }
+
+      #editor-dots {
+        display: flex;
+        flex-direction: row;
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        right: auto;
+        gap: 6px;
+      }
+
+      #editor-dots .dot {
+        width: 7px;
+        height: 7px;
+      }
+
+      #editor-end {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        margin-left: 0;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        background: #f5f4f0;
+      }
     }
   </style>
 </head>
@@ -594,17 +674,32 @@
       }
     }
 
-    var observer = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) {
-        if (e.isIntersecting) activate(parseInt(e.target.dataset.panel, 10));
-      });
-    }, { threshold: 0.5 });
+    var isMobile = window.innerWidth <= 780;
+    var panelsCol = document.getElementById('panels-col');
 
-    panels.forEach(function(p) { observer.observe(p); });
+    if (isMobile) {
+      panelsCol.addEventListener('scroll', function() {
+        var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
+        idx = Math.max(0, Math.min(idx, panels.length - 1));
+        activate(idx);
+      });
+    } else {
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) activate(parseInt(e.target.dataset.panel, 10));
+        });
+      }, { threshold: 0.5 });
+      panels.forEach(function(p) { observer.observe(p); });
+    }
 
     dots.forEach(function(dot) {
       dot.addEventListener('click', function() {
-        panels[parseInt(dot.dataset.target, 10)].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var idx = parseInt(dot.dataset.target, 10);
+        if (isMobile) {
+          panelsCol.scrollTo({ left: idx * panelsCol.clientWidth, behavior: 'smooth' });
+        } else {
+          panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
     });
 

@@ -196,30 +196,70 @@
 
     /* ── MOBILE ── */
     @media (max-width: 780px) {
-      html { scroll-snap-type: none; }
+      html { scroll-snap-type: none; overflow: hidden; height: 100%; }
+      body { overflow: hidden; height: 100%; }
 
+      #coach-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 64px);
+        overflow: hidden;
+      }
+
+      /* TOP 30%: face */
       #face-col {
         position: relative;
         width: 100%;
-        height: auto;
-        padding: 3.5rem 1.5rem 2.5rem;
+        height: 30%;
+        min-height: 0;
+        padding: 0.75rem 1rem 0.5rem;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 1rem;
+        background: #fff;
+        border-bottom: 1px solid rgba(43,58,142,0.08);
+        overflow: hidden;
       }
 
       #face-circle {
-        width: min(240px, 60vw);
-        height: min(240px, 60vw);
+        width: min(100px, 22vw);
+        height: min(100px, 22vw);
+        flex-shrink: 0;
       }
 
+      /* surface the face label/tagline next to the face */
+      #face-label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      /* BOTTOM 70%: horizontal scroll panels */
       #panels-col {
+        display: flex;
+        flex-direction: row;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        height: 70%;
         margin-left: 0;
+        flex-shrink: 0;
       }
 
       .coach-panel {
-        height: auto;
-        min-height: 85vh;
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        min-height: unset;
+        flex-shrink: 0;
+        scroll-snap-align: start;
         border-left: none;
         border-top: 1px solid rgba(43,58,142,0.07);
-        padding: 3rem 1.75rem;
+        padding: 2rem 1.75rem 4rem;
+        overflow-y: auto;
+        box-sizing: border-box;
       }
 
       .panel-inner {
@@ -227,11 +267,30 @@
         transform: none;
       }
 
-      #coach-dots { display: none; }
+      #coach-dots {
+        display: flex;
+        flex-direction: row;
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        right: auto;
+        gap: 6px;
+      }
+
+      #coach-dots .dot {
+        width: 7px;
+        height: 7px;
+      }
 
       #coach-end {
-        height: 80vh;
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
         margin-left: 0;
+        flex-shrink: 0;
+        scroll-snap-align: start;
       }
     }
   </style>
@@ -489,20 +548,34 @@
       window.setDillyMode(modeMap[idx]);
     }
 
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          activate(parseInt(entry.target.dataset.panel, 10));
-        }
-      });
-    }, { threshold: 0.5 });
+    var isMobile = window.innerWidth <= 780;
+    var panelsCol = document.getElementById('panels-col');
 
-    panels.forEach(function (p) { observer.observe(p); });
+    if (isMobile) {
+      panelsCol.addEventListener('scroll', function() {
+        var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
+        idx = Math.max(0, Math.min(idx, panels.length - 1));
+        activate(idx);
+      });
+    } else {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            activate(parseInt(entry.target.dataset.panel, 10));
+          }
+        });
+      }, { threshold: 0.5 });
+      panels.forEach(function (p) { observer.observe(p); });
+    }
 
     dots.forEach(function (dot) {
       dot.addEventListener('click', function () {
         var idx = parseInt(dot.dataset.target, 10);
-        panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (isMobile) {
+          panelsCol.scrollTo({ left: idx * panelsCol.clientWidth, behavior: 'smooth' });
+        } else {
+          panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
     });
 
