@@ -77,7 +77,7 @@ const DATA_SCIENCE_OPTIONS: Option[] = [
   },
 ];
 
-// ── Progress bar (step 2 active — same as profile screen) ────────────────────
+// ── Progress bar ──────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 6;
 
@@ -87,7 +87,7 @@ function ProgressBar() {
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <View
           key={i}
-          style={[pb.seg, i < 1 ? pb.done : i === 1 ? pb.active : pb.empty]}
+          style={[pb.seg, i < 3 ? pb.done : i === 3 ? pb.active : pb.empty]}
         />
       ))}
     </View>
@@ -105,7 +105,11 @@ const pb = StyleSheet.create({
 
 export default function IndustryTargetScreen() {
   const insets = useSafeAreaInsets();
-  const { context = 'quantitative' } = useLocalSearchParams<{ context: string }>();
+  const { context = 'quantitative', cohort: cohortParam = '', name = '' } = useLocalSearchParams<{
+    context: string;
+    cohort?: string;
+    name?: string;
+  }>();
 
   const isQuantitative = context === 'quantitative';
   const options  = isQuantitative ? QUANT_OPTIONS : DATA_SCIENCE_OPTIONS;
@@ -129,10 +133,10 @@ export default function IndustryTargetScreen() {
     } catch { /* non-fatal */ } finally {
       setLoading(false);
     }
-    const cohort = isQuantitative ? 'Quantitative' : 'Tech';
+    const cohort = cohortParam || (isQuantitative ? 'Quantitative' : 'Tech');
     router.push({
       pathname: '/onboarding/you-are-in',
-      params: { cohort, industryTarget: finalSelection },
+      params: { cohort, name, industryTarget: finalSelection },
     });
   }
 

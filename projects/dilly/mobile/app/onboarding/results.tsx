@@ -16,12 +16,18 @@ import { colors, spacing } from '../../lib/tokens';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+interface Recommendation {
+  title:       string;
+  description: string;
+}
+
 interface AuditResult {
-  final_score?:    number;
-  scores?:         { smart?: number; grit?: number; build?: number };
-  detected_track?: string;
-  dilly_take?:     string;
-  error?:          boolean;
+  final_score?:      number;
+  scores?:           { smart?: number; grit?: number; build?: number };
+  detected_track?:   string;
+  dilly_take?:       string;
+  recommendations?:  Recommendation[];
+  error?:            boolean;
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -260,6 +266,24 @@ export default function ResultsScreen() {
           )}
         </Animated.View>
 
+        {/* ── Recommendations ─────────────────────────────────────────────── */}
+        {!isError && result?.recommendations && result.recommendations.length > 0 && (
+          <Animated.View style={{ opacity: calloutAnim, marginBottom: 8 }}>
+            <Text style={s.recoHeading}>Top fixes for your resume</Text>
+            {result.recommendations.map((rec, i) => (
+              <View key={i} style={s.recoCard}>
+                <View style={s.recoNum}>
+                  <Text style={s.recoNumText}>{i + 1}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.recoTitle}>{rec.title}</Text>
+                  <Text style={s.recoBody}>{rec.description}</Text>
+                </View>
+              </View>
+            ))}
+          </Animated.View>
+        )}
+
         {/* ── Dilly tease card ────────────────────────────────────────────── */}
         <Animated.View style={[s.teaseCard, { opacity: teaseAnim }]}>
           <View style={s.teaseAvatar}>
@@ -372,4 +396,21 @@ const s = StyleSheet.create({
   lockText: { fontSize: 9, fontWeight: '600', color: colors.blue },
   btn: { backgroundColor: colors.green, borderRadius: 13, padding: 13, alignItems: 'center' },
   btnText: { fontSize: 13, fontWeight: '700', color: '#051A0B' },
+  recoHeading: {
+    fontSize: 8, fontWeight: '700', textTransform: 'uppercase',
+    letterSpacing: 1.2, color: colors.t3, marginBottom: 6,
+  },
+  recoCard: {
+    flexDirection: 'row', gap: 9, alignItems: 'flex-start',
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 11, padding: 10, marginBottom: 5,
+  },
+  recoNum: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.golddim, borderWidth: 1, borderColor: colors.goldbdr,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1,
+  },
+  recoNumText: { fontSize: 9, fontWeight: '700', color: colors.gold },
+  recoTitle: { fontSize: 11, fontWeight: '700', color: colors.t1, marginBottom: 2 },
+  recoBody:  { fontSize: 10, color: colors.t2, lineHeight: 15 },
 });

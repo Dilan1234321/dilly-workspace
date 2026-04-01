@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { authHeaders } from '../../lib/auth';
 import { APPROVED_MAJORS } from '../../constants/majors';
@@ -224,6 +226,31 @@ export default function ProfileScreen() {
   const [targetKey,   setTargetKey]   = useState('internship_summer');
   const [submitError, setSubmitError] = useState('');
   const [loading,     setLoading]     = useState(false);
+  const [photoUri,    setPhotoUri]    = useState<string | null>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+
+  async function handlePickPhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    setPhotoUri(asset.uri);
+    setPhotoLoading(true);
+    try {
+      const headers = await authHeaders();
+      const form = new FormData();
+      form.append('file', { uri: asset.uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
+      await fetch(`${API_BASE}/profile/photo`, { method: 'POST', headers, body: form });
+    } catch { /* non-fatal */ } finally {
+      setPhotoLoading(false);
+    }
+  }
 
   const firstName      = fullName.trim().split(/\s+/)[0] ?? '';
   const showMicroWin   = fullName.trim().length >= 2;
@@ -274,13 +301,10 @@ export default function ProfileScreen() {
         ['dilly_onboarding_target',  TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'internship'],
       ]);
 
-      const goToIndustry = resolvedCohort === 'Quantitative' || majors.includes('Data Science');
-      if (goToIndustry) {
-        const context = resolvedCohort === 'Quantitative' ? 'quantitative' : 'data-science';
-        router.push({ pathname: '/onboarding/industry-target', params: { context } });
-      } else {
-        router.push({ pathname: '/onboarding/you-are-in', params: { cohort: resolvedCohort, name: firstName } });
-      }
+      router.push({
+        pathname: '/onboarding/interests',
+        params: { cohort: resolvedCohort, majors: JSON.stringify(majors), name: firstName },
+      });
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
     } finally {
@@ -315,6 +339,23 @@ export default function ProfileScreen() {
           <Text style={s.sub}>
             Dilly scores you against the right cohort and peers — he needs this to do it right.
           </Text>
+        </View>
+
+        {/* Photo */}
+        <View style={s.photoSection}>
+          <TouchableOpacity style={s.photoCircle} onPress={handlePickPhoto} activeOpacity={0.8}>
+            {photoUri ? (
+              <Image source={{ uri: photoUri }} style={s.photoImage} />
+            ) : (
+              <Ionicons name="camera-outline" size={22} color={colors.t3} />
+            )}
+            {photoLoading && (
+              <View style={s.photoOverlay}>
+                <ActivityIndicator color="#fff" size="small" />
+              </View>
+            )}
+          </TouchableOpacity>
+          <Text style={s.photoHint}>Add a photo (optional)</Text>
         </View>
 
         {/* Full name */}
@@ -458,6 +499,40 @@ const s = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxl,
+  },
+  photoSection: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
+    marginBottom: spacing.lg,
+  },
+  photoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.s3,
+    borderWidth: 1,
+    borderColor: colors.b2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    marginBottom: 7,
+  },
+  photoImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+  },
+  photoOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoHint: {
+    fontSize: 10,
+    color: colors.t3,
+    fontWeight: '500',
   },
   backBtn: {
     flexDirection: 'row',

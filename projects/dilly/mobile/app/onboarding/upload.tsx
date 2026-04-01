@@ -179,11 +179,11 @@ export default function UploadScreen() {
         <Text style={s.backText}>Back</Text>
       </TouchableOpacity>
 
-      <ProgressBar current={3} total={6} />
+      <ProgressBar current={5} total={6} />
 
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.eyebrow}>Step 3 of 6 · Your resume</Text>
+        <Text style={s.eyebrow}>Step 5 of 6 · Your resume</Text>
         <Text style={s.heading}>{"Your resume goes in.\nYour future comes out."}</Text>
         <Text style={s.sub}>
           Dilly reads it the way a recruiter does and tells you exactly where you stand.
