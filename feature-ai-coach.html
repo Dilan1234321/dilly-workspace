@@ -1,170 +1,427 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI coach: Dilly</title>
-  <meta name="description" content="Context-aware AI career coaching with mock interviews and strategy mode.">
-  <link rel="stylesheet" href="css/dilly.css">
-</head>
-<body class="feature-pro-page" data-nav-feature="coach" data-fp-layout="coach">
+  <title>AI Coach: Dilly</title>
+  <meta name="description" content="The most powerful career advisor ever built for students.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <!-- ── DILLY FACE ── -->
-  <section style="background:#fff;min-height:95vh;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;gap:clamp(2rem,5vw,5rem);padding:4rem clamp(2rem,8vw,7rem)">
-    <!-- face -->
-    <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:1.5rem">
-      <div style="width:min(480px,46vw);height:min(480px,46vw);border-radius:50%;background:#f5f6ff;border:1.5px solid rgba(43,58,142,0.12);box-shadow:0 8px 40px rgba(43,58,142,0.12);display:flex;align-items:center;justify-content:center;overflow:hidden">
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: #0d0d0d;
+      scroll-snap-type: y mandatory;
+      overflow-x: hidden;
+    }
+
+    body { overflow-x: hidden; }
+
+    /* ── MAIN LAYOUT ── */
+    #coach-layout {
+      display: flex;
+      align-items: flex-start;
+    }
+
+    /* LEFT: sticky face */
+    #face-col {
+      position: sticky;
+      top: 0;
+      width: 44%;
+      height: 100vh;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      background: #fff;
+      z-index: 10;
+    }
+
+    #face-circle {
+      width: min(420px, 36vw);
+      height: min(420px, 36vw);
+      border-radius: 50%;
+      background: #f5f6ff;
+      border: 1.5px solid rgba(43,58,142,0.12);
+      box-shadow: 0 8px 48px rgba(43,58,142,0.13);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: box-shadow 0.8s ease;
+    }
+
+    #face-circle.mode-interview {
+      box-shadow: 0 8px 60px rgba(43,58,142,0.22);
+    }
+
+    #face-circle.mode-memory {
+      box-shadow: 0 8px 64px rgba(43,58,142,0.18), 0 0 0 6px rgba(43,58,142,0.04);
+    }
+
+    #face-label {
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.4;
+    }
+
+    /* RIGHT: scrolling panels */
+    #panels-col {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .coach-panel {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      padding: 3rem clamp(2.5rem, 6vw, 6rem) 3rem clamp(1.5rem, 3vw, 3rem);
+      border-left: 1px solid rgba(43,58,142,0.07);
+    }
+
+    .panel-inner {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1);
+      will-change: opacity, transform;
+    }
+
+    .panel-inner.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .panel-num {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.4;
+      margin-bottom: 0.65rem;
+    }
+
+    .panel-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      margin-bottom: 1.4rem;
+    }
+
+    .panel-title {
+      font-size: clamp(2.2rem, 4vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.025em;
+      color: #0d0d0d;
+      margin-bottom: 1.75rem;
+    }
+
+    .panel-body {
+      font-size: clamp(1rem, 1.35vw, 1.18rem);
+      line-height: 1.85;
+      color: #444;
+      max-width: 52ch;
+    }
+
+    /* ── DOTS ── */
+    #coach-dots {
+      position: fixed;
+      right: 1.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 300;
+    }
+
+    .coach-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(43,58,142,0.18);
+      transition: background 0.35s ease, transform 0.35s ease;
+    }
+
+    .coach-dot.active {
+      background: #2B3A8E;
+      transform: scale(1.6);
+    }
+
+    /* ── END / LOGO ── */
+    #coach-end {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      background: #f5f6ff;
+    }
+
+    #coach-end img {
+      width: clamp(180px, 24vw, 300px);
+      opacity: 0.88;
+    }
+
+    .end-cta {
+      display: inline-block;
+      background: #2B3A8E;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 1rem 2.75rem;
+      border-radius: 100px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      html { scroll-snap-type: none; }
+
+      #coach-layout { flex-direction: column; }
+
+      #face-col {
+        position: relative;
+        width: 100%;
+        height: auto;
+        padding: 3.5rem 1.5rem 2.5rem;
+      }
+
+      #face-circle {
+        width: min(240px, 60vw);
+        height: min(240px, 60vw);
+      }
+
+      .coach-panel {
+        height: auto;
+        min-height: 85vh;
+        border-left: none;
+        border-top: 1px solid rgba(43,58,142,0.07);
+        padding: 3rem 1.75rem;
+      }
+
+      .panel-inner {
+        opacity: 1;
+        transform: none;
+      }
+
+      #coach-dots { display: none; }
+
+      #coach-end { height: 80vh; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── MAIN LAYOUT ── -->
+  <div id="coach-layout">
+
+    <!-- LEFT: sticky Dilly face -->
+    <div id="face-col">
+      <div id="face-circle">
         <canvas id="dilly-face" width="480" height="480" style="display:block;width:100%;height:100%"></canvas>
       </div>
-      <p style="font-family:Montserrat,sans-serif;font-size:0.68rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#2B3A8E;opacity:0.5;margin:0">Dilly · AI Advisor</p>
+      <p id="face-label">Dilly &middot; AI Advisor</p>
     </div>
-    <!-- copy -->
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center">
-      <p style="font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#2B3A8E;margin:0 0 1.25rem">Your career advisor</p>
-      <h2 style="font-family:Montserrat,sans-serif;font-size:clamp(3.2rem,7vw,6.5rem);font-weight:800;line-height:0.95;letter-spacing:-0.02em;color:#0d0d0d;margin:0 0 2rem">Meet<br>Dilly.</h2>
-      <p style="font-size:clamp(1.05rem,1.6vw,1.3rem);line-height:1.75;color:#333;margin:0 0 1.25rem">No advisor has ever read your resume this carefully. Dilly knows your scores, your gaps, your deadlines, and your saved roles — before you say a word. Every answer is built from your actual data, not a generic template.</p>
-      <p style="font-size:clamp(1.05rem,1.6vw,1.3rem);line-height:1.75;color:#333;margin:0 0 2.5rem">Mock interviews that push back. Strategy that matches your semester. A thread that remembers every session. Dilly doesn't guess — it advises.</p>
-      <a href="https://app.trydilly.com/" style="display:inline-block;background:#2B3A8E;color:#fff;font-family:Montserrat,sans-serif;font-size:0.9rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;text-decoration:none;padding:1rem 2.25rem;border-radius:100px">Start talking to Dilly &rarr;</a>
+
+    <!-- RIGHT: 4 scrolling panels -->
+    <div id="panels-col">
+
+      <div class="coach-panel" data-panel="0">
+        <div class="panel-inner">
+          <p class="panel-num">01 / 04</p>
+          <p class="panel-eyebrow">Knows you before you speak</p>
+          <h2 class="panel-title">The Resume<br>Reader</h2>
+          <p class="panel-body">Dilly reads every bullet. Every gap. Every signal. Before you say a word, it already knows your story better than you do and exactly what is holding you back. No advisor on earth has ever walked in this prepared.</p>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="1">
+        <div class="panel-inner">
+          <p class="panel-num">02 / 04</p>
+          <p class="panel-eyebrow">Pressure that builds you</p>
+          <h2 class="panel-title">The Mock<br>Interviewer</h2>
+          <p class="panel-body">Questions that adapt in real time. Follow-ups that go exactly where your answer was weakest. Not a question bank. A live session that gets harder the better you get, until you are genuinely ready for anything.</p>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="2">
+        <div class="panel-inner">
+          <p class="panel-num">03 / 04</p>
+          <p class="panel-eyebrow">The long game</p>
+          <h2 class="panel-title">The<br>Strategist</h2>
+          <p class="panel-body">Which role to prioritize. Which gap to close first. How to frame your offer when it comes. Dilly plays the long game across your entire semester, not just the next application. No career coach charges less and knows more.</p>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="3">
+        <div class="panel-inner">
+          <p class="panel-num">04 / 04</p>
+          <p class="panel-eyebrow">Every session, remembered</p>
+          <h2 class="panel-title">The Thread That<br>Never Forgets</h2>
+          <p class="panel-body">One continuous conversation. No re-explaining your major, your goals, your timeline. Dilly carries everything forward, session after session, improvement after improvement. The advisor that never loses the thread.</p>
+        </div>
+      </div>
+
     </div>
-  </section>
+  </div>
+
+  <!-- ── NAVIGATION DOTS ── -->
+  <nav id="coach-dots" aria-label="Panel navigation">
+    <button class="coach-dot active" data-target="0" aria-label="Panel 1"></button>
+    <button class="coach-dot" data-target="1" aria-label="Panel 2"></button>
+    <button class="coach-dot" data-target="2" aria-label="Panel 3"></button>
+    <button class="coach-dot" data-target="3" aria-label="Panel 4"></button>
+  </nav>
+
+  <!-- ── END / LOGO ── -->
+  <div id="coach-end">
+    <img src="dilly-wordmark.png" alt="Dilly">
+    <a href="https://app.trydilly.com/" class="end-cta">Start free &rarr;</a>
+  </div>
 
   <script>
-  (function(){
-    var c=document.getElementById('dilly-face');if(!c)return;
-    var ctx=c.getContext('2d'),W=c.width,H=c.height,NAVY='#2B3A8E',MX=14;
-    var pos={x:0,y:0},vel={x:0,y:0},tgt={x:0,y:0},sm=0.35,st=0.35,raf;
-    function pT(){var a=Math.random()*Math.PI*2,d=(0.72+Math.random()*0.28)*MX;tgt.x=Math.cos(a)*d;tgt.y=Math.sin(a)*d}
-    function pS(){st=0.15+Math.random()*0.45}
-    function draw(){
-      vel.x+=((tgt.x-pos.x)*0.06-vel.x)*0.2;vel.y+=((tgt.y-pos.y)*0.06-vel.y)*0.2;
-      pos.x+=vel.x;pos.y+=vel.y;sm+=(st-sm)*0.04;
-      var s=(W*0.44/2)/19;ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(W/2+pos.x,H/2+pos.y);
-      ctx.fillStyle=NAVY;ctx.beginPath();ctx.arc(-8*s,-4*s,2.8*s,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.arc(8*s,-4*s,2.8*s,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.moveTo(-8*s,5*s);ctx.quadraticCurveTo(0,5*s+sm*9*s,8*s,5*s);
-      ctx.strokeStyle=NAVY;ctx.lineWidth=2.2*s;ctx.lineCap='round';ctx.stroke();
-      ctx.restore();raf=requestAnimationFrame(draw)
+  (function () {
+    /* ── DILLY FACE ENGINE ── */
+    var c = document.getElementById('dilly-face');
+    if (!c) return;
+    var ctx = c.getContext('2d'), W = c.width, H = c.height, NAVY = '#2B3A8E';
+    var pos = { x: 0, y: 0 }, vel = { x: 0, y: 0 }, tgt = { x: 0, y: 0 };
+    var smileTgt = 0.35, smileCur = 0.35;
+    var currentMode = 'reading';
+    var ptTimer, psTimer;
+
+    var modes = {
+      reading:   { moveInterval: 3200, maxDist: 10,  smileMin: 0.28, smileMax: 0.42, spring: 0.048 },
+      interview: { moveInterval: 900,  maxDist: 14,  smileMin: 0.15, smileMax: 0.48, spring: 0.13  },
+      strategy:  { moveInterval: 5200, maxDist: 4,   smileMin: 0.30, smileMax: 0.38, spring: 0.028 },
+      memory:    { moveInterval: 3600, maxDist: 5,   smileMin: 0.58, smileMax: 0.78, spring: 0.038 }
+    };
+
+    function conf() { return modes[currentMode] || modes.reading; }
+
+    function pickTarget() {
+      var m = conf(), a = Math.random() * Math.PI * 2, d = m.maxDist * (0.5 + Math.random() * 0.5);
+      tgt.x = Math.cos(a) * d;
+      tgt.y = Math.sin(a) * d;
     }
-    pT();pS();setInterval(pT,2600);setInterval(pS,2200);raf=requestAnimationFrame(draw);
-  })();
+
+    function pickSmile() {
+      var m = conf();
+      smileTgt = m.smileMin + Math.random() * (m.smileMax - m.smileMin);
+    }
+
+    function scheduleTarget() {
+      clearTimeout(ptTimer);
+      pickTarget();
+      ptTimer = setTimeout(scheduleTarget, conf().moveInterval + Math.random() * 500);
+    }
+
+    function scheduleSmile() {
+      clearTimeout(psTimer);
+      pickSmile();
+      psTimer = setTimeout(scheduleSmile, conf().moveInterval * 0.75 + Math.random() * 400);
+    }
+
+    window.setDillyMode = function (m) {
+      currentMode = m;
+      pickTarget();
+      pickSmile();
+      var circle = document.getElementById('face-circle');
+      if (circle) {
+        circle.className = 'mode-' + m;
+      }
+    };
+
+    function draw() {
+      var sp = conf().spring;
+      vel.x += ((tgt.x - pos.x) * sp - vel.x) * 0.22;
+      vel.y += ((tgt.y - pos.y) * sp - vel.y) * 0.22;
+      pos.x += vel.x;
+      pos.y += vel.y;
+      smileCur += (smileTgt - smileCur) * 0.04;
+
+      var s = (W * 0.44 / 2) / 19;
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(W / 2 + pos.x, H / 2 + pos.y);
+      ctx.fillStyle = NAVY;
+
+      ctx.beginPath(); ctx.arc(-8 * s, -4 * s, 2.8 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc( 8 * s, -4 * s, 2.8 * s, 0, Math.PI * 2); ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-8 * s, 5 * s);
+      ctx.quadraticCurveTo(0, 5 * s + smileCur * 9 * s, 8 * s, 5 * s);
+      ctx.strokeStyle = NAVY;
+      ctx.lineWidth = 2.2 * s;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      ctx.restore();
+      requestAnimationFrame(draw);
+    }
+
+    scheduleTarget();
+    scheduleSmile();
+    requestAnimationFrame(draw);
+
+    /* ── PANEL TRACKING ── */
+    var panels   = document.querySelectorAll('.coach-panel');
+    var inners   = document.querySelectorAll('.panel-inner');
+    var dots     = document.querySelectorAll('.coach-dot');
+    var modeMap  = ['reading', 'interview', 'strategy', 'memory'];
+    var active   = -1;
+
+    function activate(idx) {
+      if (idx === active) return;
+      active = idx;
+      dots.forEach(function (d, i)   { d.classList.toggle('active', i === idx); });
+      inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
+      window.setDillyMode(modeMap[idx]);
+    }
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          activate(parseInt(entry.target.dataset.panel, 10));
+        }
+      });
+    }, { threshold: 0.5 });
+
+    panels.forEach(function (p) { observer.observe(p); });
+
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        var idx = parseInt(dot.dataset.target, 10);
+        panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    activate(0);
+
+  }());
   </script>
 
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Modes</p>
-      <h2 class="section-title">Strategy when you think, practice when you sweat</h2>
-      <p class="section-desc">Toggle mental models: long-arc planning versus live Q&amp;A. Same brain, different tempo.</p>
-    </div>
-    <div class="fp-pillar-grid">
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">◇</span>
-        <h3>Coach mode</h3>
-        <p>Prioritization, narrative, offer negotiation framing, and semester planning. For when you need direction more than adrenaline.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">▶</span>
-        <h3>Practice mode</h3>
-        <p>Mock interviews with follow-ups that probe weak dimensions. Pause, revise, rerun until answers feel grounded.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">∞</span>
-        <h3>Continuous thread</h3>
-        <p>History stays attached. No re-explaining your major, your gaps, or your target companies every session.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="fp-section fp-section--surface">
-    <div class="fp-split fp-split--reverse">
-      <div class="fp-split-visual"><img src="carousel-resume.png" alt="Dilly AI coach" style="width:100%;border-radius:var(--radius);display:block"></div>
-      <div class="fp-split-copy">
-        <h2 class="fp-h2">Grounded answers, not generic pep</h2>
-        <p>Because Dilly already scored your bullets and labeled your listings, the coach can say “fix Build first” with reasons, not vibes. That saves cycles when you are tired and tempted to polish what is already fine.</p>
-        <p>When you change the resume, the coach’s context updates. The thread stays coherent as you improve.</p>
-        <ul class="fp-checklist">
-          <li>References dimension scores explicitly when tradeoffs appear</li>
-          <li>Suggests editor actions when wording is the bottleneck</li>
-          <li>Flags calendar conflicts when you overcommit prep</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Rhythm</p>
-      <h2 class="section-title">A week with the coach</h2>
-    </div>
-    <ol class="fp-step-list">
-      <li><strong>Monday:</strong> strategy pass on top three saved roles. Decide which gap is worth a two-week sprint.</li>
-      <li><strong>Midweek:</strong> short practice bursts on behavioral prompts tied to weak Grit signals.</li>
-      <li><strong>Post-edit:</strong> rerun a mock after resume changes land. Confirm stories match the new bullets.</li>
-      <li><strong>Friday:</strong> lightweight review of tracker + calendar; adjust next week’s plan with coach notes.</li>
-    </ol>
-  </section>
-
-  <section class="fp-section fp-section--surface">
-    <div class="fp-prose">
-      <h2 class="fp-h2">Why full context changes the advice quality</h2>
-      <p>Chatbots without your file guess. Dilly coach is constrained by structured signals: scores, stages, deadlines. That constraint is what makes guidance feel like a human who did the homework.</p>
-      <p>Pair with Ask Dilly for role-specific drills, then return to coach mode to integrate lessons across applications.</p>
-    </div>
-  </section>
-
-  <section class="fp-stats" aria-label="Coach stats">
-    <div class="fp-stats-inner">
-      <div><span class="fp-stat-num">1</span><span class="fp-stat-label">Thread across the semester</span></div>
-      <div><span class="fp-stat-num">2</span><span class="fp-stat-label">Modes: plan vs practice</span></div>
-      <div><span class="fp-stat-num">Live</span><span class="fp-stat-label">Updates when your data moves</span></div>
-      <div><span class="fp-stat-num">Safe</span><span class="fp-stat-label">No training on your prompts</span></div>
-    </div>
-  </section>
-
-  <section class="fp-section">
-    <blockquote class="fp-quote">“Your Build gap is the real problem: 16 points. Stripe wants interns who have shipped something real. Pick one project, get it to production in 4, 6 weeks.”<cite>Example coach line</cite></blockquote>
-  </section>
-
-  <section class="fp-section fp-section--surface">
-    <div class="fp-section-head">
-      <h2 class="section-title">Explore more</h2>
-    </div>
-    <div class="fp-next-grid">
-      <a class="fp-next-card" href="feature-ask-dilly.html">
-        <span class="fp-next-tag">Role</span>
-        <h3>Ask Dilly</h3>
-        <p>Focused prompts per listing.</p>
-      </a>
-      <a class="fp-next-card" href="feature-dilly-score.html">
-        <span class="fp-next-tag">Scores</span>
-        <h3>Dilly Score</h3>
-        <p>What the coach reads first.</p>
-      </a>
-      <a class="fp-next-card" href="feature-leaderboard.html">
-        <span class="fp-next-tag">Peers</span>
-        <h3>Leaderboard</h3>
-        <p>Benchmark progress after coaching sprints.</p>
-      </a>
-    </div>
-  </section>
-
-  <section class="cta-band">
-    <h2 class="font-display" style="letter-spacing:0.05em">Talk to a coach that read your resume</h2>
-    <p>Open the app and start a thread. Bring a hard question.</p>
-    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center">
-      <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
-      <a class="btn btn-ghost" href="quiz.html">Take the quiz</a>
-    </div>
-  </section>
-
-  <footer class="site-footer">
-    <nav class="footer-links" aria-label="Footer">
-      <a href="index.html">Home</a>
-      <a href="features.html">Features</a>
-      <a href="pricing.html">Pricing</a>
-      <a href="quiz.html">Quiz</a>
-    </nav>
-    <p>Dilly · AI coach</p>
-  </footer>
-  <script src="dilly.js"></script>
 </body>
 </html>
