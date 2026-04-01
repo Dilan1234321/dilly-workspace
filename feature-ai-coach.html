@@ -22,17 +22,16 @@
 
     /* ── MAIN LAYOUT ── */
     #coach-layout {
-      display: flex;
-      align-items: flex-start;
+      display: block;
     }
 
-    /* LEFT: sticky face */
+    /* LEFT: fixed face */
     #face-col {
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
       width: 44%;
       height: 100vh;
-      flex-shrink: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -73,10 +72,9 @@
       opacity: 0.4;
     }
 
-    /* RIGHT: scrolling panels */
+    /* RIGHT: scrolling panels, offset to clear fixed face */
     #panels-col {
-      flex: 1;
-      min-width: 0;
+      margin-left: 44%;
     }
 
     .coach-panel {
@@ -167,6 +165,7 @@
     #coach-end {
       height: 100vh;
       scroll-snap-align: start;
+      margin-left: 44%;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -198,8 +197,6 @@
     @media (max-width: 780px) {
       html { scroll-snap-type: none; }
 
-      #coach-layout { flex-direction: column; }
-
       #face-col {
         position: relative;
         width: 100%;
@@ -210,6 +207,10 @@
       #face-circle {
         width: min(240px, 60vw);
         height: min(240px, 60vw);
+      }
+
+      #panels-col {
+        margin-left: 0;
       }
 
       .coach-panel {
@@ -227,7 +228,10 @@
 
       #coach-dots { display: none; }
 
-      #coach-end { height: 80vh; }
+      #coach-end {
+        height: 80vh;
+        margin-left: 0;
+      }
     }
   </style>
 </head>
