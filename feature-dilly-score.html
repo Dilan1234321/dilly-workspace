@@ -749,14 +749,12 @@
     if (!isMobile && mobileSubscores) mobileSubscores.style.display = 'none';
 
     if (isMobile) {
-      /* show full radar immediately on mobile so the top section isn't empty */
-      animateToFull(SMART, GRIT, BUILD);
-      compWrap.classList.add('visible');
-
       panelsCol.addEventListener('scroll', function () {
         var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
         idx = Math.max(0, Math.min(idx, panels.length - 1));
-        /* keep radar filled on mobile; just update dots + text visibility */
+        /* animate radar per panel on mobile too */
+        var s = stateMap[idx] || [SMART, GRIT, BUILD];
+        animateToFull(s[0] || SMART, s[1] || GRIT, s[2] || BUILD);
         dots.forEach(function (d, i) { d.classList.toggle('active', i === idx); });
         inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
       });
@@ -781,6 +779,11 @@
     });
 
     activate(0);
+    /* on mobile: override activate(0)'s reset — show full radar from the start */
+    if (isMobile) {
+      animateToFull(SMART, GRIT, BUILD);
+      compWrap.classList.add('visible');
+    }
   }());
   </script>
 
