@@ -513,7 +513,7 @@
       reading:   { moveInterval: 3200, maxDist: 10,  smileMin: 0.12, smileMax: 0.38, spring: 0.048, eyeScale: 1.0  },
       interview: { moveInterval: 800,  maxDist: 20,  smileMin: -0.35,smileMax: 0.12, spring: 0.18,  eyeScale: 0.75 },
       strategy:  { moveInterval: 5500, maxDist: 3,   smileMin: 0.06, smileMax: 0.18, spring: 0.022, eyeScale: 0.85 },
-      memory:    { moveInterval: 3200, maxDist: 6,   smileMin: 0.82, smileMax: 1.15, spring: 0.042, eyeScale: 1.28 }
+      memory:    { moveInterval: 3200, maxDist: 6,   smileMin: 1.25, smileMax: 1.65, spring: 0.042, eyeScale: 1.28 }
     };
 
     function conf() { return modes[currentMode] || modes.reading; }
@@ -603,10 +603,12 @@
       dots.forEach(function (d, i)   { d.classList.toggle('active', i === idx); });
       inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
       var m = modeMap[idx];
-      /* on first activate, snap eye scale directly so it doesn't lerp from 1.0 */
+      /* on first activate, snap eye scale and smile directly so it doesn't lerp from defaults */
       if (active === idx && !window._dillyModeSet) {
         eyeScaleCur = modes[m] ? modes[m].eyeScale : 1.0;
         eyeScaleTgt = eyeScaleCur;
+        smileCur = modes[m] ? (modes[m].smileMin + modes[m].smileMax) / 2 : 0.35;
+        smileTgt = smileCur;
         window._dillyModeSet = true;
       }
       window.setDillyMode(m);
