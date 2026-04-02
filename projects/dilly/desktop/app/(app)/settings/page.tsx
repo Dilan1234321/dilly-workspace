@@ -94,18 +94,25 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [interests, setInterests] = useState<string[]>(profile?.interests ?? []);
+  const [pendingInterests, setPendingInterests] = useState<string[]>(profile?.interests ?? []);
   const [interestsSaving, setInterestsSaving] = useState(false);
   const [interestsSaved, setInterestsSaved] = useState(false);
+  const interestsDirty = JSON.stringify([...pendingInterests].sort()) !== JSON.stringify([...interests].sort());
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains('dark'));
   }, []);
 
-  async function saveInterests(next: string[]) {
-    setInterests(next);
+  async function saveInterests() {
     setInterestsSaving(true);
     setInterestsSaved(false);
-    try { await dilly.patch('/profile', { interests: next }); setInterestsSaved(true); setTimeout(() => setInterestsSaved(false), 2000); }
+    try {
+      const p = await dilly.patch('/profile', { interests: pendingInterests });
+      setInterests(pendingInterests);
+      setProfile(p);
+      setInterestsSaved(true);
+      setTimeout(() => setInterestsSaved(false), 2000);
+    }
     catch { /* ignore */ }
     finally { setInterestsSaving(false); }
   }
@@ -227,14 +234,26 @@ export default function SettingsPage() {
             <SectionCard>
               <Row>
                 <p className="text-xs text-txt-3 mb-4">Pick the fields you want to explore — Dilly will tailor job matches, coaching, and resume templates to your interests.</p>
-                <InterestsPicker selected={interests} onChange={saveInterests} />
+                <InterestsPicker selected={pendingInterests} onChange={setPendingInterests} />
               </Row>
               <Row border={false}>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-txt-3">{interests.length === 0 ? 'No interests selected' : `${interests.length} field${interests.length === 1 ? '' : 's'} selected`}</p>
-                  <span className="text-xs" style={{ color: interestsSaved ? '#16a34a' : 'transparent', fontWeight: 600, transition: 'color 0.2s' }}>
-                    {interestsSaving ? '...' : 'Saved'}
-                  </span>
+                  <p className="text-xs text-txt-3">{pendingInterests.length === 0 ? 'No interests selected' : `${pendingInterests.length} field${pendingInterests.length === 1 ? '' : 's'} selected`}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs" style={{ color: interestsSaved ? '#16a34a' : 'transparent', fontWeight: 600, transition: 'color 0.2s' }}>
+                      Saved
+                    </span>
+                    {interestsDirty && (
+                      <button
+                        onClick={saveInterests}
+                        disabled={interestsSaving}
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                        style={{ background: 'rgba(59,76,192,0.1)', color: '#2B3A8E', border: '1px solid rgba(59,76,192,0.2)', opacity: interestsSaving ? 0.6 : 1 }}
+                      >
+                        {interestsSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </Row>
             </SectionCard>

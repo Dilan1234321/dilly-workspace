@@ -173,6 +173,30 @@ async def get_profile(request: Request):
                         _add(m, "major")
                     for m in minors:
                         _add(m, "minor")
+                    # Interest cohorts: stored as cohort label strings, not majors.
+                    # They show up as an additional lens — no score impact.
+                    interests_list = profile.get("interests") or []
+                    for cohort_label in interests_list:
+                        if not cohort_label or cohort_label in seen:
+                            continue
+                        cfg = COHORT_SCORING_CONFIG.get(cohort_label, {})
+                        if not cfg:
+                            continue  # unknown cohort label — skip
+                        bar = cfg.get("recruiter_bar", 70)
+                        w = cfg.get("weights", {"smart": 0.333, "grit": 0.333, "build": 0.334})
+                        exp_s = _expected_dim(w.get("smart", 0.333), bar)
+                        exp_g = _expected_dim(w.get("grit",  0.333), bar)
+                        exp_b = _expected_dim(w.get("build", 0.334), bar)
+                        seen[cohort_label] = {
+                            "cohort": cohort_label,
+                            "level": "interest",
+                            "field": cohort_label,
+                            "smart": _cohort_dim_score(s, exp_s),
+                            "grit":  _cohort_dim_score(g, exp_g),
+                            "build": _cohort_dim_score(b, exp_b),
+                            "dilly_score": _dilly_for_cohort(cohort_label, s, g, b),
+                            "weight": 0.0,
+                        }
 
                     if seen:
                         # Merge synthesized cohorts into any existing DB-stored cohort_scores.

@@ -426,14 +426,14 @@ async def get_internship_feed(
 
     # Read student scores + cohort for fallback scoring
     cur.execute(
-        "SELECT overall_smart, overall_grit, overall_build, cohort, majors, minors FROM students WHERE id = %s",
+        "SELECT overall_smart, overall_grit, overall_build, cohort, majors, minors, interests FROM students WHERE id = %s",
         (student_id,),
     )
     stu = cur.fetchone()
     s_smart = float(stu["overall_smart"]) if stu and stu["overall_smart"] else 0
     s_grit  = float(stu["overall_grit"])  if stu and stu["overall_grit"]  else 0
     s_build = float(stu["overall_build"]) if stu and stu["overall_build"] else 0
-    # Build set of student cohorts (primary + from majors + from minors)
+    # Build set of student cohorts (primary + from majors + from minors + from interests)
     s_cohort = stu["cohort"] if stu else None
     def _parse_json_list(v):
         if isinstance(v, list): return v
@@ -441,8 +441,9 @@ async def get_internship_feed(
             try: return json.loads(v)
             except Exception: return []
         return []
-    s_majors = _parse_json_list(stu["majors"] if stu else [])
-    s_minors = _parse_json_list(stu["minors"] if stu else [])
+    s_majors    = _parse_json_list(stu["majors"]    if stu else [])
+    s_minors    = _parse_json_list(stu["minors"]    if stu else [])
+    s_interests = _parse_json_list(stu["interests"] if stu else [])
     try:
         from projects.dilly.api.cohort_config import MAJOR_TO_COHORT
         _student_cohorts: set[str] = set()
@@ -452,6 +453,10 @@ async def get_internship_feed(
             _c = MAJOR_TO_COHORT.get(str(_m).strip())
             if _c:
                 _student_cohorts.add(_c)
+        # Interests are stored as cohort label strings — add them directly
+        for _i in s_interests:
+            if _i and isinstance(_i, str):
+                _student_cohorts.add(_i.strip())
     except Exception:
         _student_cohorts = {s_cohort} if s_cohort else set()
 
@@ -583,7 +588,7 @@ async def get_match_stats(request: Request):
         return {"total": 0, "ready": 0, "almost": 0, "gap": 0, "by_type": {}}
 
     cur.execute(
-        "SELECT overall_smart, overall_grit, overall_build, cohort, majors, minors FROM students WHERE id = %s",
+        "SELECT overall_smart, overall_grit, overall_build, cohort, majors, minors, interests FROM students WHERE id = %s",
         (student_id,),
     )
     stu = cur.fetchone()
@@ -597,8 +602,9 @@ async def get_match_stats(request: Request):
             try: return json.loads(v)
             except Exception: return []
         return []
-    s_majors_raw = _pjl(stu["majors"] if stu else [])
-    s_minors_raw = _pjl(stu["minors"] if stu else [])
+    s_majors_raw    = _pjl(stu["majors"]    if stu else [])
+    s_minors_raw    = _pjl(stu["minors"]    if stu else [])
+    s_interests_raw = _pjl(stu["interests"] if stu else [])
     try:
         from projects.dilly.api.cohort_config import MAJOR_TO_COHORT
         _sc: set[str] = set()
@@ -608,6 +614,9 @@ async def get_match_stats(request: Request):
             _c2 = MAJOR_TO_COHORT.get(str(_m).strip())
             if _c2:
                 _sc.add(_c2)
+        for _i in s_interests_raw:
+            if _i and isinstance(_i, str):
+                _sc.add(_i.strip())
     except Exception:
         _sc = {s_cohort} if s_cohort else set()
 
