@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATS Scanner: Dilly</title>
-  <meta name="description" content="See exactly how the six biggest ATS systems parse your resume — before you submit.">
+  <meta name="description" content="See exactly how the six biggest ATS systems parse your resume  -  before you submit.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dilly.css">
@@ -573,7 +573,7 @@
   <!-- ── HERO ── -->
   <section id="ats-hero">
     <p class="ats-eyebrow">ATS Scanner</p>
-    <h1>See what the bots<br>see — before you submit.</h1>
+    <h1>See what the bots<br>see  -  before you submit.</h1>
     <p>Paste your resume below. The scanner checks it against the parsing logic of the six biggest ATS systems and shows you exactly what gets extracted, what gets mangled, and what gets dropped entirely.</p>
   </section>
 
@@ -604,7 +604,7 @@
             <button class="ats-sample-btn bad"  data-quality="bad"  type="button">Weak</button>
           </div>
         </div>
-        <textarea id="ats-input" spellcheck="false" placeholder="Paste your resume here as plain text — or click &quot;Load sample&quot; to see a demo scan."></textarea>
+        <textarea id="ats-input" spellcheck="false" placeholder="Paste your resume here as plain text  -  or click &quot;Load sample&quot; to see a demo scan."></textarea>
         <div id="ats-input-footer">
           <span id="ats-word-count">0 words</span>
           <button class="ats-scan-btn" id="ats-scan-btn" type="button" disabled>Scan resume</button>
@@ -674,7 +674,7 @@
         <div class="ats-sys-card">
           <p class="ats-sys-name">Ashby</p>
           <p class="ats-sys-share">~8% of high-growth startups</p>
-          <p class="ats-sys-desc">Modern, flexible parser. Best at handling varied formats. Weakest at skills inference — must be explicitly listed to be counted.</p>
+          <p class="ats-sys-desc">Modern, flexible parser. Best at handling varied formats. Weakest at skills inference  -  must be explicitly listed to be counted.</p>
         </div>
       </div>
     </div>
@@ -701,24 +701,24 @@
       'Relevant coursework: Financial Modeling, Corporate Finance, Derivatives, Data Analytics',
       '',
       'EXPERIENCE',
-      'Goldman Sachs — Investment Banking Summer Analyst | New York, NY | Jun 2024 – Aug 2024',
+      'Goldman Sachs  -  Investment Banking Summer Analyst | New York, NY | Jun 2024 – Aug 2024',
       '• Built 3-statement LBO model for $420M consumer goods acquisition, presented to MD',
       '• Automated weekly portfolio reporting in Excel VBA, saving 6 hours/week across team',
       '• Supported live M&A deal with $1.2B enterprise value; coordinated diligence materials',
       '',
-      'Raymond James — Equity Research Intern | Tampa, FL | Jan 2024 – May 2024',
+      'Raymond James  -  Equity Research Intern | Tampa, FL | Jan 2024 – May 2024',
       '• Initiated coverage on 4 mid-cap industrials companies; published 12-page equity reports',
       '• Built DCF and comps models for each coverage; average model accuracy within 3.2%',
       '',
       'PROJECTS',
-      'Personal Trading Algorithm — Python, pandas, yfinance',
+      'Personal Trading Algorithm  -  Python, pandas, yfinance',
       '• Built momentum strategy backtested on S&P 500 constituents (2018–2024); 11.4% alpha',
       '',
       'SKILLS',
       'Excel (advanced), Python, SQL, Bloomberg Terminal, FactSet, Capital IQ, PowerPoint',
       '',
       'ACTIVITIES',
-      'Investment Club — VP of Research | CFA Institute Research Challenge Participant',
+      'Investment Club  -  VP of Research | CFA Institute Research Challenge Participant',
     ].join('\n');
 
     var SAMPLE_MEH = [
@@ -733,11 +733,11 @@
       'GPA: 3.1',
       '',
       'Work Experience',
-      'Bank of America — Teller (Part-time)',
+      'Bank of America  -  Teller (Part-time)',
       'Handled customer transactions and assisted with account inquiries',
       'Learned banking systems and improved customer service',
       '',
-      'Target — Sales Associate',
+      'Target  -  Sales Associate',
       'Summer 2023',
       'Helped customers find products, worked the register',
       '',
@@ -773,7 +773,7 @@
 
     var SAMPLE = SAMPLE_GOOD;
 
-    /* ── PARSER RULES (pure regex / string logic — zero AI, zero network) ── */
+    /* ── PARSER RULES (pure regex / string logic  -  zero AI, zero network) ── */
 
     var SYSTEMS = {
       greenhouse: { name: 'Greenhouse', strictness: 0.82 },
@@ -928,7 +928,7 @@
           note: skills.length < 5 ? 'Fewer than 5 skills extracted. Add a dedicated SKILLS section with comma-separated items.' : null });
       } else {
         fields.push({ section: 'Skills', key: 'Skills section', val: null, status: sysKey === 'ashby' ? 'fail' : 'warn',
-          note: sysKey === 'ashby' ? 'Ashby requires an explicit skills list — it does not infer from bullets.' : 'No SKILLS section found. Keyword matching will be weak.' });
+          note: sysKey === 'ashby' ? 'Ashby requires an explicit skills list  -  it does not infer from bullets.' : 'No SKILLS section found. Keyword matching will be weak.' });
       }
 
       /* system-specific extras */
@@ -965,7 +965,7 @@
     /* ── DOM REFS ── */
     var textarea  = document.getElementById('ats-input');
     var scanBtn   = document.getElementById('ats-scan-btn');
-    var sampleBtn = null; /* removed — replaced by group buttons below */
+    var sampleBtn = null; /* removed  -  replaced by group buttons below */
     var wordCount = document.getElementById('ats-word-count');
     var tabs      = Array.from(document.querySelectorAll('.ats-tab'));
     var emptyEl   = document.getElementById('ats-empty-state');
@@ -1090,6 +1090,10 @@
 
   }());
   </script>
+
+  <footer style="padding:2.5rem 1.5rem;text-align:center;background:#f0f1f8;border-top:1px solid rgba(43,58,142,0.08)">
+    <a href="index.html" style="display:inline-block;line-height:0"><img src="dilly-wordmark.png" alt="Dilly" style="height:22px;opacity:0.45"></a>
+  </footer>
 
   <script src="dilly.js"></script>
 </body>
