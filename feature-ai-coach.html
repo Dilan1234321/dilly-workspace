@@ -506,8 +506,9 @@
     var pos = { x: 0, y: 0 }, vel = { x: 0, y: 0 }, tgt = { x: 0, y: 0 };
     var smileTgt = 0.35, smileCur = 0.35;
     var eyeScaleTgt = 1.0, eyeScaleCur = 1.0;
+    var eyeSkewTgt = 1.0, eyeSkewCur = 1.0, eyeSkewSide = 1;
     var currentMode = 'reading';
-    var ptTimer, psTimer;
+    var ptTimer, psTimer, skewTimer, skewResetTimer;
 
     var modes = {
       reading:   { moveInterval: 3200, maxDist: 10,  smileMin: 0.12, smileMax: 0.38, spring: 0.048, eyeScale: 1.0  },
@@ -519,9 +520,17 @@
     function conf() { return modes[currentMode] || modes.reading; }
 
     function pickTarget() {
-      var m = conf(), a = Math.random() * Math.PI * 2, d = m.maxDist * (0.5 + Math.random() * 0.5);
-      tgt.x = Math.cos(a) * d;
-      tgt.y = Math.sin(a) * d;
+      var m = conf(), a, d;
+      if (currentMode === 'interview') {
+        /* A: keep X close to center; C: bias movement vertically (slow nod) */
+        tgt.x = (Math.random() - 0.5) * m.maxDist * 0.45;
+        tgt.y = (Math.random() - 0.5) * m.maxDist * 1.8;
+      } else {
+        a = Math.random() * Math.PI * 2;
+        d = m.maxDist * (0.5 + Math.random() * 0.5);
+        tgt.x = Math.cos(a) * d;
+        tgt.y = Math.sin(a) * d;
+      }
     }
 
     function pickSmile() {
@@ -541,12 +550,31 @@
       psTimer = setTimeout(scheduleSmile, conf().moveInterval * 0.75 + Math.random() * 400);
     }
 
+    /* B: raised-eyebrow flicker — fires periodically in interview mode */
+    function triggerSkew() {
+      if (currentMode !== 'interview') return;
+      eyeSkewTgt = 1.26;
+      eyeSkewSide = Math.random() < 0.5 ? 1 : -1;
+      clearTimeout(skewResetTimer);
+      skewResetTimer = setTimeout(function () { eyeSkewTgt = 1.0; }, 750);
+      skewTimer = setTimeout(triggerSkew, 3000 + Math.random() * 2800);
+    }
+
     window.setDillyMode = function (m) {
       if (m === currentMode) return;
+      /* leaving interview — cancel skew */
+      if (currentMode === 'interview') {
+        clearTimeout(skewTimer); clearTimeout(skewResetTimer);
+        eyeSkewTgt = 1.0;
+      }
       currentMode = m;
       pickTarget();
       pickSmile();
       eyeScaleTgt = modes[m] ? modes[m].eyeScale : 1.0;
+      /* entering interview — schedule first skew */
+      if (m === 'interview') {
+        skewTimer = setTimeout(triggerSkew, 1800 + Math.random() * 1500);
+      }
       var circle = document.getElementById('face-circle');
       if (circle) {
         circle.classList.remove('mode-pulse');
@@ -563,16 +591,20 @@
       pos.y += vel.y;
       smileCur += (smileTgt - smileCur) * 0.065;
       eyeScaleCur += (eyeScaleTgt - eyeScaleCur) * 0.065;
+      eyeSkewCur += (eyeSkewTgt - eyeSkewCur) * 0.07;
 
       var s = (W * 0.44 / 2) / 19;
       var eyeR = 2.8 * s * eyeScaleCur;
+      /* B: asymmetric eye — one side gets the skew multiplier */
+      var eyeRL = eyeR * (eyeSkewSide < 0 ? eyeSkewCur : 1.0);
+      var eyeRR = eyeR * (eyeSkewSide > 0 ? eyeSkewCur : 1.0);
       ctx.clearRect(0, 0, W, H);
       ctx.save();
       ctx.translate(W / 2 + pos.x, H / 2 + pos.y);
       ctx.fillStyle = NAVY;
 
-      ctx.beginPath(); ctx.arc(-8 * s, -4 * s, eyeR, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc( 8 * s, -4 * s, eyeR, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(-8 * s, -4 * s, eyeRL, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc( 8 * s, -4 * s, eyeRR, 0, Math.PI * 2); ctx.fill();
 
       ctx.beginPath();
       ctx.moveTo(-8 * s, 5 * s);
