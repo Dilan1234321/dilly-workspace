@@ -6,20 +6,20 @@
   <title>Application Tracker: Dilly</title>
   <meta name="description" content="Your full internship pipeline — from saved to offer — in one place. Auto-entries, deadline nudges, and zero spreadsheets.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dilly.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html {
       font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f5f6ff;
+      background: #f0f1f8;
       color: #0d0d0d;
       overflow-x: hidden;
     }
     body { overflow-x: hidden; }
 
-    /* ── TOP BAR (nav + mini header) ── */
+    /* ── STICKY TOPBAR ── */
     #tk-topbar {
       background: #fff;
       border-bottom: 1px solid rgba(43,58,142,0.08);
@@ -33,182 +33,334 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
-      border-bottom: 1px solid rgba(43,58,142,0.06);
-      background: #fff;
+      padding: 0.9rem clamp(1.25rem, 3vw, 2.5rem);
+      gap: 1.5rem;
     }
 
     #tk-appbar-left {
       display: flex;
       align-items: center;
-      gap: 1.25rem;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+
+    .tk-avatar-ring {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2B3A8E, #4f63c4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
     }
 
     #tk-app-title {
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       font-weight: 800;
       color: #0d0d0d;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
     }
 
     #tk-app-sub {
-      font-size: 0.65rem;
+      font-size: 0.64rem;
       font-weight: 600;
-      color: rgba(43,58,142,0.45);
+      color: rgba(43,58,142,0.4);
       letter-spacing: 0.04em;
+      margin-top: 0.1rem;
     }
 
+    /* stats strip */
     #tk-stats-row {
       display: flex;
-      gap: 1.75rem;
-      align-items: center;
+      gap: 0.25rem;
+      align-items: stretch;
+      background: rgba(43,58,142,0.04);
+      border-radius: 12px;
+      padding: 0.25rem;
     }
 
     .tk-stat {
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 1.1rem;
+      border-radius: 8px;
+      transition: background 0.15s;
+      cursor: default;
     }
+
+    .tk-stat:hover {
+      background: rgba(43,58,142,0.07);
+    }
+
     .tk-stat-val {
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       font-weight: 800;
       color: #2B3A8E;
       line-height: 1;
     }
     .tk-stat-label {
-      font-size: 0.56rem;
+      font-size: 0.54rem;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: rgba(43,58,142,0.4);
+      color: rgba(43,58,142,0.38);
       margin-top: 0.15rem;
+    }
+
+    .tk-stat--highlight .tk-stat-val { color: #16a34a; }
+    .tk-stat--highlight .tk-stat-label { color: rgba(22,163,74,0.5); }
+
+    /* pipeline progress bar */
+    #tk-pipeline-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: rgba(43,58,142,0.04);
+      border-radius: 100px;
+      padding: 0.3rem 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .tk-pipe-step {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      padding: 0.25rem 0.7rem;
+      border-radius: 100px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .tk-pipe-step.active {
+      background: #2B3A8E;
+      color: #fff;
+    }
+
+    .tk-pipe-arrow {
+      font-size: 0.5rem;
+      color: rgba(43,58,142,0.2);
+      margin: 0 0.1rem;
     }
 
     #tk-add-btn {
       font-family: inherit;
       font-size: 0.7rem;
       font-weight: 800;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      padding: 0.45rem 1.1rem;
-      border-radius: 100px;
+      padding: 0.55rem 1.2rem;
+      border-radius: 10px;
       border: none;
       background: #2B3A8E;
       color: #fff;
       cursor: pointer;
-      transition: opacity 0.2s;
+      transition: opacity 0.2s, transform 0.15s;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
-    #tk-add-btn:hover { opacity: 0.85; }
+    #tk-add-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    #tk-add-btn:active { transform: translateY(0); }
 
-    /* hint banner */
+    /* hint strip */
     #tk-hint {
-      padding: 0.55rem clamp(1rem, 3vw, 2.5rem);
-      background: rgba(43,58,142,0.04);
-      border-bottom: 1px solid rgba(43,58,142,0.06);
-      font-size: 0.65rem;
+      padding: 0.5rem clamp(1.25rem, 3vw, 2.5rem);
+      background: rgba(43,58,142,0.03);
+      border-top: 1px solid rgba(43,58,142,0.05);
+      font-size: 0.63rem;
       font-weight: 600;
-      color: rgba(43,58,142,0.5);
-      text-align: center;
-      letter-spacing: 0.04em;
+      color: rgba(43,58,142,0.42);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      letter-spacing: 0.03em;
+    }
+
+    #tk-hint::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(43,58,142,0.25);
+      flex-shrink: 0;
     }
 
     /* ── BOARD ── */
     #tk-board {
       display: flex;
       gap: 1rem;
-      padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 2.5rem;
+      padding: 1.5rem clamp(1.25rem, 2.5vw, 2.5rem) 3rem;
       overflow-x: auto;
-      min-height: calc(100vh - 200px);
+      min-height: calc(100vh - 160px);
       align-items: flex-start;
       -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(43,58,142,0.15) transparent;
     }
 
     /* ── COLUMN ── */
     .tk-col {
-      flex: 0 0 220px;
-      min-width: 220px;
+      flex: 0 0 260px;
+      min-width: 260px;
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
+      gap: 0.65rem;
     }
 
     .tk-col-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 0.25rem 0.5rem;
+      padding: 0.6rem 0.85rem;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid rgba(43,58,142,0.07);
     }
 
+    .tk-col-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .tk-col-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tk-col--saved    .tk-col-dot { background: #94a3b8; }
+    .tk-col--applied  .tk-col-dot { background: #f59e0b; }
+    .tk-col--screening .tk-col-dot { background: #3b82f6; }
+    .tk-col--interview .tk-col-dot { background: #a855f7; }
+    .tk-col--offer    .tk-col-dot { background: #22c55e; }
+
     .tk-col-name {
-      font-size: 0.65rem;
+      font-size: 0.68rem;
       font-weight: 800;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: rgba(0,0,0,0.45);
+      color: rgba(0,0,0,0.55);
     }
 
     .tk-col-count {
-      font-size: 0.65rem;
+      font-size: 0.68rem;
       font-weight: 700;
-      color: rgba(0,0,0,0.25);
+      background: rgba(43,58,142,0.07);
+      color: rgba(43,58,142,0.55);
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* ── CARD ── */
     .tk-card {
       background: #fff;
-      border: 1px solid rgba(43,58,142,0.09);
+      border: 1px solid rgba(43,58,142,0.08);
+      border-left: 3px solid transparent;
       border-radius: 12px;
-      padding: 1rem;
+      padding: 1rem 1rem 0.85rem;
       cursor: pointer;
       transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s, border-color 0.18s;
       position: relative;
       user-select: none;
     }
+
+    .tk-col--saved    .tk-card { border-left-color: #94a3b8; }
+    .tk-col--applied  .tk-card { border-left-color: #f59e0b; }
+    .tk-col--screening .tk-card { border-left-color: #3b82f6; }
+    .tk-col--interview .tk-card { border-left-color: #a855f7; }
+    .tk-col--offer    .tk-card { border-left-color: #22c55e; }
+
     .tk-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(43,58,142,0.1);
-      border-color: rgba(43,58,142,0.2);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(43,58,142,0.1);
     }
     .tk-card:active { transform: translateY(0); }
 
-    /* advance hint on hover */
+    /* advance hint */
     .tk-card::after {
       content: attr(data-next-label);
       position: absolute;
-      bottom: 0.6rem;
-      right: 0.75rem;
+      top: 0.75rem;
+      right: 0.85rem;
       font-size: 0.58rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: rgba(43,58,142,0.35);
+      color: rgba(43,58,142,0.3);
       opacity: 0;
       transition: opacity 0.15s;
     }
     .tk-card:hover::after { opacity: 1; }
 
-    /* moving animation */
+    /* pop animation */
     .tk-card.moving {
       animation: cardPop 0.38s cubic-bezier(0.34,1.56,0.64,1);
     }
     @keyframes cardPop {
-      0%   { transform: scale(0.94); opacity: 0.6; }
-      60%  { transform: scale(1.03); }
-      100% { transform: scale(1);    opacity: 1; }
+      0%   { transform: scale(0.93) translateY(4px); opacity: 0.6; }
+      60%  { transform: scale(1.03) translateY(-2px); }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
     }
 
+    /* card internals */
+    .tk-card-top {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .tk-co-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+      color: #fff;
+    }
+
+    .tk-card-info { flex: 1; min-width: 0; }
+
     .tk-card-company {
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       font-weight: 800;
       color: #0d0d0d;
-      margin-bottom: 0.2rem;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .tk-card-role {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       font-weight: 600;
-      color: rgba(0,0,0,0.45);
-      margin-bottom: 0.65rem;
-      line-height: 1.35;
+      color: rgba(0,0,0,0.42);
+      margin-top: 0.1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
     }
 
     .tk-card-footer {
@@ -219,59 +371,67 @@
     }
 
     .tk-card-track {
-      font-size: 0.6rem;
+      font-size: 0.59rem;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.07em;
       text-transform: uppercase;
-      color: rgba(43,58,142,0.45);
+      color: rgba(43,58,142,0.38);
+      background: rgba(43,58,142,0.05);
+      padding: 0.2rem 0.55rem;
+      border-radius: 100px;
     }
 
     .tk-card-badge {
       font-size: 0.58rem;
       font-weight: 700;
-      letter-spacing: 0.07em;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
-      padding: 0.22rem 0.55rem;
+      padding: 0.22rem 0.6rem;
       border-radius: 100px;
     }
 
-    /* badge colours per stage */
-    .tk-badge-saved      { background: rgba(43,58,142,0.08);  color: #2B3A8E; }
-    .tk-badge-applied    { background: rgba(234,179,8,0.12);  color: #92400e; }
-    .tk-badge-screening  { background: rgba(59,130,246,0.12); color: #1d4ed8; }
-    .tk-badge-interview  { background: rgba(168,85,247,0.12); color: #7e22ce; }
-    .tk-badge-offer      { background: rgba(22,163,74,0.12);  color: #15803d; }
+    .tk-badge-saved      { background: rgba(148,163,184,0.15); color: #475569; }
+    .tk-badge-applied    { background: rgba(245,158,11,0.12);  color: #92400e; }
+    .tk-badge-screening  { background: rgba(59,130,246,0.12);  color: #1d4ed8; }
+    .tk-badge-interview  { background: rgba(168,85,247,0.12);  color: #7e22ce; }
+    .tk-badge-offer      { background: rgba(34,197,94,0.13);   color: #15803d; }
 
-    /* deadline pill */
+    /* deadline */
     .tk-card-deadline {
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       font-weight: 700;
-      color: rgba(0,0,0,0.28);
-      margin-top: 0.4rem;
+      color: rgba(0,0,0,0.3);
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid rgba(43,58,142,0.06);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
     }
-    .tk-card-deadline.urgent { color: #dc2626; }
+    .tk-card-deadline.urgent {
+      color: #dc2626;
+    }
 
-    /* offer card glow */
+    /* offer card */
     .tk-col--offer .tk-card {
-      border-color: rgba(22,163,74,0.25);
-      background: linear-gradient(135deg, #fff 0%, rgba(22,163,74,0.03) 100%);
+      background: linear-gradient(135deg, #fff 0%, rgba(34,197,94,0.04) 100%);
     }
     .tk-col--offer .tk-card:hover {
-      box-shadow: 0 6px 24px rgba(22,163,74,0.14);
+      box-shadow: 0 8px 28px rgba(34,197,94,0.13);
     }
 
-    /* empty column placeholder */
+    /* empty col */
     .tk-col-empty {
-      border: 1.5px dashed rgba(43,58,142,0.12);
+      border: 1.5px dashed rgba(43,58,142,0.1);
       border-radius: 12px;
-      height: 80px;
+      height: 88px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.65rem;
+      font-size: 0.63rem;
       font-weight: 600;
-      color: rgba(43,58,142,0.22);
-      letter-spacing: 0.06em;
+      color: rgba(43,58,142,0.2);
+      letter-spacing: 0.04em;
     }
 
     /* ── TOAST ── */
@@ -279,13 +439,14 @@
       position: fixed;
       bottom: 2rem;
       left: 50%;
-      transform: translateX(-50%) translateY(8px);
+      transform: translateX(-50%) translateY(12px);
       background: #0d0d0d;
       color: #fff;
-      font-size: 0.75rem;
+      font-size: 0.76rem;
       font-weight: 700;
-      padding: 0.65rem 1.5rem;
+      padding: 0.7rem 1.6rem;
       border-radius: 100px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       opacity: 0;
       transition: opacity 0.25s, transform 0.25s;
       pointer-events: none;
@@ -304,7 +465,7 @@
       text-align: center;
     }
     #tk-cta h2 {
-      font-size: clamp(1.9rem, 4vw, 3.5rem);
+      font-size: clamp(2rem, 4vw, 3.5rem);
       font-weight: 800;
       color: #fff;
       letter-spacing: -0.03em;
@@ -312,7 +473,7 @@
     }
     #tk-cta p {
       font-size: 0.95rem;
-      color: rgba(255,255,255,0.55);
+      color: rgba(255,255,255,0.5);
       line-height: 1.75;
       max-width: 44ch;
       margin: 0 auto 2.25rem;
@@ -327,16 +488,21 @@
       text-decoration: none;
       padding: 0.9rem 2.25rem;
       border-radius: 100px;
-      transition: opacity 0.2s;
+      transition: opacity 0.2s, transform 0.15s;
     }
-    .tk-btn:hover { opacity: 0.85; }
+    .tk-btn:hover { opacity: 0.87; transform: translateY(-1px); }
     .tk-btn--white { background: #fff; color: #2B3A8E; }
 
     /* ── MOBILE ── */
-    @media (max-width: 640px) {
+    @media (max-width: 768px) {
       #tk-stats-row { display: none; }
+      #tk-pipeline-bar { display: none; }
       #tk-hint { font-size: 0.6rem; }
-      .tk-col { flex: 0 0 185px; min-width: 185px; }
+      .tk-col { flex: 0 0 230px; min-width: 230px; }
+    }
+    @media (max-width: 480px) {
+      .tk-col { flex: 0 0 210px; min-width: 210px; }
+      #tk-add-btn { font-size: 0.62rem; padding: 0.5rem 0.9rem; }
     }
   </style>
 </head>
@@ -408,29 +574,44 @@
     <!-- app header -->
     <div id="tk-appbar">
       <div id="tk-appbar-left">
+        <div class="tk-avatar-ring">DK</div>
         <div>
           <div id="tk-app-title">My Pipeline</div>
-          <div id="tk-app-sub">Spring 2025 &middot; Finance</div>
+          <div id="tk-app-sub">Spring 2025 &middot; Finance &amp; Consulting</div>
         </div>
       </div>
+
       <div id="tk-stats-row">
         <div class="tk-stat">
           <div class="tk-stat-val" id="tk-stat-total">8</div>
           <div class="tk-stat-label">Tracked</div>
         </div>
         <div class="tk-stat">
-          <div class="tk-stat-val" id="tk-stat-applied">4</div>
+          <div class="tk-stat-val" id="tk-stat-applied">6</div>
           <div class="tk-stat-label">Applied</div>
         </div>
         <div class="tk-stat">
           <div class="tk-stat-val" id="tk-stat-active">3</div>
           <div class="tk-stat-label">Active</div>
         </div>
-        <div class="tk-stat">
+        <div class="tk-stat tk-stat--highlight">
           <div class="tk-stat-val" id="tk-stat-offers">1</div>
           <div class="tk-stat-label">Offers</div>
         </div>
       </div>
+
+      <div id="tk-pipeline-bar">
+        <div class="tk-pipe-step" data-stage="0">Saved</div>
+        <div class="tk-pipe-arrow">›</div>
+        <div class="tk-pipe-step" data-stage="1">Applied</div>
+        <div class="tk-pipe-arrow">›</div>
+        <div class="tk-pipe-step" data-stage="2">Screening</div>
+        <div class="tk-pipe-arrow">›</div>
+        <div class="tk-pipe-step" data-stage="3">Interview</div>
+        <div class="tk-pipe-arrow">›</div>
+        <div class="tk-pipe-step" data-stage="4">Offer</div>
+      </div>
+
       <button id="tk-add-btn" type="button">+ Add role</button>
     </div>
 
@@ -440,38 +621,53 @@
   <!-- ── KANBAN BOARD ── -->
   <div id="tk-board" role="region" aria-label="Application pipeline">
 
-    <div class="tk-col" data-stage="0" id="col-saved">
+    <div class="tk-col tk-col--saved" data-stage="0" id="col-saved">
       <div class="tk-col-header">
-        <span class="tk-col-name">Saved</span>
-        <span class="tk-col-count" id="cnt-saved"></span>
+        <div class="tk-col-header-left">
+          <div class="tk-col-dot"></div>
+          <span class="tk-col-name">Saved</span>
+        </div>
+        <div class="tk-col-count" id="cnt-saved"></div>
       </div>
     </div>
 
-    <div class="tk-col" data-stage="1" id="col-applied">
+    <div class="tk-col tk-col--applied" data-stage="1" id="col-applied">
       <div class="tk-col-header">
-        <span class="tk-col-name">Applied</span>
-        <span class="tk-col-count" id="cnt-applied"></span>
+        <div class="tk-col-header-left">
+          <div class="tk-col-dot"></div>
+          <span class="tk-col-name">Applied</span>
+        </div>
+        <div class="tk-col-count" id="cnt-applied"></div>
       </div>
     </div>
 
-    <div class="tk-col" data-stage="2" id="col-screening">
+    <div class="tk-col tk-col--screening" data-stage="2" id="col-screening">
       <div class="tk-col-header">
-        <span class="tk-col-name">Screening</span>
-        <span class="tk-col-count" id="cnt-screening"></span>
+        <div class="tk-col-header-left">
+          <div class="tk-col-dot"></div>
+          <span class="tk-col-name">Screening</span>
+        </div>
+        <div class="tk-col-count" id="cnt-screening"></div>
       </div>
     </div>
 
-    <div class="tk-col" data-stage="3" id="col-interview">
+    <div class="tk-col tk-col--interview" data-stage="3" id="col-interview">
       <div class="tk-col-header">
-        <span class="tk-col-name">Interview</span>
-        <span class="tk-col-count" id="cnt-interview"></span>
+        <div class="tk-col-header-left">
+          <div class="tk-col-dot"></div>
+          <span class="tk-col-name">Interview</span>
+        </div>
+        <div class="tk-col-count" id="cnt-interview"></div>
       </div>
     </div>
 
     <div class="tk-col tk-col--offer" data-stage="4" id="col-offer">
       <div class="tk-col-header">
-        <span class="tk-col-name">Offer</span>
-        <span class="tk-col-count" id="cnt-offer"></span>
+        <div class="tk-col-header-left">
+          <div class="tk-col-dot"></div>
+          <span class="tk-col-name">Offer</span>
+        </div>
+        <div class="tk-col-count" id="cnt-offer"></div>
       </div>
     </div>
 
@@ -490,19 +686,38 @@
   <script>
   (function () {
 
-    var STAGES   = ['saved', 'applied', 'screening', 'interview', 'offer'];
+    var STAGES       = ['saved', 'applied', 'screening', 'interview', 'offer'];
     var STAGE_LABELS = ['Saved', 'Applied', 'Screening', 'Interview', 'Offer'];
     var NEXT_LABELS  = ['→ Applied', '→ Screening', '→ Interview', '→ Offer', '✓ Done'];
 
+    /* avatar palettes keyed by initial letter */
+    var PALETTES = {
+      G: '#1a2f6e', C: '#7c3aed', M: '#0369a1', B: '#065f46',
+      J: '#9a3412', Bk: '#1e3a5f', Bc: '#6d28d9', default: '#374151'
+    };
+
+    function avatarColor(company) {
+      var first = company[0];
+      if (company.startsWith('Bl')) return '#065f46';
+      if (company.startsWith('Bc')) return '#6d28d9';
+      return PALETTES[first] || PALETTES.default;
+    }
+
+    function initials(company) {
+      var words = company.split(' ');
+      if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+      return company.slice(0, 2).toUpperCase();
+    }
+
     var CARDS = [
-      { id: 0, company: 'Goldman Sachs',    role: 'Investment Banking Analyst',  track: 'Finance',    stage: 0, deadline: 'Deadline Dec 1',  urgent: false },
-      { id: 1, company: 'Citadel',          role: 'Quantitative Research Intern',track: 'Finance',    stage: 0, deadline: 'Deadline Nov 15', urgent: true  },
-      { id: 2, company: 'Morgan Stanley',   role: 'Sales & Trading Intern',      track: 'Finance',    stage: 1, deadline: null,              urgent: false },
-      { id: 3, company: 'BlackRock',        role: 'Portfolio Management Intern', track: 'Finance',    stage: 1, deadline: null,              urgent: false },
-      { id: 4, company: 'JPMorgan',         role: 'Corporate Finance Intern',    track: 'Finance',    stage: 2, deadline: null,              urgent: false },
-      { id: 5, company: 'McKinsey',         role: 'Business Analyst Intern',     track: 'Consulting', stage: 3, deadline: null,              urgent: false },
-      { id: 6, company: 'BCG',              role: 'Strategy Intern',             track: 'Consulting', stage: 3, deadline: null,              urgent: false },
-      { id: 7, company: 'Blackstone',       role: 'Private Equity Intern',       track: 'Finance',    stage: 4, deadline: null,              urgent: false },
+      { id: 0, company: 'Goldman Sachs',  role: 'Investment Banking Analyst',   track: 'Finance',    stage: 0, deadline: 'Dec 1',   urgent: false },
+      { id: 1, company: 'Citadel',        role: 'Quantitative Research Intern', track: 'Finance',    stage: 0, deadline: 'Nov 15',  urgent: true  },
+      { id: 2, company: 'Morgan Stanley', role: 'Sales & Trading Intern',       track: 'Finance',    stage: 1, deadline: null,      urgent: false },
+      { id: 3, company: 'BlackRock',      role: 'Portfolio Management Intern',  track: 'Finance',    stage: 1, deadline: null,      urgent: false },
+      { id: 4, company: 'JPMorgan',       role: 'Corporate Finance Intern',     track: 'Finance',    stage: 2, deadline: null,      urgent: false },
+      { id: 5, company: 'McKinsey',       role: 'Business Analyst Intern',      track: 'Consulting', stage: 3, deadline: null,      urgent: false },
+      { id: 6, company: 'BCG',            role: 'Strategy Intern',              track: 'Consulting', stage: 3, deadline: null,      urgent: false },
+      { id: 7, company: 'Blackstone',     role: 'Private Equity Intern',        track: 'Finance',    stage: 4, deadline: null,      urgent: false },
     ];
 
     var colEls = {
@@ -517,18 +732,20 @@
       0: document.getElementById('cnt-saved'),
       1: document.getElementById('cnt-applied'),
       2: document.getElementById('cnt-screening'),
-      3: document.getElementById('cnt-interview'),
+      3: document.getElementById('col-interview') ? document.getElementById('cnt-interview') : null,
       4: document.getElementById('cnt-offer'),
     };
+
+    cntEls[3] = document.getElementById('cnt-interview');
 
     var toastEl   = document.getElementById('tk-toast');
     var toastTimer;
 
-    function badgeClass (stage) {
+    function badgeClass(stage) {
       return ['tk-badge-saved','tk-badge-applied','tk-badge-screening','tk-badge-interview','tk-badge-offer'][stage];
     }
 
-    function makeCard (card) {
+    function makeCard(card) {
       var el = document.createElement('div');
       el.className = 'tk-card';
       el.dataset.id = card.id;
@@ -537,19 +754,29 @@
       el.setAttribute('tabindex', '0');
       el.setAttribute('aria-label', card.company + ' — ' + card.role + '. Click to advance.');
 
-      var badge = '<span class="tk-card-badge ' + badgeClass(card.stage) + '">' + STAGE_LABELS[card.stage] + '</span>';
-      var deadline = card.deadline
-        ? '<div class="tk-card-deadline' + (card.urgent ? ' urgent' : '') + '">' + (card.urgent ? '⚠ ' : '') + card.deadline + '</div>'
+      var badge  = '<span class="tk-card-badge ' + badgeClass(card.stage) + '">' + STAGE_LABELS[card.stage] + '</span>';
+      var deadlineHtml = card.deadline
+        ? '<div class="tk-card-deadline' + (card.urgent ? ' urgent' : '') + '">' +
+            (card.urgent ? '⚠ Deadline ' : '🗓 Deadline ') + card.deadline +
+          '</div>'
         : '';
 
+      var color = avatarColor(card.company);
+      var inits = initials(card.company);
+
       el.innerHTML =
-        '<div class="tk-card-company">' + card.company + '</div>' +
-        '<div class="tk-card-role">' + card.role + '</div>' +
+        '<div class="tk-card-top">' +
+          '<div class="tk-co-avatar" style="background:' + color + '">' + inits + '</div>' +
+          '<div class="tk-card-info">' +
+            '<div class="tk-card-company">' + card.company + '</div>' +
+            '<div class="tk-card-role">' + card.role + '</div>' +
+          '</div>' +
+        '</div>' +
         '<div class="tk-card-footer">' +
           '<span class="tk-card-track">' + card.track + '</span>' +
           badge +
         '</div>' +
-        deadline;
+        deadlineHtml;
 
       el.addEventListener('click', function () { advanceCard(card); });
       el.addEventListener('keydown', function (e) {
@@ -558,21 +785,20 @@
       return el;
     }
 
-    function advanceCard (card) {
+    function advanceCard(card) {
       if (card.stage >= 4) {
-        showToast(card.company + ' offer confirmed. 🎉');
+        showToast('🎉 ' + card.company + ' offer confirmed!');
         return;
       }
       card.stage++;
       renderBoard();
       updateStats();
-      var msg = card.company + ' moved to ' + STAGE_LABELS[card.stage];
-      if (card.stage === 4) msg = '🎉 ' + card.company + ' offer received!';
+      var msg = card.company + ' → ' + STAGE_LABELS[card.stage];
+      if (card.stage === 4) msg = '🎉 ' + card.company + ' — offer received!';
       showToast(msg);
     }
 
-    function renderBoard () {
-      /* clear card contents from each col (keep header) */
+    function renderBoard() {
       Object.values(colEls).forEach(function (col) {
         Array.from(col.querySelectorAll('.tk-card, .tk-col-empty')).forEach(function (el) { el.remove(); });
       });
@@ -582,24 +808,33 @@
       CARDS.forEach(function (card) {
         var el = makeCard(card);
         colEls[card.stage].appendChild(el);
-        /* pop animation on first render skip */
-        if (el._justMoved) { el.classList.add('moving'); el._justMoved = false; }
         counts[card.stage]++;
       });
 
-      /* empty placeholders */
       Object.keys(colEls).forEach(function (stage) {
-        if (counts[stage] === 0) {
+        var s = parseInt(stage);
+        if (counts[s] === 0) {
           var ph = document.createElement('div');
           ph.className = 'tk-col-empty';
           ph.textContent = 'None yet';
-          colEls[stage].appendChild(ph);
+          colEls[s].appendChild(ph);
         }
-        cntEls[stage].textContent = counts[stage] || '';
+        cntEls[s].textContent = counts[s] || '';
+      });
+
+      /* highlight pipeline bar step with most active stage */
+      var activeStage = 0;
+      var maxCount = 0;
+      for (var i = 0; i <= 4; i++) {
+        if (counts[i] > maxCount) { maxCount = counts[i]; activeStage = i; }
+      }
+      document.querySelectorAll('.tk-pipe-step').forEach(function (el) {
+        var s = parseInt(el.dataset.stage);
+        el.classList.toggle('active', s === activeStage);
       });
     }
 
-    function updateStats () {
+    function updateStats() {
       var total   = CARDS.length;
       var applied = CARDS.filter(function(c) { return c.stage >= 1; }).length;
       var active  = CARDS.filter(function(c) { return c.stage >= 2 && c.stage <= 3; }).length;
@@ -610,14 +845,13 @@
       document.getElementById('tk-stat-offers').textContent  = offers;
     }
 
-    function showToast (msg) {
+    function showToast(msg) {
       clearTimeout(toastTimer);
       toastEl.textContent = msg;
       toastEl.classList.add('show');
       toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
     }
 
-    /* add role button — hint only */
     document.getElementById('tk-add-btn').addEventListener('click', function () {
       showToast('In the real app, Dilly auto-imports roles you save.');
     });
