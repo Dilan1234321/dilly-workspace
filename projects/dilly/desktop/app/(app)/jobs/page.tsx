@@ -74,32 +74,39 @@ export default function JobsPage() {
       const listings = data.listings || [];
       const usStates = /^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i;
       const intlWords = /argentina|colombia|poland|warszawa|ireland|london|berlin|paris|tokyo|singapore|sydney|mumbai|bangalore|india|israel|amsterdam|dublin|munich|stockholm|hong kong|brazil|mexico|united kingdom|uk|europe|emea|apac|latam|germany|france|italy|spain|netherlands/i;
+      const broadNational = /^(united states|usa|u\.s\.|nationwide|multiple locations?|various|anywhere)$/i;
       const filtered = listings.filter((l: any) => {
         const state = (l.location_state || '').trim();
         const city = (l.location_city || '').toLowerCase();
         const fullLoc = city + ' ' + state.toLowerCase();
         if (intlWords.test(fullLoc)) return false;
         const isRemote = l.work_mode === 'remote' || city.includes('remote');
-        return isRemote || usStates.test(state) || (!city && !state);
+        const isBroad = broadNational.test(city.trim()) || broadNational.test(state.trim());
+        return isRemote || isBroad || usStates.test(state) || (!city && !state);
       });
       const parsed = filtered.map((l: any) => ({
         id: l.id, title: l.title, company: l.company,
         location: [l.location_city, l.location_state].filter(Boolean).join(', '),
         remote: l.work_mode === 'remote', posted_date: l.posted_date,
         readiness: l.readiness, cohort_readiness: l.cohort_readiness || [],
+        cohort_requirements: l.cohort_requirements || [],
+        required_smart: l.required_smart, required_grit: l.required_grit, required_build: l.required_build,
         description: l.description, apply_url: l.apply_url, source: l.source,
       }));
       setJobs(parsed);
       setRecommended(pickRecommended(parsed));
       if (parsed.length > 0 && !selected) { setSelected(parsed[0]); showJob(parsed[0]); }
-      const counts: Record<string, number> = {};
-      parsed.forEach((j: any) => (j.cohort_readiness || []).forEach((cr: any) => { counts[cr.cohort] = (counts[cr.cohort] || 0) + 1; }));
-      setCohortMatchCounts(counts);
     } catch (e) { console.error(e); }
     setLoading(false);
   }
 
-  async function loadStats() { try { setStats(await dilly.get('/v2/internships/stats')); } catch {} }
+  async function loadStats() {
+    try {
+      const s = await dilly.get('/v2/internships/stats');
+      setStats(s);
+      if (s.cohort_counts) setCohortMatchCounts(s.cohort_counts);
+    } catch {}
+  }
 
   function handleContext(e: React.MouseEvent, job: any) { setCtxMenu({ x: e.clientX, y: e.clientY, job }); }
 

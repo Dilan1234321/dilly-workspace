@@ -21,7 +21,7 @@ os.chdir(_WORKSPACE_ROOT)  # so paths like projects/meridian/... resolve
 _ENV_PATH = os.path.join(_WORKSPACE_ROOT, ".env")
 try:
     from dotenv import load_dotenv
-    load_dotenv(_ENV_PATH)
+    load_dotenv(_ENV_PATH, override=True)
 except ImportError:
     pass
 

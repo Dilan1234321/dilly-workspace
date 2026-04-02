@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import CompanyLogo from './CompanyLogo';
-import { useRightPanel } from '@/app/(app)/layout';
+import { useRightPanel, useProfile } from '@/app/(app)/layout';
 import { dilly } from '@/lib/dilly';
 
 /** Decode HTML entities + strip tags via the browser's own parser.
@@ -28,19 +28,52 @@ function cleanDescription(raw: string): string {
 }
 
 interface CohortReadiness {
-  cohort: string; readiness: string; level: string;
+  cohort: string; readiness: string;
   student_smart?: number; student_grit?: number; student_build?: number;
   required_smart?: number; required_grit?: number; required_build?: number;
 }
 interface Job {
   id: string; title: string; company: string; location: string; remote: boolean;
   posted_date: string; readiness: string; cohort_readiness: CohortReadiness[];
+  cohort_requirements?: { cohort: string; smart?: number; grit?: number; build?: number }[];
+  required_smart?: number; required_grit?: number; required_build?: number;
   description?: string; apply_url?: string; source: string;
 }
 
 export default function JobDetail({ job }: { job: Job }) {
   const { fireProactiveCoach } = useRightPanel();
+  const { profile } = useProfile();
   const router = useRouter();
+
+  // Build fit rows to display. Use cohort_readiness (matched cohorts with student scores)
+  // when available; fall back to all cohort_requirements with overall student scores.
+  const studentSmart = profile?.overall_smart ?? 0;
+  const studentGrit  = profile?.overall_grit  ?? 0;
+  const studentBuild = profile?.overall_build ?? 0;
+
+  const fitRows: CohortReadiness[] = (() => {
+    if (job.cohort_readiness?.length > 0) return job.cohort_readiness;
+    // Fallback: synthesize from raw cohort_requirements
+    const reqs = job.cohort_requirements || [];
+    if (reqs.length > 0) {
+      return reqs.map(req => {
+        const rs = req.smart ?? 0, rg = req.grit ?? 0, rb = req.build ?? 0;
+        const gaps = [
+          rs > 0 && studentSmart < rs ? rs - studentSmart : 0,
+          rg > 0 && studentGrit  < rg ? rg - studentGrit  : 0,
+          rb > 0 && studentBuild < rb ? rb - studentBuild : 0,
+        ].filter(Boolean);
+        const readiness = gaps.length === 0 ? 'ready' : gaps.length === 1 && gaps[0] <= 15 ? 'almost' : 'gap';
+        return { cohort: req.cohort, readiness, required_smart: rs, required_grit: rg, required_build: rb, student_smart: studentSmart, student_grit: studentGrit, student_build: studentBuild };
+      });
+    }
+    // Last resort: flat scores
+    if (job.required_smart || job.required_grit || job.required_build) {
+      const rs = job.required_smart ?? 0, rg = job.required_grit ?? 0, rb = job.required_build ?? 0;
+      return [{ cohort: 'Overall', readiness: job.readiness, required_smart: rs, required_grit: rg, required_build: rb, student_smart: studentSmart, student_grit: studentGrit, student_build: studentBuild }];
+    }
+    return [];
+  })();
   const [fullDescription, setFullDescription] = useState<string | null>(null);
   const [descLoading, setDescLoading] = useState(false);
 
@@ -93,15 +126,15 @@ export default function JobDetail({ job }: { job: Job }) {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {job.cohort_readiness?.length > 0 && (
+        {fitRows.length > 0 && (
           <div className="px-5 pb-4">
             <div className="bg-surface-2 rounded-xl p-4">
               <h3 className="text-[10px] font-bold text-dilly-gold tracking-[0.15em] uppercase mb-4">Your fit</h3>
-              {job.cohort_readiness.map((cr, i) => (
-                <div key={i} className={i < job.cohort_readiness.length - 1 ? 'mb-5 pb-5 border-b border-border-main' : ''}>
+              {fitRows.map((cr, i) => (
+                <div key={i} className={i < fitRows.length - 1 ? 'mb-5 pb-5 border-b border-border-main' : ''}>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[13px] font-semibold text-txt-1">{cr.cohort}</span>
-                    <span className="text-[9px] font-bold text-txt-3 tracking-widest uppercase bg-surface-1 px-2 py-0.5 rounded">{cr.level}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded" style={{ background: cr.readiness === 'ready' ? 'rgba(52,199,89,0.12)' : cr.readiness === 'almost' ? 'rgba(255,159,10,0.12)' : 'rgba(255,69,58,0.12)', color: cr.readiness === 'ready' ? '#34C759' : cr.readiness === 'almost' ? '#FF9F0A' : '#FF453A' }}>{cr.readiness}</span>
                   </div>
                   <DimBar label="Smart" student={cr.student_smart || 0} required={cr.required_smart || 0} />
                   <DimBar label="Grit" student={cr.student_grit || 0} required={cr.required_grit || 0} />
@@ -137,6 +170,7 @@ export default function JobDetail({ job }: { job: Job }) {
             </div>
           </div>
         )}
+
 
         {(fullDescription || job.description) && (
           <div className="px-5 pb-5">

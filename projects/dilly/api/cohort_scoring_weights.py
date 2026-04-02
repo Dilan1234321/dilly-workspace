@@ -1,18 +1,55 @@
 """
-43-Cohort Scoring Weights — Research-backed Smart / Grit / Build weights
-and recruiter bar thresholds for Dilly's career scoring engine.
+22-Cohort Scoring Weights — Deeply-researched Smart / Grit / Build weights,
+recruiter-bar thresholds, and per-dimension definitions for Dilly's career
+scoring engine.
 
-Sources: Web research conducted March 2026 across top employer hiring
-pages, Glassdoor, Wall Street Oasis, eFinancialCareers, SHRM, APICS,
-university career centers, and industry certification bodies.
+DIMENSION DEFINITIONS (change meaning by cohort — see each entry)
+──────────────────────────────────────────────────────────────────
+Smart  = The intellectual/academic proof for THIS field.
+         Not generic GPA — the specific type of knowledge that signals
+         readiness to recruiters in this cohort.
+         (e.g. Smart in Finance = financial modeling + quant GPA;
+               Smart in Design = design theory + UX research methods;
+               Smart in SWE = algorithmic thinking + CS fundamentals)
 
-Methodology:
-  - Smart  = academic rigor (GPA, honors, research, major difficulty, coursework)
-  - Grit   = leadership, ownership, impact (clubs, work experience, initiative)
-  - Build  = shipped work, domain-specific proof (projects, certs, portfolios)
-  - Weights always sum to 100 (stored as integers for clarity)
-  - recruiter_bar = 0-100 threshold above which a student is competitive
-    at the reference benchmark employer
+Grit   = The persistence/drive/ownership proof for THIS field.
+         Leadership and work ethic expressed through the lens of what
+         this cohort actually demands.
+         (e.g. Grit in Finance = 200+ networking coffee chats, GPA under
+               pressure, investment club consistency;
+               Grit in Healthcare = clinical hours logged, pre-med
+               multi-year dedication, patient care endurance)
+
+Build  = Shipped, tangible proof of competence for THIS field.
+         Domain-specific artifacts that a recruiter can point to.
+         (e.g. Build in SWE = deployed apps, GitHub portfolio;
+               Build in Design = Figma case studies, Behance portfolio;
+               Build in Finance = DCF models, pitch decks, deal exposure)
+
+SCALE
+─────
+  100 = perfect — student gets any job they want in this cohort
+  85+ = elite — competitive at Goldman, McKinsey, Google, SpaceX, etc.
+  75–84 = strong — competitive at Tier-2 leaders (Stripe, Brex, Boeing)
+  65–74 = competitive — gets most mid-market internships; some top-tier
+  55–64 = developing — entry-level roles, regional employers
+  <55   = needs significant work before job applications
+
+COHORT WEIGHTS
+──────────────
+  smart + grit + build = 100 (integers for clarity)
+  These weights determine how dilly_score is computed:
+    dilly_score = smart_score×(smart/100) + grit_score×(grit/100) + build_score×(build/100)
+
+  recruiter_bar = minimum dilly_score to be competitive at the reference employer.
+
+SOURCES (April 2026 research)
+──────────────────────────────
+  Hiring data: company career pages, Glassdoor, LinkedIn Salary, Wall Street Oasis,
+  Blind, levels.fyi, eFinancialCareers, LeetCode discuss, Biotech/Pharma forums,
+  SHRM, APICS, IEEE, ASCE, ABA, AMA, PRSA, SPJ, NASW, SEJ.
+  Acceptance rates: company press releases, Bloomberg, Fortune, NYT reporting.
+  Certification bodies: CompTIA, PMI, CFA Institute, CAIA, APICS, NSPE, ABRET.
 """
 from __future__ import annotations
 
@@ -22,1379 +59,1023 @@ COHORT_SCORING_WEIGHTS: dict[str, dict] = {
     # ─────────────────────────────────────────────────────────────────────
     # 1. Software Engineering & CS
     # ─────────────────────────────────────────────────────────────────────
-    # Google/Meta/Amazon: GPA not formally screened (removed requirement
-    # years ago). Hiring is interview-driven: LeetCode, system design,
-    # behavioral. GitHub repos, deployed apps, and open-source
-    # contributions dominate resume screening. Google acceptance rate
-    # ~0.2-0.5% for SWE roles. Build-heavy field.
+    # Reference: Google/Meta/Amazon new-grad SWE (L3/E3/SDE-I).
+    # Google acceptance ~0.2–0.5%. Build dominates because FAANG removed
+    # GPA screens — interview performance (LeetCode/system design) and
+    # portfolio evidence determine outcome. Smart is still non-trivial:
+    # it captures algorithmic fluency, not academic GPA.
+    #
+    # Smart (SWE)  = Algorithmic thinking, data structures, system design,
+    #                CS theory, competitive programming rating, coding interview
+    #                performance, depth of CS coursework
+    # Grit  (SWE)  = Consistency of open-source contributions, persistence
+    #                through hard coding challenges, time invested in
+    #                self-teaching, hackathon participation, side project
+    #                follow-through across semesters
+    # Build (SWE)  = Deployed applications with real users, GitHub portfolio
+    #                activity and code quality, internships at recognized tech
+    #                companies, system complexity demonstrated, open-source
+    #                contributions merged upstream
     "software_engineering_cs": {
         "label": "Software Engineering & CS",
         "smart": 20,
         "grit": 25,
         "build": 55,
         "recruiter_bar": 76,
-        "reference_benchmark": "Google L3 new-grad hiring bar",
+        "reference_benchmark": "Google L3 / Meta E3 new-grad bar",
         "reference_company": "Google",
-        "gpa_screen": None,  # No formal GPA cutoff at FAANG
-        "acceptance_rate": "~0.2-0.5% (Google), <1% (Meta/Amazon)",
+        "gpa_screen": None,
+        "acceptance_rate": "~0.2–0.5% (Google), <1% (Meta/Amazon)",
+        "smart_means": "Algorithmic thinking, DS&A mastery, system design ability, LeetCode performance, CS theory depth",
+        "grit_means": "Consistent building over time, open-source persistence, hackathon follow-through, self-teaching new tech stacks",
+        "build_means": "Deployed apps with users, GitHub portfolio quality/activity, tech internships, system complexity, open-source merged PRs",
         "key_proof_points": [
-            "Deployed applications with real users",
-            "GitHub portfolio with meaningful contributions",
-            "LeetCode / system design interview performance",
-            "Hackathon wins, open-source contributions",
-            "Technical internships at recognized companies",
+            "LeetCode 200+ problems solved, medium/hard focus",
+            "Deployed app with real users (not just localhost)",
+            "GitHub portfolio with meaningful, sustained contributions",
+            "Technical internship at recognized company",
+            "Hackathon win or substantial open-source contribution",
         ],
-        "certifications": ["AWS Solutions Architect", "Google Cloud Professional"],
+        "certifications": ["AWS Solutions Architect", "Google Cloud Professional Engineer"],
         "competition_level": "extreme",
     },
 
     # ─────────────────────────────────────────────────────────────────────
     # 2. Data Science & Analytics
     # ─────────────────────────────────────────────────────────────────────
-    # Google/Meta data roles: SQL and Python are non-negotiable. Tested
-    # on statistics, A/B testing, probability, experimental design.
-    # Recruiters want clarity, numbers, and impact in projects. Mix of
-    # academic foundation (stats) and practical proof (Kaggle, deployed
-    # models, dashboards). Interview process 4-6 weeks.
+    # Reference: Google/Meta DS new-grad, Stripe Analytics, Airbnb DS.
+    # Acceptance ~1–3% for top DS roles. Heavier on Smart than SWE
+    # because statistical reasoning and mathematical foundations are
+    # screened in interviews (probability, A/B testing, SQL). Build
+    # matters: deployed models and Kaggle scores are verifiable proof.
+    #
+    # Smart (DS&A) = Statistical reasoning, ML theory, math foundations,
+    #                SQL + Python/R mastery, experimental design, probability,
+    #                quantitative coursework depth, A/B testing knowledge
+    # Grit  (DS&A) = Kaggle competition persistence, long analysis projects
+    #                seen through to publication, staying current with ML
+    #                advances, iterating on failed model architectures
+    # Build (DS&A) = Deployed ML models with measurable business impact,
+    #                Kaggle competition rankings, published analysis notebooks,
+    #                data pipelines in production, dashboards used by real teams
     "data_science_analytics": {
         "label": "Data Science & Analytics",
-        "smart": 30,
+        "smart": 35,
         "grit": 25,
-        "build": 45,
-        "recruiter_bar": 78,
-        "reference_benchmark": "Google/Meta Data Scientist new-grad bar",
-        "reference_company": "Google",
+        "build": 40,
+        "recruiter_bar": 75,
+        "reference_benchmark": "Google/Stripe/Airbnb DS new-grad bar",
+        "reference_company": "Stripe",
         "gpa_screen": "3.0+ typical; no hard cutoff at FAANG",
-        "acceptance_rate": "~1-3% for top data roles",
+        "acceptance_rate": "~1–3% for top DS roles",
+        "smart_means": "Statistical reasoning, ML theory, math foundations, SQL/Python mastery, A/B testing, probability, experimental design",
+        "grit_means": "Kaggle persistence, long analysis projects followed through, staying current with ML literature, iterating on model failures",
+        "build_means": "Deployed models with business impact, Kaggle rankings, published notebooks, production data pipelines, dashboards used by teams",
         "key_proof_points": [
-            "SQL + Python/R proficiency (non-negotiable)",
+            "SQL and Python/R proficiency (screened in every interview)",
             "A/B testing and experimental design experience",
-            "Kaggle competitions or published analyses",
-            "ML models with measurable business impact",
-            "Dashboards and data pipeline projects",
+            "Kaggle competition or published public analysis",
+            "ML model with quantified business impact",
+            "Data pipeline or dashboard used by real stakeholders",
         ],
-        "certifications": ["Google Data Analytics Certificate", "IBM Data Science"],
+        "certifications": ["Google Data Analytics Certificate", "Databricks Certified Associate"],
         "competition_level": "very_high",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 3. Cybersecurity & IT
+    # 3. Finance & Accounting
     # ─────────────────────────────────────────────────────────────────────
-    # CrowdStrike, Palo Alto Networks: Certifications carry enormous
-    # weight (CompTIA Security+, CEH, PCCET). GPA rarely screened.
-    # Practical skills (CTF competitions, incident response, pen testing)
-    # matter more than academic pedigree. Palo Alto's LEAP program and
-    # Unit 42 Consulting hire entry-level with academy training.
-    "cybersecurity_it": {
-        "label": "Cybersecurity & IT",
-        "smart": 20,
-        "grit": 30,
-        "build": 50,
-        "recruiter_bar": 72,
-        "reference_benchmark": "CrowdStrike / Palo Alto Networks entry-level bar",
-        "reference_company": "CrowdStrike",
-        "gpa_screen": None,  # Certifications matter more than GPA
-        "acceptance_rate": "~3-5% for top security firms",
+    # Reference: Goldman Sachs summer analyst. 360K+ applicants, <0.7%
+    # acceptance. GPA screens are REAL: 3.5+ target school, 3.7+ non-target.
+    # Grit is the strongest signal because networking is the meta-game —
+    # students who land Goldman do 150-300 coffee chats. Smart reflects
+    # quantitative academic performance. Build is lowest because finance
+    # cares less about portfolio artifacts and more about who you know and
+    # how you perform in modeling/case interviews.
+    #
+    # Smart (Finance) = GPA (heavily screened), financial modeling proficiency,
+    #                   quantitative reasoning, accounting/valuation knowledge,
+    #                   Bloomberg Terminal skill, econ/finance coursework depth
+    # Grit  (Finance) = Networking intensity (coffee chats, information interviews),
+    #                   recruiting hustle (applying 100+ roles), investment club
+    #                   consistent involvement, maintaining GPA under pressure,
+    #                   persistence through rejection-heavy process
+    # Build (Finance) = DCF and LBO models built, case competition finishes,
+    #                   pitch deck quality, Bloomberg proficiency demonstrated,
+    #                   deal exposure or investment research published
+    "finance_accounting": {
+        "label": "Finance & Accounting",
+        "smart": 40,
+        "grit": 38,
+        "build": 22,
+        "recruiter_bar": 84,
+        "reference_benchmark": "Goldman Sachs / JPMorgan summer analyst filter",
+        "reference_company": "Goldman Sachs",
+        "gpa_screen": "3.5+ (target school), 3.7+ (non-target) — hard screen",
+        "acceptance_rate": "<0.7% (Goldman internship), ~1–2% (bulge bracket)",
+        "smart_means": "GPA (hard-screened), financial modeling, valuation (DCF/LBO), quant reasoning, Bloomberg/Excel mastery, accounting fundamentals",
+        "grit_means": "Networking intensity (150+ coffee chats), recruiting persistence, investment club leadership, maintaining GPA under pressure, rejection resilience",
+        "build_means": "DCF/LBO models built, case competition placements, Bloomberg proficiency, deal or investment research published, pitch decks",
         "key_proof_points": [
-            "CompTIA Security+, CEH, or PCCET certification",
-            "CTF competition participation and wins",
-            "Penetration testing / vulnerability assessment labs",
-            "Incident response or SOC experience",
-            "Home lab environments documented",
+            "GPA 3.5+ (non-negotiable at bulge bracket banks)",
+            "Investment club or finance society leadership role",
+            "Financial model (DCF/LBO) built from scratch",
+            "Bloomberg Terminal proficiency",
+            "Case/pitch competition participation or win",
         ],
-        "certifications": [
-            "CompTIA Security+", "CompTIA Network+", "CEH",
-            "PCCET (Palo Alto)", "CISSP (advanced)",
-        ],
-        "competition_level": "high",
+        "certifications": ["CFA Level I (in progress)", "Series 7/63", "CPA (accounting track)"],
+        "competition_level": "extreme",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 4. Finance & Accounting
+    # 4. Consulting & Strategy
     # ─────────────────────────────────────────────────────────────────────
-    # Goldman Sachs, JP Morgan, Deloitte: GPA screens are REAL.
-    # Goldman received 360,000+ intern applications in 2025 with <0.7%
-    # acceptance. Target school: 3.5+ GPA; non-target: 3.7+ to pass
-    # resume screen. Leadership (investment clubs, case competitions)
-    # and networking are critical. Financial modeling is key build proof.
-    "finance_accounting": {
-        "label": "Finance & Accounting",
+    # Reference: McKinsey AC, BCG Consultant, Bain AC (~200K applicants,
+    # ~2K spots at McKinsey → <1% overall). GPA 3.5+ minimum, 3.7+ strong.
+    # Grit is highest because case prep is the differentiator — top hires
+    # do 50-100 practice cases. Networking and persistence across multi-
+    # month recruiting cycles matter enormously.
+    #
+    # Smart (Consulting) = Structured problem-solving speed, quantitative
+    #                      analysis, business case frameworks (MECE thinking),
+    #                      GPA + rigorous coursework, market sizing accuracy
+    # Grit  (Consulting) = Case prep volume (50-100+ cases), networking across
+    #                      recruiting cycle, persistence through 5-6 rounds,
+    #                      consistent consulting club involvement, leadership
+    # Build (Consulting) = Case competition wins/finals, client-facing projects,
+    #                      strategy deliverables, operations improvement with
+    #                      quantified results, pro-bono consulting projects
+    "consulting_strategy": {
+        "label": "Consulting & Strategy",
         "smart": 35,
-        "grit": 40,
-        "build": 25,
-        "recruiter_bar": 84,
-        "reference_benchmark": "Goldman Sachs summer analyst filter",
-        "reference_company": "Goldman Sachs",
-        "gpa_screen": "3.5+ (target school), 3.7+ (non-target)",
-        "acceptance_rate": "<0.7% (Goldman internship), ~1-2% (bulge bracket)",
+        "grit": 42,
+        "build": 23,
+        "recruiter_bar": 85,
+        "reference_benchmark": "McKinsey / BCG / Bain Associate Consultant bar",
+        "reference_company": "McKinsey",
+        "gpa_screen": "3.5+ minimum, 3.7+ competitive",
+        "acceptance_rate": "<1% overall (MBB); 15–30% of final-round candidates",
+        "smart_means": "Structured problem-solving, quantitative case analysis, MECE thinking, GPA + rigorous coursework, business frameworks mastery",
+        "grit_means": "Case prep volume (50-100+ cases), multi-month recruiting persistence, consulting club leadership, handling repeated rejection",
+        "build_means": "Case competition wins/finals, client-facing deliverables, strategy projects with quantified outcomes, pro-bono consulting",
         "key_proof_points": [
-            "GPA 3.5+ (hard screen at top banks)",
-            "Investment club / finance society leadership",
-            "Financial modeling and DCF experience",
-            "Bloomberg Terminal proficiency",
-            "Case/pitch competitions, networking events",
+            "GPA 3.6+ with quantitative coursework",
+            "Case competition finals or win (national/regional)",
+            "Consulting club leadership or client project",
+            "50+ practice cases completed",
+            "Significant leadership role (president, VP-level)",
         ],
-        "certifications": ["CFA Level I (in progress)", "Series 7/63", "CPA (accounting)"],
+        "certifications": [],
         "competition_level": "extreme",
     },
 
     # ─────────────────────────────────────────────────────────────────────
     # 5. Marketing & Advertising
     # ─────────────────────────────────────────────────────────────────────
-    # WPP, Ogilvy, HubSpot: Portfolio and measurable campaign results
-    # dominate. GPA rarely screened. Creative proof (campaigns run,
-    # content produced, social accounts grown, ad spend managed) is
-    # what gets you hired. Ogilvy is #1 global agency on WARC for
-    # creative excellence. Soft skills and creative thinking valued.
+    # Reference: Ogilvy/WPP/HubSpot early career programs. GPA not
+    # screened. Portfolio and measurable campaign results dominate.
+    # Build is highest — the interviewer wants to see campaigns run,
+    # social accounts grown, ad spend managed with ROI. Creative thinking
+    # demonstrated through work, not GPA.
+    #
+    # Smart (Marketing) = Market research methodology, digital analytics
+    #                     (Google Analytics, Meta Ads Manager), consumer
+    #                     psychology principles, SEO/SEM understanding,
+    #                     data interpretation and A/B testing literacy
+    # Grit  (Marketing) = Creative iteration cycles, campaign follow-through
+    #                     to measurable results, content consistency over
+    #                     months, client/feedback-driven revision persistence,
+    #                     multi-platform management without dropping quality
+    # Build (Marketing) = Campaigns run with documented metrics (impressions,
+    #                     conversions, CTR), social media accounts grown
+    #                     with follower/engagement proof, ad spend managed
+    #                     with ROI documentation, creative portfolio,
+    #                     agency or brand internship
     "marketing_advertising": {
         "label": "Marketing & Advertising",
-        "smart": 15,
-        "grit": 35,
+        "smart": 20,
+        "grit": 30,
         "build": 50,
         "recruiter_bar": 68,
-        "reference_benchmark": "Ogilvy / WPP early career program bar",
+        "reference_benchmark": "Ogilvy / WPP / HubSpot early career bar",
         "reference_company": "Ogilvy",
-        "gpa_screen": None,  # Portfolio matters, not GPA
-        "acceptance_rate": "~5-10% for top agency programs",
+        "gpa_screen": None,
+        "acceptance_rate": "~5–10% for top agency/brand programs",
+        "smart_means": "Market research, digital analytics (GA4/Meta/TikTok), consumer psychology, SEO/SEM, data interpretation, brand strategy literacy",
+        "grit_means": "Creative iteration and revision cycles, campaign follow-through to results, content consistency over months, client feedback loops",
+        "build_means": "Campaigns run with metrics (impressions, conversions, CTR, ROAS), social accounts grown, ad spend managed with ROI, creative portfolio",
         "key_proof_points": [
-            "Campaign portfolio with measurable results",
-            "Social media accounts grown with metrics",
-            "Content marketing portfolio (blog, video, social)",
-            "Ad spend managed with ROI documentation",
-            "Creative awards or competition wins",
+            "Campaign portfolio with measurable results (not just screenshots)",
+            "Social media accounts managed with growth metrics",
+            "Ad spend managed — even $100 budgets with ROI documented",
+            "Brand or agency internship",
+            "Google Ads / Meta Blueprint / HubSpot certification",
         ],
-        "certifications": [
-            "Google Ads Certification", "HubSpot Inbound Marketing",
-            "Meta Blueprint",
-        ],
+        "certifications": ["Google Ads Certification", "Meta Blueprint", "HubSpot Inbound Marketing"],
         "competition_level": "moderate",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 6. Consulting & Strategy
+    # 6. Management & Operations
     # ─────────────────────────────────────────────────────────────────────
-    # McKinsey, BCG, Bain: Sub-1% overall acceptance rate (~200K
-    # applicants for ~2K spots at McKinsey). GPA 3.5+ minimum, 3.7+
-    # strong. Case competition wins and consulting club experience
-    # matter enormously. Leadership roles are weighted heavily.
-    # 10-15% get first-round interviews; 20-30% of final-round get offers.
-    "consulting_strategy": {
-        "label": "Consulting & Strategy",
+    # Reference: Amazon Pathways program, Target GLTDP, GE Operations
+    # Management. Grit-dominant because operations is about leading
+    # teams and delivering under pressure. Smart captures process
+    # optimization and data-driven decision-making (not academic GPA).
+    # Build is quantified operational impact — efficiency % improvements.
+    #
+    # Smart (Ops)  = Process optimization methodology, supply chain
+    #                fundamentals, data-driven decision frameworks,
+    #                Six Sigma principles, ERP system literacy, financial
+    #                acumen for operations (P&L reading, cost analysis)
+    # Grit  (Ops)  = Leading teams through ambiguity, delivering results
+    #                across multi-month projects, managing cross-functional
+    #                stakeholders, consistently meeting deadlines under
+    #                resource constraints, ownership of problems end-to-end
+    # Build (Ops)  = Processes improved with quantified outcomes (cost
+    #                saved, time reduced, efficiency %), teams led with
+    #                headcount and results, ops internship at recognized
+    #                company, Lean/Six Sigma project documented
+    "management_operations": {
+        "label": "Management & Operations",
+        "smart": 25,
+        "grit": 43,
+        "build": 32,
+        "recruiter_bar": 72,
+        "reference_benchmark": "Amazon Pathways / Target GLTDP bar",
+        "reference_company": "Amazon",
+        "gpa_screen": "3.0+ preferred, not hard cutoff",
+        "acceptance_rate": "~5–8% for Amazon Pathways, ~8% Target GLTDP",
+        "smart_means": "Process optimization, supply chain logic, Six Sigma methodology, data-driven decisions, ERP literacy, P&L and cost analysis",
+        "grit_means": "Leading teams under pressure, multi-month project delivery, cross-functional stakeholder management, ownership through setbacks",
+        "build_means": "Quantified process improvements (cost%, time%, efficiency%), teams led with headcount, ops internship experience, Lean/Six Sigma projects",
+        "key_proof_points": [
+            "Process improvement project with quantified outcome (%)",
+            "Team leadership with headcount and deliverable",
+            "Operations or supply chain internship",
+            "Six Sigma, Lean, or PMP exposure",
+            "Data-driven decision example with business impact",
+        ],
+        "certifications": ["Six Sigma Green Belt", "PMP", "Lean certification", "APICS CPIM"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 7. Healthcare & Clinical
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: Mayo Clinic, Cleveland Clinic entry-level clinical roles.
+    # Grit is highest because healthcare demands sustained dedication —
+    # clinical hours (200+ competitive), patient care consistency, and
+    # the emotional/physical demands of the field. Smart reflects medical
+    # science mastery. Build is certifications and documented hours.
+    #
+    # Smart (HC)   = Medical/clinical science mastery, anatomy & physiology,
+    #                pharmacology basics, clinical protocol knowledge,
+    #                science GPA (especially for pre-health), MCAT prep
+    #                performance, healthcare system understanding
+    # Grit  (HC)   = Clinical hours logged (200+ for competitive apps),
+    #                patient care consistency over semesters, emotional
+    #                resilience in healthcare settings, pre-med multi-year
+    #                dedication, volunteering in underserved settings
+    # Build (HC)   = CNA/EMT/BLS/Phlebotomy certifications, documented
+    #                patient encounter hours, hospital/clinic placements,
+    #                healthcare research or poster presentations, leadership
+    #                in pre-med/health organizations
+    "healthcare_clinical": {
+        "label": "Healthcare & Clinical",
         "smart": 30,
         "grit": 45,
         "build": 25,
-        "recruiter_bar": 85,
-        "reference_benchmark": "McKinsey Associate Consultant hiring bar",
-        "reference_company": "McKinsey",
-        "gpa_screen": "3.5+ minimum, 3.7+ competitive",
-        "acceptance_rate": "<1% overall (MBB); 15-30% of interviewed candidates",
-        "key_proof_points": [
-            "GPA 3.6+ with quantitative coursework",
-            "Case competition wins or finals appearances",
-            "Consulting club leadership or client projects",
-            "Significant leadership roles (president-level)",
-            "Structured problem-solving demonstration",
-        ],
-        "certifications": [],  # No certifications; pure meritocracy via cases
-        "competition_level": "extreme",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 7. Management & Operations
-    # ─────────────────────────────────────────────────────────────────────
-    # Amazon operations, supply chain roles: Lean/Kaizen/Six Sigma
-    # process improvement experience valued. Quantified impact on
-    # operations (efficiency %, cost reduction). Amazon's Pathways
-    # program hires recent grads for ops leadership. Data-driven
-    # decision-making emphasized.
-    "management_operations": {
-        "label": "Management & Operations",
-        "smart": 20,
-        "grit": 45,
-        "build": 35,
-        "recruiter_bar": 72,
-        "reference_benchmark": "Amazon Area Manager / Pathways program bar",
-        "reference_company": "Amazon",
-        "gpa_screen": "3.0+ preferred, not hard cutoff",
-        "acceptance_rate": "~5-8% for Amazon Pathways",
-        "key_proof_points": [
-            "Lean / Six Sigma / Kaizen experience",
-            "Quantified process improvement results",
-            "Team leadership with measurable outcomes",
-            "Operations internship experience",
-            "Data-driven decision-making examples",
-        ],
-        "certifications": ["Six Sigma Green Belt", "PMP", "Lean certification"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 8. Economics & Public Policy
-    # ─────────────────────────────────────────────────────────────────────
-    # Federal Reserve, Brookings, World Bank: Research Assistant roles
-    # are the entry point. Require strong economics/stats coursework,
-    # Stata/R/Python skills, and demonstrated research ability.
-    # Fed RA is a 2-year program; most go to top PhD programs after.
-    # Brookings RAs recruited in fall/spring cycles. GPA matters.
-    "economics_public_policy": {
-        "label": "Economics & Public Policy",
-        "smart": 40,
-        "grit": 30,
-        "build": 30,
-        "recruiter_bar": 80,
-        "reference_benchmark": "Federal Reserve Research Assistant bar",
-        "reference_company": "Federal Reserve",
-        "gpa_screen": "3.5+ expected, strong quant coursework required",
-        "acceptance_rate": "~3-5% for Fed RA, ~5-8% for Brookings RA",
-        "key_proof_points": [
-            "Economics / econometrics coursework depth",
-            "Stata, R, or Python proficiency",
-            "Independent research or thesis",
-            "Policy writing or published analysis",
-            "Government / think tank internship",
-        ],
-        "certifications": [],  # Academic credentials dominate
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 9. Entrepreneurship & Innovation
-    # ─────────────────────────────────────────────────────────────────────
-    # YC, Techstars, startup roles: GPA is irrelevant. What have you
-    # built? Shipped products, revenue generated, users acquired.
-    # YC Spring 2025 batch was 50%+ agentic AI companies. Startups
-    # value adaptability, grit, and problem-solving over credentials.
-    # Small teams = you wear multiple hats from day one.
-    "entrepreneurship_innovation": {
-        "label": "Entrepreneurship & Innovation",
-        "smart": 10,
-        "grit": 35,
-        "build": 55,
-        "recruiter_bar": 70,
-        "reference_benchmark": "Y Combinator startup hiring bar",
-        "reference_company": "Y Combinator (portfolio)",
-        "gpa_screen": None,  # Completely irrelevant
-        "acceptance_rate": "~2-3% (YC acceptance); startup jobs vary widely",
-        "key_proof_points": [
-            "Products or businesses launched",
-            "Revenue generated or users acquired",
-            "Pitch competition wins",
-            "Hackathon projects shipped to production",
-            "Demonstrated scrappiness and resourcefulness",
-        ],
-        "certifications": [],  # Building is the certification
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 10. Healthcare & Clinical
-    # ─────────────────────────────────────────────────────────────────────
-    # Mayo Clinic, top hospitals: Clinical hours and certifications are
-    # the entry ticket. CNA/EMT/BLS required. Must be 18+. Preferred:
-    # nursing assistant certification, 6+ months healthcare experience.
-    # Patient care documentation and empathy demonstration matter.
-    # Entry-level pay $20-25/hr at Mayo. Grit-heavy (volunteering,
-    # clinical hours, patient interaction).
-    "healthcare_clinical": {
-        "label": "Healthcare & Clinical",
-        "smart": 25,
-        "grit": 40,
-        "build": 35,
         "recruiter_bar": 74,
-        "reference_benchmark": "Mayo Clinic entry-level clinical bar",
+        "reference_benchmark": "Mayo Clinic / Cleveland Clinic entry-level clinical bar",
         "reference_company": "Mayo Clinic",
-        "gpa_screen": "3.0+ for nursing/clinical programs",
-        "acceptance_rate": "~10-15% for top hospital systems",
+        "gpa_screen": "3.0+ for clinical programs; 3.5+ for competitive hospitals",
+        "acceptance_rate": "~10–15% for top hospital systems",
+        "smart_means": "Clinical science mastery (A&P, pharmacology, pathophysiology), science GPA, MCAT prep performance, healthcare protocol knowledge",
+        "grit_means": "Clinical hours (200+ = competitive), patient care endurance over semesters, emotional resilience, pre-med multi-year commitment, volunteering consistency",
+        "build_means": "CNA/EMT/BLS/Phlebotomy certifications, documented patient encounters, hospital placements, healthcare research, pre-health org leadership",
         "key_proof_points": [
-            "Clinical hours logged (200+ competitive)",
-            "CNA, EMT, or BLS certification",
-            "Patient care experience documented",
-            "Hospital / clinic volunteering",
-            "Health organization leadership",
+            "200+ clinical hours documented (minimum for competitive apps)",
+            "CNA, EMT-B, or BLS certification",
+            "Hospital or clinic internship/volunteering",
+            "Pre-health organization leadership role",
+            "Research or shadow experience with physician documentation",
         ],
-        "certifications": ["CNA", "EMT-B", "BLS/CPR", "Phlebotomy"],
+        "certifications": ["CNA", "EMT-B", "BLS/CPR", "Phlebotomy Tech", "Patient Care Tech"],
         "competition_level": "moderate",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 11. Life Sciences & Research
+    # 8. Cybersecurity & IT
     # ─────────────────────────────────────────────────────────────────────
-    # Pfizer, NIH, biotech: Publications and lab experience are king.
-    # Pfizer's R&D Rotational Program (2-year, 4 rotations) has 3-5%
-    # acceptance rate. Top life sciences schools prioritized (Johns
-    # Hopkins, Harvard, UC Berkeley). 0-2 years lab experience for
-    # entry-level. Summer intern acceptance ~3-5%.
-    "life_sciences_research": {
-        "label": "Life Sciences & Research",
-        "smart": 40,
-        "grit": 25,
-        "build": 35,
-        "recruiter_bar": 78,
-        "reference_benchmark": "Pfizer R&D Rotational Program bar",
-        "reference_company": "Pfizer",
-        "gpa_screen": "3.3+ typical for top biotech programs",
-        "acceptance_rate": "~3-5% for Pfizer R&D program",
-        "key_proof_points": [
-            "Lab research experience (0-2 years minimum)",
-            "Publications or conference posters",
-            "REU or NIH-funded research",
-            "Lab techniques mastered (PCR, Western blot, etc.)",
-            "Research presentations at conferences",
-        ],
-        "certifications": ["BSL-2 training", "IACUC certification", "GLP training"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 12. Physical Sciences & Math
-    # ─────────────────────────────────────────────────────────────────────
-    # National labs (PNNL, LLNL, Sandia, Argonne, Brookhaven):
-    # Heavy academic focus. BS minimum with 2+ years lab experience for
-    # entry-level. Advanced degrees (MS/PhD) strongly preferred for
-    # research roles. Computational skills (Python, MATLAB) required.
-    # Research output (papers, simulations) is primary proof.
-    "physical_sciences_math": {
-        "label": "Physical Sciences & Math",
-        "smart": 50,
-        "grit": 20,
-        "build": 30,
-        "recruiter_bar": 80,
-        "reference_benchmark": "National lab (LLNL/PNNL) entry-level researcher bar",
-        "reference_company": "Lawrence Livermore National Laboratory",
-        "gpa_screen": "3.5+ strongly preferred for national labs",
-        "acceptance_rate": "~5-10% for national lab positions",
-        "key_proof_points": [
-            "Advanced coursework in physics/math/chemistry",
-            "Research papers or thesis",
-            "Computational modeling (Python, MATLAB, Fortran)",
-            "NSF REU or national lab internship",
-            "Math competition achievements (Putnam, AMC)",
-        ],
-        "certifications": [],  # Academic credentials and research output dominate
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 13. Social Sciences & Nonprofit
-    # ─────────────────────────────────────────────────────────────────────
-    # UNDP, large nonprofits: Fieldwork, community impact, and policy
-    # work are primary signals. 53% of nonprofit employers expanding
-    # teams in 2025. UNDP internships focus on research, writing,
-    # conference support. Impact measurement skills increasingly valued.
-    # Community organizing and advocacy experience weighted heavily.
-    "social_sciences_nonprofit": {
-        "label": "Social Sciences & Nonprofit",
-        "smart": 25,
-        "grit": 45,
-        "build": 30,
-        "recruiter_bar": 68,
-        "reference_benchmark": "UNDP / major nonprofit internship bar",
-        "reference_company": "UNDP",
-        "gpa_screen": "3.0+ preferred for competitive programs",
-        "acceptance_rate": "~10-15% for top international orgs",
-        "key_proof_points": [
-            "Community impact projects with documented outcomes",
-            "Nonprofit volunteering or fieldwork",
-            "Policy research or advocacy experience",
-            "Grant writing or fundraising",
-            "Cross-cultural experience or language skills",
-        ],
-        "certifications": ["Peace Corps", "AmeriCorps", "Nonprofit Management cert"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 14. Media & Communications
-    # ─────────────────────────────────────────────────────────────────────
-    # NYT, CNN, PR agencies: Published work and bylines are everything.
-    # Portfolio of diverse reporting styles required. Familiarity with
-    # video editing, CMS, social media platforms, and multimedia tools
-    # expected. Student media experience (newspaper, TV, radio) is the
-    # primary pipeline. GPA rarely factors in hiring decisions.
-    "media_communications": {
-        "label": "Media & Communications",
-        "smart": 15,
-        "grit": 35,
+    # Reference: CrowdStrike, Palo Alto Networks, Mandiant entry-level.
+    # Build-dominant: certifications (CompTIA Security+, CEH, PCCET) and
+    # practical lab proof (CTF wins, bug bounties) matter far more than
+    # academic credentials. Smart reflects hands-on technical depth, not
+    # GPA. Grit is self-directed learning persistence.
+    #
+    # Smart (Cyber) = Network fundamentals (TCP/IP, DNS, routing), security
+    #                 protocols (TLS, OAuth, PKI), cryptography basics,
+    #                 OS internals (Linux command line mastery), threat
+    #                 landscape awareness, OWASP top 10, MITRE ATT&CK
+    # Grit  (Cyber) = CTF competition persistence and improvement over time,
+    #                 self-directed certification study (Security+, CEH),
+    #                 staying current on threat intelligence, bug bounty
+    #                 hunting consistency, home lab expansion over months
+    # Build (Cyber) = CTF wins and rankings (HackTheBox, TryHackMe, PicoCTF),
+    #                 certifications earned (CompTIA, CEH, PCCET, OSCP),
+    #                 bug bounties submitted/rewarded, pen test lab docs,
+    #                 security tools built or contributed to, SOC/IR experience
+    "cybersecurity_it": {
+        "label": "Cybersecurity & IT",
+        "smart": 22,
+        "grit": 28,
         "build": 50,
-        "recruiter_bar": 70,
-        "reference_benchmark": "NYT / CNN entry-level reporter/producer bar",
-        "reference_company": "New York Times",
-        "gpa_screen": None,  # Portfolio and clips matter, not GPA
-        "acceptance_rate": "~3-5% for top masthead fellowships",
-        "key_proof_points": [
-            "Published articles / bylines at recognized outlets",
-            "Student newspaper or campus media leadership",
-            "Multimedia portfolio (video, audio, written)",
-            "Social media content creation with reach metrics",
-            "Journalism internships at recognized publications",
-        ],
-        "certifications": ["Google News Initiative training", "AP Style mastery"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 15. Design & Creative
-    # ─────────────────────────────────────────────────────────────────────
-    # IDEO, design agencies: Portfolio is EVERYTHING. Process-driven
-    # design thinking valued (research-led, human-centered). Figma,
-    # Adobe XD proficiency expected. Dribbble/Behance presence matters.
-    # Entry-level UX designers start with personal projects, freelance,
-    # or volunteering. GPA not a factor.
-    "design_creative": {
-        "label": "Design & Creative",
-        "smart": 10,
-        "grit": 25,
-        "build": 65,
         "recruiter_bar": 72,
-        "reference_benchmark": "IDEO / top design agency junior designer bar",
-        "reference_company": "IDEO",
-        "gpa_screen": None,  # Portfolio is the only screen
-        "acceptance_rate": "~5-10% for top design programs/agencies",
+        "reference_benchmark": "CrowdStrike / Palo Alto Networks / Mandiant entry-level bar",
+        "reference_company": "CrowdStrike",
+        "gpa_screen": None,
+        "acceptance_rate": "~3–5% for top security firms",
+        "smart_means": "Network fundamentals, security protocols, cryptography basics, OS internals (Linux), threat landscape, OWASP top 10, MITRE ATT&CK framework",
+        "grit_means": "CTF persistence and skill growth over time, self-directed cert study, staying current on threat intel, bug bounty hunting consistency",
+        "build_means": "CTF wins/rankings (HTB, THM, PicoCTF), certifications (Security+, CEH, PCCET, OSCP), bug bounties, pen test lab documentation, SOC experience",
         "key_proof_points": [
-            "Portfolio with 4-6 case studies showing process",
-            "Figma / Adobe XD proficiency",
-            "User research and usability testing conducted",
-            "Dribbble/Behance presence with quality work",
-            "Design competition wins or hackathon projects",
+            "CompTIA Security+ or CEH certification",
+            "CTF competition ranking (HackTheBox, TryHackMe profile)",
+            "Home lab documentation (VMs, network topology, tools used)",
+            "Bug bounty program participation (even no-reward submissions)",
+            "Penetration testing or incident response experience",
         ],
-        "certifications": ["Google UX Design Certificate", "Nielsen Norman Group UX cert"],
+        "certifications": ["CompTIA Security+", "CompTIA Network+", "CEH", "PCCET", "OSCP (advanced)"],
         "competition_level": "high",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 16. Legal & Compliance
+    # 9. Law & Government
     # ─────────────────────────────────────────────────────────────────────
-    # Top law firms, corporate legal: Pre-law path is GPA + LSAT driven.
-    # Mock trial, moot court, legal internships matter for law school
-    # admission. For corporate compliance (non-JD path), GPA screens
-    # exist at top firms. Government legal programs (DOJ, IRS) evaluate
-    # moot court, journal, clinical experience, and GPA (3.25+ minimum
-    # for some programs). LSAT 160+ for competitive schools.
-    "legal_compliance": {
-        "label": "Legal & Compliance",
-        "smart": 40,
-        "grit": 35,
+    # Reference: T14 law school admission / BigLaw summer associate /
+    # DOJ Honors Program. Smart-dominant because legal reasoning, writing,
+    # and analytical thinking are the core screening tool (LSAT proxy).
+    # GPA screens are real at top law firms (3.5+ minimum). Grit reflects
+    # preparation depth and advocacy persistence.
+    #
+    # Smart (Law)  = Legal reasoning and analytical writing, LSAT-equivalent
+    #                thinking (logical deduction, argument structure),
+    #                constitutional/statutory knowledge, policy analysis,
+    #                GPA + rigorous coursework, research paper quality
+    # Grit  (Law)  = Moot court rounds and preparation depth, legal writing
+    #                revision cycles (10+ drafts is normal), pro-bono
+    #                hours, political/advocacy work persistence, debate
+    #                competition dedication
+    # Build (Law)  = Moot court performance/wins, law review articles,
+    #                published policy papers, government or legal internships,
+    #                paralegal or legal clinic experience, mock trial wins
+    "law_government": {
+        "label": "Law & Government",
+        "smart": 45,
+        "grit": 30,
         "build": 25,
         "recruiter_bar": 82,
-        "reference_benchmark": "Top law school admission / BigLaw hiring bar",
+        "reference_benchmark": "T14 law school / BigLaw SA / DOJ Honors Program bar",
         "reference_company": "Skadden, Arps",
-        "gpa_screen": "3.5+ for top law schools; 3.25+ for government honors programs",
-        "acceptance_rate": "~5-10% for T14 law schools; <5% for BigLaw summer associate",
+        "gpa_screen": "3.5+ for T14 law; 3.25+ for government honors programs",
+        "acceptance_rate": "~5–10% T14 law; <5% BigLaw SA; ~3% DOJ Honors",
+        "smart_means": "Legal/analytical reasoning, LSAT-equivalent thinking, constitutional/statutory knowledge, policy analysis, GPA + rigorous coursework, research paper quality",
+        "grit_means": "Moot court preparation depth, legal writing revision cycles, pro-bono hours, advocacy/political work persistence, debate competition dedication",
+        "build_means": "Moot court wins/performance, law review articles, policy papers published, government/legal internships, paralegal or legal clinic experience",
         "key_proof_points": [
-            "GPA 3.5+ (hard screen for law school admissions)",
-            "LSAT score 160+ (80th percentile)",
-            "Mock trial or moot court participation",
-            "Legal internship or paralegal experience",
-            "Law review, debate, policy research",
+            "GPA 3.5+ (hard screen for BigLaw and T14 law)",
+            "Moot court or mock trial participation",
+            "Government or legal internship (state/federal/NGO)",
+            "Published research paper or policy brief",
+            "Debate club, pre-law society, or political org leadership",
         ],
-        "certifications": ["Paralegal Certificate", "Compliance certifications (for non-JD)"],
+        "certifications": ["Paralegal Certificate", "LSAT 160+ (80th percentile)"],
         "competition_level": "very_high",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 17. Human Resources & People
+    # 10. Biotech & Pharmaceutical
     # ─────────────────────────────────────────────────────────────────────
-    # SHRM-CP is the gold standard certification. No degree or prior HR
-    # experience required to sit for SHRM-CP. SHRM-certified
-    # professionals earn ~15% more. Operational HR knowledge (policies,
-    # day-to-day functions, employee relations) is the focus. People
-    # skills and culture building outweigh technical skills.
-    "human_resources_people": {
-        "label": "Human Resources & People",
-        "smart": 20,
-        "grit": 50,
-        "build": 30,
-        "recruiter_bar": 66,
-        "reference_benchmark": "SHRM-CP certified HR generalist bar",
-        "reference_company": "SHRM",
-        "gpa_screen": None,  # People skills > GPA
-        "acceptance_rate": "~20-30% for top HR associate programs",
-        "key_proof_points": [
-            "SHRM-CP certification (or in progress)",
-            "HR internship or people operations experience",
-            "Employee relations or culture initiatives",
-            "Event planning and team coordination",
-            "Conflict resolution and communication skills",
-        ],
-        "certifications": ["SHRM-CP", "SHRM-SCP (advanced)", "PHR"],
-        "competition_level": "low",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 18. Supply Chain & Logistics
-    # ─────────────────────────────────────────────────────────────────────
-    # Amazon, FedEx, logistics companies: APICS certifications (CSCP,
-    # CPIM) provide competitive edge. Six Sigma valued. Entry-level
-    # certified logistics professionals start ~$50K. Excel/SQL and
-    # warehouse management system familiarity expected. Operations
-    # focus with process improvement mindset.
-    "supply_chain_logistics": {
-        "label": "Supply Chain & Logistics",
-        "smart": 20,
-        "grit": 40,
-        "build": 40,
-        "recruiter_bar": 70,
-        "reference_benchmark": "Amazon / FedEx supply chain analyst bar",
-        "reference_company": "Amazon",
-        "gpa_screen": "3.0+ preferred",
-        "acceptance_rate": "~10-15% for top supply chain programs",
-        "key_proof_points": [
-            "APICS CSCP or CPIM certification (or in progress)",
-            "Six Sigma Green/Yellow Belt",
-            "Excel and SQL proficiency",
-            "Supply chain internship or warehouse experience",
-            "Process improvement projects with metrics",
-        ],
-        "certifications": ["APICS CSCP", "APICS CPIM", "Six Sigma Green Belt", "CLTD"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 19. Education & Teaching
-    # ─────────────────────────────────────────────────────────────────────
-    # Top school districts, ed-tech: Classroom hours are the primary
-    # gate. Student teaching requires 450-600+ hours depending on state.
-    # Typically 20 weeks at 25+ hrs/week. State teaching certification
-    # required. Teacher shortages in STEM and special education create
-    # opportunities. Ed-tech values curriculum design and learning
-    # management system experience.
-    "education_teaching": {
-        "label": "Education & Teaching",
-        "smart": 20,
-        "grit": 45,
-        "build": 35,
-        "recruiter_bar": 65,
-        "reference_benchmark": "Top school district / ed-tech hiring bar",
-        "reference_company": "Teach For America",
-        "gpa_screen": "2.5+ minimum for certification; 3.0+ competitive",
-        "acceptance_rate": "~15-25% for TFA; varies by district/shortage area",
-        "key_proof_points": [
-            "450-600+ student teaching hours completed",
-            "State teaching certification (or in progress)",
-            "Tutoring or mentoring experience",
-            "Classroom management demonstrations",
-            "Curriculum design or lesson plan portfolio",
-        ],
-        "certifications": [
-            "State Teaching License", "Praxis exams",
-            "ESL/TESOL certification", "Special Education endorsement",
-        ],
-        "competition_level": "low",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 20. Real Estate & Construction
-    # ─────────────────────────────────────────────────────────────────────
-    # CBRE, top developers: Bachelor's in Business, Real Estate, Finance,
-    # or Engineering required. Real estate license required if state-
-    # mandated. 0-5 years experience for entry-level at CBRE. Deal
-    # experience, market analysis, and financial modeling valued.
-    # Intern exposure to diverse clients and projects is the entry point.
-    "real_estate_construction": {
-        "label": "Real Estate & Construction",
-        "smart": 20,
-        "grit": 40,
-        "build": 40,
-        "recruiter_bar": 70,
-        "reference_benchmark": "CBRE entry-level analyst bar",
-        "reference_company": "CBRE",
-        "gpa_screen": "3.0+ preferred for commercial real estate firms",
-        "acceptance_rate": "~10-15% for top CRE firms",
-        "key_proof_points": [
-            "Real estate license (if state-mandated)",
-            "Financial modeling and market analysis",
-            "Real estate internship or deal exposure",
-            "Excel / Argus proficiency",
-            "Networking within local real estate community",
-        ],
-        "certifications": ["Real Estate License", "LEED AP", "Argus certification"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 21. Environmental & Sustainability
-    # ─────────────────────────────────────────────────────────────────────
-    # EPA, sustainability firms (ERM): Entry-level includes lab roles,
-    # field sampling, compliance, and sustainability positions. Hands-on
-    # fieldwork valued. LEED, GHG Protocol, and energy audit knowledge
-    # increasingly required. Consulting firms (ERM) hire early-career
-    # for EHS and sustainability. Starting salaries $50-62K for climate
-    # consultants.
-    "environmental_sustainability": {
-        "label": "Environmental & Sustainability",
-        "smart": 30,
-        "grit": 35,
-        "build": 35,
-        "recruiter_bar": 68,
-        "reference_benchmark": "EPA / ERM entry-level environmental scientist bar",
-        "reference_company": "EPA",
-        "gpa_screen": "3.0+ for competitive programs",
-        "acceptance_rate": "~10-20% for EPA entry programs",
-        "key_proof_points": [
-            "Field research or environmental sampling experience",
-            "LEED or GHG Protocol knowledge",
-            "Environmental impact assessments conducted",
-            "GIS or environmental modeling skills",
-            "Sustainability internship or research",
-        ],
-        "certifications": ["LEED Green Associate", "LEED AP", "Certified Environmental Scientist"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 22. Hospitality & Events
-    # ─────────────────────────────────────────────────────────────────────
-    # Marriott, live events: Customer service orientation is paramount.
-    # Bachelor's in hospitality, business, or related field preferred.
-    # Event management software proficiency expected. Practical
-    # internship experience valued. Marriott career fairs across US.
-    # Event Manager salary range $57K-$85K. Volume management and
-    # organizational skills are the differentiators.
-    "hospitality_events": {
-        "label": "Hospitality & Events",
-        "smart": 10,
-        "grit": 50,
-        "build": 40,
-        "recruiter_bar": 62,
-        "reference_benchmark": "Marriott entry-level event coordinator bar",
-        "reference_company": "Marriott",
-        "gpa_screen": None,  # Experience and service orientation matter more
-        "acceptance_rate": "~15-25% for major hotel management programs",
-        "key_proof_points": [
-            "Event coordination experience with documented scale",
-            "Hospitality internship at recognized brand",
-            "Customer service metrics or testimonials",
-            "Event management software proficiency",
-            "Volume management under pressure",
-        ],
-        "certifications": [
-            "CMP (Certified Meeting Professional)",
-            "ServSafe", "TIPS certification",
-        ],
-        "competition_level": "low",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 23. Mechanical & Aerospace Engineering
-    # ─────────────────────────────────────────────────────────────────────
-    # Boeing, Lockheed Martin, SpaceX, Tesla, GE Aerospace. GPA screens
-    # are real (3.0+ minimum, 3.5+ for top tier like SpaceX). FE exam
-    # passage is a strong signal. Senior design projects, SAE/ASME
-    # competitions, and co-op experience are critical. CAD proficiency
-    # (SolidWorks, CATIA, NX) is non-negotiable. Hands-on prototyping
-    # and manufacturing experience differentiates. SpaceX acceptance
-    # rate <1%. Boeing hires ~3,000 interns/year from 100K+ applicants.
-    "mechanical_aerospace_engineering": {
-        "label": "Mechanical & Aerospace Engineering",
-        "smart": 35,
-        "grit": 25,
-        "build": 40,
+    # Reference: Pfizer R&D, Genentech, J&J, Moderna entry-level.
+    # Pfizer acceptance <3% for R&D program. Smart-dominant because the
+    # scientific depth required (molecular biology, biochemistry, FDA
+    # regulatory) is the primary screen. Grit reflects lab research
+    # persistence (failed experiments are the norm in this field).
+    #
+    # Smart (Biotech) = Molecular biology, biochemistry, cell biology,
+    #                   pharmacology mastery, FDA regulatory pathway
+    #                   understanding, lab science GPA (3.3+ competitive),
+    #                   drug discovery and development process knowledge
+    # Grit  (Biotech) = Lab research persistence through repeated failed
+    #                   experiments, grant writing dedication, long publication
+    #                   timelines (6–24 months), multi-semester research
+    #                   commitment, conference presentation preparation
+    # Build (Biotech) = Research publications or conference posters,
+    #                   lab technique certifications (BSL-2, GLP, GMP),
+    #                   patents or invention disclosures, industry internship
+    #                   at pharma/biotech, thesis quality and research citations
+    "biotech_pharmaceutical": {
+        "label": "Biotech & Pharmaceutical",
+        "smart": 42,
+        "grit": 33,
+        "build": 25,
         "recruiter_bar": 76,
-        "reference_benchmark": "Boeing / SpaceX new-grad engineering bar",
-        "reference_company": "Boeing",
-        "gpa_screen": 3.0,  # 3.5+ for SpaceX/top tier
-        "acceptance_rate": "<1% (SpaceX), ~3% (Boeing internships)",
+        "reference_benchmark": "Pfizer R&D / Genentech / Moderna entry-level bar",
+        "reference_company": "Pfizer",
+        "gpa_screen": "3.3+ typical; 3.5+ for top pharma R&D",
+        "acceptance_rate": "<3% (Pfizer R&D program), ~4–6% major pharma internships",
+        "smart_means": "Molecular biology, biochemistry, cell biology, pharmacology, FDA regulatory pathways, drug discovery process, science GPA",
+        "grit_means": "Lab research persistence through failures, grant writing, long publication timelines, multi-semester research commitment, conference prep",
+        "build_means": "Publications/conference posters, lab certifications (BSL-2, GLP, GMP), patents, pharma/biotech internship, thesis quality",
         "key_proof_points": [
-            "Senior design project with tangible deliverable",
-            "SAE/ASME/AIAA competition team experience",
-            "Co-op or internship at recognized manufacturer",
-            "CAD proficiency (SolidWorks, CATIA, NX)",
-            "FE exam passage or preparation",
-            "Hands-on prototyping or machine shop experience",
+            "Wet lab research experience (0-2 years minimum)",
+            "Publications, posters, or research presentations",
+            "BSL-2 training and core lab technique proficiency",
+            "Industry internship at pharma or biotech company",
+            "GPA 3.3+ in science courses (pre-requisite screen)",
         ],
-        "certifications": ["FE (Fundamentals of Engineering)", "SolidWorks CSWA/CSWP", "Six Sigma Green Belt"],
+        "certifications": ["BSL-2 Lab Safety", "GLP/GMP Training", "IRB/IACUC certification"],
         "competition_level": "high",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 24. Electrical & Computer Engineering
+    # 11. Mechanical & Aerospace Engineering
     # ─────────────────────────────────────────────────────────────────────
-    # Intel, Qualcomm, Texas Instruments, NVIDIA, Apple. Hardware/firmware
-    # roles require deep academic foundation (circuit design, signals,
-    # embedded systems). GPA screens at 3.2+ for most semiconductor
-    # companies. Lab work and project portfolios (PCB design, FPGA
-    # implementations, embedded projects) are critical proof. Intel
-    # ISEF participation and IEEE student branch leadership valued.
-    # NVIDIA acceptance rate <2% for hardware roles.
+    # Reference: Boeing, SpaceX, Lockheed Martin, Tesla. SpaceX <1%
+    # acceptance, Boeing hires 3K interns from 100K+ applications (~3%).
+    # GPA screens real: 3.0+ standard, 3.5+ for SpaceX/Blue Origin.
+    # Smart reflects engineering fundamentals mastery. Build captures
+    # the tangible prototypes and CAD portfolio that differentiate.
+    #
+    # Smart (ME/AE) = Thermodynamics, fluid mechanics, structural analysis,
+    #                 FE exam-level theory, materials science, CAD theory
+    #                 and simulation (FEA/CFD understanding), statics/dynamics,
+    #                 machine design principles, engineering math depth
+    # Grit  (ME/AE) = Senior capstone dedication through multiple semesters,
+    #                 competition team commitment (SAE, AIAA, ASME), iterative
+    #                 physical prototyping persistence, manufacturing shop hours,
+    #                 handling design failures and iterating to solutions
+    # Build (ME/AE) = CAD portfolio (SolidWorks/CATIA/NX designs), manufactured
+    #                 prototypes and physical builds, SAE/FSAE/AIAA competition
+    #                 results, FE exam passage, co-op at recognized manufacturer,
+    #                 lab reports and documented experimental results
+    "mechanical_aerospace_engineering": {
+        "label": "Mechanical & Aerospace Engineering",
+        "smart": 33,
+        "grit": 27,
+        "build": 40,
+        "recruiter_bar": 76,
+        "reference_benchmark": "Boeing / SpaceX / Lockheed Martin new-grad bar",
+        "reference_company": "Boeing",
+        "gpa_screen": "3.0+ standard; 3.5+ for SpaceX/Blue Origin",
+        "acceptance_rate": "<1% (SpaceX), ~3% (Boeing internships)",
+        "smart_means": "Thermodynamics, fluid mechanics, structural analysis, FE-level theory, materials science, FEA/CFD understanding, statics/dynamics/machine design",
+        "grit_means": "Senior capstone multi-semester dedication, SAE/AIAA/ASME competition commitment, iterative prototyping persistence, manufacturing shop hours",
+        "build_means": "CAD portfolio (SolidWorks/CATIA/NX), manufactured prototypes, FSAE/AIAA competition results, FE exam passage, co-op at recognized manufacturer",
+        "key_proof_points": [
+            "Senior design project with tangible manufactured deliverable",
+            "SAE/FSAE, AIAA, or ASME competition team experience",
+            "CAD proficiency (SolidWorks/CATIA/NX) — non-negotiable",
+            "FE exam passage or preparation (before graduation)",
+            "Co-op or internship at recognized manufacturer/aerospace company",
+        ],
+        "certifications": ["FE (Fundamentals of Engineering)", "SolidWorks CSWA/CSWP"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 12. Electrical & Computer Engineering
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: Intel, NVIDIA, Qualcomm, Apple hardware/firmware.
+    # NVIDIA acceptance <2% for hardware roles. GPA screen at 3.2+
+    # for most semiconductor companies. Build-heavy (similar to SWE)
+    # because hardware portfolio (PCB, FPGA, embedded) is the proof.
+    # Smart reflects deep circuit and systems theory mastery.
+    #
+    # Smart (ECE)  = Circuit theory, signal processing, digital design,
+    #                embedded systems theory, computer architecture, VLSI
+    #                fundamentals, electromagnetics, GPA in technical courses,
+    #                advanced math (diff eq, linear algebra) mastery
+    # Grit  (ECE)  = Hardware debugging persistence (hours tracing signals),
+    #                lab report rigor, staying current with hardware trends
+    #                (silicon, RISC-V, neuromorphic), long-haul research
+    # Build (ECE)  = PCB designs (Altium, KiCad) with proven function,
+    #                FPGA implementations and HDL code portfolio, embedded
+    #                systems projects with real hardware, IEEE/robotics club
+    #                leadership, certifications (LabVIEW), industry internship
     "electrical_computer_engineering": {
         "label": "Electrical & Computer Engineering",
         "smart": 35,
         "grit": 20,
         "build": 45,
         "recruiter_bar": 78,
-        "reference_benchmark": "Intel / NVIDIA hardware engineering bar",
-        "reference_company": "Intel",
-        "gpa_screen": 3.2,  # Semiconductor companies screen rigorously
+        "reference_benchmark": "Intel / NVIDIA / Qualcomm hardware engineering bar",
+        "reference_company": "NVIDIA",
+        "gpa_screen": "3.2+ (semiconductor companies screen rigorously)",
         "acceptance_rate": "<2% (NVIDIA), ~3% (Intel internships)",
+        "smart_means": "Circuit theory, signal processing, digital design, embedded systems theory, computer architecture, VLSI, GPA in technical courses",
+        "grit_means": "Hardware debugging persistence, lab report rigor, staying current with hardware trends, long-haul research and iteration",
+        "build_means": "PCB designs (Altium/KiCad), FPGA/HDL implementations, embedded systems projects with real hardware, IEEE/robotics club leadership",
         "key_proof_points": [
-            "PCB design or FPGA implementation projects",
-            "Embedded systems projects with real hardware",
-            "Circuit design and simulation portfolio",
-            "Lab coursework with documented results",
-            "IEEE or robotics club leadership",
-            "Internship at semiconductor or hardware company",
+            "PCB design (Altium or KiCad) with functional demonstration",
+            "FPGA or embedded systems project with real hardware",
+            "GPA 3.2+ in technical courses",
+            "IEEE student branch or robotics club involvement",
+            "Hardware internship at semiconductor/systems company",
         ],
-        "certifications": ["FE (Fundamentals of Engineering)", "Certified LabVIEW Developer", "Altium Designer Certification"],
+        "certifications": ["FE (Fundamentals of Engineering)", "LabVIEW Associate Developer", "Altium Designer Cert"],
         "competition_level": "very_high",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 25. Civil & Environmental Engineering
+    # 13. Design & Creative Arts
     # ─────────────────────────────────────────────────────────────────────
-    # AECOM, Bechtel, Jacobs, Fluor. PE licensure path is the career
-    # backbone — FE exam passage before graduation is strongly expected.
-    # AutoCAD Civil 3D, Revit, and GIS proficiency required. Field
-    # experience (surveying, construction site observation) valued.
-    # Infrastructure projects and sustainability design increasingly
-    # important. More stable hiring than other engineering fields.
-    # AECOM hires ~2,000 interns globally.
-    "civil_environmental_engineering": {
-        "label": "Civil & Environmental Engineering",
-        "smart": 30,
-        "grit": 30,
-        "build": 40,
+    # Reference: IDEO, Figma Design, Apple HIG team, top ad agencies.
+    # MOST build-heavy cohort — portfolio is 100% of the hiring decision.
+    # GPA doesn't exist in the conversation. Smart captures design
+    # theory (not IQ). Grit is the relentless iteration mindset.
+    # A student who has done 100 portfolio revisions and published 6
+    # case studies beats a design student with a 4.0 every time.
+    #
+    # Smart (Design) = Design theory (typography, color theory, grid systems),
+    #                  UX research methodology (user interviews, usability
+    #                  testing, affinity mapping), visual communication
+    #                  principles, design history and precedent awareness,
+    #                  information architecture and interaction design theory
+    # Grit  (Design) = Willingness to iterate a design 50-100 times,
+    #                  client and user feedback incorporation without ego,
+    #                  sustained portfolio development over years, creative
+    #                  block resilience, self-critique rigor and improvement
+    # Build (Design) = Portfolio case studies (4-6 minimum, process-driven),
+    #                  Figma/Sketch/Adobe CC proficiency demonstrated in work,
+    #                  Dribbble/Behance presence with quality pieces, shipped
+    #                  products/interfaces used by real people, design
+    #                  competition wins or recognized publications, freelance
+    "design_creative_arts": {
+        "label": "Design & Creative Arts",
+        "smart": 12,
+        "grit": 23,
+        "build": 65,
         "recruiter_bar": 72,
-        "reference_benchmark": "AECOM / Bechtel entry-level bar",
-        "reference_company": "AECOM",
-        "gpa_screen": 3.0,  # Standard across major firms
-        "acceptance_rate": "~5-8% (top firms), moderate overall",
+        "reference_benchmark": "IDEO / Figma Design / Apple HIG junior designer bar",
+        "reference_company": "IDEO",
+        "gpa_screen": None,
+        "acceptance_rate": "~5–10% for top design programs/agencies",
+        "smart_means": "Design theory (typography, color, grid), UX research methodology, visual communication principles, information architecture, interaction design theory",
+        "grit_means": "Willingness to iterate 50-100 times, client/user feedback without ego, sustained portfolio building over years, self-critique rigor",
+        "build_means": "Portfolio case studies (4-6, process-driven), Figma/Adobe CC mastery shown in work, Dribbble/Behance presence, shipped products, competition wins",
         "key_proof_points": [
-            "FE exam passage (strongly expected before graduation)",
-            "AutoCAD Civil 3D / Revit / GIS proficiency",
-            "Senior capstone with real client or municipality",
-            "Field experience (surveying, site observation)",
-            "ASCE student chapter leadership",
-            "Sustainability or green infrastructure projects",
+            "Portfolio with 4-6 case studies showing PROCESS (not just final output)",
+            "Figma or Adobe CC proficiency demonstrated in work (not just listed)",
+            "User research and usability testing conducted and documented",
+            "Shipped design used by real users (app, site, product)",
+            "Dribbble/Behance portfolio with quality and consistency",
         ],
-        "certifications": ["FE (Fundamentals of Engineering)", "LEED Green Associate", "GIS Certificate"],
+        "certifications": ["Google UX Design Certificate", "Nielsen Norman Group UX Cert"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 14. Education & Human Development
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: Teach For America, top school districts, ed-tech companies.
+    # Grit-dominant because teaching demands sustained human dedication —
+    # classroom management, student relationship-building, and curriculum
+    # iteration require emotional resilience. Build is documented hours and
+    # certifications. Smart is pedagogical theory, not academic GPA.
+    #
+    # Smart (Edu)  = Pedagogical theory (Vygotsky, Bloom's taxonomy, UDL),
+    #                child and adolescent development research, curriculum
+    #                design principles, assessment literacy, educational
+    #                psychology, learning management system proficiency
+    # Grit  (Edu)  = Student teaching hours logged (450-600+ for licensure),
+    #                classroom management persistence through difficult students,
+    #                tutoring or mentoring consistency over semesters,
+    #                emotional resilience with student crises
+    # Build (Edu)  = State teaching certification (in progress or earned),
+    #                curriculum materials created and used, documented student
+    #                outcomes/impact, tutoring program built, Praxis exam
+    #                scores, education internship or student teaching placement
+    "education_human_development": {
+        "label": "Education & Human Development",
+        "smart": 22,
+        "grit": 48,
+        "build": 30,
+        "recruiter_bar": 65,
+        "reference_benchmark": "Teach For America / top school district hiring bar",
+        "reference_company": "Teach For America",
+        "gpa_screen": "2.5+ minimum for certification; 3.0+ competitive",
+        "acceptance_rate": "~15–25% for TFA; varies by district/shortage area",
+        "smart_means": "Pedagogical theory (Bloom's, UDL, constructivism), child development research, curriculum design, assessment literacy, educational psychology",
+        "grit_means": "Student teaching hours (450-600+ for licensure), classroom management persistence, tutoring/mentoring consistency, emotional resilience",
+        "build_means": "State teaching certification, curriculum materials created, documented student outcomes, tutoring/program built, Praxis scores, student teaching placement",
+        "key_proof_points": [
+            "450+ hours of student teaching or supervised classroom time",
+            "State teaching certification (or enrolled in credentialing program)",
+            "Tutoring or mentoring experience with documented impact",
+            "Curriculum design or lesson plan portfolio",
+            "Praxis exams passed or in preparation",
+        ],
+        "certifications": ["State Teaching License", "Praxis Core + Subject", "ESL/TESOL", "Special Education Endorsement"],
+        "competition_level": "low",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 15. Social Sciences & Nonprofit
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: UNDP, Peace Corps, major US nonprofits (Gates Foundation,
+    # United Way). Grit-dominant because nonprofit work is chronically
+    # underfunded and demands sustained commitment without financial
+    # incentive. Smart captures research and policy analysis skills.
+    # Build is documented community impact and grant work.
+    #
+    # Smart (SS/NP) = Social science research methodology (qualitative +
+    #                 quantitative), policy analysis frameworks, statistical
+    #                 literacy for social research, sociological and
+    #                 psychological theory, grant proposal writing quality,
+    #                 cultural competency and community needs assessment
+    # Grit  (SS/NP) = Grant writing persistence (most grants rejected),
+    #                 community organizing long-haul commitment, advocacy
+    #                 work in underfunded environments, volunteer leadership
+    #                 sustained over multiple years, dealing with systemic
+    #                 barriers without burnout
+    # Build (SS/NP) = Community programs launched with documented impact,
+    #                 grant dollars raised, research publications or policy
+    #                 briefs, nonprofit internship or volunteer leadership,
+    #                 AmeriCorps/Peace Corps service, conference presentations
+    "social_sciences_nonprofit": {
+        "label": "Social Sciences & Nonprofit",
+        "smart": 25,
+        "grit": 45,
+        "build": 30,
+        "recruiter_bar": 68,
+        "reference_benchmark": "UNDP / Gates Foundation / United Way intern bar",
+        "reference_company": "UNDP",
+        "gpa_screen": "3.0+ preferred for competitive international orgs",
+        "acceptance_rate": "~10–15% for top international organizations",
+        "smart_means": "Research methodology (qual+quant), policy analysis, social science theory, statistical literacy, grant proposal writing, cultural competency",
+        "grit_means": "Grant persistence (most rejected), community organizing multi-year commitment, advocacy in underfunded settings, volunteer leadership sustained over years",
+        "build_means": "Community programs with documented impact, grant dollars raised, publications/policy briefs, nonprofit internship/leadership, AmeriCorps/Peace Corps",
+        "key_proof_points": [
+            "Community program or initiative led with documented impact",
+            "Grant writing or fundraising experience",
+            "Nonprofit or government internship",
+            "Research paper or policy brief published/presented",
+            "AmeriCorps, Peace Corps, or equivalent service",
+        ],
+        "certifications": ["AmeriCorps certification", "Peace Corps", "Nonprofit Management cert (CNM)"],
         "competition_level": "moderate",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 26. Chemical & Biomedical Engineering
+    # 16. Media & Communications
     # ─────────────────────────────────────────────────────────────────────
-    # Pfizer, J&J, Medtronic, Dow, ExxonMobil. Chemical engineering
-    # roles require strong academic foundation (thermodynamics, transport
-    # phenomena, reaction kinetics). Biomedical roles need FDA regulatory
-    # knowledge and medical device design. GPA screens at 3.2+ for
-    # pharma/biotech. Lab research experience is critical. Co-ops are
-    # common and almost expected (especially at Dow, ExxonMobil).
-    # Pfizer R&D acceptance rate <3%.
+    # Reference: New York Times, CNN, top PR agencies (Edelman).
+    # Build-dominant: published bylines and portfolio are everything.
+    # The NYT fellowship receives thousands of applications for 5-10
+    # spots. Grit captures story pitching persistence and deadline
+    # performance. Smart reflects storytelling craft and media literacy.
+    #
+    # Smart (Media) = Storytelling craft and narrative structure, media
+    #                 theory and journalism ethics (AP style mastery),
+    #                 audience analytics interpretation, communications
+    #                 strategy, media law fundamentals, SEO for content,
+    #                 data journalism literacy
+    # Grit  (Media) = Story pitching persistence to editors (most rejected),
+    #                 deadline performance under pressure, handling editorial
+    #                 rejection and revision, interview hustle, long-form
+    #                 investigative research over months
+    # Build (Media) = Published articles/bylines at recognized outlets,
+    #                 multimedia portfolio (video, audio, written, social),
+    #                 broadcast/podcast production credits, social media
+    #                 reach metrics, newsroom or PR internship, student
+    #                 media leadership (editor/producer role)
+    "media_communications": {
+        "label": "Media & Communications",
+        "smart": 18,
+        "grit": 30,
+        "build": 52,
+        "recruiter_bar": 70,
+        "reference_benchmark": "New York Times / CNN / Edelman early career bar",
+        "reference_company": "New York Times",
+        "gpa_screen": None,
+        "acceptance_rate": "~3–5% for top masthead fellowships",
+        "smart_means": "Storytelling craft, narrative structure, media theory, AP style mastery, audience analytics, communications strategy, data journalism literacy",
+        "grit_means": "Story pitching persistence (most rejected), deadline performance, editorial rejection resilience, interview hustle, long-form investigative research",
+        "build_means": "Published bylines at recognized outlets, multimedia portfolio (video/audio/written/social), broadcast/podcast credits, social media reach, student media leadership",
+        "key_proof_points": [
+            "Published bylines at student newspaper, local outlet, or recognized platform",
+            "Multimedia portfolio (written + at least one of: video, audio, social)",
+            "Student media leadership (editor, producer, or senior role)",
+            "Journalism or PR internship at recognized organization",
+            "Social media management with audience metrics documented",
+        ],
+        "certifications": ["Google News Initiative Training", "AP Style mastery (test)"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 17. Life Sciences & Research
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: Pfizer, NIH, Genentech, major academic research labs.
+    # Smart-dominant because research roles require deep scientific
+    # foundation. Grit reflects lab research persistence (negative results
+    # are the norm — a good researcher persists through them). Build is
+    # publications, posters, and lab technique mastery.
+    #
+    # Smart (LS/R) = Molecular/cellular biology mastery, biochemistry,
+    #                experimental design and controls, statistical analysis
+    #                (SPSS, R, GraphPad), literature review depth,
+    #                grant proposal structure, scientific writing quality
+    # Grit  (LS/R) = Lab research persistence through failure (avg 70%+
+    #                experiments fail), multi-semester research commitment,
+    #                scientific writing revision cycles, conference
+    #                preparation and abstract submission persistence
+    # Build (LS/R) = Publications (first or co-author), conference posters
+    #                or oral presentations, grants funded, lab techniques
+    #                mastered and certified, industry or academic research
+    #                internship, thesis/dissertation quality
+    "life_sciences_research": {
+        "label": "Life Sciences & Research",
+        "smart": 45,
+        "grit": 30,
+        "build": 25,
+        "recruiter_bar": 78,
+        "reference_benchmark": "Pfizer R&D / NIH Research Fellowship bar",
+        "reference_company": "Pfizer",
+        "gpa_screen": "3.3+ typical for top biotech programs",
+        "acceptance_rate": "~3–5% for Pfizer R&D, NIH IRTA",
+        "smart_means": "Molecular/cellular biology mastery, biochemistry, experimental design, statistical analysis, literature review depth, scientific writing quality",
+        "grit_means": "Lab research persistence through failure (70%+ experiments fail), multi-semester commitment, scientific writing revision cycles, conference prep",
+        "build_means": "Publications (first/co-author), conference posters/presentations, grants funded, lab techniques certified, research internship, thesis quality",
+        "key_proof_points": [
+            "0-2 years wet lab research experience minimum",
+            "Publications, conference posters, or research presentations",
+            "REU, NIH fellowship, or faculty-mentored research",
+            "Core lab techniques mastered (PCR, Western blot, cell culture)",
+            "GPA 3.3+ in science courses",
+        ],
+        "certifications": ["BSL-2 Safety", "IACUC Certification", "GLP Training"],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 18. Economics & Public Policy
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: Federal Reserve Research Assistant, Brookings Research
+    # Assistant, World Bank YPP. Fed RA is a 2-year program; most go to
+    # top PhD programs after. Smart-dominant because econometrics and
+    # quantitative research are the primary screens. Build reflects
+    # research output quality.
+    #
+    # Smart (Econ) = Econometrics (OLS, IV, DID, RDD), macro/micro theory
+    #                depth, Stata/R/Python proficiency, research design,
+    #                mathematical economics (real analysis, linear algebra),
+    #                GPA in economics and math courses, policy analysis
+    # Grit  (Econ) = Thesis research multi-year dedication, policy paper
+    #                revision cycles, think tank application persistence,
+    #                econ competition preparation, long-form research
+    #                project follow-through
+    # Build (Econ) = Independent research/thesis published or circulated,
+    #                econometric models with documented results, policy
+    #                briefs written and distributed, think tank or
+    #                government internship, econ competition performance
+    "economics_public_policy": {
+        "label": "Economics & Public Policy",
+        "smart": 42,
+        "grit": 28,
+        "build": 30,
+        "recruiter_bar": 80,
+        "reference_benchmark": "Federal Reserve RA / Brookings RA bar",
+        "reference_company": "Federal Reserve",
+        "gpa_screen": "3.5+ expected; strong quant coursework required",
+        "acceptance_rate": "~3–5% (Fed RA), ~5–8% (Brookings RA)",
+        "smart_means": "Econometrics (OLS/IV/DID), macro/micro theory, Stata/R/Python, mathematical economics, research design, GPA in econ and math, policy analysis",
+        "grit_means": "Thesis research multi-year dedication, policy paper revision cycles, think tank persistence, econ competition preparation, long-form research",
+        "build_means": "Research/thesis published/circulated, econometric models with results, policy briefs, think tank or government internship, econ competition placement",
+        "key_proof_points": [
+            "Econometrics coursework (OLS, IV, panel data) with demonstrated proficiency",
+            "Stata, R, or Python for economic analysis",
+            "Independent research paper, thesis, or policy brief",
+            "Government or think tank internship",
+            "Economics competition participation",
+        ],
+        "certifications": [],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 19. Entrepreneurship & Innovation
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: Y Combinator startup hiring, Techstars portfolio
+    # companies. GPA is 100% irrelevant. Startups want proof that you've
+    # shipped something real and handled failure. Grit is the resilience
+    # to keep going when everything is uncertain. Build is the portfolio
+    # of what you've actually launched.
+    #
+    # Smart (Entro) = Business model thinking, product sense, market sizing
+    #                 and validation skills, lean startup methodology, basic
+    #                 financial literacy (unit economics, CAC, LTV), customer
+    #                 discovery and interview technique
+    # Grit  (Entro) = Startup resilience (built something despite no money/
+    #                 team/resources), customer discovery persistence,
+    #                 fundraising rejection handling, willingness to pivot,
+    #                 24/7 ownership mentality, community building
+    # Build (Entro) = Companies or products launched (even small), revenue
+    #                 generated or users acquired, pitch competition wins,
+    #                 press or recognition, hackathon projects shipped to
+    #                 production, funding raised (even small angel round)
+    "entrepreneurship_innovation": {
+        "label": "Entrepreneurship & Innovation",
+        "smart": 15,
+        "grit": 42,
+        "build": 43,
+        "recruiter_bar": 70,
+        "reference_benchmark": "Y Combinator / Techstars startup team hiring bar",
+        "reference_company": "Y Combinator (portfolio)",
+        "gpa_screen": None,
+        "acceptance_rate": "~2–3% (YC acceptance); startup jobs vary widely",
+        "smart_means": "Business model thinking, product sense, market sizing, lean methodology, unit economics (CAC/LTV), customer discovery interview technique",
+        "grit_means": "Startup resilience, customer discovery persistence, fundraising rejection handling, willingness to pivot, 24/7 ownership, community building",
+        "build_means": "Companies/products launched (even small), revenue/users acquired, pitch competition wins, press/recognition, hackathon shipped to production, funding raised",
+        "key_proof_points": [
+            "Product or business launched (even if failed — show what you learned)",
+            "Revenue generated OR users acquired with documented numbers",
+            "Pitch competition participation or win",
+            "Hackathon project shipped to production (deployed, not just demoed)",
+            "Customer discovery — 20+ user interviews conducted",
+        ],
+        "certifications": [],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 20. Physical Sciences & Math
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: National labs (LLNL, PNNL, Argonne, Brookhaven, Sandia).
+    # Most Smart-heavy cohort of all 22 because theoretical depth and
+    # mathematical rigor are THE gate. Advanced degrees strongly preferred.
+    # Grit captures competition math dedication. Build is research output.
+    #
+    # Smart (PS/M)  = Mathematical proof-writing ability, abstract algebra/
+    #                 real analysis/topology, theoretical physics depth,
+    #                 computational methods (Python, MATLAB, Fortran/Julia),
+    #                 research methodology, GPA in proof-based courses,
+    #                 competition math performance (Putnam, USAMO, IMO)
+    # Grit  (PS/M)  = Problem set persistence (math is notoriously hard),
+    #                 competition math training over years, long research
+    #                 cycles with delayed gratification, PhD-track discipline
+    # Build (PS/M)  = Research papers (even pre-prints), Putnam/USAMO/AMC
+    #                 competition wins, computational physics/math projects,
+    #                 NSF REU or national lab internship, thesis quality
+    "physical_sciences_math": {
+        "label": "Physical Sciences & Math",
+        "smart": 52,
+        "grit": 25,
+        "build": 23,
+        "recruiter_bar": 80,
+        "reference_benchmark": "National lab (LLNL/PNNL/Argonne) entry-level researcher bar",
+        "reference_company": "Lawrence Livermore National Laboratory",
+        "gpa_screen": "3.5+ strongly preferred for national labs",
+        "acceptance_rate": "~5–10% for national lab positions",
+        "smart_means": "Mathematical proof-writing, abstract algebra/real analysis, theoretical physics depth, computational methods (Python/MATLAB), research methodology",
+        "grit_means": "Problem set persistence in proof-based courses, competition math training over years, long research cycles with delayed gratification",
+        "build_means": "Research papers (even pre-prints), Putnam/USAMO/AMC wins, computational physics/math projects, NSF REU or national lab internship",
+        "key_proof_points": [
+            "Advanced coursework in proof-based mathematics (real analysis, algebra, topology)",
+            "Research paper, thesis, or technical report",
+            "NSF REU or national laboratory internship",
+            "Math competition achievement (Putnam, USAMO, AMC)",
+            "Computational modeling project (Python/MATLAB/Julia)",
+        ],
+        "certifications": [],
+        "competition_level": "high",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # 21. Chemical & Biomedical Engineering
+    # ─────────────────────────────────────────────────────────────────────
+    # Reference: Pfizer, J&J, Medtronic, Dow Chemical, ExxonMobil.
+    # Pfizer R&D acceptance <3%. GPA screen at 3.2+ for pharma/biotech.
+    # Smart reflects rigorous ChE/BME fundamentals. Build is lab-and-
+    # simulation proof. Co-ops are almost expected (Dow, ExxonMobil).
+    #
+    # Smart (ChE/BME) = Thermodynamics, transport phenomena, reaction kinetics,
+    #                   biomaterials and tissue engineering (BME track),
+    #                   process design and simulation (Aspen, COMSOL),
+    #                   FDA regulatory pathway knowledge (BME), GPA in
+    #                   core ChE/BME courses (3.2+ screen), ABET fundamentals
+    # Grit  (ChE/BME) = Lab experiment iteration through repeated failures,
+    #                   senior design multi-semester commitment, complex
+    #                   problem set persistence, co-op dedication and
+    #                   professional development during work terms
+    # Build (ChE/BME) = Lab protocols mastered (analytical chemistry,
+    #                   bioprocessing, GMP), process simulation projects
+    #                   (Aspen Plus, COMSOL), research publications or posters,
+    #                   co-op at recognized chemical/pharma/biotech company,
+    #                   medical device prototype or FE passage
     "chemical_biomedical_engineering": {
         "label": "Chemical & Biomedical Engineering",
         "smart": 40,
         "grit": 25,
         "build": 35,
         "recruiter_bar": 78,
-        "reference_benchmark": "Pfizer R&D / Medtronic entry-level bar",
+        "reference_benchmark": "Pfizer R&D / Medtronic / Dow Chemical entry-level bar",
         "reference_company": "Pfizer",
-        "gpa_screen": 3.2,  # Pharma/biotech screen rigorously
+        "gpa_screen": "3.2+ (pharma/biotech screen rigorously)",
         "acceptance_rate": "<3% (Pfizer R&D), ~5% (major pharma internships)",
+        "smart_means": "Thermodynamics, transport phenomena, reaction kinetics, biomaterials (BME), process simulation (Aspen/COMSOL), FDA regulatory (BME), GPA in core courses",
+        "grit_means": "Lab experiment iteration through failures, senior design multi-semester commitment, complex problem set persistence, co-op professional development",
+        "build_means": "Lab protocols mastered, process simulation projects (Aspen/COMSOL), publications/posters, co-op at pharma/biotech company, FE passage",
         "key_proof_points": [
-            "Research experience with publications or presentations",
-            "Process design or simulation projects (Aspen, COMSOL)",
-            "Lab skills (GMP, analytical chemistry, bioprocessing)",
-            "Co-op at recognized chemical or pharmaceutical company",
-            "FDA regulatory awareness (for biomedical track)",
-            "Medical device prototyping or design control",
+            "GPA 3.2+ in ChE/BME core courses",
+            "Process simulation project (Aspen Plus or COMSOL)",
+            "Co-op or internship at recognized chemical/pharma/biotech company",
+            "Lab research experience with documented techniques",
+            "FE exam passage or preparation (before graduation)",
         ],
-        "certifications": ["FE (Fundamentals of Engineering)", "Six Sigma Green Belt", "Lean Manufacturing"],
+        "certifications": ["FE (Fundamentals of Engineering)", "Six Sigma Green Belt", "GMP Training"],
         "competition_level": "high",
     },
 
     # ─────────────────────────────────────────────────────────────────────
-    # 27. Industrial & Systems Engineering
+    # 22. Civil & Environmental Engineering
     # ─────────────────────────────────────────────────────────────────────
-    # Amazon, GE, Toyota, Deloitte (operations consulting). ISE is the
-    # bridge between engineering and business — optimization, lean/six
-    # sigma, supply chain modeling, data analytics. Employers value
-    # quantified process improvements. Six Sigma certification is a
-    # major differentiator. Amazon Operations hires heavily from ISE.
-    # Consulting firms recruit ISE for operations practices. GPA
-    # screen at 3.0+ standard, 3.5+ for consulting.
-    "industrial_systems_engineering": {
-        "label": "Industrial & Systems Engineering",
-        "smart": 25,
-        "grit": 35,
-        "build": 40,
-        "recruiter_bar": 74,
-        "reference_benchmark": "Amazon Operations / GE entry-level bar",
-        "reference_company": "Amazon",
-        "gpa_screen": 3.0,  # 3.5+ for consulting track
-        "acceptance_rate": "~3-5% (Amazon Ops), ~8% (GE internships)",
-        "key_proof_points": [
-            "Quantified process improvement projects",
-            "Lean/Six Sigma project with documented savings",
-            "Supply chain or logistics optimization work",
-            "Simulation modeling (Arena, AnyLogic, Python)",
-            "Data analytics with business impact",
-            "IIE/IISE student chapter or case competition",
-        ],
-        "certifications": ["Six Sigma Green Belt", "Six Sigma Black Belt", "APICS CSCP", "Lean Manufacturing"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 28. Agriculture & Food Science
-    # ─────────────────────────────────────────────────────────────────────
-    # Cargill, USDA, Monsanto/Bayer Crop Science, ADM. Mix of academic
-    # (agronomy, soil science) and practical (farm management, equipment).
-    # FFA experience matters. Research on crop yields and sustainability
-    # is valued. Field experience and applied research dominate hiring.
-    "agriculture_food_science": {
-        "label": "Agriculture & Food Science",
-        "smart": 30,
-        "grit": 35,
-        "build": 35,
-        "recruiter_bar": 68,
-        "reference_benchmark": "Cargill / USDA entry-level agronomist bar",
-        "reference_company": "Cargill",
-        "gpa_screen": "3.0+ preferred for research roles",
-        "acceptance_rate": "~10-15% for top agribusiness programs",
-        "key_proof_points": [
-            "FFA or 4-H leadership and competition awards",
-            "Crop yield or sustainability research projects",
-            "Farm management or agribusiness internship",
-            "Soil science or agronomy fieldwork",
-            "Equipment operation and precision agriculture tech",
-        ],
-        "certifications": ["Certified Crop Adviser (CCA)", "HACCP", "ServSafe"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 29. Architecture & Urban Planning
-    # ─────────────────────────────────────────────────────────────────────
-    # Gensler, SOM, AECOM, HOK. Portfolio is critical (like design).
-    # Academic rigor matters (5-year accredited B.Arch programs). ARE exam
-    # path. Studio projects and internship hours (IDP/AXP) required for
-    # licensure. Build-heavy because portfolio and studio work dominate.
-    "architecture_urban_planning": {
-        "label": "Architecture & Urban Planning",
-        "smart": 25,
-        "grit": 25,
-        "build": 50,
-        "recruiter_bar": 74,
-        "reference_benchmark": "Gensler / SOM junior designer bar",
-        "reference_company": "Gensler",
-        "gpa_screen": "3.0+ for competitive firms",
-        "acceptance_rate": "~5-10% for top architecture firms",
-        "key_proof_points": [
-            "Design portfolio with 4-6 studio projects",
-            "AXP/IDP internship hours logged toward licensure",
-            "Revit, AutoCAD, Rhino, Grasshopper proficiency",
-            "Competition entries or awards (AIA, ULI)",
-            "Urban planning or community design charrette experience",
-        ],
-        "certifications": ["ARE (Architect Registration Exam)", "LEED AP", "AICP (for planning track)"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 30. Performing Arts & Film
-    # ─────────────────────────────────────────────────────────────────────
-    # Netflix, Disney, A24, Broadway, regional theaters, film studios.
-    # Reel/portfolio/performance credits are everything. Academic
-    # credentials are less important. Festival selections, productions
-    # directed or acted in, and union membership (SAG-AFTRA) matter.
-    # Extremely build-heavy — shipped creative work is the currency.
-    "performing_arts_film": {
-        "label": "Performing Arts & Film",
-        "smart": 10,
+    # Reference: AECOM, Bechtel, Jacobs, Fluor. PE licensure path is
+    # the career backbone. AECOM hires ~2K interns globally. More stable
+    # hiring than other engineering fields. FE exam passage expected
+    # before graduation at competitive firms. Field experience matters.
+    #
+    # Smart (CE/EE) = Structural analysis, geotechnical engineering,
+    #                 hydraulics and fluid mechanics, surveying and
+    #                 mapping, environmental regulations (Clean Water Act,
+    #                 NEPA), AutoCAD Civil 3D and GIS proficiency,
+    #                 construction materials knowledge, GPA 3.0+
+    # Grit  (CE/EE) = Field work dedication (site observation, surveying),
+    #                 long multi-year infrastructure project timelines,
+    #                 regulatory approval patience, construction site
+    #                 conditions and physical demands, ASCE chapter
+    # Build (CE/EE) = AutoCAD Civil 3D / Revit / GIS design portfolio,
+    #                 senior capstone with real client or municipality,
+    #                 field experience documented (hours, projects),
+    #                 FE exam passage, ASCE student chapter leadership,
+    #                 sustainability or green infrastructure project
+    "civil_environmental_engineering": {
+        "label": "Civil & Environmental Engineering",
+        "smart": 32,
         "grit": 30,
-        "build": 60,
-        "recruiter_bar": 70,
-        "reference_benchmark": "Netflix / A24 entry-level production bar",
-        "reference_company": "Netflix",
-        "gpa_screen": None,  # Credits and reel matter, not GPA
-        "acceptance_rate": "~2-5% for top film/theater programs; <1% for studio roles",
+        "build": 38,
+        "recruiter_bar": 72,
+        "reference_benchmark": "AECOM / Bechtel / Jacobs entry-level bar",
+        "reference_company": "AECOM",
+        "gpa_screen": "3.0+ (standard across major firms)",
+        "acceptance_rate": "~5–8% (top firms), moderate overall",
+        "smart_means": "Structural analysis, geotechnical engineering, hydraulics, environmental regulations, AutoCAD Civil 3D and GIS proficiency, construction materials, GPA 3.0+",
+        "grit_means": "Field work dedication, long infrastructure project timelines, regulatory patience, construction site work, ASCE chapter involvement",
+        "build_means": "AutoCAD Civil 3D/Revit/GIS portfolio, senior capstone with real client, field experience hours documented, FE passage, ASCE leadership",
         "key_proof_points": [
-            "Demo reel or performance credits",
-            "Festival selections or competition awards",
-            "Productions directed, acted in, or crewed",
-            "Union membership (SAG-AFTRA, IATSE)",
-            "Student film or theater leadership roles",
+            "FE exam passage (strongly expected before graduation at top firms)",
+            "AutoCAD Civil 3D, Revit, or GIS proficiency demonstrated",
+            "Senior capstone project with real client or municipality",
+            "Field experience (surveying, site observation, construction)",
+            "ASCE student chapter leadership or competition",
         ],
-        "certifications": ["SAG-AFTRA membership", "IATSE membership", "Final Cut / Avid / DaVinci Resolve"],
+        "certifications": ["FE (Fundamentals of Engineering)", "LEED Green Associate", "GIS Certificate"],
+        "competition_level": "moderate",
+    },
+
+    # ─────────────────────────────────────────────────────────────────────
+    # LEGACY KEYS — kept for backward compatibility with old references
+    # These map to the same data as the active cohorts above.
+    # cohort_config.py uses the `label` field as the key in COHORT_SCORING_CONFIG,
+    # so duplicate labels are deduplicated automatically.
+    # ─────────────────────────────────────────────────────────────────────
+    "design_creative": {
+        "label": "Design & Creative Arts",  # Redirect to canonical label
+        "smart": 12, "grit": 23, "build": 65,
+        "recruiter_bar": 72,
+        "reference_benchmark": "IDEO / top design agency junior designer bar",
+        "reference_company": "IDEO",
+        "gpa_screen": None, "acceptance_rate": "~5–10%",
+        "competition_level": "high",
+    },
+    "legal_compliance": {
+        "label": "Law & Government",  # Redirect to canonical label
+        "smart": 45, "grit": 30, "build": 25,
+        "recruiter_bar": 82,
+        "reference_benchmark": "T14 law / BigLaw SA / DOJ Honors bar",
+        "reference_company": "Skadden, Arps",
+        "gpa_screen": "3.5+", "acceptance_rate": "~5–10%",
         "competition_level": "very_high",
     },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 31. Foreign Languages & Linguistics
-    # ─────────────────────────────────────────────────────────────────────
-    # State Department, UN, translation firms, international organizations.
-    # DLPT scores, interpreter certifications, and immersion experience
-    # are primary signals. Academic rigor (linguistics research) combined
-    # with practical fluency proof. Bilingual candidates in high-demand
-    # languages (Arabic, Mandarin, Russian) have strong advantage.
-    "foreign_languages_linguistics": {
-        "label": "Foreign Languages & Linguistics",
-        "smart": 35,
-        "grit": 30,
-        "build": 35,
-        "recruiter_bar": 72,
-        "reference_benchmark": "State Department / UN interpreter bar",
-        "reference_company": "U.S. State Department",
-        "gpa_screen": "3.0+ for government language programs",
-        "acceptance_rate": "~10-15% for State Dept fellowships",
-        "key_proof_points": [
-            "DLPT score or equivalent proficiency certification",
-            "Immersion experience (study abroad, Peace Corps)",
-            "Interpreter or translation work samples",
-            "Linguistics research or published papers",
-            "Fluency in 2+ languages with documented proficiency",
-        ],
-        "certifications": ["ATA Certified Translator", "State Dept DLPT", "ACTFL OPI certification"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 32. Religious Studies & Ministry
-    # ─────────────────────────────────────────────────────────────────────
-    # Seminaries, chaplaincy programs, faith-based nonprofits. Community
-    # leadership, pastoral care, and theology GPA are the primary signals.
-    # Grit-heavy — leadership, service orientation, and interpersonal
-    # skills dominate over technical or academic proof.
-    "religious_studies_ministry": {
-        "label": "Religious Studies & Ministry",
-        "smart": 30,
-        "grit": 45,
-        "build": 25,
-        "recruiter_bar": 62,
-        "reference_benchmark": "Top seminary / chaplaincy program admission bar",
-        "reference_company": "Duke Divinity School",
-        "gpa_screen": "3.0+ preferred for competitive seminaries",
-        "acceptance_rate": "~20-30% for top seminary programs",
-        "key_proof_points": [
-            "Community or congregational leadership roles",
-            "Pastoral care or chaplaincy volunteer hours",
-            "Theology coursework and GPA",
-            "Mission trips or faith-based service projects",
-            "Public speaking and teaching experience",
-        ],
-        "certifications": ["CPE (Clinical Pastoral Education)", "Ordination credentials", "Board Certified Chaplain"],
+    "education_teaching": {
+        "label": "Education & Human Development",  # Redirect to canonical label
+        "smart": 22, "grit": 48, "build": 30,
+        "recruiter_bar": 65,
+        "reference_benchmark": "TFA / top school district bar",
+        "reference_company": "Teach For America",
+        "gpa_screen": "2.5+", "acceptance_rate": "~15–25%",
         "competition_level": "low",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 33. Aviation & Transportation
-    # ─────────────────────────────────────────────────────────────────────
-    # Delta, United, FedEx, FAA. FAA certifications (PPL, instrument
-    # rating) and logged flight hours are the hard gates. Build-heavy
-    # because certifications and flight time are non-negotiable proof.
-    # Airline cadet programs are the primary pipeline for new pilots.
-    "aviation_transportation": {
-        "label": "Aviation & Transportation",
-        "smart": 25,
-        "grit": 30,
-        "build": 45,
-        "recruiter_bar": 72,
-        "reference_benchmark": "Delta / United cadet program bar",
-        "reference_company": "Delta Air Lines",
-        "gpa_screen": "2.5+ minimum; 3.0+ for competitive cadet programs",
-        "acceptance_rate": "~5-10% for airline cadet programs",
-        "key_proof_points": [
-            "FAA Private Pilot License (PPL) or higher",
-            "Instrument rating and logged flight hours",
-            "Aviation internship or FBO experience",
-            "FAA written exam scores",
-            "Leadership in aviation clubs or organizations",
-        ],
-        "certifications": ["FAA PPL", "Instrument Rating", "Commercial Pilot License (CPL)", "FAA Part 107 (drone)"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 34. Criminal Justice & Public Safety
-    # ─────────────────────────────────────────────────────────────────────
-    # FBI, DEA, US Marshals, state/local law enforcement. Physical
-    # fitness, leadership, and community service are primary signals.
-    # Background investigations matter. Academy training is the entry
-    # point. Grit-heavy — resilience, integrity, and service dominate.
-    "criminal_justice_public_safety": {
-        "label": "Criminal Justice & Public Safety",
-        "smart": 25,
-        "grit": 45,
-        "build": 30,
-        "recruiter_bar": 68,
-        "reference_benchmark": "FBI / DEA special agent entry bar",
-        "reference_company": "FBI",
-        "gpa_screen": "3.0+ for federal agencies; 2.5+ for local",
-        "acceptance_rate": "~5% (FBI), ~10-15% (local law enforcement)",
-        "key_proof_points": [
-            "Physical fitness test scores (PFT)",
-            "Leadership roles in student organizations",
-            "Community service and volunteer hours",
-            "Criminal justice internship or ride-along",
-            "Clean background and drug screening",
-        ],
-        "certifications": ["CPR/First Aid", "FEMA ICS certifications", "State POST certification"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 35. Library & Information Science
-    # ─────────────────────────────────────────────────────────────────────
-    # Library of Congress, academic libraries, digital archives. MLS
-    # preparation, cataloging/metadata experience, and digital literacy
-    # are the primary signals. Balanced across all three dimensions.
-    "library_information_science": {
-        "label": "Library & Information Science",
-        "smart": 35,
-        "grit": 30,
-        "build": 35,
-        "recruiter_bar": 64,
-        "reference_benchmark": "Library of Congress / top academic library bar",
-        "reference_company": "Library of Congress",
-        "gpa_screen": "3.0+ for competitive MLS programs",
-        "acceptance_rate": "~25-35% for top MLS programs",
-        "key_proof_points": [
-            "Library internship or work-study experience",
-            "Cataloging, metadata, or digital archiving projects",
-            "Information literacy instruction experience",
-            "Database management and digital tools proficiency",
-            "Community programming and outreach",
-        ],
-        "certifications": ["MLS/MLIS (in progress)", "Digital Archives Specialist", "Metadata certification"],
-        "competition_level": "low",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 36. Culinary Arts & Food Service
-    # ─────────────────────────────────────────────────────────────────────
-    # CIA (Culinary Institute of America), Michelin restaurants, hotel
-    # food programs. Kitchen experience, stages/externships, and food
-    # safety certifications are non-negotiable. Build-heavy — hands-on
-    # cooking skill and kitchen time are the currency.
-    "culinary_arts_food_service": {
-        "label": "Culinary Arts & Food Service",
-        "smart": 10,
-        "grit": 40,
-        "build": 50,
-        "recruiter_bar": 66,
-        "reference_benchmark": "CIA / Michelin restaurant entry bar",
-        "reference_company": "Culinary Institute of America",
-        "gpa_screen": None,  # Kitchen skill matters, not GPA
-        "acceptance_rate": "~20-30% for top culinary programs",
-        "key_proof_points": [
-            "Kitchen experience (line cook, prep, pastry)",
-            "Stage or externship at recognized restaurant",
-            "Food safety and sanitation certifications",
-            "Culinary competition awards",
-            "Menu development or recipe creation portfolio",
-        ],
-        "certifications": ["ServSafe Manager", "ACF Certified Culinarian", "HACCP"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 37. Fashion & Apparel
-    # ─────────────────────────────────────────────────────────────────────
-    # LVMH, Nike, Vogue, PVH, Kering. Portfolio, runway shows, design
-    # competitions, and brand internships are primary signals. Extremely
-    # build-heavy — creative output and industry exposure dominate.
-    "fashion_apparel": {
-        "label": "Fashion & Apparel",
-        "smart": 10,
-        "grit": 30,
-        "build": 60,
-        "recruiter_bar": 72,
-        "reference_benchmark": "LVMH / Nike design entry bar",
-        "reference_company": "LVMH",
-        "gpa_screen": None,  # Portfolio is the only screen
-        "acceptance_rate": "~3-5% for top fashion house internships",
-        "key_proof_points": [
-            "Fashion design portfolio with collection work",
-            "Runway shows or design competition participation",
-            "Brand internship at recognized label",
-            "Textile and pattern-making proficiency",
-            "Fashion week or trade show exposure",
-        ],
-        "certifications": ["CLO 3D certification", "Adobe Creative Suite", "Textile science credential"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 38. Journalism & Broadcasting
-    # ─────────────────────────────────────────────────────────────────────
-    # NYT, WSJ, CNN, NPR, AP. Published clips, broadcast reels, and
-    # editor experience are primary signals. Separate from general
-    # media/comms — more specific to investigative reporting, beat
-    # coverage, and broadcast production. Build-heavy but grit matters
-    # for deadline-driven, high-pressure newsroom culture.
-    "journalism_broadcasting": {
-        "label": "Journalism & Broadcasting",
-        "smart": 20,
-        "grit": 35,
-        "build": 45,
-        "recruiter_bar": 72,
-        "reference_benchmark": "NYT / CNN entry-level reporter bar",
-        "reference_company": "New York Times",
-        "gpa_screen": None,  # Published work matters, not GPA
-        "acceptance_rate": "~2-5% for top masthead fellowships/internships",
-        "key_proof_points": [
-            "Published clips at recognized outlets",
-            "Broadcast reel with on-air or production work",
-            "Student newspaper or campus media editor role",
-            "Investigative or enterprise reporting samples",
-            "AP Style and CMS proficiency",
-        ],
-        "certifications": ["Google News Initiative", "AP Style certification", "Broadcast journalism credential"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 39. Public Administration & Government
-    # ─────────────────────────────────────────────────────────────────────
-    # Federal agencies, state government, city management. Policy
-    # analysis, public speaking, and government internships are primary
-    # signals. Grit-heavy — public service orientation, leadership, and
-    # persistence through bureaucratic processes matter.
-    "public_administration_government": {
-        "label": "Public Administration & Government",
-        "smart": 30,
-        "grit": 40,
-        "build": 30,
-        "recruiter_bar": 70,
-        "reference_benchmark": "Federal PMF / state government analyst bar",
-        "reference_company": "Office of Management and Budget",
-        "gpa_screen": "3.0+ for Presidential Management Fellowship",
-        "acceptance_rate": "~5-10% for PMF; ~15-20% for state programs",
-        "key_proof_points": [
-            "Government internship (federal, state, or local)",
-            "Policy analysis or research papers",
-            "Public speaking and legislative testimony",
-            "Community organizing or civic engagement",
-            "Grant writing or program evaluation",
-        ],
-        "certifications": ["Certified Public Manager (CPM)", "PMP", "FEMA certifications"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 40. Veterinary & Animal Science
-    # ─────────────────────────────────────────────────────────────────────
-    # Top vet schools, animal hospitals, USDA APHIS. Clinical hours,
-    # animal handling, and GRE/GPA screens are the hard gates. Smart-
-    # heavy because pre-vet academic requirements are rigorous.
-    "veterinary_animal_science": {
-        "label": "Veterinary & Animal Science",
-        "smart": 40,
-        "grit": 30,
-        "build": 30,
-        "recruiter_bar": 76,
-        "reference_benchmark": "Top vet school admission / USDA APHIS bar",
-        "reference_company": "Cornell Veterinary",
-        "gpa_screen": 3.4,  # Pre-vet GPA screens are rigorous
-        "acceptance_rate": "~10-15% for top vet schools",
-        "key_proof_points": [
-            "500+ clinical or animal handling hours",
-            "Veterinary hospital or clinic experience",
-            "Animal science research with faculty",
-            "GRE scores in competitive range",
-            "Large and small animal experience diversity",
-        ],
-        "certifications": ["Veterinary Technician (CVT)", "USDA APHIS accreditation", "Fear Free certification"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 41. Pharmacy & Pharmaceutical Science
-    # ─────────────────────────────────────────────────────────────────────
-    # CVS Health, Walgreens, Pfizer, FDA. PCAT prep, pharmacy internship
-    # hours, and compounding experience are primary signals. Smart-heavy
-    # due to rigorous pre-pharmacy academic requirements and PCAT.
-    "pharmacy_pharmaceutical": {
-        "label": "Pharmacy & Pharmaceutical Science",
-        "smart": 45,
-        "grit": 25,
-        "build": 30,
-        "recruiter_bar": 78,
-        "reference_benchmark": "Top PharmD program admission / Pfizer entry bar",
-        "reference_company": "Pfizer",
-        "gpa_screen": 3.3,  # Pre-pharmacy GPA screens are strict
-        "acceptance_rate": "~15-25% for top PharmD programs",
-        "key_proof_points": [
-            "PCAT score in competitive range",
-            "Pharmacy internship hours (300+ preferred)",
-            "Compounding or clinical rotation experience",
-            "Pharmaceutical research or lab work",
-            "Patient counseling and medication therapy management",
-        ],
-        "certifications": ["Pharmacy Technician (CPhT)", "Immunization delivery", "PCAT"],
-        "competition_level": "high",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 42. Nursing & Patient Care
-    # ─────────────────────────────────────────────────────────────────────
-    # Mayo Clinic, Cleveland Clinic, HCA, Kaiser Permanente. NCLEX prep,
-    # clinical rotations, and patient care hours are the hard gates.
-    # Grit-heavy — resilience, compassion, and ability to perform under
-    # pressure in clinical settings are paramount.
-    "nursing_patient_care": {
-        "label": "Nursing & Patient Care",
-        "smart": 30,
-        "grit": 40,
-        "build": 30,
-        "recruiter_bar": 72,
-        "reference_benchmark": "Mayo Clinic / Cleveland Clinic new-grad RN bar",
-        "reference_company": "Mayo Clinic",
-        "gpa_screen": 3.0,  # BSN programs screen at 3.0+
-        "acceptance_rate": "~15-25% for top nursing residency programs",
-        "key_proof_points": [
-            "NCLEX-RN preparation and practice scores",
-            "500+ clinical rotation hours across specialties",
-            "Patient care technician or CNA experience",
-            "Simulation lab performance evaluations",
-            "Healthcare volunteer hours and leadership",
-        ],
-        "certifications": ["BLS/ACLS", "CNA", "NCLEX-RN (in progress)", "Specialty nursing certifications"],
-        "competition_level": "moderate",
-    },
-
-    # ─────────────────────────────────────────────────────────────────────
-    # 43. Dental & Oral Health
-    # ─────────────────────────────────────────────────────────────────────
-    # Top dental schools, private practices, community health. DAT prep,
-    # shadowing hours, manual dexterity, and patient interaction are
-    # primary signals. Smart-heavy due to rigorous pre-dental academic
-    # requirements and DAT scoring.
-    "dental_oral_health": {
-        "label": "Dental & Oral Health",
-        "smart": 40,
-        "grit": 30,
-        "build": 30,
-        "recruiter_bar": 78,
-        "reference_benchmark": "Top dental school admission bar",
-        "reference_company": "UCSF School of Dentistry",
-        "gpa_screen": 3.5,  # Pre-dental GPA screens are very strict
-        "acceptance_rate": "~5-10% for top dental schools",
-        "key_proof_points": [
-            "DAT score in competitive range (20+ AA)",
-            "100+ dental shadowing hours across specialties",
-            "Manual dexterity demonstration (wire bending, wax-up)",
-            "Patient interaction in clinical or volunteer setting",
-            "Dental research or community oral health outreach",
-        ],
-        "certifications": ["DAT", "Dental Assisting (CDA)", "Radiology certification"],
-        "competition_level": "very_high",
     },
 }
-
-
-# ── Convenience accessors ──────────────────────────────────────────────────
-
-def get_cohort_weights(cohort_key: str) -> dict[str, float]:
-    """Return normalized {smart, grit, build} weights (summing to 1.0)."""
-    cfg = COHORT_SCORING_WEIGHTS.get(cohort_key)
-    if not cfg:
-        # Fallback: equal weights
-        return {"smart": 0.33, "grit": 0.34, "build": 0.33}
-    return {
-        "smart": cfg["smart"] / 100,
-        "grit": cfg["grit"] / 100,
-        "build": cfg["build"] / 100,
-    }
-
-
-def get_recruiter_bar(cohort_key: str) -> int:
-    """Return the recruiter bar threshold (0-100) for a given cohort."""
-    cfg = COHORT_SCORING_WEIGHTS.get(cohort_key)
-    return cfg["recruiter_bar"] if cfg else 70
-
-
-def get_reference(cohort_key: str) -> tuple[str, str]:
-    """Return (reference_company, reference_benchmark) for a cohort."""
-    cfg = COHORT_SCORING_WEIGHTS.get(cohort_key)
-    if not cfg:
-        return ("top employers", "the recruiter threshold")
-    return (cfg["reference_company"], cfg["reference_benchmark"])
-
-
-def list_cohort_keys() -> list[str]:
-    """Return all 43 cohort keys."""
-    return list(COHORT_SCORING_WEIGHTS.keys())
-
-
-# ── JSON export for frontend / API consumption ─────────────────────────────
-
-def export_weights_json() -> list[dict]:
-    """Export all cohort weights as a JSON-serializable list."""
-    result = []
-    for key, cfg in COHORT_SCORING_WEIGHTS.items():
-        result.append({
-            "cohort_key": key,
-            "label": cfg["label"],
-            "weights": {
-                "smart": cfg["smart"],
-                "grit": cfg["grit"],
-                "build": cfg["build"],
-            },
-            "recruiter_bar": cfg["recruiter_bar"],
-            "reference_benchmark": cfg["reference_benchmark"],
-            "reference_company": cfg["reference_company"],
-            "gpa_screen": cfg["gpa_screen"],
-            "competition_level": cfg["competition_level"],
-            "key_proof_points": cfg["key_proof_points"],
-            "certifications": cfg["certifications"],
-        })
-    return result
-
-
-# ── Summary table (for quick reference) ────────────────────────────────────
-
-WEIGHTS_SUMMARY = """
-+----+------------------------------------+-------+------+-------+-----+------------------+---------------+
-| #  | Cohort                             | Smart | Grit | Build | Bar | Reference        | Competition   |
-+----+------------------------------------+-------+------+-------+-----+------------------+---------------+
-|  1 | Software Engineering & CS          |  20   |  25  |  55   |  76 | Google           | extreme       |
-|  2 | Data Science & Analytics           |  30   |  25  |  45   |  78 | Google           | very_high     |
-|  3 | Cybersecurity & IT                 |  20   |  30  |  50   |  72 | CrowdStrike      | high          |
-|  4 | Finance & Accounting               |  35   |  40  |  25   |  84 | Goldman Sachs    | extreme       |
-|  5 | Marketing & Advertising            |  15   |  35  |  50   |  68 | Ogilvy           | moderate      |
-|  6 | Consulting & Strategy              |  30   |  45  |  25   |  85 | McKinsey         | extreme       |
-|  7 | Management & Operations            |  20   |  45  |  35   |  72 | Amazon           | moderate      |
-|  8 | Economics & Public Policy          |  40   |  30  |  30   |  80 | Federal Reserve  | high          |
-|  9 | Entrepreneurship & Innovation      |  10   |  35  |  55   |  70 | YC (portfolio)   | moderate      |
-| 10 | Healthcare & Clinical              |  25   |  40  |  35   |  74 | Mayo Clinic      | moderate      |
-| 11 | Life Sciences & Research           |  40   |  25  |  35   |  78 | Pfizer           | high          |
-| 12 | Physical Sciences & Math           |  50   |  20  |  30   |  80 | LLNL             | high          |
-| 13 | Social Sciences & Nonprofit        |  25   |  45  |  30   |  68 | UNDP             | moderate      |
-| 14 | Media & Communications             |  15   |  35  |  50   |  70 | New York Times   | high          |
-| 15 | Design & Creative                  |  10   |  25  |  65   |  72 | IDEO             | high          |
-| 16 | Legal & Compliance                 |  40   |  35  |  25   |  82 | Skadden          | very_high     |
-| 17 | Human Resources & People           |  20   |  50  |  30   |  66 | SHRM             | low           |
-| 18 | Supply Chain & Logistics           |  20   |  40  |  40   |  70 | Amazon           | moderate      |
-| 19 | Education & Teaching               |  20   |  45  |  35   |  65 | TFA              | low           |
-| 20 | Real Estate & Construction         |  20   |  40  |  40   |  70 | CBRE             | moderate      |
-| 21 | Environmental & Sustainability     |  30   |  35  |  35   |  68 | EPA              | moderate      |
-| 22 | Hospitality & Events               |  10   |  50  |  40   |  62 | Marriott         | low           |
-| 23 | Mechanical & Aerospace Eng.        |  35   |  25  |  40   |  76 | Boeing           | high          |
-| 24 | Electrical & Computer Eng.         |  35   |  20  |  45   |  78 | Intel            | very_high     |
-| 25 | Civil & Environmental Eng.         |  30   |  30  |  40   |  72 | AECOM            | moderate      |
-| 26 | Chemical & Biomedical Eng.         |  40   |  25  |  35   |  78 | Pfizer           | high          |
-| 27 | Industrial & Systems Eng.          |  25   |  35  |  40   |  74 | Amazon           | moderate      |
-| 28 | Agriculture & Food Science         |  30   |  35  |  35   |  68 | Cargill          | moderate      |
-| 29 | Architecture & Urban Planning      |  25   |  25  |  50   |  74 | Gensler          | high          |
-| 30 | Performing Arts & Film             |  10   |  30  |  60   |  70 | Netflix          | very_high     |
-| 31 | Foreign Languages & Linguistics    |  35   |  30  |  35   |  72 | State Dept       | moderate      |
-| 32 | Religious Studies & Ministry       |  30   |  45  |  25   |  62 | Duke Divinity    | low           |
-| 33 | Aviation & Transportation          |  25   |  30  |  45   |  72 | Delta            | high          |
-| 34 | Criminal Justice & Public Safety   |  25   |  45  |  30   |  68 | FBI              | moderate      |
-| 35 | Library & Information Science      |  35   |  30  |  35   |  64 | Library of Cong. | low           |
-| 36 | Culinary Arts & Food Service       |  10   |  40  |  50   |  66 | CIA (Culinary)   | moderate      |
-| 37 | Fashion & Apparel                  |  10   |  30  |  60   |  72 | LVMH             | high          |
-| 38 | Journalism & Broadcasting          |  20   |  35  |  45   |  72 | New York Times   | high          |
-| 39 | Public Administration & Govt       |  30   |  40  |  30   |  70 | OMB              | moderate      |
-| 40 | Veterinary & Animal Science        |  40   |  30  |  30   |  76 | Cornell Vet      | high          |
-| 41 | Pharmacy & Pharmaceutical          |  45   |  25  |  30   |  78 | Pfizer           | high          |
-| 42 | Nursing & Patient Care             |  30   |  40  |  30   |  72 | Mayo Clinic      | moderate      |
-| 43 | Dental & Oral Health               |  40   |  30  |  30   |  78 | UCSF Dentistry   | very_high     |
-+----+------------------------------------+-------+------+-------+-----+------------------+---------------+
-"""
-
-
-if __name__ == "__main__":
-    import json
-    print(json.dumps(export_weights_json(), indent=2))

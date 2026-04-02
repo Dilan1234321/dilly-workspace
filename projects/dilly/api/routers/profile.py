@@ -65,6 +65,30 @@ async def get_profile(request: Request):
         except Exception:
             pass
 
+        # Fallback: if scores still missing, pull them from the latest audit in audit_history.json
+        if not profile.get("overall_dilly_score"):
+            try:
+                from projects.dilly.api.audit_history import get_audits
+                audits = get_audits(email)
+                if audits:
+                    latest = audits[-1]
+                    scores = latest.get("scores") or {}
+                    smart = scores.get("smart")
+                    grit = scores.get("grit")
+                    build = scores.get("build")
+                    if smart is not None:
+                        profile["overall_smart"] = float(smart)
+                    if grit is not None:
+                        profile["overall_grit"] = float(grit)
+                    if build is not None:
+                        profile["overall_build"] = float(build)
+                    final = latest.get("final_score")
+                    if final is not None:
+                        profile["overall_dilly_score"] = float(final)
+                    profile["latest_audit_id"] = latest.get("id")
+            except Exception:
+                pass
+
         # Re-derive cohort from majors/track whenever the stored cohort is a legacy
         # short name (or missing).  This transparently upgrades existing users to the
         # unified 22-cohort system on their next login — no migration script needed.
@@ -83,6 +107,84 @@ async def get_profile(request: Request):
                     profile["cohort"] = new_cohort
         except Exception:
             pass
+
+        # Synthesize cohort_scores from majors/minors and merge with any DB-stored entries.
+        # Always runs so that cohorts from minors/secondary tracks are included even when
+        # the DB only stores the primary track entry (set during audit).
+        if profile.get("overall_smart") or profile.get("overall_grit") or profile.get("overall_build"):
+            try:
+                from projects.dilly.api.cohort_config import MAJOR_TO_COHORT, COHORT_SCORING_CONFIG
+                s = float(profile.get("overall_smart") or 0)
+                g = float(profile.get("overall_grit")  or 0)
+                b = float(profile.get("overall_build") or 0)
+                d = float(profile.get("overall_dilly_score") or 0)
+
+                if s or g or b:
+                    majors  = profile.get("majors") or ([profile["major"]] if profile.get("major") else [])
+                    minors  = profile.get("minors") or []
+                    seen: dict = {}
+
+                    def _dilly_for_cohort(cohort_name: str, smart: float, grit: float, build: float) -> float:
+                        cfg = COHORT_SCORING_CONFIG.get(cohort_name, {})
+                        w = cfg.get("weights", {"smart": 0.33, "grit": 0.33, "build": 0.34})
+                        return round(smart * w.get("smart", 0.33) +
+                                     grit  * w.get("grit",  0.33) +
+                                     build * w.get("build", 0.34), 2)
+
+                    def _cohort_dim_score(raw: float, expected: float) -> float:
+                        """Map raw student score to 0–100 relative to cohort's competitive bar.
+                        100 = at or above bar. Below 100 = percentage of bar met."""
+                        if expected <= 0:
+                            return raw
+                        return min(100.0, round((raw / expected) * 100, 1))
+
+                    def _expected_dim(w: float, recruiter_bar: float, spread: float = 0.55) -> float:
+                        """Competitive threshold for a single dimension given its weight (0–1) and bar."""
+                        mean_w = 1.0 / 3.0
+                        return max(1.0, recruiter_bar + (w - mean_w) * 100 * spread)
+
+                    def _add(major_or_minor: str, level: str):
+                        cohort = MAJOR_TO_COHORT.get(str(major_or_minor).strip())
+                        if not cohort or cohort in seen:
+                            return
+                        cfg = COHORT_SCORING_CONFIG.get(cohort, {})
+                        bar = cfg.get("recruiter_bar", 70)
+                        w = cfg.get("weights", {"smart": 0.333, "grit": 0.333, "build": 0.334})
+                        # Compute each dimension's expected competitive score for this cohort
+                        exp_s = _expected_dim(w.get("smart", 0.333), bar)
+                        exp_g = _expected_dim(w.get("grit",  0.333), bar)
+                        exp_b = _expected_dim(w.get("build", 0.334), bar)
+                        # Student's cohort-specific scores: how close are they to the bar?
+                        cs = _cohort_dim_score(s, exp_s)
+                        cg = _cohort_dim_score(g, exp_g)
+                        cb = _cohort_dim_score(b, exp_b)
+                        seen[cohort] = {
+                            "cohort": cohort,
+                            "level": level,
+                            "field": major_or_minor,
+                            "smart": cs,
+                            "grit":  cg,
+                            "build": cb,
+                            "dilly_score": _dilly_for_cohort(cohort, s, g, b),
+                            "weight": 1.0 if level == "major" else 0.5,
+                        }
+
+                    for m in majors:
+                        _add(m, "major")
+                    for m in minors:
+                        _add(m, "minor")
+
+                    if seen:
+                        # Merge synthesized cohorts into any existing DB-stored cohort_scores.
+                        # DB entries win for cohorts already present (they may have more precise
+                        # per-cohort data from a domain-specific audit in the future).
+                        existing = profile.get("cohort_scores") or {}
+                        merged = dict(seen)
+                        for k, v in existing.items():
+                            merged[k] = v  # DB entry overrides synthesized fallback
+                        profile["cohort_scores"] = merged
+            except Exception:
+                pass
 
         return profile
     except ValueError as e:
