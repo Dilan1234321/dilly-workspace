@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATS Scanner: Dilly</title>
-  <meta name="description" content="See exactly how the six biggest ATS systems parse your resume  -  before you submit.">
+  <meta name="description" content="See exactly how the six biggest ATS systems parse your resume, before you submit.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dilly.css">
@@ -573,7 +573,7 @@
   <!-- ── HERO ── -->
   <section id="ats-hero">
     <p class="ats-eyebrow">ATS Scanner</p>
-    <h1>See what the bots<br>see  -  before you submit.</h1>
+    <h1>See what the bots<br>see, before you submit.</h1>
     <p>Paste your resume below. The scanner checks it against the parsing logic of the six biggest ATS systems and shows you exactly what gets extracted, what gets mangled, and what gets dropped entirely.</p>
   </section>
 
@@ -604,7 +604,7 @@
             <button class="ats-sample-btn bad"  data-quality="bad"  type="button">Weak</button>
           </div>
         </div>
-        <textarea id="ats-input" spellcheck="false" placeholder="Paste your resume here as plain text  -  or click &quot;Load sample&quot; to see a demo scan."></textarea>
+        <textarea id="ats-input" spellcheck="false" placeholder="Paste your resume here as plain text, or click &quot;Load sample&quot; to see a demo scan."></textarea>
         <div id="ats-input-footer">
           <span id="ats-word-count">0 words</span>
           <button class="ats-scan-btn" id="ats-scan-btn" type="button" disabled>Scan resume</button>
@@ -674,7 +674,7 @@
         <div class="ats-sys-card">
           <p class="ats-sys-name">Ashby</p>
           <p class="ats-sys-share">~8% of high-growth startups</p>
-          <p class="ats-sys-desc">Modern, flexible parser. Best at handling varied formats. Weakest at skills inference  -  must be explicitly listed to be counted.</p>
+          <p class="ats-sys-desc">Modern, flexible parser. Best at handling varied formats. Weakest at skills inference, must be explicitly listed to be counted.</p>
         </div>
       </div>
     </div>
@@ -928,7 +928,7 @@
           note: skills.length < 5 ? 'Fewer than 5 skills extracted. Add a dedicated SKILLS section with comma-separated items.' : null });
       } else {
         fields.push({ section: 'Skills', key: 'Skills section', val: null, status: sysKey === 'ashby' ? 'fail' : 'warn',
-          note: sysKey === 'ashby' ? 'Ashby requires an explicit skills list  -  it does not infer from bullets.' : 'No SKILLS section found. Keyword matching will be weak.' });
+          note: sysKey === 'ashby' ? 'Ashby requires an explicit skills list, it does not infer from bullets.' : 'No SKILLS section found. Keyword matching will be weak.' });
       }
 
       /* system-specific extras */
