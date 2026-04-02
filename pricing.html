@@ -397,6 +397,76 @@
     .p-feat-rows.revealed li:nth-child(5)  { transition-delay: 0.25s; }
     .p-feat-rows.revealed li:nth-child(6)  { transition-delay: 0.3s; }
 
+    /* ── COMPETITOR TABLE ── */
+    .p-vs {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 1.5rem 5rem;
+    }
+
+    .p-vs-label {
+      text-align: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      margin-bottom: 2rem;
+    }
+
+    .p-vs-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .p-vs-table th {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      padding: 0 1rem 0.75rem;
+      text-align: left;
+    }
+
+    .p-vs-table th:last-child { text-align: right; }
+
+    .p-vs-row {
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .p-vs-row td {
+      padding: 1rem 1rem;
+      font-size: 0.82rem;
+      vertical-align: middle;
+    }
+
+    .p-vs-row .p-vs-tool {
+      font-weight: 700;
+      color: rgba(255,255,255,0.75);
+    }
+
+    .p-vs-row .p-vs-what {
+      color: rgba(255,255,255,0.35);
+      font-size: 0.76rem;
+      line-height: 1.4;
+    }
+
+    .p-vs-row .p-vs-price {
+      text-align: right;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.4);
+      white-space: nowrap;
+    }
+
+    .p-vs-row--dilly .p-vs-tool { color: #7b9fff; }
+    .p-vs-row--dilly .p-vs-what { color: rgba(123,159,255,0.6); }
+    .p-vs-row--dilly .p-vs-price { color: #5ecfb0; }
+    .p-vs-row--dilly td { background: rgba(123,159,255,0.04); }
+    .p-vs-row--dilly td:first-child { border-radius: 10px 0 0 10px; }
+    .p-vs-row--dilly td:last-child { border-radius: 0 10px 10px 0; }
+
     /* ── FAQ + CTA ── */
     .p-faq-tease {
       text-align: center;
@@ -650,6 +720,42 @@
 
     </section>
 
+    <!-- ── COMPETITOR COMPARISON ── -->
+    <section class="p-vs" aria-label="Competitor pricing comparison">
+      <p class="p-vs-label">What everything else costs</p>
+      <table class="p-vs-table">
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>What you get</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="p-vs-row">
+            <td class="p-vs-tool">LinkedIn Premium</td>
+            <td class="p-vs-what">InMail credits, who viewed your profile, generic learning content. No resume scoring, no ATS check, no readiness signal.</td>
+            <td class="p-vs-price">$80/mo</td>
+          </tr>
+          <tr class="p-vs-row">
+            <td class="p-vs-tool">Jobscan</td>
+            <td class="p-vs-what">Keyword match percentage vs. a job description. No peer benchmarking, no coaching, no internship pipeline.</td>
+            <td class="p-vs-price">$49.95/mo</td>
+          </tr>
+          <tr class="p-vs-row">
+            <td class="p-vs-tool">VMock</td>
+            <td class="p-vs-what">One-shot AI resume review with a letter grade. No real-time editing, no ATS parse preview, no job matching.</td>
+            <td class="p-vs-price">$29.95/review</td>
+          </tr>
+          <tr class="p-vs-row p-vs-row--dilly">
+            <td class="p-vs-tool">Dilly Pro</td>
+            <td class="p-vs-what">Resume scoring, ATS scans across 6 systems, job matching with readiness bars, AI coach, peer leaderboard, pipeline tracker.</td>
+            <td class="p-vs-price">$9.99/mo</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
     <!-- ── FAQ TEASE ── -->
     <div class="p-faq-tease">
       <p>Questions about ATS, privacy, or ROI?</p>
@@ -665,7 +771,7 @@
       <a href="faq.html">FAQ</a>
       <a href="quiz.html">Quiz</a>
     </nav>
-    <p>Dilly · Pricing</p>
+    <a href="index.html" style="display:block;line-height:0;text-align:center"><img src="dilly-wordmark.png" alt="Dilly" style="height:22px;opacity:0.25;filter:brightness(0) invert(1)"></a>
   </footer>
 
   <script>
