@@ -28,6 +28,20 @@
       z-index: 200;
     }
 
+    /* Override dilly.css fixed positioning so site-nav stays in-flow inside the topbar */
+    #tk-topbar .site-nav--inner {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      width: 100% !important;
+      background: #fff !important;
+      border-bottom: 1px solid rgba(43,58,142,0.06) !important;
+    }
+    :root.light #tk-topbar .site-nav--inner {
+      background: #fff !important;
+      border-bottom: 1px solid rgba(43,58,142,0.06) !important;
+    }
+
     /* ── APP HEADER ── */
     #tk-appbar {
       display: flex;
