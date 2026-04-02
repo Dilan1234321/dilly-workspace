@@ -125,19 +125,40 @@
 
     .ats-sample-btn {
       font-family: inherit;
-      font-size: 0.62rem;
+      font-size: 0.65rem;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      padding: 0.3rem 0.8rem;
-      border-radius: 100px;
-      border: 1.5px solid rgba(43,58,142,0.25);
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+      border: 1.5px solid rgba(43,58,142,0.22);
       background: transparent;
       color: #2B3A8E;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .ats-sample-btn:hover { background: rgba(43,58,142,0.07); }
+    .ats-sample-btn:hover { background: rgba(43,58,142,0.07); border-color: rgba(43,58,142,0.4); }
+    .ats-sample-btn.good  { border-color: rgba(22,163,74,0.35); color: #15803d; }
+    .ats-sample-btn.good:hover  { background: rgba(22,163,74,0.07); }
+    .ats-sample-btn.meh   { border-color: rgba(234,179,8,0.45); color: #92400e; }
+    .ats-sample-btn.meh:hover   { background: rgba(234,179,8,0.07); }
+    .ats-sample-btn.bad   { border-color: rgba(220,38,38,0.35); color: #dc2626; }
+    .ats-sample-btn.bad:hover   { background: rgba(220,38,38,0.07); }
+
+    #ats-sample-group {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #ats-sample-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      margin-right: 0.15rem;
+    }
 
     /* input pane */
     #ats-input {
@@ -576,7 +597,12 @@
       <div class="ats-pane">
         <div class="ats-pane-header">
           <span class="ats-pane-title">Your resume text</span>
-          <button class="ats-sample-btn" id="ats-load-sample" type="button">Load sample</button>
+          <div id="ats-sample-group">
+            <span id="ats-sample-label">Try:</span>
+            <button class="ats-sample-btn good" data-quality="good" type="button">Strong</button>
+            <button class="ats-sample-btn meh"  data-quality="meh"  type="button">Mediocre</button>
+            <button class="ats-sample-btn bad"  data-quality="bad"  type="button">Weak</button>
+          </div>
         </div>
         <textarea id="ats-input" spellcheck="false" placeholder="Paste your resume here as plain text — or click &quot;Load sample&quot; to see a demo scan."></textarea>
         <div id="ats-input-footer">
@@ -664,8 +690,8 @@
   <script>
   (function () {
 
-    /* ── SAMPLE RESUME TEXT ── */
-    var SAMPLE = [
+    /* ── SAMPLE RESUMES ── */
+    var SAMPLE_GOOD = [
       'ALEX JOHNSON',
       'alex.johnson@email.com | (555) 214-8890 | linkedin.com/in/alexjohnson | github.com/alexjohnson',
       '',
@@ -694,6 +720,58 @@
       'ACTIVITIES',
       'Investment Club — VP of Research | CFA Institute Research Challenge Participant',
     ].join('\n');
+
+    var SAMPLE_MEH = [
+      'Jamie Lee',
+      'jamielee93@gmail.com | 813-555-0192',
+      '',
+      'Objective: Looking for a finance internship where I can use my skills and grow professionally.',
+      '',
+      'Education',
+      'University of South Florida',
+      'Business Administration, Finance Concentration',
+      'GPA: 3.1',
+      '',
+      'Work Experience',
+      'Bank of America — Teller (Part-time)',
+      'Handled customer transactions and assisted with account inquiries',
+      'Learned banking systems and improved customer service',
+      '',
+      'Target — Sales Associate',
+      'Summer 2023',
+      'Helped customers find products, worked the register',
+      '',
+      'Skills',
+      'Microsoft Excel, Word, PowerPoint',
+      'Good communicator, team player, detail oriented',
+      '',
+      'Activities',
+      'Finance Club member',
+      'Volunteer at food bank',
+    ].join('\n');
+
+    var SAMPLE_BAD = [
+      'RESUME',
+      '',
+      'Chris',
+      'chris_smith_1999@hotmail.com',
+      '',
+      'I am a motivated student looking for opportunities in the financial sector. I am a hard worker and quick learner who is passionate about finance and investments. I have always been interested in business since I was young.',
+      '',
+      'SCHOOL',
+      'Currently attending college for business',
+      '',
+      'JOBS',
+      'Worked at McDonalds for 2 years',
+      'Worked at a local accounting firm last summer doing stuff',
+      '',
+      'SKILLS',
+      'I know Excel a little bit',
+      'Good at math',
+      'Microsoft Office',
+    ].join('\n');
+
+    var SAMPLE = SAMPLE_GOOD;
 
     /* ── PARSER RULES (pure regex / string logic — zero AI, zero network) ── */
 
@@ -887,7 +965,7 @@
     /* ── DOM REFS ── */
     var textarea  = document.getElementById('ats-input');
     var scanBtn   = document.getElementById('ats-scan-btn');
-    var sampleBtn = document.getElementById('ats-load-sample');
+    var sampleBtn = null; /* removed — replaced by group buttons below */
     var wordCount = document.getElementById('ats-word-count');
     var tabs      = Array.from(document.querySelectorAll('.ats-tab'));
     var emptyEl   = document.getElementById('ats-empty-state');
@@ -910,10 +988,13 @@
       scanBtn.disabled = words < 10;
     });
 
-    /* sample */
-    sampleBtn.addEventListener('click', function () {
-      textarea.value = SAMPLE;
-      textarea.dispatchEvent(new Event('input'));
+    /* sample buttons */
+    var SAMPLES = { good: SAMPLE_GOOD, meh: SAMPLE_MEH, bad: SAMPLE_BAD };
+    document.querySelectorAll('#ats-sample-group [data-quality]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        textarea.value = SAMPLES[btn.dataset.quality] || SAMPLE_GOOD;
+        textarea.dispatchEvent(new Event('input'));
+      });
     });
 
     /* tabs */

@@ -34,8 +34,11 @@
     body[data-nav-feature="score"] .site-nav--inner .nav-item--signin { color: rgba(255,255,255,0.55); }
     body[data-nav-feature="score"] .site-nav--inner .menu-toggle span { background: rgba(255,255,255,0.8); }
 
-    /* Wrapper header: 0-height spacer so scroll-snap panels start at y=0 */
+    /* Wrapper header: 0-height spacer so scroll-snap panels start at y=0 (desktop) */
     .score-nav { padding: 0; min-height: 0; border: none; }
+    @media (max-width: 780px) {
+      .score-nav { height: 76px; min-height: 76px; }
+    }
 
     /* ── SPLIT LAYOUT ── */
     #score-layout { display: block; }
@@ -233,52 +236,79 @@
 
     /* ── MOBILE ── */
     @media (max-width: 780px) {
-      html { scroll-snap-type: none; overflow: hidden; height: 100%; }
-      body { overflow: hidden; height: 100%; }
+      html { scroll-snap-type: none !important; overflow: hidden !important; }
+      body { overflow: hidden !important; }
 
       #score-layout {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 64px);
+        height: calc(100vh - 76px);
         overflow: hidden;
       }
 
       #radar-col {
         position: relative;
-        top: auto;
-        left: auto;
+        top: auto; left: auto;
         width: 100%;
-        height: 30%;
+        height: auto;
         min-height: 0;
+        max-height: none;
+        flex-shrink: 0;
         border-right: none;
         border-bottom: 1px solid rgba(255,255,255,0.06);
-        padding: 0.5rem;
+        padding: 1rem 1rem 0.75rem;
+        padding-top: calc(76px + 0.75rem);
         flex-direction: row;
         gap: 1rem;
+        align-items: center;
+        justify-content: center;
       }
 
       #radar-svg {
-        width: min(110px, 28vw);
-        height: min(110px, 28vw);
+        width: min(100px, 26vw);
+        height: min(100px, 26vw);
+        flex-shrink: 0;
       }
 
       #composite-wrap {
         margin-top: 0;
         text-align: left;
+        opacity: 1 !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
-      #composite-num { font-size: clamp(2rem, 9vw, 3rem); }
+      #composite-num {
+        font-size: clamp(2.4rem, 10vw, 3.2rem);
+        color: #fff;
+      }
+
+      #composite-label { font-size: 0.6rem; letter-spacing: 0.16em; }
+
+      /* mobile-only sub-scores strip */
+      #mobile-subscores {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+      }
+      .mob-sub { display: flex; flex-direction: column; }
+      .mob-sub-val { font-size: 0.9rem; font-weight: 800; line-height: 1; }
+      .mob-sub-lbl { font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-top: 0.1rem; }
+      .mob-sub-val--smart { color: #7b9fff; }
+      .mob-sub-val--grit  { color: #a78bff; }
+      .mob-sub-val--build { color: #5ecfb0; }
 
       #panels-col {
         display: flex;
         flex-direction: row;
         overflow-x: scroll;
-        overflow-y: visible;
+        overflow-y: hidden;
         scroll-snap-type: x mandatory;
         -webkit-overflow-scrolling: touch;
-        height: 70%;
+        flex: 1;
+        min-height: 0;
         margin-left: 0;
-        flex-shrink: 0;
       }
 
       .score-panel {
@@ -288,44 +318,47 @@
         min-height: unset;
         flex-shrink: 0;
         scroll-snap-align: start;
-        padding: 1.75rem 1.5rem 3.5rem;
+        padding: 1.75rem 1.5rem 5rem;
         align-items: flex-start;
+        justify-content: flex-start;
         overflow-y: auto;
-        box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
       }
 
       .sp-inner {
-        opacity: 1;
-        transform: none;
+        opacity: 1 !important;
+        transform: none !important;
         max-width: 100%;
       }
 
-      .sp-title { font-size: clamp(1.7rem, 7vw, 2.5rem) !important; }
+      .sp-title { font-size: clamp(1.6rem, 7vw, 2.2rem) !important; }
+      .sp-score-num { font-size: clamp(2.5rem, 10vw, 4rem) !important; }
+      .sp-body { font-size: 0.85rem !important; }
 
       #score-dots {
         display: flex !important;
         flex-direction: row !important;
         align-items: center;
         position: fixed;
-        bottom: 1rem;
+        bottom: 1.1rem;
         left: 50%;
         transform: translateX(-50%);
-        top: auto;
-        right: auto;
+        top: auto; right: auto;
         gap: 6px;
         height: auto;
+        background: rgba(6,14,28,0.6);
+        padding: 0.35rem 0.7rem;
+        border-radius: 100px;
+        backdrop-filter: blur(8px);
       }
 
       #score-dots .score-dot {
         -webkit-appearance: none;
         appearance: none;
         display: block;
-        width: 7px !important;
-        height: 7px !important;
-        min-width: 7px;
-        min-height: 7px;
-        max-width: 7px;
-        max-height: 7px;
+        width: 6px !important; height: 6px !important;
+        min-width: 6px; min-height: 6px;
+        max-width: 6px; max-height: 6px;
         flex-shrink: 0;
         padding: 0;
         border-radius: 50%;
@@ -488,6 +521,11 @@
       <div id="composite-wrap">
         <div id="composite-num">68</div>
         <div id="composite-label">Dilly Score</div>
+        <div id="mobile-subscores">
+          <div class="mob-sub"><span class="mob-sub-val mob-sub-val--smart">74</span><span class="mob-sub-lbl">Smart</span></div>
+          <div class="mob-sub"><span class="mob-sub-val mob-sub-val--grit">88</span><span class="mob-sub-lbl">Grit</span></div>
+          <div class="mob-sub"><span class="mob-sub-val mob-sub-val--build">41</span><span class="mob-sub-lbl">Build</span></div>
+        </div>
       </div>
     </div>
 
@@ -705,12 +743,22 @@
 
     var isMobile = window.innerWidth <= 780;
     var panelsCol = document.getElementById('panels-col');
+    var mobileSubscores = document.getElementById('mobile-subscores');
+
+    /* hide sub-scores on desktop */
+    if (!isMobile && mobileSubscores) mobileSubscores.style.display = 'none';
 
     if (isMobile) {
+      /* show full radar immediately on mobile so the top section isn't empty */
+      animateToFull(SMART, GRIT, BUILD);
+      compWrap.classList.add('visible');
+
       panelsCol.addEventListener('scroll', function () {
         var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
         idx = Math.max(0, Math.min(idx, panels.length - 1));
-        activate(idx);
+        /* keep radar filled on mobile; just update dots + text visibility */
+        dots.forEach(function (d, i) { d.classList.toggle('active', i === idx); });
+        inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
       });
     } else {
       var observer = new IntersectionObserver(function (entries) {
