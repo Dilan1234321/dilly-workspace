@@ -1,5 +1,6 @@
 /* Dilly redesign: UTampa AKPsi glass + motion × Artlist dark grids/tabs */
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Geist+Mono:wght@400;500;700&display=swap");
+.mono { font-family: 'Geist Mono', 'Courier New', monospace; }
 
 :root {
   --navy: #002868;
@@ -1802,6 +1803,13 @@ img {
 
 :root.light .compare-table td.compare-no {
   color: #dc2626;
+}
+
+.compare-row--key {
+  background: rgba(43,58,142,0.04);
+}
+.compare-row--key td:first-child {
+  color: #2B3A8E;
 }
 
 /* ---------- Pricing cards ---------- */
