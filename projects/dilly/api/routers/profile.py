@@ -427,7 +427,8 @@ async def update_profile(request: Request, body: dict = Body(...)):
                 _majors = _prof.get("majors") or []
                 _major = _majors[0] if _majors else None
                 _minors = _prof.get("minors") or []
-                _goals = _prof.get("goals") or []
+                _goals     = _prof.get("goals") or []
+                _interests = _prof.get("interests") or []   # separate field — was incorrectly using _goals
                 _industry = _prof.get("industry_target") or None
                 _track = _prof.get("pre_professional_track") or None
                 _career_goal = _prof.get("application_target") or None
@@ -470,9 +471,9 @@ async def update_profile(request: Request, body: dict = Body(...)):
                     (
                         email, _name, _first, _last,
                         _school, _school_id, _major,
-                        _json.dumps(_majors) if _majors else None,
-                        _json.dumps(_minors) if _minors else None,
-                        _json.dumps(_goals) if _goals else None,
+                        _json.dumps(_majors)     if _majors     else None,
+                        _json.dumps(_minors)     if _minors     else None,
+                        _json.dumps(_interests)  if _interests  else None,  # was _goals — wrong field
                         _track, _industry, _career_goal,
                         _ob_complete, _has_audit,
                     )

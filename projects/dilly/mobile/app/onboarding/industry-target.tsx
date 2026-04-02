@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { authHeaders } from '../../lib/auth';
 
@@ -133,6 +134,11 @@ export default function IndustryTargetScreen() {
     } catch { /* non-fatal */ } finally {
       setLoading(false);
     }
+    // Persist to AsyncStorage so scanning.tsx can include it in the audit formData.
+    // The PATCH above is non-fatal fire-and-forget; AsyncStorage is the reliable path.
+    try {
+      await AsyncStorage.setItem('dilly_onboarding_industry_target', finalSelection);
+    } catch { /* non-fatal */ }
     const cohort = cohortParam || (isQuantitative ? 'Quantitative' : 'Tech');
     router.push({
       pathname: '/onboarding/you-are-in',

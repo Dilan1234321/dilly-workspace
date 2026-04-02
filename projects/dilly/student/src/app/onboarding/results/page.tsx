@@ -33,7 +33,10 @@ const TRACK_CFG: Record<string, { bar: number; gapDim: string; company: string }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function calcPercentile(score: number): number {
+// Use API-provided peer_percentiles when available (real cohort data).
+// Falls back to score-band estimate only when the API doesn't return a value.
+function calcPercentile(score: number, apiPercentile?: number): number {
+  if (typeof apiPercentile === "number" && apiPercentile > 0) return Math.round(apiPercentile);
   if (score >= 90) return 5;
   if (score >= 80) return 15;
   if (score >= 70) return 30;
@@ -178,8 +181,13 @@ export default function ResultsPage() {
   const gritScore  = Math.round(auditResult?.scores?.grit  ?? 0);
   const buildScore = Math.round(auditResult?.scores?.build ?? 0);
 
-  // peer_percentiles has keys smart/grit/build — no "overall". Derive from final_score.
-  const percentile     = calcPercentile(finalScore);
+  // Derive overall percentile: average the API's per-dimension values when present,
+  // otherwise fall back to score-band estimate.
+  const pp = auditResult?.peer_percentiles;
+  const apiOverallPercentile = (pp?.smart && pp?.grit && pp?.build)
+    ? Math.round((pp.smart + pp.grit + pp.build) / 3)
+    : undefined;
+  const percentile     = calcPercentile(finalScore, apiOverallPercentile);
   const resolvedTrack  = (auditResult?.detected_track || track || "General") as string;
   const cfg            = TRACK_CFG[resolvedTrack] ?? TRACK_CFG.General;
 

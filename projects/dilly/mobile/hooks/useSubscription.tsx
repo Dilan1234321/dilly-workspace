@@ -72,6 +72,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const res = await dilly.fetch('/profile');
+      // Guard: non-2xx (401 expired token, 500 outage) must not be parsed as a
+      // profile object — that would wipe out subscription state silently.
+      if (!res.ok) throw new Error(`Profile fetch failed: ${res.status}`);
       const profile = await res.json();
 
       // Backend can set a 'subscribed' flag on the profile

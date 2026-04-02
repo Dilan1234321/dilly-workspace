@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { verifyCode, sendVerificationCode } from "@/lib/auth";
 
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3000";
 const RESEND_COOLDOWN = 30;
 
 // ── Progress bar ─────────────────────────────────────────────────────────────
@@ -126,8 +127,8 @@ export default function VerifyPage() {
           // Returning user — skip all onboarding, go straight to dashboard
           const token = typeof localStorage !== "undefined" ? localStorage.getItem("dilly_auth_token") : null;
           window.location.href = token
-            ? `http://localhost:3000/?token=${token}`
-            : "http://localhost:3000";
+            ? `${DASHBOARD_URL}/?token=${encodeURIComponent(token)}`
+            : DASHBOARD_URL;
           return;
         }
         router.push("/onboarding/profile");
