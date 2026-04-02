@@ -4,12 +4,433 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Find Your Path: Dilly</title>
-  <meta name="description" content="Answer a few questions and see how Dilly fits your goals.">
+  <meta name="description" content="Answer 5 quick questions and see your personalized Dilly starting point — with a simulated score reveal.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f0f1f8;
+      color: #0d0d0d;
+      overflow-x: hidden;
+    }
+    body { overflow-x: hidden; }
+
+    /* ── NAV OVERRIDE (same trick as tracker) ── */
+    #qz-nav { background: #fff; border-bottom: 1px solid rgba(43,58,142,0.08); }
+    #qz-nav .site-nav--inner {
+      position: relative !important;
+      top: auto !important; left: auto !important;
+      width: 100% !important;
+      background: #fff !important;
+    }
+    :root.light #qz-nav .site-nav--inner { background: #fff !important; border-bottom: none !important; }
+
+    /* ── HERO ── */
+    #qz-hero {
+      text-align: center;
+      padding: 3.5rem clamp(1.5rem, 5vw, 3rem) 2rem;
+    }
+    .qz-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.5;
+      margin-bottom: 0.85rem;
+    }
+    #qz-hero h1 {
+      font-size: clamp(1.8rem, 3.5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      color: #0d0d0d;
+      margin-bottom: 0.75rem;
+    }
+    #qz-hero p {
+      font-size: 0.92rem;
+      color: #666;
+      line-height: 1.7;
+    }
+
+    /* ── QUIZ SHELL ── */
+    #qz-shell {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 2.5rem) 5rem;
+      position: relative;
+    }
+
+    /* step counter */
+    #qz-steps-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .qz-step-num {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.4);
+    }
+    /* dot track */
+    .qz-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .qz-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(43,58,142,0.15);
+      transition: background 0.25s, transform 0.25s;
+    }
+    .qz-dot.active { background: #2B3A8E; transform: scale(1.25); }
+    .qz-dot.done   { background: rgba(43,58,142,0.35); }
+
+    /* ── STEP CARD ── */
+    .qz-card {
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid rgba(43,58,142,0.07);
+      padding: 2.25rem clamp(1.5rem, 4vw, 2.5rem) 2rem;
+      position: absolute;
+      width: calc(100% - 2 * clamp(1rem, 4vw, 2.5rem));
+      opacity: 0;
+      transform: translateX(40px);
+      pointer-events: none;
+      transition: opacity 0.32s ease, transform 0.32s ease;
+    }
+    .qz-card.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+      position: relative;
+    }
+    .qz-card.exit {
+      opacity: 0;
+      transform: translateX(-40px);
+      pointer-events: none;
+      position: absolute;
+    }
+
+    /* progress bar inside card */
+    .qz-bar {
+      height: 3px;
+      background: rgba(43,58,142,0.07);
+      border-radius: 3px;
+      margin-bottom: 1.75rem;
+      overflow: hidden;
+    }
+    .qz-bar-fill {
+      height: 100%;
+      background: #2B3A8E;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    .qz-q-label {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.4);
+      margin-bottom: 0.6rem;
+    }
+    .qz-q {
+      font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      color: #0d0d0d;
+      margin-bottom: 0.45rem;
+    }
+    .qz-sub {
+      font-size: 0.82rem;
+      color: #888;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    /* options */
+    .qz-opts {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .qz-opt {
+      font-family: inherit;
+      font-size: 0.87rem;
+      font-weight: 600;
+      color: #0d0d0d;
+      text-align: left;
+      background: #fff;
+      border: 1.5px solid rgba(43,58,142,0.12);
+      border-radius: 12px;
+      padding: 0.85rem 1.15rem;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s, transform 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .qz-opt:hover {
+      border-color: rgba(43,58,142,0.4);
+      background: rgba(43,58,142,0.025);
+      transform: translateY(-1px);
+    }
+    .qz-opt.selected {
+      border-color: #2B3A8E;
+      background: rgba(43,58,142,0.05);
+    }
+    .qz-opt-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      width: 28px;
+      text-align: center;
+    }
+
+    /* back */
+    .qz-back {
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: rgba(43,58,142,0.4);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-top: 1.5rem;
+      letter-spacing: 0.04em;
+      transition: color 0.15s;
+    }
+    .qz-back:hover { color: #2B3A8E; }
+
+    /* ── RESULT CARD ── */
+    #qz-result {
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid rgba(43,58,142,0.07);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #qz-result.visible { opacity: 1; transform: translateY(0); }
+
+    #qz-result-header {
+      background: linear-gradient(135deg, #1a2a6e 0%, #2B3A8E 60%, #3d4faf 100%);
+      padding: 2.25rem clamp(1.5rem, 4vw, 2.5rem) 2rem;
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    /* mini radar */
+    #qz-radar-wrap {
+      flex-shrink: 0;
+      position: relative;
+      width: 120px;
+      height: 120px;
+    }
+    #qz-radar-svg { width: 120px; height: 120px; }
+
+    #qz-score-block { flex: 1; min-width: 0; }
+    #qz-score-eyebrow {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 0.35rem;
+    }
+    #qz-score-num {
+      font-size: 3.25rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 0.1rem;
+    }
+    #qz-score-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 0.9rem;
+    }
+    .qz-dims-row {
+      display: flex;
+      gap: 0.85rem;
+    }
+    .qz-dim-block { display: flex; flex-direction: column; gap: 0.1rem; }
+    .qz-dim-val {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+    }
+    .qz-dim-val--smart { color: #7b9fff; }
+    .qz-dim-val--grit  { color: #a78bff; }
+    .qz-dim-val--build { color: #5ecfb0; }
+    .qz-dim-lbl {
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+    }
+
+    /* result body */
+    #qz-result-body {
+      padding: 2rem clamp(1.5rem, 4vw, 2.5rem);
+    }
+    #qz-result-body h2 {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.4rem;
+      color: #0d0d0d;
+    }
+    #qz-result-body > p {
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.7;
+      margin-bottom: 1.5rem;
+    }
+
+    /* steps */
+    .qz-steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-bottom: 1.75rem;
+    }
+    .qz-step-item {
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+      background: rgba(43,58,142,0.035);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+    }
+    .qz-step-num-badge {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #2B3A8E;
+      color: #fff;
+      font-size: 0.62rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .qz-step-copy strong {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #0d0d0d;
+      margin-bottom: 0.15rem;
+    }
+    .qz-step-copy span {
+      font-size: 0.78rem;
+      color: #888;
+      line-height: 1.5;
+    }
+
+    /* CTA row */
+    .qz-cta-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .qz-btn-primary {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.75rem 1.75rem;
+      border-radius: 100px;
+      background: #2B3A8E;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .qz-btn-primary:hover { opacity: 0.87; transform: translateY(-1px); }
+    .qz-btn-ghost {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 100px;
+      background: transparent;
+      color: #2B3A8E;
+      border: 1.5px solid rgba(43,58,142,0.2);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .qz-btn-ghost:hover { border-color: #2B3A8E; }
+
+    .qz-restart {
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: rgba(43,58,142,0.35);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-top: 1.25rem;
+      letter-spacing: 0.04em;
+      display: block;
+      transition: color 0.15s;
+    }
+    .qz-restart:hover { color: rgba(43,58,142,0.7); }
+
+    /* ── BOTTOM CTA ── */
+    #qz-cta {
+      background: #2B3A8E;
+      padding: 5rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+      margin-top: 4rem;
+    }
+    #qz-cta h2 {
+      font-size: clamp(1.8rem, 3.5vw, 3rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.8rem;
+    }
+    #qz-cta p { font-size: 0.95rem; color: rgba(255,255,255,0.5); margin-bottom: 2rem; }
+
+    @media (max-width: 520px) {
+      #qz-result-header { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+      #qz-radar-wrap { width: 100px; height: 100px; }
+      #qz-radar-svg { width: 100px; height: 100px; }
+    }
+  </style>
 </head>
-<body data-nav-page="quiz">
-  <header class="page-hero" style="padding-top:6rem;padding-bottom:2rem">
-    <div class="site-nav site-nav--inner">
+<body>
+
+  <!-- NAV -->
+  <div id="qz-nav">
+    <div class="site-nav site-nav--inner" style="background:#fff;">
       <a class="logo-lockup" href="index.html">
         <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
       </a>
@@ -19,57 +440,49 @@
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Your resume</span>
-                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
-                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
-                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
-                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link">ATS scanner</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Search and track</span>
-                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
-                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
-                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
-                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link">Ask Dilly on any job</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Guidance</span>
-                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
-                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link">Peer leaderboard</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Decide</span>
-                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
-                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Decide</span>
+                <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+              </div></div>
             </div>
           </li>
           <li><a class="nav-item" href="faq.html">FAQ</a></li>
-          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item" href="quiz.html" aria-current="page">Quiz</a></li>
           <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
         </ul>
       </nav>
@@ -77,58 +490,430 @@
         <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
       </div>
     </div>
-    <p class="section-eyebrow" style="margin-top:2rem">Find your path</p>
-    <h1 class="font-display" style="font-size:clamp(1.75rem,4vw,2.5rem);letter-spacing:0.06em">Dilly has something for everyone</h1>
-    <p style="color:var(--text-muted);max-width:32rem;margin:0.75rem auto 0">Let us narrow what to do first: three quick steps.</p>
-  </header>
-
-  <div class="section-inner quiz-shell" data-quiz>
-    <div class="quiz-step is-active quiz-card">
-      <p class="section-eyebrow">Step 1</p>
-      <h2 class="font-display" style="font-size:1.25rem;letter-spacing:0.05em;margin-bottom:0.5rem">Which best describes you?</h2>
-      <p style="color:var(--text-muted);font-size:0.9rem">We will tailor the next question to your situation.</p>
-      <div class="quiz-options">
-        <button type="button" class="quiz-opt" data-next="1">College student applying to internships</button>
-        <button type="button" class="quiz-opt" data-next="1">Recent grad / full-time job search</button>
-        <button type="button" class="quiz-opt" data-next="1">Parent supporting a student</button>
-        <button type="button" class="quiz-opt" data-next="1">Recruiter or hiring manager</button>
-      </div>
-    </div>
-
-    <div class="quiz-step quiz-card">
-      <p class="section-eyebrow">Step 2</p>
-      <h2 class="font-display" style="font-size:1.25rem;letter-spacing:0.05em;margin-bottom:0.5rem">What do you want most right now?</h2>
-      <p style="color:var(--text-muted);font-size:0.9rem">Pick the outcome that matters this week.</p>
-      <div class="quiz-options">
-        <button type="button" class="quiz-opt" data-next="2">Know my real competitiveness vs. peers</button>
-        <button type="button" class="quiz-opt" data-next="2">Stop getting filtered by ATS</button>
-        <button type="button" class="quiz-opt" data-next="2">Match to specific roles and close gaps</button>
-        <button type="button" class="quiz-opt" data-next="2">Practice interviews with context on my resume</button>
-      </div>
-      <button type="button" class="quiz-back" data-quiz-back="0">← Back</button>
-    </div>
-
-    <div class="quiz-step quiz-card">
-      <p class="section-eyebrow">Step 3</p>
-      <h2 class="font-display" style="font-size:1.25rem;letter-spacing:0.05em;margin-bottom:0.75rem">Your starting path</h2>
-      <p style="color:var(--text-muted);line-height:1.75;margin-bottom:1.25rem">Based on typical users with those goals: start with a <strong style="color:var(--text)">resume audit</strong> to lock your Smart / Grit / Build baseline, then run an <strong style="color:var(--text)">ATS pass</strong> on your one-page, then open <strong style="color:var(--text)">target roles</strong> to read your Gap cards. That sequence takes under 10 minutes and gives Dilly the context to coach you well.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:0.75rem">
-        <a class="btn btn-primary" href="https://app.trydilly.com/">Open Dilly: get my score</a>
-        <a class="btn btn-ghost" href="pricing.html">Compare plans</a>
-      </div>
-      <button type="button" class="quiz-back" data-quiz-back="1">← Back</button>
-      <p style="margin-top:1.5rem;font-size:0.85rem;color:var(--text-muted)"><a href="features.html" style="color:var(--gold);font-weight:600">Browse all features →</a></p>
-    </div>
   </div>
+
+  <!-- HERO -->
+  <div id="qz-hero">
+    <p class="qz-eyebrow">Find your path</p>
+    <h1>See where you stand<br>in 5 questions</h1>
+    <p>Answer honestly. Dilly estimates your starting score<br>and gives you a first-week plan.</p>
+  </div>
+
+  <!-- QUIZ SHELL -->
+  <div id="qz-shell">
+
+    <div id="qz-steps-label">
+      <span class="qz-step-num" id="qz-step-label">Step 1 of 5</span>
+      <div class="qz-dots" id="qz-dots">
+        <div class="qz-dot active" data-dot="0"></div>
+        <div class="qz-dot" data-dot="1"></div>
+        <div class="qz-dot" data-dot="2"></div>
+        <div class="qz-dot" data-dot="3"></div>
+        <div class="qz-dot" data-dot="4"></div>
+      </div>
+    </div>
+
+    <!-- STEP 0: Who are you -->
+    <div class="qz-card active" data-step="0">
+      <div class="qz-bar"><div class="qz-bar-fill" style="width:20%"></div></div>
+      <p class="qz-q-label">Step 1</p>
+      <h2 class="qz-q">Which best describes you?</h2>
+      <p class="qz-sub">We'll tailor the rest of the quiz to your situation.</p>
+      <div class="qz-opts">
+        <button class="qz-opt" data-val="student"><span class="qz-opt-icon">🎓</span>College student — applying to internships</button>
+        <button class="qz-opt" data-val="grad"><span class="qz-opt-icon">💼</span>Recent grad — full-time job search</button>
+        <button class="qz-opt" data-val="parent"><span class="qz-opt-icon">👨‍👩‍👧</span>Parent supporting a student</button>
+        <button class="qz-opt" data-val="recruiter"><span class="qz-opt-icon">🔍</span>Recruiter or hiring manager</button>
+      </div>
+    </div>
+
+    <!-- STEP 1: Track -->
+    <div class="qz-card" data-step="1">
+      <div class="qz-bar"><div class="qz-bar-fill" style="width:40%"></div></div>
+      <p class="qz-q-label">Step 2</p>
+      <h2 class="qz-q">What's your major or target field?</h2>
+      <p class="qz-sub">Pick the track that best matches the roles you're targeting.</p>
+      <div class="qz-opts">
+        <button class="qz-opt" data-val="finance"><span class="qz-opt-icon">📊</span>Finance or Business</button>
+        <button class="qz-opt" data-val="tech"><span class="qz-opt-icon">💻</span>Tech or Computer Science</button>
+        <button class="qz-opt" data-val="consulting"><span class="qz-opt-icon">🧩</span>Consulting or Strategy</button>
+        <button class="qz-opt" data-val="science"><span class="qz-opt-icon">🔬</span>Sciences, Pre-health, or Pre-law</button>
+        <button class="qz-opt" data-val="arts"><span class="qz-opt-icon">🎨</span>Arts, Communications, or Humanities</button>
+      </div>
+      <button class="qz-back" data-back="0">← Back</button>
+    </div>
+
+    <!-- STEP 2: Timeline -->
+    <div class="qz-card" data-step="2">
+      <div class="qz-bar"><div class="qz-bar-fill" style="width:60%"></div></div>
+      <p class="qz-q-label">Step 3</p>
+      <h2 class="qz-q">How far out is your graduation?</h2>
+      <p class="qz-sub">Helps Dilly calibrate urgency and competition level.</p>
+      <div class="qz-opts">
+        <button class="qz-opt" data-val="2plus"><span class="qz-opt-icon">🗓</span>More than 2 years away</button>
+        <button class="qz-opt" data-val="2yr"><span class="qz-opt-icon">📅</span>Within 2 years</button>
+        <button class="qz-opt" data-val="1yr"><span class="qz-opt-icon">⏳</span>Within 1 year — this is crunch time</button>
+        <button class="qz-opt" data-val="done"><span class="qz-opt-icon">🎉</span>Already graduated</button>
+      </div>
+      <button class="qz-back" data-back="1">← Back</button>
+    </div>
+
+    <!-- STEP 3: Biggest blocker -->
+    <div class="qz-card" data-step="3">
+      <div class="qz-bar"><div class="qz-bar-fill" style="width:80%"></div></div>
+      <p class="qz-q-label">Step 4</p>
+      <h2 class="qz-q">What's your biggest pain right now?</h2>
+      <p class="qz-sub">Be honest — this shapes the plan we show you.</p>
+      <div class="qz-opts">
+        <button class="qz-opt" data-val="weak-resume"><span class="qz-opt-icon">📄</span>My resume is weak — I know it but don't know how to fix it</button>
+        <button class="qz-opt" data-val="no-benchmark"><span class="qz-opt-icon">📉</span>I don't know how I compare to other candidates</button>
+        <button class="qz-opt" data-val="no-roles"><span class="qz-opt-icon">🔎</span>I can't find roles that match my background</button>
+        <button class="qz-opt" data-val="ats"><span class="qz-opt-icon">🤖</span>I'm getting filtered by ATS before anyone reads my resume</button>
+      </div>
+      <button class="qz-back" data-back="2">← Back</button>
+    </div>
+
+    <!-- STEP 4: Current activity -->
+    <div class="qz-card" data-step="4">
+      <div class="qz-bar"><div class="qz-bar-fill" style="width:100%"></div></div>
+      <p class="qz-q-label">Step 5</p>
+      <h2 class="qz-q">How active are you right now?</h2>
+      <p class="qz-sub">Final question — no wrong answers here.</p>
+      <div class="qz-opts">
+        <button class="qz-opt" data-val="active"><span class="qz-opt-icon">🚀</span>Actively applying to multiple roles</button>
+        <button class="qz-opt" data-val="exploring"><span class="qz-opt-icon">🧭</span>Exploring — building my shortlist</button>
+        <button class="qz-opt" data-val="planning"><span class="qz-opt-icon">📋</span>Planning for next cycle, not applying yet</button>
+        <button class="qz-opt" data-val="start"><span class="qz-opt-icon">🌱</span>Just getting started — don't know where to begin</button>
+      </div>
+      <button class="qz-back" data-back="3">← Back</button>
+    </div>
+
+    <!-- RESULT -->
+    <div id="qz-result" style="display:none">
+      <div id="qz-result-header">
+        <div id="qz-radar-wrap">
+          <svg id="qz-radar-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="qz-rg" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#7b9fff" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="#2B3A8E" stop-opacity="0.04"/>
+              </radialGradient>
+            </defs>
+            <!-- axis lines -->
+            <line x1="100" y1="100" x2="100" y2="28"  stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <line x1="100" y1="100" x2="163" y2="136" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <line x1="100" y1="100" x2="37"  y2="136" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <!-- rings -->
+            <polygon points="100,65 128,82 128,118 100,135 72,118 72,82" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+            <polygon points="100,48 137,69 137,131 100,152 63,131 63,69" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            <!-- data polygon (animated by JS) -->
+            <polygon id="qz-poly-glow" points="100,100 100,100 100,100" fill="url(#qz-rg)" opacity="0.6"/>
+            <polygon id="qz-poly"      points="100,100 100,100 100,100" fill="rgba(123,159,255,0.18)" stroke="#7b9fff" stroke-width="1.5" stroke-linejoin="round"/>
+            <!-- dots -->
+            <circle id="qz-dot-s" cx="100" cy="100" r="3" fill="#7b9fff" opacity="0"/>
+            <circle id="qz-dot-g" cx="100" cy="100" r="3" fill="#a78bff" opacity="0"/>
+            <circle id="qz-dot-b" cx="100" cy="100" r="3" fill="#5ecfb0" opacity="0"/>
+          </svg>
+        </div>
+
+        <div id="qz-score-block">
+          <p id="qz-score-eyebrow">Estimated Dilly Score</p>
+          <div id="qz-score-num">—</div>
+          <div id="qz-score-label">Dilly Score</div>
+          <div class="qz-dims-row">
+            <div class="qz-dim-block">
+              <span class="qz-dim-val qz-dim-val--smart" id="qz-cnt-s">—</span>
+              <span class="qz-dim-lbl">Smart</span>
+            </div>
+            <div class="qz-dim-block">
+              <span class="qz-dim-val qz-dim-val--grit" id="qz-cnt-g">—</span>
+              <span class="qz-dim-lbl">Grit</span>
+            </div>
+            <div class="qz-dim-block">
+              <span class="qz-dim-val qz-dim-val--build" id="qz-cnt-b">—</span>
+              <span class="qz-dim-lbl">Build</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="qz-result-body">
+        <h2 id="qz-result-title">Your starting path</h2>
+        <p id="qz-result-desc"></p>
+        <div class="qz-steps-list" id="qz-steps-list"></div>
+        <div class="qz-cta-row">
+          <a class="qz-btn-primary" href="https://app.trydilly.com/" id="qz-cta-btn">Get my real score</a>
+          <a class="qz-btn-ghost" href="features.html">Browse all features</a>
+        </div>
+        <button class="qz-restart" id="qz-restart">← Retake the quiz</button>
+      </div>
+    </div>
+
+  </div><!-- /qz-shell -->
+
+  <!-- BOTTOM CTA -->
+  <section id="qz-cta">
+    <h2>Ready to see your real score?</h2>
+    <p>Upload your resume and Dilly audits Smart, Grit, and Build in under 60 seconds.</p>
+    <a class="qz-btn-primary" href="https://app.trydilly.com/" style="font-size:0.85rem;padding:0.9rem 2.25rem">Open Dilly free</a>
+  </section>
 
   <footer class="site-footer">
     <nav class="footer-links" aria-label="Footer">
       <a href="index.html">Home</a>
       <a href="features.html">Features</a>
       <a href="pricing.html">Pricing</a>
+      <a href="quiz.html">Quiz</a>
     </nav>
-    <p>Dilly · Find your path</p>
+    <p>Dilly &middot; Find your path</p>
   </footer>
+
+  <script>
+  (function () {
+    var answers = {};
+    var currentStep = 0;
+    var TOTAL = 5;
+
+    var cards  = Array.from(document.querySelectorAll('.qz-card'));
+    var result = document.getElementById('qz-result');
+    var stepsLabel = document.getElementById('qz-step-label');
+    var dots   = Array.from(document.querySelectorAll('.qz-dot'));
+
+    /* ── radar geometry (same as dilly-score, scaled to 200px viewBox) ── */
+    var CX = 100, CY = 100, R = 64;
+    var SX = 0,   SY = -1;                            /* Smart: up */
+    var GX = Math.sin(Math.PI * 2/3),  GY = -Math.cos(Math.PI * 2/3);  /* Grit: lower-right */
+    var BX = -Math.sin(Math.PI * 2/3), BY = -Math.cos(Math.PI * 2/3);  /* Build: lower-left */
+
+    var poly     = document.getElementById('qz-poly');
+    var polyGlow = document.getElementById('qz-poly-glow');
+    var dotS     = document.getElementById('qz-dot-s');
+    var dotG     = document.getElementById('qz-dot-g');
+    var dotB     = document.getElementById('qz-dot-b');
+    var cntS     = document.getElementById('qz-cnt-s');
+    var cntG     = document.getElementById('qz-cnt-g');
+    var cntB     = document.getElementById('qz-cnt-b');
+    var scoreNum = document.getElementById('qz-score-num');
+
+    var curS = 0, curG = 0, curB = 0;
+    var tgtS = 0, tgtG = 0, tgtB = 0;
+    var rafId = null;
+
+    function pt(ux, uy, score) {
+      return (CX + R * (score/100) * ux).toFixed(2) + ',' + (CY + R * (score/100) * uy).toFixed(2);
+    }
+    function updateRadar() {
+      var pts = pt(SX,SY,curS) + ' ' + pt(GX,GY,curG) + ' ' + pt(BX,BY,curB);
+      poly.setAttribute('points', pts);
+      polyGlow.setAttribute('points', pts);
+      dotS.setAttribute('cx', (CX + R*(curS/100)*SX).toFixed(2));
+      dotS.setAttribute('cy', (CY + R*(curS/100)*SY).toFixed(2));
+      dotG.setAttribute('cx', (CX + R*(curG/100)*GX).toFixed(2));
+      dotG.setAttribute('cy', (CY + R*(curG/100)*GY).toFixed(2));
+      dotB.setAttribute('cx', (CX + R*(curB/100)*BX).toFixed(2));
+      dotB.setAttribute('cy', (CY + R*(curB/100)*BY).toFixed(2));
+      dotS.setAttribute('opacity', curS > 2 ? 1 : 0);
+      dotG.setAttribute('opacity', curG > 2 ? 1 : 0);
+      dotB.setAttribute('opacity', curB > 2 ? 1 : 0);
+      cntS.textContent = Math.round(curS);
+      cntG.textContent = Math.round(curG);
+      cntB.textContent = Math.round(curB);
+      var composite = Math.round((curS * 0.35 + curG * 0.35 + curB * 0.3));
+      scoreNum.textContent = composite > 0 ? composite : '—';
+    }
+    function ease(c, t) {
+      var d = t - c;
+      return Math.abs(d) < 0.3 ? t : c + d * 0.08;
+    }
+    function tick() {
+      curS = ease(curS, tgtS); curG = ease(curG, tgtG); curB = ease(curB, tgtB);
+      updateRadar();
+      var done = Math.abs(curS-tgtS)<0.3 && Math.abs(curG-tgtG)<0.3 && Math.abs(curB-tgtB)<0.3;
+      if (!done) { rafId = requestAnimationFrame(tick); }
+      else { curS=tgtS; curG=tgtG; curB=tgtB; updateRadar(); }
+    }
+    function animateRadar(s, g, b) {
+      tgtS=s; tgtG=g; tgtB=b;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    /* ── SCORE MODEL ── */
+    var BASE = {
+      finance:    { s: 72, g: 75, b: 48 },
+      tech:       { s: 68, g: 62, b: 85 },
+      consulting: { s: 76, g: 80, b: 54 },
+      science:    { s: 74, g: 70, b: 52 },
+      arts:       { s: 65, g: 72, b: 46 }
+    };
+    var BLOCKER_ADJ = {
+      'weak-resume':   { s: -6, g: -4, b: -3 },
+      'no-benchmark':  { s:  0, g:  0, b:  0 },
+      'no-roles':      { s:  2, g:  3, b: -5 },
+      'ats':           { s: -3, g:  0, b: -2 }
+    };
+    var TIMELINE_ADJ = {
+      '2plus': { s: -3, g: -5, b: -4 },
+      '2yr':   { s:  0, g:  0, b:  0 },
+      '1yr':   { s:  4, g:  5, b:  3 },
+      'done':  { s:  5, g:  6, b:  4 }
+    };
+    var ACTIVITY_ADJ = {
+      'active':    { s:  3, g:  5, b:  2 },
+      'exploring': { s:  1, g:  2, b:  1 },
+      'planning':  { s: -1, g: -2, b:  0 },
+      'start':     { s: -4, g: -6, b: -4 }
+    };
+
+    function computeScore() {
+      var base = BASE[answers[1]] || BASE.finance;
+      var b1   = BLOCKER_ADJ[answers[3]]  || { s:0, g:0, b:0 };
+      var b2   = TIMELINE_ADJ[answers[2]] || { s:0, g:0, b:0 };
+      var b3   = ACTIVITY_ADJ[answers[4]] || { s:0, g:0, b:0 };
+      return {
+        s: Math.max(20, Math.min(99, base.s + b1.s + b2.s + b3.s)),
+        g: Math.max(20, Math.min(99, base.g + b1.g + b2.g + b3.g)),
+        b: Math.max(20, Math.min(99, base.b + b1.b + b2.b + b3.b))
+      };
+    }
+
+    /* ── PLAN CONTENT ── */
+    var PLANS = {
+      'weak-resume': {
+        title: 'Start with the audit',
+        desc:  'Your resume gaps are fixable — but you need a baseline first. Dilly scores your file across Smart, Grit, and Build so you know exactly where to push.',
+        steps: [
+          { h: 'Upload resume → run Dilly Score', d: 'Get your Smart, Grit, Build baseline in under 60 seconds.' },
+          { h: 'Run ATS scanner', d: 'See how the six biggest systems parse your file before any recruiter does.' },
+          { h: 'Open Resume editor', d: 'Tackle the lowest-scoring bullets first — AI rewrites grounded in your real experience.' }
+        ]
+      },
+      'no-benchmark': {
+        title: 'Find your rank',
+        desc:  'Knowing your score is only half the picture. Dilly shows you where you sit against peers in your track so you can stop guessing.',
+        steps: [
+          { h: 'Get your Dilly Score', d: 'Three dimensions. One number. Takes 60 seconds from upload.' },
+          { h: 'Check the Leaderboard', d: 'See your percentile against other Finance, Tech, or Consulting students.' },
+          { h: 'Read your gap labels', d: 'On any internship match, Dilly shows how far your profile is from the role\'s implied target.' }
+        ]
+      },
+      'no-roles': {
+        title: 'Match before you apply',
+        desc:  'Spraying applications is expensive. Dilly surfaces roles where your profile is already close so you spend energy where it counts.',
+        steps: [
+          { h: 'Browse Internship matches', d: 'Each listing shows Ready, Almost, or Gap against your Dilly Score dimensions.' },
+          { h: 'Save your top 5 roles', d: 'They flow directly into the Application tracker — no re-entering anything.' },
+          { h: 'Use Ask Dilly on your top pick', d: 'Gap-driven action plan in seconds. Specific to that company and your profile.' }
+        ]
+      },
+      'ats': {
+        title: 'Fix the parsing problem first',
+        desc:  'ATS filters reject resumes before a human ever looks. Dilly models six major systems and shows exactly what breaks.',
+        steps: [
+          { h: 'Run the ATS scanner', d: 'See parse previews from Greenhouse, Workday, Lever, and others on your current file.' },
+          { h: 'Fix structural blockers', d: 'Section headers, date formats, font choices — Dilly flags each one specifically.' },
+          { h: 'Re-score after edits', d: 'Dilly Score updates in real-time so you can see ATS-safe improvements translate to a higher baseline.' }
+        ]
+      }
+    };
+
+    var DEFAULT_PLAN = PLANS['weak-resume'];
+
+    /* ── NAVIGATION ── */
+    function goTo(step) {
+      var prev = currentStep;
+      currentStep = step;
+
+      cards.forEach(function (c) {
+        var s = parseInt(c.dataset.step, 10);
+        c.classList.remove('active', 'exit');
+        if (s === prev && s !== step) {
+          c.classList.add('exit');
+          setTimeout(function () { c.classList.remove('exit'); }, 350);
+        }
+        if (s === step) c.classList.add('active');
+      });
+
+      stepsLabel.textContent = 'Step ' + (step + 1) + ' of ' + TOTAL;
+      dots.forEach(function (d, i) {
+        d.classList.toggle('active', i === step);
+        d.classList.toggle('done',   i < step);
+      });
+    }
+
+    function showResult() {
+      /* hide all cards */
+      cards.forEach(function (c) { c.classList.remove('active', 'exit'); c.style.display = 'none'; });
+      document.getElementById('qz-steps-label').style.display = 'none';
+
+      var plan = PLANS[answers[3]] || DEFAULT_PLAN;
+      var score = computeScore();
+
+      document.getElementById('qz-result-title').textContent = plan.title;
+      document.getElementById('qz-result-desc').textContent  = plan.desc;
+
+      var list = document.getElementById('qz-steps-list');
+      list.innerHTML = '';
+      plan.steps.forEach(function (st, i) {
+        list.innerHTML +=
+          '<div class="qz-step-item">' +
+            '<div class="qz-step-num-badge">' + (i+1) + '</div>' +
+            '<div class="qz-step-copy"><strong>' + st.h + '</strong><span>' + st.d + '</span></div>' +
+          '</div>';
+      });
+
+      result.style.display = 'block';
+      setTimeout(function () { result.classList.add('visible'); }, 20);
+      animateRadar(score.s, score.g, score.b);
+    }
+
+    /* ── EVENT BINDING ── */
+    document.querySelectorAll('.qz-opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var step = parseInt(btn.closest('.qz-card').dataset.step, 10);
+        answers[step] = btn.dataset.val;
+
+        btn.closest('.qz-opts').querySelectorAll('.qz-opt').forEach(function (b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+
+        setTimeout(function () {
+          if (step < TOTAL - 1) {
+            goTo(step + 1);
+          } else {
+            showResult();
+          }
+        }, 180);
+      });
+    });
+
+    document.querySelectorAll('.qz-back').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        goTo(parseInt(btn.dataset.back, 10));
+      });
+    });
+
+    document.getElementById('qz-restart').addEventListener('click', function () {
+      answers = {};
+      currentStep = 0;
+      result.classList.remove('visible');
+      setTimeout(function () {
+        result.style.display = 'none';
+        cards.forEach(function (c) {
+          c.style.display = '';
+          c.classList.remove('active', 'exit');
+          c.querySelectorAll('.qz-opt').forEach(function (b) { b.classList.remove('selected'); });
+        });
+        document.getElementById('qz-steps-label').style.display = '';
+        goTo(0);
+        curS = curG = curB = 0;
+        if (rafId) cancelAnimationFrame(rafId);
+        updateRadar();
+      }, 350);
+    });
+
+  }());
+  </script>
+
   <script src="dilly.js"></script>
 </body>
 </html>

@@ -5,9 +5,343 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Internship matching: Dilly</title>
   <meta name="description" content="Internship listings with Ready, Almost, and Gap analysis. Watch Dilly sort your matches live — Ready roles rise, Gap roles fade.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dilly.css">
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: #0d0d0d;
+      overflow-x: hidden;
+    }
+    body { overflow-x: hidden; }
+
+    /* ── NAV (in-flow) ── */
+    #int-nav { background: #fff; border-bottom: 1px solid rgba(43,58,142,0.08); }
+    #int-nav .site-nav--inner {
+      position: relative !important;
+      top: auto !important; left: auto !important;
+      width: 100% !important;
+      background: #fff !important;
+    }
+    :root.light #int-nav .site-nav--inner { background: #fff !important; border-bottom: none !important; }
+
+    /* ── HERO ── */
+    #int-hero {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 5.5rem clamp(1.5rem, 5vw, 4rem) 4rem;
+      text-align: center;
+    }
+    .int-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.5;
+      margin-bottom: 1.1rem;
+    }
+    #int-hero h1 {
+      font-size: clamp(2.4rem, 5vw, 4.25rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.0;
+      margin-bottom: 1.25rem;
+    }
+    #int-hero p {
+      font-size: clamp(0.93rem, 1.3vw, 1.08rem);
+      color: #555;
+      line-height: 1.8;
+      max-width: 54ch;
+      margin: 0 auto 2.25rem;
+    }
+    .int-hero-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+    .int-btn-primary {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.8rem 2rem;
+      border-radius: 100px;
+      background: #2B3A8E;
+      color: #fff;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .int-btn-primary:hover { opacity: 0.87; transform: translateY(-1px); }
+    .int-btn-ghost {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.8rem 1.75rem;
+      border-radius: 100px;
+      background: transparent;
+      color: #2B3A8E;
+      border: 1.5px solid rgba(43,58,142,0.2);
+      transition: border-color 0.2s;
+    }
+    .int-btn-ghost:hover { border-color: #2B3A8E; }
+
+    /* match badge preview strip */
+    .int-badge-strip {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .int-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.9rem;
+      border-radius: 100px;
+    }
+    .int-badge--ready  { background: rgba(34,197,94,0.1);  color: #16a34a; border: 1px solid rgba(34,197,94,0.25); }
+    .int-badge--almost { background: rgba(251,191,36,0.1); color: #d97706; border: 1px solid rgba(251,191,36,0.25); }
+    .int-badge--gap    { background: rgba(239,68,68,0.08); color: #dc2626; border: 1px solid rgba(239,68,68,0.18); }
+
+    /* ── INFO SECTIONS (light-mode rewrite) ── */
+    .int-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem clamp(1.5rem, 4vw, 3rem);
+    }
+    .int-section-head {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .int-section-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.4);
+      margin-bottom: 0.7rem;
+    }
+    .int-section-title {
+      font-size: clamp(1.5rem, 2.8vw, 2.25rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+    }
+    .int-section-desc {
+      font-size: 0.88rem;
+      color: #666;
+      line-height: 1.75;
+      max-width: 52ch;
+      margin: 0 auto;
+    }
+
+    .int-pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    @media (max-width: 768px) { .int-pillars { grid-template-columns: 1fr; } }
+
+    .int-pillar {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.07);
+      border-radius: 18px;
+      padding: 1.75rem;
+    }
+    .int-pillar-icon {
+      font-size: 1.25rem;
+      margin-bottom: 0.9rem;
+      display: block;
+    }
+    .int-pillar h3 {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .int-pillar p { font-size: 0.82rem; color: #666; line-height: 1.7; }
+
+    /* split */
+    .int-split-section { background: #f8f9fc; padding: 5rem clamp(1.5rem, 4vw, 3rem); }
+    .int-split {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+    @media (max-width: 768px) { .int-split { grid-template-columns: 1fr; gap: 2.5rem; } }
+    .int-split h2 {
+      font-size: clamp(1.5rem, 2.5vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .int-split p { font-size: 0.87rem; color: #555; line-height: 1.8; margin-bottom: 0.75rem; }
+    .int-checklist { list-style: none; margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.55rem; }
+    .int-checklist li {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #333;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+    .int-checklist li::before { content: '✓'; position: absolute; left: 0; color: #2B3A8E; font-weight: 800; }
+
+    .int-visual-card {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.08);
+      border-radius: 18px;
+      padding: 1.5rem;
+    }
+    .int-jc-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+    .int-jc-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 10px;
+      border: 1px solid rgba(43,58,142,0.06);
+    }
+    .int-jc-status {
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      flex-shrink: 0;
+      width: 60px;
+      text-align: center;
+    }
+    .int-jc-status--ready  { background: rgba(34,197,94,0.1);  color: #16a34a; }
+    .int-jc-status--almost { background: rgba(251,191,36,0.1); color: #d97706; }
+    .int-jc-status--gap    { background: rgba(239,68,68,0.08); color: #dc2626; }
+    .int-jc-info { flex: 1; min-width: 0; }
+    .int-jc-co { font-size: 0.82rem; font-weight: 700; color: #0d0d0d; }
+    .int-jc-role { font-size: 0.72rem; color: #888; margin-top: 0.1rem; }
+    .int-jc-dims { display: flex; gap: 0.35rem; flex-shrink: 0; }
+    .int-jc-dim {
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+    }
+    .int-jc-dim--s { background: rgba(43,58,142,0.07); color: #2B3A8E; }
+    .int-jc-dim--g { background: rgba(124,58,237,0.07); color: #7c3aed; }
+    .int-jc-dim--b { background: rgba(3,105,161,0.07);  color: #0369a1; }
+
+    /* stats */
+    .int-stats-section { background: #2B3A8E; padding: 3.5rem clamp(1.5rem, 5vw, 4rem); }
+    .int-stats-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      text-align: center;
+    }
+    @media (max-width: 640px) { .int-stats-inner { grid-template-columns: repeat(2, 1fr); } }
+    .int-stat-num { display: block; font-size: 2.25rem; font-weight: 800; color: #fff; letter-spacing: -0.04em; line-height: 1; margin-bottom: 0.3rem; }
+    .int-stat-label { font-size: 0.7rem; font-weight: 600; color: rgba(255,255,255,0.4); letter-spacing: 0.06em; line-height: 1.4; }
+
+    /* quote */
+    .int-quote-section { background: #f8f9fc; padding: 4rem clamp(1.5rem, 5vw, 6rem); text-align: center; }
+    .int-quote {
+      font-size: clamp(1rem, 1.8vw, 1.35rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.6;
+      color: #0d0d0d;
+      max-width: 56ch;
+      margin: 0 auto;
+    }
+    .int-quote cite {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.3);
+      margin-top: 1rem;
+      font-style: normal;
+    }
+
+    /* explore more */
+    .int-next-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    @media (max-width: 640px) { .int-next-grid { grid-template-columns: 1fr; } }
+    .int-next-card {
+      display: block;
+      text-decoration: none;
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.07);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .int-next-card:hover { border-color: rgba(43,58,142,0.22); transform: translateY(-2px); }
+    .int-next-tag {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.4);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .int-next-card h3 { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.01em; color: #0d0d0d; margin-bottom: 0.35rem; }
+    .int-next-card p { font-size: 0.78rem; color: #888; line-height: 1.6; }
+
+    /* prose */
+    .int-prose {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .int-prose h2 {
+      font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+    }
+    .int-prose p { font-size: 0.87rem; color: #555; line-height: 1.8; }
+
+    /* cta band */
+    .int-cta-band {
+      background: #2B3A8E;
+      padding: 5rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+    }
+    .int-cta-band h2 {
+      font-size: clamp(1.8rem, 3.5vw, 3rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.8rem;
+    }
+    .int-cta-band p { font-size: 0.95rem; color: rgba(255,255,255,0.5); margin-bottom: 2rem; }
 
     /* ── SORT DEMO SECTION ── */
     .sort-section {
@@ -190,11 +524,11 @@
     }
   </style>
 </head>
-<body class="feature-pro-page" data-nav-feature="internships" data-fp-layout="jobs">
-  <header class="fp-hero fp-hero--jobs" aria-label="Internship matching">
-    <div class="fp-hero__bg" aria-hidden="true"></div>
-    <div class="fp-hero__veil" aria-hidden="true"></div>
-    <div class="site-nav site-nav--inner">
+<body>
+
+  <!-- NAV -->
+  <div id="int-nav">
+    <div class="site-nav site-nav--inner" style="background:#fff;">
       <a class="logo-lockup" href="index.html">
         <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
       </a>
@@ -204,53 +538,45 @@
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Your resume</span>
-                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
-                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
-                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
-                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link">ATS scanner</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Search and track</span>
-                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
-                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
-                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
-                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link">Ask Dilly on any job</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Guidance</span>
-                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
-                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link">Peer leaderboard</a>
+              </div></div>
             </div>
           </li>
           <li class="nav-dropdown">
             <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
             <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
-              <div class="nav-dropdown-inner">
-                <div class="nav-dropdown-col">
-                  <span class="nav-dropdown-label">Decide</span>
-                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
-                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
-                </div>
-              </div>
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Decide</span>
+                <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+              </div></div>
             </div>
           </li>
           <li><a class="nav-item" href="faq.html">FAQ</a></li>
@@ -262,21 +588,23 @@
         <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
       </div>
     </div>
-    <div class="fp-hero__inner">
-      <p class="fp-kicker">Jobs &amp; pipeline</p>
-      <h1 class="fp-title font-display">Real roles. Real bars. No wishful thinking.</h1>
-      <p class="fp-lead">Browse internships from employers students actually target. Each listing shows Ready, Almost, or Gap with Smart, Grit, and Build compared to what the role signals. You see the delta before you burn an application.</p>
-      <div class="fp-hero-actions">
-        <a class="btn btn-primary" href="https://app.trydilly.com/">Browse listings</a>
-        <a class="btn btn-ghost" href="feature-ask-dilly.html">Deep dive with Ask Dilly</a>
-      </div>
-      <div class="fp-hero-metrics" aria-label="Matching highlights">
-        <div><span class="fp-metric-val">Fit</span><span class="fp-metric-label">Ready · Almost · Gap</span></div>
-        <div><span class="fp-metric-val">Bars</span><span class="fp-metric-label">Dimension-by-dimension view</span></div>
-        <div><span class="fp-metric-val">Tailor</span><span class="fp-metric-label">Resume per card, your experience</span></div>
-      </div>
+  </div>
+
+  <!-- HERO -->
+  <div id="int-hero">
+    <p class="int-eyebrow">Jobs &amp; pipeline</p>
+    <h1>Real roles.<br>Real bars.<br>No wishful thinking.</h1>
+    <p>Browse internships from employers students actually target. Each listing shows Ready, Almost, or Gap with Smart, Grit, and Build compared to what the role signals — before you spend an application.</p>
+    <div class="int-hero-actions">
+      <a class="int-btn-primary" href="https://app.trydilly.com/">Browse listings</a>
+      <a class="int-btn-ghost" href="feature-ask-dilly.html">Deep dive with Ask Dilly</a>
     </div>
-  </header>
+    <div class="int-badge-strip">
+      <span class="int-badge int-badge--ready">Ready</span>
+      <span class="int-badge int-badge--almost">Almost</span>
+      <span class="int-badge int-badge--gap">Gap</span>
+    </div>
+  </div>
 
   <!-- ── SORT DEMO ── -->
   <section class="sort-section" id="sort-demo" aria-label="Live sorting demo">
@@ -305,98 +633,124 @@
     </div>
   </section>
 
-  <!-- ── INFO SECTIONS ── -->
-  <section class="fp-section">
-    <div class="fp-section-head">
-      <p class="section-eyebrow">Intelligence</p>
-      <h2 class="section-title">What each listing shows</h2>
-      <p class="section-desc">A single label is not enough. You get the story behind the label: which dimension lags and what kind of proof would move it.</p>
+  <!-- INFO SECTIONS -->
+  <section class="int-section">
+    <div class="int-section-head">
+      <p class="int-section-eyebrow">Intelligence</p>
+      <h2 class="int-section-title">What each listing shows</h2>
+      <p class="int-section-desc">A single label is not enough. You get the story behind the label: which dimension lags and what kind of proof would move it.</p>
     </div>
-    <div class="fp-pillar-grid">
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">◆</span>
+    <div class="int-pillars">
+      <div class="int-pillar">
+        <span class="int-pillar-icon">◆</span>
         <h3>Employer reality</h3>
-        <p>Roles from recognizable programs so you are not practicing on fictional JDs. Signals map to how competitive interns look in that stack.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">▥</span>
+        <p>Roles from recognizable programs — not fictional JDs. Signals map to how competitive interns look in that hiring stack.</p>
+      </div>
+      <div class="int-pillar">
+        <span class="int-pillar-icon">▥</span>
         <h3>Gap math</h3>
         <p>Visual comparison between your scores and implied targets. Biggest gap surfaces first so you know whether to chase proof or polish.</p>
-      </article>
-      <article class="fp-pillar surface-panel">
-        <span class="fp-pillar-icon" aria-hidden="true">→</span>
+      </div>
+      <div class="int-pillar">
+        <span class="int-pillar-icon">→</span>
         <h3>Next actions</h3>
         <p>Short, specific moves: ship a project, tighten two bullets, pick up a skill path. Designed to be doable between classes.</p>
-      </article>
+      </div>
     </div>
   </section>
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-split">
-      <div class="fp-split-copy">
-        <p class="section-eyebrow">One tap</p>
-        <h2 class="fp-h2">Tailor resume on every job card</h2>
+  <section class="int-split-section">
+    <div class="int-split">
+      <div>
+        <p class="int-section-eyebrow">One tap</p>
+        <h2>Tailor resume on every job card</h2>
         <p>Each listing includes a <strong>Tailor resume</strong> action. Dilly uses your real experience to generate a version of your resume aimed at that role's signals.</p>
-        <p>No blank prompt. No invented jobs. The strongest honest framing of what you actually did, aligned to the posting you are looking at.</p>
-        <ul class="fp-checklist">
-          <li>Grounded in your profile: history and bullets Dilly already knows</li>
+        <p>No blank prompt. No invented jobs. The strongest honest framing of what you actually did, aligned to the posting you're looking at.</p>
+        <ul class="int-checklist">
+          <li>Grounded in your profile — bullets Dilly already knows</li>
           <li>Fast draft you refine, not a generic template</li>
           <li>Tied to the same Ready / Almost / Gap read as the card</li>
         </ul>
       </div>
-      <div class="fp-split-visual"><img src="carousel-jobs.png" alt="Dilly gap analysis" style="width:100%;border-radius:var(--radius);display:block"></div>
+      <div class="int-visual-card">
+        <div class="int-jc-preview">
+          <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(43,58,142,0.35);margin-bottom:0.25rem">Your matches — Finance track</div>
+          <div class="int-jc-row">
+            <span class="int-jc-status int-jc-status--ready">Ready</span>
+            <div class="int-jc-info"><div class="int-jc-co">Goldman Sachs</div><div class="int-jc-role">Investment Banking Analyst</div></div>
+            <div class="int-jc-dims"><span class="int-jc-dim int-jc-dim--s">S 82</span><span class="int-jc-dim int-jc-dim--g">G 79</span><span class="int-jc-dim int-jc-dim--b">B 68</span></div>
+          </div>
+          <div class="int-jc-row">
+            <span class="int-jc-status int-jc-status--almost">Almost</span>
+            <div class="int-jc-info"><div class="int-jc-co">BCG</div><div class="int-jc-role">Strategy Consulting Intern</div></div>
+            <div class="int-jc-dims"><span class="int-jc-dim int-jc-dim--s">S 74</span><span class="int-jc-dim int-jc-dim--g">G 77</span><span class="int-jc-dim int-jc-dim--b">B 61</span></div>
+          </div>
+          <div class="int-jc-row" style="opacity:0.5">
+            <span class="int-jc-status int-jc-status--gap">Gap</span>
+            <div class="int-jc-info"><div class="int-jc-co">Citadel</div><div class="int-jc-role">Quantitative Research Intern</div></div>
+            <div class="int-jc-dims"><span class="int-jc-dim int-jc-dim--s">S 61</span><span class="int-jc-dim int-jc-dim--g">G 55</span><span class="int-jc-dim int-jc-dim--b">B 47</span></div>
+          </div>
+          <div style="margin-top:0.75rem;background:rgba(43,58,142,0.04);border-radius:10px;padding:0.75rem;font-size:0.72rem;color:#555;line-height:1.5">
+            <strong style="color:#0d0d0d">Citadel gap: Build 41 → 88</strong><br>
+            They want shipped quant projects, not coursework. Deploy one model to GitHub and your card flips to Almost.
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <section class="fp-section">
-    <div class="fp-prose">
-      <h2 class="fp-h2">Job not in Dilly yet? Add it yourself</h2>
+  <section class="int-section">
+    <div class="int-prose">
+      <h2>Job not in Dilly yet? Add it yourself</h2>
       <p>If a role is not in our listings, enter <strong>company</strong>, <strong>job title</strong>, and <strong>job description</strong>. Dilly builds a tailored resume for that posting the same way: from your real experience, not filler.</p>
     </div>
   </section>
 
-  <section class="fp-stats" aria-label="Matching stats">
-    <div class="fp-stats-inner">
-      <div><span class="fp-stat-num">Real</span><span class="fp-stat-label">Listings tied to real hiring stacks</span></div>
-      <div><span class="fp-stat-num">3</span><span class="fp-stat-label">Dimensions on every card</span></div>
-      <div><span class="fp-stat-num">1</span><span class="fp-stat-label">Pipeline from browse to offer</span></div>
-      <div><span class="fp-stat-num">Sync</span><span class="fp-stat-label">Coach knows your saved roles</span></div>
+  <section class="int-stats-section">
+    <div class="int-stats-inner">
+      <div><span class="int-stat-num">Real</span><span class="int-stat-label">Listings tied to real hiring stacks</span></div>
+      <div><span class="int-stat-num">3</span><span class="int-stat-label">Dimensions on every card</span></div>
+      <div><span class="int-stat-num">1</span><span class="int-stat-label">Pipeline from browse to offer</span></div>
+      <div><span class="int-stat-num">Sync</span><span class="int-stat-label">Coach knows your saved roles</span></div>
     </div>
   </section>
 
-  <section class="fp-section">
-    <blockquote class="fp-quote">"Your Build is 72, but Stripe wants 88 (16 point gap). They want shipped products, not tutorials. Deploy one project and you are competitive."<cite>Example gap read</cite></blockquote>
-  </section>
+  <div class="int-quote-section">
+    <blockquote class="int-quote">
+      "Your Build is 72, but Stripe wants 88. That's a 16-point gap. They want shipped products, not tutorials. Deploy one project and you're competitive."
+      <cite>Example gap read</cite>
+    </blockquote>
+  </div>
 
-  <section class="fp-section fp-section--surface">
-    <div class="fp-section-head">
-      <h2 class="section-title">Explore more</h2>
+  <section class="int-section">
+    <div class="int-section-head">
+      <h2 class="int-section-title">Explore more</h2>
     </div>
-    <div class="fp-next-grid">
-      <a class="fp-next-card" href="feature-tracker.html">
-        <span class="fp-next-tag">Pipeline</span>
+    <div class="int-next-grid">
+      <a class="int-next-card" href="feature-tracker.html">
+        <span class="int-next-tag">Pipeline</span>
         <h3>Application tracker</h3>
         <p>Move saved roles through stages with less spreadsheet pain.</p>
       </a>
-      <a class="fp-next-card" href="feature-ask-dilly.html">
-        <span class="fp-next-tag">AI</span>
+      <a class="int-next-card" href="feature-ask-dilly.html">
+        <span class="int-next-tag">AI</span>
         <h3>Ask Dilly</h3>
         <p>Gap-driven action plans on any role in seconds.</p>
       </a>
-      <a class="fp-next-card" href="feature-dilly-score.html">
-        <span class="fp-next-tag">Base</span>
+      <a class="int-next-card" href="feature-dilly-score.html">
+        <span class="int-next-tag">Base</span>
         <h3>Dilly Score</h3>
         <p>Strengthen the profile listings read against.</p>
       </a>
     </div>
   </section>
 
-  <section class="cta-band">
-    <h2 class="font-display" style="letter-spacing:0.05em">Browse with your eyes open</h2>
+  <section class="int-cta-band">
+    <h2>Browse with your eyes open</h2>
     <p>See fit before you spend emotional energy on another portal form.</p>
     <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center">
-      <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
-      <a class="btn btn-ghost" href="quiz.html">Take the quiz</a>
+      <a class="int-btn-primary" href="https://app.trydilly.com/" style="font-size:0.85rem;padding:0.9rem 2.25rem">Start free</a>
+      <a class="int-btn-ghost" href="quiz.html" style="font-size:0.85rem;padding:0.9rem 2rem;border-color:rgba(255,255,255,0.3);color:#fff">Take the quiz</a>
     </div>
   </section>
 
@@ -407,7 +761,7 @@
       <a href="pricing.html">Pricing</a>
       <a href="quiz.html">Quiz</a>
     </nav>
-    <p>Dilly · Internship matching</p>
+    <p>Dilly &middot; Internship matching</p>
   </footer>
 
   <script>
