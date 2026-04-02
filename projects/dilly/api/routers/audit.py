@@ -833,14 +833,19 @@ async def audit_resume_v2(
                 _cur.execute("""
                     INSERT INTO students (
                         email, name, track, cohort_scores,
+                        smart_score, grit_score, build_score, dilly_score,
                         overall_smart, overall_grit, overall_build, overall_dilly_score,
                         latest_audit_id, has_run_first_audit
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
                     ON CONFLICT (email) DO UPDATE SET
                         name = CASE WHEN EXCLUDED.name <> '' THEN EXCLUDED.name ELSE students.name END,
                         track = COALESCE(EXCLUDED.track, students.track),
                         cohort_scores = EXCLUDED.cohort_scores,
+                        smart_score = EXCLUDED.smart_score,
+                        grit_score = EXCLUDED.grit_score,
+                        build_score = EXCLUDED.build_score,
+                        dilly_score = EXCLUDED.dilly_score,
                         overall_smart = EXCLUDED.overall_smart,
                         overall_grit = EXCLUDED.overall_grit,
                         overall_build = EXCLUDED.overall_build,
@@ -853,10 +858,52 @@ async def audit_resume_v2(
                     _track or None,
                     _json.dumps(_cohort_scores),
                     _smart, _grit, _build, _dilly,
+                    _smart, _grit, _build, _dilly,
                     audit_id,
                 ))
                 _conn.commit()
                 _conn.close()
+                # Trigger match score computation for this student in background
+                # so the jobs feed is populated immediately after onboarding.
+                try:
+                    import threading as _threading
+                    _student_email_for_match = email
+                    def _compute_matches_bg():
+                        try:
+                            import sys as _sys, os as _os, json as _json2, uuid as _uuid2
+                            _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', '..'))
+                            import psycopg2 as _pg2, psycopg2.extras as _extras2
+                            from projects.dilly.match_engine import compute_matches_for_student as _cms
+                            _mpw = _os.environ.get("DILLY_DB_PASSWORD", "")
+                            if not _mpw:
+                                try: _mpw = open(_os.path.expanduser("~/.dilly_db_pass")).read().strip()
+                                except: pass
+                            _mc = _pg2.connect(
+                                host=_os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+                                database="dilly", user="dilly_admin", password=_mpw, sslmode="require"
+                            )
+                            _mcur = _mc.cursor(cursor_factory=_extras2.DictCursor)
+                            _mcur.execute("SELECT * FROM students WHERE email = %s", (_student_email_for_match,))
+                            _student_row = _mcur.fetchone()
+                            if _student_row:
+                                _matches, _ = _cms(_mc, _student_row)
+                                _mcur.execute("DELETE FROM match_scores WHERE student_id = %s", (_student_row["id"],))
+                                for _m in _matches:
+                                    _mcur.execute(
+                                        """INSERT INTO match_scores (id, student_id, internship_id, rank_score,
+                                            readiness, cohort_readiness, location_score, work_mode_score, compensation_score)
+                                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                                        (str(_uuid2.uuid4()), _m["student_id"], _m["internship_id"], _m["rank_score"],
+                                         _m["readiness"], _json2.dumps(_m["cohort_readiness"]),
+                                         _m["location_score"], _m["work_mode_score"], _m["compensation_score"])
+                                    )
+                                _mc.commit()
+                            _mc.close()
+                        except Exception:
+                            pass
+                    _threading.Thread(target=_compute_matches_bg, daemon=True).start()
+                except Exception:
+                    pass
             except Exception:
                 pass
             response = response.model_copy(update={"id": audit_id}) if hasattr(response, "model_copy") else response
