@@ -17,13 +17,14 @@ import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ONBOARDING_KEYS = {
-  name:    'dilly_onboarding_name',
-  cohort:  'dilly_onboarding_cohort',
-  track:   'dilly_onboarding_track',
-  target:  'dilly_onboarding_target',
-  majors:  'dilly_onboarding_majors',
-  preProf: 'dilly_onboarding_pre_prof',
+  name:      'dilly_onboarding_name',
+  cohort:    'dilly_onboarding_cohort',
+  track:     'dilly_onboarding_track',
+  target:    'dilly_onboarding_target',
+  majors:    'dilly_onboarding_majors',
+  preProf:   'dilly_onboarding_pre_prof',
   indTarget: 'dilly_onboarding_industry_target',
+  interests: 'dilly_onboarding_interests',
 };
 
 export const AUDIT_RESULT_KEY = 'dilly_audit_result';
@@ -290,7 +291,7 @@ export default function ScanningScreen() {
         }
 
         // Attach profile params
-        const [nameRaw, majorsRaw, preProf, indTarget, cohortVal, track, appTarget] = await Promise.all([
+        const [nameRaw, majorsRaw, preProf, indTarget, cohortVal, track, appTarget, interestsRaw] = await Promise.all([
           AsyncStorage.getItem(ONBOARDING_KEYS.name),
           AsyncStorage.getItem(ONBOARDING_KEYS.majors),
           AsyncStorage.getItem(ONBOARDING_KEYS.preProf),
@@ -298,7 +299,22 @@ export default function ScanningScreen() {
           AsyncStorage.getItem(ONBOARDING_KEYS.cohort),
           AsyncStorage.getItem(ONBOARDING_KEYS.track),
           AsyncStorage.getItem(ONBOARDING_KEYS.target),
+          AsyncStorage.getItem(ONBOARDING_KEYS.interests),
         ]);
+
+        // Guarantee interests are on the profile before the audit runs.
+        // interests.tsx fires a fire-and-forget PATCH that may not have settled yet
+        // (bad timing, flaky network). Re-saving here is idempotent and cheap.
+        if (interestsRaw) {
+          try {
+            const interests = JSON.parse(interestsRaw);
+            fetch(`${API_BASE}/profile`, {
+              method:  'PATCH',
+              headers: { 'Content-Type': 'application/json', ...headers },
+              body:    JSON.stringify({ interests }),
+            }).catch(() => null);
+          } catch { /* ignore parse errors */ }
+        }
 
         if (nameRaw)    formData.append('name',                   nameRaw);
         if (majorsRaw) {
