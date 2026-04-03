@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Why Your Resume Probably Never Reached a Human (And How to Fix It)</title>
+  <meta name="description" content="75% of resumes are filtered before a recruiter sees them. Here's exactly what ATS software does, the formatting mistakes that confuse parsers, and why Dilly tests six parsers instead of one.">
+  <link rel="canonical" href="https://hellodilly.com/blog-why-resume-never-reaches-human.html">
+  <meta property="og:url" content="https://hellodilly.com/blog-why-resume-never-reaches-human.html">
+  <meta property="og:title" content="Why Your Resume Probably Never Reached a Human (And How to Fix It)">
+  <meta property="og:description" content="75% of resumes are filtered before a recruiter sees them. Here's exactly what ATS software does, the formatting mistakes that confuse parsers, and why Dilly tests six parsers instead of one.">
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="https://hellodilly.com/dilly-og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://hellodilly.com/dilly-og.png">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Article","headline":"Why Your Resume Probably Never Reached a Human (And How to Fix It)","description":"75% of resumes are filtered before a recruiter sees them. Here's exactly what ATS software does, the formatting mistakes that confuse parsers, and why Dilly tests six parsers instead of one.","author":{"@type":"Person","name":"Dilan Kochhar"},"publisher":{"@type":"Organization","name":"Dilly","logo":{"@type":"ImageObject","url":"https://hellodilly.com/dilly-logo.png"}},"datePublished":"2026-04-02","dateModified":"2026-04-02","url":"https://hellodilly.com/blog-why-resume-never-reaches-human.html","mainEntityOfPage":"https://hellodilly.com/blog-why-resume-never-reaches-human.html"}
+  </script>
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    .blog-wrap { max-width: 740px; margin: 0 auto; padding: 80px 24px 120px; font-family: var(--font-body, system-ui, sans-serif); color: var(--color-text, #1a1a1a); line-height: 1.75; }
+    .blog-wrap h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); line-height: 1.2; margin-bottom: 12px; font-weight: 800; }
+    .blog-wrap .byline { font-size: 0.875rem; color: var(--color-muted, #666); margin-bottom: 40px; }
+    .blog-wrap h2 { font-size: 1.4rem; font-weight: 700; margin-top: 52px; margin-bottom: 12px; }
+    .blog-wrap h3 { font-size: 1.15rem; font-weight: 700; margin-top: 36px; margin-bottom: 10px; }
+    .blog-wrap p { margin-bottom: 20px; }
+    .blog-wrap ul, .blog-wrap ol { padding-left: 24px; margin-bottom: 20px; }
+    .blog-wrap li { margin-bottom: 8px; }
+    .app-preview { margin: 36px 0; }
+    .app-preview img { width: 100%; border-radius: 12px; box-shadow: 0 4px 32px rgba(0,0,0,0.10); display: block; }
+    .img-caption { font-size: 0.85rem; color: var(--color-muted, #666); text-align: center; margin-top: 10px; font-style: italic; margin-bottom: 0; }
+    .cta-box { background: var(--color-accent, #2b3a8e); color: white; border-radius: 14px; padding: 40px 32px; text-align: center; margin-top: 60px; }
+    .cta-box h2 { color: white; margin-top: 0; font-size: 1.5rem; }
+    .cta-box p { opacity: 0.85; margin-bottom: 24px; }
+    .cta-box a { display: inline-block; background: white; color: var(--color-accent, #2b3a8e); font-weight: 700; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 1rem; }
+    .related-posts { margin-top: 60px; padding-top: 40px; border-top: 1px solid var(--color-border, #e2e2e2); }
+    .related-posts h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .related-card { border: 1px solid var(--color-border, #e2e2e2); border-radius: 10px; padding: 20px; text-decoration: none; color: inherit; display: flex; flex-direction: column; transition: box-shadow 0.15s; }
+    .related-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+    .related-card .tag { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-accent, #2b3a8e); margin-bottom: 8px; }
+    .related-card h3 { font-size: 0.9rem; font-weight: 600; line-height: 1.4; margin: 0; }
+  </style>
+</head>
+<body>
+  <header class="site-nav" style="position:sticky;top:0;z-index:100">
+    <a class="logo-lockup" href="index.html"><img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="200" height="58" decoding="async"></a>
+    <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav-glass" aria-label="Primary">
+      <ul>
+        <li><a class="nav-item" href="features.html">Features</a></li>
+        <li><a class="nav-item" href="pricing.html">Pricing</a></li>
+        <li><a class="nav-item" href="blog.html">Blog</a></li>
+        <li><a class="nav-item" href="faq.html">FAQ</a></li>
+        <li><a class="nav-item nav-item--signin" href="https://app.hellodilly.com">Sign in</a></li>
+      </ul>
+    </nav>
+    <div class="nav-cta-row"><a class="btn btn-primary" href="https://app.hellodilly.com/">Start free</a></div>
+  </header>
+
+  <main>
+    <div class="blog-wrap">
+      <p class="byline">By Dilan Kochhar &nbsp;&middot;&nbsp; Dilly Blog &nbsp;&middot;&nbsp; April 2026</p>
+      <h1>Why Your Resume Probably Never Reached a Human (And How to Fix It)</h1>
+
+
+<p>You spent three hours on your resume. You applied to 40 companies. You heard back from two — and neither was a company you actually wanted.</p>
+<p>Here's what happened: your resume got filtered out before any human saw it. Not because it was bad, but because it wasn't built for the system that screens it first.</p>
+<p>That system is called an ATS — Applicant Tracking System — and it's the invisible gatekeeper standing between your application and a recruiter's inbox.</p>
+<div style="background:#f0f4ff;border:1px solid #d0d8f0;border-radius:10px;padding:24px;margin:28px 0;text-align:center;">
+<div style="font-size:3rem;font-weight:800;color:#2b3a8e;line-height:1;margin-bottom:8px;">75%</div>
+<p>of resumes are rejected by ATS systems before a human recruiter ever reads them</p>
+</div>
+<h2>What an ATS Actually Does</h2>
+<p>An Applicant Tracking System is software that companies use to receive, organize, and pre-screen job applications. When you submit a resume through a company's online portal, it almost certainly goes into an ATS first.</p>
+<p>The ATS does a few things automatically:</p>
+<ol>
+<li><strong>Parses your resume</strong> — extracts your name, contact info, education, work experience, and skills into structured data</li>
+<li><strong>Scores your resume</strong> — compares your content against keywords and requirements from the job description</li>
+<li><strong>Ranks or filters applicants</strong> — moves high-scoring resumes to recruiter review queues and buries or rejects low-scoring ones</li>
+</ol>
+<p>The problem is that ATS parsing is imperfect. Different systems — Greenhouse, Workday, Lever, iCIMS, Taleo, and others — parse resumes differently. A format that works perfectly in one system may appear as garbled text in another.</p>
+<h2>The Format Mistakes That Break ATS Parsing</h2>
+<p>These are the most common formatting issues that cause ATS systems to misread or discard your resume entirely:</p>
+<ul class="ats-list">
+<li><span class="check">✗</span><span><strong>Tables and text boxes</strong> — most ATS systems can't parse content inside table cells or text boxes. Your carefully formatted resume appears as empty or scrambled.</span></li>
+<li><span class="check">✗</span><span><strong>Headers and footers</strong> — contact information placed in the document header or footer often gets ignored entirely.</span></li>
+<li><span class="check">✗</span><span><strong>Graphics, icons, and images</strong> — any visual element (including icon-based skill ratings) is invisible to ATS parsers.</span></li>
+<li><span class="check">✗</span><span><strong>Non-standard section headings</strong> — "My Journey" instead of "Experience" or "What I Know" instead of "Skills" confuses the parser's categorization logic.</span></li>
+<li><span class="check">✗</span><span><strong>Unusual fonts or special characters</strong> — some decorative characters, especially bullet point symbols, render incorrectly across parsers.</span></li>
+<li><span class="check">✗</span><span><strong>Multi-column layouts</strong> — many ATS systems read left-to-right across the full width, merging columns into nonsense strings.</span></li>
+<li><span class="check">✗</span><span><strong>PDF with embedded fonts</strong> — certain PDF export settings prevent text extraction. Use a standard PDF or .docx.</span></li>
+</ul>
+<h2>The Keywords Problem</h2>
+<p>Even if your resume parses correctly, it still needs to match the keywords the ATS is looking for. Most systems score your resume by comparing it to the job description — and if the key terms aren't there, you score low regardless of your qualifications.</p>
+<p>This is where most students fail: they write a single "master resume" and submit it everywhere without tailoring to each job description.</p>
+<div style="background:#f0f4ff;border-left:3px solid #2b3a8e;border-radius:8px;padding:20px 24px;margin:28px 0;">
+<p><strong>The hard truth:</strong> Submitting the same resume to every job is one of the biggest mistakes in modern job searching. The ATS is looking for specific skills, tools, and experience from that exact job description. If your resume doesn't mirror those terms, it gets filtered — even if you're qualified.</p>
+</div>
+<h3>How to Fix the Keywords Problem</h3>
+<p>For every application:</p>
+<ol>
+<li>Read the job description carefully and identify the 5-8 most important required skills and experience areas</li>
+<li>Check whether those exact terms (or very close synonyms) appear in your resume</li>
+<li>Where they don't, adjust your bullet points to reflect those skills — honestly and accurately</li>
+<li>Mirror the language of the job description naturally throughout your content</li>
+</ol>
+<p>This doesn't mean stuffing keywords randomly. It means describing your legitimate experience using the same language the company uses. If the job says "cross-functional collaboration" and you've done it, say "cross-functional collaboration" — not "worked with different departments."</p>
+<h2>What the Best ATS-Optimized Resume Looks Like</h2>
+<ul class="ats-list">
+<li><span class="checkgreen">✓</span><span>Single-column layout with clean section headers (Education, Experience, Skills, Projects)</span></li>
+<li><span class="checkgreen">✓</span><span>Contact information at the top of the body — not in headers/footers</span></li>
+<li><span class="checkgreen">✓</span><span>Standard bullet points (• or -), no image-based bullets</span></li>
+<li><span class="checkgreen">✓</span><span>Consistent date formats throughout (Month Year or MM/YYYY)</span></li>
+<li><span class="checkgreen">✓</span><span>Skills listed as plain text in a dedicated Skills section</span></li>
+<li><span class="checkgreen">✓</span><span>File saved as a standard PDF (or .docx if specifically requested)</span></li>
+<li><span class="checkgreen">✓</span><span>No tables, text boxes, or multi-column structures</span></li>
+<li><span class="checkgreen">✓</span><span>Job-description keywords woven naturally into bullet points</span></li>
+</ul>
+<h2>The ATS Systems You're Most Likely Up Against</h2>
+<p>Different companies use different ATS platforms, and they all have quirks:</p>
+<ul>
+<li><strong>Workday</strong> — used by many Fortune 500s; struggles with complex PDF formatting</li>
+<li><strong>Greenhouse</strong> — common at tech companies and startups; generally parses well but sensitive to columns</li>
+<li><strong>Taleo (Oracle)</strong> — older system used by large enterprises; notoriously strict about formatting</li>
+<li><strong>Lever</strong> — used by growth-stage tech companies; relatively modern and forgiving</li>
+<li><strong>iCIMS</strong> — common in retail and large corporations; prefers .docx over PDF</li>
+</ul>
+<p>The safest approach: design your resume to survive the most restrictive system (Taleo), and you'll pass every other one.</p>
+<h2>How Dilly Makes This Easier</h2>
+<div class="app-preview">
+<img alt="Dilly ATS scanner results showing parser breakdown" src="screenshot-ats.png" style="width:100%;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.12);margin:20px 0;"/>
+<p class="img-caption">Dilly runs your resume through 6 ATS parser systems and shows you exactly what each one sees.</p>
+</div>
+<p>Dilly's ATS scanner runs your resume through multiple real ATS parsing systems simultaneously and shows you exactly how each one reads your document — what it extracted correctly, what it missed, and what came through as garbled data.</p>
+<p>Instead of guessing whether your resume will survive Workday or Taleo, you can see the actual parsed output and fix specific issues before you apply. It's the closest thing to seeing your application from the recruiter's side of the screen.</p>
+
+
+
+      <div class="cta-box">
+        <h2>Find Out What ATS Systems See in Your Resume</h2>
+        <p>Dilly tests your resume against 6 ATS parsing engines and shows you exactly what each one extracts. Free with a .edu email.</p>
+        <a href="https://app.hellodilly.com/">Get your score free</a>
+      </div>
+
+      <div class="related-posts">
+        <h2>Related Articles</h2>
+        <div class="related-grid">
+        <a class="related-card" href="blog-what-is-ats.html">
+          <span class="tag">ATS</span>
+          <h3>What Is an Applicant Tracking System (And Why It's Rejecting Your Resume)</h3>
+        </a>
+        <a class="related-card" href="blog-how-to-beat-ats.html">
+          <span class="tag">ATS</span>
+          <h3>How to Beat ATS Resume Scanning: A Practical Guide for College Students</h3>
+        </a>
+        <a class="related-card" href="blog-resume-scanner-comparison.html">
+          <span class="tag">Tools</span>
+          <h3>Best Resume Scanner for College Students (2026): Jobscan, Teal, Rezi, and Dilly Compared</h3>
+        </a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <nav class="footer-links" aria-label="Footer">
+      <a href="features.html">Features</a>
+      <a href="faq.html">FAQ</a>
+      <a href="quiz.html">Quiz</a>
+      <a href="https://app.hellodilly.com">Sign in</a>
+      <a href="https://app.hellodilly.com/">App</a>
+    </nav>
+    <a href="index.html" style="display:block;line-height:0;text-align:center"><img src="dilly-wordmark.png" alt="Dilly" style="height:22px;opacity:0.45"></a>
+  </footer>
+  <script src="dilly.js"></script>
+</body>
+</html>

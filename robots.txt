@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /signin.html
+Disallow: /success.html
+
+Sitemap: https://hellodilly.com/sitemap.xml

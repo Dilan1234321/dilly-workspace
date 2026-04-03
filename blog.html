@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dilly Blog | Career Advice for College Students</title>
+  <meta name="description" content="Resume tips, ATS guides, internship advice, and career strategy for college students. From the team at Dilly.">
+  <link rel="canonical" href="https://hellodilly.com/blog.html">
+  <meta property="og:url" content="https://hellodilly.com/blog.html">
+  <meta property="og:title" content="Dilly Blog | Career Advice for College Students">
+  <meta property="og:description" content="Resume tips, ATS guides, internship advice, and career strategy for college students.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://hellodilly.com/dilly-og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://hellodilly.com/dilly-og.png">
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    .blog-index-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 24px 120px;
+    }
+    .blog-index-wrap h1 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .blog-index-wrap .page-lead {
+      font-size: 1.1rem;
+      color: var(--color-muted, #666);
+      margin-bottom: 56px;
+    }
+    .post-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 28px;
+    }
+    .post-card {
+      border: 1px solid var(--color-border, #e2e2e2);
+      border-radius: 12px;
+      padding: 28px;
+      background: var(--color-surface, #fafafa);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .post-card:hover {
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+    .post-card .tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-accent, #2b3a8e);
+      margin-bottom: 12px;
+    }
+    .post-card h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 0 0 12px;
+    }
+    .post-card p {
+      font-size: 0.9rem;
+      color: var(--color-muted, #666);
+      line-height: 1.6;
+      flex: 1;
+      margin: 0 0 20px;
+    }
+    .post-card .read-link {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-accent, #2b3a8e);
+    }
+    .cta-strip {
+      margin-top: 80px;
+      background: var(--color-accent, #2b3a8e);
+      border-radius: 14px;
+      padding: 40px 32px;
+      text-align: center;
+      color: white;
+    }
+    .cta-strip h2 {
+      font-size: 1.5rem;
+      margin: 0 0 10px;
+      color: white;
+    }
+    .cta-strip p {
+      opacity: 0.85;
+      margin-bottom: 24px;
+    }
+    .cta-strip a {
+      display: inline-block;
+      background: white;
+      color: var(--color-accent, #2b3a8e);
+      font-weight: 700;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-nav" style="position:sticky;top:0;z-index:100">
+    <a class="logo-lockup" href="index.html">
+      <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="200" height="58" decoding="async">
+    </a>
+    <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav-glass" aria-label="Primary">
+      <ul>
+        <li class="nav-dropdown">
+          <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+          <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+            <div class="nav-dropdown-inner">
+              <div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link">ATS scanner</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+          <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+            <div class="nav-dropdown-inner">
+              <div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link">Ask Dilly on any job</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li class="nav-dropdown">
+          <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+          <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+            <div class="nav-dropdown-inner">
+              <div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link">Peer leaderboard</a>
+              </div>
+            </div>
+          </div>
+        </li>
+        <li><a class="nav-item" href="pricing.html">Pricing</a></li>
+        <li><a class="nav-item" href="blog.html" aria-current="page">Blog</a></li>
+        <li><a class="nav-item" href="faq.html">FAQ</a></li>
+        <li><a class="nav-item nav-item--signin" href="https://app.hellodilly.com">Sign in</a></li>
+      </ul>
+    </nav>
+    <div class="nav-cta-row">
+      <a class="btn btn-primary" href="https://app.hellodilly.com/">Start free</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="blog-index-wrap">
+      <h1>The Dilly Blog</h1>
+      <p class="page-lead">Resume tips, ATS guides, and career strategy — written for college students, not recruiters.</p>
+
+      <div class="post-grid">
+
+        <a class="post-card" href="blog-college-resume-template.html">
+          <span class="tag">Resume</span>
+          <h2>College Resume Template: What to Include (With Examples)</h2>
+          <p>The right sections, the right order, and what to write in each one — a resume template built for students applying to internships, not professionals with 10 years of experience.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-how-to-get-internship-no-experience.html">
+          <span class="tag">Internships</span>
+          <h2>How to Get an Internship With No Experience: A Freshman &amp; Sophomore Guide</h2>
+          <p>The students who land their first internship aren't doing something magical — they're doing a few specific things most peers aren't. Here's what those things are.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-gpa-for-internships.html">
+          <span class="tag">Internships</span>
+          <h2>What GPA Do You Need for an Internship? The Real Answer by Industry</h2>
+          <p>Finance wants 3.5. Tech is flexible. Consulting screens hard. Here's the real GPA breakdown by industry — and what to do if your GPA isn't where you need it.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-what-is-dilly.html">
+          <span class="tag">About Dilly</span>
+          <h2>What Is Dilly? The AI Career App for College Students Explained</h2>
+          <p>Dilly scores your resume on Smart, Grit, and Build, tests it against 6 ATS systems, and benchmarks you against students in your major. Here's how it works.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-resume-scanner-comparison.html">
+          <span class="tag">Tools</span>
+          <h2>Best Resume Scanner for College Students (2026): Jobscan, Teal, Rezi, and Dilly Compared</h2>
+          <p>We break down the four most popular resume scanners on price, ATS accuracy, and features that actually matter for internship hunting.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-how-to-beat-ats.html">
+          <span class="tag">ATS</span>
+          <h2>How to Beat ATS Resume Scanning: A Practical Guide for College Students</h2>
+          <p>What ATS systems actually do to your resume, the formatting mistakes that kill applications before a human sees them, and how to fix it.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-resume-tips-internships.html">
+          <span class="tag">Resume</span>
+          <h2>Resume Tips for College Internships That Actually Work in 2026</h2>
+          <p>The biggest mistakes students make on internship resumes, what strong intern resumes actually look like, and a framework for building one.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-what-is-ats.html">
+          <span class="tag">ATS</span>
+          <h2>What Is an Applicant Tracking System (And Why It's Rejecting Your Resume)</h2>
+          <p>Most students have never heard of ATS. Most students also wonder why they never hear back. Here is the connection explained plainly.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-free-resume-tools-students.html">
+          <span class="tag">Tools</span>
+          <h2>The Best Free Resume Tools for College Students (Honest Review)</h2>
+          <p>Google Docs templates, LinkedIn, Canva, Zety, and Dilly. We look at what the free tier of each actually gives you and where each falls short.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-what-recruiters-look-for.html">
+          <span class="tag">Resume</span>
+          <h2>What Recruiters Actually Look for in a College Resume (From People Who've Seen Thousands)</h2>
+          <p>Recruiters spend 6-7 seconds on a resume. What makes them stop vs. keep scanning, and how Smart, Grit, and Build map to what they instinctively value.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-resume-no-experience.html">
+          <span class="tag">Resume</span>
+          <h2>How to Write a College Resume When You Have No Experience</h2>
+          <p>Every student thinks they have nothing to put on a resume. Classwork, club leadership, personal projects, and volunteer work all count — if you frame them right.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-smart-grit-build-explained.html">
+          <span class="tag">Dilly Score</span>
+          <h2>Smart, Grit, and Build: The Three Things That Actually Define Your Career Readiness</h2>
+          <p>Most resume scores just count keywords. Dilly's three-axis system measures academic signals, persistence, and execution ability — and why all three matter differently by track.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-why-resume-never-reaches-human.html">
+          <span class="tag">ATS</span>
+          <h2>Why Your Resume Probably Never Reached a Human (And How to Fix It)</h2>
+          <p>75% of resumes are filtered before a recruiter sees them. Here's exactly what ATS software does, the formatting mistakes that confuse parsers, and why Dilly tests six parsers instead of one.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-internship-application-timeline.html">
+          <span class="tag">Internships</span>
+          <h2>When to Apply for Internships: The College Student Timeline Nobody Tells You About</h2>
+          <p>Finance recruiting starts in September. Tech starts in August. Most students don't find this out until February when everything is closed. Here's the full timeline by industry.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+        <a class="post-card" href="blog-college-career-leaderboard.html">
+          <span class="tag">Strategy</span>
+          <h2>How to Actually Stand Out in Your College's Career Center (Hint: Stop Relying on It)</h2>
+          <p>Career centers are understaffed and give generic advice. What actually works: knowing your specific track, having numbers on every bullet, and using peer benchmarking to know where you stand.</p>
+          <span class="read-link">Read article &rarr;</span>
+        </a>
+
+      </div>
+
+      <div class="cta-strip">
+        <h2>See how competitive your resume actually is</h2>
+        <p>Upload your resume, get your Smart, Grit, and Build scores, and see where you rank against students in your major. Free to start.</p>
+        <a href="https://app.hellodilly.com/">Get your score free</a>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <nav class="footer-links" aria-label="Footer">
+      <a href="features.html">Features</a>
+      <a href="blog.html">Blog</a>
+      <a href="faq.html">FAQ</a>
+      <a href="quiz.html">Quiz</a>
+      <a href="https://app.hellodilly.com">Sign in</a>
+      <a href="https://app.hellodilly.com/">App</a>
+    </nav>
+    <a href="index.html" style="display:block;line-height:0;text-align:center"><img src="dilly-wordmark.png" alt="Dilly" style="height:22px;opacity:0.45"></a>
+  </footer>
+
+  <script src="dilly.js"></script>
+</body>
+</html>
