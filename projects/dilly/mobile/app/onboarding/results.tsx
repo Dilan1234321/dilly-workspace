@@ -236,7 +236,7 @@ export default function ResultsScreen() {
           {isError ? (
             <View style={[s.calloutBox, { backgroundColor: colors.s2, borderColor: colors.b1 }]}>
               <Text style={{ fontSize: 11, color: colors.t2, lineHeight: 17 }}>
-                Dilly couldn't score your resume fully. Upload a cleaner PDF and run another audit.
+                Your resume looks like a scanned image, so Dilly can't read the text. Try uploading the original Word doc (.docx) instead, or re-export it from Google Docs as a PDF.
               </Text>
             </View>
           ) : above ? (

@@ -6,7 +6,7 @@ MAX_UPLOAD_BYTES = _MAX_UPLOAD_MB * 1024 * 1024
 
 ERR_FILE_TYPE = "Dilly only reads PDF and DOCX files."
 ERR_FILE_TOO_BIG = f"That file is too large. Keep it under {_MAX_UPLOAD_MB} MB."
-ERR_EXTRACT = "Dilly couldn't read that file. It might be a scan or image-only PDF. Try a different file or make sure text is selectable."
+ERR_EXTRACT = "Your resume looks like a scanned image, so Dilly can't read the text. Try uploading the original Word doc (.docx) instead, or re-export it from Google Docs as a PDF."
 
 MIN_RESUME_WORDS = 80
 MAX_RESUME_WORDS = 4000
