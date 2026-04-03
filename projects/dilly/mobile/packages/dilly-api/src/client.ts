@@ -87,7 +87,8 @@ export class DillyApiError extends Error {
   requestId?: string;
 
   constructor(status: number, body: ApiError) {
-    super(body.detail || body.error || `API error ${status}`);
+    const msg = typeof body.detail === "string" ? body.detail : body.detail?.message || body.error || `API error ${status}`;
+    super(msg);
     this.name = "DillyApiError";
     this.status = status;
     this.code = body.code || "UNKNOWN";
