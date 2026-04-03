@@ -68,7 +68,7 @@ async def get_profile(request: Request):
         # Fallback: if scores still missing, pull them from the latest audit in audit_history.json
         if not profile.get("overall_dilly_score"):
             try:
-                from projects.dilly.api.audit_history import get_audits
+                from projects.dilly.api.audit_history_pg import get_audits
                 audits = get_audits(email)
                 if audits:
                     latest = audits[-1]
@@ -522,7 +522,7 @@ async def update_profile(request: Request, body: dict = Body(...)):
             pass
         try:
             from projects.dilly.api.candidate_index import index_candidate_after_audit
-            from projects.dilly.api.audit_history import get_audits
+            from projects.dilly.api.audit_history_pg import get_audits
             audits = get_audits(email)
             latest_audit = audits[0] if audits else {}
             index_candidate_after_audit(email, profile=p, audit=latest_audit, resume_text=None)
@@ -823,7 +823,7 @@ async def delete_account(request: Request):
         traceback.print_exc()
 
     # 4. Delete auth: user record + all sessions
-    from projects.dilly.api.auth_store import delete_user_and_sessions
+    from projects.dilly.api.auth_store_pg import delete_user_and_sessions
     delete_user_and_sessions(email)
 
     return {"ok": True, "deleted": email}
@@ -853,7 +853,7 @@ async def parent_summary(token: str = ""):
     if not (token or "").strip():
         raise errors.validation_error( "token required.")
     from projects.dilly.api.profile_store import get_email_by_parent_invite_token, get_profile
-    from projects.dilly.api.audit_history import get_audits
+    from projects.dilly.api.audit_history_pg import get_audits
     student_email = get_email_by_parent_invite_token(token.strip())
     if not student_email:
         raise errors.not_found( "Invalid or expired link.")
@@ -919,7 +919,7 @@ async def get_public_dilly_profile(slug: str):
 async def get_public_profile(slug: str):
     """Public Six-second profile data. No auth. Built dynamically from profile + latest audit. No-cache."""
     from projects.dilly.api.profile_store import get_profile_by_slug
-    from projects.dilly.api.audit_history import get_audits
+    from projects.dilly.api.audit_history_pg import get_audits
     from projects.dilly.api.schools import get_school_from_email, SCHOOLS
     profile = get_profile_by_slug(slug)
     if not profile:
@@ -1073,7 +1073,7 @@ async def export_profile_data(request: Request):
         raise errors.unauthorized()
 
     from projects.dilly.api.profile_store import get_profile, get_profile_folder_path
-    from projects.dilly.api.audit_history import get_audits
+    from projects.dilly.api.audit_history_pg import get_audits
     from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
 
     profile = get_profile(email) or {}

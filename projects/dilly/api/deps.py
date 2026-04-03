@@ -47,7 +47,7 @@ def bearer_user(request: Request) -> dict | None:
     if not token:
         return None
     try:
-        from projects.dilly.api.auth_store import get_session
+        from projects.dilly.api.auth_store_pg import get_session
         from projects.dilly.api.family_store import is_student_in_any_family
 
         user = get_session(token)

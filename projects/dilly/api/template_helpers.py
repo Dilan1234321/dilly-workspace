@@ -34,7 +34,7 @@ def get_profile_context_for_templates(email: str, max_chars: int = 8000) -> str:
     # Fallback: build from profile + audit
     try:
         from projects.dilly.api.profile_store import get_profile
-        from projects.dilly.api.audit_history import get_audits
+        from projects.dilly.api.audit_history_pg import get_audits
         profile = get_profile(email) or {}
         audits = get_audits(email)
         latest = audits[0] if audits else {}

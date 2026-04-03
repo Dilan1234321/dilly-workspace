@@ -23,7 +23,7 @@ async def get_recommended_jobs(request: Request, limit: int = 15, offset: int = 
     offset = max(0, offset)
     try:
         from projects.dilly.api.profile_store import get_profile
-        from projects.dilly.api.audit_history import get_audits
+        from projects.dilly.api.audit_history_pg import get_audits
         from projects.dilly.api.job_matching import get_recommended_jobs as match_jobs
         profile = get_profile(email) or {}
         audits = get_audits(email)
@@ -145,7 +145,7 @@ async def get_door_eligibility(request: Request):
     email = (user.get("email") or "").strip().lower()
     try:
         from projects.dilly.api.profile_store import get_profile
-        from projects.dilly.api.audit_history import get_audits
+        from projects.dilly.api.audit_history_pg import get_audits
         from projects.dilly.api.door_eligibility import evaluate_doors
         profile = get_profile(email) or {}
         audits = get_audits(email)

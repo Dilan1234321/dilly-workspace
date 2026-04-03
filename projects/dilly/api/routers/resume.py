@@ -549,7 +549,7 @@ async def audit_from_edited_resume(request: Request, body: ResumeAuditRequest = 
         # Persist to audit history so Career Center shows the new audit (same as /audit/v2)
         if isinstance(result, dict):
             import uuid as _uuid
-            from projects.dilly.api.audit_history import append_audit, get_audits
+            from projects.dilly.api.audit_history_pg import append_audit, get_audits
             from projects.dilly.api.profile_store import get_profile, save_profile
             audit_id = _uuid.uuid4().hex
             full_audit_dict = dict(result)

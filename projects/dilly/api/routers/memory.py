@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Request
 from fastapi.responses import JSONResponse
 
 from projects.dilly.api import deps
-from projects.dilly.api.audit_history import get_audits
+from projects.dilly.api.audit_history_pg import get_audits
 from projects.dilly.api.memory_extraction import regenerate_narrative
 from projects.dilly.api.memory_surface_store import (
     add_memory_item,

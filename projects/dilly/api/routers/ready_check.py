@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, HTTPException, Request
 
 from projects.dilly.api import deps
-from projects.dilly.api.audit_history import get_audits
+from projects.dilly.api.audit_history_pg import get_audits
 from projects.dilly.api.company_criteria import get_all_companies
 from projects.dilly.api.generate_ready_check_verdict import generate_ready_check_verdict
 from projects.dilly.api.peer_benchmark import get_cohort_stats

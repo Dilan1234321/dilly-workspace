@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
-from projects.dilly.api.audit_history import get_audits
-from projects.dilly.api.auth_store import list_active_subscribed_users
+from projects.dilly.api.audit_history_pg import get_audits
+from projects.dilly.api.auth_store_pg import list_active_subscribed_users
 from projects.dilly.api.notification_store import log_notification
 from projects.dilly.api.ready_check_store import (
     has_newer_company_check,

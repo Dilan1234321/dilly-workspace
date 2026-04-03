@@ -6,6 +6,8 @@ import json
 import time
 import uuid
 
+import psycopg2
+import psycopg2.extras
 from projects.dilly.api.database import get_db
 from projects.dilly.api.profile_store_pg import get_profile
 
@@ -29,17 +31,17 @@ def append_audit(email: str, summary: dict) -> None:
 
     scores = summary.get("scores") or {}
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
             INSERT INTO audit_results (
-                user_id, final_score, smart, grit, build,
+                user_id, email, final_score, smart, grit, build,
                 track, candidate_name, major,
                 findings, recommendations, evidence,
                 peer_percentiles, dilly_take,
                 strongest_signal, skill_tags, raw_audit
             ) VALUES (
-                %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
                 %s, %s, %s,
                 %s::jsonb, %s::jsonb, %s::jsonb,
                 %s::jsonb, %s,
@@ -48,6 +50,7 @@ def append_audit(email: str, summary: dict) -> None:
             """,
             (
                 user["id"],
+                email,
                 summary.get("final_score"),
                 scores.get("smart"),
                 scores.get("grit"),
@@ -78,7 +81,7 @@ def get_latest_audit(email: str) -> dict | None:
     if not user:
         return None
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
             SELECT * FROM audit_results
@@ -103,7 +106,7 @@ def get_audits(email: str) -> list:
     if not user:
         return []
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
             SELECT * FROM audit_results
@@ -129,7 +132,7 @@ def normalize_audit_id_key(val: object) -> str:
 def _get_user_id(email: str) -> dict | None:
     """Return {id} row from users table for this email."""
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT id FROM users WHERE email = %s", (email,))
         row = cur.fetchone()
         return dict(row) if row else None

@@ -751,7 +751,7 @@ async def audit_resume_v2(
         except Exception:
             pass
         try:
-            from projects.dilly.api.audit_history import append_audit, get_audits
+            from projects.dilly.api.audit_history_pg import append_audit, get_audits
             from projects.dilly.api.profile_store import get_profile, save_profile
             audit_id = uuid.uuid4().hex
             full_audit_dict = response.model_dump() if hasattr(response, "model_dump") else response.dict()
@@ -1190,7 +1190,7 @@ async def audit_from_text(request: Request, body: dict = Body(...)):
     )
 
     try:
-        from projects.dilly.api.audit_history import append_audit, get_audits
+        from projects.dilly.api.audit_history_pg import append_audit, get_audits
         from projects.dilly.api.profile_store import get_profile, save_profile
         audit_id = uuid.uuid4().hex
         full_audit_dict = response.model_dump()
@@ -1233,7 +1233,7 @@ async def get_audit_history(request: Request):
     email = (user.get("email") or "").strip().lower()
     _SUMMARY_KEYS = {"id", "ts", "scores", "final_score", "detected_track", "candidate_name", "major", "peer_percentiles", "dilly_take", "strongest_signal_sentence", "skill_tags"}
     try:
-        from projects.dilly.api.audit_history import get_audits
+        from projects.dilly.api.audit_history_pg import get_audits
         audits = get_audits(email)
         summaries = []
         for a in audits:
@@ -1252,7 +1252,7 @@ async def get_latest_audit(request: Request):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     try:
-        from projects.dilly.api.audit_history import get_audits
+        from projects.dilly.api.audit_history_pg import get_audits
         audits = get_audits(email)
         if not audits:
             return {"audit": None}
@@ -1267,9 +1267,9 @@ async def get_audit_by_id(request: Request, audit_id: str):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     try:
-        from projects.dilly.api.audit_history import get_audits
+        from projects.dilly.api.audit_history_pg import get_audits
         audits = get_audits(email)
-        from projects.dilly.api.audit_history import normalize_audit_id_key
+        from projects.dilly.api.audit_history_pg import normalize_audit_id_key
 
         want = normalize_audit_id_key(audit_id)
         for a in audits:
@@ -1305,7 +1305,7 @@ def _audit_for_badge_snapshot(request: Request, audit_id: str | None = None, bod
     if not audit and audit_id:
         user = deps.require_auth(request)
         email = (user.get("email") or "").strip().lower()
-        from projects.dilly.api.audit_history import get_audits, normalize_audit_id_key
+        from projects.dilly.api.audit_history_pg import get_audits, normalize_audit_id_key
 
         want = normalize_audit_id_key(audit_id)
         for a in get_audits(email):
@@ -1477,7 +1477,7 @@ async def post_snapshot(request: Request, body: dict = Body(...)):
 @router.get("/leaderboard/{track}")
 async def get_leaderboard(request: Request, track: str):
     deps.require_subscribed(request)
-    from projects.dilly.api.audit_history import get_audits as _get_audits
+    from projects.dilly.api.audit_history_pg import get_audits as _get_audits
     from projects.dilly.api.leaderboard_page import _newest_audit_for_leaderboard_track
     from projects.dilly.api.profile_store import is_leaderboard_participating
 

@@ -12,7 +12,7 @@ from projects.dilly.api.memory_surface_store import add_memory_item, get_memory_
 from projects.dilly.api.profile_store import get_profile, save_profile
 from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
 from projects.dilly.api.routers.applications import _load_applications, _save_applications
-from projects.dilly.api.audit_history import append_audit
+from projects.dilly.api.audit_history_pg import append_audit
 
 
 def _now_iso() -> str:

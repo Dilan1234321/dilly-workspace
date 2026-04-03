@@ -45,7 +45,7 @@ async def get_company_breakdown(request: Request, slug: str):
 
     # User's latest audit for score comparison
     from projects.dilly.api.profile_store import get_profile
-    from projects.dilly.api.audit_history import get_audits
+    from projects.dilly.api.audit_history_pg import get_audits
 
     profile = get_profile(email) or {}
     audits = get_audits(email)

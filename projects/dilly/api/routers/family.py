@@ -37,7 +37,7 @@ async def family_add_student(request: Request, body: FamilyAddStudentRequest):
         raise errors.validation_error("student_email must be a .edu address.")
     try:
         from projects.dilly.api.family_store import add_student_by_token
-        from projects.dilly.api.auth_store import set_subscribed
+        from projects.dilly.api.auth_store_pg import set_subscribed
         from projects.dilly.api.profile_store import ensure_profile_exists, save_profile
         if not add_student_by_token(token, student_email):
             raise errors.bad_request("Invalid token or no slots left.")
