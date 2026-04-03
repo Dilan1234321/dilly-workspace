@@ -6,6 +6,7 @@ anthropic==0.86.0
 pydantic==2.12.5
 python-multipart==0.0.22
 httpx==0.28.1
-PyPDF2==3.0.1
+pypdf
+pymupdf
 docx2txt==0.9
 resend==2.10.0
