@@ -97,6 +97,7 @@ def append_audit(email: str, summary: dict) -> None:
             "overall_build": scores.get("build"),
             "overall_dilly_score": summary.get("final_score"),
             "has_run_first_audit": True,
+            "onboarding_complete": True,
         })
     except Exception:
         pass
