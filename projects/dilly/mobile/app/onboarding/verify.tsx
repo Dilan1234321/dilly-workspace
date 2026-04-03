@@ -254,9 +254,6 @@ export default function VerifyScreen() {
             }
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.replace('/onboarding/welcome')}>
-            <Text style={[styles.link, { textAlign: 'center', marginTop: 4 }]}>New user? Start here</Text>
-          </TouchableOpacity>
         </ScrollView>
       </View>
       </KeyboardAvoidingView>

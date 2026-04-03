@@ -40,6 +40,46 @@ def recompute_matches(token: str = ""):
     return {"ok": True}
 
 
+@router.get("/admin-delete-account", summary="Admin: permanently delete a user account by email")
+def admin_delete_account(token: str = "", email: str = ""):
+    """Permanently delete a user account. Protected by CRON_SECRET. Temporary admin tool."""
+    _require_cron_secret(token)
+    email = (email or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="email param required.")
+    import traceback
+
+    # 1. Profile folder + file-based data
+    try:
+        from projects.dilly.api.profile_store import delete_account_data
+        deleted_profile = delete_account_data(email)
+    except Exception:
+        traceback.print_exc()
+        deleted_profile = False
+
+    # 2. PostgreSQL tables
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            for table in ("profile_facts", "students", "push_tokens", "internship_applications"):
+                try:
+                    cur.execute(f"DELETE FROM {table} WHERE LOWER(email) = LOWER(%s)", (email,))
+                except Exception:
+                    pass
+    except Exception:
+        traceback.print_exc()
+
+    # 3. Auth: user + sessions
+    try:
+        from projects.dilly.api.auth_store import delete_user_and_sessions
+        delete_user_and_sessions(email)
+    except Exception:
+        traceback.print_exc()
+
+    return {"ok": True, "deleted": email, "profile_deleted": deleted_profile}
+
+
 @router.get("/crawl-internships", summary="Scrape internships + classify new listings")
 def crawl_internships(token: str = ""):
     """Scrape all ATS sources (Greenhouse, Lever, Ashby, SmartRecruiters) into
