@@ -27,18 +27,18 @@ projects/dilly/mobile/.expo/
 projects/dilly/mobile/ios/
 projects/dilly/mobile/android/
 
-# Workspace root — large dirs and files
-assets/
-aplivio/
-core/
-cron_test/
-dilly_core/
-docs/
-lib/
-memory/
-meridian_core/
-node_modules/
-scripts/
+# Workspace root — large dirs and files (anchored with / so they don't match mobile subdirs)
+/assets/
+/aplivio/
+/core/
+/cron_test/
+/dilly_core/
+/docs/
+/lib/
+/memory/
+/meridian_core/
+/node_modules/
+/scripts/
 *.zip
 *.pdf
 *.dmg
