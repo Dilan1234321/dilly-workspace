@@ -280,12 +280,29 @@ def get_profile_folder_path(email: str) -> str:
 
 def get_profile_photo_path(email: str) -> str | None:
     folder = get_profile_folder_path(email)
-    if not folder or not os.path.isdir(folder):
+    if not folder:
         return None
-    for ext in _ALLOWED_PHOTO_EXT:
-        path = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
-        if os.path.isfile(path):
-            return path
+    # Check filesystem first
+    if os.path.isdir(folder):
+        for ext in _ALLOWED_PHOTO_EXT:
+            path = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
+            if os.path.isfile(path):
+                return path
+    # Restore from base64 in profile_json if file missing (e.g. after deploy)
+    try:
+        import base64
+        profile = get_profile(email)
+        b64 = (profile or {}).get("profile_photo_b64")
+        if b64:
+            ct = (profile or {}).get("profile_photo_content_type", "image/jpeg")
+            ext = ".png" if "png" in ct else ".webp" if "webp" in ct else ".gif" if "gif" in ct else ".jpg"
+            os.makedirs(folder, exist_ok=True)
+            dest = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
+            with open(dest, "wb") as f:
+                f.write(base64.b64decode(b64))
+            return dest
+    except Exception:
+        pass
     return None
 
 
@@ -313,6 +330,17 @@ def save_profile_photo(email: str, file_path: str, content_type: str) -> str:
             break
     dest = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
     shutil.copy2(file_path, dest)
+    # Also store photo as base64 in profile_json so it persists across deploys
+    try:
+        import base64
+        with open(dest, "rb") as photo_file:
+            photo_b64 = base64.b64encode(photo_file.read()).decode("ascii")
+        save_profile(email, {
+            "profile_photo_b64": photo_b64,
+            "profile_photo_content_type": content_type or "image/jpeg",
+        })
+    except Exception:
+        pass
     return dest
 
 
