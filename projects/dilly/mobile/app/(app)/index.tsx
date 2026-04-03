@@ -155,6 +155,16 @@ export default function HomeScreen() {
           auditRawRes.json(),
         ]);
 
+        // If onboarding not complete, redirect to appropriate step
+        if (!profileRes?.onboarding_complete) {
+          if (!profileRes?.name) {
+            router.replace('/onboarding/profile');
+          } else if (!profileRes?.has_run_first_audit) {
+            router.replace('/onboarding/upload');
+          }
+          return;
+        }
+
         const auditObj = auditRaw?.audit ?? auditRaw ?? {};
         const hasAuditFlag = auditRaw?.has_audit !== false && auditObj?.final_score != null;
 
