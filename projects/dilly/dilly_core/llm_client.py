@@ -1,5 +1,5 @@
 """
-Meridian LLM client - OpenAI only. Chat completion for normalizer and auditor.
+Dilly LLM client - Anthropic Claude. Chat completion for auditor, voice, and tools.
 """
 
 import json
@@ -16,42 +16,28 @@ def get_chat_completion(
     temperature: float = 0.1,
 ) -> Optional[str]:
     """
-    Send system + user to the LLM and return the assistant message text.
-    Uses OpenAI (OPENAI_API_KEY). Returns None on failure or missing key.
+    Send system + user to Claude and return the assistant message text.
+    Uses ANTHROPIC_API_KEY. Returns None on failure or missing key.
     """
-    return _call_openai(system, user, model=model, max_tokens=max_tokens, temperature=temperature)
-
-
-def _call_openai(
-    system: str,
-    user: str,
-    *,
-    model: Optional[str] = None,
-    max_tokens: int = 16000,
-    temperature: float = 0.1,
-) -> Optional[str]:
-    """Call OpenAI API (or OpenAI-compatible via OPENAI_BASE_URL)."""
     try:
-        from openai import OpenAI
+        from anthropic import Anthropic
     except ImportError:
         return None
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return None
-    model = (model or os.environ.get("MERIDIAN_LLM_MODEL") or "gpt-4o").strip()
-    base_url = os.environ.get("OPENAI_BASE_URL", "").strip() or None
+    model = (model or os.environ.get("MERIDIAN_LLM_MODEL") or "claude-sonnet-4-20250514").strip()
     try:
-        client = OpenAI(api_key=api_key, base_url=base_url, timeout=45.0)
-        response = client.chat.completions.create(
+        client = Anthropic(api_key=api_key, timeout=45.0)
+        response = client.messages.create(
             model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            system=system,
+            messages=[{"role": "user", "content": user}],
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        return (response.choices[0].message.content or "").strip() or None
+        text = response.content[0].text if response.content else None
+        return (text or "").strip() or None
     except Exception:
         return None
 
@@ -65,48 +51,43 @@ def stream_chat_completion(
     temperature: float = 0.4,
 ):
     """
-    Stream tokens from OpenAI. Yields string chunks as they arrive.
+    Stream tokens from Claude. Yields string chunks as they arrive.
     Yields nothing (empty iterator) on failure or missing key.
     """
     try:
-        from openai import OpenAI
+        from anthropic import Anthropic
     except ImportError:
         return
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return
-    model = (model or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "gpt-4o-mini").strip()
-    base_url = os.environ.get("OPENAI_BASE_URL", "").strip() or None
+    model = (model or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
     try:
-        client = OpenAI(api_key=api_key, base_url=base_url)
-        with client.chat.completions.create(
+        client = Anthropic(api_key=api_key)
+        with client.messages.stream(
             model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            system=system,
+            messages=[{"role": "user", "content": user}],
             max_tokens=max_tokens,
             temperature=temperature,
-            stream=True,
         ) as stream:
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content if chunk.choices else None
-                if delta:
-                    yield delta
+            for text in stream.text_stream:
+                if text:
+                    yield text
     except Exception:
         return
 
 
 def get_light_model() -> str:
     """Return the 'light' model name for cheaper calls (Voice, explain-delta).
-    Reads MERIDIAN_LLM_MODEL_LIGHT env var; defaults to gpt-4o-mini."""
-    return (os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "gpt-4o-mini").strip()
+    Reads MERIDIAN_LLM_MODEL_LIGHT env var; defaults to claude-haiku-4-5."""
+    return (os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
 
 
 def get_strong_model() -> str:
     """Return the 'strong' model for complex reasoning (deep-dive Voice questions).
-    Reads MERIDIAN_LLM_MODEL env var; defaults to gpt-4o."""
-    return (os.environ.get("MERIDIAN_LLM_MODEL") or "gpt-4o").strip()
+    Reads MERIDIAN_LLM_MODEL env var; defaults to claude-sonnet-4."""
+    return (os.environ.get("MERIDIAN_LLM_MODEL") or "claude-sonnet-4-20250514").strip()
 
 
 def get_chat_completion_with_tools(
@@ -124,45 +105,44 @@ def get_chat_completion_with_tools(
     Returns None on failure or missing key.
     """
     try:
-        from openai import OpenAI
+        from anthropic import Anthropic
     except ImportError:
         return None
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return None
-    model = (model or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "gpt-4o-mini").strip()
-    base_url = os.environ.get("OPENAI_BASE_URL", "").strip() or None
+    model = (model or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
+
+    # Convert OpenAI-style tools to Anthropic format
+    anthropic_tools = []
+    for t in tools:
+        fn = t.get("function", t)
+        anthropic_tools.append({
+            "name": fn.get("name", ""),
+            "description": fn.get("description", ""),
+            "input_schema": fn.get("parameters", {}),
+        })
+
     try:
-        client = OpenAI(api_key=api_key, base_url=base_url)
-        response = client.chat.completions.create(
+        client = Anthropic(api_key=api_key)
+        response = client.messages.create(
             model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            tools=tools,
-            tool_choice="auto",
+            system=system,
+            messages=[{"role": "user", "content": user}],
+            tools=anthropic_tools,
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        msg = response.choices[0].message if response.choices else None
-        if not msg:
-            return None
-        content = (msg.content or "").strip() or None
+        content = None
         tool_calls = []
-        if hasattr(msg, "tool_calls") and msg.tool_calls:
-            for tc in msg.tool_calls:
-                fn = getattr(tc, "function", None) or {}
-                name = getattr(fn, "name", None) or (fn.get("name") if isinstance(fn, dict) else None)
-                args_str = getattr(fn, "arguments", None) or (fn.get("arguments", "{}") if isinstance(fn, dict) else "{}")
-                try:
-                    args = json.loads(args_str) if isinstance(args_str, str) else (args_str or {})
-                except json.JSONDecodeError:
-                    args = {}
+        for block in response.content:
+            if block.type == "text":
+                content = (block.text or "").strip() or None
+            elif block.type == "tool_use":
                 tool_calls.append({
-                    "id": getattr(tc, "id", None) or "",
-                    "name": name or "",
-                    "arguments": args,
+                    "id": block.id,
+                    "name": block.name,
+                    "arguments": block.input or {},
                 })
         return {"content": content, "tool_calls": tool_calls}
     except Exception:
@@ -170,5 +150,5 @@ def get_chat_completion_with_tools(
 
 
 def is_llm_available() -> bool:
-    """True if OPENAI_API_KEY is set."""
-    return bool(os.environ.get("OPENAI_API_KEY", "").strip())
+    """True if ANTHROPIC_API_KEY is set."""
+    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
