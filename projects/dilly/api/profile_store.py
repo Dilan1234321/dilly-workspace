@@ -1,6 +1,6 @@
 """
-File-based profile store. Profiles live in memory/dilly_profiles/{uid}/profile.json.
-No Postgres required.
+Postgres-backed profile store. Drop-in replacement for profile_store.py.
+Profiles live in the users table. Files (photos, transcripts) still use the filesystem.
 """
 
 import hashlib
@@ -8,9 +8,12 @@ import json
 import os
 import secrets
 import shutil
-import threading
 import time
+from datetime import datetime
 
+from projects.dilly.api.database import get_db
+
+# ── File paths (photos/transcripts still on disk) ─────────────────────────────
 _WORKSPACE_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
 )
@@ -20,47 +23,13 @@ _ALLOWED_PHOTO_EXT = frozenset({".jpg", ".jpeg", ".png", ".webp", ".gif"})
 _TRANSCRIPT_FILENAME = "transcript"
 _ALLOWED_TRANSCRIPT_EXT = frozenset({".pdf"})
 
-_lock = threading.Lock()
-
 
 def _user_id(email: str) -> str:
+    """Stable filesystem slug for this email (used for photo/transcript folders)."""
     e = (email or "").strip().lower()
     if not e:
         return ""
     return hashlib.sha256(e.encode("utf-8")).hexdigest()[:16]
-
-
-def _profile_path(email: str) -> str:
-    uid = _user_id(email)
-    if not uid:
-        return ""
-    return os.path.join(_PROFILES_DIR, uid, "profile.json")
-
-
-def _load_profile(email: str) -> dict | None:
-    path = _profile_path(email)
-    if not path or not os.path.isfile(path):
-        return None
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def _write_profile(email: str, data: dict) -> None:
-    uid = _user_id(email)
-    if not uid:
-        return
-    folder = os.path.join(_PROFILES_DIR, uid)
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, "profile.json")
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-def _generate_referral_code() -> str:
-    return secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:8].lower()
 
 
 def _school_id_from_email(email: str) -> str | None:
@@ -72,31 +41,153 @@ def _school_id_from_email(email: str) -> str | None:
         return None
 
 
-# ── Core CRUD ─────────────────────────────────────────────────────────────────
+def _title_case_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+    s = (value if isinstance(value, str) else str(value)).strip()
+    if not s:
+        return None
+    return " ".join(w.capitalize() for w in s.split())
+
+
+def _generate_referral_code() -> str:
+    return secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:8].lower()
+
+
+# ── 9. update_profile ─────────────────────────────────────────────────────────
+
+# Column names that map directly onto the users table.
+_USERS_COLUMNS = frozenset({
+    "first_name", "last_name", "full_name", "major", "minor",
+    "track", "application_target", "school", "onboarding_complete",
+    "has_run_first_audit", "subscribed", "profile_status",
+    "leaderboard_opt_in", "referral_code", "voice_avatar_index",
+})
+
+# Everything else goes into a JSONB `extra` column (we'll add it lazily if needed,
+# but for now we store it all in the users table as direct columns where possible,
+# and keep a flat JSON blob in a `profile_json` column for the rest).
+
 
 def get_profile(email: str) -> dict | None:
+    """Return the full profile dict for email, or None."""
     email = (email or "").strip().lower()
     if not email:
         return None
-    return _load_profile(email)
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return _row_to_profile(dict(row))
 
 
 def save_profile(email: str, data: dict) -> dict:
+    """
+    Upsert profile for email. Merges with existing.
+    Structured fields update their dedicated columns; everything else
+    goes into profile_json (JSONB extra blob on the users table).
+    Returns the saved profile.
+    """
     email = (email or "").strip().lower()
     if not email:
         raise ValueError("Email required")
-    with _lock:
-        existing = _load_profile(email) or {}
-        merged = {**existing, **data}
-        merged["email"] = email
-        merged["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        # Sync name → first_name / last_name if name provided
-        if "name" in data and data["name"]:
-            parts = str(data["name"]).strip().split(None, 1)
-            merged.setdefault("first_name", parts[0] if parts else None)
-            merged.setdefault("last_name", parts[1] if len(parts) > 1 else None)
-        _write_profile(email, merged)
-    return merged
+
+    if "name" in data:
+        data = {**data, "name": _title_case_name(data.get("name"))}
+
+    school_id = _school_id_from_email(email)
+
+    # Separate known columns from the JSON blob
+    col_updates: dict = {}
+    blob_updates: dict = {}
+
+    _FIELD_MAP = {
+        "major": "major",
+        "minor": "minor",
+        "majors": "majors",
+        "minors": "minors",
+        "pre_professional_track": "pre_professional_track",
+        "track": "track",
+        "application_target": "application_target",
+        "onboarding_complete": "onboarding_complete",
+        "has_run_first_audit": "has_run_first_audit",
+        "subscribed": "subscribed",
+        "profile_status": "profile_status",
+        "profileStatus": "profile_status",
+        "leaderboard_opt_in": "leaderboard_opt_in",
+        "referral_code": "referral_code",
+        "voice_avatar_index": "voice_avatar_index",
+    }
+
+    # Split name → first_name / last_name / full_name
+    if "name" in data:
+        name = data["name"] or ""
+        parts = name.strip().split(None, 1)
+        col_updates["first_name"] = parts[0] if parts else None
+        col_updates["last_name"] = parts[1] if len(parts) > 1 else None
+        col_updates["full_name"] = name or None
+        blob_updates["name"] = name
+
+    for src_key, col in _FIELD_MAP.items():
+        if src_key in data:
+            col_updates[col] = data[src_key]
+
+    if school_id:
+        col_updates["school"] = school_id
+        blob_updates["school_id"] = school_id
+        blob_updates["schoolId"] = school_id
+
+    # Everything else goes into the blob
+    skip = set(_FIELD_MAP.keys()) | {"name"}
+    for k, v in data.items():
+        if k not in skip:
+            blob_updates[k] = v
+
+    blob_updates["email"] = email
+    blob_updates["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+    with get_db() as conn:
+        cur = conn.cursor()
+        # Ensure the row exists
+        cur.execute(
+            """
+            INSERT INTO users (email, referral_code)
+            VALUES (%s, %s)
+            ON CONFLICT (email) DO NOTHING
+            """,
+            (email, _generate_referral_code()),
+        )
+        # Fetch current profile_json
+        cur.execute("SELECT profile_json FROM users WHERE email = %s", (email,))
+        row = cur.fetchone()
+        existing_blob = {}
+        if row and row["profile_json"]:
+            existing_blob = dict(row["profile_json"]) if isinstance(row["profile_json"], dict) else json.loads(row["profile_json"])
+
+        merged_blob = {**existing_blob, **blob_updates}
+
+        # Build SET clause for known columns
+        set_parts = ["profile_json = %s::jsonb", "updated_at = now()"]
+        params: list = [json.dumps(merged_blob)]
+
+        _JSONB_COLS = {"majors", "minors"}
+        for col, val in col_updates.items():
+            if col in _JSONB_COLS:
+                set_parts.append(f"{col} = %s::jsonb")
+                params.append(json.dumps(val if val is not None else []))
+            else:
+                set_parts.append(f"{col} = %s")
+                params.append(val)
+
+        params.append(email)
+        cur.execute(
+            f"UPDATE users SET {', '.join(set_parts)} WHERE email = %s",
+            params,
+        )
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        return _row_to_profile(dict(cur.fetchone()))
 
 
 def ensure_profile_exists(email: str) -> dict:
@@ -105,6 +196,7 @@ def ensure_profile_exists(email: str) -> dict:
         raise ValueError("Email required")
     existing = get_profile(email)
     if existing is not None:
+        # Backfill referral_code if missing
         if not existing.get("referral_code"):
             return save_profile(email, {"referral_code": _generate_referral_code()})
         return existing
@@ -113,16 +205,29 @@ def ensure_profile_exists(email: str) -> dict:
         "email": email,
         "verified": True,
         "profileStatus": "draft",
-        "profile_status": "draft",
         "name": None,
         "major": None,
         "majors": [],
         "minors": [],
+        "preProfessional": False,
         "track": None,
         "goals": [],
         "application_target": None,
         "voice_avatar_index": 0,
         "referral_code": _generate_referral_code(),
+        "push_token": None,
+        "notification_prefs": {
+            "enabled": True,
+            "quiet_hours_start": 22,
+            "quiet_hours_end": 8,
+            "timezone": "America/New_York",
+        },
+        "last_deep_dive_at": None,
+        "weekly_review_day": 0,
+        "dilly_narrative": None,
+        "dilly_narrative_updated_at": None,
+        "dilly_memory_items": [],
+        "voice_session_captures": [],
         "leaderboard_opt_in": True,
         "onboarding_complete": False,
         "has_run_first_audit": False,
@@ -133,15 +238,10 @@ def ensure_profile_exists(email: str) -> dict:
     return save_profile(email, default)
 
 
-def ensure_referral_code(email: str) -> str:
-    profile = get_profile(email)
-    if not profile:
-        return ""
-    code = profile.get("referral_code") or ""
-    if not code or len(code) < 4:
-        code = _generate_referral_code()
-        save_profile(email, {"referral_code": code})
-    return code
+def is_leaderboard_participating(profile: dict | None) -> bool:
+    if not profile or not isinstance(profile, dict):
+        return False
+    return profile.get("leaderboard_opt_in") is not False
 
 
 def get_profile_slug(email: str) -> str:
@@ -151,24 +251,23 @@ def get_profile_slug(email: str) -> str:
 def get_profile_by_slug(slug: str) -> dict | None:
     if not slug or len(slug) != 16:
         return None
+    # slug is sha256[:16] of email — need to scan (or store slug column)
+    # Fall back to filesystem for now if not found via DB
     path = os.path.join(_PROFILES_DIR, slug, "profile.json")
-    if not os.path.isfile(path):
-        return None
-    try:
-        with open(path) as f:
-            data = json.load(f)
-        return data
-    except Exception:
-        return None
+    if os.path.isfile(path):
+        try:
+            import json as _json
+            with open(path) as f:
+                data = _json.load(f)
+            email = data.get("email", "")
+            if email:
+                return get_profile(email)
+        except Exception:
+            pass
+    return None
 
 
-def is_leaderboard_participating(profile: dict | None) -> bool:
-    if not profile or not isinstance(profile, dict):
-        return False
-    return profile.get("leaderboard_opt_in") is not False
-
-
-# ── File paths ────────────────────────────────────────────────────────────────
+# ── Profile photo helpers (unchanged — still filesystem) ───────────────────────
 
 def get_profile_folder_path(email: str) -> str:
     uid = _user_id((email or "").strip().lower())
@@ -181,17 +280,6 @@ def get_profile_photo_path(email: str) -> str | None:
     folder = get_profile_folder_path(email)
     if not folder or not os.path.isdir(folder):
         return None
-    for ext in _ALLOWED_PHOTO_EXT:
-        path = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
-        if os.path.isfile(path):
-            return path
-    return None
-
-
-def get_profile_photo_path_by_slug(slug: str) -> str | None:
-    if not slug or len(slug) != 16:
-        return None
-    folder = os.path.join(_PROFILES_DIR, slug)
     for ext in _ALLOWED_PHOTO_EXT:
         path = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
         if os.path.isfile(path):
@@ -220,6 +308,7 @@ def save_profile_photo(email: str, file_path: str, content_type: str) -> str:
                 os.remove(old_path)
             except OSError:
                 pass
+            break
     dest = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
     shutil.copy2(file_path, dest)
     return dest
@@ -235,6 +324,21 @@ def delete_profile_photo(email: str) -> bool:
             pass
     return False
 
+
+def get_profile_photo_path_by_slug(slug: str) -> str | None:
+    if not slug or len(slug) != 16:
+        return None
+    folder = os.path.join(_PROFILES_DIR, slug)
+    if not os.path.isdir(folder):
+        return None
+    for ext in _ALLOWED_PHOTO_EXT:
+        path = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+# ── Transcript helpers (unchanged — still filesystem) ─────────────────────────
 
 def get_transcript_path(email: str) -> str | None:
     folder = get_profile_folder_path(email)
@@ -307,53 +411,103 @@ def ensure_parent_invite_token(email: str) -> str:
 
 def get_email_by_parent_invite_token(token: str) -> str | None:
     token = (token or "").strip()
-    if not token or not os.path.isdir(_PROFILES_DIR):
+    if not token:
         return None
-    for uid in os.listdir(_PROFILES_DIR):
-        path = os.path.join(_PROFILES_DIR, uid, "profile.json")
-        if not os.path.isfile(path):
-            continue
-        try:
-            with open(path) as f:
-                data = json.load(f)
-            if data.get("parent_invite_token") == token:
-                return data.get("email")
-        except Exception:
-            continue
-    return None
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT email FROM users WHERE profile_json->>'parent_invite_token' = %s",
+            (token,),
+        )
+        row = cur.fetchone()
+        return row["email"] if row else None
 
 
-# ── Account deletion ──────────────────────────────────────────────────────────
+def ensure_referral_code(email: str) -> str:
+    profile = get_profile(email)
+    if not profile:
+        return ""
+    code = profile.get("referral_code") or ""
+    if not code or not isinstance(code, str) or len(code) < 4:
+        code = _generate_referral_code()
+        save_profile(email, {"referral_code": code})
+    return code
+
 
 def delete_account_data(email: str) -> bool:
     email = (email or "").strip().lower()
     if not email:
         return False
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM users WHERE email = %s", (email,))
+        deleted = (cur.rowcount or 0) > 0
+    # Also remove file-based folder
     folder = get_profile_folder_path(email)
     if folder and os.path.isdir(folder):
         try:
             shutil.rmtree(folder)
-            return True
         except Exception:
             pass
-    return False
+    return deleted
 
 
 def delete_draft_profiles_older_than_days(days: int) -> int:
-    if not os.path.isdir(_PROFILES_DIR):
-        return 0
-    cutoff = time.time() - days * 86400
-    count = 0
-    for uid in os.listdir(_PROFILES_DIR):
-        path = os.path.join(_PROFILES_DIR, uid, "profile.json")
-        if not os.path.isfile(path):
-            continue
-        try:
-            with open(path) as f:
-                data = json.load(f)
-            if data.get("profileStatus") == "draft" and os.path.getmtime(path) < cutoff:
-                shutil.rmtree(os.path.join(_PROFILES_DIR, uid))
-                count += 1
-        except Exception:
-            continue
-    return count
+    cutoff = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            DELETE FROM users
+            WHERE profile_status = 'draft'
+              AND updated_at < now() - interval '%s days'
+            """,
+            (days,),
+        )
+        return cur.rowcount or 0
+
+
+# ── Internal helper ───────────────────────────────────────────────────────────
+
+def _row_to_profile(row: dict) -> dict:
+    """Merge users table row with its profile_json blob into a single flat dict."""
+    blob = {}
+    if row.get("profile_json"):
+        raw = row["profile_json"]
+        blob = dict(raw) if isinstance(raw, dict) else json.loads(raw)
+
+    # Structured columns win over blob
+    profile = {**blob}
+    profile["email"] = row.get("email") or blob.get("email", "")
+    profile["subscribed"] = bool(row.get("subscribed", False))
+    profile["onboarding_complete"] = bool(row.get("onboarding_complete", False))
+    profile["has_run_first_audit"] = bool(row.get("has_run_first_audit", False))
+    profile["leaderboard_opt_in"] = row.get("leaderboard_opt_in") if row.get("leaderboard_opt_in") is not None else blob.get("leaderboard_opt_in", True)
+    profile["profile_status"] = row.get("profile_status") or blob.get("profileStatus") or "draft"
+    profile["profileStatus"] = profile["profile_status"]
+    if row.get("track"):
+        profile["track"] = row["track"]
+    if row.get("major"):
+        profile["major"] = row["major"]
+    if row.get("application_target"):
+        profile["application_target"] = row["application_target"]
+    if row.get("referral_code"):
+        profile["referral_code"] = row["referral_code"]
+    if row.get("voice_avatar_index") is not None:
+        profile["voice_avatar_index"] = row["voice_avatar_index"]
+    if row.get("full_name"):
+        profile["name"] = row["full_name"]
+    # Multi-major / minor / pre-professional track — dedicated columns win over blob
+    if row.get("majors") is not None:
+        raw_m = row["majors"]
+        profile["majors"] = list(raw_m) if isinstance(raw_m, list) else (json.loads(raw_m) if isinstance(raw_m, str) else [])
+    elif "majors" not in profile:
+        profile["majors"] = []
+    if row.get("minors") is not None:
+        raw_mi = row["minors"]
+        profile["minors"] = list(raw_mi) if isinstance(raw_mi, list) else (json.loads(raw_mi) if isinstance(raw_mi, str) else [])
+    elif "minors" not in profile:
+        profile["minors"] = []
+    if "pre_professional_track" in row:
+        profile["pre_professional_track"] = row.get("pre_professional_track")
+    return profile

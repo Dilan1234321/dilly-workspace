@@ -80,6 +80,20 @@ def admin_delete_account(token: str = "", email: str = ""):
     return {"ok": True, "deleted": email, "profile_deleted": deleted_profile}
 
 
+@router.post("/migrate-profile", summary="Admin: upsert a profile JSON blob into PG")
+async def migrate_profile(request: Request, token: str = ""):
+    """Accept a full profile JSON body and upsert it into the users table via save_profile."""
+    _require_cron_secret(token)
+    from fastapi import Request as _R
+    body = await request.json()
+    email = (body.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="email required in body.")
+    from projects.dilly.api.profile_store import save_profile
+    save_profile(email, body)
+    return {"ok": True, "email": email}
+
+
 @router.get("/crawl-internships", summary="Scrape internships + classify new listings")
 def crawl_internships(token: str = ""):
     """Scrape all ATS sources (Greenhouse, Lever, Ashby, SmartRecruiters) into
