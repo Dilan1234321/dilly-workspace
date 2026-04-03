@@ -262,11 +262,10 @@ export default function SettingsScreen() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign out', style: 'destructive', onPress: async () => {
+          try {
+            await dilly.logout();
+          } catch {}
           await clearAuth();
-          // Dismiss all screens and go to root — prevents stale app screens
-          while (router.canGoBack()) {
-            router.back();
-          }
           router.replace('/');
         },
       },
@@ -285,11 +284,10 @@ export default function SettingsScreen() {
               text: 'Yes, delete everything', style: 'destructive',
               onPress: async () => {
                 try {
-                  const res = await dilly.post('/account/delete');
-                  if (!res.ok) throw new Error();
+                  await dilly.post('/account/delete');
                   await clearAuth();
                   router.replace('/');
-                } catch { Alert.alert('Error', 'Could not delete account.'); }
+                } catch (e: any) { Alert.alert('Error', e?.message || 'Could not delete account.'); }
               },
             },
           ]);
