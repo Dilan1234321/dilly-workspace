@@ -51,7 +51,14 @@ def setup_users_table(token: str = ""):
                 updated_at TIMESTAMPTZ DEFAULT now()
             )
         """)
-    return {"ok": True, "message": "users table ready"}
+        # Add columns introduced after initial table creation
+        for stmt in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS majors JSONB",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS minors JSONB",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS pre_professional_track TEXT",
+        ]:
+            cur.execute(stmt)
+    return {"ok": True, "message": "users table ready (columns updated)"}
 
 
 @router.get("/cleanup-draft-profiles", summary="Cleanup draft profiles")
