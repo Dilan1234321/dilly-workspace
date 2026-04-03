@@ -453,7 +453,7 @@ async def ai_chat(request: Request, body: ChatRequest):
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(model="claude-sonnet-4-6", max_tokens=1024, system=system, messages=messages)
+        response = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=1024, system=system, messages=messages)
         content = response.content[0].text if response.content else ""
 
         # ── Background profile extraction ────────────────────────────
