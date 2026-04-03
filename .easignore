@@ -39,6 +39,22 @@ projects/dilly/mobile/android/
 /meridian_core/
 /node_modules/
 /scripts/
+/bot/
+/v2/
+/__pycache__/
+/meridian-website/
+
+# Python virtual environments at workspace root
+/.venv/
+/.venv-meridian/
+/.venv_compare/
+
+# Hidden workspace dirs (not needed for mobile build)
+/.claire/
+/.openclaw/
+/.expo/
+/.github/
+
 *.zip
 *.pdf
 *.dmg
@@ -46,3 +62,4 @@ projects/dilly/mobile/android/
 *.sh
 *.csv
 *.log
+*.dylib
