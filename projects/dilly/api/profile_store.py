@@ -75,7 +75,8 @@ def get_profile(email: str) -> dict | None:
     if not email:
         return None
     with get_db() as conn:
-        cur = conn.cursor()
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT * FROM users WHERE email = %s", (email,))
         row = cur.fetchone()
         if not row:
@@ -149,7 +150,8 @@ def save_profile(email: str, data: dict) -> dict:
     blob_updates["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     with get_db() as conn:
-        cur = conn.cursor()
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         # Ensure the row exists
         cur.execute(
             """
@@ -414,7 +416,8 @@ def get_email_by_parent_invite_token(token: str) -> str | None:
     if not token:
         return None
     with get_db() as conn:
-        cur = conn.cursor()
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             "SELECT email FROM users WHERE profile_json->>'parent_invite_token' = %s",
             (token,),
