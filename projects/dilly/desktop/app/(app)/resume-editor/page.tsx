@@ -230,26 +230,6 @@ function getTemplate(cohort: string): Template {
   return TEMPLATES[cohort] ?? TEMPLATES.General;
 }
 
-function hydrateContactFromProfile(sections: ResumeSection[], profile: { name?: string | null; email?: string; linkedin?: string; linkedin_url?: string | null } | null | undefined): ResumeSection[] {
-  if (!profile) return sections;
-  const existing = sections.find(s => s.key === 'contact');
-  const c = existing?.contact;
-  if (c && c.name) return sections; // already has name — don't overwrite
-  const filled: ContactSection = {
-    name: profile.name ?? '',
-    email: profile.email ?? '',
-    phone: c?.phone ?? '',
-    location: c?.location ?? '',
-    linkedin: c?.linkedin ?? (profile.linkedin_url ?? profile.linkedin ?? ''),
-    github: c?.github ?? '',
-    portfolio: c?.portfolio ?? '',
-  };
-  if (existing) {
-    return sections.map(s => s.key === 'contact' ? { ...s, contact: filled } : s);
-  }
-  return [{ key: 'contact', label: 'Contact', contact: filled }, ...sections];
-}
-
 /* ═══════════════════════════════════════
    BULLET SCORE CACHE + DEBOUNCE HOOK
 ═══════════════════════════════════════ */
@@ -265,8 +245,9 @@ function useBulletScore(text: string): BulletScore | null {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       try {
-        const data = await dilly.post('/resume/bullet-score', { bullet: text });
-        if (data && typeof data.score === 'number') {
+        const res = await dilly.post('/resume/bullet-score', { bullet: text });
+        if (res.ok) {
+          const data = await res.json();
           scoreCache.set(text, data);
           setScore(data);
         }
@@ -446,19 +427,6 @@ function ResumePaper({
 /* ═══════════════════════════════════════
    BULLET EDITOR (right panel)
 ═══════════════════════════════════════ */
-function ScoreBar({ score, label }: { score: number; label?: string }) {
-  const color = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#ef4444';
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-      <div style={{ flex: 1, height: 3, background: 'var(--border-main)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${score}%`, background: color, borderRadius: 2, transition: 'width 0.5s ease, background 0.3s ease' }} />
-      </div>
-      {label && <span style={{ fontSize: 10, fontWeight: 600, color, whiteSpace: 'nowrap' }}>{score} — {label}</span>}
-      {!label && <span style={{ fontSize: 10, fontWeight: 600, color, whiteSpace: 'nowrap' }}>{score}</span>}
-    </div>
-  );
-}
-
 function BulletEditorRow({
   bullet, onChange, onDelete, onImprove, accentColor, highlighted, onDismissHighlight,
 }: {
@@ -473,16 +441,6 @@ function BulletEditorRow({
     : score.score >= 80 ? '#16a34a'
     : score.score >= 60 ? '#d97706'
     : '#ef4444';
-
-  const [showWhatIf, setShowWhatIf] = useState(false);
-  const [draft, setDraft] = useState('');
-  const draftScore = useBulletScore(showWhatIf ? draft : '');
-
-  function openWhatIf() { setDraft(bullet.text); setShowWhatIf(true); }
-  function closeWhatIf() { setShowWhatIf(false); setDraft(''); }
-  function applyDraft() { onChange(bullet.id, draft); closeWhatIf(); }
-
-  const delta = (score && draftScore) ? draftScore.score - score.score : null;
 
   return (
     <div style={{ marginBottom: 12 }}>
@@ -518,69 +476,13 @@ function BulletEditorRow({
         {score && (
           <span style={{ fontSize: 10, fontWeight: 600, color: scoreColor, whiteSpace: 'nowrap' }}>{score.score} — {score.label}</span>
         )}
-        {!showWhatIf && (
-          <button onClick={openWhatIf} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', background: 'none', border: '1px solid var(--border-main)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = accentColor; e.currentTarget.style.color = accentColor; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-main)'; e.currentTarget.style.color = 'var(--text-3)'; }}>
-            What if?
-          </button>
-        )}
         <button onClick={() => onImprove(bullet)} style={{ fontSize: 10, fontWeight: 600, color: accentColor, background: `${accentColor}10`, border: `1px solid ${accentColor}30`, borderRadius: 6, padding: '2px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
           Improve ✦
         </button>
       </div>
 
-      {/* What if panel */}
-      {showWhatIf && (
-        <div style={{ marginTop: 8, paddingLeft: 18 }}>
-          <div style={{ background: 'var(--surface-1)', border: `1px solid ${accentColor}30`, borderRadius: 8, padding: '10px 12px' }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 7px' }}>Try a rewrite</p>
-            <textarea
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              autoFocus
-              rows={2}
-              style={{
-                width: '100%', padding: '7px 9px', fontSize: 13, borderRadius: 6, outline: 'none',
-                resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, boxSizing: 'border-box',
-                border: `1px solid ${accentColor}40`, background: 'var(--surface-0)', color: 'var(--text-1)',
-              }}
-            />
-            {/* Side-by-side comparison */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' }}>Current</p>
-                {score ? <ScoreBar score={score.score} label={score.label} /> : <div style={{ height: 3, background: 'var(--border-main)', borderRadius: 2 }} />}
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px',
-                  color: delta == null ? 'var(--text-3)' : delta > 0 ? '#16a34a' : delta < 0 ? '#ef4444' : 'var(--text-3)' }}>
-                  {delta == null ? 'Proposed' : delta > 0 ? `▲ +${delta} pts` : delta < 0 ? `▼ ${delta} pts` : 'No change'}
-                </p>
-                {draftScore ? <ScoreBar score={draftScore.score} label={draftScore.label} /> : <div style={{ height: 3, background: 'var(--border-main)', borderRadius: 2 }} />}
-              </div>
-            </div>
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-              <button onClick={applyDraft} disabled={!draft.trim() || draft === bullet.text}
-                style={{
-                  flex: 1, padding: '5px 0', fontSize: 11, fontWeight: 700, borderRadius: 6, cursor: draft.trim() && draft !== bullet.text ? 'pointer' : 'not-allowed',
-                  border: 'none', background: draft.trim() && draft !== bullet.text ? accentColor : 'var(--surface-2)',
-                  color: draft.trim() && draft !== bullet.text ? '#fff' : 'var(--text-3)', transition: 'all 0.15s',
-                }}>
-                Apply
-              </button>
-              <button onClick={closeWhatIf}
-                style={{ padding: '5px 14px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border-main)', background: 'none', color: 'var(--text-3)' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Inline hints */}
-      {score?.hints != null && score.hints.length > 0 && !showWhatIf && (
+      {score?.hints != null && score.hints.length > 0 && (
         <div style={{ paddingLeft: 18, marginTop: 4 }}>
           {score.hints.slice(0, 2).map((h, i) => (
             <p key={i} style={{ fontSize: 11, color: 'var(--text-3)', margin: '2px 0', lineHeight: 1.4 }}>↳ {h}</p>
@@ -912,13 +814,12 @@ function EditorPanel({
 ═══════════════════════════════════════ */
 interface ContextMenuState { x: number; y: number; variantId: string; }
 
-function ContextMenu({ menu, variants, onRename, onDuplicate, onDelete, onOutcome, onClose }: {
+function ContextMenu({ menu, variants, onRename, onDuplicate, onDelete, onClose }: {
   menu: ContextMenuState;
   variants: VariantMeta[];
   onRename: (id: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
-  onOutcome: (id: string, outcome: VariantOutcome | null) => void;
   onClose: () => void;
 }) {
   const variant = variants.find(v => v.id === menu.variantId);
@@ -975,33 +876,6 @@ function ContextMenu({ menu, variants, onRename, onDuplicate, onDelete, onOutcom
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
           Duplicate
         </button>
-        {/* Track Outcome — job variants only */}
-        {variant?.type === 'job' && (
-          <>
-            <div style={{ height: 1, background: 'var(--border-main)', margin: '3px 0' }} />
-            <div style={{ padding: '5px 14px 4px' }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 5px' }}>Track Outcome</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {(Object.entries(OUTCOME_CONFIG) as [VariantOutcome, typeof OUTCOME_CONFIG[VariantOutcome]][]).map(([key, cfg]) => {
-                  const active = variant.outcome === key;
-                  return (
-                    <button key={key}
-                      onClick={() => { onOutcome(menu.variantId, active ? null : key); onClose(); }}
-                      style={{
-                        fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 4, cursor: 'pointer',
-                        border: `1px solid ${active ? cfg.color : 'var(--border-main)'}`,
-                        background: active ? cfg.bg : 'transparent',
-                        color: active ? cfg.color : 'var(--text-3)',
-                        transition: 'all 0.12s',
-                      }}>
-                      {cfg.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
         <div style={{ height: 1, background: 'var(--border-main)', margin: '3px 0' }} />
         <button
           style={{ ...ITEM, color: canDelete ? '#ef4444' : 'var(--text-3)', cursor: canDelete ? 'pointer' : 'default', opacity: canDelete ? 1 : 0.4 }}
@@ -1188,27 +1062,14 @@ function ResumeOverview({ variants, dirtySet, activeId, hiddenIds, onSelect, onC
                         </svg>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                      <p style={{
-                        fontSize: 10, color: 'var(--text-3)', margin: 0,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-                      }}>
-                        {isHidden ? 'Hidden · click to reopen' : subtitle}
-                      </p>
-                      {v.outcome && OUTCOME_CONFIG[v.outcome] && (
-                        <span style={{
-                          fontSize: 8, fontWeight: 700, letterSpacing: '0.04em',
-                          color: OUTCOME_CONFIG[v.outcome].color,
-                          background: OUTCOME_CONFIG[v.outcome].bg,
-                          border: `1px solid ${OUTCOME_CONFIG[v.outcome].color}40`,
-                          borderRadius: 3, padding: '1px 5px', flexShrink: 0,
-                        }}>
-                          {OUTCOME_CONFIG[v.outcome].label.toUpperCase()}
-                        </span>
-                      )}
-                    </div>
+                    <p style={{
+                      fontSize: 10, color: 'var(--text-3)', margin: '1px 0 0',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {isHidden ? 'Hidden · click to reopen' : subtitle}
+                    </p>
                   </div>
-                  {isJob && !v.outcome && (
+                  {isJob && (
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={tc} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                     </svg>
@@ -1311,20 +1172,9 @@ function cohortDisplayName(c: string) { return COHORT_DISPLAY[c] ?? c; }
 /* ═══════════════════════════════════════
    VARIANT TYPES
 ═══════════════════════════════════════ */
-type VariantOutcome = 'applied' | 'callback' | 'interview' | 'offer' | 'rejected';
-
-const OUTCOME_CONFIG: Record<VariantOutcome, { label: string; color: string; bg: string }> = {
-  applied:   { label: 'Applied',   color: '#60a5fa', bg: 'rgba(96,165,250,0.12)'  },
-  callback:  { label: 'Callback',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)'  },
-  interview: { label: 'Interview', color: '#f97316', bg: 'rgba(249,115,22,0.12)'  },
-  offer:     { label: 'Offer',     color: '#34d399', bg: 'rgba(52,211,153,0.12)'  },
-  rejected:  { label: 'Rejected',  color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
-};
-
 interface VariantMeta {
   id: string; label: string; cohort: string; type: 'cohort' | 'job';
   job_title?: string; job_company?: string; created_at: string;
-  outcome?: VariantOutcome | null;
 }
 
 /* ═══════════════════════════════════════
@@ -1433,183 +1283,6 @@ async function animateFillSections(
 }
 
 /* ═══════════════════════════════════════
-   RECRUITER SIMULATION PANEL
-═══════════════════════════════════════ */
-function RecruiterPanel({ sections, cohort, onCritique }: {
-  sections: ResumeSection[];
-  cohort: string;
-  onCritique: () => void;
-}) {
-  const [atsOpen, setAtsOpen] = useState(false);
-  const t = getTemplate(cohort);
-
-  // Extract scannable elements
-  const contact = sections.find(s => s.contact)?.contact;
-  const edu = sections.find(s => s.education)?.education;
-  const allExp = sections.flatMap(s => [...(s.experiences ?? []), ...(s.leadership ?? [])]);
-  const mostRecent = allExp[0] ?? null;
-  const skills = sections.find(s => s.key === 'skills')?.simple?.lines?.join(' ') ?? '';
-  const topSkill = skills.split(/[,•·\n]/)[0]?.trim() ?? '';
-  const allBullets = allExp.flatMap(e => e.bullets.map(b => b.text));
-  const bulletsWithMetrics = allBullets.filter(b => /\d/.test(b)).length;
-  const metricRatio = allBullets.length > 0 ? bulletsWithMetrics / allBullets.length : 0;
-
-  // Scanability score (0–100)
-  let scanScore = 0;
-  const scanChecks: { label: string; ok: boolean; tip: string }[] = [
-    { label: 'Name is clear', ok: !!contact?.name, tip: 'Add your full name to the contact section.' },
-    { label: 'Most recent role visible', ok: !!mostRecent?.company && !!mostRecent?.role, tip: 'Fill in your most recent company and role.' },
-    { label: 'School & degree shown', ok: !!edu?.university && !!edu?.major, tip: 'Add your university and major.' },
-    { label: 'Skills section present', ok: !!topSkill, tip: 'Add a skills section with your top tools.' },
-    { label: `${Math.round(metricRatio * 100)}% of bullets have metrics`, ok: metricRatio >= 0.5, tip: 'At least half your bullets should include a number.' },
-  ];
-  scanScore = Math.round((scanChecks.filter(c => c.ok).length / scanChecks.length) * 100);
-  const scanColor = scanScore >= 80 ? '#34d399' : scanScore >= 60 ? '#f59e0b' : '#f87171';
-
-  // ATS plain text
-  const atsLines: string[] = [];
-  if (contact) {
-    atsLines.push(contact.name || '');
-    const contactLine = [contact.email, contact.phone, contact.location, contact.linkedin].filter(Boolean).join(' | ');
-    if (contactLine) atsLines.push(contactLine);
-    atsLines.push('');
-  }
-  if (edu) {
-    atsLines.push('EDUCATION');
-    atsLines.push([edu.university, edu.location].filter(Boolean).join(' — '));
-    atsLines.push([edu.major, edu.minor && `Minor: ${edu.minor}`, edu.gpa && `GPA: ${edu.gpa}`, edu.graduation].filter(Boolean).join(' | '));
-    atsLines.push('');
-  }
-  for (const s of sections) {
-    const exps = [...(s.experiences ?? []), ...(s.leadership ?? [])];
-    if (exps.length > 0) {
-      atsLines.push(s.key === 'leadership' ? 'LEADERSHIP & ACTIVITIES' : 'EXPERIENCE');
-      for (const exp of exps) {
-        atsLines.push(`${exp.company} — ${exp.role} (${exp.date})`);
-        for (const b of exp.bullets) atsLines.push(`• ${b.text}`);
-      }
-      atsLines.push('');
-    }
-    if (s.projects && s.projects.length > 0) {
-      atsLines.push('PROJECTS');
-      for (const proj of s.projects) {
-        atsLines.push(`${proj.name}${proj.tech ? ` | ${proj.tech}` : ''} (${proj.date})`);
-        for (const b of proj.bullets) atsLines.push(`• ${b.text}`);
-      }
-      atsLines.push('');
-    }
-    if (s.simple?.lines?.length) {
-      atsLines.push(s.label.toUpperCase());
-      for (const line of s.simple.lines) atsLines.push(line);
-      atsLines.push('');
-    }
-  }
-
-  return (
-    <div style={{ width: '100%', maxWidth: 680, padding: '8px 0' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '0 4px' }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: scanColor }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Recruiter Simulation</span>
-        <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>Scanability {scanScore}/100</span>
-      </div>
-
-      {/* 6-Second Scan */}
-      <div style={{ background: 'var(--surface-0)', borderRadius: 10, border: '1px solid var(--border-main)', overflow: 'hidden', marginBottom: 12 }}>
-        <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid var(--border-main)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)' }}>6-Second Scan</span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>What a recruiter sees first</span>
-        </div>
-
-        {/* Scannable highlights */}
-        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            { tag: 'Name', value: contact?.name, missing: 'Not set' },
-            { tag: 'Role', value: mostRecent ? `${mostRecent.role} @ ${mostRecent.company}` : null, missing: 'No experience' },
-            { tag: 'School', value: edu ? `${edu.university}${edu.major ? ` · ${edu.major}` : ''}` : null, missing: 'No education' },
-            { tag: 'Top Skill', value: topSkill || null, missing: 'No skills listed' },
-          ].map(({ tag, value, missing }) => (
-            <div key={tag} style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', width: 56, flexShrink: 0 }}>{tag}</span>
-              <span style={{ fontSize: 13, fontWeight: value ? 600 : 400, color: value ? 'var(--text-1)' : 'var(--text-3)', fontStyle: value ? 'normal' : 'italic' }}>
-                {value ?? missing}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Scan checks */}
-        <div style={{ borderTop: '1px solid var(--border-main)', padding: '10px 16px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {scanChecks.map(c => (
-            <div key={c.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <span style={{ fontSize: 12, color: c.ok ? '#34d399' : '#f87171', flexShrink: 0, marginTop: 1 }}>{c.ok ? '✓' : '✗'}</span>
-              <div>
-                <span style={{ fontSize: 11, color: c.ok ? 'var(--text-2)' : 'var(--text-1)', fontWeight: c.ok ? 400 : 600 }}>{c.label}</span>
-                {!c.ok && <p style={{ fontSize: 10, color: 'var(--text-3)', margin: '1px 0 0' }}>{c.tip}</p>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ATS View */}
-      <div style={{ background: 'var(--surface-0)', borderRadius: 10, border: '1px solid var(--border-main)', overflow: 'hidden', marginBottom: 12 }}>
-        <button
-          onClick={() => setAtsOpen(o => !o)}
-          style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)' }}>ATS Text View</span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)', flex: 1 }}>What the parser sees</span>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            {atsOpen ? <polyline points="18 15 12 9 6 15"/> : <polyline points="6 9 12 15 18 9"/>}
-          </svg>
-        </button>
-        {atsOpen && (
-          <pre style={{ margin: 0, padding: '0 16px 16px', fontSize: 11, lineHeight: 1.65, color: 'var(--text-2)', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderTop: '1px solid var(--border-main)', background: 'var(--surface-1)' }}>
-            {atsLines.join('\n') || '(Nothing to show — add content to your resume.)'}
-          </pre>
-        )}
-      </div>
-
-      {/* Recruiter Critique */}
-      <div style={{ background: 'var(--surface-0)', borderRadius: 10, border: `1px solid ${t.accentColor}30`, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>Recruiter Critique</p>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 12px', lineHeight: 1.5 }}>
-            Dilly reviews your resume as a cold recruiter — no sugarcoating.
-          </p>
-          <button
-            onClick={onCritique}
-            style={{
-              width: '100%', padding: '8px 0', fontSize: 12, fontWeight: 700, borderRadius: 7, cursor: 'pointer',
-              border: 'none', background: t.accentColor, color: '#fff',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-            Get Recruiter Take ✦
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function sectionsToPlainText(sections: ResumeSection[]): string {
-  const parts: string[] = [];
-  for (const s of sections) {
-    if (s.contact) { const c = s.contact; parts.push([c.name, c.email, c.location, c.linkedin].filter(Boolean).join(' ')); }
-    if (s.education) { const e = s.education; parts.push([e.university, e.major, e.minor, e.coursework].filter(Boolean).join(' ')); }
-    for (const exp of [...(s.experiences ?? []), ...(s.leadership ?? [])]) {
-      parts.push([exp.company, exp.role, ...exp.bullets.map(b => b.text)].filter(Boolean).join(' '));
-    }
-    for (const proj of s.projects ?? []) {
-      parts.push([proj.name, proj.tech, ...proj.bullets.map(b => b.text)].filter(Boolean).join(' '));
-    }
-    if (s.simple?.lines) parts.push(s.simple.lines.join(' '));
-  }
-  return parts.join(' ').toLowerCase();
-}
-
-/* ═══════════════════════════════════════
    COACH HELPERS
 ═══════════════════════════════════════ */
 function summarizeSections(sections: ResumeSection[], cohort: string): string {
@@ -1712,19 +1385,11 @@ function FitBar({ label, student, required }: { label: string; student: number; 
   );
 }
 
-interface KeywordGap { text: string; category: string; count: number; }
-
-function JobFitPanel({ variant, resumeText, onKeywordClick }: {
-  variant: VariantMeta;
-  resumeText: string;
-  onKeywordClick: (keyword: string) => void;
-}) {
+function JobFitPanel({ variant }: { variant: VariantMeta }) {
   const [scores, setScores] = useState<FitScores | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [keywordGaps, setKeywordGaps] = useState<KeywordGap[]>([]);
-  const [kwLoading, setKwLoading] = useState(false);
 
   useEffect(() => {
     setScores(null); setError(false); setLoading(true);
@@ -1746,16 +1411,6 @@ function JobFitPanel({ variant, resumeText, onKeywordClick }: {
       setLoading(false);
     });
   }, [variant.id, variant.job_title]);
-
-  useEffect(() => {
-    const jdText = typeof window !== 'undefined' ? (localStorage.getItem(`dilly_jd_${variant.id}`) || '') : '';
-    if (!jdText) { setKeywordGaps([]); return; }
-    setKwLoading(true);
-    dilly.post('/resume/keyword-gaps', { jd_text: jdText, resume_text: resumeText })
-      .then((data: { gaps?: KeywordGap[] }) => { setKeywordGaps(data?.gaps ?? []); })
-      .catch(() => {})
-      .finally(() => setKwLoading(false));
-  }, [variant.id, resumeText]);
 
   const readiness = scores ? (() => {
     const maxGap = Math.max(
@@ -1854,55 +1509,6 @@ function JobFitPanel({ variant, resumeText, onKeywordClick }: {
                 These scores are AI-predicted and may not be exact. A longer, more detailed job description will give you more accurate results.
               </p>
             </>
-          )}
-
-          {/* Keyword Gaps */}
-          {(kwLoading || keywordGaps.length > 0) && (
-            <div style={{ marginTop: 18, borderTop: '1px solid var(--border-main)', paddingTop: 14 }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 10px' }}>
-                Missing Keywords
-              </p>
-              {kwLoading ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {[60, 80, 50, 70, 55].map((w, i) => (
-                    <div key={i} style={{ height: 22, width: w, borderRadius: 4, background: 'var(--surface-2)', animation: 'jfpPulse 1.4s ease infinite', animationDelay: `${i * 0.1}s` }} />
-                  ))}
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {keywordGaps.map(kw => (
-                      <button
-                        key={kw.text}
-                        onClick={() => onKeywordClick(kw.text)}
-                        title={`Add "${kw.text}" to your resume`}
-                        style={{
-                          fontSize: 10, fontWeight: 600, padding: '3px 8px',
-                          borderRadius: 5, border: '1px solid var(--border-main)',
-                          background: 'var(--surface-1)', color: 'var(--text-2)',
-                          cursor: 'pointer', transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = 'rgba(201,168,76,0.12)';
-                          e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)';
-                          e.currentTarget.style.color = 'var(--text-1)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = 'var(--surface-1)';
-                          e.currentTarget.style.borderColor = 'var(--border-main)';
-                          e.currentTarget.style.color = 'var(--text-2)';
-                        }}
-                      >
-                        + {kw.text}
-                      </button>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.5 }}>
-                    Click any keyword — Dilly will suggest where to add it.
-                  </p>
-                </>
-              )}
-            </div>
           )}
         </div>
       )}
@@ -2099,15 +1705,6 @@ export default function ResumeEditorPage() {
     } catch { /* ignore */ }
   }
 
-  // Requested variant from URL — read once at render time
-  const requestedVariantId = useRef<string>('');
-  if (!requestedVariantId.current) {
-    try {
-      const p = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-      requestedVariantId.current = p.get('variant') ?? '';
-    } catch { /* ignore */ }
-  }
-
   // ATS fix mode — read once at render time (same Strict Mode immunity as pendingJobRef)
   const atsFix = useRef<{ vendor: string; vendorKey: string; issues: string[]; tips: string[] } | null>(null);
   if (atsFix.current === null) {
@@ -2136,6 +1733,7 @@ export default function ResumeEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeSection, setActiveSection] = useState<ActiveSection>('contact');
+  const [improveBullet, setImproveBullet] = useState<Bullet | null>(null);
   const [overflowLines, setOverflowLines] = useState(0);
   const [jobGenerating, setJobGenerating] = useState(false);
   const [jobGeneratingCompany, setJobGeneratingCompany] = useState('');
@@ -2155,7 +1753,6 @@ export default function ResumeEditorPage() {
     localStorage.setItem('dilly_hidden_variants', JSON.stringify(Array.from(hiddenVariantIds)));
   }, [hiddenVariantIds]);
   const [showOverview, setShowOverview] = useState(false);
-  const [showRecruiterView, setShowRecruiterView] = useState(false);
   const [overviewSort, setOverviewSort] = useState<OverviewSort>('cohort');
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
@@ -2181,14 +1778,12 @@ export default function ResumeEditorPage() {
         const vList: VariantMeta[] = varData?.variants ?? [];
         setVariants(vList);
         if (vList.length > 0) {
-          const reqId = requestedVariantId.current;
-          const initialId = (reqId && vList.find(v => v.id === reqId)) ? reqId : vList[0].id;
-          setActiveVariantId(initialId);
-          const contentData = await dilly.get(`/resume/variants/${initialId}`);
-          const initialSections = hydrateContactFromProfile(contentData?.sections ?? [], profile);
-          setSectionsByVariant({ [initialId]: initialSections });
-          setSavedSnapshots({ [initialId]: JSON.stringify(initialSections) });
-          setLoadedVariants(new Set([initialId]));
+          setActiveVariantId(vList[0].id);
+          const contentData = await dilly.get(`/resume/variants/${vList[0].id}`);
+          const initialSections = contentData?.sections ?? [];
+          setSectionsByVariant({ [vList[0].id]: initialSections });
+          setSavedSnapshots({ [vList[0].id]: JSON.stringify(initialSections) });
+          setLoadedVariants(new Set([vList[0].id]));
         } else {
           // No variants yet — try to import parsed resume from onboarding/audit
           try {
@@ -2225,7 +1820,7 @@ export default function ResumeEditorPage() {
   useEffect(() => {
     if (!activeVariantId || loadedVariants.has(activeVariantId)) return;
     dilly.get(`/resume/variants/${activeVariantId}`).then((data) => {
-      const sects = hydrateContactFromProfile(data?.sections ?? [], profile);
+      const sects = data?.sections ?? [];
       setSectionsByVariant(prev => ({ ...prev, [activeVariantId]: sects }));
       setSavedSnapshots(prev => ({ ...prev, [activeVariantId]: JSON.stringify(sects) }));
       setLoadedVariants(prev => { const s = new Set(prev); s.add(activeVariantId); return s; });
@@ -2311,8 +1906,7 @@ export default function ResumeEditorPage() {
       const content = contentRef.current;
       const paper = paperRef.current;
       if (!content || !paper) return;
-      const actualPaperWidth = Math.min(paper.clientWidth - 40, 680);
-      const paperHeight = actualPaperWidth * (11 / 8.5);
+      const paperHeight = paper.clientWidth * (11 / 8.5);
       setOverflowLines(Math.max(0, Math.ceil((content.scrollHeight - paperHeight) / 14)));
     });
     obs.observe(contentRef.current);
@@ -2928,49 +2522,14 @@ export default function ResumeEditorPage() {
 
       {/* Main split */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* LEFT: Resume paper preview (or recruiter simulation) */}
-        <div ref={paperRef} style={{ flex: '0 0 55%', overflow: 'auto', background: 'var(--surface-2)', display: 'flex', flexDirection: 'column', alignItems: 'center' }} className="resume-print-area">
-          {/* Toolbar */}
-          <div style={{ width: '100%', maxWidth: 680, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '10px 0 0' }}>
-            <button
-              onClick={() => setShowRecruiterView(v => !v)}
-              style={{
-                fontSize: 10, fontWeight: 700, padding: '4px 11px', borderRadius: 6, cursor: 'pointer',
-                border: `1px solid ${showRecruiterView ? getTemplate(cohort).accentColor : 'var(--border-main)'}`,
-                background: showRecruiterView ? `${getTemplate(cohort).accentColor}15` : 'var(--surface-1)',
-                color: showRecruiterView ? getTemplate(cohort).accentColor : 'var(--text-3)',
-                transition: 'all 0.15s',
-              }}>
-              {showRecruiterView ? '← Resume' : 'Recruiter View'}
-            </button>
+        {/* LEFT: Resume paper preview */}
+        <div ref={paperRef} style={{ flex: '0 0 55%', overflow: 'auto', padding: '20px', background: 'var(--surface-2)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }} className="resume-print-area">
+          <div style={{ width: '100%', maxWidth: 680, background: 'white', boxShadow: '0 2px 20px rgba(0,0,0,0.10)', borderRadius: 2, minHeight: 880, position: 'relative' }}>
+            <ResumePaper sections={sections} cohort={cohort} contentRef={contentRef as React.RefObject<HTMLDivElement>} overflowRef={overflowRef as React.RefObject<HTMLDivElement>} />
+            {overflowLines > 0 && (
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: Math.min(overflowLines * 14, 120), background: 'linear-gradient(to bottom, transparent, rgba(239,68,68,0.08))', pointerEvents: 'none', borderRadius: '0 0 2px 2px' }} />
+            )}
           </div>
-
-          {showRecruiterView ? (
-            <div style={{ width: '100%', maxWidth: 680, padding: '12px 0 20px' }}>
-              <RecruiterPanel
-                sections={sections}
-                cohort={cohort}
-                onCritique={() => {
-                  setShowRecruiterView(false);
-                  const contact = sections.find(s => s.contact)?.contact;
-                  const allExp = sections.flatMap(s => [...(s.experiences ?? []), ...(s.leadership ?? [])]);
-                  const mostRecent = allExp[0];
-                  fireProactiveCoach(
-                    `You are playing the role of an experienced recruiter reviewing a resume cold — no prior context, no sugarcoating. Be direct and honest.\n\nCandidate: ${contact?.name || 'Unknown'}\nMost recent role: ${mostRecent ? `${mostRecent.role} at ${mostRecent.company}` : 'Not listed'}\n\nHere is their full resume:\n${sectionsToPlainText(sections)}\n\nGive your honest recruiter take: What do you notice in the first 6 seconds? What makes you keep reading — or not? What's the single biggest weakness? Keep it under 150 words, be blunt.`
-                  );
-                }}
-              />
-            </div>
-          ) : (
-            <div style={{ width: '100%', maxWidth: 680, padding: '10px 0 20px' }}>
-              <div style={{ background: 'white', boxShadow: '0 2px 20px rgba(0,0,0,0.10)', borderRadius: 2, minHeight: 880, position: 'relative' }}>
-                <ResumePaper sections={sections} cohort={cohort} contentRef={contentRef as React.RefObject<HTMLDivElement>} overflowRef={overflowRef as React.RefObject<HTMLDivElement>} />
-                {overflowLines > 0 && (
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: Math.min(overflowLines * 14, 120), background: 'linear-gradient(to bottom, transparent, rgba(239,68,68,0.08))', pointerEvents: 'none', borderRadius: '0 0 2px 2px' }} />
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* RIGHT: Editor (with optional generating overlay) */}
@@ -2978,11 +2537,7 @@ export default function ResumeEditorPage() {
           <EditorPanel
             sections={sections} setSections={handleSectionsChange}
             activeSection={activeSection} setActiveSection={setActiveSection}
-            cohort={cohort} onImprove={b => {
-              fireProactiveCoach(
-                `The user wants to improve this resume bullet:\n\n"${b.text}"\n\nRewrite it to be stronger — start with a powerful action verb, add a metric or quantified outcome if possible, and make it specific. Give the rewritten version first, then explain in 1-2 sentences what you changed and why.`
-              );
-            }}
+            cohort={cohort} onImprove={b => setImproveBullet(b)}
             overflowLines={overflowLines}
             jobContext={activeVariant?.type === 'job' ? { company: activeVariant.job_company || '', title: activeVariant.job_title || '' } : undefined}
             onAskDilly={fireProactiveCoach}
@@ -3001,13 +2556,7 @@ export default function ResumeEditorPage() {
 
         {/* Job Fit panel — shown for job variants */}
         {activeVariant?.type === 'job' && (
-          <JobFitPanel
-            variant={activeVariant}
-            resumeText={sectionsToPlainText(sections)}
-            onKeywordClick={kw => fireProactiveCoach(
-              `The user wants to add the keyword "${kw}" to their resume for the ${activeVariant.job_title || 'role'} at ${activeVariant.job_company || 'this company'}.\n\nLook at their current resume and suggest exactly which bullet or section to update to naturally include "${kw}". Give a specific rewrite of that bullet if possible.`
-            )}
-          />
+          <JobFitPanel variant={activeVariant} />
         )}
 
         {/* Resume list panel — slides in adjacent to AI panel */}
@@ -3040,13 +2589,10 @@ export default function ResumeEditorPage() {
           onRename={id => { setActiveVariantId(id); setRenamingId(id); }}
           onDuplicate={handleDuplicate}
           onDelete={id => { setActiveVariantId(id); setShowDeleteConfirm(true); }}
-          onOutcome={(id, outcome) => {
-            setVariants(prev => prev.map(v => v.id === id ? { ...v, outcome: outcome ?? undefined } : v));
-            dilly.patch(`/resume/variants/${id}`, { outcome: outcome ?? null }).catch(() => {});
-          }}
         />
       )}
 
+      {improveBullet && <ImproveModal bullet={improveBullet} cohort={cohort} onClose={() => setImproveBullet(null)} />}
 
       {/* Unsaved changes warning */}
       {pendingSwitch !== null && activeVariant && (

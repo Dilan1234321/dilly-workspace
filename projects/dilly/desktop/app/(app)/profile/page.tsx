@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { dilly } from '@/lib/dilly';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -29,6 +28,7 @@ interface MemorySurface {
 const CATEGORY_CONFIG: Record<string, { label: string; color: string }> = {
   achievement:          { label: 'Achievements',         color: '#2B3A8E' },
   goal:                 { label: 'Goals',                color: '#34C759' },
+  target_company:       { label: 'Target Companies',     color: '#2B3A8E' },
   skill_unlisted:       { label: 'Unlisted Skills',      color: '#2B3A8E' },
   project_detail:       { label: 'Project Details',      color: '#34C759' },
   motivation:           { label: 'Motivations',          color: '#FF6B8A' },
@@ -51,7 +51,7 @@ const CATEGORY_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 const CATEGORY_ORDER = [
-  'achievement', 'goal',
+  'achievement', 'goal', 'target_company',
   'skill_unlisted', 'project_detail',
   'motivation', 'personality', 'soft_skill',
   'hobby', 'life_context', 'company_culture_pref',
@@ -64,16 +64,10 @@ const CATEGORY_ORDER = [
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DillyProfilePage() {
-  const searchParams = useSearchParams();
-  const deepCategory = searchParams.get('category');
-  const deepAdd = searchParams.get('add') === '1';
-
   const [data, setData] = useState<MemorySurface | null>(null);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
-  const [seedMsg, setSeedMsg] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(deepCategory);
-  const [addingTo, setAddingTo] = useState<string | null>(deepAdd && deepCategory ? deepCategory : null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
   const [addLabel, setAddLabel] = useState('');
   const [addValue, setAddValue] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,20 +127,6 @@ export default function DillyProfilePage() {
     } catch {}
   }
 
-  async function seedFromResume() {
-    setSeeding(true);
-    setSeedMsg(null);
-    try {
-      const res = await dilly.post('/memory/seed-from-resume', {});
-      setSeedMsg(res?.seeded > 0 ? `Added ${res.seeded} facts from your resume.` : 'No new facts found — try re-uploading your resume.');
-      if ((res?.seeded ?? 0) > 0) fetchData();
-    } catch {
-      setSeedMsg('Something went wrong. Try again.');
-    } finally {
-      setSeeding(false);
-    }
-  }
-
   async function handleAddFact() {
     if (!addingTo || !addLabel.trim()) return;
     try {
@@ -172,6 +152,7 @@ export default function DillyProfilePage() {
 
   const CORE_CATEGORIES = [
     { key: 'goal', nudge: 'Career goals' },
+    { key: 'target_company', nudge: 'Dream companies' },
     { key: 'skill_unlisted', nudge: 'Skills not on resume' },
     { key: 'project_detail', nudge: 'Projects you have worked on' },
     { key: 'motivation', nudge: 'What drives you' },
@@ -245,28 +226,8 @@ export default function DillyProfilePage() {
             </p>
           ) : (
             <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-              {totalFacts === 0 ? 'Your profile is empty. Populate it from your resume or chat with Dilly.' : 'Chat with Dilly to keep building your profile.'}
+              Chat with Dilly to start building your profile.
             </p>
-          )}
-          {totalFacts < 5 && (
-            <div style={{ marginTop: data?.narrative || totalFacts > 0 ? 10 : 8 }}>
-              <button
-                onClick={seedFromResume}
-                disabled={seeding}
-                style={{
-                  width: '100%', height: 30, borderRadius: 7, fontSize: 11, fontWeight: 700,
-                  color: '#fff', background: seeding ? 'var(--surface-2)' : '#2B3A8E',
-                  border: 'none', cursor: seeding ? 'default' : 'pointer', transition: 'opacity 140ms',
-                }}
-              >
-                {seeding ? 'Reading your resume…' : 'Populate from resume ✦'}
-              </button>
-              {seedMsg && (
-                <p className="text-xs mt-2" style={{ color: seedMsg.startsWith('Added') ? '#34C759' : 'var(--text-3)' }}>
-                  {seedMsg}
-                </p>
-              )}
-            </div>
           )}
         </div>
 
@@ -300,26 +261,6 @@ export default function DillyProfilePage() {
             )}
           </div>
         )}
-
-        {/* Add to profile */}
-        <button
-          onClick={() => { setSelected('__add__'); setAddingTo(null); }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px',
-            borderRadius: 10, border: '1.5px dashed var(--border-main)', background: 'none',
-            cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'all 140ms ease',
-            color: 'var(--text-2)',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#2B3A8E'; (e.currentTarget as HTMLElement).style.color = '#2B3A8E'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-main)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-2)'; }}
-        >
-          <div style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(59,76,192,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2B3A8E" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>Add to profile</span>
-        </button>
 
         {/* Category list */}
         {orderedCategories.length > 0 && (
@@ -397,39 +338,7 @@ export default function DillyProfilePage() {
 
       {/* ── Right column: detail panel ────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '32px 32px' }}>
-        {selected === '__add__' ? (
-          <div style={{ maxWidth: 560 }}>
-            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>
-              Add to your profile
-            </h2>
-            <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 24, lineHeight: 1.6 }}>
-              Pick a category, then tell Dilly what you want to add.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {CATEGORY_ORDER.map(cat => {
-                const cfg = CATEGORY_CONFIG[cat];
-                if (!cfg) return null;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => { setSelected(cat); setAddingTo(cat); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
-                      borderRadius: 10, border: '1px solid var(--border-main)',
-                      background: 'var(--surface-1)', cursor: 'pointer', textAlign: 'left',
-                      transition: 'all 140ms ease',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = cfg.color + '60'; (e.currentTarget as HTMLElement).style.background = cfg.color + '0a'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-main)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)'; }}
-                  >
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-1)' }}>{cfg.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : selected && selectedCfg ? (
+        {selected && selectedCfg ? (
           <div style={{ maxWidth: 600 }}>
             {/* Detail header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>

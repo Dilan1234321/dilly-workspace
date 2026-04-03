@@ -1,18 +1,11 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { dilly } from '@/lib/dilly';
-import { useProfile, useRightPanel } from '../layout';
+import { useProfile } from '../layout';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
-import { saveSnapshot, getDailyHistory, type ScoreSnapshot } from '@/lib/score-history';
+import { saveSnapshot, getDailyHistory, getMilestone, type ScoreSnapshot } from '@/lib/score-history';
 
-/* ── User Task (manual, synced to calendar via localStorage) ── */
-const TASKS_KEY = 'dilly_user_tasks';
-interface UserTask { id: string; text: string; date?: string; time?: string; done: boolean; createdAt: string; }
-function loadUserTasks(): UserTask[] { try { return JSON.parse(localStorage.getItem(TASKS_KEY) || '[]'); } catch { return []; } }
-function saveUserTasks(tasks: UserTask[]) { localStorage.setItem(TASKS_KEY, JSON.stringify(tasks)); }
-
-/* ── Animated number ── */
 function AnimNum({ value, delay = 0 }: { value: number; delay?: number }) {
   const [d, setD] = useState(0);
   const ref = useRef(0);
@@ -20,7 +13,7 @@ function AnimNum({ value, delay = 0 }: { value: number; delay?: number }) {
     const t = setTimeout(() => {
       const s = performance.now();
       function tick(now: number) {
-        const p = Math.min((now - s) / 900, 1);
+        const p = Math.min((now - s) / 1000, 1);
         setD(Math.round((1 - Math.pow(1 - p, 3)) * value));
         if (p < 1) ref.current = requestAnimationFrame(tick);
       }
@@ -31,777 +24,436 @@ function AnimNum({ value, delay = 0 }: { value: number; delay?: number }) {
   return <>{d}</>;
 }
 
-/* ── Dim chip ── */
-function DimChip({ label, value, delay }: { label: string; value: number; delay: number }) {
+function AnimBar({ pct, color, delay = 0 }: { pct: number; color: string; delay?: number }) {
+  const [w, setW] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setW(pct), delay); return () => clearTimeout(t); }, [pct, delay]);
+  return (
+    <div style={{ height: 4, background: 'var(--border-main)', borderRadius: 2 }}>
+      <div style={{ height: '100%', borderRadius: 2, backgroundColor: color, width: w + '%', transition: 'width 900ms cubic-bezier(0.16, 1, 0.3, 1)' }} />
+    </div>
+  );
+}
+
+function DillyNote({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  return (
+    <div className="animate-fade-in" style={{ animationDelay: delay + 'ms', display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0' }}>
+      <span style={{ fontSize: 12, fontWeight: 800, color: '#2B3A8E', flexShrink: 0, letterSpacing: -0.3 }}>dilly</span>
+      <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65, margin: 0 }}>{children}</p>
+    </div>
+  );
+}
+
+function SGBBox({ label, value, delay }: { label: string; value: number; delay: number }) {
   const color = value >= 75 ? '#34C759' : value >= 55 ? '#FF9F0A' : '#FF453A';
+  const bgColor = value >= 75 ? 'rgba(52,199,89,0.08)' : value >= 55 ? 'rgba(255,159,10,0.08)' : 'rgba(255,69,58,0.08)';
+  const borderColor = value >= 75 ? 'rgba(52,199,89,0.2)' : value >= 55 ? 'rgba(255,159,10,0.2)' : 'rgba(255,69,58,0.2)';
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ fontSize: 22, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
-        <AnimNum value={value} delay={delay} />
-      </span>
+    <div className="animate-fade-in" style={{
+      animationDelay: delay + 'ms',
+      width: 110, padding: '14px 14px 16px', textAlign: 'center' as const,
+      border: '1px solid ' + borderColor, borderRadius: 4, background: bgColor,
+    }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)', letterSpacing: 1.5, textTransform: 'uppercase', margin: '0 0 8px' }}>{label}</p>
+      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 28, fontWeight: 700, color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+        <AnimNum value={value} delay={delay + 200} />
+      </p>
     </div>
   );
 }
 
-/* ── Pipeline stage ── */
-function PipelineStage({ label, count, color, icon, onClick }: {
-  label: string; count: number; color: string; icon: React.ReactNode; onClick: () => void;
-}) {
+function MiniSGB({ label, s, g, b, delay }: { label: string; s: number; g: number; b: number; delay: number }) {
   return (
-    <button onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8,
-      background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left',
-      transition: 'background 140ms ease',
+    <div className="animate-fade-in" style={{ animationDelay: delay + 'ms', display: 'flex', gap: 8 }}>
+      <MiniBar label="S" value={s} color="#2B3A8E" delay={delay + 200} />
+      <MiniBar label="G" value={g} color="#2B3A8E" delay={delay + 300} />
+      <MiniBar label="B" value={b} color="#34C759" delay={delay + 400} />
+    </div>
+  );
+}
+
+function CohortSGBCard({ label, value, delay, isDilly, small }: { label: string; value: number; delay: number; isDilly?: boolean; small?: boolean }) {
+  const color = value >= 75 ? '#34C759' : value >= 55 ? '#FF9F0A' : '#FF453A';
+  const bg = value >= 75 ? 'rgba(52,199,89,0.04)' : value >= 55 ? 'rgba(255,159,10,0.04)' : 'rgba(255,69,58,0.04)';
+  const border = value >= 75 ? 'rgba(52,199,89,0.12)' : value >= 55 ? 'rgba(255,159,10,0.12)' : 'rgba(255,69,58,0.12)';
+  return (
+    <div className="animate-fade-in" style={{
+      animationDelay: delay + 'ms',
+      padding: small ? '14px 10px' : '18px 14px', textAlign: 'center' as const, borderRadius: small ? 10 : 12,
+      background: isDilly ? 'rgba(59,76,192,0.04)' : bg,
+      border: '1px solid ' + (isDilly ? 'rgba(59,76,192,0.12)' : border),
+      transition: 'transform 150ms ease',
+      display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: small ? 6 : 8,
     }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none'; }}
-    >
-      <span style={{ color, flexShrink: 0 }}>{icon}</span>
-      <span style={{ flex: 1, fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>{label}</span>
-      <span style={{
-        fontSize: 16, fontWeight: 800, color: count > 0 ? color : 'var(--text-3)',
-        fontVariantNumeric: 'tabular-nums', minWidth: 24, textAlign: 'right',
-      }}>{count}</span>
-    </button>
-  );
-}
-
-/* ── Section header ── */
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase',
-      color: 'var(--text-3)', margin: '0 0 12px',
-    }}>{children}</p>
-  );
-}
-
-/* ── Deadline row ── */
-function DeadlineRow({ label, daysUntil, date }: { label: string; daysUntil: number; date: string }) {
-  const urgent = daysUntil <= 2;
-  const soon = daysUntil <= 7;
-  const color = urgent ? '#FF453A' : soon ? '#FF9F0A' : 'var(--text-3)';
-  const tag = daysUntil === 0 ? 'TODAY' : daysUntil === 1 ? 'TOMORROW' : `${daysUntil}d`;
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--border-main)' }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color, minWidth: 52, flexShrink: 0 }}>{tag}</span>
-      <span style={{ fontSize: 12.5, color: 'var(--text-2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-    </div>
-  );
-}
-
-/* ── Score sparkline ── */
-function ScoreSparkline({ history, currentScore }: { history: ScoreSnapshot[]; currentScore: number }) {
-  const W = 88, H = 32, pad = 3;
-
-  if (history.length < 2) {
-    const color = currentScore >= 75 ? '#34C759' : currentScore >= 55 ? '#FF9F0A' : '#FF453A';
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-        <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Your score</span>
-        <span style={{ fontSize: 13, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums' }}>{currentScore}/100</span>
-      </div>
-    );
-  }
-
-  const scores = history.map(s => s.dilly);
-  const min = Math.min(...scores), max = Math.max(...scores);
-  const range = max - min || 10;
-  const pts = scores.map((v, i) => {
-    const x = pad + (i / (scores.length - 1)) * (W - pad * 2);
-    const y = H - pad - ((v - min) / range) * (H - pad * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  const delta = scores[scores.length - 1] - scores[0];
-  const color = delta > 0 ? '#34C759' : delta < 0 ? '#FF453A' : 'var(--text-3)';
-  const deltaLabel = delta === 0 ? 'no change' : `${delta > 0 ? '+' : ''}${delta} pts`;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
-        <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.7" />
-        {(() => { const [lx, ly] = pts.split(' ').pop()!.split(','); return <circle cx={lx} cy={ly} r="2.5" fill={color} />; })()}
-      </svg>
-      <span style={{ fontSize: 10, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{deltaLabel}</span>
-    </div>
-  );
-}
-
-/* ── Dilly AI action row (read-only, mark done) ── */
-function ActionRow({ item, onComplete }: { item: any; onComplete: (id: string) => void }) {
-  const [completing, setCompleting] = useState(false);
-  const dimColor = item.dimension === 'smart' ? '#2B3A8E' : item.dimension === 'grit' ? '#C9A84C' : item.dimension === 'build' ? '#34C759' : null;
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 16px',
-      borderBottom: '1px solid var(--border-main)',
-      opacity: completing ? 0.35 : 1, transition: 'opacity 250ms ease',
-    }}>
-      <button onClick={() => { setCompleting(true); onComplete(item.id); }} style={{
-        width: 17, height: 17, borderRadius: 4, border: '1.5px solid var(--border-main)',
-        background: 'var(--surface-2)', cursor: 'pointer', flexShrink: 0, marginTop: 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-        transition: 'border-color 140ms, background 140ms',
-      }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#34C759'; (e.currentTarget as HTMLElement).style.background = 'rgba(52,199,89,0.1)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-main)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
-      />
-      <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>{item.text}</span>
-      {dimColor && (
-        <span style={{ fontSize: 9, fontWeight: 700, color: dimColor, background: dimColor + '15', padding: '2px 6px', borderRadius: 4, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {item.dimension}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* ── User task row ── */
-function UserTaskRow({ task, onChange, onDelete }: {
-  task: UserTask;
-  onChange: (updated: UserTask) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(task.text);
-  const [draftDate, setDraftDate] = useState(task.date || '');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { if (editing) setTimeout(() => inputRef.current?.focus(), 20); }, [editing]);
-
-  function save() {
-    if (!draft.trim()) { onDelete(task.id); return; }
-    onChange({ ...task, text: draft.trim(), date: draftDate || undefined });
-    setEditing(false);
-  }
-
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px',
-      borderBottom: '1px solid var(--border-main)',
-      opacity: task.done ? 0.4 : 1, transition: 'opacity 200ms',
-    }}>
-      {/* Check */}
-      <button onClick={() => onChange({ ...task, done: !task.done })} style={{
-        width: 17, height: 17, borderRadius: 4, flexShrink: 0,
-        border: task.done ? '1.5px solid #5B8DEF' : '1.5px solid var(--border-main)',
-        background: task.done ? '#5B8DEF' : 'var(--surface-2)',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-        transition: 'all 140ms',
-      }}>
-        {task.done && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-      </button>
-
-      {/* Text / edit inline */}
-      {editing ? (
-        <div style={{ flex: 1, display: 'flex', gap: 6, alignItems: 'center' }}>
-          <input ref={inputRef} value={draft} onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-            style={{
-              flex: 1, fontSize: 12.5, padding: '2px 6px', borderRadius: 5,
-              border: '1px solid #5B8DEF', background: 'var(--surface-2)', color: 'var(--text-1)',
-              outline: 'none',
-            }}
-          />
-          <input type="date" value={draftDate} onChange={e => setDraftDate(e.target.value)}
-            style={{
-              fontSize: 11, padding: '2px 6px', borderRadius: 5,
-              border: '1px solid var(--border-main)', background: 'var(--surface-2)', color: 'var(--text-2)',
-              outline: 'none', width: 110,
-            }}
-          />
-          <button onClick={save} style={{ fontSize: 11, fontWeight: 600, color: '#5B8DEF', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}>Save</button>
-          <button onClick={() => setEditing(false)} style={{ fontSize: 11, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}>×</button>
-        </div>
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}>
+      <p style={{ fontSize: small ? 9 : 11, fontWeight: 600, color: 'var(--text-3)', letterSpacing: small ? 1 : 2, textTransform: 'uppercase', margin: 0 }}>{label}</p>
+      {value > 0 ? (
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: small ? 16 : 28, fontWeight: 700, color: isDilly ? '#2B3A8E' : color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+          <AnimNum value={value} delay={delay} />
+        </p>
       ) : (
-        <>
-          <span style={{ flex: 1, fontSize: 12.5, color: task.done ? 'var(--text-3)' : 'var(--text-2)', lineHeight: 1.5, textDecoration: task.done ? 'line-through' : 'none', cursor: 'text' }}
-            onDoubleClick={() => { if (!task.done) { setDraft(task.text); setDraftDate(task.date || ''); setEditing(true); } }}>
-            {task.text}
-          </span>
-          {task.date && !task.done && (
-            <span style={{ fontSize: 10, color: 'var(--text-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-              {new Date(task.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </span>
-          )}
-          {/* Edit icon */}
-          {!task.done && (
-            <button onClick={() => { setDraft(task.text); setDraftDate(task.date || ''); setEditing(true); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2, flexShrink: 0, opacity: 0.6, lineHeight: 1 }}
-              title="Edit">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
-          )}
-          {/* Delete icon */}
-          <button onClick={() => onDelete(task.id)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2, flexShrink: 0, opacity: 0.5, lineHeight: 1 }}
-            title="Delete"
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FF453A'; (e.currentTarget as HTMLElement).style.opacity = '1'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; (e.currentTarget as HTMLElement).style.opacity = '0.5'; }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-            </svg>
-          </button>
-        </>
+        <div style={{ width: '50%', height: small ? 3 : 4, background: 'var(--border-main)', borderRadius: 2, margin: small ? '4px 0' : '8px 0' }}>
+          <div style={{ height: '100%', borderRadius: 2, backgroundColor: isDilly ? '#2B3A8E' : color, width: '100%' }} />
+        </div>
       )}
     </div>
   );
 }
 
-/* ── Add task row ── */
-function AddTaskRow({ onAdd }: { onAdd: (text: string, date?: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState('');
-  const [date, setDate] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 20); }, [open]);
-
-  function submit() {
-    if (!text.trim()) { setOpen(false); return; }
-    onAdd(text.trim(), date || undefined);
-    setText(''); setDate(''); setOpen(false);
-  }
-
-  if (!open) {
-    return (
-      <button onClick={() => setOpen(true)} style={{
-        display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-        padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer',
-        fontSize: 12, color: 'var(--text-3)', textAlign: 'left',
-        transition: 'color 120ms',
-      }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#5B8DEF'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-3)'; }}>
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-        Add task
-      </button>
-    );
-  }
-
+function MiniBar({ label, value, color, delay }: { label: string; value: number; color: string; delay: number }) {
+  const [w, setW] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setW(value), delay); return () => clearTimeout(t); }, [value, delay]);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderTop: '1px solid var(--border-main)' }}>
-      <input ref={inputRef} value={text} onChange={e => setText(e.target.value)} placeholder="Task name"
-        onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') { setOpen(false); setText(''); setDate(''); } }}
-        style={{
-          flex: 1, fontSize: 12.5, padding: '4px 8px', borderRadius: 6,
-          border: '1px solid #5B8DEF', background: 'var(--surface-2)', color: 'var(--text-1)',
-          outline: 'none',
-        }}
-      />
-      <input type="date" value={date} onChange={e => setDate(e.target.value)}
-        style={{
-          fontSize: 11, padding: '4px 6px', borderRadius: 6, width: 110,
-          border: '1px solid var(--border-main)', background: 'var(--surface-2)', color: 'var(--text-2)',
-          outline: 'none',
-        }}
-      />
-      <button onClick={submit} style={{
-        height: 28, padding: '0 12px', borderRadius: 6, fontSize: 11, fontWeight: 700,
-        color: '#fff', background: '#5B8DEF', border: 'none', cursor: 'pointer', flexShrink: 0,
-      }}>Add</button>
-      <button onClick={() => { setOpen(false); setText(''); setDate(''); }} style={{
-        height: 28, width: 28, borderRadius: 6, fontSize: 14, fontWeight: 500,
-        color: 'var(--text-3)', background: 'none', border: '1px solid var(--border-main)', cursor: 'pointer', flexShrink: 0,
-      }}>×</button>
+    <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+        <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-3)' }}>{label}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{Math.round(value)}</span>
+      </div>
+      <div style={{ height: 3, background: 'var(--border-main)', borderRadius: 2 }}>
+        <div style={{ height: '100%', borderRadius: 2, backgroundColor: color, width: w + '%', transition: 'width 800ms cubic-bezier(0.16, 1, 0.3, 1)' }} />
+      </div>
     </div>
   );
 }
 
-/* ════════════════════════════════════════
-   PAGE
-════════════════════════════════════════ */
+function smartCapitalize(name: string): string {
+  // Known patterns that need special casing
+  const special: Record<string, string> = {};
+  return name.split(' ').map(word => {
+    if (!word) return word;
+    const lower = word.toLowerCase();
+    // If the original already has mixed case like DeLoe or McLaughlin, keep it
+    if (word.length > 2 && word !== word.toLowerCase() && word !== word.toUpperCase() && word.charAt(0) === word.charAt(0).toUpperCase()) {
+      return word;
+    }
+    // Handle O'Brien, O'Connor
+    if (lower.startsWith("o'") && word.length > 2) {
+      return "O'" + word.charAt(2).toUpperCase() + word.slice(3).toLowerCase();
+    }
+    // Handle D'Angelo
+    if (lower.startsWith("d'") && word.length > 2) {
+      return "D'" + word.charAt(2).toUpperCase() + word.slice(3).toLowerCase();
+    }
+    // Handle Mc prefix (McDonald, McLaughlin)
+    if (lower.startsWith('mc') && word.length > 2) {
+      return 'Mc' + word.charAt(2).toUpperCase() + word.slice(3).toLowerCase();
+    }
+    // Handle Mac prefix (MacArthur) - only if original had it
+    if (lower.startsWith('mac') && word.length > 3 && word.charAt(3) === word.charAt(3).toUpperCase()) {
+      return 'Mac' + word.charAt(3).toUpperCase() + word.slice(4).toLowerCase();
+    }
+    // Standard: first letter upper, rest lower
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+function ScoreHistoryChart({ history, currentScore }: { history: ScoreSnapshot[]; currentScore: number }) {
+  if (history.length < 2) return null;
+
+  const W = 560; const H = 120; const PAD = { top: 12, right: 16, bottom: 28, left: 32 };
+  const minScore = Math.max(0, Math.min(...history.map(s => s.dilly)) - 10);
+  const maxScore = Math.min(100, Math.max(...history.map(s => s.dilly)) + 10);
+  const xScale = (i: number) => PAD.left + (i / (history.length - 1)) * (W - PAD.left - PAD.right);
+  const yScale = (v: number) => PAD.top + (1 - (v - minScore) / (maxScore - minScore)) * (H - PAD.top - PAD.bottom);
+
+  const points = history.map((s, i) => `${xScale(i)},${yScale(s.dilly)}`).join(' ');
+  const fillPts = `${xScale(0)},${H - PAD.bottom} ${points} ${xScale(history.length - 1)},${H - PAD.bottom}`;
+
+  // Find milestones
+  const milestones: { idx: number; label: string }[] = [];
+  for (let i = 1; i < history.length; i++) {
+    const m = getMilestone(history[i - 1].dilly, history[i].dilly);
+    if (m) milestones.push({ idx: i, label: m });
+  }
+
+  const first = history[0];
+  const last = history[history.length - 1];
+  const delta = last.dilly - first.dilly;
+  const daySpan = Math.round((last.ts - first.ts) / 86400000) || 1;
+
+  return (
+    <div className="animate-fade-in" style={{ animationDelay: '600ms', marginTop: 40, paddingTop: 32, borderTop: '1px solid var(--border-main)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: 'var(--text-1)', letterSpacing: 1.5, textTransform: 'uppercase', margin: '0 0 4px' }}>
+            Your trajectory
+          </h2>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            {daySpan === 1 ? 'Today' : `${daySpan} days`} &middot; {history.length} sessions tracked
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 20, textAlign: 'right' as const }}>
+          <div>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, margin: '0 0 2px' }}>Change</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: delta >= 0 ? '#34C759' : '#FF453A', margin: 0 }}>
+              {delta >= 0 ? '+' : ''}{delta}
+            </p>
+          </div>
+          <div>
+            <p style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, margin: '0 0 2px' }}>Now</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: currentScore >= 80 ? '#34C759' : currentScore >= 60 ? '#FF9F0A' : '#FF453A', margin: 0 }}>
+              {currentScore}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, overflow: 'visible' }}>
+        <defs>
+          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#2B3A8E" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="#2B3A8E" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        {[60, 70, 80, 90].map(v => {
+          const y = yScale(v);
+          if (y < PAD.top || y > H - PAD.bottom) return null;
+          return (
+            <g key={v}>
+              <line x1={PAD.left} y1={y} x2={W - PAD.right} y2={y} stroke="var(--border-main)" strokeWidth="1" />
+              <text x={PAD.left - 4} y={y + 3.5} textAnchor="end" fill="var(--text-3)" fontSize="9" fontFamily="monospace">{v}</text>
+            </g>
+          );
+        })}
+
+        {/* Fill area */}
+        <polygon points={fillPts} fill="url(#chartFill)" />
+
+        {/* Line */}
+        <polyline points={points} fill="none" stroke="#2B3A8E" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+        {/* Milestone dots */}
+        {milestones.map(m => {
+          const x = xScale(m.idx); const y = yScale(history[m.idx].dilly);
+          return (
+            <g key={m.idx}>
+              <circle cx={x} cy={y} r="5" fill="#2B3A8E" stroke="var(--surface-0)" strokeWidth="2" />
+              <text x={x} y={y - 8} textAnchor="middle" fill="#2B3A8E" fontSize="9" fontWeight="600">{m.label}</text>
+            </g>
+          );
+        })}
+
+        {/* Current dot */}
+        <circle cx={xScale(history.length - 1)} cy={yScale(last.dilly)} r="5" fill="#2B3A8E" stroke="var(--surface-0)" strokeWidth="2" />
+
+        {/* X-axis date labels */}
+        {[0, Math.floor((history.length - 1) / 2), history.length - 1].map(i => {
+          const snap = history[i];
+          const d = new Date(snap.ts);
+          const label = (d.getMonth() + 1) + '/' + d.getDate();
+          return <text key={i} x={xScale(i)} y={H - PAD.bottom + 14} textAnchor="middle" fill="var(--text-3)" fontSize="9">{label}</text>;
+        })}
+      </svg>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { profile } = useProfile();
-  const { fireProactiveCoach } = useRightPanel();
   const router = useRouter();
-  const [richCtx, setRichCtx] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
   const [topJobs, setTopJobs] = useState<any[]>([]);
-  const [exploreJobs, setExploreJobs] = useState<any[]>([]);
-  const [jobsLoaded, setJobsLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [readyCount, setReadyCount] = useState<number>(0);
-  const [actionItems, setActionItems] = useState<any[]>([]);
-  const [userTasks, setUserTasks] = useState<UserTask[]>([]);
-  const [scoreHistory, setScoreHistory] = useState<ScoreSnapshot[]>([]);
-
-  async function completeAction(id: string) {
-    setActionItems(prev => prev.filter(a => a.id !== id));
-    try { await dilly.patch(`/actions/${id}`, { done: true, done_at: new Date().toISOString() }); } catch {}
-  }
-
-  const persistTasks = useCallback((tasks: UserTask[]) => {
-    setUserTasks(tasks);
-    saveUserTasks(tasks);
-  }, []);
-
-  function addUserTask(text: string, date?: string) {
-    const task: UserTask = { id: String(Date.now()), text, date, done: false, createdAt: new Date().toISOString() };
-    persistTasks([...userTasks, task]);
-  }
-
-  function updateUserTask(updated: UserTask) {
-    persistTasks(userTasks.map(t => t.id === updated.id ? updated : t));
-  }
-
-  function deleteUserTask(id: string) {
-    persistTasks(userTasks.filter(t => t.id !== id));
-  }
+  const [history, setHistory] = useState<ScoreSnapshot[]>([]);
 
   useEffect(() => {
+    // Profile is already in context — just save snapshot and load secondary data
     saveSnapshot(profile.overall_smart || 0, profile.overall_grit || 0, profile.overall_build || 0, profile.overall_dilly_score || 0);
+    setHistory(getDailyHistory());
 
-    dilly.blob('/profile/photo').then(b => { if (b) setPhotoUrl(URL.createObjectURL(b)); }).catch(() => {});
-
-    dilly.get('/ai/context').then(setRichCtx).catch(() => {});
-
-    dilly.get('/v2/internships/stats').then((s: any) => setReadyCount(s?.ready || 0)).catch(() => {});
-
-    dilly.get('/actions').then((r: any) => setActionItems(r?.undone || [])).catch(() => {});
-
-    setScoreHistory(getDailyHistory().slice(-8));
-    setUserTasks(loadUserTasks());
-
-    const usStates = /^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i;
-    const intl = /argentina|colombia|poland|ireland|london|berlin|paris|tokyo|singapore|sydney|mumbai|india|israel|amsterdam|dublin|hong kong|brazil|mexico|uk|europe|emea|apac|latam|germany|france|italy|spain/i;
-    const broadNational = /^(united states|usa|u\.s\.|nationwide|multiple locations?|various|anywhere)$/i;
-
-    function normalizeJob(l: any, label: string) {
-      return { id: l.id, title: l.title, company: l.company, label, readiness: l.readiness_label || label,
-        location: [l.location_city, l.location_state].filter(Boolean).join(', ') };
-    }
-    function domFilter(listings: any[]) {
-      return listings.filter((l: any) => {
-        const st = (l.location_state || '').trim(); const ci = (l.location_city || '').toLowerCase();
-        if (intl.test(ci + ' ' + st.toLowerCase())) return false;
-        const isBroad = broadNational.test(ci.trim()) || broadNational.test(st.trim());
-        return l.work_mode === 'remote' || isBroad || usStates.test(st) || (!ci && !st);
-      });
-    }
-
-    dilly.get('/v2/internships/feed?readiness=ready&limit=6').then((d: any) => {
-      const filtered = domFilter(d.listings || []);
-      const ready = filtered.slice(0, 6).map((l: any) => normalizeJob(l, 'READY'));
-      setTopJobs(ready);
-      setJobsLoaded(true);
-      if (ready.length === 0) {
-        // Fall back to general explore feed
-        dilly.get('/v2/internships/feed?limit=8').then((ex: any) => {
-          const exp = domFilter(ex.listings || []).slice(0, 6).map((l: any) => normalizeJob(l, 'EXPLORE'));
-          setExploreJobs(exp);
-        }).catch(() => {});
-      }
-    }).catch(() => { setJobsLoaded(true); });
+    Promise.all([
+      dilly.blob('/profile/photo').then(b => { if (b) setPhotoUrl(URL.createObjectURL(b)); }).catch(() => {}),
+      dilly.get('/v2/internships/stats').then(setStats).catch(() => {}),
+      dilly.get('/v2/internships/feed?readiness=ready&limit=8').then((d: any) => {
+        const usStates = /^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i;
+        const intl = /argentina|colombia|poland|ireland|london|berlin|paris|tokyo|singapore|sydney|mumbai|india|israel|amsterdam|dublin|hong kong|brazil|mexico|uk|europe|emea|apac|latam|germany|france|italy|spain/i;
+        const filtered = (d.listings || []).filter((l: any) => {
+          const st = (l.location_state || '').trim(); const ci = (l.location_city || '').toLowerCase();
+          if (intl.test(ci + ' ' + st.toLowerCase())) return false;
+          return l.work_mode === 'remote' || usStates.test(st) || (!ci && !st);
+        });
+        setTopJobs(filtered.slice(0, 6).map((l: any) => ({ id: l.id, title: l.title, company: l.company, location: [l.location_city, l.location_state].filter(Boolean).join(', ') })));
+      }).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, [profile]);
 
-  /* ── Derived values ── */
+  const cohorts = (Object.values(profile.cohort_scores || {}) as any[]).sort((a: any, b: any) => b.dilly_score - a.dilly_score);
+  const fullName = profile.name;
+  const name = fullName ?? '';
   const smart = Math.round(profile?.overall_smart || 0);
-  const grit  = Math.round(profile?.overall_grit  || 0);
+  const grit = Math.round(profile?.overall_grit || 0);
   const build = Math.round(profile?.overall_build || 0);
-  const score = Math.round(profile?.overall_dilly_score || 0);
-  const majors = (profile?.majors || []).join(' & ');
-  const minors = (profile?.minors || []).join(' & ');
-  const name = profile?.name || '';
-  const school = profile?.school || '';
-
-  const weakest     = richCtx?.weakest_dimension || null;
-  const dillyTake   = richCtx?.dilly_take || null;
-  const ac          = richCtx?.app_counts || { saved: 0, applied: 0, interviewing: 0, offer: 0, rejected: 0 };
-  const allDeadlines = (richCtx?.upcoming_deadlines || []).filter((d: any) => d.days_until >= 0);
-  const interviewDeadlines = allDeadlines.filter((d: any) => /interview/i.test(d.label));
-  const deadlines   = allDeadlines.slice(0, 5);
-
+  const dillyScore = Math.round(profile?.overall_dilly_score || 0);
+  const majors = profile?.majors || [];
+  const minors = profile?.minors || [];
+  const strongestCohort = cohorts[0];
+  const weakestCohort = cohorts[cohorts.length - 1];
+  const strongestDim = build >= grit && build >= smart ? 'Build' : grit >= smart ? 'Grit' : 'Smart';
   const h = new Date().getHours();
   const greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-
-  const dimColor = (v: number) => v >= 75 ? '#34C759' : v >= 55 ? '#FF9F0A' : '#FF453A';
 
   return (
-    <div style={{ height: '100%', overflow: 'auto' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 36px 48px' }}>
+    <div style={{ height: '100%', overflow: 'auto', padding: '36px 44px' }}>
 
-        {/* ── Identity header ── */}
-        <div className="animate-fade-in" style={{
-          display: 'flex', alignItems: 'center', gap: 16,
-          marginBottom: 28, paddingBottom: 24, borderBottom: '1px solid var(--border-main)',
-        }}>
-          {/* Photo */}
+      {/* Profile header */}
+      <div className="animate-fade-in" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, paddingBottom: 28, borderBottom: '1px solid var(--border-main)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div style={{
-            width: 64, height: 64, borderRadius: '50%', flexShrink: 0,
-            background: 'var(--surface-2)', border: '2px solid var(--border-main)',
-            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 180, height: 180, borderRadius: 90, background: 'var(--surface-2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            border: '3px solid var(--border-main)', overflow: 'hidden',
           }}>
-            {photoUrl
-              ? <img src={photoUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: 24, fontWeight: 600, color: 'var(--text-3)' }}>{name.charAt(0)}</span>
-            }
+            {photoUrl ? (
+              <img src={photoUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: 64, fontWeight: 600, color: 'var(--text-3)' }}>{name.charAt(0)}</span>
+            )}
           </div>
-
-          {/* Name + details */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1)', margin: '0 0 3px', letterSpacing: -0.4, lineHeight: 1.2 }}>
-              {greet}, {name.split(' ')[0]}
+          <div>
+            <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: 38, fontWeight: 700, color: 'var(--text-1)', letterSpacing: 0.5, margin: 0 }}>
+              {smartCapitalize(name)}
             </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              {majors && <span style={{ fontSize: 13, fontWeight: 600, color: '#2B3A8E' }}>{majors}</span>}
-              {minors && (
-                <>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>·</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{minors}</span>
-                </>
-              )}
-              {school && (
-                <>
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>·</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{school}</span>
-                </>
+            <div style={{ marginTop: 10 }}>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 600, color: '#2B3A8E', margin: 0, lineHeight: 1.3 }}>
+                {majors.join(' & ')}
+              </p>
+              {minors.length > 0 && (
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: '#2B3A8E', margin: '4px 0 0', lineHeight: 1.3 }}>
+                  {minors.join(' & ')}
+                </p>
               )}
             </div>
-          </div>
 
-          <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{dateStr}</span>
-        </div>
-
-        {/* ── Score hero ── */}
-        <div className="animate-fade-in" style={{
-          animationDelay: '100ms',
-          background: 'var(--surface-1)', border: '1px solid var(--border-main)',
-          borderRadius: 14, padding: '20px 28px', marginBottom: 24,
-          display: 'flex', alignItems: 'center', gap: 32,
-        }}>
-          {/* Score */}
-          <div style={{ flexShrink: 0 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-3)', margin: '0 0 2px' }}>
-              Dilly Score
-            </p>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-              <span style={{ fontSize: 48, fontWeight: 900, color: '#2B3A8E', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                <AnimNum value={score} delay={200} />
-              </span>
-              <span style={{ fontSize: 16, color: 'var(--text-3)', fontWeight: 500 }}>/100</span>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ width: 1, height: 48, background: 'var(--border-main)', flexShrink: 0 }} />
-
-          {/* S / G / B */}
-          <div style={{ display: 'flex', gap: 24, flexShrink: 0 }}>
-            <DimChip label="Smart" value={smart} delay={400} />
-            <DimChip label="Grit"  value={grit}  delay={500} />
-            <DimChip label="Build" value={build}  delay={600} />
-          </div>
-
-          {/* Weakest dim insight */}
-          {weakest && (
-            <>
-              <div style={{ width: 1, height: 48, background: 'var(--border-main)', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                <span style={{ fontWeight: 700, color: dimColor(weakest === 'smart' ? smart : weakest === 'grit' ? grit : build), textTransform: 'capitalize' }}>{weakest}</span>
-                {' '}is your weakest dimension
-                {dillyTake && <span style={{ color: 'var(--text-3)' }}> · {dillyTake}</span>}
-              </span>
-            </>
-          )}
-
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-            <ScoreSparkline history={scoreHistory} currentScore={score} />
-            <button onClick={() => router.push('/scores')} style={{
-              height: 32, padding: '0 14px', borderRadius: 8,
-              fontSize: 11, fontWeight: 600, color: '#2B3A8E',
-              background: 'rgba(59,76,192,0.07)', border: '1px solid rgba(59,76,192,0.15)', cursor: 'pointer',
-            }}>
-              Full scores &rarr;
-            </button>
+            <p style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}>{profile.school}</p>
           </div>
         </div>
 
-        {/* ── Three columns ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 240px', gap: 20, marginBottom: 20 }}>
-
-          {/* ─ Col 1: Pipeline ─ */}
-          <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <SectionLabel>Pipeline</SectionLabel>
-            <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)', borderRadius: 12, overflow: 'hidden' }}>
-              <PipelineStage label="Saved" count={ac.saved} color="var(--text-3)" onClick={() => router.push('/tracker')}
-                icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>}
-              />
-              <PipelineStage label="Applied" count={ac.applied} color="#2B3A8E" onClick={() => router.push('/tracker')}
-                icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>}
-              />
-              <PipelineStage label="Interviewing" count={ac.interviewing} color="#FF9F0A" onClick={() => router.push('/tracker')}
-                icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>}
-              />
-              <PipelineStage label="Offers" count={ac.offer} color="#34C759" onClick={() => router.push('/tracker')}
-                icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-              />
-              <PipelineStage label="Rejected" count={ac.rejected} color="#FF453A" onClick={() => router.push('/tracker')}
-                icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>}
-              />
-            </div>
-
-            <button onClick={() => router.push('/tracker')} style={{
-              marginTop: 8, width: '100%', height: 32, borderRadius: 8, fontSize: 11, fontWeight: 600,
-              color: '#2B3A8E', background: 'rgba(59,76,192,0.06)', border: '1px solid rgba(59,76,192,0.15)',
-              cursor: 'pointer',
-            }}>
-              Open tracker &rarr;
-            </button>
-          </div>
-
-          {/* ─ Col 2: Ready to apply / Explore ─ */}
-          {(() => {
-            const showingExplore = jobsLoaded && topJobs.length === 0;
-            const displayJobs = showingExplore ? exploreJobs : topJobs;
+        {/* Cohort Dilly scores in header */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(' + cohorts.length + ', 1fr)', gap: 8 }}>
+          {cohorts.map((c: any, i: number) => {
+            const sc = Math.round(c.dilly_score);
+            const col = sc >= 75 ? '#34C759' : sc >= 55 ? '#FF9F0A' : '#FF453A';
+            const bg = sc >= 75 ? 'rgba(52,199,89,0.06)' : sc >= 55 ? 'rgba(255,159,10,0.06)' : 'rgba(255,69,58,0.06)';
+            const border = sc >= 75 ? 'rgba(52,199,89,0.15)' : sc >= 55 ? 'rgba(255,159,10,0.15)' : 'rgba(255,69,58,0.15)';
+            const shortName = c.cohort.replace('Software Engineering & CS', 'CS').replace('Data Science & Analytics', 'Data Sci').replace('Entrepreneurship & Innovation', 'Startup').replace('Physical Sciences & Math', 'Math').replace('Consulting & Strategy', 'Consulting').replace('Social Sciences & Nonprofit', 'Social Sci');
             return (
-              <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <SectionLabel>
-                    {showingExplore ? 'Explore jobs' : (
-                      <>Ready to apply{readyCount > 0 && <span style={{ marginLeft: 6, color: '#34C759', fontVariantNumeric: 'tabular-nums' }}>({readyCount})</span>}</>
-                    )}
-                  </SectionLabel>
-                  <button onClick={() => router.push('/jobs')} style={{ fontSize: 11, color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, marginBottom: 12 }}>
-                    View all &rarr;
-                  </button>
-                </div>
-
-                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)', borderRadius: 12, overflow: 'hidden' }}>
-                  {displayJobs.length === 0 ? (
-                    <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-                      <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>
-                        {!jobsLoaded ? 'Loading…' : 'Upload your resume to unlock matches.'}
-                      </p>
-                    </div>
-                  ) : (
-                    displayJobs.map((job, i) => {
-                      const isExplore = job.label === 'EXPLORE';
-                      return (
-                        <div key={job.id}
-                          onClick={() => router.push('/jobs')}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px',
-                            borderBottom: i < displayJobs.length - 1 ? '1px solid var(--border-main)' : 'none',
-                            cursor: 'pointer', transition: 'background 140ms ease',
-                          }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                        >
-                          <CompanyLogo company={job.company} size={32} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {job.title}
-                            </p>
-                            <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '2px 0 0' }}>{job.company}</p>
-                          </div>
-                          <span style={{
-                            fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 4, flexShrink: 0,
-                            color: isExplore ? '#5B8DEF' : '#34C759',
-                            background: isExplore ? 'rgba(91,141,239,0.1)' : 'rgba(52,199,89,0.1)',
-                          }}>
-                            {job.label}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {displayJobs.length > 0 && (
-                  <button onClick={() => router.push('/jobs')} style={{
-                    marginTop: 8, width: '100%', height: 32, borderRadius: 8, fontSize: 11, fontWeight: 600,
-                    color: showingExplore ? '#5B8DEF' : '#34C759',
-                    background: showingExplore ? 'rgba(91,141,239,0.06)' : 'rgba(52,199,89,0.06)',
-                    border: `1px solid ${showingExplore ? 'rgba(91,141,239,0.2)' : 'rgba(52,199,89,0.2)'}`,
-                    cursor: 'pointer',
-                  }}>
-                    {showingExplore ? 'Browse all jobs →' : `See all ${readyCount} ready matches →`}
-                  </button>
-                )}
+              <div key={c.cohort} className="animate-fade-in" style={{
+                animationDelay: (300 + i * 80) + 'ms',
+                padding: '24px 10px', minHeight: 190, textAlign: 'center' as const,
+                border: '1px solid ' + border, borderRadius: 12, background: bg,
+                display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10,
+                transition: 'transform 150ms ease', cursor: 'pointer',
+              }}
+                onMouseEnter={(e: any) => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={(e: any) => { e.currentTarget.style.transform = 'translateY(0)'; }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: 2, textTransform: 'uppercase', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{shortName}</p>
+                <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 52, fontWeight: 700, color: col, margin: 0, fontStyle: 'italic' }}>
+                  <AnimNum value={sc} delay={400 + i * 100} />
+                </p>
               </div>
             );
-          })()}
-
-          {/* ─ Col 3: Deadlines + Targets ─ */}
-          <div className="animate-fade-in" style={{ animationDelay: '400ms', display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-            {/* Deadlines */}
-            <div>
-              <SectionLabel>Up next</SectionLabel>
-              {deadlines.length === 0 ? (
-                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)', borderRadius: 12, padding: '20px 16px' }}>
-                  <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, textAlign: 'center' }}>No deadlines scheduled.</p>
-                  <button onClick={() => router.push('/calendar')} style={{ marginTop: 8, display: 'block', width: '100%', fontSize: 11, color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-                    Add one &rarr;
-                  </button>
-                </div>
-              ) : (
-                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)', borderRadius: 12, padding: '4px 16px' }}>
-                  {deadlines.map((dl: any, i: number) => (
-                    <DeadlineRow key={i} label={dl.label} daysUntil={dl.days_until} date={dl.date} />
-                  ))}
-                  <button onClick={() => router.push('/calendar')} style={{
-                    display: 'block', width: '100%', padding: '8px 0', fontSize: 11, color: '#2B3A8E',
-                    background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, textAlign: 'left',
-                  }}>
-                    Calendar &rarr;
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Interview prep card */}
-            {interviewDeadlines.length > 0 && (
-              <div>
-                <div style={{ background: 'rgba(255,159,10,0.06)', border: '1px solid rgba(255,159,10,0.25)', borderRadius: 12, padding: '14px 16px' }}>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: '#FF9F0A', letterSpacing: '0.14em', textTransform: 'uppercase', margin: '0 0 6px' }}>
-                    Interview coming up
-                  </p>
-                  <p style={{ fontSize: 12.5, color: 'var(--text-1)', fontWeight: 600, margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {interviewDeadlines[0].label}
-                  </p>
-                  <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 12px' }}>
-                    {interviewDeadlines[0].days_until === 0 ? 'Today' : interviewDeadlines[0].days_until === 1 ? 'Tomorrow' : `In ${interviewDeadlines[0].days_until} days`}
-                  </p>
-                  <button
-                    onClick={() => fireProactiveCoach(`Let's do a mock interview to prep for my upcoming ${interviewDeadlines[0].label}.`)}
-                    style={{
-                      width: '100%', height: 30, borderRadius: 8, fontSize: 11, fontWeight: 700,
-                      color: '#FF9F0A', background: 'rgba(255,159,10,0.1)', border: '1px solid rgba(255,159,10,0.3)', cursor: 'pointer',
-                    }}
-                  >
-                    Practice with Dilly &rarr;
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Audit nudge */}
-            {!richCtx && (
-              <div>
-                <div style={{ background: 'rgba(59,76,192,0.05)', border: '1px solid rgba(59,76,192,0.15)', borderRadius: 12, padding: '16px' }}>
-                  <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: '0 0 10px', lineHeight: 1.55 }}>
-                    Run an audit to see how you stack up against your target companies.
-                  </p>
-                  <button onClick={() => router.push('/audit')} style={{
-                    width: '100%', height: 32, borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    color: 'white', background: '#2B3A8E', border: 'none', cursor: 'pointer',
-                  }}>
-                    Run audit &rarr;
-                  </button>
-                </div>
-              </div>
-            )}
-
-          </div>
+          })}
         </div>
-
-        {/* ── Row 2: Action Items + Resume Health ── */}
-        <div className="animate-fade-in" style={{ animationDelay: '450ms', display: 'grid', gridTemplateColumns: '1fr 260px', gap: 20 }}>
-
-          {/* To Do */}
-          <div>
-            {(() => {
-              const activeTasks = userTasks.filter(t => !t.done);
-              const doneTasks = userTasks.filter(t => t.done);
-              const pendingCount = activeTasks.length + actionItems.length;
-              return (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <SectionLabel>To do</SectionLabel>
-                    {pendingCount > 0 && (
-                      <span style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>
-                        {pendingCount} pending
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)', borderRadius: 12, overflow: 'hidden' }}>
-
-                    {/* User tasks — active */}
-                    {activeTasks.map(task => (
-                      <UserTaskRow key={task.id} task={task} onChange={updateUserTask} onDelete={deleteUserTask} />
-                    ))}
-
-                    {/* Dilly AI suggestions */}
-                    {actionItems.slice(0, 4).map(item => (
-                      <ActionRow key={item.id} item={item} onComplete={completeAction} />
-                    ))}
-
-                    {/* Empty state */}
-                    {activeTasks.length === 0 && actionItems.length === 0 && (
-                      <div style={{ padding: '18px 16px', textAlign: 'center' }}>
-                        <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>No tasks yet. Add one below or chat with Dilly.</p>
-                      </div>
-                    )}
-
-                    {/* Add task */}
-                    <AddTaskRow onAdd={addUserTask} />
-
-                    {/* Done tasks (collapsed) */}
-                    {doneTasks.length > 0 && (
-                      <div style={{ borderTop: '1px solid var(--border-main)', padding: '8px 16px' }}>
-                        <span style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>
-                          {doneTasks.length} completed
-                          <button onClick={() => persistTasks(userTasks.filter(t => !t.done))}
-                            style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-                            Clear
-                          </button>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-
-          {/* Resume Health */}
-          <div>
-            <SectionLabel>Resume health</SectionLabel>
-            {(() => {
-              const days = richCtx?.days_since_audit ?? null;
-              const take = richCtx?.dilly_take || null;
-              const auditColor = days === null ? 'var(--text-3)' : days <= 7 ? '#34C759' : days <= 30 ? '#FF9F0A' : '#FF453A';
-              const auditNum = days === null ? '—' : days === 0 ? 'Today' : String(days);
-              const auditUnit = days === null ? '' : days === 0 ? '' : days === 1 ? 'day ago' : 'days ago';
-              return (
-                <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)', borderRadius: 12, padding: '16px' }}>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.14em', textTransform: 'uppercase', margin: '0 0 8px' }}>
-                    Time since last audit
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
-                    <span style={{ fontSize: 32, fontWeight: 900, color: auditColor, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
-                      {auditNum}
-                    </span>
-                    {auditUnit && (
-                      <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>
-                        {auditUnit}
-                      </span>
-                    )}
-                  </div>
-                  {take && (
-                    <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 14px', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {take}
-                    </p>
-                  )}
-                  <button onClick={() => router.push('/audit')} style={{
-                    width: '100%', height: 32, borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    color: '#2B3A8E', background: 'rgba(59,76,192,0.07)', border: '1px solid rgba(59,76,192,0.15)', cursor: 'pointer',
-                  }}>
-                    {days === null ? 'Run first audit' : 'Re-audit'} &rarr;
-                  </button>
-                </div>
-              );
-            })()}
-          </div>
-
-        </div>
-
       </div>
+
+      {/* Two columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
+
+        {/* Left: Dilly's advice + Ready jobs */}
+        <div>
+          <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: 'var(--text-1)', letterSpacing: 1.5, textTransform: 'uppercase', margin: '0 0 16px' }}>
+            What Dilly recommends
+          </h2>
+
+          <DillyNote delay={300}>
+            {greet}. You have <strong style={{ color: '#34C759' }}>{stats?.ready || 0} Ready matches</strong> right now.
+            Your strongest dimension is <strong style={{ color: '#2B3A8E' }}>{strongestDim}</strong> — that's what sets you apart.
+          </DillyNote>
+
+          {strongestCohort && (
+            <DillyNote delay={500}>
+              Your <strong>{strongestCohort.cohort}</strong> score is <strong style={{ color: '#34C759' }}>{Math.round(strongestCohort.dilly_score)}</strong>.
+              {weakestCohort && weakestCohort.cohort !== strongestCohort.cohort && (
+                <> Your <strong>{weakestCohort.cohort}</strong> at <strong style={{ color: '#FF9F0A' }}>{Math.round(weakestCohort.dilly_score)}</strong> has the most room to grow. </>
+              )}
+              <button onClick={() => router.push('/scores')} style={{ color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>View genome &rarr;</button>
+            </DillyNote>
+          )}
+
+          <DillyNote delay={700}>
+            {topJobs.length > 0 ? <>I found roles you're ready for. Apply this week — don't wait.</> : <>Upload your resume and I'll find matches.</>}
+          </DillyNote>
+
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', letterSpacing: 1.5, textTransform: 'uppercase', margin: 0 }}>Apply this week</p>
+              <button onClick={() => router.push('/jobs')} style={{ fontSize: 11, color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View all &rarr;</button>
+            </div>
+            {topJobs.map((job, i) => (
+              <div key={job.id} className="animate-fade-in" style={{
+                animationDelay: (800 + i * 60) + 'ms',
+                display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', borderRadius: 4,
+                cursor: 'pointer', transition: 'background 150ms ease',
+              }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-1)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                onClick={() => router.push('/jobs')}>
+                <CompanyLogo company={job.company} size={28} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '1px 0 0' }}>{job.company}</p>
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 600, color: '#34C759', background: 'rgba(52,199,89,0.08)', padding: '2px 8px', borderRadius: 3 }}>Ready</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right: Cohort cards with mini S/G/B */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 600, color: 'var(--text-1)', letterSpacing: 1.5, textTransform: 'uppercase', margin: 0 }}>
+              Cohort breakdown
+            </h2>
+            <button onClick={() => router.push('/scores')} style={{ fontSize: 11, color: '#2B3A8E', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>View genome &rarr;</button>
+          </div>
+
+          {/* Per-cohort grids */}
+          {cohorts.map((c: any, i: number) => {
+            const sc = Math.round(c.dilly_score);
+            const dillyCol = sc >= 75 ? '#34C759' : sc >= 55 ? '#FF9F0A' : '#FF453A';
+            return (
+              <div key={c.cohort} className="animate-fade-in" style={{ animationDelay: (400 + i * 120) + 'ms', marginBottom: 24, cursor: 'pointer' }} onClick={() => router.push('/scores')}>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: 'rgba(130,170,255,0.7)', letterSpacing: 2, textTransform: 'uppercase' as const, margin: '0 0 12px' }}>
+                  {c.cohort}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  <CohortSGBCard label="Smart" value={Math.round(c.smart)} delay={500 + i * 120} small />
+                  <CohortSGBCard label="Grit" value={Math.round(c.grit)} delay={600 + i * 120} small />
+                  <CohortSGBCard label="Build" value={Math.round(c.build)} delay={700 + i * 120} small />
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Overall S/G/B */}
+          <div className="animate-fade-in" style={{ animationDelay: (400 + cohorts.length * 120 + 100) + 'ms', marginTop: 24 }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: 'rgba(130,170,255,0.7)', letterSpacing: 2, textTransform: 'uppercase' as const, margin: '0 0 12px' }}>
+              Overall
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              <CohortSGBCard label="Smart" value={smart} delay={400 + cohorts.length * 120 + 200} small />
+              <CohortSGBCard label="Grit" value={grit} delay={400 + cohorts.length * 120 + 300} small />
+              <CohortSGBCard label="Build" value={build} delay={400 + cohorts.length * 120 + 400} small />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ScoreHistoryChart history={history} currentScore={dillyScore} />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { dilly } from '@/lib/dilly';
 import { useProfile } from '../layout';
 
@@ -10,106 +9,13 @@ interface CohortScore {
   dilly_score: number; weight: number;
 }
 
-type SimScores = Record<string, { smart: number; grit: number; build: number }>;
-
-const SHORT_NAMES: [string, string][] = [
-  ['Software Engineering & CS', 'CS'],
-  ['Data Science & Analytics', 'Data Science'],
-  ['Entrepreneurship & Innovation', 'Startup'],
-  ['Physical Sciences & Math', 'Math & Physics'],
-  ['Consulting & Strategy', 'Consulting'],
-  ['Social Sciences & Nonprofit', 'Social Sci'],
-  ['Architecture & Urban Planning', 'Architecture'],
-  ['Public Administration & Government', 'Public Admin'],
-  ['Foreign Languages & Linguistics', 'Languages'],
-  ['Marketing & Advertising', 'Marketing'],
-  ['Finance & Accounting', 'Finance'],
-  ['Management & Operations', 'Mgmt & Ops'],
-  ['Healthcare & Clinical', 'Healthcare'],
-  ['Life Sciences & Research', 'Life Sciences'],
-  ['Cybersecurity & IT', 'Cybersecurity'],
-  ['Media & Communications', 'Media'],
-  ['Law & Government', 'Law'],
-  ['Education & Teaching', 'Education'],
-  ['Fashion & Apparel', 'Fashion'],
-  ['Real Estate & Construction', 'Real Estate'],
-  ['Mechanical & Aerospace Engineering', 'Mech & Aero'],
-  ['Electrical & Computer Engineering', 'Elec & CompE'],
-  ['Civil & Environmental Engineering', 'Civil & Env'],
-  ['Chemical & Biomedical Engineering', 'Chem & BioE'],
-  ['Biotech & Pharmaceutical', 'Biotech'],
-  ['Economics & Public Policy', 'Economics'],
-  ['Industrial & Systems Engineering', 'Ind & Sys Eng'],
-];
-
-function shorten(name: string, maxLen = 18) {
-  for (const [full, short] of SHORT_NAMES) {
-    if (name.includes(full)) { name = name.replace(full, short); break; }
-  }
-  if (name.length > maxLen) name = name.slice(0, maxLen) + '…';
-  return name;
-}
-
 export default function ScoresPage() {
   const { profile } = useProfile();
-  const router = useRouter();
-  const cohorts = (Object.values(profile.cohort_scores || {}) as CohortScore[]).filter(c => c && c.cohort);
+  const cohorts = Object.values(profile.cohort_scores || {}) as CohortScore[];
   const overall = { smart: profile.overall_smart || 0, grit: profile.overall_grit || 0, build: profile.overall_build || 0, dilly: profile.overall_dilly_score || 0 };
   const [stats, setStats] = useState<any>(null);
   const [hoveredCohort, setHoveredCohort] = useState<string | null>(null);
-  const [expandedCohort, setExpandedCohort] = useState<string | null>(null);
-
-  // Per-cohort sim scores: initialized from each cohort's actual scores
-  const [simCohortScores, setSimCohortScores] = useState<SimScores>({});
-  const simInit = useRef(false);
-
-  // Initialise once cohorts are loaded
-  useEffect(() => {
-    if (!simInit.current && cohorts.length > 0) {
-      const init: SimScores = {};
-      cohorts.forEach(c => { init[c.cohort] = { smart: c.smart, grit: c.grit, build: c.build }; });
-      setSimCohortScores(init);
-      simInit.current = true;
-    }
-  }, [cohorts.length]); // eslint-disable-line
-
-  // Helpers
-  const getSimFor = (c: CohortScore) => simCohortScores[c.cohort] ?? { smart: c.smart, grit: c.grit, build: c.build };
-
-  const setSimDim = (cohort: string, dim: 'smart' | 'grit' | 'build', val: number) => {
-    setSimCohortScores(prev => ({
-      ...prev,
-      [cohort]: { ...(prev[cohort] ?? { smart: 0, grit: 0, build: 0 }), [dim]: val },
-    }));
-  };
-
-  const cohortHasChanges = (c: CohortScore) => {
-    const s = simCohortScores[c.cohort];
-    if (!s) return false;
-    return Math.round(s.smart) !== Math.round(c.smart)
-      || Math.round(s.grit) !== Math.round(c.grit)
-      || Math.round(s.build) !== Math.round(c.build);
-  };
-
-  const resetCohort = (c: CohortScore) =>
-    setSimCohortScores(prev => ({ ...prev, [c.cohort]: { smart: c.smart, grit: c.grit, build: c.build } }));
-
-  const resetAll = () => {
-    const init: SimScores = {};
-    cohorts.forEach(c => { init[c.cohort] = { smart: c.smart, grit: c.grit, build: c.build }; });
-    setSimCohortScores(init);
-  };
-
-  const anyChanges = cohorts.some(c => cohortHasChanges(c));
-
-  // Weighted-average delta across cohorts (for center score + match estimate)
-  const avgDelta = cohorts.length > 0
-    ? cohorts.reduce((sum, c) => {
-        const s = getSimFor(c);
-        return sum + (s.smart - c.smart) * 0.40 + (s.grit - c.grit) * 0.35 + (s.build - c.build) * 0.25;
-      }, 0) / cohorts.length
-    : 0;
-
+  const [simAdjust, setSimAdjust] = useState({ smart: 0, grit: 0, build: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -119,13 +25,13 @@ export default function ScoresPage() {
     dilly.get('/v2/internships/stats').then(setStats).catch(() => {});
   }, []);
 
-  // Resize canvas to fit left column
+  // Resize canvas to fit container
   useEffect(() => {
     function resize() {
       if (containerRef.current) {
         const w = containerRef.current.offsetWidth;
-        const availH = window.innerHeight - 360;
-        setCanvasSize(Math.min(w - 48, availH, 460));
+        const h = window.innerHeight - 200;
+        setCanvasSize(Math.min(w - 40, h, 700));
       }
     }
     resize();
@@ -149,7 +55,7 @@ export default function ScoresPage() {
 
     const cx = size / 2;
     const cy = size / 2;
-    const maxR = size / 2 - 96;
+    const maxR = size / 2 - 80;
     const n = cohorts.length;
 
     function draw(t: number) {
@@ -171,6 +77,7 @@ export default function ScoresPage() {
         ctx.lineWidth = ring === 4 ? 1.5 : 0.5;
         ctx.stroke();
 
+        // Ring labels
         if (ring < 4) {
           ctx.save();
           ctx.font = '9px Inter, system-ui';
@@ -181,7 +88,7 @@ export default function ScoresPage() {
         }
       }
 
-      // Axis lines + labels
+      // Axis lines
       cohorts.forEach((c, i) => {
         const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
         const ex = cx + Math.cos(angle) * maxR * breathe;
@@ -194,6 +101,7 @@ export default function ScoresPage() {
         ctx.lineWidth = hoveredCohort === c.cohort ? 2 : 0.5;
         ctx.stroke();
 
+        // Labels
         const labelR = maxR + 45;
         const lx = cx + Math.cos(angle) * labelR * breathe;
         const ly = cy + Math.sin(angle) * labelR * breathe;
@@ -203,15 +111,21 @@ export default function ScoresPage() {
         ctx.fillStyle = isHovered ? '#2B3A8E' : 'rgba(142,142,147,0.8)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(shorten(c.cohort), lx, ly);
+        const shortName = c.cohort
+          .replace('Software Engineering & CS', 'CS')
+          .replace('Data Science & Analytics', 'Data Science')
+          .replace('Entrepreneurship & Innovation', 'Entrepreneurship')
+          .replace('Physical Sciences & Math', 'Math & Physics')
+          .replace('Consulting & Strategy', 'Consulting')
+          .replace('Social Sciences & Nonprofit', 'Social Sciences');
+        ctx.fillText(shortName, lx, ly);
 
-        // Score under label — use simulated dilly for that cohort
-        const s = simCohortScores[c.cohort] ?? c;
-        const projectedScore = Math.min(100, Math.round(0.40 * s.smart + 0.35 * s.grit + 0.25 * s.build));
+        // Score under label
+        const score = Math.round(c.dilly_score);
         ctx.font = isHovered ? 'italic 16px Cormorant Garamond, serif' : 'italic 14px Cormorant Garamond, serif';
-        const scoreColor = projectedScore >= 75 ? '#34C759' : projectedScore >= 55 ? '#FF9F0A' : '#FF453A';
+        const scoreColor = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
         ctx.fillStyle = isHovered ? scoreColor : scoreColor + '80';
-        ctx.fillText(String(projectedScore), lx, ly + 16);
+        ctx.fillText(String(score), lx, ly + 16);
 
         // Level tag
         ctx.font = '8px Inter, system-ui';
@@ -221,17 +135,16 @@ export default function ScoresPage() {
         ctx.restore();
       });
 
-      // Data polygons (per-cohort sim values)
-      drawPoly(ctx, cohorts, cx, cy, maxR, breathe, n, 'smart', 'rgba(59,76,192,0.12)', 'rgba(59,76,192,0.6)', simCohortScores);
-      drawPoly(ctx, cohorts, cx, cy, maxR, breathe, n, 'grit', 'rgba(201,168,76,0.08)', 'rgba(201,168,76,0.5)', simCohortScores);
-      drawPoly(ctx, cohorts, cx, cy, maxR, breathe, n, 'build', 'rgba(52,199,89,0.08)', 'rgba(52,199,89,0.5)', simCohortScores);
+      // Data polygons
+      drawPoly(ctx, cohorts, cx, cy, maxR, breathe, n, 'smart', 'rgba(59,76,192,0.12)', 'rgba(59,76,192,0.6)', simAdjust.smart);
+      drawPoly(ctx, cohorts, cx, cy, maxR, breathe, n, 'grit', 'rgba(201,168,76,0.08)', 'rgba(201,168,76,0.5)', simAdjust.grit);
+      drawPoly(ctx, cohorts, cx, cy, maxR, breathe, n, 'build', 'rgba(52,199,89,0.08)', 'rgba(52,199,89,0.5)', simAdjust.build);
 
       // Vertex dots
       cohorts.forEach((c, i) => {
         const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
-        const s = simCohortScores[c.cohort] ?? c;
-        const projVal = Math.min((0.40 * s.smart + 0.35 * s.grit + 0.25 * s.build) / 100, 1);
-        const r = maxR * projVal * breathe;
+        const val = Math.min(c.dilly_score / 100, 1);
+        const r = maxR * val * breathe;
         const x = cx + Math.cos(angle) * r;
         const y = cy + Math.sin(angle) * r;
         const isH = hoveredCohort === c.cohort;
@@ -256,13 +169,13 @@ export default function ScoresPage() {
       });
 
       // Center score
-      const projectedDilly = Math.round(overall.dilly + avgDelta);
+      const dillyScore = Math.round(overall.dilly + (simAdjust.smart + simAdjust.grit + simAdjust.build) / 3);
       ctx.save();
       ctx.font = 'italic 56px Cormorant Garamond, serif';
       ctx.fillStyle = '#f5f5f7';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(String(projectedDilly), cx, cy - 10);
+      ctx.fillText(String(dillyScore), cx, cy - 10);
       ctx.font = '10px Inter, system-ui';
       ctx.fillStyle = 'rgba(142,142,147,0.5)';
       ctx.letterSpacing = '3px';
@@ -274,206 +187,167 @@ export default function ScoresPage() {
 
     animRef.current = requestAnimationFrame(() => draw(performance.now()));
     return () => cancelAnimationFrame(animRef.current);
-  }, [cohorts, hoveredCohort, simCohortScores, overall, canvasSize, avgDelta]); // eslint-disable-line
+  }, [cohorts, hoveredCohort, simAdjust, overall, canvasSize]);
 
-  const simMatches = stats ? Math.max(0, Math.round(stats.ready + avgDelta * 0.3)) : 0;
-
-  const radarInteract = {
-    onMouseMove: (e: React.MouseEvent) => {
-      if (!cohorts.length) return;
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const cx = canvasSize / 2, cy = canvasSize / 2, maxR = canvasSize / 2 - 80;
-      let closest: string | null = null;
-      let closestDist = 60;
-      cohorts.forEach((c, i) => {
-        const angle = (Math.PI * 2 * i / cohorts.length) - Math.PI / 2;
-        const val = c.dilly_score / 100;
-        const r = maxR * Math.min(val, 1);
-        const x = cx + Math.cos(angle) * r;
-        const y = cy + Math.sin(angle) * r;
-        const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
-        if (dist < closestDist) { closest = c.cohort; closestDist = dist; }
-      });
-      setHoveredCohort(closest);
-    },
-    onMouseLeave: () => setHoveredCohort(null),
-  };
+  const simMatches = stats ? Math.max(0, Math.round(stats.ready + (simAdjust.smart + simAdjust.grit + simAdjust.build) * 0.3)) : 0;
 
   return (
-    <div className="h-full flex overflow-hidden">
-      {/* LEFT COLUMN */}
-      <div ref={containerRef} className="flex flex-col overflow-hidden border-r border-border-main" style={{ width: '52%' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-1 flex-shrink-0">
-          <div>
-            <h1 className="font-display text-[26px] text-txt-1 tracking-tight">Career genome</h1>
-            <p className="text-[12px] text-txt-3">Your unique career readiness fingerprint</p>
+    <div className="h-full overflow-y-auto" ref={containerRef}>
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-8 pt-5 pb-2">
+        <div>
+          <h1 className="font-display text-[28px] text-txt-1 tracking-tight">Career genome</h1>
+          <p className="text-[13px] text-txt-3">Your unique career readiness fingerprint</p>
+        </div>
+        <div className="flex items-center gap-8">
+          <div className="text-right">
+            <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Live matches</p>
+            <p className="text-[28px] font-bold font-mono text-ready leading-none mt-1">{simMatches}</p>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Live matches</p>
-              <p className="text-[24px] font-bold font-mono text-ready leading-none mt-0.5">{simMatches}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Percentile</p>
-              <p className="text-[24px] font-bold font-mono text-dilly-blue leading-none mt-0.5">Top 15%</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Radar */}
-        <div className="flex justify-center flex-shrink-0">
-          <canvas ref={canvasRef} className="cursor-crosshair" {...radarInteract} />
-        </div>
-
-        {/* Legend */}
-        <div className="flex justify-center gap-6 flex-shrink-0 mb-1">
-          <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#2B3A8E'}}/><span className="text-[11px] text-txt-3">Smart</span></div>
-          <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#C9A84C'}}/><span className="text-[11px] text-txt-3">Grit</span></div>
-          <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#34C759'}}/><span className="text-[11px] text-txt-3">Build</span></div>
-        </div>
-
-        {/* Scrollable: per-cohort simulator */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-none">
-          <div className="bg-surface-1 rounded-xl p-4">
-            {/* Header row */}
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[10px] font-bold text-dilly-blue tracking-[0.15em] uppercase">What-if simulator</h3>
-              <div className="flex items-center gap-3">
-                {anyChanges && (
-                  <button onClick={resetAll}
-                    className="text-[11px] text-txt-3 hover:text-dilly-blue transition-colors">
-                    Reset all
-                  </button>
-                )}
-                <span className="text-[12px] font-mono text-ready font-bold">{simMatches} matches</span>
-              </div>
-            </div>
-
-            {/* Per-cohort accordion rows */}
-            <div className="space-y-0.5">
-              {cohorts.map(c => {
-                const sim = getSimFor(c);
-                const projected = Math.min(100, Math.round(0.40 * sim.smart + 0.35 * sim.grit + 0.25 * sim.build));
-                const current = Math.round(isNaN(c.dilly_score) ? 0 : c.dilly_score);
-                const diff = projected - current;
-                const projColor = projected >= 75 ? '#34C759' : projected >= 55 ? '#FF9F0A' : '#FF453A';
-                const isExpanded = expandedCohort === c.cohort;
-                const hasChanges = cohortHasChanges(c);
-                const name = shorten(c.cohort, 20);
-
-                return (
-                  <div key={c.cohort} className="rounded-lg overflow-hidden">
-                    {/* Row header */}
-                    <button
-                      onClick={() => setExpandedCohort(isExpanded ? null : c.cohort)}
-                      className="w-full flex items-center gap-2 px-2 py-2 hover:bg-surface-2 transition-colors rounded-lg"
-                    >
-                      {/* Chevron */}
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-                        style={{ flexShrink: 0, color: 'var(--text-3)', transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 150ms ease' }}>
-                        <path d="M2 1.5l3.5 2.5L2 6.5" />
-                      </svg>
-                      <span className="text-[11px] text-txt-2 flex-1 text-left truncate">{name}</span>
-                      {/* Change indicator dot */}
-                      {hasChanges && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#2B3A8E' }} />}
-                      {/* Projected score */}
-                      <span className="text-[12px] font-mono font-bold flex-shrink-0" style={{ color: projColor }}>{projected}</span>
-                      {/* Delta */}
-                      {diff !== 0
-                        ? <span className="text-[10px] font-mono w-8 text-right flex-shrink-0"
-                            style={{ color: diff > 0 ? '#34C759' : '#FF453A' }}>
-                            {diff > 0 ? '+' : ''}{diff}
-                          </span>
-                        : <span className="w-8 flex-shrink-0" />
-                      }
-                    </button>
-
-                    {/* Expanded sliders */}
-                    {isExpanded && (
-                      <div className="px-4 pb-3 pt-0.5 border-t border-border-main mt-0.5">
-                        <SimSlider label="Smart" value={sim.smart} base={c.smart} color="#2B3A8E"
-                          onChange={v => setSimDim(c.cohort, 'smart', v)} />
-                        <SimSlider label="Grit" value={sim.grit} base={c.grit} color="#C9A84C"
-                          onChange={v => setSimDim(c.cohort, 'grit', v)} />
-                        <SimSlider label="Build" value={sim.build} base={c.build} color="#34C759"
-                          onChange={v => setSimDim(c.cohort, 'build', v)} />
-                        {hasChanges && (
-                          <button onClick={() => resetCohort(c)}
-                            className="text-[11px] text-txt-3 hover:text-dilly-blue transition-colors mt-1">
-                            Reset
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+          <div className="text-right">
+            <p className="text-[9px] text-txt-3 font-bold uppercase tracking-widest">Percentile</p>
+            <p className="text-[28px] font-bold font-mono text-dilly-blue leading-none mt-1">Top 15%</p>
           </div>
         </div>
       </div>
 
-      {/* RIGHT COLUMN — AI Resilience + Cohort cards, scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-none">
-        <AIResiliencePanel build={overall.build} grit={overall.grit} smart={overall.smart} cohorts={cohorts} />
+      {/* Radar - centered, full width */}
+      <div className="flex justify-center py-2">
+        <canvas ref={canvasRef}
+          className="cursor-crosshair"
+          onMouseMove={(e) => {
+            if (!cohorts.length) return;
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const cx = canvasSize / 2, cy = canvasSize / 2, maxR = canvasSize / 2 - 80;
+            let closest: string | null = null;
+            let closestDist = 60;
+            cohorts.forEach((c, i) => {
+              const angle = (Math.PI * 2 * i / cohorts.length) - Math.PI / 2;
+              const val = c.dilly_score / 100;
+              const r = maxR * Math.min(val, 1);
+              const x = cx + Math.cos(angle) * r;
+              const y = cy + Math.sin(angle) * r;
+              const dist = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+              if (dist < closestDist) { closest = c.cohort; closestDist = dist; }
+            });
+            setHoveredCohort(closest);
+          }}
+          onMouseLeave={() => setHoveredCohort(null)}
+        />
+      </div>
 
-        {/* Cohort score cards — 2-col grid below AI Resilience */}
-        {cohorts.length > 0 && (
-          <div className="px-5 pb-6">
-            <p className="text-[9px] font-bold text-txt-3 tracking-[0.15em] uppercase mb-3">Cohort Scores</p>
-            <div className="grid grid-cols-2 gap-3">
-              {cohorts.map(c => {
-                const score = Math.round(isNaN(c.dilly_score) ? 0 : c.dilly_score);
-                const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
-                const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
-                const isH = hoveredCohort === c.cohort;
-                return (
-                  <button key={c.cohort}
-                    onClick={() => router.push(`/audit?cohort=${encodeURIComponent(c.cohort)}`)}
-                    onMouseEnter={() => setHoveredCohort(c.cohort)}
-                    onMouseLeave={() => setHoveredCohort(null)}
-                    className={`bg-surface-1 rounded-xl p-4 transition-all duration-200 cursor-pointer border text-left w-full
-                      ${isH ? 'border-dilly-blue/30 -translate-y-[1px] shadow-[0_4px_16px_rgba(59,76,192,0.08)]' : 'border-transparent'}`}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-1.5 py-0.5 rounded">{tag}</span>
-                      <span className="text-[18px] font-bold font-mono" style={{ color }}>{score}</span>
-                    </div>
-                    <p className="text-[12px] font-semibold text-txt-1 truncate mb-2">{c.cohort}</p>
-                    <div className="flex gap-3 text-[10px]">
-                      <span><span className="text-txt-3">S</span> <span className="font-bold font-mono text-dilly-blue">{Math.round(c.smart)}</span></span>
-                      <span><span className="text-txt-3">G</span> <span className="font-bold font-mono text-dilly-gold">{Math.round(c.grit)}</span></span>
-                      <span><span className="text-txt-3">B</span> <span className="font-bold font-mono text-ready">{Math.round(c.build)}</span></span>
-                    </div>
-                  </button>
-                );
-              })}
+      {/* Legend */}
+      <div className="flex justify-center gap-8 mb-6">
+        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#2B3A8E'}}/><span className="text-[11px] text-txt-3">Smart</span></div>
+        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#2B3A8E'}}/><span className="text-[11px] text-txt-3">Grit</span></div>
+        <div className="flex items-center gap-2"><div className="w-4 h-1.5 rounded-full" style={{background:'#34C759'}}/><span className="text-[11px] text-txt-3">Build</span></div>
+      </div>
+
+      {/* Bottom section: Simulator + Cohort cards */}
+      <div className="px-8 pb-8">
+        <div className="grid grid-cols-3 gap-4">
+          {/* Simulator */}
+          <div className="bg-surface-1 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-bold text-dilly-blue tracking-[0.15em] uppercase">What-if simulator</h3>
+              <span className="text-[13px] font-mono text-ready font-bold">{simMatches} matches</span>
             </div>
+            <SimSlider label="Smart" value={simAdjust.smart} color="#2B3A8E" onChange={v => setSimAdjust(p => ({ ...p, smart: v }))} />
+            <SimSlider label="Grit" value={simAdjust.grit} color="#2B3A8E" onChange={v => setSimAdjust(p => ({ ...p, grit: v }))} />
+            <SimSlider label="Build" value={simAdjust.build} color="#34C759" onChange={v => setSimAdjust(p => ({ ...p, build: v }))} />
+            {(simAdjust.smart !== 0 || simAdjust.grit !== 0 || simAdjust.build !== 0) && (
+              <button onClick={() => setSimAdjust({ smart: 0, grit: 0, build: 0 })}
+                className="text-[11px] text-txt-3 hover:text-dilly-blue mt-3 transition-colors">
+                Reset
+              </button>
+            )}
           </div>
-        )}
+
+          {/* Cohort cards */}
+          {cohorts.slice(0, 2).map(c => {
+            const score = Math.round(c.dilly_score);
+            const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
+            const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
+            const isH = hoveredCohort === c.cohort;
+            return (
+              <div key={c.cohort}
+                onMouseEnter={() => setHoveredCohort(c.cohort)}
+                onMouseLeave={() => setHoveredCohort(null)}
+                className={`bg-surface-1 rounded-xl p-5 transition-all duration-200 cursor-pointer border
+                  ${isH ? 'border-dilly-blue/30 -translate-y-[1px] shadow-[0_4px_20px_rgba(59,76,192,0.08)]' : 'border-transparent'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[8px] font-bold text-txt-3 tracking-widest bg-surface-2 px-1.5 py-0.5 rounded">{tag}</span>
+                  <span className="text-[13px] font-semibold text-txt-1 truncate">{c.cohort}</span>
+                  <span className="text-[20px] font-bold font-mono ml-auto" style={{ color }}>{score}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <MiniScore label="Smart" value={c.smart} color="#2B3A8E" />
+                  <MiniScore label="Grit" value={c.grit} color="#2B3A8E" />
+                  <MiniScore label="Build" value={c.build} color="#34C759" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Remaining cohort cards */}
+        <div className="grid grid-cols-4 gap-3 mt-3">
+          {cohorts.slice(2).map(c => {
+            const score = Math.round(c.dilly_score);
+            const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
+            const tag = c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : 'INTEREST';
+            const isH = hoveredCohort === c.cohort;
+            return (
+              <div key={c.cohort}
+                onMouseEnter={() => setHoveredCohort(c.cohort)}
+                onMouseLeave={() => setHoveredCohort(null)}
+                className={`bg-surface-1 rounded-xl p-4 transition-all duration-200 cursor-pointer border
+                  ${isH ? 'border-dilly-blue/30 -translate-y-[1px]' : 'border-transparent'}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[8px] font-bold text-txt-3 tracking-widest">{tag}</span>
+                  <span className="text-[16px] font-bold font-mono" style={{ color }}>{score}</span>
+                </div>
+                <p className="text-[12px] font-semibold text-txt-1 truncate">{c.cohort}</p>
+                <div className="flex gap-3 mt-2 text-[10px]">
+                  <span><span className="text-txt-3">S</span> <span className="font-bold font-mono text-dilly-blue">{Math.round(c.smart)}</span></span>
+                  <span><span className="text-txt-3">G</span> <span className="font-bold font-mono text-dilly-gold">{Math.round(c.grit)}</span></span>
+                  <span><span className="text-txt-3">B</span> <span className="font-bold font-mono text-ready">{Math.round(c.build)}</span></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* AI Resilience Panel */}
+        <AIResiliencePanel build={overall.build} grit={overall.grit} smart={overall.smart} cohorts={cohorts} />
       </div>
     </div>
   );
 }
 
-function SimSlider({ label, value, base, color, onChange }: {
-  label: string; value: number; base: number; color: string; onChange: (v: number) => void;
-}) {
-  const delta = Math.round(value - base);
+function SimSlider({ label, value, color, onChange }: { label: string; value: number; color: string; onChange: (v: number) => void }) {
   return (
-    <div className="flex items-center gap-2 mb-2 last:mb-0">
-      <span className="text-[11px] font-semibold w-10 flex-shrink-0" style={{ color }}>{label}</span>
-      <input type="range" min="0" max="100" value={Math.round(value)} step="1"
+    <div className="flex items-center gap-3 mb-3 last:mb-0">
+      <span className="text-[12px] font-semibold w-12" style={{ color }}>{label}</span>
+      <input type="range" min="-20" max="20" value={value} step="1"
         onChange={e => onChange(Number(e.target.value))}
         className="flex-1 h-1 cursor-pointer" style={{ accentColor: color }} />
-      <span className="text-[11px] font-mono font-bold w-7 text-right flex-shrink-0 text-txt-1">{Math.round(value)}</span>
-      <span className="text-[10px] font-mono w-8 text-right flex-shrink-0"
-        style={{ color: delta > 0 ? '#34C759' : delta < 0 ? '#FF453A' : '#48484A' }}>
-        {delta > 0 ? '+' : ''}{delta !== 0 ? delta : ''}
+      <span className="text-[12px] font-mono font-bold w-10 text-right"
+        style={{ color: value > 0 ? '#34C759' : value < 0 ? '#FF453A' : '#48484A' }}>
+        {value > 0 ? '+' : ''}{value}
       </span>
+    </div>
+  );
+}
+
+function MiniScore({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div>
+      <p className="text-[9px] text-txt-3 mb-0.5">{label}</p>
+      <p className="text-[16px] font-bold font-mono" style={{ color }}>{Math.round(value)}</p>
     </div>
   );
 }
@@ -504,7 +378,7 @@ function AIResiliencePanel({ build, grit, smart, cohorts }: { build: number; gri
   ];
 
   return (
-    <div style={{ background: tier.bg, border: '1px solid ' + tier.border, borderRadius: 14, padding: '20px 24px', margin: '20px 20px' }}>
+    <div style={{ marginTop: 16, background: tier.bg, border: '1px solid ' + tier.border, borderRadius: 14, padding: '20px 24px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
           <p style={{ fontSize: 9, fontWeight: 700, color: tier.color, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 4 }}>AI Resilience Score</p>
@@ -566,20 +440,13 @@ function AIResiliencePanel({ build, grit, smart, cohorts }: { build: number; gri
   );
 }
 
-function drawPoly(
-  ctx: CanvasRenderingContext2D,
-  cohorts: CohortScore[],
-  cx: number, cy: number,
-  maxR: number, breathe: number, n: number,
-  dim: 'smart' | 'grit' | 'build',
-  fill: string, stroke: string,
-  simCohortScores: SimScores,
-) {
+function drawPoly(ctx: CanvasRenderingContext2D, cohorts: CohortScore[], cx: number, cy: number,
+  maxR: number, breathe: number, n: number, dim: 'smart' | 'grit' | 'build',
+  fill: string, stroke: string, simAdj: number) {
   ctx.beginPath();
   cohorts.forEach((c, i) => {
     const angle = (Math.PI * 2 * i / n) - Math.PI / 2;
-    const simVal = simCohortScores[c.cohort]?.[dim] ?? c[dim];
-    const val = Math.min(simVal / 100, 1);
+    const val = Math.min((c[dim] + simAdj) / 100, 1);
     const r = maxR * Math.max(val, 0) * breathe;
     const x = cx + Math.cos(angle) * r;
     const y = cy + Math.sin(angle) * r;

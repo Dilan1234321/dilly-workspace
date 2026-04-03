@@ -77,13 +77,13 @@ export default function JobDetail({ job }: { job: Job }) {
   const [fullDescription, setFullDescription] = useState<string | null>(null);
   const [descLoading, setDescLoading] = useState(false);
 
-  function generateResume() {
+  function tailorResume() {
     sessionStorage.setItem('dilly_tailor_job', JSON.stringify({
       company: job.company,
       title: job.title,
       description: fullDescription || job.description || '',
     }));
-    router.push('/resume-generate');
+    router.push('/resume-editor?auto_generate=1');
   }
 
   useEffect(() => {
@@ -192,16 +192,13 @@ export default function JobDetail({ job }: { job: Job }) {
 
       <div className="p-4 border-t border-border-main flex flex-col gap-2">
         <button
-          onClick={generateResume}
+          onClick={tailorResume}
           className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold tracking-wide transition-all duration-150 active:scale-[0.98]"
-          style={{ background: '#2B3A8E', color: 'white' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#3b4fcc'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#2B3A8E'; }}
+          style={{ background: 'rgba(59,76,192,0.08)', border: '1px solid rgba(59,76,192,0.2)', color: '#2B3A8E' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.14)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.08)'; }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>
-          </svg>
-          Generate resume for this job
+          ✦ Tailor resume for this role
         </button>
         <div className="flex gap-2.5">
           {job.apply_url && (

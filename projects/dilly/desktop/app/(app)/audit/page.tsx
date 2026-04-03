@@ -1,216 +1,133 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { dilly } from '@/lib/dilly';
 import { getToken } from '@/lib/auth';
-import { useProfile } from '../layout';
+import { getScoreColor } from '@/lib/scores';
 
 /* ── Types ─────────────────────────────────────────── */
-interface ProfileGap {
+interface Recommendation {
+  type: 'generic' | 'line_edit' | 'action';
   title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-}
-interface ProfileAddition {
-  title: string;
-  description: string;
   action: string;
+  current_line?: string;
+  suggested_line?: string;
+  score_target?: string;
+  diagnosis?: string;
 }
-interface ResumeItem {
-  title: string;
-  why: string;
+
+interface AuditResult {
+  id?: string;
+  candidate_name: string;
+  detected_track: string;
+  major: string;
+  scores: { smart: number; grit: number; build: number };
+  final_score: number;
+  audit_findings: string[];
+  evidence: { smart: string; grit: string; build: string };
+  evidence_quotes?: { smart: string; grit: string; build: string } | null;
+  recommendations: Recommendation[];
+  dilly_take?: string | null;
+  strongest_signal_sentence?: string | null;
+  consistency_findings?: string[] | null;
+  red_flags?: { message: string; line?: string }[] | null;
+  peer_percentiles?: { smart: number; grit: number; build: number } | null;
+  peer_cohort_n?: number | null;
+  benchmark_copy?: { smart: string; grit: string; build: string } | null;
 }
-interface ResumeReframe {
-  current: string;
-  suggested: string;
-  why: string;
-}
-interface CohortAuditResult {
-  cohort_name: string;
+
+interface HistoryItem {
+  id: string;
   ts: number;
-  dilly_take: string;
-  profile_gaps: ProfileGap[];
-  profile_additions: ProfileAddition[];
-  resume_for_cohort: {
-    include: ResumeItem[];
-    exclude: ResumeItem[];
-    reframe: ResumeReframe[];
-  };
-  cohort_score?: {
-    smart: number;
-    grit: number;
-    build: number;
-    dilly_score: number;
-    level: string;
-  };
-}
-interface CohortTab {
-  name: string;
-  level: 'major' | 'minor' | 'interest';
-  smart: number;
-  grit: number;
-  build: number;
-  dilly_score: number;
+  scores: { smart: number; grit: number; build: number };
+  final_score: number;
+  detected_track: string;
+  candidate_name?: string;
+  major?: string;
+  dilly_take?: string;
+  peer_percentiles?: { smart: number; grit: number; build: number };
 }
 
-/* ── Helpers ────────────────────────────────────────── */
-function scoreColor(s: number) {
-  return s >= 75 ? '#34C759' : s >= 55 ? '#FF9F0A' : '#FF453A';
+/* ── Constants ─────────────────────────────────────── */
+const DIM = {
+  smart: { label: 'Smart', color: '#FF9F0A', bg: 'rgba(255,159,10,0.08)', border: 'rgba(255,159,10,0.18)' },
+  grit:  { label: 'Grit',  color: '#34C759', bg: 'rgba(52,199,89,0.08)',  border: 'rgba(52,199,89,0.18)' },
+  build: { label: 'Build', color: '#2B3A8E', bg: 'rgba(59,76,192,0.08)',  border: 'rgba(59,76,192,0.18)' },
+} as const;
+
+type DimKey = keyof typeof DIM;
+
+/** Safe renderer: converts **bold** markers to <strong> without dangerouslySetInnerHTML */
+function BoldText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('**') && part.endsWith('**')
+          ? <strong key={i}>{part.slice(2, -2)}</strong>
+          : <span key={i}>{part}</span>
+      )}
+    </>
+  );
 }
 
-function guessCategoryFromAddition(title: string, action: string): string {
-  const text = (title + ' ' + action).toLowerCase();
-  if (/skill|technical|language|tool|framework|certif/.test(text)) return 'skill_unlisted';
-  if (/project|built|created|developed|portfolio/.test(text)) return 'project_detail';
-  if (/goal|career|aspir|ambition|objective/.test(text)) return 'goal';
-  if (/hobby|interest|passion|outside|volunteer|club/.test(text)) return 'hobby';
-  if (/personality|style|work style|approach|prefer/.test(text)) return 'personality';
-  if (/strength|good at|excel|best at/.test(text)) return 'strength';
-  if (/motiv|drive|why|purpose|meaning/.test(text)) return 'motivation';
-  if (/culture|company|environment|workplace|team/.test(text)) return 'company_culture_pref';
-  if (/availab|start date|when|relocat/.test(text)) return 'availability';
-  if (/soft skill|leadership|communic|collaboration|problem.solv/.test(text)) return 'soft_skill';
-  if (/achievement|award|recogni|honor|accomplish/.test(text)) return 'achievement';
-  return 'goal'; // safe default
+function tierInfo(score: number) {
+  if (score >= 85) return { label: 'Elite', color: '#34C759' };
+  if (score >= 70) return { label: 'Strong', color: '#FF9F0A' };
+  if (score >= 55) return { label: 'Average', color: 'var(--text-2)' };
+  return { label: 'At Risk', color: '#FF453A' };
 }
-function priorityColor(p: string) {
-  return p === 'high' ? '#FF453A' : p === 'medium' ? '#FF9F0A' : '#34C759';
-}
-function priorityBg(p: string) {
-  return p === 'high' ? 'rgba(255,69,58,0.08)' : p === 'medium' ? 'rgba(255,159,10,0.08)' : 'rgba(52,199,89,0.08)';
-}
+
+const scoreColor = getScoreColor;
 
 /* ── Page ──────────────────────────────────────────── */
 export default function AuditPage() {
-  const { profile, refreshProfile } = useProfile();
-  const searchParams = useSearchParams();
-  const deepLinkCohort = searchParams.get('cohort');
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  // Cohorts from profile
-  const allCohorts: CohortTab[] = Object.values(profile.cohort_scores || {}).map((c: any) => ({
-    name: c.cohort,
-    level: c.level,
-    smart: c.smart,
-    grit: c.grit,
-    build: c.build,
-    dilly_score: c.dilly_score,
-  }));
-
-  // Unlocked interest cohorts from profile
-  const unlockedFromProfile: string[] = (profile as any).unlocked_cohorts || [];
-
-  const [hasResume, setHasResume] = useState<boolean | null>(null);
-  const [selectedCohort, setSelectedCohort] = useState<string>(deepLinkCohort || '');
-  const [results, setResults] = useState<Record<string, CohortAuditResult>>({});
-  const [loading, setLoading] = useState<Set<string>>(new Set());
+  const [audit, setAudit] = useState<AuditResult | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [unlocked, setUnlocked] = useState<string[]>(unlockedFromProfile);
+  const [target, setTarget] = useState<'internship' | 'full_time' | 'exploring'>('internship');
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // Refs to avoid stale closures in async callbacks
-  const inFlightRef = useRef<Set<string>>(new Set());
-  const resultsRef = useRef<Record<string, CohortAuditResult>>({});
-  useEffect(() => { resultsRef.current = results; }, [results]);
-
-  // Sync unlocked from profile
+  // Toggle loading cursor on app shell (cleanup on unmount)
   useEffect(() => {
-    setUnlocked((profile as any).unlocked_cohorts || []);
-  }, [(profile as any).unlocked_cohorts]);
+    const shell = document.querySelector('.dilly-app-shell') as HTMLElement | null;
+    if (shell) shell.dataset.loading = uploading ? 'true' : 'false';
+    return () => { if (shell) shell.dataset.loading = 'false'; };
+  }, [uploading]);
 
-  // Check for resume on mount
+  // Load history on mount
   useEffect(() => {
+    setLoading(true);
     dilly.get('/audit/history')
-      .then((res: any) => {
-        const h = Array.isArray(res) ? res : (res?.audits || []);
-        setHasResume(h.length > 0);
-      })
-      .catch(() => setHasResume(false));
-  }, []);
-
-  // Load any existing cached cohort audits
-  useEffect(() => {
-    if (!hasResume) return;
-    dilly.get('/audit/cohort/list')
-      .then((res: any) => {
-        const cached = res?.cohort_audits || {};
-        if (Object.keys(cached).length > 0) {
-          // Fetch full results for cached cohorts
-          Object.keys(cached).forEach(name => {
-            // Will load on tab click — just note they exist
-          });
+      .then((res: { audits: HistoryItem[] } | HistoryItem[]) => {
+        const h: HistoryItem[] = Array.isArray(res) ? res : (res as any).audits || [];
+        setHistory(h);
+        if (h.length > 0) {
+          // Load most recent audit
+          loadAudit(h[0].id);
+          setSelectedHistoryId(h[0].id);
         }
       })
-      .catch(() => {});
-  }, [hasResume]);
-
-  // Auto-run major/minor cohorts when resume is confirmed
-  useEffect(() => {
-    if (!hasResume || allCohorts.length === 0) return;
-
-    const majorMinor = allCohorts.filter(c => c.level === 'major' || c.level === 'minor');
-
-    // Set primary major as selected — deep-link cohort takes priority
-    const deepMatch = deepLinkCohort && allCohorts.find(c => c.name === deepLinkCohort);
-    const primaryMajor = deepMatch || allCohorts.find(c => c.level === 'major') || majorMinor[0];
-    if (primaryMajor && !selectedCohort) {
-      setSelectedCohort(primaryMajor.name);
-    }
-
-    // Kick off all major/minor audits in parallel
-    majorMinor.forEach(c => runCohortAudit(c.name));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasResume, allCohorts.length]);
-
-  const runCohortAudit = useCallback(async (cohortName: string, force = false) => {
-    if (inFlightRef.current.has(cohortName) && !force) return;
-    if (resultsRef.current[cohortName] && !force) return;
-
-    inFlightRef.current.add(cohortName);
-    setLoading(prev => new Set(prev).add(cohortName));
-    try {
-      const result = await dilly.post<CohortAuditResult>('/audit/cohort', { cohort_name: cohortName, force });
-      setResults(prev => ({ ...prev, [cohortName]: result }));
-    } catch {
-      // Silently fail — tab will show retry option
-    } finally {
-      inFlightRef.current.delete(cohortName);
-      setLoading(prev => {
-        const next = new Set(prev);
-        next.delete(cohortName);
-        return next;
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const handleTabClick = useCallback(async (tab: CohortTab) => {
-    setSelectedCohort(tab.name);
-
-    const isInterest = tab.level === 'interest';
-    const isUnlocked = unlocked.includes(tab.name);
-
-    if (isInterest && !isUnlocked) {
-      // Unlock + run audit
-      try {
-        const slug = tab.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-        const res = await dilly.post<any>(`/audit/cohort/${slug}/unlock`, { cohort_name: tab.name });
-        setUnlocked(res.unlocked_cohorts || []);
-        await refreshProfile();
-      } catch { /* best effort */ }
-    }
-
-    if (!results[tab.name]) {
-      runCohortAudit(tab.name);
-    }
-  }, [unlocked, results, runCohortAudit, refreshProfile]);
+  const loadAudit = useCallback((id: string) => {
+    setLoading(true);
+    dilly.get(`/audit/history/${id}`)
+      .then((a: AuditResult) => { setAudit(a); setSelectedHistoryId(id); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleUpload = useCallback(async (file: File) => {
     setUploading(true);
     try {
       const form = new FormData();
       form.append('file', file);
-      form.append('application_target', 'internship');
+      form.append('application_target', target);
       const token = getToken() || '';
       const base = typeof window !== 'undefined' ? '/api/proxy' : (process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000');
       const res = await fetch(`${base}/audit/v2`, {
@@ -218,23 +135,31 @@ export default function AuditPage() {
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
-      if (!res.ok) throw new Error('Upload failed');
-      await res.json();
-      // Rebuild resume_edited.json from the newly parsed resume so the generator uses real data
+      if (!res.ok) throw new Error('Audit failed');
+      const result: AuditResult = await res.json();
+      setAudit(result);
+      // Refresh history
+      dilly.get('/audit/history').then((res: any) => setHistory(Array.isArray(res) ? res : res.audits || [])).catch(() => {});
+      if (result.id) setSelectedHistoryId(result.id);
+      // Sync parsed resume to editor as a new variant
       try {
-        await fetch(`${base}/resume/sync-base`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-      } catch {}
-      await refreshProfile();
-      setHasResume(true);
-      // Clear cached cohort audits so they re-run with new resume
-      setResults({});
-      setLoading(new Set());
+        const editedData = await dilly.get('/resume/edited');
+        const parsedSections = editedData?.resume?.sections ?? editedData?.sections ?? [];
+        if (parsedSections.length > 0) {
+          const label = `${result.detected_track || 'Audit'} — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+          const newVar = await dilly.post<any>('/resume/variants', { label, cohort: result.detected_track || 'General' });
+          const varId = newVar?.variant?.id;
+          if (varId) {
+            await dilly.put(`/resume/variants/${varId}`, { sections: parsedSections });
+          }
+        }
+      } catch { /* resume sync is best-effort */ }
     } catch {
-      // Could add toast
+      // Could add toast here
     } finally {
       setUploading(false);
     }
-  }, [refreshProfile]);
+  }, [target]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -248,456 +173,551 @@ export default function AuditPage() {
     if (file) handleUpload(file);
   }, [handleUpload]);
 
-  /* ── No resume yet ── */
-  if (hasResume === false || (hasResume === null && allCohorts.length === 0)) {
+  /* ── Upload / Empty State ──────────────────────── */
+  if (!audit && !loading) {
     return (
-      <div className="h-full flex items-center justify-center p-8">
+      <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '36px 44px' }}>
         <div
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          className="w-full max-w-md text-center transition-all duration-200"
           style={{
-            padding: '52px 44px', borderRadius: 20,
+            width: 520, padding: '56px 48px', borderRadius: 20,
             border: `2px dashed ${dragOver ? '#2B3A8E' : 'var(--border-main)'}`,
             background: dragOver ? 'rgba(59,76,192,0.04)' : 'var(--surface-1)',
+            textAlign: 'center', transition: 'all 200ms ease',
           }}
         >
-          <div className="text-4xl mb-4 opacity-30">✦</div>
-          <h2 className="font-display text-xl text-txt-1 mb-2">Build your profile</h2>
-          <p className="text-[13px] text-txt-3 mb-6 leading-relaxed">
-            Upload your resume and Dilly will analyze your readiness<br />
-            across every cohort — then tell you exactly what to add<br />
-            to your Dilly profile for each one.
+          <div style={{ fontSize: 40, marginBottom: 16, opacity: 0.3 }}>📄</div>
+          <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>
+            Resume Audit
+          </h2>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 24, lineHeight: 1.5 }}>
+            Drop your resume here or click to upload.<br />
+            Get scored on Smart, Grit, and Build with personalized recommendations.
           </p>
-          <button
-            onClick={() => fileRef.current?.click()}
+
+          {/* Target selector */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 20 }}>
+            {(['internship', 'full_time', 'exploring'] as const).map(t => (
+              <button key={t} onClick={() => setTarget(t)}
+                style={{
+                  padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                  border: `1px solid ${target === t ? '#2B3A8E' : 'var(--border-main)'}`,
+                  background: target === t ? 'rgba(59,76,192,0.08)' : 'transparent',
+                  color: target === t ? '#2B3A8E' : 'var(--text-3)',
+                  cursor: 'pointer', transition: 'all 150ms ease',
+                }}>
+                {t === 'full_time' ? 'Full-time' : t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="px-7 py-2.5 rounded-lg text-[13px] font-semibold text-white transition-opacity"
-            style={{ background: '#2B3A8E', opacity: uploading ? 0.5 : 1 }}
-          >
-            {uploading ? 'Analyzing…' : 'Upload Resume'}
+            style={{
+              padding: '10px 28px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+              background: '#2B3A8E', color: '#fff', border: 'none', cursor: 'pointer',
+              opacity: uploading ? 0.5 : 1, transition: 'opacity 150ms',
+            }}>
+            {uploading ? 'Auditing...' : 'Upload Resume'}
           </button>
-          <input ref={fileRef} type="file" accept=".pdf,.docx" onChange={onFileChange} className="hidden" />
+          <input ref={fileRef} type="file" accept=".pdf,.docx" onChange={onFileChange} style={{ display: 'none' }} />
         </div>
       </div>
     );
   }
 
-  const activeResult = selectedCohort ? results[selectedCohort] : null;
-  const isLoadingActive = selectedCohort ? loading.has(selectedCohort) : false;
-  const activeTab = allCohorts.find(c => c.name === selectedCohort);
-
-  /* ── Main layout ── */
-  return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* ── Top bar ── */}
-      <div className="flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0 border-b border-border-main">
-        <div>
-          <h1 className="font-display text-[22px] text-txt-1 tracking-tight">Profile Analysis</h1>
-          <p className="text-[11px] text-txt-3">Cohort-specific readiness · what to build · what to put on your resume</p>
-        </div>
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="text-[11px] font-semibold px-4 py-2 rounded-lg border border-border-main text-txt-2 hover:border-dilly-blue hover:text-dilly-blue transition-colors"
-        >
-          {uploading ? 'Uploading…' : 'Update Resume'}
-        </button>
-        <input ref={fileRef} type="file" accept=".pdf,.docx" onChange={onFileChange} className="hidden" />
-      </div>
-
-      {/* ── Cohort tabs (desktop: horizontal scroll, mobile: dropdown) ── */}
-      <div className="flex-shrink-0 border-b border-border-main">
-        {/* Desktop tabs */}
-        <div className="hidden sm:flex overflow-x-auto scrollbar-none px-6 gap-1 pt-1">
-          {allCohorts.map(tab => {
-            const isSelected = tab.name === selectedCohort;
-            const isInterest = tab.level === 'interest';
-            const isUnlockedInterest = isInterest && unlocked.includes(tab.name);
-            const isLocked = isInterest && !unlocked.includes(tab.name);
-            const isRunning = loading.has(tab.name);
-            const hasResult = !!results[tab.name];
-            const score = Math.round(tab.dilly_score);
-
-            return (
-              <button
-                key={tab.name}
-                onClick={() => handleTabClick(tab)}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 text-[12px] font-medium whitespace-nowrap transition-all rounded-t-lg border-b-2 flex-shrink-0"
-                style={{
-                  borderBottomColor: isSelected ? '#2B3A8E' : 'transparent',
-                  color: isLocked ? 'var(--text-3)' : isSelected ? '#2B3A8E' : 'var(--text-2)',
-                  opacity: isLocked ? 0.5 : 1,
-                  background: isSelected ? 'rgba(59,76,192,0.04)' : 'transparent',
-                }}
-              >
-                {isRunning ? (
-                  <span className="w-3 h-3 rounded-full border-2 border-dilly-blue border-t-transparent animate-spin inline-block" />
-                ) : isLocked ? (
-                  <span className="text-[10px]">🔒</span>
-                ) : hasResult ? (
-                  <span
-                    className="text-[10px] font-bold font-mono"
-                    style={{ color: scoreColor(score) }}
-                  >
-                    {score}
-                  </span>
-                ) : null}
-                <span>{tab.name}</span>
-                {!isInterest && (
-                  <span
-                    className="text-[7px] font-bold tracking-widest uppercase ml-0.5"
-                    style={{ color: isSelected ? '#2B3A8E' : 'var(--text-3)' }}
-                  >
-                    {tab.level}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Mobile dropdown */}
-        <div className="sm:hidden px-4 py-2">
-          <select
-            value={selectedCohort}
-            onChange={e => {
-              const tab = allCohorts.find(c => c.name === e.target.value);
-              if (tab) handleTabClick(tab);
-            }}
-            className="w-full text-[13px] px-3 py-2 rounded-lg border border-border-main bg-surface-1 text-txt-1"
-          >
-            {allCohorts.map(tab => (
-              <option key={tab.name} value={tab.name}>{tab.name} ({tab.level})</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* ── Content area ── */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Loading state */}
-        {isLoadingActive && !activeResult && (
-          <div className="flex flex-col gap-4 p-6">
-            {[100, 200, 280, 180].map((h, i) => (
-              <div key={i} className="skeleton rounded-xl" style={{ height: h }} />
+  /* ── Loading skeleton ──────────────────────────── */
+  if (loading && !audit) {
+    return (
+      <div style={{ height: '100%', overflow: 'auto', padding: '36px 44px' }}>
+        <div style={{ display: 'flex', gap: 32 }}>
+          <div style={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[200, 280, 240].map((h, i) => (
+              <div key={i} className="skeleton" style={{ height: h, borderRadius: 14 }} />
             ))}
           </div>
-        )}
-
-        {/* No cohorts yet */}
-        {allCohorts.length === 0 && !isLoadingActive && (
-          <div className="h-full flex items-center justify-center text-txt-3 text-[13px]">
-            Complete your profile to see cohort analysis.
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[80, 300, 200, 160].map((h, i) => (
+              <div key={i} className="skeleton" style={{ height: h, borderRadius: 14 }} />
+            ))}
           </div>
-        )}
-
-        {/* Interest cohort not yet unlocked */}
-        {activeTab && activeTab.level === 'interest' && !unlocked.includes(activeTab.name) && !isLoadingActive && (
-          <div className="h-full flex flex-col items-center justify-center gap-4 text-center p-8">
-            <div className="text-4xl opacity-20">🔒</div>
-            <p className="text-[14px] font-semibold text-txt-1">Analyze {activeTab.name} readiness</p>
-            <p className="text-[12px] text-txt-3 max-w-xs leading-relaxed">
-              Click to run a full profile analysis for this field. Once complete, jobs for this cohort will appear across the app.
-            </p>
-            <button
-              onClick={() => handleTabClick(activeTab)}
-              className="px-6 py-2.5 rounded-lg text-[13px] font-semibold text-white"
-              style={{ background: '#2B3A8E' }}
-            >
-              Analyze {activeTab.name}
-            </button>
-          </div>
-        )}
-
-        {/* Results */}
-        {activeResult && !isLoadingActive && (
-          <CohortAnalysisView result={activeResult} tab={activeTab} onRefresh={() => runCohortAudit(selectedCohort, true)} />
-        )}
-
-        {/* No result yet and not loading — shouldn't happen but fallback */}
-        {!activeResult && !isLoadingActive && selectedCohort && activeTab && (
-          activeTab.level !== 'interest' || unlocked.includes(activeTab.name)
-        ) && (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <p className="text-[13px] text-txt-3">No analysis yet for {selectedCohort}.</p>
-            <button
-              onClick={() => runCohortAudit(selectedCohort)}
-              className="text-[12px] text-dilly-blue font-semibold hover:underline"
-            >
-              Run analysis
-            </button>
-          </div>
-        )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-/* ── Cohort Analysis View ──────────────────────────── */
-function CohortAnalysisView({
-  result,
-  tab,
-  onRefresh,
-}: {
-  result: CohortAuditResult;
-  tab: CohortTab | undefined;
-  onRefresh: () => void;
-}) {
-  const router = useRouter();
-  // Tab scores come from the live profile context (synthesized in-memory on GET /profile)
-  // and are always more accurate than the backend's cohort_score (which reads from raw file).
-  const score = {
-    smart: tab?.smart || result.cohort_score?.smart || 0,
-    grit: tab?.grit || result.cohort_score?.grit || 0,
-    build: tab?.build || result.cohort_score?.build || 0,
-    dilly_score: tab?.dilly_score || result.cohort_score?.dilly_score || 0,
-    level: tab?.level || result.cohort_score?.level || 'interest',
-  };
-  const dillyScore = Math.round(score.dilly_score);
-  const ts = result.ts ? new Date(result.ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  if (!audit) return null;
 
+  const tier = tierInfo(audit.final_score);
+  const dims: DimKey[] = ['smart', 'grit', 'build'];
+
+  /* ── Results ───────────────────────────────────── */
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-5 pb-12">
-      {/* Score hero + Dilly Take */}
-      <div
-        className="rounded-2xl p-5"
-        style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)' }}
-      >
-        <div className="flex items-start justify-between mb-4">
-          {/* Scores */}
-          <div className="flex items-center gap-5">
-            <div>
-              <p className="text-[9px] font-bold tracking-widest uppercase text-txt-3 mb-0.5">Dilly Score</p>
-              <span
-                className="font-display text-5xl leading-none"
-                style={{ color: scoreColor(dillyScore), fontStyle: 'italic' }}
-              >
-                {dillyScore}
+    <div style={{ height: '100%', overflow: 'auto', padding: '36px 44px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
+            Resume Audit
+          </h1>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+            {audit.detected_track} · {audit.major}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {history.length > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{history.length} audit{history.length !== 1 ? 's' : ''}</span>
+          )}
+          <button onClick={() => fileRef.current?.click()} disabled={uploading}
+            style={{
+              padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              background: '#2B3A8E', color: '#fff', border: 'none', cursor: 'pointer',
+            }}>
+            {uploading ? 'Auditing...' : 'Re-audit'}
+          </button>
+          <input ref={fileRef} type="file" accept=".pdf,.docx" onChange={onFileChange} style={{ display: 'none' }} />
+        </div>
+      </div>
+
+      {/* Two-column layout */}
+      <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+
+        {/* ── LEFT COLUMN ──────────────────────── */}
+        <div style={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Final Score Hero */}
+          <div data-cursor-score={Math.round(audit.final_score)} data-cursor-score-color={scoreColor(audit.final_score)} style={{
+            borderRadius: 14, padding: '28px 24px', textAlign: 'center',
+            background: 'var(--surface-1)', border: '1px solid var(--border-main)',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 8 }}>
+              Dilly Score
+            </div>
+            <AnimNum value={audit.final_score} style={{
+              fontFamily: "'Cormorant Garamond', serif", fontSize: 64, fontWeight: 300,
+              color: scoreColor(audit.final_score), lineHeight: 1,
+            }} />
+            <div style={{ marginTop: 8 }}>
+              <span style={{
+                display: 'inline-block', padding: '3px 12px', borderRadius: 20,
+                fontSize: 11, fontWeight: 600, color: tier.color,
+                background: `${tier.color}14`, border: `1px solid ${tier.color}30`,
+              }}>
+                {tier.label}
               </span>
             </div>
-            <div className="flex gap-4 text-[12px]">
-              {[
-                { label: 'Smart', value: Math.round(score.smart), color: '#2B3A8E' },
-                { label: 'Grit', value: Math.round(score.grit), color: '#C9A84C' },
-                { label: 'Build', value: Math.round(score.build), color: '#34C759' },
-              ].map(d => (
-                <div key={d.label} className="text-center">
-                  <p className="text-[9px] text-txt-3 mb-0.5">{d.label}</p>
-                  <p className="text-[18px] font-bold font-mono" style={{ color: d.color }}>{d.value}</p>
+            {audit.peer_percentiles && (
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 10 }}>
+                Top {Math.max(1, 100 - Math.round((audit.peer_percentiles.smart + audit.peer_percentiles.grit + audit.peer_percentiles.build) / 3))}%
+                {audit.peer_cohort_n ? ` of ${audit.peer_cohort_n} peers` : ''}
+              </p>
+            )}
+            {/* Score bar */}
+            <div style={{ marginTop: 14, height: 6, borderRadius: 3, background: 'var(--surface-2)', overflow: 'hidden' }}>
+              <AnimBar value={audit.final_score} color={scoreColor(audit.final_score)} />
+            </div>
+          </div>
+
+          {/* History */}
+          {history.length > 0 && (
+            <div style={{
+              borderRadius: 14, padding: '16px 20px', background: 'var(--surface-1)', border: '1px solid var(--border-main)',
+            }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 10 }}>
+                Past Audits
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {history.map(h => {
+                  const isSelected = h.id === selectedHistoryId;
+                  return (
+                    <button key={h.id} onClick={() => loadAudit(h.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        background: isSelected ? 'rgba(59,76,192,0.08)' : 'transparent',
+                        transition: 'background 120ms ease', width: '100%', textAlign: 'left',
+                      }}>
+                      <div>
+                        <p style={{ fontSize: 12, fontWeight: isSelected ? 600 : 400, color: isSelected ? '#2B3A8E' : 'var(--text-1)', margin: 0 }}>
+                          {new Date(h.ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                        <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>{h.detected_track}</p>
+                      </div>
+                      <span style={{
+                        fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 400,
+                        color: scoreColor(h.final_score),
+                      }}>
+                        {Math.round(h.final_score)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Dimension Cards */}
+          {dims.map(d => (
+            <div key={d} data-cursor-score={Math.round(audit.scores[d])} data-cursor-score-color={DIM[d].color} style={{
+              borderRadius: 14, padding: '18px 20px',
+              background: DIM[d].bg, border: `1px solid ${DIM[d].border}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: DIM[d].color }}>{DIM[d].label}</span>
+                <AnimNum value={audit.scores[d]} style={{
+                  fontFamily: "'Cormorant Garamond', serif", fontSize: 32, fontWeight: 400,
+                  color: DIM[d].color, lineHeight: 1,
+                }} />
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: `${DIM[d].color}18`, overflow: 'hidden' }}>
+                <AnimBar value={audit.scores[d]} color={DIM[d].color} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                {audit.peer_percentiles && (
+                  <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                    Top {Math.max(1, 100 - audit.peer_percentiles[d])}%
+                  </span>
+                )}
+                {audit.benchmark_copy?.[d] && (
+                  <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{audit.benchmark_copy[d]}</span>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Radar Chart */}
+          <div style={{
+            borderRadius: 14, padding: '20px', background: 'var(--surface-1)', border: '1px solid var(--border-main)',
+          }}>
+            <RadarChart scores={audit.scores} />
+          </div>
+        </div>
+
+        {/* ── RIGHT COLUMN ─────────────────────── */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Dilly Take */}
+          {audit.dilly_take && (
+            <div style={{
+              borderRadius: 14, padding: '18px 24px',
+              background: 'rgba(59,76,192,0.04)', border: '1px solid rgba(59,76,192,0.12)',
+            }}>
+              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-1)', lineHeight: 1.55, margin: 0 }}>
+                <BoldText text={audit.dilly_take} />
+              </p>
+              {audit.strongest_signal_sentence && (
+                <p style={{ fontSize: 12, color: '#2B3A8E', marginTop: 10, fontWeight: 500, margin: '10px 0 0' }}>
+                  {audit.strongest_signal_sentence}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Recommendations */}
+          {audit.recommendations.length > 0 && (
+            <div style={{
+              borderRadius: 14, padding: '20px 24px',
+              background: 'var(--surface-1)', border: '1px solid var(--border-main)',
+            }}>
+              <SectionHeader>Recommendations</SectionHeader>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14 }}>
+                {audit.recommendations.map((rec, i) => (
+                  rec.type === 'line_edit' && rec.current_line && rec.suggested_line ? (
+                    <RewriteCard key={i} rec={rec} />
+                  ) : (
+                    <ActionCard key={i} rec={rec} />
+                  )
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Evidence */}
+          <div style={{
+            borderRadius: 14, padding: '20px 24px',
+            background: 'var(--surface-1)', border: '1px solid var(--border-main)',
+          }}>
+            <SectionHeader>Evidence</SectionHeader>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 14 }}>
+              {dims.map(d => (
+                <div key={d}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: DIM[d].color }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: DIM[d].color }}>{DIM[d].label}</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.55, margin: 0 }}>
+                    {audit.evidence[d]}
+                  </p>
+                  {audit.evidence_quotes?.[d] && (
+                    <div style={{
+                      marginTop: 8, padding: '10px 14px', borderRadius: 8,
+                      borderLeft: `3px solid ${DIM[d].color}`,
+                      background: DIM[d].bg, fontSize: 12, color: 'var(--text-2)',
+                      fontStyle: 'italic', lineHeight: 1.5,
+                    }}>
+                      &ldquo;{audit.evidence_quotes[d]}&rdquo;
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-          {/* Meta */}
-          <div className="text-right flex flex-col items-end gap-1.5">
-            {tab && (
-              <span
-                className="text-[7px] font-bold tracking-widest uppercase px-2 py-0.5 rounded"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}
-              >
-                {tab.level}
-              </span>
-            )}
-            {ts && <p className="text-[10px] text-txt-3">Analyzed {ts}</p>}
-            <button
-              onClick={onRefresh}
-              className="text-[10px] text-txt-3 hover:text-dilly-blue transition-colors"
-            >
-              Refresh ↻
-            </button>
-          </div>
+
+          {/* Audit Findings */}
+          {audit.audit_findings.length > 0 && (
+            <div style={{
+              borderRadius: 14, padding: '20px 24px',
+              background: 'var(--surface-1)', border: '1px solid var(--border-main)',
+            }}>
+              <SectionHeader>Key Findings</SectionHeader>
+              <ul style={{ margin: '14px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {audit.audit_findings.map((f, i) => (
+                  <li key={i} style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Consistency & Red Flags */}
+          {((audit.consistency_findings?.length ?? 0) > 0 || (audit.red_flags?.length ?? 0) > 0) && (
+            <div style={{
+              borderRadius: 14, padding: '20px 24px',
+              background: 'var(--surface-1)', border: '1px solid var(--border-main)',
+            }}>
+              <SectionHeader>Flags</SectionHeader>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                {audit.consistency_findings?.map((c, i) => (
+                  <FlagCard key={`c${i}`} type="consistency" message={c} />
+                ))}
+                {audit.red_flags?.map((r, i) => (
+                  <FlagCard key={`r${i}`} type="red" message={r.message} line={r.line} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Dilly Take */}
-        {result.dilly_take && (
-          <div
-            className="rounded-xl p-4"
-            style={{ background: 'rgba(59,76,192,0.04)', border: '1px solid rgba(59,76,192,0.12)' }}
-          >
-            <p className="text-[13px] font-medium text-txt-1 leading-relaxed" style={{ margin: 0 }}>
-              {result.dilly_take}
-            </p>
-          </div>
-        )}
       </div>
-
-      {/* Profile Gaps */}
-      {result.profile_gaps?.length > 0 && (
-        <Section title="Profile Gaps" subtitle="What's missing from your Dilly profile for this cohort">
-          <div className="space-y-2.5">
-            {result.profile_gaps.map((gap, i) => (
-              <div
-                key={i}
-                className="rounded-xl p-4 flex gap-3"
-                style={{ background: priorityBg(gap.priority), border: `1px solid ${priorityColor(gap.priority)}28` }}
-              >
-                <div
-                  className="text-[8px] font-bold tracking-widest uppercase px-2 py-1 rounded flex-shrink-0 h-fit mt-0.5"
-                  style={{ color: priorityColor(gap.priority), background: `${priorityColor(gap.priority)}18` }}
-                >
-                  {gap.priority}
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-txt-1 mb-1">{gap.title}</p>
-                  <p className="text-[12px] text-txt-2 leading-relaxed">{gap.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* Add to Dilly Profile */}
-      {result.profile_additions?.length > 0 && (
-        <Section title="Add to Your Dilly Profile" subtitle="Log these to close your gaps and improve your score">
-          <div className="space-y-2.5">
-            {result.profile_additions.map((item, i) => (
-              <div
-                key={i}
-                className="rounded-xl p-4 flex gap-3"
-                style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)' }}
-              >
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold mt-0.5"
-                  style={{ background: 'rgba(59,76,192,0.1)', color: '#2B3A8E' }}
-                >
-                  +
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-txt-1 mb-0.5">{item.title}</p>
-                  <p className="text-[12px] text-txt-2 leading-relaxed mb-2">{item.description}</p>
-                  <button
-                    onClick={() => {
-                      const cat = guessCategoryFromAddition(item.title, item.action);
-                      router.push(`/profile?category=${encodeURIComponent(cat)}&add=1`);
-                    }}
-                    className="text-[11px] font-medium px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition-all"
-                    style={{ background: 'rgba(59,76,192,0.08)', color: '#2B3A8E', border: '1px solid rgba(59,76,192,0.15)', cursor: 'pointer' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.14)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(59,76,192,0.08)'; }}
-                  >
-                    <span>→</span>
-                    <span>{item.action}</span>
-                    <span style={{ opacity: 0.5 }}>· Add to profile</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* Resume for Cohort */}
-      {result.resume_for_cohort && (
-        <Section
-          title={`Resume for ${result.cohort_name}`}
-          subtitle="What to include, cut, and reframe for this specific field"
-        >
-          <div className="space-y-4">
-            {/* Include */}
-            {result.resume_for_cohort.include?.length > 0 && (
-              <div>
-                <p className="text-[9px] font-bold tracking-widest uppercase text-txt-3 mb-2">Include</p>
-                <div className="space-y-2">
-                  {result.resume_for_cohort.include.map((item, i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl p-3.5 flex gap-3"
-                      style={{ background: 'rgba(52,199,89,0.05)', border: '1px solid rgba(52,199,89,0.2)' }}
-                    >
-                      <span className="text-[14px] flex-shrink-0">✓</span>
-                      <div>
-                        <p className="text-[12px] font-semibold text-txt-1">{item.title}</p>
-                        <p className="text-[11px] text-txt-3 leading-relaxed mt-0.5">{item.why}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Exclude */}
-            {result.resume_for_cohort.exclude?.length > 0 && (
-              <div>
-                <p className="text-[9px] font-bold tracking-widest uppercase text-txt-3 mb-2">Remove or De-emphasize</p>
-                <div className="space-y-2">
-                  {result.resume_for_cohort.exclude.map((item, i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl p-3.5 flex gap-3"
-                      style={{ background: 'rgba(255,69,58,0.04)', border: '1px solid rgba(255,69,58,0.15)' }}
-                    >
-                      <span className="text-[14px] flex-shrink-0">✕</span>
-                      <div>
-                        <p className="text-[12px] font-semibold text-txt-1">{item.title}</p>
-                        <p className="text-[11px] text-txt-3 leading-relaxed mt-0.5">{item.why}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Reframe */}
-            {result.resume_for_cohort.reframe?.length > 0 && (
-              <div>
-                <p className="text-[9px] font-bold tracking-widest uppercase text-txt-3 mb-2">Reframe</p>
-                <div className="space-y-2.5">
-                  {result.resume_for_cohort.reframe.map((item, i) => (
-                    <div
-                      key={i}
-                      className="rounded-xl overflow-hidden"
-                      style={{ border: '1px solid var(--border-main)' }}
-                    >
-                      <div className="grid grid-cols-2">
-                        <div className="p-3.5" style={{ background: 'rgba(255,69,58,0.04)', borderRight: '1px solid var(--border-main)' }}>
-                          <p className="text-[8px] font-bold tracking-widest uppercase text-[#FF453A] mb-1.5">Before</p>
-                          <p className="text-[12px] text-txt-2 leading-relaxed">{item.current}</p>
-                        </div>
-                        <div className="p-3.5" style={{ background: 'rgba(52,199,89,0.04)' }}>
-                          <p className="text-[8px] font-bold tracking-widest uppercase text-[#34C759] mb-1.5">After</p>
-                          <p className="text-[12px] text-txt-1 leading-relaxed">{item.suggested}</p>
-                        </div>
-                      </div>
-                      {item.why && (
-                        <div className="px-4 py-2" style={{ background: 'var(--surface-1)', borderTop: '1px solid var(--border-main)' }}>
-                          <p className="text-[10px] text-txt-3">{item.why}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </Section>
-      )}
     </div>
   );
 }
 
-/* ── Section wrapper ──────────────────────────────── */
-function Section({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
+/* ── Sub-components ────────────────────────────────── */
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="rounded-2xl p-5"
-      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-main)' }}
-    >
-      <div className="mb-4">
-        <h3 className="text-[10px] font-bold tracking-widest uppercase text-dilly-blue mb-0.5">{title}</h3>
-        {subtitle && <p className="text-[11px] text-txt-3">{subtitle}</p>}
-      </div>
+    <h3 style={{
+      fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+      color: 'var(--text-3)', margin: 0,
+    }}>
       {children}
+    </h3>
+  );
+}
+
+function AnimNum({ value, style }: { value: number; style: React.CSSProperties }) {
+  const [display, setDisplay] = useState(0);
+  const ref = useRef<number>(0);
+
+  useEffect(() => {
+    const target = Math.round(value);
+    const start = performance.now();
+    const duration = 700;
+    const from = 0;
+    function tick(now: number) {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(from + (target - from) * ease));
+      if (t < 1) ref.current = requestAnimationFrame(tick);
+    }
+    ref.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(ref.current);
+  }, [value]);
+
+  return <div style={style}>{display}</div>;
+}
+
+function AnimBar({ value, color }: { value: number; color: string }) {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setWidth(Math.min(value, 100)), 50);
+    return () => clearTimeout(t);
+  }, [value]);
+
+  return (
+    <div style={{
+      height: '100%', borderRadius: 3, background: color,
+      width: `${width}%`, transition: 'width 600ms cubic-bezier(0.16, 1, 0.3, 1)',
+    }} />
+  );
+}
+
+function RewriteCard({ rec }: { rec: Recommendation }) {
+  return (
+    <div style={{ borderRadius: 10, border: '1px solid var(--border-main)', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)' }}>{rec.title}</span>
+        {rec.diagnosis && (
+          <span style={{
+            fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 10,
+            background: 'rgba(255,159,10,0.1)', color: '#FF9F0A',
+          }}>
+            {rec.diagnosis}
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+        <div style={{ padding: '10px 14px', background: 'rgba(255,69,58,0.04)', borderTop: '1px solid var(--border-main)', borderRight: '1px solid var(--border-main)' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF453A', marginBottom: 4, margin: 0 }}>Before</p>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>{rec.current_line}</p>
+        </div>
+        <div style={{ padding: '10px 14px', background: 'rgba(52,199,89,0.04)', borderTop: '1px solid var(--border-main)' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#34C759', marginBottom: 4, margin: 0 }}>After</p>
+          <p style={{ fontSize: 12, color: 'var(--text-1)', lineHeight: 1.5, margin: 0 }}>{rec.suggested_line}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActionCard({ rec }: { rec: Recommendation }) {
+  return (
+    <div style={{
+      padding: '12px 14px', borderRadius: 10,
+      border: '1px solid var(--border-main)', background: 'var(--surface-2)',
+      display: 'flex', alignItems: 'flex-start', gap: 10,
+    }}>
+      <div style={{ marginTop: 2, fontSize: 14 }}>💡</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)' }}>{rec.title}</span>
+          {rec.score_target && (
+            <span style={{
+              fontSize: 9, fontWeight: 600, padding: '2px 7px', borderRadius: 10,
+              background: DIM[rec.score_target.toLowerCase() as DimKey]?.bg || 'var(--surface-2)',
+              color: DIM[rec.score_target.toLowerCase() as DimKey]?.color || 'var(--text-3)',
+            }}>
+              {rec.score_target}
+            </span>
+          )}
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5, margin: 0 }}>{rec.action}</p>
+      </div>
+    </div>
+  );
+}
+
+function FlagCard({ type, message, line }: { type: 'consistency' | 'red'; message: string; line?: string }) {
+  const isRed = type === 'red';
+  return (
+    <div style={{
+      padding: '10px 14px', borderRadius: 10,
+      background: isRed ? 'rgba(255,69,58,0.04)' : 'rgba(255,159,10,0.04)',
+      border: `1px solid ${isRed ? 'rgba(255,69,58,0.15)' : 'rgba(255,159,10,0.15)'}`,
+      display: 'flex', gap: 8,
+    }}>
+      <span style={{ fontSize: 13 }}>{isRed ? '🚩' : '⚠️'}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 12, color: 'var(--text-1)', lineHeight: 1.5, margin: 0 }}>{message}</p>
+        {line && <p style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic', margin: '4px 0 0' }}>&ldquo;{line}&rdquo;</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ── Radar Chart (Canvas) ──────────────────────────── */
+function RadarChart({ scores }: { scores: { smart: number; grit: number; build: number } }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const size = 280;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+    ctx.scale(dpr, dpr);
+
+    const cx = size / 2;
+    const cy = size / 2;
+    const maxR = size / 2 - 40;
+    const dims: { key: DimKey; angle: number }[] = [
+      { key: 'smart', angle: -Math.PI / 2 },
+      { key: 'grit',  angle: Math.PI / 6 },
+      { key: 'build', angle: (5 * Math.PI) / 6 },
+    ];
+
+    ctx.clearRect(0, 0, size, size);
+
+    // Grid rings
+    for (let ring = 1; ring <= 4; ring++) {
+      const r = maxR * ring / 4;
+      ctx.beginPath();
+      dims.forEach((d, i) => {
+        const x = cx + Math.cos(d.angle) * r;
+        const y = cy + Math.sin(d.angle) * r;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.strokeStyle = 'var(--border-main)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Axes
+    dims.forEach(d => {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(d.angle) * maxR, cy + Math.sin(d.angle) * maxR);
+      ctx.strokeStyle = 'var(--border-main)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+
+    // Data polygon
+    ctx.beginPath();
+    dims.forEach((d, i) => {
+      const r = maxR * (scores[d.key] / 100);
+      const x = cx + Math.cos(d.angle) * r;
+      const y = cy + Math.sin(d.angle) * r;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(59, 76, 192, 0.08)';
+    ctx.fill();
+    ctx.strokeStyle = '#2B3A8E';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Vertices + labels
+    dims.forEach(d => {
+      const r = maxR * (scores[d.key] / 100);
+      const x = cx + Math.cos(d.angle) * r;
+      const y = cy + Math.sin(d.angle) * r;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = DIM[d.key].color;
+      ctx.fill();
+
+      // Label
+      const labelR = maxR + 20;
+      const lx = cx + Math.cos(d.angle) * labelR;
+      const ly = cy + Math.sin(d.angle) * labelR;
+      ctx.font = '600 11px Inter, sans-serif';
+      ctx.fillStyle = DIM[d.key].color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${DIM[d.key].label} ${Math.round(scores[d.key])}`, lx, ly);
+    });
+  }, [scores]);
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <canvas ref={canvasRef} />
     </div>
   );
 }

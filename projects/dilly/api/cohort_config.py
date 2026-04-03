@@ -54,11 +54,7 @@ except ImportError:
 # cohort_scoring_weights.py has 43 research-backed entries keyed by snake_case.
 # Build a label → config dict for easy lookup by cohort display name.
 try:
-    from projects.dilly.api.cohort_scoring_weights import (
-        COHORT_SCORING_WEIGHTS as _CSW,
-        COHORT_EXPECTED_GPA as _CGPA,
-        COHORT_ACTIVITY_KEYWORDS as _CAKW,
-    )
+    from projects.dilly.api.cohort_scoring_weights import COHORT_SCORING_WEIGHTS as _CSW
     COHORT_SCORING_CONFIG: dict[str, dict] = {}
     for _key, _cfg in _CSW.items():
         _label = _cfg.get("label", _key)
@@ -67,7 +63,6 @@ try:
         _b = _cfg.get("build", 34)
         _total = _s + _g + _b or 100
         COHORT_SCORING_CONFIG[_label] = {
-            "label": _label,
             "weights": {
                 "smart": round(_s / _total, 4),
                 "grit":  round(_g / _total, 4),
@@ -81,8 +76,6 @@ try:
                 else "Grit score" if _g >= _s
                 else "Smart score"
             ),
-            "expected_gpa":       _CGPA.get(_label, 3.0),
-            "activity_keywords":  _CAKW.get(_label, []),
         }
 except ImportError:
     # Minimal fallback
@@ -171,121 +164,6 @@ def get_build_signals(cohort: str) -> list[str]:
         return entry.get("fields", [])
     except ImportError:
         return []
-
-
-# ── Cohort-specific scoring ────────────────────────────────────────────────────
-
-def score_for_cohort(
-    signals: dict,
-    resume_text: str,
-    cohort_label: str,
-    global_build: float,
-) -> dict[str, float]:
-    """
-    Compute Smart, Grit, Build scores through a specific cohort's lens.
-
-    • Smart  — cohort-relative GPA (3.5 in Communications > 3.5 in Biochemistry
-               because Communications expects 2.8, Biochemistry expects 3.7).
-               Also scaled by field-fit: domain knowledge signals in this field.
-
-    • Grit   — leadership credit is reduced when the activity is not field-relevant
-               (Biology Club presidency boosts Life Sciences Grit more than
-               Business Grit).  Quantifiable impact and work entries are universal.
-
-    • Build  — global audit build score scaled by field-fit: a CS portfolio does
-               not count as Architecture build evidence.
-
-    Args:
-        signals:      Serialised ScoringSignals dict (stored in audit_history.json).
-        resume_text:  Full resume text for keyword matching.
-        cohort_label: Cohort display name (e.g. "Software Engineering & CS").
-        global_build: Audit-computed Build score (track-specific, from audit engine).
-
-    Returns:
-        {"smart": float, "grit": float, "build": float}  — each 0–100.
-    """
-    cfg         = COHORT_SCORING_CONFIG.get(cohort_label, COHORT_SCORING_CONFIG.get("General", {}))
-    text        = (resume_text or "").lower()
-
-    # ── Raw signal extraction ─────────────────────────────────────────────────
-    gpa          = float(signals.get("gpa", 0) or 0)
-    honors_ws    = float(signals.get("honors_weighted_sum", 0) or 0)
-    honors_cnt   = int(signals.get("honors_count", 0) or 0)
-    has_research = bool(signals.get("has_research"))
-    impact_ws    = float(signals.get("impact_weighted_sum", 0) or 0)
-    impact_cnt   = int(signals.get("quantifiable_impact_count", 0) or 0)
-    lead_ws      = float(signals.get("leadership_weighted_sum", 0) or 0)
-    lead_cnt     = int(signals.get("leadership_density", 0) or 0)
-    work_entries = int(signals.get("work_entry_count", 0) or 0)
-    international = bool(signals.get("international_markers"))
-
-    expected_gpa     = float(cfg.get("expected_gpa", 3.0))
-    activity_kws     = cfg.get("activity_keywords", [])
-
-    # ── Field-fit rate (shared by Smart and Build) ────────────────────────────
-    # How many of this cohort's distinctive keywords appear in the resume?
-    # High match → user has direct experience in this field.
-    # Zero match → they're exploring from a completely different background.
-    try:
-        from projects.dilly.api.cohort_scoring_weights import COHORT_FIELD_KEYWORDS
-        field_kws = COHORT_FIELD_KEYWORDS.get(cohort_label, [])
-    except ImportError:
-        field_kws = []
-
-    if field_kws and text:
-        kw_hits   = sum(1 for kw in field_kws if kw.lower() in text)
-        fit_rate  = min(1.0, kw_hits / max(1, len(field_kws) * 0.4))
-    else:
-        fit_rate  = 1.0   # no keywords defined → can't penalise
-
-    # ── SMART ─────────────────────────────────────────────────────────────────
-    # Cohort-relative GPA component (base multiplier 70 calibrated so that
-    # a student at their cohort's expected GPA scores roughly 70 from GPA alone,
-    # leaving room for research/honors bonuses).
-    gpa_ratio   = min(1.30, gpa / max(0.01, expected_gpa))
-    smart_base  = gpa_ratio * 70.0
-
-    # Research bonus: full credit only if research is field-relevant
-    if has_research:
-        research_relevant = field_kws and any(kw.lower() in text for kw in field_kws)
-        research_pts = 22.0 if research_relevant else 8.0
-    else:
-        research_pts = 0.0
-
-    honors_pts = min(22.0, honors_ws * 8 if honors_ws > 0 else honors_cnt * 8)
-
-    # Field-fit applied to Smart: a CS student's 3.5 GPA ÷ Architecture's
-    # 3.3 expected = ratio 1.06, smart_base = 74.  But they have no Architecture
-    # knowledge signals → smart_ff = 0.40 → smart ≈ 30.  Accurate.
-    smart_ff   = 0.40 + 0.60 * fit_rate
-    raw_smart  = min(100.0, smart_base + research_pts + honors_pts)
-    smart      = round(min(100.0, max(0.0, raw_smart * smart_ff)), 2)
-
-    # ── GRIT ──────────────────────────────────────────────────────────────────
-    # Leadership: reduce credit when the activity isn't field-relevant.
-    raw_lead = lead_ws * 12 if lead_ws > 0 else lead_cnt * 12
-
-    if activity_kws and raw_lead > 0:
-        relevant_act = any(kw.lower() in text for kw in activity_kws)
-        lead_pts = raw_lead if relevant_act else raw_lead * 0.35
-    else:
-        lead_pts = raw_lead   # no activity_kws defined → full credit
-
-    impact_pts = impact_ws * 15 if impact_ws > 0 else impact_cnt * 15
-    work_pts   = work_entries * 5
-    raw_grit   = impact_pts + lead_pts + work_pts
-    if international:
-        raw_grit *= 1.10
-    grit = round(min(100.0, max(0.0, raw_grit)), 2)
-
-    # ── BUILD ─────────────────────────────────────────────────────────────────
-    # Reuse the audit-computed build score (track-specific, outcome-tied) but
-    # scale by field-fit.  A deployed app / GitHub portfolio does not count as
-    # Architecture or Fashion build evidence.
-    build_fit   = 0.25 + 0.75 * fit_rate
-    build       = round(min(100.0, max(0.0, global_build * build_fit)), 2)
-
-    return {"smart": smart, "grit": grit, "build": build}
 
 
 # ── BUILD_SIGNALS compat shim ─────────────────────────────────────────────────

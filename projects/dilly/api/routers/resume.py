@@ -763,7 +763,6 @@ class VariantMeta(BaseModel):
     job_title: Optional[str] = None
     job_company: Optional[str] = None
     created_at: str
-    outcome: Optional[str] = None  # None | "applied" | "callback" | "interview" | "offer" | "rejected"
 
 
 class CreateVariantRequest(BaseModel):
@@ -775,9 +774,8 @@ class CreateVariantRequest(BaseModel):
     sections: Optional[List[ResumeSection]] = None  # seed content
 
 
-class PatchVariantRequest(BaseModel):
-    label: Optional[str] = None
-    outcome: Optional[str] = None  # None clears outcome; omit to leave unchanged
+class RenameVariantRequest(BaseModel):
+    label: str
 
 
 class SaveVariantRequest(BaseModel):
@@ -1331,11 +1329,8 @@ async def save_variant_content(request: Request, variant_id: str, body: SaveVari
     return {"ok": True, "saved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
 
 
-_VALID_OUTCOMES = {None, "applied", "callback", "interview", "offer", "rejected"}
-
-
 @router.patch("/resume/variants/{variant_id}")
-async def patch_variant(request: Request, variant_id: str, body: PatchVariantRequest):
+async def rename_variant(request: Request, variant_id: str, body: RenameVariantRequest):
     user = deps.require_auth(request)
     email = user.get("email") or ""
     if not email:
@@ -1344,11 +1339,7 @@ async def patch_variant(request: Request, variant_id: str, body: PatchVariantReq
     updated = False
     for v in manifest["variants"]:
         if v["id"] == variant_id:
-            if body.label is not None:
-                v["label"] = body.label[:80]
-            if "outcome" in body.model_fields_set:
-                outcome = body.outcome if body.outcome in _VALID_OUTCOMES else None
-                v["outcome"] = outcome
+            v["label"] = body.label[:80]
             updated = True
             break
     if not updated:
@@ -1564,103 +1555,6 @@ Include only sections that have content. Do not include markdown, explanations, 
             yield f"\n{{\"error\": \"{str(e)[:100]}\"}}"
 
     return StreamingResponse(stream_generate(), media_type="text/plain")
-
-
-# ---------------------------------------------------------------------------
-# Keyword Gap Analysis — no LLM, pure rule-based
-# ---------------------------------------------------------------------------
-
-_KEYWORD_CATEGORIES: list[tuple[str, list[str]]] = [
-    ("Languages", [
-        "python", "javascript", "typescript", "java", "c++", "c#", "go", "rust", "kotlin",
-        "swift", "r", "scala", "ruby", "php", "bash", "sql", "html", "css", "matlab",
-    ]),
-    ("Frameworks & Libraries", [
-        "react", "next.js", "vue", "angular", "svelte", "django", "flask", "fastapi",
-        "spring", "express", "node.js", "pytorch", "tensorflow", "keras", "scikit-learn",
-        "pandas", "numpy", "hugging face", "langchain", "openai", "tailwind",
-    ]),
-    ("Tools & Platforms", [
-        "git", "github", "gitlab", "docker", "kubernetes", "aws", "azure", "gcp",
-        "google cloud", "postgresql", "mysql", "mongodb", "redis", "elasticsearch",
-        "tableau", "power bi", "figma", "jira", "confluence", "linux", "terraform",
-        "airflow", "spark", "hadoop", "snowflake", "databricks", "vercel", "supabase",
-    ]),
-    ("Methods & Practices", [
-        "agile", "scrum", "ci/cd", "devops", "machine learning", "deep learning",
-        "natural language processing", "nlp", "computer vision", "data engineering",
-        "data analysis", "data visualization", "statistical modeling", "a/b testing",
-        "rest api", "graphql", "microservices", "object-oriented", "test-driven",
-        "cloud computing", "big data", "etl", "regression", "classification",
-    ]),
-    ("Business & Finance", [
-        "financial modeling", "valuation", "dcf", "bloomberg", "excel", "vba",
-        "equity research", "investment banking", "private equity", "venture capital",
-        "portfolio management", "risk management", "accounting", "auditing",
-        "budgeting", "forecasting", "p&l", "due diligence", "m&a",
-    ]),
-    ("Soft Skills & Traits", [
-        "cross-functional", "stakeholder", "communication", "collaboration",
-        "problem-solving", "analytical", "strategic", "detail-oriented",
-        "fast-paced", "startup", "entrepreneurial", "self-starter",
-        "project management", "team leadership",
-    ]),
-]
-
-# Flatten for fast lookup
-_ALL_KEYWORDS: list[tuple[str, str]] = [  # (keyword, category)
-    (kw, cat) for cat, kws in _KEYWORD_CATEGORIES for kw in kws
-]
-
-
-class KeywordGapRequest(BaseModel):
-    jd_text: str = ""
-    resume_text: str = ""
-
-
-class KeywordGap(BaseModel):
-    text: str
-    category: str
-    count: int  # how many times in JD
-
-
-class KeywordGapResponse(BaseModel):
-    gaps: List[KeywordGap]
-
-
-@router.post("/resume/keyword-gaps")
-async def get_keyword_gaps(body: KeywordGapRequest):
-    """
-    Rule-based keyword gap analysis. No LLM — sub-50ms.
-    Finds keywords present in the JD but absent from the resume.
-    Returns top gaps sorted by JD frequency, max 24.
-    """
-    jd = (body.jd_text or "").lower()
-    resume = (body.resume_text or "").lower()
-    if not jd:
-        return KeywordGapResponse(gaps=[])
-
-    gaps: list[KeywordGap] = []
-    for kw, category in _ALL_KEYWORDS:
-        # Count occurrences in JD using word-boundary-aware matching
-        pattern = _re.escape(kw)
-        jd_count = len(_re.findall(rf"(?<![a-z]){pattern}(?![a-z])", jd))
-        if jd_count == 0:
-            continue
-        # Check if already in resume
-        in_resume = bool(_re.search(rf"(?<![a-z]){pattern}(?![a-z])", resume))
-        if not in_resume:
-            gaps.append(KeywordGap(text=kw, category=category, count=jd_count))
-
-    # Sort: highest JD frequency first, dedupe by text
-    seen: set[str] = set()
-    deduped: list[KeywordGap] = []
-    for g in sorted(gaps, key=lambda x: -x.count):
-        if g.text not in seen:
-            seen.add(g.text)
-            deduped.append(g)
-
-    return KeywordGapResponse(gaps=deduped[:24])
 
 
 def _get_cohort_tip(cohort: str) -> str:

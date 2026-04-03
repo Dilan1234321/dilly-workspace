@@ -160,39 +160,20 @@ def _build_rich_context(email: str) -> dict:
     has_resume = len(resume_text.strip()) > 50
     has_editor_resume = False
 
-    # Dilly Profile facts + completeness — everything Dilly has learned about this user
+    # Dilly Profile facts — everything Dilly has learned about this user
     profile_facts_text = ""
-    profile_completeness = 0
-    profile_filled_categories: list[str] = []
-    profile_missing_categories: list[str] = []
-    CORE_CATS = [
-        ("goal", "Career goals"),
-        ("target_company", "Target companies"),
-        ("skill_unlisted", "Skills not on resume"),
-        ("project_detail", "Projects beyond resume"),
-        ("motivation", "What drives them"),
-        ("hobby", "Hobbies & interests"),
-        ("personality", "Work style & personality"),
-        ("strength", "Strengths"),
-        ("company_culture_pref", "Ideal workplace"),
-        ("availability", "When they can start"),
-    ]
     try:
         from projects.dilly.api.memory_surface_store import get_memory_surface
         surface = get_memory_surface(email)
         facts = surface.get("items") or []
         narrative = surface.get("narrative") or ""
-        grouped: dict[str, list] = {}
-        for f in facts:
-            cat = f.get("category", "other")
-            if cat not in grouped:
-                grouped[cat] = []
-            grouped[cat].append(f)
-        # Profile strength: how many of the 10 core categories are filled
-        profile_filled_categories = [label for key, label in CORE_CATS if grouped.get(key)]
-        profile_missing_categories = [label for key, label in CORE_CATS if not grouped.get(key)]
-        profile_completeness = round(len(profile_filled_categories) / len(CORE_CATS) * 100)
         if facts:
+            grouped: dict[str, list] = {}
+            for f in facts:
+                cat = f.get("category", "other")
+                if cat not in grouped:
+                    grouped[cat] = []
+                grouped[cat].append(f)
             lines = []
             cat_labels = {
                 "achievement": "Achievements", "goal": "Goals", "target_company": "Target Companies",
@@ -252,9 +233,6 @@ def _build_rich_context(email: str) -> dict:
         "resume_snippet": resume_text[:5000] if resume_text else "",
         "nudges": nudges,
         "profile_facts_text": profile_facts_text,
-        "profile_completeness": profile_completeness,
-        "profile_filled_categories": profile_filled_categories,
-        "profile_missing_categories": profile_missing_categories,
     }
 
 
@@ -475,7 +453,7 @@ async def ai_chat(request: Request, body: ChatRequest):
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=1024, system=system, messages=messages)
+        response = client.messages.create(model="claude-sonnet-4-6", max_tokens=1024, system=system, messages=messages)
         content = response.content[0].text if response.content else ""
 
         # ── Background profile extraction ────────────────────────────

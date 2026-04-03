@@ -145,7 +145,7 @@ def _maybe_enqueue_memory_extract(
     assistant_reply: str,
     is_session_ending: bool = False,
 ) -> None:
-    """Queue memory extraction every 2 messages or session ending.
+    """Queue memory extraction every 4 messages or session ending.
 
     This must never block voice responses.
     """
@@ -154,9 +154,9 @@ def _maybe_enqueue_memory_extract(
     hist = history if isinstance(history, list) else []
     # Include this completed turn in count.
     message_count = len(hist) + 2
-    if message_count < 2 and not is_session_ending:
+    if message_count < 4 and not is_session_ending:
         return
-    if not is_session_ending and (message_count % 2 != 0):
+    if not is_session_ending and (message_count % 4 != 0):
         return
     recent_messages: list[dict[str, str]] = []
     for row in hist[-6:]:
@@ -584,13 +584,19 @@ async def voice_chat(request: Request, body: dict = Body(...)):
     suggestions: list[str] = []
     try:
         from dilly_core.llm_client import is_llm_available, get_chat_completion, get_light_model
+        import traceback as _tb
+        print(f"[voice] is_llm_available={is_llm_available()}", flush=True)
         if is_llm_available():
             raw = get_chat_completion(system, user_content, model=get_light_model(), temperature=0.5, max_tokens=800)
+            print(f"[voice] LLM returned {len(raw or '')} chars", flush=True)
             if raw:
                 reply, suggestions = extract_suggestions_from_reply(raw.strip())
                 reply, suggestions = sanitize_voice_reply_and_suggestions(reply, suggestions)
-    except Exception:
-        pass
+        else:
+            print("[voice] LLM not available - ANTHROPIC_API_KEY missing?", flush=True)
+    except Exception as _e:
+        print(f"[voice] LLM error: {_e}", flush=True)
+        _tb.print_exc()
 
     profile_updates = _compute_profile_updates(email, message, context, history=history)
     target_company_added = _maybe_capture_target_company_from_message(email, message)

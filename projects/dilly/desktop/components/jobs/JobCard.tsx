@@ -40,11 +40,8 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
   const risk = getAutomationRisk(job.title);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
       onClick={() => onSelect(job)}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelect(job); }}
       onContextMenu={(e) => { e.preventDefault(); onContext(e, job); }}
       style={{
         width: '100%', textAlign: 'left', borderRadius: 4, padding: '14px 16px',
@@ -137,7 +134,7 @@ export default function JobCard({ job, selected, onSelect, onContext }: {
         ✦ Tailor resume
       </button>
       </div>
-    </div>
+    </button>
   );
 }
 

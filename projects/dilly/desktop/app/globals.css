@@ -61,12 +61,6 @@ body {
 .animate-slide-in { animation: slideIn 350ms ease-out both; }
 .skeleton { background: linear-gradient(90deg, var(--surface-1) 25%, var(--surface-2) 50%, var(--surface-1) 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
 
-/* ── Nav Progress Bar ── */
-@keyframes nav-progress {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(0.85); }
-}
-
 /* ── Page Transitions ── */
 @keyframes pageEnter {
   from { opacity: 0; transform: translateY(8px) scale(0.998); filter: blur(2px); }

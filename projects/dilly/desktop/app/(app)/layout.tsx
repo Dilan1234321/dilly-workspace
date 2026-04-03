@@ -5,7 +5,6 @@ import Sidebar from '@/components/layout/Sidebar';
 import { GlobalMenuProvider } from '@/components/layout/GlobalMenu';
 import RightPanel from '@/components/layout/RightPanel';
 import JobDetail from '@/components/jobs/JobDetail';
-import DillyAvatar from '@/components/layout/DillyAvatar';
 
 import { getToken, clearToken } from '@/lib/auth';
 import { dilly } from '@/lib/dilly';
@@ -287,15 +286,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               style={{
                 position: 'fixed', bottom: 24, right: 24, zIndex: 200,
                 width: 52, height: 52, borderRadius: '50%',
-                background: 'white', border: 'none', cursor: 'pointer',
+                background: '#2B3A8E', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 0 1px rgba(59,76,192,0.18), 0 4px 20px rgba(59,76,192,0.35)',
+                boxShadow: '0 4px 20px rgba(59,76,192,0.45)',
                 transition: 'transform 160ms ease, box-shadow 160ms ease',
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59,76,192,0.3), 0 6px 28px rgba(59,76,192,0.5)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(59,76,192,0.18), 0 4px 20px rgba(59,76,192,0.35)'; }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(59,76,192,0.6)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(59,76,192,0.45)'; }}
             >
-              <DillyAvatar size={40} />
+              {/* Chat bubble icon */}
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+              </svg>
+              {/* "dilly" label */}
+              <span style={{
+                position: 'absolute', bottom: -18, left: '50%', transform: 'translateX(-50%)',
+                fontSize: 9, fontWeight: 800, color: '#2B3A8E', letterSpacing: -0.3,
+                fontFamily: 'Cinzel, serif', whiteSpace: 'nowrap',
+              }}>dilly</span>
             </button>
           )}
         </main>
@@ -329,24 +337,11 @@ function PageTransition({ pathname, children }: { pathname: string | null; child
   }, [pathname, children]);
 
   return (
-    <div style={{ minHeight: '100%', position: 'relative' }}>
-      {/* Nav progress bar — visible during the 150ms exit/transition window */}
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: 2, zIndex: 9999,
-        pointerEvents: 'none',
-        opacity: phase === 'exit' ? 1 : 0,
-        transition: 'opacity 80ms ease',
-      }}>
-        <div style={{
-          height: '100%',
-          background: 'linear-gradient(90deg, #3B4CC0, #5B8DEF)',
-          animation: phase === 'exit' ? 'nav-progress 400ms ease-out forwards' : 'none',
-          transformOrigin: 'left center',
-        }} />
-      </div>
-      <div className={phase === 'enter' ? 'page-enter' : 'page-exit'} style={{ minHeight: '100%' }}>
-        {displayChildren}
-      </div>
+    <div
+      className={phase === 'enter' ? 'page-enter' : 'page-exit'}
+      style={{ minHeight: '100%' }}
+    >
+      {displayChildren}
     </div>
   );
 }
