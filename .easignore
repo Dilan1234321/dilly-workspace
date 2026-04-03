@@ -1,0 +1,48 @@
+# EAS Build ignore — only include projects/dilly/mobile source
+
+# Other dilly projects
+projects/dilly/api/
+projects/dilly/dashboard/
+projects/dilly/desktop/
+projects/dilly/website/
+projects/dilly/student/
+projects/dilly/docs/
+projects/dilly/knowledge/
+projects/dilly/scripts/
+projects/dilly/packages/
+projects/dilly/__pycache__/
+projects/dilly/dilly_core/
+projects/dilly/logs/
+projects/dilly/models/
+projects/dilly/parsed_resumes/
+projects/dilly/projects/
+projects/dilly/prompts/
+projects/dilly/pure_resumes/
+projects/dilly/reports/
+projects/dilly/supabase/
+
+# Mobile build artifacts — EAS does expo prebuild in cloud, ios/ and android/ must not be pre-baked
+projects/dilly/mobile/node_modules/
+projects/dilly/mobile/.expo/
+projects/dilly/mobile/ios/
+projects/dilly/mobile/android/
+
+# Workspace root — large dirs and files
+assets/
+aplivio/
+core/
+cron_test/
+dilly_core/
+docs/
+lib/
+memory/
+meridian_core/
+node_modules/
+scripts/
+*.zip
+*.pdf
+*.dmg
+*.py
+*.sh
+*.csv
+*.log
