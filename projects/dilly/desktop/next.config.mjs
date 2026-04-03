@@ -1,7 +1,7 @@
 const API_DEST = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
 const nextConfig = {
-  transpilePackages: ['@dilly/api'],
+  transpilePackages: [],
   images: { domains: ['logo.clearbit.com'] },
   async rewrites() {
     return [

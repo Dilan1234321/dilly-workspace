@@ -75,14 +75,45 @@ function formatShortDate(ds: string) {
   return new Date(ds + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+const TASKS_KEY = 'dilly_user_tasks';
+interface UserTask { id: string; text: string; date?: string; time?: string; done: boolean; }
+function loadUserTasksAsEvents(): CalEvent[] {
+  try {
+    const tasks: UserTask[] = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
+    return tasks
+      .filter(t => !t.done && t.date)
+      .map(t => ({ id: `ut-${t.id}`, date: t.date!, title: t.text, type: 'task' as const, time: t.time }));
+  } catch { return []; }
+}
+
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [selectedDate, setSelectedDate] = useState<string>(TODAY);
-  const [filters, setFilters] = useState<FilterSet>(new Set(['deadline', 'interview', 'task', 'match']));
-  const [events, setEvents] = useState<CalEvent[]>(DEMO_EVENTS);
+  const [filters, setFilters] = useState<FilterSet>(new Set<EventType>(['deadline', 'interview', 'task', 'match']));
+  const [events, setEvents] = useState<CalEvent[]>(() => {
+    if (typeof window === 'undefined') return DEMO_EVENTS;
+    const userTaskEvents = loadUserTasksAsEvents();
+    // Merge: user tasks override demo tasks with same id
+    return [...DEMO_EVENTS, ...userTaskEvents];
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEvent, setNewEvent] = useState<NewEvent>(EMPTY_NEW_EVENT);
   const titleRef = useRef<HTMLInputElement>(null);
+
+  // Sync user tasks from home page on mount + storage changes
+  useEffect(() => {
+    function syncTasks() {
+      const taskEvents = loadUserTasksAsEvents();
+      setEvents(prev => {
+        // Remove old user-task events, re-add fresh ones
+        const withoutUserTasks = prev.filter(e => !e.id.startsWith('ut-'));
+        return [...withoutUserTasks, ...taskEvents];
+      });
+    }
+    syncTasks();
+    window.addEventListener('storage', syncTasks);
+    return () => window.removeEventListener('storage', syncTasks);
+  }, []);
 
   useEffect(() => {
     if (showAddModal) setTimeout(() => titleRef.current?.focus(), 50);

@@ -210,7 +210,7 @@ function ContextMenuUI({ menu, onClose }: { menu: ContextMenuState; onClose: () 
   const adjustedY = Math.min(menu.y, window.innerHeight - menu.items.length * 36 - 20);
 
   return (
-    <div className="fixed inset-0 z-[150] cursor-none" onContextMenu={() => closeMenu()}>
+    <div className="fixed inset-0 z-[150] cursor-none" onContextMenu={() => onClose()}>
       <div ref={ref}
         className="absolute bg-surface-1 border border-border-main rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.4)] py-1.5 min-w-[200px] backdrop-blur-xl overflow-hidden"
         style={{ left: adjustedX, top: adjustedY, animation: 'ctxIn 120ms ease-out' }}>

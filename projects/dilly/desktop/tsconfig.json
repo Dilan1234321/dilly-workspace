@@ -27,10 +27,10 @@
         "./*"
       ],
       "@dilly/api": [
-        "../packages/dilly-api/src/index.ts"
+        "./lib/dilly-api/index.ts"
       ],
       "@dilly/api/*": [
-        "../packages/dilly-api/src/*"
+        "./lib/dilly-api/*"
       ]
     }
   },

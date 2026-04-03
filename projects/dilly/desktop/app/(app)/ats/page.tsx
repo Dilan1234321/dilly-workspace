@@ -825,7 +825,11 @@ function VendorsTab({ vendors, commentary, issues }: { vendors: Vendor[]; commen
                 ✓ {v.companies.slice(0, 3).join(' · ')}
               </p>
             )}
-            {(v.status === 'risky' || v.status === 'fail') && (
+            {v.score >= 100 ? (
+              <p style={{ marginTop: 10, textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#34C759' }}>
+                🎉 Wow! Great job!
+              </p>
+            ) : (
               <button
                 onClick={() => handleFixWithDilly(v)}
                 style={{
@@ -1079,11 +1083,11 @@ function normalizeResult(data: any): ATSResult {
     issues,
     quick_fixes: [],
     keywords: [],
-    keyword_stats: null,
-    keyword_placement_pct: null,
+    keyword_stats: undefined,
+    keyword_placement_pct: undefined,
     vendors: vendorList,
-    dilly_score_commentary: null,
-    dilly_keyword_commentary: null,
-    dilly_vendor_commentary: null,
+    dilly_score_commentary: undefined,
+    dilly_keyword_commentary: undefined,
+    dilly_vendor_commentary: undefined,
   };
 }

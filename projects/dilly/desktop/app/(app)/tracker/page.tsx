@@ -5,6 +5,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import { dilly } from '@/lib/dilly';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
+import { useRightPanel } from '@/app/(app)/layout';
 
 /* ── Types ───────────────────────────────────────────── */
 type Status = 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected';
@@ -14,12 +15,21 @@ interface Application {
 }
 
 /* ── Columns ─────────────────────────────────────────── */
-const COLS: { key: Status; label: string; color: string; glow: string; emptyIcon: string; emptyLine: string; emptyHint: string }[] = [
-  { key: 'saved',        label: 'Saved',        color: '#636366', glow: 'rgba(99,99,102,0.45)',  emptyIcon: '📌', emptyLine: 'No saved jobs yet', emptyHint: 'Browse the Jobs tab and save roles you like' },
-  { key: 'applied',      label: 'Applied',      color: '#5B8DEF', glow: 'rgba(91,141,239,0.5)',  emptyIcon: '📤', emptyLine: 'Nothing applied', emptyHint: 'Drag a saved job here once you hit submit' },
-  { key: 'interviewing', label: 'Interviewing', color: '#FF9F0A', glow: 'rgba(255,159,10,0.5)',  emptyIcon: '🎙️', emptyLine: 'No interviews yet', emptyHint: 'When you hear back, move cards here' },
-  { key: 'offer',        label: 'Offer',        color: '#34C759', glow: 'rgba(52,199,89,0.55)',  emptyIcon: '🏆', emptyLine: 'The finish line', emptyHint: 'Your offers will land here' },
-  { key: 'rejected',     label: 'Rejected',     color: '#FF453A', glow: 'rgba(255,69,58,0.35)',  emptyIcon: '💪', emptyLine: 'Part of the process', emptyHint: 'Every rejection gets you closer' },
+// SVG path data for column empty-state icons
+const COL_ICONS: Record<Status, string> = {
+  saved:        'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z',
+  applied:      'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  interviewing: 'M12 2a3 3 0 013 3v4a3 3 0 01-6 0V5a3 3 0 013-3zM19 10a7 7 0 01-14 0M12 19v3M8 22h8',
+  offer:        'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  rejected:     'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+};
+
+const COLS: { key: Status; label: string; color: string; glow: string; emptyLine: string; emptyHint: string }[] = [
+  { key: 'saved',        label: 'Saved',        color: '#636366', glow: 'rgba(99,99,102,0.45)', emptyLine: 'No saved jobs yet', emptyHint: 'Browse the Jobs tab and save roles you like' },
+  { key: 'applied',      label: 'Applied',      color: '#5B8DEF', glow: 'rgba(91,141,239,0.5)', emptyLine: 'Nothing applied', emptyHint: 'Drag a saved job here once you hit submit' },
+  { key: 'interviewing', label: 'Interviewing', color: '#FF9F0A', glow: 'rgba(255,159,10,0.5)', emptyLine: 'No interviews yet', emptyHint: 'When you hear back, move cards here' },
+  { key: 'offer',        label: 'Offer',        color: '#34C759', glow: 'rgba(52,199,89,0.55)', emptyLine: 'The finish line', emptyHint: 'Your offers will land here' },
+  { key: 'rejected',     label: 'Rejected',     color: '#FF453A', glow: 'rgba(255,69,58,0.35)', emptyLine: 'Part of the process', emptyHint: 'Every rejection gets you closer' },
 ];
 
 /* ── Demo data ───────────────────────────────────────── */
@@ -64,7 +74,11 @@ function buildNudges(apps: Application[]): Nudge[] {
   return out.slice(0, 3);
 }
 
-const NUDGE_ICON: Record<string, string> = { urgent: '🔴', warning: '🟡', info: '🟢' };
+const NUDGE_ICON_PATH: Record<string, string> = {
+  urgent:  'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z',
+  warning: 'M12 8v4m0 4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z',
+  info:    'M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z',
+};
 const NUDGE_COLORS: Record<string, { accent: string; bg: string; border: string }> = {
   urgent:  { accent: '#FF453A', bg: 'rgba(255,69,58,0.06)',  border: 'rgba(255,69,58,0.18)' },
   warning: { accent: '#FF9F0A', bg: 'rgba(255,159,10,0.06)', border: 'rgba(255,159,10,0.18)' },
@@ -74,11 +88,11 @@ const NUDGE_COLORS: Record<string, { accent: string; bg: string; border: string 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 const STORAGE_KEY = 'dilly_tracker';
 
-export function saveTrackerApps(appsToSave: Application[]) {
+function saveTrackerApps(appsToSave: Application[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appsToSave)); } catch {}
 }
 
-export function addToTracker(company: string, role: string, jobUrl?: string): 'saved' | 'duplicate' | 'error' {
+function addToTracker(company: string, role: string, jobUrl?: string): 'saved' | 'duplicate' | 'error' {
   if (typeof window === 'undefined') return 'error';
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -91,6 +105,7 @@ export function addToTracker(company: string, role: string, jobUrl?: string): 's
 }
 
 export default function TrackerPage() {
+  const { fireProactiveCoach } = useRightPanel();
   const [apps, setApps] = useState<Application[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -171,15 +186,15 @@ export default function TrackerPage() {
     const savedWithDeadline = apps.filter(a => a.status === 'saved' && a.deadline).sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime());
     if (savedWithDeadline.length > 0) {
       const d = daysUntil(savedWithDeadline[0].deadline);
-      if (d !== null && d >= 0 && d <= 14) out.saved = `⏰ ${savedWithDeadline[0].company} closes in ${d}d`;
+      if (d !== null && d >= 0 && d <= 14) out.saved = `${savedWithDeadline[0].company} closes in ${d}d`;
     }
     const oldestApplied = apps.filter(a => a.status === 'applied' && a.applied_at).sort((a, b) => new Date(a.applied_at!).getTime() - new Date(b.applied_at!).getTime());
     if (oldestApplied.length > 0) {
       const d = daysAgo(oldestApplied[0].applied_at);
-      if (d !== null && d >= 7) out.applied = `📬 Oldest: ${oldestApplied[0].company} (${d}d)`;
+      if (d !== null && d >= 7) out.applied = `Oldest: ${oldestApplied[0].company} (${d}d)`;
     }
-    if (counts.interviewing > 0) out.interviewing = `🎯 ${counts.interviewing} active — prep with Dilly Voice`;
-    if (counts.offer > 0) out.offer = `🎉 Congrats! Compare in Career Center`;
+    if (counts.interviewing > 0) out.interviewing = `${counts.interviewing} active — prep with Dilly`;
+    if (counts.offer > 0) out.offer = `Congrats! Review your offer`;
     return out;
   }, [apps, counts]);
 
@@ -259,7 +274,9 @@ export default function TrackerPage() {
               return (
                 <div key={i} className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 min-w-[200px] max-w-[280px] flex-shrink-0 nudge-card transition-all duration-200 hover:-translate-y-[2px]"
                   style={{ background: c.bg, border: `1px solid ${c.border}`, borderLeft: `3px solid ${c.accent}` }}>
-                  <span className="text-[11px] mt-[1px] shrink-0">{NUDGE_ICON[n.type]}</span>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={c.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-[1px]">
+                    <path d={NUDGE_ICON_PATH[n.type]} />
+                  </svg>
                   <div className="min-w-0">
                     <span className="text-[8px] font-extrabold uppercase tracking-[0.15em] block" style={{ color: c.accent }}>{n.label}</span>
                     <span className="text-[11px] text-txt-2 leading-snug block mt-1">{n.detail}</span>
@@ -279,7 +296,8 @@ export default function TrackerPage() {
             {COLS.map(col => (
               <KanbanColumn key={col.key} col={col} apps={apps.filter(a => a.status === col.key)}
                 insight={colInsights[col.key]}
-                onContext={(e, app) => setCtxMenu({ x: e.clientX, y: e.clientY, app })} />
+                onContext={(e, app) => setCtxMenu({ x: e.clientX, y: e.clientY, app })}
+                onPrepWithDilly={app => fireProactiveCoach(`Let's prep for my ${app.role} interview at ${app.company}. Quiz me on common questions, help me practice my story, and point out anything I should research.`)} />
             ))}
           </div>
           <DragOverlay>{activeApp && <AppCard app={activeApp} isDragging />}</DragOverlay>
@@ -323,9 +341,10 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
 }
 
 /* ── Kanban column — full height ────────────────────── */
-function KanbanColumn({ col, apps, insight, onContext }: {
+function KanbanColumn({ col, apps, insight, onContext, onPrepWithDilly }: {
   col: typeof COLS[number]; apps: Application[]; insight: string | null;
   onContext: (e: React.MouseEvent, app: Application) => void;
+  onPrepWithDilly?: (app: Application) => void;
 }) {
   const { setNodeRef, isOver } = useSortable({ id: col.key });
   return (
@@ -335,10 +354,12 @@ function KanbanColumn({ col, apps, insight, onContext }: {
         background: isOver ? `${col.color}06` : 'var(--surface-1)',
         border: isOver ? `1px solid ${col.color}30` : '1px solid var(--border-main)',
       }}>
-      {/* Header with glowing dot */}
+      {/* Header */}
       <div className="px-3.5 py-2.5 flex items-center gap-2 border-b border-border-main shrink-0">
-        <div className="w-[6px] h-[6px] rounded-full"
-          style={{ background: col.color, boxShadow: apps.length > 0 ? `0 0 6px ${col.glow}, 0 0 2px ${col.glow}` : 'none' }} />
+        <svg width="10" height="10" viewBox="0 0 24 24" fill={col.color} stroke="none"
+          style={{ filter: apps.length > 0 ? `drop-shadow(0 0 3px ${col.glow})` : 'none', flexShrink: 0 }}>
+          <circle cx="12" cy="12" r="10" />
+        </svg>
         <span className="text-[12px] font-semibold text-txt-1">{col.label}</span>
         <span className="text-[10px] font-mono text-txt-3 ml-auto">{apps.length}</span>
       </div>
@@ -348,7 +369,7 @@ function KanbanColumn({ col, apps, insight, onContext }: {
         <SortableContext items={apps.map(a => a.id)} strategy={verticalListSortingStrategy}>
           {apps.length === 0 ? (
             <EmptyColumn col={col} />
-          ) : apps.map(app => <SortableAppCard key={app.id} app={app} onContext={onContext} />)}
+          ) : apps.map(app => <SortableAppCard key={app.id} app={app} onContext={onContext} onPrepWithDilly={col.key === 'interviewing' ? onPrepWithDilly : undefined} />)}
         </SortableContext>
       </div>
 
@@ -368,7 +389,10 @@ function EmptyColumn({ col }: { col: typeof COLS[number] }) {
     <div className="flex flex-col items-center justify-center py-10 px-4 text-center h-full">
       <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3"
         style={{ background: `${col.color}12` }}>
-        <span className="text-[20px]">{col.emptyIcon}</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke={col.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d={COL_ICONS[col.key]} />
+        </svg>
       </div>
       <p className="text-[12px] font-medium text-txt-2 mb-1">{col.emptyLine}</p>
       <p className="text-[10px] text-txt-3 leading-relaxed max-w-[160px]">{col.emptyHint}</p>
@@ -381,11 +405,11 @@ function EmptyColumn({ col }: { col: typeof COLS[number] }) {
 }
 
 /* ── Cards ──────────────────────────────────────────── */
-function SortableAppCard({ app, onContext }: { app: Application; onContext: (e: React.MouseEvent, app: Application) => void }) {
+function SortableAppCard({ app, onContext, onPrepWithDilly }: { app: Application; onContext: (e: React.MouseEvent, app: Application) => void; onPrepWithDilly?: (app: Application) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: app.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.3 : 1 }} {...attributes} {...listeners}>
-      <AppCard app={app} onContext={onContext} />
+      <AppCard app={app} onContext={onContext} onPrepWithDilly={onPrepWithDilly} />
     </div>
   );
 }
@@ -426,7 +450,7 @@ function getNextStep(app: Application): string | null {
   return null;
 }
 
-function AppCard({ app, isDragging, onContext }: { app: Application; isDragging?: boolean; onContext?: (e: React.MouseEvent, app: Application) => void }) {
+function AppCard({ app, isDragging, onContext, onPrepWithDilly }: { app: Application; isDragging?: boolean; onContext?: (e: React.MouseEvent, app: Application) => void; onPrepWithDilly?: (app: Application) => void }) {
   const d = daysAgo(app.applied_at);
   const dl = daysUntil(app.deadline);
   const staleColor = getCardStaleColor(app);
@@ -468,13 +492,27 @@ function AppCard({ app, isDragging, onContext }: { app: Application; isDragging?
 
       {/* Next step hint */}
       {nextStep && (
-        <div className="mt-2 flex items-center gap-1">
-          <div style={{ width: 4, height: 4, borderRadius: '50%', background: staleColor || 'var(--text-3)', flexShrink: 0 }} />
-          <span className="text-[9px] font-medium truncate"
-            style={{ color: isStale ? '#FF9F0A' : staleColor ? staleColor : 'var(--text-3)' }}>
-            {nextStep}
-          </span>
-        </div>
+        app.status === 'interviewing' && onPrepWithDilly ? (
+          <button
+            onClick={e => { e.stopPropagation(); onPrepWithDilly(app); }}
+            className="mt-2 w-full text-left flex items-center gap-1 px-2 py-1 rounded-md transition-colors hover:bg-[#FF9F0A]/10"
+            onMouseDown={e => e.stopPropagation()}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+            <span className="text-[9px] font-semibold" style={{ color: '#FF9F0A' }}>{nextStep}</span>
+          </button>
+        ) : (
+          <div className="mt-2 flex items-center gap-1">
+            <svg width="7" height="7" viewBox="0 0 24 24" fill={staleColor || 'var(--text-3)'} stroke="none" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+            <span className="text-[9px] font-medium truncate"
+              style={{ color: isStale ? '#FF9F0A' : staleColor ? staleColor : 'var(--text-3)' }}>
+              {nextStep}
+            </span>
+          </div>
+        )
       )}
     </div>
   );
@@ -503,7 +541,9 @@ function CtxMenu({ x, y, app, onClose, onMove, onDelete }: {
         {COLS.filter(c => c.key !== app.status).map(c => (
           <button key={c.key} onClick={() => onMove(c.key)}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 text-left hover:bg-[#5B8DEF]/8 transition-colors group">
-            <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: c.color }} />
+            <svg width="8" height="8" viewBox="0 0 24 24" fill={c.color} stroke="none">
+              <circle cx="12" cy="12" r="10" />
+            </svg>
             <span className="text-[11px] text-txt-1 group-hover:text-[#5B8DEF] transition-colors">{c.label}</span>
           </button>
         ))}
