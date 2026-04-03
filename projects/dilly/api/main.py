@@ -81,6 +81,9 @@ _CORS_ORIGINS = [
     "http://127.0.0.1:3002",
     "https://trydilly.com",
     "https://www.trydilly.com",
+    "https://hellodilly.com",
+    "https://www.hellodilly.com",
+    "https://app.hellodilly.com",
 ]
 
 app.add_middleware(
@@ -142,6 +145,7 @@ from projects.dilly.api.routers import tracks as tracks_router
 from projects.dilly.api.routers import templates as templates_router
 from projects.dilly.api.routers import career_brain as career_brain_router
 from projects.dilly.api.routers import habits as habits_router
+from projects.dilly.api.routers import cohort_audit as cohort_audit_router
 from projects.dilly.api.routers import internships_v2 as internships_v2_router
 from projects.dilly.api.routers import push as push_router
 from projects.dilly.api.routers import notifications as notifications_router
@@ -178,6 +182,7 @@ app.include_router(tracks_router.router)
 app.include_router(templates_router.router)
 app.include_router(career_brain_router.router)
 app.include_router(habits_router.router)
+app.include_router(cohort_audit_router.router)
 app.include_router(internships_v2_router.router)
 app.include_router(push_router.router)
 app.include_router(notifications_router.router)

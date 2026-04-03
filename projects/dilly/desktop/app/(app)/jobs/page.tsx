@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import JobCard from '@/components/jobs/JobCard';
 import CompanyLogo from '@/components/jobs/CompanyLogo';
 import CohortStrip from '@/components/jobs/CohortStrip';
@@ -34,14 +34,49 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const { profile } = useProfile();
-  const cohortScores = Object.values(profile.cohort_scores || {}) as any[];
-  const [cohortMatchCounts, setCohortMatchCounts] = useState<Record<string, number>>({});
-  const [recommended, setRecommended] = useState<any[]>([]);
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; job: any } | null>(null);
-  const { showJob } = useRightPanel();
 
-  useEffect(() => { loadJobs(); loadStats(); }, [tab, readinessFilter, cohortFilter]);
-  useEffect(() => { const t = setTimeout(() => loadJobs(), 250); return () => clearTimeout(t); }, [search]);
+  // cohort_scores from the API is { "Tech": { smart, grit, build, level } }.
+  // Normalize to [{ cohort: "Tech", smart, grit, build }] for consistent use below.
+  const cohortScores = useMemo(
+    () => Object.entries(profile.cohort_scores || {}).map(([cohort, data]: [string, any]) => ({
+      cohort, ...(typeof data === 'object' && data !== null ? data : {}),
+    })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(Object.keys(profile.cohort_scores || {}).sort())]
+  );
+  const cohortNamesStr = cohortScores.map((c: any) => c.cohort as string).sort().join('|');
+  // True once the profile has loaded (email is populated by the auth session).
+  const profileReady = !!(profile as any).email;
+
+  // Stale-call guard: discard results from superseded fetches (rapid filter changes, etc.)
+  const loadJobsCallId = useRef(0);
+
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; job: any } | null>(null);
+  const { showJob, showChat } = useRightPanel();
+
+  // All fetched jobs are visible — cohort_requirements is for readiness display, not gating.
+  const visibleJobs = jobs;
+  const displayedJobs = useMemo(() =>
+    cohortFilter
+      ? visibleJobs.filter(job => (job.cohort_requirements || []).some((r: any) => r.cohort === cohortFilter))
+      : visibleJobs,
+    [visibleJobs, cohortFilter]
+  );
+  const recommended = useMemo(() => pickRecommended(visibleJobs), [visibleJobs]);
+
+  // Main fetch: wait for profile to load, then re-run on filter changes.
+  useEffect(() => {
+    if (!profileReady) return;
+    loadJobs();
+    loadStats();
+  }, [tab, readinessFilter, cohortNamesStr, profileReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Search debounce — also waits for profile.
+  useEffect(() => {
+    if (!profileReady) return;
+    const t = setTimeout(() => loadJobs(), 250);
+    return () => clearTimeout(t);
+  }, [search, cohortNamesStr, profileReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -49,9 +84,9 @@ export default function JobsPage() {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        const idx = jobs.findIndex(j => j.id === selected?.id);
-        const next = e.key === 'ArrowDown' ? Math.min(idx + 1, jobs.length - 1) : Math.max(idx - 1, 0);
-        if (jobs[next]) { setSelected(jobs[next]); showJob(jobs[next]); }
+        const idx = displayedJobs.findIndex(j => j.id === selected?.id);
+        const next = e.key === 'ArrowDown' ? Math.min(idx + 1, displayedJobs.length - 1) : Math.max(idx - 1, 0);
+        if (displayedJobs[next]) { setSelected(displayedJobs[next]); showJob(displayedJobs[next]); }
         return;
       }
       if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -61,28 +96,28 @@ export default function JobsPage() {
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [jobs, selected]);
+  }, [displayedJobs, selected]);
 
   async function loadJobs() {
+    // Tag this call; if a newer call starts before this one resolves, discard our results.
+    const callId = ++loadJobsCallId.current;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ tab, limit: '80' });
-      if (search) params.set('search', search);
-      if (readinessFilter) params.set('readiness', readinessFilter);
-      if (cohortFilter) params.set('cohort', cohortFilter);
-      const data = await dilly.get('/v2/internships/feed?' + params);
-      const listings = data.listings || [];
-      const usStates = /^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i;
-      const intlWords = /argentina|colombia|poland|warszawa|ireland|london|berlin|paris|tokyo|singapore|sydney|mumbai|bangalore|india|israel|amsterdam|dublin|munich|stockholm|hong kong|brazil|mexico|united kingdom|uk|europe|emea|apac|latam|germany|france|italy|spain|netherlands/i;
-      const broadNational = /^(united states|usa|u\.s\.|nationwide|multiple locations?|various|anywhere)$/i;
-      const filtered = listings.filter((l: any) => {
-        const state = (l.location_state || '').trim();
+      const baseParams = new URLSearchParams({ tab, limit: '500' });
+      if (search) baseParams.set('search', search);
+      if (readinessFilter) baseParams.set('readiness', readinessFilter);
+      if (cohortFilter) baseParams.set('cohort', cohortFilter);
+
+      const data = await dilly.get('/v2/internships/feed?' + baseParams);
+      const merged: any[] = data.listings || [];
+
+      const intlWords = /\b(argentina|colombia|poland|ireland|london|berlin|paris|tokyo|singapore|sydney|mumbai|bangalore|israel|amsterdam|dublin|munich|stockholm|hong kong|brazil|mexico|united kingdom|germany|france|italy|spain|netherlands|estonia|india|canada(?! road)|ontario|toronto|vancouver|montreal|australia|china|japan|korea)\b/i;
+      const filtered = merged.filter((l: any) => {
+        const state = (l.location_state || '').toLowerCase();
         const city = (l.location_city || '').toLowerCase();
-        const fullLoc = city + ' ' + state.toLowerCase();
-        if (intlWords.test(fullLoc)) return false;
-        const isRemote = l.work_mode === 'remote' || city.includes('remote');
-        const isBroad = broadNational.test(city.trim()) || broadNational.test(state.trim());
-        return isRemote || isBroad || usStates.test(state) || (!city && !state);
+        const isRemote = l.work_mode === 'remote' || city.includes('remote') || state.includes('remote');
+        if (isRemote) return true;
+        return !intlWords.test(city + ' ' + state);
       });
       const parsed = filtered.map((l: any) => ({
         id: l.id, title: l.title, company: l.company,
@@ -93,18 +128,20 @@ export default function JobsPage() {
         required_smart: l.required_smart, required_grit: l.required_grit, required_build: l.required_build,
         description: l.description, apply_url: l.apply_url, source: l.source,
       }));
-      setJobs(parsed);
-      setRecommended(pickRecommended(parsed));
-      if (parsed.length > 0 && !selected) { setSelected(parsed[0]); showJob(parsed[0]); }
-    } catch (e) { console.error(e); }
-    setLoading(false);
+      if (callId === loadJobsCallId.current) {
+        setJobs(parsed);
+        setLoading(false);
+      }
+    } catch (e) {
+      console.error(e);
+      if (callId === loadJobsCallId.current) setLoading(false);
+    }
   }
 
   async function loadStats() {
     try {
       const s = await dilly.get('/v2/internships/stats');
       setStats(s);
-      if (s.cohort_counts) setCohortMatchCounts(s.cohort_counts);
     } catch {}
   }
 
@@ -117,7 +154,7 @@ export default function JobsPage() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-baseline gap-3">
             <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: 24, fontWeight: 600, color: 'var(--text-1)', letterSpacing: 0.5 }}>Jobs</h1>
-            {stats && <span className="text-[13px] text-txt-3 font-mono">{stats.total} matches</span>}
+            {!loading && <span className="text-[13px] text-txt-3 font-mono">{displayedJobs.length} listings</span>}
           </div>
           <div className="flex gap-1.5">
             {[{ key: '', label: 'Any' }, { key: 'ready', label: 'Ready', c: '#34C759' }, { key: 'almost', label: 'Almost', c: '#FF9F0A' }, { key: 'gap', label: 'Gap', c: '#FF453A' }].map(r => (
@@ -130,25 +167,31 @@ export default function JobsPage() {
           </div>
         </div>
 
-        {/* Dashboard strip */}
+        {/* Dashboard strip — counts from displayed jobs (respects cohort pill filter) */}
         {stats && (
           <div className="grid grid-cols-4 gap-3 mb-5">
             <div className="bg-surface-1 rounded-xl p-3.5">
               <p className="text-[10px] text-txt-3 font-semibold uppercase tracking-wider">Ready</p>
-              <p className="text-[24px] font-bold font-mono text-ready mt-0.5">{stats.ready}</p>
+              <p className="text-[24px] font-bold font-mono text-ready mt-0.5">
+                {displayedJobs.filter(j => j.readiness === 'ready').length}
+              </p>
             </div>
             <div className="bg-surface-1 rounded-xl p-3.5">
               <p className="text-[10px] text-txt-3 font-semibold uppercase tracking-wider">Almost</p>
-              <p className="text-[24px] font-bold font-mono text-almost mt-0.5">{stats.almost}</p>
+              <p className="text-[24px] font-bold font-mono text-almost mt-0.5">
+                {displayedJobs.filter(j => j.readiness === 'almost').length}
+              </p>
             </div>
             <div className="bg-surface-1 rounded-xl p-3.5">
               <p className="text-[10px] text-txt-3 font-semibold uppercase tracking-wider">Gap</p>
-              <p className="text-[24px] font-bold font-mono text-gap mt-0.5">{stats.gap}</p>
+              <p className="text-[24px] font-bold font-mono text-gap mt-0.5">
+                {displayedJobs.filter(j => j.readiness === 'gap').length}
+              </p>
             </div>
             <div className="bg-surface-1 rounded-xl p-3.5">
               <p className="text-[10px] text-txt-3 font-semibold uppercase tracking-wider">Companies</p>
               <p className="text-[24px] font-bold font-mono text-dilly-blue mt-0.5">
-                {new Set(jobs.map(j => j.company)).size}
+                {new Set(displayedJobs.map(j => j.company)).size}
               </p>
             </div>
           </div>
@@ -194,16 +237,24 @@ export default function JobsPage() {
           </div>
         )}
 
-        {/* Cohort strip */}
+        {/* Cohort strip — match counts computed from visible jobs */}
         {cohortScores.length > 0 && (
           <div className="mb-4">
             <CohortStrip
-            cohorts={cohortScores}
-            activeCohorts={cohortFilter ? new Set([cohortFilter]) : new Set()}
-            onToggle={(c) => setCohortFilter(cohortFilter === c ? null : c)}
-            onClearAll={() => setCohortFilter(null)}
-            matchCounts={cohortMatchCounts}
-          />
+              cohorts={cohortScores}
+              activeCohorts={cohortFilter ? new Set([cohortFilter]) : new Set()}
+              onToggle={(c) => setCohortFilter(cohortFilter === c ? null : c)}
+              onClearAll={() => setCohortFilter(null)}
+              matchCounts={(() => {
+                const counts: Record<string, number> = {};
+                visibleJobs.forEach(job => {
+                  (job.cohort_requirements || []).forEach((r: any) => {
+                    if (r.cohort) counts[r.cohort] = (counts[r.cohort] || 0) + 1;
+                  });
+                });
+                return counts;
+              })()}
+            />
           </div>
         )}
 
@@ -234,14 +285,14 @@ export default function JobsPage() {
               <div key={i} className="h-[160px] bg-surface-1 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.08 }} />
             ))}
           </div>
-        ) : jobs.length === 0 ? (
+        ) : displayedJobs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[200px] gap-2">
             <p className="text-[14px] text-txt-2">No matches found</p>
             <p className="text-[12px] text-txt-3">Try different filters</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2.5">
-            {jobs.map(job => (
+            {displayedJobs.map(job => (
               <JobCard key={job.id} job={job}
                 selected={selected?.id === job.id}
                 onSelect={(j) => { setSelected(j); showJob(j); }}
@@ -249,6 +300,7 @@ export default function JobsPage() {
             ))}
           </div>
         )}
+
       </div>
 
       {ctxMenu && (

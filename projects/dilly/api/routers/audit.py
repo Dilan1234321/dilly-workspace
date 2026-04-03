@@ -757,6 +757,35 @@ async def audit_resume_v2(
             full_audit_dict = response.model_dump() if hasattr(response, "model_dump") else response.dict()
             full_audit_dict["id"] = audit_id
             full_audit_dict["ts"] = time.time()
+            # Store raw ScoringSignals so profile synthesis can compute
+            # cohort-specific scores without re-running the audit.
+            try:
+                full_audit_dict["scoring_signals"] = {
+                    "gpa":                       float(getattr(parsed, "gpa", 0) or 0),
+                    "major":                     str(getattr(parsed, "major", "") or ""),
+                    "honors_count":              int(getattr(parsed, "honors_count", 0) or 0),
+                    "honors_weighted_sum":       float(getattr(parsed, "honors_weighted_sum", 0) or 0),
+                    "has_research":              bool(getattr(parsed, "has_research", False)),
+                    "quantifiable_impact_count": int(getattr(parsed, "quantifiable_impact_count", 0) or 0),
+                    "impact_weighted_sum":       float(getattr(parsed, "impact_weighted_sum", 0) or 0),
+                    "leadership_density":        int(getattr(parsed, "leadership_density", 0) or 0),
+                    "leadership_weighted_sum":   float(getattr(parsed, "leadership_weighted_sum", 0) or 0),
+                    "work_entry_count":          int(getattr(parsed, "work_entry_count", 0) or 0),
+                    "international_markers":     bool(getattr(parsed, "international_markers", False)),
+                    "minor":                     str(getattr(parsed, "minor", "") or ""),
+                    "deployed_app_or_live_link": bool(getattr(parsed, "deployed_app_or_live_link", False)),
+                    "hackathon_mention":         bool(getattr(parsed, "hackathon_mention", False)),
+                    "recognized_tech_employer":  bool(getattr(parsed, "recognized_tech_employer", False)),
+                    "competitive_programming":   bool(getattr(parsed, "competitive_programming", False)),
+                    "commit_velocity_per_week":  float(getattr(parsed, "commit_velocity_per_week", 0) or 0),
+                    "certifications_list":       list(getattr(parsed, "certifications_list", []) or []),
+                    "actuarial_exams_passed":    int(getattr(parsed, "actuarial_exams_passed", 0) or 0),
+                    "security_metrics_count":    int(getattr(parsed, "security_metrics_count", 0) or 0),
+                    "bcpm_gpa":                  float(getattr(parsed, "bcpm_gpa", None) or 0) or None,
+                    "research_semesters":        float(getattr(parsed, "research_semesters", 0) or 0),
+                }
+            except Exception:
+                pass
             try:
                 from dilly_core.skill_tags import extract_skill_tags
                 profile_for_tags = get_profile(email)
@@ -804,6 +833,21 @@ async def audit_resume_v2(
                 write_dilly_profile_txt(email)
             except Exception:
                 pass
+            # Seed Dilly Profile from resume text (auto-populate on first audit)
+            try:
+                import threading as _threading
+                _seed_email = email
+                _seed_text = _load_parsed_resume_for_voice(email, max_chars=6000) or text
+                _seed_audit = full_audit_dict
+                def _seed_bg():
+                    try:
+                        from projects.dilly.api.memory_extraction import seed_profile_from_resume
+                        seed_profile_from_resume(_seed_email, _seed_text, _seed_audit)
+                    except Exception:
+                        pass
+                _threading.Thread(target=_seed_bg, daemon=True).start()
+            except Exception:
+                pass
             # Sync audit scores to PostgreSQL so GET /profile returns them immediately
             try:
                 import psycopg2, psycopg2.extras, json as _json
@@ -813,14 +857,19 @@ async def audit_resume_v2(
                 _grit = float(_scores.get("grit", 0))
                 _build = float(_scores.get("build", 0))
                 _dilly = float(full_audit_dict.get("final_score", 0))
+                try:
+                    from projects.dilly.academic_taxonomy import get_cohort as _get_cohort
+                    _cohort_key = _get_cohort(major or "", _track or "")
+                except Exception:
+                    _cohort_key = _track or ""
                 _cohort_scores = {
-                    _track: {
+                    _cohort_key: {
                         "smart": _smart,
                         "grit": _grit,
                         "build": _build,
                         "level": "primary",
                     }
-                } if _track else {}
+                } if _cohort_key else {}
                 _pw = os.environ.get("DILLY_DB_PASSWORD", "")
                 if not _pw:
                     try: _pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
@@ -1197,6 +1246,33 @@ async def audit_from_text(request: Request, body: dict = Body(...)):
         full_audit_dict["id"] = audit_id
         full_audit_dict["ts"] = time.time()
         try:
+            full_audit_dict["scoring_signals"] = {
+                "gpa":                       float(getattr(parsed, "gpa", 0) or 0),
+                "major":                     str(getattr(parsed, "major", "") or ""),
+                "honors_count":              int(getattr(parsed, "honors_count", 0) or 0),
+                "honors_weighted_sum":       float(getattr(parsed, "honors_weighted_sum", 0) or 0),
+                "has_research":              bool(getattr(parsed, "has_research", False)),
+                "quantifiable_impact_count": int(getattr(parsed, "quantifiable_impact_count", 0) or 0),
+                "impact_weighted_sum":       float(getattr(parsed, "impact_weighted_sum", 0) or 0),
+                "leadership_density":        int(getattr(parsed, "leadership_density", 0) or 0),
+                "leadership_weighted_sum":   float(getattr(parsed, "leadership_weighted_sum", 0) or 0),
+                "work_entry_count":          int(getattr(parsed, "work_entry_count", 0) or 0),
+                "international_markers":     bool(getattr(parsed, "international_markers", False)),
+                "minor":                     str(getattr(parsed, "minor", "") or ""),
+                "deployed_app_or_live_link": bool(getattr(parsed, "deployed_app_or_live_link", False)),
+                "hackathon_mention":         bool(getattr(parsed, "hackathon_mention", False)),
+                "recognized_tech_employer":  bool(getattr(parsed, "recognized_tech_employer", False)),
+                "competitive_programming":   bool(getattr(parsed, "competitive_programming", False)),
+                "commit_velocity_per_week":  float(getattr(parsed, "commit_velocity_per_week", 0) or 0),
+                "certifications_list":       list(getattr(parsed, "certifications_list", []) or []),
+                "actuarial_exams_passed":    int(getattr(parsed, "actuarial_exams_passed", 0) or 0),
+                "security_metrics_count":    int(getattr(parsed, "security_metrics_count", 0) or 0),
+                "bcpm_gpa":                  float(getattr(parsed, "bcpm_gpa", None) or 0) or None,
+                "research_semesters":        float(getattr(parsed, "research_semesters", 0) or 0),
+            }
+        except Exception:
+            pass
+        try:
             from dilly_core.skill_tags import extract_skill_tags
             profile_for_tags = get_profile(email)
             full_audit_dict["skill_tags"] = extract_skill_tags(parsed_resume=None, audit=full_audit_dict, profile=profile_for_tags or {})
@@ -1218,6 +1294,21 @@ async def audit_from_text(request: Request, body: dict = Body(...)):
         try:
             from projects.dilly.api.dilly_profile_txt import write_dilly_profile_txt
             write_dilly_profile_txt(email)
+        except Exception:
+            pass
+        # Seed Dilly Profile from resume text
+        try:
+            import threading as _threading
+            _seed_email2 = email
+            _seed_text2 = text
+            _seed_audit2 = full_audit_dict
+            def _seed_bg2():
+                try:
+                    from projects.dilly.api.memory_extraction import seed_profile_from_resume
+                    seed_profile_from_resume(_seed_email2, _seed_text2, _seed_audit2)
+                except Exception:
+                    pass
+            _threading.Thread(target=_seed_bg2, daemon=True).start()
         except Exception:
             pass
         response = response.model_copy(update={"id": audit_id})

@@ -31,7 +31,7 @@ def write_dilly_profile_txt(email: str) -> str | None:
         from dilly_core.structured_resume import safe_filename_from_key, read_parsed_resume
         from dilly_core.dilly_profile_txt import build_dilly_profile_txt
         from projects.dilly.api.profile_store import get_profile
-        from projects.dilly.api.audit_history_pg import get_audits
+        from projects.dilly.api.audit_history import get_audits
     except Exception as e:
         sys.stderr.write(f"Meridian profile txt: import error: {e}\n")
         return None
@@ -74,9 +74,10 @@ def get_dilly_profile_txt_content(email: str, max_chars: int = 12000) -> str:
         return ""
     try:
         from dilly_core.structured_resume import safe_filename_from_key
+        path = os.path.join(_PROFILE_TXT_DIR, safe_filename_from_key(email))
     except Exception:
-        return ""
-    path = os.path.join(_PROFILE_TXT_DIR, safe_filename_from_key(email))
+        # Fallback: files are named directly as email + ".txt"
+        path = os.path.join(_PROFILE_TXT_DIR, email + ".txt")
     if not os.path.isfile(path):
         return ""
     try:

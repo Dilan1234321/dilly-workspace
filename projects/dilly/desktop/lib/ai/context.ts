@@ -61,6 +61,11 @@ export interface RichContext {
   resume_snippet: string;
   nudges: Array<{ priority: string; message: string }>;
   dilly_narrative?: string;
+  // Dilly Profile completeness
+  profile_facts_text?: string;
+  profile_completeness?: number;        // 0–100 — percentage of core categories filled
+  profile_filled_categories?: string[]; // e.g. ["Career goals", "Target companies"]
+  profile_missing_categories?: string[]; // e.g. ["Hobbies & interests", "Availability"]
 }
 
 /** Fetch rich context server-side before calling streamText. */

@@ -108,105 +108,161 @@ async def get_profile(request: Request):
         except Exception:
             pass
 
-        # Synthesize cohort_scores from majors/minors and merge with any DB-stored entries.
-        # Always runs so that cohorts from minors/secondary tracks are included even when
-        # the DB only stores the primary track entry (set during audit).
+        # Synthesize cohort_scores using cohort-specific scoring.
+        # Each cohort gets its own Smart/Grit/Build computed through that field's
+        # lens: GPA is compared against the cohort's competitive expectation, and
+        # leadership credit is reduced for activities outside the field.
         if profile.get("overall_smart") or profile.get("overall_grit") or profile.get("overall_build"):
             try:
-                from projects.dilly.api.cohort_config import MAJOR_TO_COHORT, COHORT_SCORING_CONFIG
-                s = float(profile.get("overall_smart") or 0)
-                g = float(profile.get("overall_grit")  or 0)
-                b = float(profile.get("overall_build") or 0)
-                d = float(profile.get("overall_dilly_score") or 0)
+                from projects.dilly.api.cohort_config import (
+                    MAJOR_TO_COHORT, COHORT_SCORING_CONFIG, score_for_cohort,
+                )
+                b_global = float(profile.get("overall_build") or 0)
 
-                if s or g or b:
-                    majors  = profile.get("majors") or ([profile["major"]] if profile.get("major") else [])
-                    minors  = profile.get("minors") or []
-                    seen: dict = {}
+                # Load the latest audit for raw signals + resume text
+                _signals: dict = {}
+                _resume_text: str = ""
+                try:
+                    from projects.dilly.api.audit_history import get_audits as _gau2
+                    _au2 = _gau2(email)
+                    if _au2:
+                        _la2 = _au2[0]
+                        _signals     = _la2.get("scoring_signals") or {}
+                        # Enrich corpus: join resume_text + skill_tags so keyword
+                        # matching catches structured tags even if the raw text
+                        # uses variant phrasing (e.g. tag "Machine learning" vs
+                        # resume phrase "AI Engineering Intern").
+                        _skill_tags  = " ".join(_la2.get("skill_tags") or [])
+                        _resume_text = f"{_la2.get('resume_text') or ''} {_skill_tags}"
+                except Exception:
+                    pass
 
-                    def _dilly_for_cohort(cohort_name: str, smart: float, grit: float, build: float) -> float:
-                        cfg = COHORT_SCORING_CONFIG.get(cohort_name, {})
-                        w = cfg.get("weights", {"smart": 0.33, "grit": 0.33, "build": 0.34})
-                        return round(smart * w.get("smart", 0.33) +
-                                     grit  * w.get("grit",  0.33) +
-                                     build * w.get("build", 0.34), 2)
+                # Fallback: if no stored signals, derive GPA from profile
+                if not _signals:
+                    _gpa_fallback = float(profile.get("gpa") or profile.get("transcript_gpa") or 0)
+                    if _gpa_fallback:
+                        _signals = {"gpa": _gpa_fallback}
 
-                    def _cohort_dim_score(raw: float, expected: float) -> float:
-                        """Map raw student score to 0–100 relative to cohort's competitive bar.
-                        100 = at or above bar. Below 100 = percentage of bar met."""
-                        if expected <= 0:
-                            return raw
-                        return min(100.0, round((raw / expected) * 100, 1))
+                has_signals = bool(_signals)
 
-                    def _expected_dim(w: float, recruiter_bar: float, spread: float = 0.55) -> float:
-                        """Competitive threshold for a single dimension given its weight (0–1) and bar."""
-                        mean_w = 1.0 / 3.0
-                        return max(1.0, recruiter_bar + (w - mean_w) * 100 * spread)
+                majors = profile.get("majors") or ([profile["major"]] if profile.get("major") else [])
+                minors = profile.get("minors") or []
+                seen: dict = {}
 
-                    def _add(major_or_minor: str, level: str):
-                        cohort = MAJOR_TO_COHORT.get(str(major_or_minor).strip())
-                        if not cohort or cohort in seen:
-                            return
-                        cfg = COHORT_SCORING_CONFIG.get(cohort, {})
-                        bar = cfg.get("recruiter_bar", 70)
-                        w = cfg.get("weights", {"smart": 0.333, "grit": 0.333, "build": 0.334})
-                        # Compute each dimension's expected competitive score for this cohort
-                        exp_s = _expected_dim(w.get("smart", 0.333), bar)
-                        exp_g = _expected_dim(w.get("grit",  0.333), bar)
-                        exp_b = _expected_dim(w.get("build", 0.334), bar)
-                        # Student's cohort-specific scores: how close are they to the bar?
-                        cs = _cohort_dim_score(s, exp_s)
-                        cg = _cohort_dim_score(g, exp_g)
-                        cb = _cohort_dim_score(b, exp_b)
-                        seen[cohort] = {
-                            "cohort": cohort,
-                            "level": level,
-                            "field": major_or_minor,
-                            "smart": cs,
-                            "grit":  cg,
-                            "build": cb,
-                            "dilly_score": _dilly_for_cohort(cohort, s, g, b),
-                            "weight": 1.0 if level == "major" else 0.5,
-                        }
+                def _dilly_for_cohort(cohort_name: str, smart: float, grit: float, build: float) -> float:
+                    cfg = COHORT_SCORING_CONFIG.get(cohort_name, {})
+                    w = cfg.get("weights", {"smart": 0.33, "grit": 0.33, "build": 0.34})
+                    # Guard against NaN/inf inputs from stale/corrupt stored scores
+                    s = smart if smart == smart else 0.0
+                    g = grit  if grit  == grit  else 0.0
+                    b = build if build == build else 0.0
+                    return round(s * w.get("smart", 0.33) +
+                                 g * w.get("grit",  0.33) +
+                                 b * w.get("build", 0.34), 2)
 
-                    for m in majors:
-                        _add(m, "major")
-                    for m in minors:
-                        _add(m, "minor")
-                    # Interest cohorts: stored as cohort label strings, not majors.
-                    # They show up as an additional lens — no score impact.
-                    interests_list = profile.get("interests") or []
-                    for cohort_label in interests_list:
-                        if not cohort_label or cohort_label in seen:
+                def _add(major_or_minor: str, level: str):
+                    cohort = MAJOR_TO_COHORT.get(str(major_or_minor).strip())
+                    if not cohort or cohort in seen:
+                        return
+                    if has_signals:
+                        # When GPA is 0 (text-based audit didn't extract it),
+                        # estimate from overall_smart so field-fit still differentiates
+                        # cohorts: gpa_estimate = (overall_smart / 70) * 3.5.
+                        # This gives a realistic GPA while preserving per-cohort variance.
+                        _signals_for_scoring = _signals
+                        if not _signals.get("gpa") and profile.get("overall_smart"):
+                            _est_gpa = round(min(4.0, max(0.5, float(profile.get("overall_smart") or 0) / 70.0 * 3.5)), 2)
+                            _signals_for_scoring = {**_signals, "gpa": _est_gpa}
+                        scores = score_for_cohort(_signals_for_scoring, _resume_text, cohort, b_global)
+                        cs, cg, cb = scores["smart"], scores["grit"], scores["build"]
+                        # Grit signals (work entries, leadership, impact) can be 0
+                        # when the audit was run via plain-text import rather than
+                        # a proper PDF upload. In that case fall back to overall_grit
+                        # so the cohort card doesn't mislead with a 0.
+                        _grit_signals_empty = not any([
+                            _signals.get("work_entry_count"),
+                            _signals.get("leadership_density"),
+                            _signals.get("impact_weighted_sum"),
+                            _signals.get("quantifiable_impact_count"),
+                        ])
+                        if _grit_signals_empty and profile.get("overall_grit"):
+                            cg = float(profile.get("overall_grit") or 0)
+                    else:
+                        # No scoring_signals in audit yet (pre-dates signal capture).
+                        # Use overall scores as a best-effort approximation so the
+                        # cohort cards still render. Re-auditing upgrades these to
+                        # proper field-fit-adjusted cohort scores.
+                        cs = float(profile.get("overall_smart") or 0)
+                        cg = float(profile.get("overall_grit") or 0)
+                        cb = b_global
+                    seen[cohort] = {
+                        "cohort": cohort,
+                        "level":  level,
+                        "field":  major_or_minor,
+                        "smart":  cs,
+                        "grit":   cg,
+                        "build":  cb,
+                        "dilly_score": _dilly_for_cohort(cohort, cs, cg, cb),
+                        "weight": 1.0 if level == "major" else 0.5,
+                    }
+
+                for m in majors:
+                    _add(m, "major")
+                for m in minors:
+                    _add(m, "minor")
+
+                # Interest cohorts: same score_for_cohort engine as majors/minors.
+                # A CS student exploring Architecture will see Architecture-specific
+                # scores (low Smart/Build since no arch signals, moderate Grit).
+                interests_list = profile.get("interests") or []
+                for cohort_label in interests_list:
+                    if not cohort_label or cohort_label in seen:
+                        continue
+                    cfg = COHORT_SCORING_CONFIG.get(cohort_label, {})
+                    if not cfg:
+                        continue  # unknown cohort label — skip
+                    if has_signals:
+                        _signals_for_scoring = _signals
+                        if not _signals.get("gpa") and profile.get("overall_smart"):
+                            _est_gpa = round(min(4.0, max(0.5, float(profile.get("overall_smart") or 0) / 70.0 * 3.5)), 2)
+                            _signals_for_scoring = {**_signals, "gpa": _est_gpa}
+                        scores = score_for_cohort(_signals_for_scoring, _resume_text, cohort_label, b_global)
+                        cs, cg, cb = scores["smart"], scores["grit"], scores["build"]
+                        _grit_signals_empty = not any([
+                            _signals.get("work_entry_count"),
+                            _signals.get("leadership_density"),
+                            _signals.get("impact_weighted_sum"),
+                            _signals.get("quantifiable_impact_count"),
+                        ])
+                        if _grit_signals_empty and profile.get("overall_grit"):
+                            cg = float(profile.get("overall_grit") or 0)
+                    else:
+                        cs = float(profile.get("overall_smart") or 0)
+                        cg = float(profile.get("overall_grit") or 0)
+                        cb = b_global
+                    seen[cohort_label] = {
+                        "cohort": cohort_label,
+                        "level":  "interest",
+                        "field":  cohort_label,
+                        "smart":  cs,
+                        "grit":   cg,
+                        "build":  cb,
+                        "dilly_score": _dilly_for_cohort(cohort_label, cs, cg, cb),
+                        "weight": 0.0,
+                    }
+
+                if seen:
+                    # Merge synthesized cohorts into any existing DB-stored cohort_scores.
+                    # DB entries win for cohorts already present (they may have more precise
+                    # per-cohort data from a domain-specific audit in the future).
+                    existing = profile.get("cohort_scores") or {}
+                    merged = dict(seen)
+                    for k, v in existing.items():
+                        # Skip malformed entries: must have a truthy cohort name
+                        if not v or not v.get("cohort"):
                             continue
-                        cfg = COHORT_SCORING_CONFIG.get(cohort_label, {})
-                        if not cfg:
-                            continue  # unknown cohort label — skip
-                        bar = cfg.get("recruiter_bar", 70)
-                        w = cfg.get("weights", {"smart": 0.333, "grit": 0.333, "build": 0.334})
-                        exp_s = _expected_dim(w.get("smart", 0.333), bar)
-                        exp_g = _expected_dim(w.get("grit",  0.333), bar)
-                        exp_b = _expected_dim(w.get("build", 0.334), bar)
-                        seen[cohort_label] = {
-                            "cohort": cohort_label,
-                            "level": "interest",
-                            "field": cohort_label,
-                            "smart": _cohort_dim_score(s, exp_s),
-                            "grit":  _cohort_dim_score(g, exp_g),
-                            "build": _cohort_dim_score(b, exp_b),
-                            "dilly_score": _dilly_for_cohort(cohort_label, s, g, b),
-                            "weight": 0.0,
-                        }
-
-                    if seen:
-                        # Merge synthesized cohorts into any existing DB-stored cohort_scores.
-                        # DB entries win for cohorts already present (they may have more precise
-                        # per-cohort data from a domain-specific audit in the future).
-                        existing = profile.get("cohort_scores") or {}
-                        merged = dict(seen)
-                        for k, v in existing.items():
-                            merged[k] = v  # DB entry overrides synthesized fallback
-                        profile["cohort_scores"] = merged
+                        merged[k] = v  # DB entry overrides synthesized fallback
+                    profile["cohort_scores"] = merged
             except Exception:
                 pass
 

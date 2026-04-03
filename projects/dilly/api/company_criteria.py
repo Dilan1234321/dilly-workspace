@@ -67,7 +67,15 @@ def job_is_verified(job: dict) -> tuple[bool, str | None]:
         if fnmatch.fnmatch(company.lower(), pattern.lower()):
             return True, rule.get("criteria_for_llm") or ""
 
-    return False, None
+    # No specific criteria — use a generic fallback so all scraped jobs are shown.
+    # This allows Dilly to surface the full internship catalog while still passing
+    # a generic criteria string to the LLM for scoring.
+    generic = (
+        "Standard internship hiring criteria apply. Look for relevant coursework, "
+        "demonstrated skills, GPA if required, leadership or project experience, "
+        "and alignment between the candidate's track and the role's technical demands."
+    )
+    return True, generic
 
 
 def get_job_required_scores(job: dict) -> dict | None:

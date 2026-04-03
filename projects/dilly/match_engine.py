@@ -40,12 +40,28 @@ def get_student_cohorts(student):
     if isinstance(cohort_scores, str):
         cohort_scores = json.loads(cohort_scores)
 
-    # If new cohort_scores system is populated, use it
+    # If new cohort_scores system is populated, use it as base
     if cohort_scores:
         result = {}
         for key, data in cohort_scores.items():
             full_name = denormalize_cohort_key(key)
             result[full_name] = data
+
+        # Also add interest cohorts not already covered by major/minor scores.
+        # Interests are stored as cohort label strings (e.g. "Finance & Accounting").
+        interests = student.get("interests") or []
+        if isinstance(interests, str):
+            try:
+                interests = json.loads(interests)
+            except Exception:
+                interests = []
+        smart = float(student.get("smart_score") or student.get("overall_smart") or 50)
+        grit  = float(student.get("grit_score")  or student.get("overall_grit")  or 50)
+        build = float(student.get("build_score")  or student.get("overall_build") or 30)
+        for interest in interests:
+            if interest and isinstance(interest, str) and interest not in result:
+                result[interest] = {"level": "interest", "smart": smart * 0.7, "grit": grit * 0.7, "build": build * 0.5}
+
         return result
 
     # Fallback: build from old single-score system + academic taxonomy
@@ -164,19 +180,22 @@ def compute_matches_for_student(conn, student):
         if not requirements:
             continue
 
-        # Check: student must have ALL cohorts the job requires
+        # Show job if student has ANY of the job's required cohorts (OR logic).
         job_cohort_names = set(r["cohort"] for r in requirements)
-        if not job_cohort_names.issubset(student_cohort_names):
+        matching_cohorts = job_cohort_names.intersection(student_cohort_names)
+        if not matching_cohorts:
             skipped_no_cohort += 1
             continue
 
-        # Compute per-cohort readiness
+        # Compute per-cohort readiness for cohorts student has; skip others.
         cohort_readiness = []
         worst_readiness = "ready"
         readiness_order = {"ready": 0, "almost": 1, "gap": 2}
 
         for req in requirements:
             cohort_name = req["cohort"]
+            if cohort_name not in student_cohort_names:
+                continue  # student doesn't have this cohort — skip it
             student_scores = student_cohorts[cohort_name]
             readiness, s_gap, g_gap, b_gap, weakest = compute_cohort_readiness(
                 student_scores, req)

@@ -51,7 +51,7 @@ Description:
 - Curating and leading weekly "Problem Solving" workshops, breaking down and explaining complex concepts in Calculus and Linear Algebra to finance, economics, and tech-focused students to promote mathematical thinking.  
 
 Company: Alpha Kappa Psi - Phi Upsilon Chapter  
-Role: Chairman of Technology  
+Role: Chairman of Technology/Director of Digital Infrastructure  
 Date: December 2025 - Present  
 Location: Tampa, FL  
 Description:  

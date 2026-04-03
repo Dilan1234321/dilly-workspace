@@ -42,8 +42,14 @@ def _job_matches_location(job: dict, profile: dict) -> bool:
     loc = (job.get("location") or "").strip()
     loc_lower = loc.lower()
 
-    # Remote always included
-    if "remote" in loc_lower:
+    # Remote / hybrid always included
+    if "remote" in loc_lower or "hybrid" in loc_lower:
+        return True
+
+    # Broad national listings (e.g. "United States", "Nationwide", "Multiple Locations")
+    # are included for any non-international preference — the job is open to the user's area.
+    _broad_national = ["united states", "usa", "u.s.", "nationwide", "multiple locations", "various"]
+    if any(b in loc_lower for b in _broad_national):
         return True
 
     scope = (profile.get("job_location_scope") or "").strip().lower()

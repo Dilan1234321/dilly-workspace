@@ -17,7 +17,9 @@ interface Props {
   matchCounts: Record<string, number>;
 }
 
-export default function CohortStrip({ cohorts, activeCohorts, onToggle, onClearAll, matchCounts }: Props) {
+export default function CohortStrip({ cohorts: rawCohorts, activeCohorts, onToggle, onClearAll, matchCounts }: Props) {
+  // Filter out any malformed entries where cohort name is missing/undefined
+  const cohorts = rawCohorts.filter(c => c && c.cohort);
   if (!cohorts.length) return null;
   const anyActive = activeCohorts.size > 0;
 
@@ -39,6 +41,7 @@ export default function CohortStrip({ cohorts, activeCohorts, onToggle, onClearA
         const score = Math.round(c.dilly_score);
         const color = score >= 75 ? '#34C759' : score >= 55 ? '#FF9F0A' : '#FF453A';
         const count = matchCounts[c.cohort] || 0;
+        const showCount = count > 0 || c.level !== 'interest';
         const levelTag = c.level === 'major' ? 'M' : c.level === 'minor' ? 'm' : 'i';
 
         return (
@@ -56,13 +59,13 @@ export default function CohortStrip({ cohorts, activeCohorts, onToggle, onClearA
               <div className="flex items-center gap-1.5">
                 <span className="text-[9px] font-bold text-txt-3 uppercase tracking-wider bg-surface-2 w-4 h-4 rounded flex items-center justify-center">{levelTag}</span>
                 <span className={`text-[12px] font-semibold ${active ? 'text-txt-1' : 'text-txt-2'} whitespace-nowrap`}>
-                  {c.cohort.replace(' & ', ' & ')}
+                  {(c.cohort || '').replace(' & ', ' & ')}
                 </span>
               </div>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-[14px] font-bold font-mono tabular-nums" style={{ color }}>{score}</span>
-              <span className="text-[9px] text-txt-3 -mt-0.5">{count} jobs</span>
+              {showCount && <span className="text-[9px] text-txt-3 -mt-0.5">{count} jobs</span>}
             </div>
           </button>
         );
@@ -73,7 +76,7 @@ export default function CohortStrip({ cohorts, activeCohorts, onToggle, onClearA
           {cohorts.filter(c => activeCohorts.has(c.cohort)).map(c => {
             const sc = Math.round(c.dilly_score);
             const col = sc >= 75 ? '#34C759' : sc >= 55 ? '#FF9F0A' : '#FF453A';
-            const short = c.cohort.replace('Software Engineering & CS', 'CS').replace('Data Science & Analytics', 'Data Sci').replace('Entrepreneurship & Innovation', 'Startup').replace('Physical Sciences & Math', 'Math').replace('Consulting & Strategy', 'Consulting').replace('Social Sciences & Nonprofit', 'Social Sci');
+            const short = (c.cohort || '').replace('Software Engineering & CS', 'CS').replace('Data Science & Analytics', 'Data Sci').replace('Entrepreneurship & Innovation', 'Startup').replace('Physical Sciences & Math', 'Math').replace('Consulting & Strategy', 'Consulting').replace('Social Sciences & Nonprofit', 'Social Sci');
             return (
               <span key={c.cohort} style={{ color: col, background: col + '14', border: `1px solid ${col}30` }}
                 className="text-[10px] font-semibold px-2 py-0.5 rounded-full">

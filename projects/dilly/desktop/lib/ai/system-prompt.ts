@@ -16,7 +16,7 @@ export function buildSystemPrompt(
 }
 
 function buildPracticePrompt(ctx: RichContext | null): string {
-  const company = ctx?.reference_company || "a top company";
+  const company = ctx?.cohort || "a top company";
   const name = ctx?.name || "the student";
   const cohort = ctx?.cohort || "General";
   return `You are a tough but fair interviewer at ${company}. You are interviewing ${name} for an internship or full-time role in ${cohort}. Conduct a realistic interview simulation. Ask ONE question at a time. After each student answer, give 1-2 sentences of direct feedback, then ask your next question. Start by briefly introducing yourself and asking your first question. Be direct, professional, and challenging.`;
@@ -32,11 +32,8 @@ function buildRichPrompt(r: RichContext, narrative?: string): string {
     const lines = [
       `CURRENT SCORE: ${Math.round(score)}/100`,
       `Dimensions: Smart ${Math.round(r.smart)}, Grit ${Math.round(r.grit)}, Build ${Math.round(r.build)}`,
-      `Cohort bar (${r.reference_company}): ${Math.round(bar)}/100`,
     ];
-    if (r.cleared_bar) lines.push("ABOVE the bar. Recruiter ready.");
-    else if (gap !== null)
-      lines.push(`BELOW the bar by ${Math.round(gap)} points. ${r.weakest_dimension} is the weakest dimension.`);
+    if (r.weakest_dimension) lines.push(`Weakest dimension: ${r.weakest_dimension}`);
     if (r.strongest_dimension) lines.push(`Strongest dimension: ${r.strongest_dimension}`);
     if (r.score_delta !== null)
       lines.push(`Score changed by ${r.score_delta > 0 ? "+" : ""}${Math.round(r.score_delta)} since last audit.`);
@@ -76,8 +73,7 @@ function buildRichPrompt(r: RichContext, narrative?: string): string {
   const targetParts: string[] = [];
   if (r.career_goal) targetParts.push(`Career goal: ${r.career_goal}`);
   if (r.industry_target) targetParts.push(`Industry target: ${r.industry_target}`);
-  if (r.target_companies.length) targetParts.push(`Target companies: ${r.target_companies.slice(0, 5).join(", ")}`);
-  const targetBlock = targetParts.length ? "CAREER TARGETS:\n" + targetParts.map((p) => `  - ${p}`).join("\n") : "";
+  const targetBlock = targetParts.length ? "CAREER GOALS:\n" + targetParts.map((p) => `  - ${p}`).join("\n") : "";
 
   let historyBlock = "";
   if (r.audit_history.length > 1) {
@@ -90,6 +86,19 @@ function buildRichPrompt(r: RichContext, narrative?: string): string {
     : "";
 
   const memoryBlock = narrative ? `WHAT YOU KNOW FROM PAST CONVERSATIONS:\n${narrative}` : "";
+
+  // Dilly Profile: completeness + known facts
+  const completeness = r.profile_completeness ?? 0;
+  const filled = r.profile_filled_categories ?? [];
+  const missing = r.profile_missing_categories ?? [];
+  const facts = r.profile_facts_text ?? "";
+  const profileLines: string[] = [
+    `DILLY PROFILE STRENGTH: ${completeness}% (${filled.length}/10 core categories filled)`,
+  ];
+  if (missing.length) profileLines.push(`Missing categories: ${missing.join(", ")}`);
+  if (filled.length) profileLines.push(`Filled categories: ${filled.join(", ")}`);
+  if (facts) profileLines.push(`\nWHAT YOU KNOW ABOUT THIS STUDENT (from past conversations and their profile — never re-ask anything listed here):\n${facts}`);
+  const profileBlock = profileLines.join("\n");
 
   return `You are Dilly, an AI career coach embedded in a career acceleration app for college students. You are not just a chatbot. You are the student's personal career strategist who can see their entire dashboard.
 
@@ -114,6 +123,8 @@ ${historyBlock}
 
 ${resumeBlock}
 
+${profileBlock}
+
 ${memoryBlock}
 
 APP FEATURES YOU CAN REFERENCE:
@@ -130,6 +141,8 @@ YOUR PERSONALITY AND RULES:
 - Be specific. Never say "consider improving your resume." Say "your second bullet under Google is missing a number, add the dataset size or time saved."
 - Reference their actual data. If their Build score is 52, say so.
 - When they ask you to DO something, use your tools to actually do it.
+- When the student pastes a job description, respond conversationally about the role (fit, what stands out, gaps), then offer to generate a tailored resume using the generateResumeForJob tool. Don't wait for them to ask — offer it directly.
+- When you use generateResumeForJob, tell the student the resume was saved and they can open it in the Resume Editor to review. Reference the saved label.
 - Keep responses to 2-4 short paragraphs. No walls of text.
 - NEVER use em-dashes, emojis, or filler phrases.
 - NEVER start with the student's name.

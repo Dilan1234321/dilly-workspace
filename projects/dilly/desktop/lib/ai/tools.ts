@@ -46,12 +46,6 @@ export function buildTools(authToken: string) {
         exec("UPDATE_APPLICATION_STATUS", { company, role, status: new_status }),
     }),
 
-    addTargetCompany: tool({
-      description: "Add a company to the student's target list",
-      inputSchema: z.object({ company: z.string() }),
-      execute: async ({ company }) => exec("ADD_TARGET_COMPANY", { company_name: company }),
-    }),
-
     createActionItem: tool({
       description: "Create a to-do action item for the student",
       inputSchema: z.object({
@@ -103,8 +97,6 @@ export function buildTools(authToken: string) {
           smart: ctx.smart,
           grit: ctx.grit,
           build: ctx.build,
-          cohort_bar: ctx.cohort_bar,
-          gap: ctx.gap,
           weakest: ctx.weakest_dimension,
           strongest: ctx.strongest_dimension,
           days_since_audit: ctx.days_since_audit,
@@ -129,6 +121,74 @@ export function buildTools(authToken: string) {
       execute: async ({ career_goal }) => exec("UPDATE_CAREER_GOAL", { career_goal }),
     }),
 
+    generateResumeForJob: tool({
+      description: "Generate a full resume tailored for a specific job using the student's Dilly profile. Use this when the student asks Dilly to write or generate a resume for a specific role. This creates a named version in their resume library.",
+      inputSchema: z.object({
+        job_title: z.string().describe("The job title to tailor the resume for"),
+        job_company: z.string().describe("The company the student is applying to"),
+        job_description: z.string().optional().describe("The full job description text, if provided by the student"),
+      }),
+      execute: async ({ job_title, job_company, job_description }) => {
+        try {
+          // Trigger generation — streams from /resume/generate, saves as a variant
+          const generateRes = await fetch(`${API_BASE}/resume/generate`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ job_title, job_company, job_description: job_description ?? "" }),
+            signal: AbortSignal.timeout(60_000),
+          });
+          if (!generateRes.ok) return { error: "Resume generation failed" };
+          if (!generateRes.body) return { error: "No response body" };
+
+          const reader = generateRes.body.getReader();
+          const decoder = new TextDecoder();
+          let accumulated = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            accumulated += decoder.decode(value, { stream: true });
+          }
+
+          // Parse sections
+          let sections: unknown[] = [];
+          try { sections = JSON.parse(accumulated.trim()); } catch {
+            return { error: "Could not parse generated resume" };
+          }
+
+          // Save as named variant
+          const month = new Date().toLocaleString("en-US", { month: "short" });
+          const year = new Date().getFullYear();
+          const label = `${job_company} — ${job_title}, ${month} ${year}`;
+
+          const createRes = await fetch(`${API_BASE}/resume/variants`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ label, type: "job", job_title, job_company }),
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!createRes.ok) return { error: "Could not save resume version" };
+          const meta = await createRes.json();
+
+          await fetch(`${API_BASE}/resume/variants/${meta.id}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ sections }),
+            signal: AbortSignal.timeout(10_000),
+          });
+
+          return {
+            success: true,
+            variant_id: meta.id,
+            label,
+            sections_count: sections.length,
+            message: `Resume generated and saved as "${label}". The student can open it in the Resume Editor to review and edit.`,
+          };
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : "Generation failed" };
+        }
+      },
+    }),
+
     // High-stake tools requiring approval
     deleteDeadline: tool({
       description: "Delete a deadline from the calendar",
@@ -144,11 +204,5 @@ export function buildTools(authToken: string) {
       execute: async ({ company, role }) => exec("DELETE_APPLICATION", { company, role }),
     }),
 
-    removeTargetCompany: tool({
-      description: "Remove a company from the target list",
-      inputSchema: z.object({ company: z.string() }),
-      needsApproval: true,
-      execute: async ({ company }) => exec("REMOVE_TARGET_COMPANY", { company_name: company }),
-    }),
   };
 }

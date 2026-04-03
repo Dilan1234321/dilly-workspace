@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProfile } from '../layout';
 import { dilly } from '@/lib/dilly';
 import { clearToken } from '@/lib/auth';
 import { InterestsPicker } from '@/components/ui/InterestsPicker';
+import { ALL_COHORTS } from '@dilly/api';
+
+const API_BASE_PHOTO = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
@@ -81,20 +84,26 @@ const SHORTCUTS = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { profile, setProfile } = useProfile();
+  const { profile, setProfile, refreshProfile } = useProfile();
   const [dark, setDark] = useState(true);
   const [activeSection, setActiveSection] = useState('account');
   const [saving, setSaving] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(profile?.notification_prefs?.enabled !== false);
   const [deadlineReminders, setDeadlineReminders] = useState(true);
   const [leaderboardOptIn, setLeaderboardOptIn] = useState(profile?.leaderboard_opt_in !== false);
+  const [subscribed, setSubscribed] = useState<boolean | null>(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
   const [giftCode, setGiftCode] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [interests, setInterests] = useState<string[]>(profile?.interests ?? []);
-  const [pendingInterests, setPendingInterests] = useState<string[]>(profile?.interests ?? []);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const validProfileInterests = (profile?.interests ?? []).filter((i: string) => (ALL_COHORTS as readonly string[]).includes(i));
+  const [interests, setInterests] = useState<string[]>(validProfileInterests);
+  const [pendingInterests, setPendingInterests] = useState<string[]>(validProfileInterests);
   const [interestsSaving, setInterestsSaving] = useState(false);
   const [interestsSaved, setInterestsSaved] = useState(false);
   const interestsDirty = JSON.stringify([...pendingInterests].sort()) !== JSON.stringify([...interests].sort());
@@ -103,13 +112,19 @@ export default function SettingsPage() {
     setDark(document.documentElement.classList.contains('dark'));
   }, []);
 
+  useEffect(() => {
+    dilly.get('/auth/me').then((data: { subscribed?: boolean }) => {
+      setSubscribed(data?.subscribed ?? false);
+    }).catch(() => setSubscribed(false));
+  }, []);
+
   async function saveInterests() {
     setInterestsSaving(true);
     setInterestsSaved(false);
     try {
-      const p = await dilly.patch('/profile', { interests: pendingInterests });
+      await dilly.patch('/profile', { interests: pendingInterests });
       setInterests(pendingInterests);
-      setProfile(p);
+      await refreshProfile();
       setInterestsSaved(true);
       setTimeout(() => setInterestsSaved(false), 2000);
     }
@@ -119,7 +134,7 @@ export default function SettingsPage() {
 
   const save = async (data: Record<string, unknown>) => {
     setSaving(true);
-    try { const p = await dilly.patch('/profile', data); setProfile(p); }
+    try { await dilly.patch('/profile', data); await refreshProfile(); }
     catch { /* ignore */ }
     finally { setSaving(false); }
   };
@@ -169,11 +184,29 @@ export default function SettingsPage() {
     finally { setDeleteLoading(false); }
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const token = localStorage.getItem('dilly_token');
+      const res = await fetch(`${API_BASE_PHOTO}/profile/photo`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (res.ok) await refreshProfile();
+    } catch { /* ignore */ }
+    finally { setPhotoUploading(false); }
+  }
+
   const name = profile?.name || 'Student';
   const email = profile?.email || '';
   const school = profile?.school_id === 'utampa' ? 'University of Tampa' : (profile?.school_id || '');
-  const cohort = profile?.track || profile?.cohort || 'General';
   const major = (profile?.majors || [])[0] || profile?.major || '';
+  const photoUrl = profile?.photo_url || null;
 
   return (
     <div className="h-full overflow-y-auto" style={{ background: 'var(--surface-0)' }}>
@@ -181,18 +214,32 @@ export default function SettingsPage() {
       <div style={{ background: dark ? 'linear-gradient(180deg, var(--surface-1) 0%, var(--surface-0) 100%)' : 'linear-gradient(180deg, var(--surface-2) 0%, var(--surface-0) 100%)', borderBottom: '1px solid var(--border-main)' }}>
         <div className="max-w-[840px] mx-auto px-8 pt-8 pb-6">
           <div className="flex items-start gap-5">
-            {/* Large avatar */}
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shrink-0"
-              style={{ background: 'rgba(59,76,192,0.08)', border: '2px solid rgba(59,76,192,0.2)' }}>
-              <span className="text-3xl font-bold" style={{ color: '#2B3A8E' }}>{name.charAt(0).toUpperCase()}</span>
-            </div>
+            {/* Photo avatar — click to upload */}
+            <button className="relative w-20 h-20 rounded-2xl shrink-0 group overflow-hidden"
+              style={{ background: 'rgba(59,76,192,0.08)', border: '2px solid rgba(59,76,192,0.2)' }}
+              onClick={() => photoInputRef.current?.click()}
+              title="Change photo">
+              {photoUrl ? (
+                <img src={photoUrl} alt={name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl font-bold" style={{ color: '#2B3A8E' }}>{name.charAt(0).toUpperCase()}</span>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'rgba(0,0,0,0.45)' }}>
+                {photoUploading ? (
+                  <svg className="w-5 h-5 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
+                ) : (
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                )}
+              </div>
+            </button>
+            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
             <div className="flex-1 min-w-0 pt-1">
               <h1 style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700, color: 'var(--text-1)', letterSpacing: 0.3 }}>{name}</h1>
               <p className="text-sm mt-0.5 truncate" style={{ color: 'var(--text-2)' }}>{email}</p>
               <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                 {school && <span className="text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border-main)' }}>{school}</span>}
                 {major && <span className="text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ background: 'rgba(59,76,192,0.08)', color: '#2B3A8E', border: '1px solid rgba(59,76,192,0.15)' }}>{major}</span>}
-                <span className="text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ background: 'var(--surface-2)', color: 'var(--text-3)', border: '1px solid var(--border-main)' }}>{cohort} cohort</span>
               </div>
             </div>
           </div>
@@ -220,9 +267,9 @@ export default function SettingsPage() {
                   <div><span className="text-txt-3 text-xs">Name</span><p className="font-medium mt-0.5 text-txt-1">{name}</p></div>
                   <div><span className="text-txt-3 text-xs">Email</span><p className="font-medium mt-0.5 text-txt-1">{email}</p></div>
                   <div><span className="text-txt-3 text-xs">School</span><p className="font-medium mt-0.5 text-txt-1">{school || 'Not set'}</p></div>
-                  <div><span className="text-txt-3 text-xs">Cohort</span><p className="font-medium mt-0.5 text-txt-1">{cohort}</p></div>
                   <div><span className="text-txt-3 text-xs">Majors</span><p className="font-medium mt-0.5 text-txt-1">{(profile?.majors || []).join(', ') || 'Not set'}</p></div>
                   <div><span className="text-txt-3 text-xs">Minors</span><p className="font-medium mt-0.5 text-txt-1">{(profile?.minors || []).join(', ') || 'Not set'}</p></div>
+                  <div><span className="text-txt-3 text-xs">Graduation</span><p className="font-medium mt-0.5 text-txt-1">{profile?.graduation_year || 'Not set'}</p></div>
                 </div>
               </Row>
             </SectionCard>
@@ -266,36 +313,76 @@ export default function SettingsPage() {
               <Row>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-base font-bold text-txt-1">Free Plan</p>
-                    <p className="text-xs mt-1 text-txt-3">Score + leaderboard rank + 2 recommendations</p>
+                    <p className="text-base font-bold text-txt-1">{subscribed ? 'Dilly' : 'Dilly Starter'}</p>
+                    <p className="text-xs mt-1 text-txt-3">
+                      {subscribed
+                        ? 'Unlimited audits · AI coaching · all jobs · full score history'
+                        : 'Score + leaderboard rank + 2 audit recommendations'}
+                    </p>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full" style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}>Current</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full"
+                    style={{ background: subscribed ? 'rgba(43,58,142,0.12)' : 'var(--surface-2)', color: subscribed ? '#2B3A8E' : 'var(--text-3)' }}>
+                    {subscribed ? 'Active' : 'Free'}
+                  </span>
                 </div>
               </Row>
-              <Row>
-                <button onClick={() => alert('Coming soon')} className="w-full py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, #2B3A8E, #2B3A8E)', color: 'white' }}>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  Upgrade to Dilly Pro &middot; $9.99/mo
-                </button>
-                <p className="text-[11px] text-center mt-2 text-txt-3">Unlimited audits, AI coaching, all jobs, score history</p>
-              </Row>
-              <Row border={false}>
-                <RowLabel>Redeem a gift</RowLabel>
-                <div className="flex gap-2">
-                  <input value={giftCode} onChange={e => setGiftCode(e.target.value.toUpperCase())} placeholder="GIFT-XXXX" className="flex-1 text-sm font-mono px-3 py-2 rounded-lg outline-none" style={{ border: '1px solid var(--border-main)', background: 'var(--surface-2)', color: 'var(--text-1)' }} />
-                  <button disabled={!giftCode.trim() || redeemLoading} onClick={async () => {
-                    setRedeemLoading(true);
-                    try {
-                      const token = localStorage.getItem('dilly_token');
-                      const res = await fetch(`${API_BASE}/auth/redeem-gift`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ code: giftCode.trim() }) });
-                      if (res.ok) { setGiftCode(''); window.location.reload(); }
-                    } finally { setRedeemLoading(false); }
-                  }} className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-40" style={{ background: '#2B3A8E' }}>
-                    {redeemLoading ? '...' : 'Redeem'}
+
+              {subscribed ? (
+                <Row border={false}>
+                  <button
+                    disabled={billingLoading}
+                    onClick={async () => {
+                      setBillingLoading(true);
+                      try {
+                        const data = await dilly.post('/auth/create-billing-portal-session', {});
+                        if (data?.url) window.open(data.url, '_blank');
+                        else alert('Could not open billing portal. Please contact support.');
+                      } finally { setBillingLoading(false); }
+                    }}
+                    className="w-full py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                    style={{ background: 'var(--surface-2)', color: 'var(--text-1)', border: '1px solid var(--border-main)' }}>
+                    {billingLoading ? 'Opening…' : 'Manage billing →'}
                   </button>
-                </div>
-              </Row>
+                  <p className="text-[11px] text-center mt-2 text-txt-3">Cancel, update payment method, or view invoices</p>
+                </Row>
+              ) : (
+                <>
+                  <Row>
+                    <button
+                      disabled={upgradeLoading}
+                      onClick={async () => {
+                        setUpgradeLoading(true);
+                        try {
+                          const data = await dilly.post('/auth/create-checkout-session', {});
+                          if (data?.url) window.location.href = data.url;
+                          else alert('Payment is not configured yet. Check back soon.');
+                        } finally { setUpgradeLoading(false); }
+                      }}
+                      className="w-full py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                      style={{ background: '#2B3A8E', color: 'white' }}>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      {upgradeLoading ? 'Loading…' : 'Upgrade to Dilly · $9.99/mo'}
+                    </button>
+                    <p className="text-[11px] text-center mt-2 text-txt-3">Unlimited audits, AI coaching, all jobs, score history</p>
+                  </Row>
+                  <Row border={false}>
+                    <RowLabel>Redeem a gift</RowLabel>
+                    <div className="flex gap-2">
+                      <input value={giftCode} onChange={e => setGiftCode(e.target.value.toUpperCase())} placeholder="GIFT-XXXX" className="flex-1 text-sm font-mono px-3 py-2 rounded-lg outline-none" style={{ border: '1px solid var(--border-main)', background: 'var(--surface-2)', color: 'var(--text-1)' }} />
+                      <button disabled={!giftCode.trim() || redeemLoading} onClick={async () => {
+                        setRedeemLoading(true);
+                        try {
+                          const token = localStorage.getItem('dilly_token');
+                          const res = await fetch(`${API_BASE}/auth/redeem-gift`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ code: giftCode.trim() }) });
+                          if (res.ok) { setGiftCode(''); setSubscribed(true); }
+                        } finally { setRedeemLoading(false); }
+                      }} className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity disabled:opacity-40" style={{ background: '#2B3A8E' }}>
+                        {redeemLoading ? '...' : 'Redeem'}
+                      </button>
+                    </div>
+                  </Row>
+                </>
+              )}
             </SectionCard>
           </section>
 

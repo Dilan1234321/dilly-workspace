@@ -10,8 +10,8 @@ from fastapi import APIRouter, Body, Request
 from fastapi.responses import JSONResponse
 
 from projects.dilly.api import deps
-from projects.dilly.api.audit_history_pg import get_audits
-from projects.dilly.api.memory_extraction import regenerate_narrative
+from projects.dilly.api.audit_history import get_audits
+from projects.dilly.api.memory_extraction import regenerate_narrative, seed_profile_from_resume
 from projects.dilly.api.memory_surface_store import (
     add_memory_item,
     delete_memory_item,
@@ -175,4 +175,34 @@ async def post_memory_regenerate_narrative(request: Request):
 
     save_profile(email, {key: now})
     return {"narrative": narrative}
+
+
+@router.post("/memory/seed-from-resume")
+async def post_seed_from_resume(request: Request):
+    """Re-trigger profile seeding from resume. Works even if LLM is unavailable (rule-based fallback)."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        from projects.dilly.api import errors
+        raise errors.unauthorized()
+
+    from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
+    from projects.dilly.api.audit_history import get_audits
+
+    resume_text = load_parsed_resume_for_voice(email, max_chars=6000)
+    if not resume_text:
+        return {"seeded": 0, "message": "No resume found. Upload one first."}
+
+    # Drop the guard so we always re-seed when called explicitly
+    surface = get_memory_surface(email)
+    existing = surface.get("items") or []
+    for item in existing:
+        if item.get("source") == "resume":
+            item["source"] = "resume_old"  # demote so guard doesn't block
+    if any(i.get("source") == "resume_old" for i in existing):
+        save_memory_surface(email, items=existing)
+
+    latest_audit = (get_audits(email) or [None])[0]
+    count = seed_profile_from_resume(email, resume_text, audit=latest_audit)
+    return {"seeded": count, "message": f"Seeded {count} profile items from resume."}
 

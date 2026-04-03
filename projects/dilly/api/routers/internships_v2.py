@@ -405,7 +405,7 @@ async def get_internship_feed(
     q: Optional[str] = Query(None),
     search: Optional[str] = Query(None),  # alias used by jobs page
     sort: str = Query("rank"),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
     user = deps.require_auth(request)
@@ -558,6 +558,10 @@ async def get_internship_feed(
             "rank_score": float(r["rank_score"]) if r["rank_score"] else 0,
             "readiness": r["readiness"],
             "cohort_readiness": cr,
+            "cohort_requirements": (
+                r["cohort_requirements"] if isinstance(r["cohort_requirements"], list)
+                else (json.loads(r["cohort_requirements"]) if r["cohort_requirements"] else [])
+            ),
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
         })
 
