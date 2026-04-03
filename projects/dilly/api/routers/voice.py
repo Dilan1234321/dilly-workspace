@@ -584,13 +584,19 @@ async def voice_chat(request: Request, body: dict = Body(...)):
     suggestions: list[str] = []
     try:
         from dilly_core.llm_client import is_llm_available, get_chat_completion, get_light_model
+        import traceback as _tb
+        print(f"[voice] is_llm_available={is_llm_available()}", flush=True)
         if is_llm_available():
             raw = get_chat_completion(system, user_content, model=get_light_model(), temperature=0.5, max_tokens=800)
+            print(f"[voice] LLM returned {len(raw or '')} chars", flush=True)
             if raw:
                 reply, suggestions = extract_suggestions_from_reply(raw.strip())
                 reply, suggestions = sanitize_voice_reply_and_suggestions(reply, suggestions)
-    except Exception:
-        pass
+        else:
+            print("[voice] LLM not available - ANTHROPIC_API_KEY missing?", flush=True)
+    except Exception as _e:
+        print(f"[voice] LLM error: {_e}", flush=True)
+        _tb.print_exc()
 
     profile_updates = _compute_profile_updates(email, message, context, history=history)
     target_company_added = _maybe_capture_target_company_from_message(email, message)
