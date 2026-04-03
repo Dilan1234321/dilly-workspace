@@ -151,4 +151,9 @@ def get_chat_completion_with_tools(
 
 def is_llm_available() -> bool:
     """True if ANTHROPIC_API_KEY is set."""
-    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not key:
+        import logging
+        logging.warning("[llm_client] ANTHROPIC_API_KEY not found in env. Available keys: %s",
+                       [k for k in os.environ if "API" in k or "KEY" in k or "ANTHROPIC" in k])
+    return bool(key)
