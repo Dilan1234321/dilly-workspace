@@ -29,7 +29,7 @@ function DillyTabIcon({ focused }: { focused: boolean }) {
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <Ionicons name="chatbubble" size={12} color={colors.indigo} />
+      <Ionicons name="school" size={12} color={colors.indigo} />
     </View>
   );
 }
@@ -64,7 +64,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Career Center',
           tabBarIcon: ({ focused }) => <DillyTabIcon focused={focused} />,
           tabBarActiveTintColor: colors.gold,
           tabBarInactiveTintColor: colors.gold,
