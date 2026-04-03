@@ -1,0 +1,622 @@
+import { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TextInput,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+} from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { dilly } from '../../lib/dilly';
+import { colors, spacing, radius } from '../../lib/tokens';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import FadeInView from '../../components/FadeInView';
+
+const W = Dimensions.get('window').width;
+const INDIGO = colors.indigo;
+const GREEN = colors.green;
+const AMBER = colors.amber;
+
+type Stage = 'idle' | 'generating' | 'done' | 'error';
+
+interface GeneratedSection {
+  key: string;
+  label: string;
+}
+
+const GENERATION_STEPS = [
+  'Reading your Dilly profile…',
+  'Tailoring experience bullets…',
+  'Matching job description keywords…',
+  'Formatting for ATS compatibility…',
+  'Finalizing your resume…',
+];
+
+function PulsingDot({ delay = 0 }: { delay?: number }) {
+  const opacity = useSharedValue(0.3);
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.3, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+  }, []);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return (
+    <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: INDIGO, marginHorizontal: 3, marginTop: delay }, style]} />
+  );
+}
+
+export default function ResumeGenerateScreen() {
+  const insets = useSafeAreaInsets();
+  const [stage, setStage] = useState<Stage>('idle');
+  const [jobTitle, setJobTitle] = useState('');
+  const [company, setCompany] = useState('');
+  const [jd, setJd] = useState('');
+  const [stepIdx, setStepIdx] = useState(0);
+  const [sections, setSections] = useState<GeneratedSection[]>([]);
+  const [variantId, setVariantId] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const progressAnim = useSharedValue(0);
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progressAnim.value * 100}%`,
+  }));
+
+  useEffect(() => {
+    return () => {
+      if (stepTimer.current) clearInterval(stepTimer.current);
+    };
+  }, []);
+
+  async function handleGenerate() {
+    if (!jobTitle.trim() || !company.trim()) {
+      Alert.alert('Missing info', 'Please enter a job title and company.');
+      return;
+    }
+
+    setStage('generating');
+    setStepIdx(0);
+    setSections([]);
+    setVariantId(null);
+    setSaved(false);
+    progressAnim.value = 0;
+
+    // Animate through steps
+    let step = 0;
+    progressAnim.value = withTiming(0.15, { duration: 400 });
+    stepTimer.current = setInterval(() => {
+      step++;
+      if (step < GENERATION_STEPS.length) {
+        setStepIdx(step);
+        progressAnim.value = withTiming((step + 1) / GENERATION_STEPS.length, { duration: 700 });
+      }
+    }, 3500);
+
+    try {
+      const res = await dilly.fetch('/resume/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          job_title: jobTitle.trim(),
+          job_company: company.trim(),
+          job_description: jd.trim() || undefined,
+        }),
+      });
+
+      if (stepTimer.current) {
+        clearInterval(stepTimer.current);
+        stepTimer.current = null;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Server error ${res.status}`);
+      }
+
+      const text = await res.text();
+      // The endpoint streams raw JSON — find the JSON array in the response
+      const jsonStart = text.indexOf('[');
+      const jsonEnd = text.lastIndexOf(']');
+      if (jsonStart === -1 || jsonEnd === -1) {
+        throw new Error('Invalid response from server');
+      }
+
+      const parsed: GeneratedSection[] = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+      setSections(parsed);
+      progressAnim.value = withTiming(1, { duration: 500 });
+      setStage('done');
+
+      // Auto-save as a variant
+      await saveVariant(parsed);
+    } catch (err: any) {
+      if (stepTimer.current) {
+        clearInterval(stepTimer.current);
+        stepTimer.current = null;
+      }
+      setStage('error');
+    }
+  }
+
+  async function saveVariant(sectionsToSave: GeneratedSection[]) {
+    try {
+      const now = new Date();
+      const month = now.toLocaleString('default', { month: 'short' });
+      const year = now.getFullYear();
+      const label = `${company.trim()} — ${jobTitle.trim()}, ${month} ${year}`;
+
+      const meta: any = await dilly.post('/resume/variants', { label });
+      const id = meta?.variant?.id ?? meta?.id;
+      if (!id) return;
+
+      await dilly.put(`/resume/variants/${id}`, { sections: sectionsToSave });
+      setVariantId(id);
+      setSaved(true);
+    } catch {
+      // Saving failed silently — not blocking
+    }
+  }
+
+  function handleReset() {
+    setStage('idle');
+    setSections([]);
+    setVariantId(null);
+    setSaved(false);
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <AnimatedPressable onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={22} color={colors.t1} />
+        </AnimatedPressable>
+        <Text style={styles.headerTitle}>Generate Resume</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {stage === 'idle' && (
+          <FadeInView>
+            {/* Hero */}
+            <View style={styles.heroCard}>
+              <View style={styles.heroIcon}>
+                <Ionicons name="sparkles" size={24} color={INDIGO} />
+              </View>
+              <Text style={styles.heroTitle}>AI Resume Builder</Text>
+              <Text style={styles.heroSub}>
+                Dilly reads your profile, your experiences, and the job description to write a
+                tailored resume from scratch — not a template.
+              </Text>
+            </View>
+
+            {/* Form */}
+            <View style={styles.formCard}>
+              <Text style={styles.fieldLabel}>Job Title <Text style={{ color: colors.coral }}>*</Text></Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Data Science Intern"
+                placeholderTextColor={colors.t3}
+                value={jobTitle}
+                onChangeText={setJobTitle}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+
+              <Text style={[styles.fieldLabel, { marginTop: spacing.lg }]}>Company <Text style={{ color: colors.coral }}>*</Text></Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Goldman Sachs"
+                placeholderTextColor={colors.t3}
+                value={company}
+                onChangeText={setCompany}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+
+              <Text style={[styles.fieldLabel, { marginTop: spacing.lg }]}>
+                Job Description{' '}
+                <Text style={{ color: colors.t3, fontWeight: '400' }}>(optional but recommended)</Text>
+              </Text>
+              <TextInput
+                style={[styles.input, styles.jdInput]}
+                placeholder="Paste the job description here for better keyword matching…"
+                placeholderTextColor={colors.t3}
+                value={jd}
+                onChangeText={setJd}
+                multiline
+                textAlignVertical="top"
+                returnKeyType="default"
+              />
+            </View>
+
+            <AnimatedPressable style={styles.generateBtn} onPress={handleGenerate}>
+              <Ionicons name="sparkles" size={18} color="#fff" />
+              <Text style={styles.generateBtnText}>Generate My Resume</Text>
+            </AnimatedPressable>
+
+            <Text style={styles.disclaimer}>
+              Takes ~15–25 seconds. Your Dilly profile and current resume are used as source material.
+            </Text>
+          </FadeInView>
+        )}
+
+        {stage === 'generating' && (
+          <FadeInView>
+            <View style={styles.generatingCard}>
+              <View style={styles.dotsRow}>
+                <PulsingDot delay={0} />
+                <PulsingDot delay={4} />
+                <PulsingDot delay={8} />
+              </View>
+              <Text style={styles.generatingTitle}>Building your resume</Text>
+              <Text style={styles.generatingStep}>{GENERATION_STEPS[stepIdx]}</Text>
+
+              {/* Progress bar */}
+              <View style={styles.progressTrack}>
+                <Animated.View style={[styles.progressFill, progressStyle]} />
+              </View>
+
+              <Text style={styles.generatingHint}>
+                Tailored for {jobTitle} at {company}
+              </Text>
+            </View>
+          </FadeInView>
+        )}
+
+        {stage === 'done' && (
+          <FadeInView>
+            <View style={styles.doneCard}>
+              <View style={styles.doneIcon}>
+                <Ionicons name="checkmark-circle" size={36} color={GREEN} />
+              </View>
+              <Text style={styles.doneTitle}>Resume Generated</Text>
+              <Text style={styles.doneSub}>
+                Tailored for <Text style={{ fontWeight: '600' }}>{jobTitle}</Text> at{' '}
+                <Text style={{ fontWeight: '600' }}>{company}</Text>
+              </Text>
+
+              {/* Section list */}
+              <View style={styles.sectionList}>
+                {sections.map((s, i) => (
+                  <View key={s.key ?? i} style={styles.sectionRow}>
+                    <Ionicons name="checkmark" size={14} color={GREEN} />
+                    <Text style={styles.sectionLabel}>{s.label ?? s.key}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {saved && (
+                <View style={styles.savedBadge}>
+                  <Ionicons name="bookmark" size={13} color={INDIGO} />
+                  <Text style={styles.savedText}>Saved as a Resume Variant</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Actions */}
+            <AnimatedPressable
+              style={[styles.actionBtn, styles.actionBtnPrimary]}
+              onPress={() => router.replace('/(app)/resume-editor')}
+            >
+              <Ionicons name="document-text" size={18} color="#fff" />
+              <Text style={styles.actionBtnText}>Open Resume Editor</Text>
+            </AnimatedPressable>
+
+            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
+              <Ionicons name="refresh" size={18} color={INDIGO} />
+              <Text style={[styles.actionBtnText, { color: INDIGO }]}>Generate Another</Text>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
+        {stage === 'error' && (
+          <FadeInView>
+            <View style={styles.errorCard}>
+              <Ionicons name="alert-circle" size={36} color={AMBER} />
+              <Text style={styles.errorTitle}>Generation Failed</Text>
+              <Text style={styles.errorSub}>
+                Something went wrong. Check your connection and try again.
+              </Text>
+            </View>
+            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={handleReset}>
+              <Ionicons name="refresh" size={18} color="#fff" />
+              <Text style={styles.actionBtnText}>Try Again</Text>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.b1,
+    backgroundColor: colors.bg,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.s1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.t1,
+  },
+  content: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+
+  // Hero
+  heroCard: {
+    backgroundColor: colors.idim,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.ibdr,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  heroIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.ibdr,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.t1,
+    textAlign: 'center',
+  },
+  heroSub: {
+    fontSize: 13,
+    color: colors.t2,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+
+  // Form
+  formCard: {
+    backgroundColor: colors.s1,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.b2,
+    padding: spacing.xl,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.t1,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.b2,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    fontSize: 15,
+    color: colors.t1,
+  },
+  jdInput: {
+    height: 120,
+    paddingTop: spacing.sm + 2,
+  },
+
+  // Generate button
+  generateBtn: {
+    backgroundColor: INDIGO,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.md + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  generateBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  disclaimer: {
+    fontSize: 11,
+    color: colors.t3,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: spacing.xs,
+  },
+
+  // Generating
+  generatingCard: {
+    backgroundColor: colors.s1,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.b2,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xl,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  generatingTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.t1,
+  },
+  generatingStep: {
+    fontSize: 13,
+    color: colors.t2,
+    textAlign: 'center',
+  },
+  progressTrack: {
+    width: '100%',
+    height: 4,
+    backgroundColor: colors.s3,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: spacing.xs,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: INDIGO,
+    borderRadius: 2,
+  },
+  generatingHint: {
+    fontSize: 11,
+    color: colors.t3,
+    textAlign: 'center',
+  },
+
+  // Done
+  doneCard: {
+    backgroundColor: colors.gdim,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.gbdr,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
+  doneIcon: {
+    marginBottom: spacing.xs,
+  },
+  doneTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.t1,
+  },
+  doneSub: {
+    fontSize: 13,
+    color: colors.t2,
+    textAlign: 'center',
+  },
+  sectionList: {
+    width: '100%',
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 2,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    color: colors.t1,
+  },
+  savedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.idim,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.ibdr,
+    marginTop: spacing.xs,
+  },
+  savedText: {
+    fontSize: 12,
+    color: INDIGO,
+    fontWeight: '600',
+  },
+
+  // Action buttons
+  actionBtn: {
+    borderRadius: radius.xl,
+    paddingVertical: spacing.md + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  actionBtnPrimary: {
+    backgroundColor: INDIGO,
+  },
+  actionBtnSecondary: {
+    backgroundColor: colors.idim,
+    borderWidth: 1,
+    borderColor: colors.ibdr,
+  },
+  actionBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // Error
+  errorCard: {
+    backgroundColor: colors.adim,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.abdr,
+    padding: spacing.xxl,
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xl,
+  },
+  errorTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.t1,
+  },
+  errorSub: {
+    fontSize: 13,
+    color: colors.t2,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+});

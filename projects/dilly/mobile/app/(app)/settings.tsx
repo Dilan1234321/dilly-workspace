@@ -447,7 +447,7 @@ export default function SettingsScreen() {
               {!profile.subscribed && (
                 <>
                   <Divider />
-                  <AnimatedPressable style={st.upgradeBtn} onPress={() => Alert.alert('Coming soon', 'Payments are not yet available.')} scaleDown={0.97}>
+                  <AnimatedPressable style={st.upgradeBtn} onPress={() => Linking.openURL('https://hellodilly.com/pricing.html')} scaleDown={0.97}>
                     <Ionicons name="flash" size={14} color="#FFFFFF" />
                     <Text style={st.upgradeBtnText}>Upgrade to Dilly · $9.99/mo</Text>
                   </AnimatedPressable>

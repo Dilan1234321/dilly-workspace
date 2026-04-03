@@ -4,10 +4,10 @@
     "strict": true,
     "paths": {
       "@dilly/api": [
-        "../packages/dilly-api/src/index.ts"
+        "./packages/dilly-api/src/index.ts"
       ],
       "@dilly/api/*": [
-        "../packages/dilly-api/src/*"
+        "./packages/dilly-api/src/*"
       ]
     }
   }

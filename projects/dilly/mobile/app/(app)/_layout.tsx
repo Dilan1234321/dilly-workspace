@@ -172,6 +172,13 @@ export default function AppLayout() {
           animation: 'fade',
         }}
       />
+      <Tabs.Screen
+        name="resume-generate"
+        options={{
+          href: null,
+          animation: 'fade',
+        }}
+      />
     </Tabs>
     <DillyAIOverlayWrapper />
     <PaywallModal />

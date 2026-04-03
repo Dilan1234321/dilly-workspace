@@ -787,6 +787,16 @@ export default function ResumeEditorScreen() {
           <Text style={rs.tailorBtnText}>Tailor for a job</Text>
         </AnimatedPressable>
 
+        {/* Generate new resume with AI */}
+        <AnimatedPressable
+          style={rs.tailorBtn}
+          onPress={() => router.push('/(app)/resume-generate')}
+          scaleDown={0.97}
+        >
+          <Ionicons name="flash" size={14} color="#2B3A8E" />
+          <Text style={rs.tailorBtnText}>Generate resume with AI</Text>
+        </AnimatedPressable>
+
         {/* Resume document */}
         <FadeInView delay={120}>
           <View style={rs.resumeDoc}>
