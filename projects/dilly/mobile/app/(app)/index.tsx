@@ -165,13 +165,15 @@ export default function HomeScreen() {
           return;
         }
 
-        const auditObj = auditRaw?.audit ?? auditRaw ?? {};
-        const hasAuditFlag = auditRaw?.has_audit !== false && auditObj?.final_score != null;
+        // Use profile's latest_audit as primary source, fall back to /audit/latest
+        const latestAudit = profileRes?.latest_audit;
+        const auditObj = latestAudit ?? auditRaw?.audit ?? auditRaw ?? {};
+        const hasAuditFlag = auditObj?.final_score != null;
 
         const snapshot = profileRes?.first_audit_snapshot?.scores;
-        const smart = auditObj?.scores?.smart ?? snapshot?.smart ?? null;
-        const grit  = auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
-        const build = auditObj?.scores?.build ?? snapshot?.build ?? null;
+        const smart = auditObj?.scores?.smart ?? profileRes?.overall_smart ?? snapshot?.smart ?? null;
+        const grit  = auditObj?.scores?.grit  ?? profileRes?.overall_grit  ?? snapshot?.grit  ?? null;
+        const build = auditObj?.scores?.build ?? profileRes?.overall_build ?? snapshot?.build ?? null;
 
         const calculated = auditObj?.final_score
           || profileRes?.overall_dilly_score

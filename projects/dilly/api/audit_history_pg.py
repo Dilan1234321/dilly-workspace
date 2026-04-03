@@ -69,6 +69,38 @@ def append_audit(email: str, summary: dict) -> None:
             ),
         )
 
+    # Also write latest audit snapshot into profile_json so all screens
+    # can read scores/findings/recommendations from /profile directly.
+    try:
+        from projects.dilly.api.profile_store import save_profile
+        save_profile(email, {
+            "latest_audit": {
+                "id": summary.get("id"),
+                "ts": summary.get("ts"),
+                "final_score": summary.get("final_score"),
+                "scores": scores,
+                "detected_track": summary.get("detected_track") or summary.get("track"),
+                "candidate_name": summary.get("candidate_name"),
+                "major": summary.get("major"),
+                "audit_findings": summary.get("audit_findings") or summary.get("findings") or [],
+                "recommendations": summary.get("recommendations") or [],
+                "evidence": summary.get("evidence") or {},
+                "evidence_quotes": summary.get("evidence_quotes") or {},
+                "peer_percentiles": summary.get("peer_percentiles") or {},
+                "dilly_take": summary.get("dilly_take"),
+                "strongest_signal_sentence": summary.get("strongest_signal_sentence") or summary.get("strongest_signal"),
+                "skill_tags": summary.get("skill_tags") or [],
+                "benchmark_copy": summary.get("benchmark_copy") or {},
+            },
+            "overall_smart": scores.get("smart"),
+            "overall_grit": scores.get("grit"),
+            "overall_build": scores.get("build"),
+            "overall_dilly_score": summary.get("final_score"),
+            "has_run_first_audit": True,
+        })
+    except Exception:
+        pass
+
 
 # ── 11. get_latest_audit ──────────────────────────────────────────────────────
 

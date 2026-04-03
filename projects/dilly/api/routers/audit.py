@@ -1254,11 +1254,19 @@ async def get_latest_audit(request: Request):
     try:
         from projects.dilly.api.audit_history_pg import get_audits
         audits = get_audits(email)
-        if not audits:
-            return {"audit": None}
-        return {"audit": audits[0]}
+        if audits:
+            return {"audit": audits[0]}
     except Exception:
-        return {"audit": None}
+        pass
+    # Fall back to latest_audit snapshot in profile_json
+    try:
+        from projects.dilly.api.profile_store import get_profile
+        profile = get_profile(email)
+        if profile and profile.get("latest_audit"):
+            return {"audit": profile["latest_audit"]}
+    except Exception:
+        pass
+    return {"audit": None}
 
 
 @router.get("/audit/history/{audit_id}")
