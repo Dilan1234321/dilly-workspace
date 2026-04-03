@@ -86,7 +86,7 @@ function buildPersonalInsight(studentScores: StudentScores, rs: RequiredScores):
 
 function cleanDescription(d: string): string {
   if (!d) return '';
-  let text = d
+  let text = d.replace(/<<?/?[a-z][^>]*>>?/gi, ' ')
     .replace(/<[^>]*>/g, ' ')
     .replace(/<\/?[a-z][^>]*>/gi, '')
     .replace(/<\/?\s*/g, '')
