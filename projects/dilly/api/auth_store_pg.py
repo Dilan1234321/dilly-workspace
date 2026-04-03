@@ -7,6 +7,8 @@ import os
 import secrets
 import time
 
+import psycopg2
+import psycopg2.extras
 from projects.dilly.api.database import get_db
 
 _MAGIC_LINK_EXPIRY_SEC = 900       # 15 min
@@ -25,7 +27,7 @@ def create_verification_code(email: str) -> str:
     code = "".join(secrets.choice("0123456789") for _ in range(_VERIFICATION_CODE_LENGTH))
     expires_at = _pg_ts(time.time() + _VERIFICATION_CODE_EXPIRY_SEC)
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         # Invalidate prior unused codes for this email
         cur.execute(
             "UPDATE verification_codes SET used = true WHERE email = %s AND used = false",
@@ -46,7 +48,7 @@ def create_verification_code(email: str) -> str:
 def _get_verification_code_row(email: str, code: str) -> dict | None:
     """Return the verification_codes row for (email, code) if valid and unused."""
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
             SELECT * FROM verification_codes
@@ -61,7 +63,7 @@ def _get_verification_code_row(email: str, code: str) -> dict | None:
 
 def _mark_code_used(row_id: str) -> None:
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("UPDATE verification_codes SET used = true WHERE id = %s", (str(row_id),))
 
 
@@ -83,7 +85,7 @@ def verify_verification_code(email: str, code: str) -> bool:
 def _upsert_user(email: str) -> dict:
     """Insert user if not exists. Returns the row."""
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
             INSERT INTO users (email, subscribed)
@@ -103,7 +105,7 @@ def get_user_by_email(email: str) -> dict | None:
     if not email:
         return None
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT * FROM users WHERE email = %s", (email,))
         row = cur.fetchone()
         return dict(row) if row else None
@@ -115,7 +117,7 @@ def get_user_by_id(user_id: str) -> dict | None:
     if not user_id:
         return None
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
         row = cur.fetchone()
         return dict(row) if row else None
@@ -132,7 +134,7 @@ def create_session(email: str) -> str:
     token = secrets.token_urlsafe(32)
     expires_at = _pg_ts(time.time() + _SESSION_EXPIRY_SEC)
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
             INSERT INTO sessions (user_id, token, expires_at)
@@ -150,7 +152,7 @@ def get_session(token: str) -> dict | None:
     if not token or not token.strip():
         return None
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             """
             SELECT u.email, u.subscribed, u.id
@@ -172,7 +174,7 @@ def delete_session(token: str) -> bool:
     if not token or not token.strip():
         return False
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("DELETE FROM sessions WHERE token = %s", (token.strip(),))
         return (cur.rowcount or 0) > 0
 
@@ -184,7 +186,7 @@ def set_subscribed(email: str, subscribed: bool) -> None:
     if not email:
         return
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             "UPDATE users SET subscribed = %s, updated_at = now() WHERE email = %s",
             (subscribed, email),
@@ -195,7 +197,7 @@ def set_subscribed(email: str, subscribed: bool) -> None:
 
 def list_active_subscribed_users() -> list[str]:
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("SELECT email FROM users WHERE subscribed = true ORDER BY email")
         return [r["email"] for r in cur.fetchall()]
 
@@ -207,7 +209,7 @@ def delete_user_and_sessions(email: str) -> None:
     if not email:
         return
     with get_db() as conn:
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute("DELETE FROM users WHERE email = %s", (email,))
 
 
