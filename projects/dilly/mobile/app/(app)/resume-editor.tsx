@@ -15,7 +15,7 @@ import {
   Modal,
   KeyboardAvoidingView,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -588,6 +588,7 @@ function SimplePreview({ simple, onChange, ph }: { simple: SimpleSection; onChan
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function ResumeEditorScreen() {
+  const { variantId: incomingVariantId } = useLocalSearchParams<{ variantId?: string }>();
   const insets = useSafeAreaInsets();
 
   const [sections, setSections]     = useState<ResumeSection[]>([]);
@@ -652,9 +653,16 @@ export default function ResumeEditorScreen() {
         setLoading(false);
       }
 
-      // Fetch resume variants
-      dilly.get('/resume/variants').then(data => {
-        setVariants(data?.variants || []);
+      // Fetch resume variants; if we arrived from generate, auto-load that variant
+      dilly.get('/resume/variants').then(async data => {
+        const allVariants = data?.variants || [];
+        setVariants(allVariants);
+        if (incomingVariantId) {
+          setActiveVariant(incomingVariantId);
+          setExpanded(new Set());
+          const varData = await dilly.get(`/resume/variants/${incomingVariantId}`);
+          if (varData?.resume?.sections?.length) setSections(varData.resume.sections);
+        }
       }).catch(() => {});
     })();
   }, []);

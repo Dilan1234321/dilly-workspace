@@ -75,6 +75,9 @@ export default function ResumeGenerateScreen() {
   const [sections, setSections] = useState<GeneratedSection[]>([]);
   const [variantId, setVariantId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [profile, setProfile] = useState<Record<string, any>>({});
+  const [audit, setAudit] = useState<Record<string, any> | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const progressAnim = useSharedValue(0);
@@ -83,6 +86,18 @@ export default function ResumeGenerateScreen() {
   }));
 
   useEffect(() => {
+    (async () => {
+      try {
+        const [profileRes, auditRes] = await Promise.all([
+          dilly.get('/profile'),
+          dilly.get('/audit/latest').catch(() => null),
+        ]);
+        setProfile(profileRes || {});
+        const auditObj = auditRes?.audit ?? auditRes;
+        if (auditObj?.final_score) setAudit(auditObj);
+      } catch {}
+      finally { setProfileLoaded(true); }
+    })();
     return () => {
       if (stepTimer.current) clearInterval(stepTimer.current);
     };
@@ -91,6 +106,10 @@ export default function ResumeGenerateScreen() {
   async function handleGenerate() {
     if (!jobTitle.trim() || !company.trim()) {
       Alert.alert('Missing info', 'Please enter a job title and company.');
+      return;
+    }
+    if (!jd.trim()) {
+      Alert.alert('Job description required', 'Paste the job description so the AI can accurately score and tailor your resume for this role.');
       return;
     }
 
@@ -240,12 +259,11 @@ export default function ResumeGenerateScreen() {
               />
 
               <Text style={[styles.fieldLabel, { marginTop: spacing.lg }]}>
-                Job Description{' '}
-                <Text style={{ color: colors.t3, fontWeight: '400' }}>(optional but recommended)</Text>
+                Job Description <Text style={{ color: colors.coral }}>*</Text>
               </Text>
               <TextInput
                 style={[styles.input, styles.jdInput]}
-                placeholder="Paste the job description here for better keyword matching…"
+                placeholder="Paste the full job description — required for accurate scoring and tailoring…"
                 placeholderTextColor={colors.t3}
                 value={jd}
                 onChangeText={setJd}
@@ -254,6 +272,56 @@ export default function ResumeGenerateScreen() {
                 returnKeyType="default"
               />
             </View>
+
+            {/* Profile / score snapshot */}
+            {profileLoaded && (
+              !profile.track ? (
+                <View style={styles.warnCard}>
+                  <Ionicons name="warning-outline" size={18} color={AMBER} />
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Text style={styles.warnTitle}>Set your career track first</Text>
+                    <Text style={styles.warnSub}>
+                      Without a track, the AI can't assign the correct cohort to this job or compare your Smart, Grit, and Build scores accurately. Go to Profile → Settings to add your track.
+                    </Text>
+                  </View>
+                </View>
+              ) : !audit ? (
+                <View style={styles.warnCard}>
+                  <Ionicons name="information-circle-outline" size={18} color={INDIGO} />
+                  <Text style={[styles.warnSub, { flex: 1 }]}>
+                    Run your first Dilly Audit to unlock score-based resume tailoring for your <Text style={{ fontWeight: '700' }}>{profile.track}</Text> cohort.
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.scoreCard}>
+                  <View style={styles.scoreCardHeader}>
+                    <Text style={styles.scoreCardLabel}>YOUR SCORES</Text>
+                    <View style={styles.cohortBadge}>
+                      <Ionicons name="school-outline" size={10} color={INDIGO} />
+                      <Text style={styles.cohortBadgeText}>{profile.track}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.scoreDims}>
+                    {(['Smart', 'Grit', 'Build'] as const).map(dim => {
+                      const val = Math.round(audit.scores?.[dim.toLowerCase()] ?? 0);
+                      const c = val >= 75 ? GREEN : val >= 55 ? AMBER : CORAL;
+                      return (
+                        <View key={dim} style={styles.scoreDim}>
+                          <Text style={styles.scoreDimLabel}>{dim}</Text>
+                          <Text style={[styles.scoreDimVal, { color: c }]}>{val}</Text>
+                          <View style={styles.scoreDimBar}>
+                            <View style={[styles.scoreDimFill, { width: `${val}%`, backgroundColor: c }]} />
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                  <Text style={styles.scoreNote}>
+                    The AI will read this JD, assign its cohort, and tailor your resume to close the gap.
+                  </Text>
+                </View>
+              )
+            )}
 
             <AnimatedPressable style={styles.generateBtn} onPress={handleGenerate}>
               <Ionicons name="sparkles" size={18} color="#fff" />
@@ -322,10 +390,16 @@ export default function ResumeGenerateScreen() {
             {/* Actions */}
             <AnimatedPressable
               style={[styles.actionBtn, styles.actionBtnPrimary]}
-              onPress={() => router.replace('/(app)/resume-editor')}
+              onPress={() => {
+                if (variantId) {
+                  router.replace({ pathname: '/(app)/resume-editor', params: { variantId } });
+                } else {
+                  router.replace('/(app)/resume-editor');
+                }
+              }}
             >
               <Ionicons name="document-text" size={18} color="#fff" />
-              <Text style={styles.actionBtnText}>Open Resume Editor</Text>
+              <Text style={styles.actionBtnText}>See Resume</Text>
             </AnimatedPressable>
 
             <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
@@ -470,6 +544,36 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: spacing.xs,
   },
+
+  // Warning card (no track / no audit)
+  warnCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: `${AMBER}12`, borderRadius: radius.md,
+    borderWidth: 1, borderColor: `${AMBER}30`, padding: spacing.md,
+  },
+  warnTitle: { fontSize: 13, fontWeight: '700', color: colors.t1, marginBottom: 2 },
+  warnSub: { fontSize: 12, color: colors.t2, lineHeight: 18 },
+
+  // Score card
+  scoreCard: {
+    backgroundColor: colors.s1, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.b2, padding: spacing.md, gap: 12,
+  },
+  scoreCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  scoreCardLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3 },
+  cohortBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: `${INDIGO}12`, borderRadius: 999, borderWidth: 1, borderColor: `${INDIGO}25`,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  cohortBadgeText: { fontSize: 11, fontWeight: '700', color: INDIGO },
+  scoreDims: { flexDirection: 'row', gap: 10 },
+  scoreDim: { flex: 1, gap: 4 },
+  scoreDimLabel: { fontSize: 10, fontWeight: '600', color: colors.t3, textTransform: 'uppercase', letterSpacing: 0.5 },
+  scoreDimVal: { fontFamily: 'Cinzel_700Bold', fontSize: 20 },
+  scoreDimBar: { height: 4, borderRadius: 2, backgroundColor: colors.s3, overflow: 'hidden' },
+  scoreDimFill: { height: '100%', borderRadius: 2 },
+  scoreNote: { fontSize: 11, color: colors.t3, lineHeight: 16 },
 
   // Generating
   generatingCard: {
