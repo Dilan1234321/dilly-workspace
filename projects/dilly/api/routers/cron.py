@@ -20,6 +20,40 @@ def _require_cron_secret(token: str) -> None:
         raise HTTPException(status_code=403, detail="Forbidden.")
 
 
+@router.get("/setup-users-table", summary="One-time: create users table in PG")
+def setup_users_table(token: str = ""):
+    """Create the users table if it doesn't exist. Run once, then forget."""
+    _require_cron_secret(token)
+    from projects.dilly.api.database import get_db
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                email TEXT UNIQUE NOT NULL,
+                first_name TEXT,
+                last_name TEXT,
+                full_name TEXT,
+                major TEXT,
+                minor TEXT,
+                track TEXT,
+                application_target TEXT,
+                school TEXT,
+                onboarding_complete BOOLEAN DEFAULT FALSE,
+                has_run_first_audit BOOLEAN DEFAULT FALSE,
+                subscribed BOOLEAN DEFAULT FALSE,
+                profile_status TEXT DEFAULT 'draft',
+                leaderboard_opt_in BOOLEAN DEFAULT TRUE,
+                referral_code TEXT,
+                voice_avatar_index INTEGER,
+                profile_json JSONB,
+                created_at TIMESTAMPTZ DEFAULT now(),
+                updated_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+    return {"ok": True, "message": "users table ready"}
+
+
 @router.get("/cleanup-draft-profiles", summary="Cleanup draft profiles")
 def cleanup_draft_profiles(token: str = ""):
     """Delete draft profiles older than 3 days. Call from cron with ?token=CRON_SECRET."""
