@@ -181,6 +181,22 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
   const rc = { ready: { color: GREEN, label: 'Ready', icon: 'checkmark-circle' as const }, close: { color: AMBER, label: 'Almost', icon: 'alert-circle' as const }, gap: { color: CORAL, label: 'Gap', icon: 'arrow-up-circle' as const }, unknown: { color: colors.t3, label: '', icon: 'help-circle' as const } }[readiness];
   const atsInfo = lookupCompanyATS(listing.company, listing.source);
 
+  function tailorResume() {
+    const p = studentProfile as any;
+    const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
+    const cohort = p.track || p.cohort || 'General';
+    openDillyOverlay({
+      name: firstName, cohort,
+      score: studentScores?.score || 0, smart: studentScores?.smart || 0,
+      grit: studentScores?.grit || 0, build: studentScores?.build || 0,
+      gap: 0, cohortBar: 75,
+      referenceCompany: listing.company,
+      applicationTarget: `${listing.title} at ${listing.company}`,
+      isPaid: true,
+      initialMessage: `Help me tailor my resume for the ${listing.title} role at ${listing.company}. What specific changes should I make to my bullet points and skills section to match this job and stand out to recruiters?`,
+    });
+  }
+
   function askDilly() {
     const p = studentProfile as any;
     const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
@@ -330,12 +346,14 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
               <Ionicons name="open-outline" size={13} color="#FFFFFF" />
               <Text style={js.applyBtnText}>Apply + Track</Text>
             </Pressable>
-            {hasScores && studentScores && (
-              <Pressable style={js.dillyBtn} onPress={(e) => { e.stopPropagation(); askDilly(); }}>
-                <Ionicons name="chatbubble" size={12} color={GOLD} />
-                <Text style={js.dillyBtnText}>Ask Dilly</Text>
-              </Pressable>
-            )}
+            <Pressable style={js.dillyBtn} onPress={(e) => { e.stopPropagation(); askDilly(); }}>
+              <Ionicons name="chatbubble" size={12} color={GOLD} />
+              <Text style={js.dillyBtnText}>Ask Dilly</Text>
+            </Pressable>
+            <Pressable style={js.tailorBtn} onPress={(e) => { e.stopPropagation(); tailorResume(); }}>
+              <Ionicons name="document-text" size={12} color={INDIGO} />
+              <Text style={js.tailorBtnText}>Tailor Resume</Text>
+            </Pressable>
           </View>
         </View>
       )}
@@ -851,8 +869,10 @@ const js = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: 10 },
   applyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#2B3A8E', borderRadius: 14, paddingVertical: 14 },
   applyBtnText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5, color: '#FFFFFF' },
-  dillyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(43,58,142,0.08)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
+  dillyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(43,58,142,0.08)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
   dillyBtnText: { fontSize: 13, fontWeight: '700', color: '#2B3A8E' },
+  tailorBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(94,92,230,0.08)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
+  tailorBtnText: { fontSize: 13, fontWeight: '700', color: '#5E5CE6' },
 
   // Loading / Empty
   loadingWrap: { alignItems: 'center', paddingTop: 80, gap: 16 },

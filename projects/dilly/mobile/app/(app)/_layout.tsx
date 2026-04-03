@@ -130,14 +130,7 @@ export default function AppLayout() {
           animation: 'fade',
         }}
       />
-      <Tabs.Screen
-        name="rank"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
-      />
-      <Tabs.Screen
+<Tabs.Screen
         name="voice"
         options={{
           href: null,

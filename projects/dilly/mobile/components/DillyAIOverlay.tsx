@@ -70,6 +70,32 @@ const MessageAnimIn = ({ children }: { children: React.ReactNode; index?: number
   );
 };
 
+function getInitialSuggestions(ctx?: StudentContext): string[] {
+  if (ctx?.applicationTarget) {
+    return ['What gaps do I have?', 'How do I stand out?', 'Prep me for the interview'];
+  }
+  if (ctx?.score && ctx.score > 0) {
+    return ["What's my weakest area?", 'Where should I apply?', 'How do I improve my score?'];
+  }
+  return ['Review my resume', 'How do I get an internship?', 'What skills should I build?'];
+}
+
+function getResponseSuggestions(text: string): string[] {
+  const t = text.toLowerCase();
+  const chips: string[] = [];
+  if (t.includes('resume') || t.includes('bullet')) chips.push('Show me an example bullet');
+  if (t.includes('smart') || t.includes('academic') || t.includes('gpa')) chips.push('How do I raise my Smart score?');
+  if (t.includes('grit') || t.includes('leadership') || t.includes('club')) chips.push('What builds Grit fastest?');
+  if (t.includes('build') || t.includes('project') || t.includes('portfolio')) chips.push('What project should I build?');
+  if (t.includes('interview')) chips.push('Give me a mock interview question');
+  if (t.includes('apply') || t.includes('internship') || t.includes('company')) chips.push('Where should I apply first?');
+  if (t.includes('linkedin')) chips.push('How do I optimize my LinkedIn?');
+  if (t.includes('network') || t.includes('recruiter') || t.includes('coffee')) chips.push('How do I reach out to recruiters?');
+  const fallbacks = ['What should I do first?', 'Give me an example', 'Tell me more'];
+  while (chips.length < 2 && fallbacks.length > 0) chips.push(fallbacks.shift()!);
+  return chips.slice(0, 3);
+}
+
 export default function DillyAIOverlay({ visible, onClose, studentContext }: Props) {
   const insets = useSafeAreaInsets();
   const { canSendAIMessage, incrementAIMessage, showPaywall } = useSubscription();
@@ -102,6 +128,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const suggestionsOpacity = useRef(new Animated.Value(0)).current;
   const initialMessageSent = useRef(false);
   const pendingInitialMessage = useRef<string | null>(null);
   const sendFnRef = useRef<(text: string, msgs: Message[]) => Promise<void>>();
@@ -164,6 +192,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     const newHistory: Message[] = [...currentMessages, userMsg];
     setMessages(newHistory);
     setInput('');
+    setSuggestions([]);
+    suggestionsOpacity.setValue(0);
     setIsTyping(true);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
 
@@ -217,6 +247,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         if (done) {
           clearInterval(streamRef.current!);
           streamRef.current = null;
+          const newChips = getResponseSuggestions(fullText);
+          setSuggestions(newChips);
+          Animated.timing(suggestionsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
         } else {
           scrollRef.current?.scrollToEnd({ animated: false });
         }
@@ -246,6 +279,13 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       setIsTyping(false);
       initialMessageSent.current = false;
       pendingInitialMessage.current = studentContext?.initialMessage || null;
+      setSuggestions([]);
+      suggestionsOpacity.setValue(0);
+      setTimeout(() => {
+        const chips = getInitialSuggestions(studentContext);
+        setSuggestions(chips);
+        Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+      }, 1600);
 
       strokeOffset.setValue(HALF_PATH_LEN);
       glowOpacity.setValue(1);
@@ -329,6 +369,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       if (streamRef.current) { clearInterval(streamRef.current); streamRef.current = null; }
       contentOpacity.setValue(0);
       strokeOffset.setValue(HALF_PATH_LEN);
+      setSuggestions([]);
+      suggestionsOpacity.setValue(0);
     }
   }, [visible]);
 
@@ -450,6 +492,34 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
             )}
           </ScrollView>
 
+          {/* Suggestion chips */}
+          {suggestions.length > 0 && (
+            <Animated.View style={{ opacity: suggestionsOpacity }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.suggestionRow}
+                style={s.suggestionWrap}
+                keyboardShouldPersistTaps="handled"
+              >
+                {suggestions.map((chip, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={s.suggestionChip}
+                    onPress={() => {
+                      setSuggestions([]);
+                      suggestionsOpacity.setValue(0);
+                      sendMessageWithText(chip, messages);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.suggestionChipText}>{chip}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </Animated.View>
+          )}
+
           {/* Input */}
           <View style={[s.inputBar, { paddingBottom: insets.bottom + 10 }]}>
             <TextInput
@@ -539,6 +609,10 @@ const s = StyleSheet.create({
   input: { flex: 1, backgroundColor: colors.s1, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11, fontSize: 15, color: colors.t1, borderWidth: 1, borderColor: colors.b1 },
   sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
+  suggestionWrap: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)' },
+  suggestionRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  suggestionChip: { backgroundColor: colors.s2, borderRadius: 999, borderWidth: 1, borderColor: colors.b2, paddingHorizontal: 14, paddingVertical: 8 },
+  suggestionChipText: { color: colors.t1, fontSize: 13, fontWeight: '500' },
 
   // History overlay
   historyOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, zIndex: 30 },
