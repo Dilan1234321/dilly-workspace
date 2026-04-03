@@ -3,7 +3,7 @@ Cron / internal endpoints. Protected by CRON_SECRET.
 """
 import os, sys
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter(prefix="/cron", tags=["cron"])
 
@@ -84,7 +84,6 @@ def admin_delete_account(token: str = "", email: str = ""):
 async def migrate_profile(request: Request, token: str = ""):
     """Accept a full profile JSON body and upsert it into the users table via save_profile."""
     _require_cron_secret(token)
-    from fastapi import Request as _R
     body = await request.json()
     email = (body.get("email") or "").strip().lower()
     if not email:
