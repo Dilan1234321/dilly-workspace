@@ -266,7 +266,8 @@ export default function SettingsScreen() {
             await dilly.logout();
           } catch {}
           await clearAuth();
-          router.replace('/');
+          router.dismissAll();
+          router.replace('/onboarding/verify?returning=true');
         },
       },
     ]);
@@ -286,7 +287,8 @@ export default function SettingsScreen() {
                 try {
                   await dilly.post('/account/delete');
                   await clearAuth();
-                  router.replace('/');
+                  router.dismissAll();
+                  router.replace('/onboarding/verify?returning=true');
                 } catch (e: any) { Alert.alert('Error', e?.message || 'Could not delete account.'); }
               },
             },
