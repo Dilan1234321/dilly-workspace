@@ -46,6 +46,7 @@ def bearer_user(request: Request) -> dict | None:
     token = auth[7:].strip()
     if not token:
         return None
+    # Try Postgres auth first (production), fall back to file-based auth (dev/CI)
     try:
         from projects.dilly.api.auth_store_pg import get_session
         from projects.dilly.api.family_store import is_student_in_any_family
@@ -54,7 +55,15 @@ def bearer_user(request: Request) -> dict | None:
         if user and not user.get("subscribed"):
             if is_student_in_any_family(user.get("email") or ""):
                 user = {**user, "subscribed": True}
-        return user
+        if user:
+            return user
+    except Exception:
+        pass
+    # Fallback: file-based auth store (used by smoke tests and local dev without Postgres)
+    try:
+        from projects.dilly.api.auth_store import get_session as get_session_file
+
+        return get_session_file(token)
     except Exception:
         return None
 

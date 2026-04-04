@@ -66,7 +66,7 @@ export function ResourcesTab({
   const { user, appProfile, school } = useAppContext();
   const { audit, savedAuditForCenter } = useAuditScore();
   const { voiceAvatarIndex } = useVoice();
-  const { getHiredSubTab, setGetHiredSubTab, jobsPanelInitialFilter, setReadyCheckCompany, setMainAppTab } = useNavigation();
+  const { state: { getHiredSubTab, jobsPanelInitialFilter }, setGetHiredSubTab, setReadyCheckCompany, setMainAppTab } = useNavigation();
 
   // ── Local state (was page-level, only used here) ──────────────────────────
   const [readyCheckTarget, setReadyCheckTarget] = useState("");

@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { dilly } from "@/lib/dilly";
 import { TWENTY_X_MOMENTS, formatTwentyXCompact } from "@/lib/twentyXMoments";
 
@@ -349,7 +350,7 @@ export function ApplicationsSection() {
         <div className="rounded-[18px] p-3" style={{ background: "var(--s2)", borderLeft: "4px solid var(--coral)" }}>
           <p className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--t3)" }}>Rejection recovery</p>
           <p className="text-xs" style={{ color: "var(--t2)" }}>{formatTwentyXCompact(TWENTY_X_MOMENTS.rejection_recovery)}</p>
-          <a href="/?tab=practice" className="text-[11px] font-medium mt-2 inline-flex gap-1" style={{ color: "var(--blue)" }}>Ask Dilly AI to reframe →</a>
+          <Link href="/?tab=practice" className="text-[11px] font-medium mt-2 inline-flex gap-1" style={{ color: "var(--blue)" }}>Ask Dilly AI to reframe →</Link>
         </div>
       )}
 

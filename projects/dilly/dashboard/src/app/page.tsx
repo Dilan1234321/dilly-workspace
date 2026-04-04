@@ -180,6 +180,8 @@ function navigatorCanSharePngFile(file: File): boolean {
     return navigator.canShare({ files: [file] });
   } catch {
     return false;
+  }
+}
 
 /** First message for the "Help Dilly know you better" resume deep-dive flow. Backend uses conversation_topic: resume_deep_dive when this is sent. */
 const RESUME_DEEP_DIVE_PROMPT =
@@ -480,8 +482,6 @@ function Dashboard() {
   const voiceMemoryLengthAtVoiceEnterRef = useRef(0);
   const prevVoiceActiveRef = useRef(false);
   /** Bullet rewriter, remember, outcome — now from VoiceContext */
-  /** Calendar state */
-  const prevTabForCalendarSnapRef = useRef<typeof mainAppTab | null>(null);
   /** Jobs for you - tailored to profile/resume */
   const [recommendedJobs, setRecommendedJobs] = useState<{ id: string; title: string; company: string; location: string; url: string; match_pct: number; why_bullets: string[] }[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
@@ -1411,29 +1411,7 @@ function Dashboard() {
     }
   }, [mainAppTab, reviewSubView]);
 
-  // When opening Calendar, jump to the month of the soonest active deadline if the current month has none (avoids "empty" grid)
-  useEffect(() => {
-    const prev = prevTabForCalendarSnapRef.current;
-    prevTabForCalendarSnapRef.current = mainAppTab;
-    if (mainAppTab !== "calendar" || prev === "calendar") return;
-    const dls = (appProfile?.deadlines || []).filter((d) => d.date && d.label && !d.completedAt);
-    if (!dls.length) return;
-    setCalendarMonth((cm) => {
-      const hasInMonth = dls.some((d) => {
-        const parts = d.date.slice(0, 10).split("-");
-        if (parts.length !== 3) return false;
-        const y = Number(parts[0]);
-        const mo = Number(parts[1]) - 1;
-        return y === cm.year && mo === cm.month;
-      });
-      if (hasInMonth) return cm;
-      const sorted = [...dls].sort((a, b) => a.date.localeCompare(b.date));
-      const first = sorted[0].date.slice(0, 10);
-      const parts = first.split("-");
-      if (parts.length !== 3) return cm;
-      return { year: Number(parts[0]), month: Number(parts[1]) - 1 };
-    });
-  }, [mainAppTab, appProfile?.deadlines]);
+  // Calendar month-snap logic moved to CalendarTab (owns calendarMonth state)
 
   // Persist Career Center path so Back on child pages (ATS, Jobs, etc.) returns here instead of new audit
   useEffect(() => {
@@ -3295,10 +3273,7 @@ function Dashboard() {
                       setVoiceFollowUpSuggestions([]);
                       setVoiceMessageQueue([]);
                     }
-                    if (prevTab === "calendar") {
-                      const dw3 = appProfile?.deadlines?.filter((d) => !d.completedAt && (() => { try { return (new Date(d.date).getTime() - Date.now()) / 86400000 <= 3; } catch { return false; } })()).length ?? 0;
-                      setCalendarBadgeLastSeen(dw3);
-                    }
+                    // Calendar badge tracking moved to CalendarTab
                   }}
             items={[
               { key: "center", label: "Career Center", icon: <CareerCenterTabIcon /> },

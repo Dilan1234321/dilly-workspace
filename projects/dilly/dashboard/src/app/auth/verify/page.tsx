@@ -2,19 +2,17 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { dilly } from "@/lib/dilly";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
 function AuthVerifyContent() {
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"verifying" | "ok" | "fail">("verifying");
   const token = searchParams.get("token");
+  const [status, setStatus] = useState<"verifying" | "ok" | "fail">(token ? "verifying" : "fail");
 
   useEffect(() => {
-    if (!token) {
-      setStatus("fail");
-      return;
-    }
+    if (!token) return;
     dilly.fetch(`/auth/verify?token=${encodeURIComponent(token)}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
@@ -44,7 +42,7 @@ function AuthVerifyContent() {
       {status === "fail" && (
         <div className="text-center space-y-4">
           <p className="text-amber-400">Invalid or Expired Link.</p>
-          <a href="/" className="text-emerald-400 hover:underline">Back to Dilly</a>
+          <Link href="/" className="text-emerald-400 hover:underline">Back to Dilly</Link>
         </div>
       )}
     </div>

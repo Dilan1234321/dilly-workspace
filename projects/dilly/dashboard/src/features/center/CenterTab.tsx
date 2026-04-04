@@ -106,7 +106,7 @@ export interface CenterTabProps {
   shareCardRef: React.RefObject<HTMLDivElement | null>;
 
   // Theme
-  theme: { primary: string; secondary: string; backgroundTint: string; primaryContrast?: string };
+  theme: { primary: string; secondary: string; backgroundTint?: string; primaryContrast?: string };
 
   // Profile photo
   profilePhotoUrl: string | null;

@@ -33,22 +33,22 @@ function mockAudit(overrides: Partial<AuditV2> = {}): AuditV2 {
 }
 
 describe("scoreColor", () => {
-  it("returns Strong for score >= 70", () => {
-    const r = scoreColor(70);
+  it("returns Strong for score >= 80", () => {
+    const r = scoreColor(80);
     expect(r.label).toBe("Strong");
-    expect(r.color).toContain("22c55e");
+    expect(r.color).toContain("34C759");
   });
 
-  it("returns Average for score >= 50 and < 70", () => {
-    const r = scoreColor(55);
-    expect(r.label).toBe("Average");
-    expect(r.color).toContain("eab308");
+  it("returns Developing for score >= 60 and < 80", () => {
+    const r = scoreColor(70);
+    expect(r.label).toBe("Developing");
+    expect(r.color).toContain("FF9F0A");
   });
 
-  it("returns Needs work for score < 50", () => {
+  it("returns Gap for score < 60", () => {
     const r = scoreColor(40);
-    expect(r.label).toBe("Needs work");
-    expect(r.color).toContain("ef4444");
+    expect(r.label).toBe("Gap");
+    expect(r.color).toContain("FF453A");
   });
 });
 

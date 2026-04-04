@@ -110,7 +110,7 @@ function readCachedLeaderboardForTrack(track: string): LeaderboardData | null {
 export function RankTab() {
   const { appProfile } = useAppContext();
   const { auditHistory } = useAuditScore();
-  const { mainAppTab } = useNavigation();
+  const { state: { mainAppTab } } = useNavigation();
 
   // ── Local state (was page-level, only used here) ──────────────────────────
   const [lbData, setLbData] = useState<LeaderboardData | null>(null);

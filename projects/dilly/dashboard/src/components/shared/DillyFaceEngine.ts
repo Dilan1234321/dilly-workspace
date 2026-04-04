@@ -27,8 +27,8 @@ export function start(canvas: HTMLCanvasElement, size: number): () => void {
   const scale = faceRadius / 19;
   const travelR = size * 0.15;
 
-  let pos = { x: 0, y: 0 };
-  let vel = { x: 0, y: 0 };
+  const pos = { x: 0, y: 0 };
+  const vel = { x: 0, y: 0 };
   let target = { x: 0, y: 0 };
   let smile = 0.35;
   let smileTarget = 0.35;

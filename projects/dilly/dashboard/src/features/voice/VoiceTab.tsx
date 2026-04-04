@@ -12,6 +12,7 @@ import { HeartFavorite } from "@/components/ui/heart-favorite";
 import { ThumbsDown } from "lucide-react";
 import { VoiceInputWithMic } from "@/components/VoiceInputWithMic";
 import { VoiceAssistantRichReply } from "@/components/VoiceAssistantRichReply";
+import type { DillyVoiceChatScoresBundle } from "@/lib/voiceVisualTypes";
 import { VoiceVisualDedupProvider, VoiceDedupScrollRoot } from "@/components/VoiceChatVisualDedup";
 import { LoaderOne } from "@/components/ui/loader-one";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,7 +63,7 @@ export interface VoiceTabProps {
   ) => void;
   endVoiceMockInterviewByUser: () => void;
   voiceStarterSuggestions: string[];
-  voiceScoresForChat: Record<string, unknown> | null;
+  voiceScoresForChat: DillyVoiceChatScoresBundle | null;
   buildVoiceContext: () => Record<string, unknown>;
   mergeVoiceAutoSavedDeadlines: (rows: DillyDeadline[]) => void;
   saveProfile: (data: Record<string, unknown>) => Promise<boolean>;

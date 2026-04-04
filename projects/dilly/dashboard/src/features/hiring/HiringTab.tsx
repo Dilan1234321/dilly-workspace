@@ -94,7 +94,7 @@ export function HiringTab({
     auditHistory, setAuditHistory, auditHistoryLoading,
     setCenterRefreshKey,
   } = useAuditScore();
-  const { mainAppTab, setMainAppTab, reviewSubView, setReviewSubView } = useNavigation();
+  const { state: { mainAppTab, reviewSubView }, setMainAppTab, setReviewSubView } = useNavigation();
   const { voiceAvatarIndex } = useVoice();
   const { toast } = useToast();
   const { showVoiceNotification } = useDillyVoiceNotification();
@@ -937,7 +937,7 @@ export function HiringTab({
   // ── Main Hiring view ──────────────────────────────────────────────────────
   const displayAudit = viewingAudit ?? latestAuditRef.current ?? audit ?? savedAuditForCenter;
   const showUpload = !displayAudit || wantsNewAudit;
-  const showUploadView = reviewSubView === "upload" || (showUpload && reviewSubView !== "home" && reviewSubView !== "report" && reviewSubView !== "insights" && reviewSubView !== "dimensions");
+  const showUploadView = reviewSubView === "upload" || (showUpload && !["home", "report", "insights", "dimensions"].includes(reviewSubView));
 
   /** Review hub: legacy Score tab → canonical `/score` route */
   if (reviewSubView === "home") {
