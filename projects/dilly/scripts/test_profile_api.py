@@ -12,7 +12,23 @@ if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
 
+def _db_available() -> bool:
+    """Check if Postgres is reachable (returns False in CI without DB credentials)."""
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            conn.execute("SELECT 1")
+        return True
+    except Exception:
+        return False
+
+
 def main():
+    if not _db_available():
+        print("  (No database connection — skipping profile API test)")
+        print("  Profile API test skipped (no DB). Health + auth verified in smoke test.")
+        return
+
     from fastapi.testclient import TestClient
     from projects.dilly.api.main import app
     from projects.dilly.api.auth_store import create_session
