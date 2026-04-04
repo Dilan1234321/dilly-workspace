@@ -559,16 +559,21 @@ COHORT_SCORING_WEIGHTS: dict[str, dict] = {
     #                advanced math (diff eq, linear algebra) mastery
     # Grit  (ECE)  = Hardware debugging persistence (hours tracing signals),
     #                lab report rigor, staying current with hardware trends
-    #                (silicon, RISC-V, neuromorphic), long-haul research
+    #                (silicon, RISC-V, neuromorphic), long-haul research,
+    #                iterative prototyping through repeated hardware failures
     # Build (ECE)  = PCB designs (Altium, KiCad) with proven function,
     #                FPGA implementations and HDL code portfolio, embedded
     #                systems projects with real hardware, IEEE/robotics club
     #                leadership, certifications (LabVIEW), industry internship
+    #
+    # NOTE: Grit bumped 20→25 (hardware debugging & iteration demands real
+    # persistence — NVIDIA/Qualcomm look for lab-hours, not just portfolio).
+    # Build adjusted 45→40 to maintain sum=100.
     "electrical_computer_engineering": {
         "label": "Electrical & Computer Engineering",
         "smart": 35,
-        "grit": 20,
-        "build": 45,
+        "grit": 25,
+        "build": 40,
         "recruiter_bar": 78,
         "reference_benchmark": "Intel / NVIDIA / Qualcomm hardware engineering bar",
         "reference_company": "NVIDIA",

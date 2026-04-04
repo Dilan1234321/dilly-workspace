@@ -169,3 +169,14 @@ def get_build_signals(cohort: str) -> list[str]:
 # ── BUILD_SIGNALS compat shim ─────────────────────────────────────────────────
 # Some callers import BUILD_SIGNALS directly — provide an empty dict fallback.
 BUILD_SIGNALS: dict[str, list[str]] = {}
+
+# ── QUANTITATIVE_INDUSTRY_WEIGHTS ─────────────────────────────────────────────
+# Industry targets that shift scoring toward quantitative/analytical dimensions.
+# Used by scoring_guidelines.py for voice scoring explanations.
+QUANTITATIVE_INDUSTRY_WEIGHTS: dict[str, dict[str, float]] = {
+    "Finance & Quant Trading": {"smart": 0.45, "grit": 0.35, "build": 0.20},
+    "Finance & Investment Banking": {"smart": 0.40, "grit": 0.38, "build": 0.22},
+    "Actuarial & Insurance": {"smart": 0.50, "grit": 0.28, "build": 0.22},
+    "Consulting & Strategy": {"smart": 0.35, "grit": 0.42, "build": 0.23},
+    "Data Science & Machine Learning": {"smart": 0.35, "grit": 0.25, "build": 0.40},
+}

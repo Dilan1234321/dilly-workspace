@@ -22,18 +22,72 @@ _JOBS_DB = os.path.join(_WORKSPACE_ROOT, "projects", "dilly", "dilly_jobs.db")
 _SCHOOL_CITIES: dict[str, str] = {"utampa": "Tampa"}
 
 # Track -> job type / keyword alignment (internship-heavy for students)
+# Keywords are cohort-specific to maximize relevance of job recommendations.
 _TRACK_JOB_PREF = {
-    "tech": ["software", "engineer", "developer", "intern", "data", "product", "design"],
-    "finance": ["finance", "analyst", "investment", "banking", "intern"],
-    "consulting": ["consulting", "analyst", "strategy", "intern"],
-    "business": ["business", "analyst", "marketing", "intern", "operations"],
-    "science": ["research", "lab", "science", "intern", "data"],
-    "pre_health": ["health", "clinical", "medical", "intern", "shadow"],
-    "pre_law": ["legal", "law", "intern", "paralegal"],
-    "communications": ["communications", "media", "pr", "intern", "content"],
-    "education": ["education", "teaching", "intern", "tutor"],
-    "arts": ["design", "creative", "arts", "intern", "portfolio"],
-    "humanities": ["research", "writing", "humanities", "intern"],
+    "tech": [
+        "software", "engineer", "developer", "intern", "data", "product",
+        "machine learning", "artificial intelligence", "cloud", "devops", "backend",
+        "frontend", "fullstack", "python", "java", "github", "api", "platform",
+        "infrastructure", "security", "cybersecurity", "embedded", "firmware",
+    ],
+    "finance": [
+        "finance", "analyst", "investment", "banking", "intern",
+        "accounting", "audit", "equity", "asset management", "portfolio",
+        "valuation", "trading", "risk", "bloomberg", "cfa", "advisory",
+        "corporate finance", "financial", "capital markets", "treasury",
+    ],
+    "consulting": [
+        "consulting", "analyst", "strategy", "intern", "advisory",
+        "management consulting", "case", "client", "engagement", "operations",
+        "transformation", "due diligence", "research", "associate",
+    ],
+    "business": [
+        "business", "marketing", "intern", "operations", "management",
+        "brand", "growth", "sales", "revenue", "go-to-market", "partnerships",
+        "product management", "business development", "startup", "entrepreneur",
+        "account", "customer success",
+    ],
+    "science": [
+        "research", "lab", "science", "intern", "biology", "chemistry",
+        "genomics", "biochemistry", "biotech", "pharmaceutical", "clinical",
+        "wet lab", "pcr", "sequencing", "molecular", "cell biology",
+        "neuroscience", "ecology", "environmental", "field research",
+    ],
+    "pre_health": [
+        "health", "clinical", "medical", "intern", "hospital", "patient",
+        "nursing", "pharmacy", "physician", "cna", "emt", "public health",
+        "healthcare", "dental", "veterinary", "physical therapy", "shadow",
+        "allied health", "epidemiology", "mental health",
+    ],
+    "pre_law": [
+        "legal", "law", "intern", "paralegal", "attorney", "counsel",
+        "compliance", "regulatory", "policy", "judicial", "litigation",
+        "corporate law", "government", "nonprofit", "advocacy", "court",
+        "legislative", "justice",
+    ],
+    "communications": [
+        "communications", "media", "pr", "intern", "content", "journalism",
+        "editorial", "public relations", "broadcast", "reporter", "writer",
+        "social media", "marketing", "storytelling", "digital media",
+        "brand communications", "audience", "engagement",
+    ],
+    "education": [
+        "education", "teaching", "intern", "tutor", "teacher", "curriculum",
+        "learning", "school", "student", "k-12", "edtech", "instructional",
+        "mentoring", "academic", "literacy", "counseling",
+    ],
+    "arts": [
+        "design", "creative", "arts", "intern", "ux", "ui", "graphic",
+        "visual", "animation", "figma", "adobe", "illustration",
+        "product design", "experience design", "art direction", "portfolio",
+        "brand design", "motion", "film",
+    ],
+    "humanities": [
+        "research", "writing", "intern", "policy", "editorial",
+        "communications", "nonprofit", "advocacy", "language", "international",
+        "analyst", "social", "human rights", "culture", "publishing",
+        "grant writing", "program coordination",
+    ],
 }
 
 
@@ -256,7 +310,7 @@ def _llm_match_batch(
     voice_block = ""
     voice_text = _voice_captured_text(profile)
     if voice_text.strip():
-        voice_block = f"\nVoice-captured (told Meridian, not on resume): {voice_text[:800]}"
+        voice_block = f"\nVoice-captured (told Dilly, not on resume): {voice_text[:800]}"
 
     criteria_block = ""
     if company_criteria and any(c for c in company_criteria):
@@ -266,7 +320,7 @@ def _llm_match_batch(
                 j = jobs_with_rule_scores[i][0]
                 criteria_block += f"- {j.get('company', '?')}: {c[:400]}\n"
 
-    system = """You are Meridian's job matching advisor. For each job, produce:
+    system = """You are Dilly's job matching advisor. For each job, produce:
 1. match_pct (0-100) — how well the candidate fits given the company's hiring criteria. Be realistic; 85+ only for strong fits.
 2. why_bullets — 2-4 short bullets citing specific evidence from their resume/major/experience. Apply the company's hiring guidelines when explaining fit.
 

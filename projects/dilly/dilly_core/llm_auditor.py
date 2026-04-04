@@ -72,7 +72,7 @@ Output valid JSON only, no markdown or extra text. candidate_name must be the pe
   "smart_score": number 0-100,
   "grit_score": number 0-100,
   "build_score": number 0-100,
-  "final_score": number 0-100 (compute as 0.30*smart + 0.45*grit + 0.25*build; for Pre-Law use 0.45*smart + 0.35*grit + 0.20*build),
+  "final_score": number 0-100 (use the track-specific formula: Tech=0.20*smart+0.25*grit+0.55*build; Finance=0.40*smart+0.38*grit+0.22*build; Consulting=0.35*smart+0.42*grit+0.23*build; Science=0.45*smart+0.30*grit+0.25*build; Business=0.20*smart+0.38*grit+0.42*build; Pre-Health=0.30*smart+0.45*grit+0.25*build; Pre-Law=0.45*smart+0.30*grit+0.25*build; Communications=0.18*smart+0.30*grit+0.52*build; Education=0.22*smart+0.48*grit+0.30*build; Arts=0.12*smart+0.23*grit+0.65*build; Humanities=0.28*smart+0.42*grit+0.30*build),
   "dilly_take": "Strength-first headline: open with what's working (one clear win), then the one change that would matter most. Format: 'Here's what's working: [win]. The one change that would matter most: [fix].' Second person. 20-35 words total. Never lead with what's wrong.",
   "audit_findings": ["Smart: You showcased academic rigor through [cite specific: GPA, major, named coursework, honor society, or lab/research from the resume].", "Grit: You demonstrated leadership and impact through [cite specific: role title and org name from the resume].", "Build: You demonstrated [track] readiness through [cite specific: named clinical role, shadowing setting, lab, or project from the resume]."],
   "evidence_smart": "One flowing sentence. Start with 'You showcased high academic standard through ' then cite what is actually on the resume: GPA only if stated; otherwise major, relevant coursework, honors, certifications, or research. Example with no GPA: 'You showcased high academic standard through your Data Science major, relevant coursework in data structures and calculus, and certifications.'",
@@ -109,6 +109,8 @@ Grit (Tech): Shipped impact, ownership, metrics (e.g. "reduced latency 40%", "le
 Build (Tech): Tech stack (languages, frameworks, tools), side projects or capstones, deployments, GitHub, contributions. What would a senior engineer or tech recruiter look for to say "this person can ship"?
 
 Advice: Use the language and priorities of top tech recruiters and tech career coaches. Line_edits should reframe bullets for impact and stack visibility; actions should be what actually moves the needle in tech (e.g. one strong project with metrics, one clear tech line). No generic "emphasize skills." Name the project, give the exact rewrite.
+
+FINAL_SCORE_FORMULA: final_score = 0.20*smart_score + 0.25*grit_score + 0.55*build_score (Build dominates in Tech; a deployed app or strong GitHub outweighs GPA. A student with Build 85 and Smart 50 scores higher than one with Smart 85 and Build 50).
 """,
     "Pre-Health": """
 COHORT: PRE-HEALTH (priority track). You are a top pre-health advisor and a reviewer with med/dental/vet or health admissions experience. Score and advise ONLY through this lens. Pre-Health is unique.
@@ -118,6 +120,8 @@ Grit (Pre-Health): Leadership in health-related orgs, sustained commitment, pati
 Build (Pre-Health): Clinical hours, shadowing (specialty and dates), research (lab, PI, publications), service. Cite the exact experience: "your shadowing with [Dr./Specialty]," "your [job title] at [site]," "your research in the [Lab name] with [PI if stated]."
 
 RESUME-NATIVE RULE (Pre-Health): Every finding and recommendation must prove you read this resume. In audit_findings, name at least one specific role, org, or experience from the document (e.g. "Your Medical Scribe role at X" or "your research in the Y lab"). In every recommendation: (1) Use current_line to quote the exact phrase you are changing, or (2) Name the section and role ("Under 'Clinical Experience,' in your [Role] at [Place]") so they see you are pointing at their document. Never "add shadowing hours" without saying where (e.g. "Add total hours and specialty to your shadowing line with [Dr. X or setting]"). Never "strengthen your research" without naming the lab or project. dilly_take for Pre-Health must name something from their resume: either their standout (e.g. "Your [specific role] at [place] is your hook") or the one fix (e.g. "The bullet under [Role] about [topic] - add numbers and it becomes your Grit headline").
+
+FINAL_SCORE_FORMULA: final_score = 0.30*smart_score + 0.45*grit_score + 0.25*build_score (Grit dominates; sustained clinical commitment, patient hours, and long-term dedication are the strongest signals in pre-health. A student with 300+ clinical hours and leadership outscores a higher-GPA student with no clinical exposure).
 """,
     "Pre-Law": """
 COHORT: PRE-LAW. You are a top pre-law advisor and a legal hiring or law school admissions insider. Score and advise ONLY through this lens. Pre-Law is unique.
@@ -127,6 +131,8 @@ Grit (Pre-Law): Leadership, internships (legal or policy), sustained commitment,
 Build (Pre-Law): Legal internships, writing samples or publications, clinic work, policy projects, or research. Concrete proof of legal/analytical engagement and skill.
 
 Advice: Use the language of pre-law advisors and legal hiring. Line_edits should sharpen analytical and writing signals; actions should be specific (e.g. "Add one line under [Internship]: [exact phrasing]", "List writing sample or publication"). No generic advice. Name the role or document and give the exact step.
+
+FINAL_SCORE_FORMULA: final_score = 0.45*smart_score + 0.30*grit_score + 0.25*build_score (Smart dominates in Pre-Law; analytical rigor, GPA, and writing quality are the primary screens for law school and BigLaw. A student with Smart 90 and average Grit outscores a lower-GPA student with more experience).
 """,
     "Communications": """
 COHORT: COMMUNICATIONS. You are a top PR/media/comms hiring manager and a communications career advisor. Score and advise ONLY through this lens. Communications is unique.
@@ -136,6 +142,8 @@ Grit (Communications): Campaigns run, audience reach, leadership in media/PR org
 Build (Communications): Portfolio pieces, campaigns, clips, media relations, social or content metrics. Concrete proof they can produce and measure comms work.
 
 Advice: Use the language of PR and media hiring. Line_edits should strengthen campaign and writing bullets with clarity and impact; actions should name specific pieces or campaigns and give exact rewrites or additions. No generic "highlight writing." Cite the piece or section and give the exact line.
+
+FINAL_SCORE_FORMULA: final_score = 0.18*smart_score + 0.30*grit_score + 0.52*build_score (Build dominates in Communications; published bylines, portfolio pieces, and measurable campaign results are everything. NYT and Edelman recruiters look at the work, not the GPA).
 """,
     "Science": """
 COHORT: SCIENCE. You are a top research or industry science hiring manager and a science career advisor. Score and advise ONLY through this lens. Science is unique.
@@ -145,6 +153,8 @@ Grit (Science): Lab ownership, sustained research, leadership in science orgs, c
 Build (Science): Lab experience, methods used, publications/posters, techniques, collaborations. Concrete proof they can do research or applied science.
 
 Advice: Use the language of research and industry science. Line_edits should sharpen methods and impact in research bullets; actions should be specific (e.g. "Add method and outcome to [Project] line: [exact phrasing]"). No generic advice. Name the lab or project and give the exact rewrite.
+
+FINAL_SCORE_FORMULA: final_score = 0.45*smart_score + 0.30*grit_score + 0.25*build_score (Smart dominates in Science; deep scientific knowledge, methods mastery, and GPA are the primary screens. Research publications and lab techniques count toward Build - name specific techniques and outcomes).
 """,
     "Business": """
 COHORT: BUSINESS. You are a top finance/consulting/marketing hiring manager and a business career advisor. Score and advise ONLY through this lens. Business is unique.
@@ -154,6 +164,8 @@ Grit (Business): Deal/portfolio/campaign outcomes, leadership, revenue or cost i
 Build (Business): Relevant internships, case work, quant projects, leadership in business orgs. Concrete proof they can perform in finance, consulting, or marketing.
 
 Advice: Use the language of finance and consulting recruiting. Line_edits should add quant impact and clarity to bullets; actions should name the role or deal and give the exact line (e.g. "Under [Role], add: 'Led analysis that drove $X in savings'"). No generic advice. Specific numbers and roles.
+
+FINAL_SCORE_FORMULA: final_score = 0.20*smart_score + 0.38*grit_score + 0.42*build_score (Build and Grit are near-equal in Business; quantifiable outcomes, internship track record, and campaign/ops results drive hiring decisions. GPA matters less - show numbers and impact).
 """,
     "Finance": """
 COHORT: FINANCE. You are a top Big Four (audit/tax/advisory), investment banking, or asset management hiring manager and a finance career advisor. Score and advise ONLY through this lens. Finance is distinct from general Business; this cohort is for students targeting Big Four, bulge bracket, and financial firms.
@@ -163,6 +175,8 @@ Grit (Finance): Quantifiable impact ($, %, revenue, cost savings), deal or audit
 Build (Finance): Audit/tax/advisory internships, valuation or modeling work, transaction/due diligence exposure, Excel/Tableau/GAAP, certifications or exam progress. Concrete proof they can perform in public accounting or finance roles.
 
 Advice: Use the language of Big Four and finance recruiting. Line_edits should add $ or % impact, deal/audit scope, or certification; actions should name the firm or engagement and give the exact line (e.g. "Under [Audit Internship], add: 'Supported audit of $XM segment; identified Y finding'"). No generic advice. Specific numbers, firms, and deliverables.
+
+FINAL_SCORE_FORMULA: final_score = 0.40*smart_score + 0.38*grit_score + 0.22*build_score (Smart and Grit are near-equal in Finance; GPA is hard-screened at bulge bracket banks and Big Four, and networking intensity (coffee chats, investment club consistency) is the Grit signal. Build - models and deal exposure - counts less but still matters).
 """,
     "Consulting": """
 COHORT: CONSULTING. You are a top strategy consulting (MBB, Big Four advisory) hiring manager and a consulting career advisor. Score and advise ONLY through this lens. Consulting is distinct from general Business; this cohort is for students targeting consulting firms.
@@ -172,6 +186,8 @@ Grit (Consulting): Leadership, client or team impact, quantifiable outcomes ($, 
 Build (Consulting): Consulting internships, case competitions, client projects, frameworks, synthesis and presentation. Concrete proof they can do consulting work.
 
 Advice: Use the language of consulting recruiting. Line_edits should add scope, outcome, or deliverable; actions should name the project or client and give the exact line (e.g. "Under [Role], add: 'Delivered X recommendation; drove Y% improvement'"). No generic advice. Specific outcomes and deliverables.
+
+FINAL_SCORE_FORMULA: final_score = 0.35*smart_score + 0.42*grit_score + 0.23*build_score (Grit edges Smart in Consulting; case prep volume, networking across the recruiting cycle, and persistence through 5-6 rounds are the MBB differentiators. Smart (structured problem-solving, quant rigor) is still heavily weighted. Build is case competition wins and client deliverables).
 """,
     "Education": """
 COHORT: EDUCATION. You are a top K-12 or ed-tech hiring manager and an education career advisor. Score and advise ONLY through this lens. Education is unique.
@@ -181,6 +197,8 @@ Grit (Education): Teaching or tutoring experience, student outcomes, leadership 
 Build (Education): Student teaching, lesson design, ed-tech tools, student growth metrics. Concrete proof they can teach or support learning.
 
 Advice: Use the language of education hiring. Line_edits should strengthen teaching and outcome bullets; actions should name the experience and give the exact line (e.g. "In [Student Teaching], add: 'Designed and delivered units that improved [metric]'"). No generic advice. Specific classrooms or programs.
+
+FINAL_SCORE_FORMULA: final_score = 0.22*smart_score + 0.48*grit_score + 0.30*build_score (Grit overwhelmingly dominates in Education; sustained teaching hours, classroom management persistence, and documented student outcomes are the strongest signals. A student with 500+ teaching hours and strong mentoring impact outscores a higher-GPA student with no classroom experience).
 """,
     "Arts": """
 COHORT: ARTS. You are a top creative/design hiring manager and an arts career advisor. Score and advise ONLY through this lens. Arts is unique.
@@ -190,6 +208,8 @@ Grit (Arts): Projects shipped, collaborations, exhibitions or performances, lead
 Build (Arts): Portfolio, specific projects, tools and medium, exhibitions or shows. Concrete proof they can create and deliver.
 
 Advice: Use the language of creative and design hiring. Line_edits should sharpen project and craft bullets; actions should name the piece or project and give the exact rewrite. No generic advice. Specific works and outcomes.
+
+FINAL_SCORE_FORMULA: final_score = 0.12*smart_score + 0.23*grit_score + 0.65*build_score (Build overwhelmingly dominates in Arts and Design; portfolio is 100% of the hiring decision at IDEO, Figma, and Apple HIG. GPA is essentially irrelevant. A student with 6 polished case studies showing process beats a 4.0 student with no portfolio every time).
 """,
     "Humanities": """
 COHORT: HUMANITIES. You are a top writing/editorial/research hiring manager and a humanities career advisor. Score and advise ONLY through this lens. Humanities is unique.
@@ -199,6 +219,8 @@ Grit (Humanities): Publications, editorial roles, research projects, leadership 
 Build (Humanities): Writing samples, research output, language proficiency, editorial or teaching experience. Concrete proof they can write and analyze.
 
 Advice: Use the language of editorial and research hiring. Line_edits should strengthen writing and analysis bullets; actions should name the piece or role and give the exact line. No generic advice. Specific bylines or projects.
+
+FINAL_SCORE_FORMULA: final_score = 0.28*smart_score + 0.42*grit_score + 0.30*build_score (Grit leads in Humanities; research persistence, publications, and sustained editorial output are key signals. Smart reflects writing/analytical rigor and coursework depth. Build is publications, language certifications, and writing samples).
 """,
 }
 
@@ -284,7 +306,7 @@ def _build_few_shot_block(examples: List[dict]) -> str:
     if not examples:
         return ""
     lines = [
-        "Below are example audits from the Meridian rule-based engine (trained on your resume set). Grade the next resume in the same style and scale.",
+        "Below are example audits from the Dilly rule-based engine (trained on your resume set). Grade the next resume in the same style and scale.",
         "",
     ]
     for i, ex in enumerate(examples, 1):
