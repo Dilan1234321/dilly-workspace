@@ -146,6 +146,7 @@ import { getDillyNoticedCard, markNoticedSeen } from "@/lib/dillyNoticed";
 import { TWENTY_X_MOMENTS, formatTwentyXCompact } from "@/lib/twentyXMoments";
 import { cn } from "@/lib/utils";
 import { useNavigation, type AppTab, type HiringSubView, type GetHiredSubTab } from "@/contexts/NavigationContext";
+import { useAppContext } from "@/context/AppContext";
 import { sanitizeVoiceAssistantReply } from "@/lib/voiceReplySanitize";
 import html2canvas from "html2canvas";
 import { PROFILE_THEMES, PROFILE_THEME_IDS, type ProfileThemeId } from "@/lib/profileThemes";
@@ -318,8 +319,6 @@ function extractExperienceLabelsFromStructuredText(text: string | null | undefin
   return labels.length > 0 ? labels.slice(0, 8) : undefined;
 }
 
-type User = { email: string; subscribed: boolean };
-
 export default function DashboardPage() {
   return <Dashboard />;
 }
@@ -331,22 +330,15 @@ function Dashboard() {
     state: { mainAppTab, reviewSubView, getHiredSubTab, readyCheckCompany, jobsPanelInitialFilter },
     setMainAppTab, setReviewSubView, setGetHiredSubTab, setReadyCheckCompany, setJobsPanelInitialFilter,
   } = useNavigation();
-  const [school, setSchool] = useState<SchoolConfig | null>(null);
-  const [onboardingNeeded, setOnboardingNeeded] = useState<boolean | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const savedId = localStorage.getItem(SCHOOL_STORAGE_KEY);
-      if (savedId && getSchoolById(savedId)) return false;
-      return true;
-    } catch {
-      return true;
-    }
-  });
-
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [allowMainApp, setAllowMainApp] = useState(false);
-  const [profileFetchDone, setProfileFetchDone] = useState(false);
+  const {
+    user, setUser,
+    authLoading, setAuthLoading,
+    allowMainApp, setAllowMainApp,
+    onboardingNeeded, setOnboardingNeeded,
+    profileFetchDone, setProfileFetchDone,
+    appProfile, setAppProfile,
+    school, setSchool,
+  } = useAppContext();
 
   const [file, setFile] = useState<File | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
@@ -395,8 +387,7 @@ function Dashboard() {
   /** After deep link `/?tab=resources&view=applications`, scroll once the Get Hired panel mounts. */
   const scrollApplicationsOnResourcesRef = useRef(false);
   /** Get Hired sub-tab + filter — now from NavigationContext */
-  /** Profile loaded from API for Career Center */
-  const [appProfile, setAppProfile] = useState<AppProfile | null>(null);
+  /** Profile loaded from API — now from AppContext */
   const [stickerSheetOpen, setStickerSheetOpen] = useState(false);
   const searchParams = useClientSearchParams();
   const pathname = usePathname();
