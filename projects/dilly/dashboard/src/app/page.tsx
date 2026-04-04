@@ -148,6 +148,7 @@ import { cn } from "@/lib/utils";
 import { useNavigation, type AppTab, type HiringSubView, type GetHiredSubTab } from "@/contexts/NavigationContext";
 import { useAppContext } from "@/context/AppContext";
 import { useAuditScore } from "@/contexts/AuditScoreContext";
+import { useVoice } from "@/contexts/VoiceContext";
 import { sanitizeVoiceAssistantReply } from "@/lib/voiceReplySanitize";
 import html2canvas from "html2canvas";
 import { PROFILE_THEMES, PROFILE_THEME_IDS, type ProfileThemeId } from "@/lib/profileThemes";
@@ -352,6 +353,37 @@ function Dashboard() {
     doorEligibility, setDoorEligibility,
     centerRefreshKey, setCenterRefreshKey,
   } = useAuditScore();
+  const {
+    voiceConvos, setVoiceConvos, openVoiceConvIds, setOpenVoiceConvIds,
+    activeVoiceConvId, setActiveVoiceConvId, voiceChatListOpen, setVoiceChatListOpen,
+    voiceAvatarIndex, setVoiceAvatarIndex, voiceAvatarPickerOpen, setVoiceAvatarPickerOpen,
+    renamingVoiceConvId, setRenamingVoiceConvId, renameValue, setRenameValue,
+    voiceMessages, setVoiceMessages, voiceMockInterviewSession, setVoiceMockInterviewSession,
+    voiceMessageQueue, setVoiceMessageQueue, voiceInput, setVoiceInput,
+    voiceLoading, setVoiceLoading, voiceStreamingText, setVoiceStreamingText,
+    voiceFollowUpSuggestions, setVoiceFollowUpSuggestions, mascotTapCount, setMascotTapCount,
+    lastAuditTsOnVoiceEnter, setLastAuditTsOnVoiceEnter,
+    memoryItems, setMemoryItems, pendingSessionCaptureCard, setPendingSessionCaptureCard,
+    latestConversationOutput, setLatestConversationOutput,
+    voiceRecapNonce, setVoiceRecapNonce, voiceRecapForCard, setVoiceRecapForCard,
+    voiceApplicationsPreview, setVoiceApplicationsPreview,
+    bulletRewriterOpen, setBulletRewriterOpen, bulletInput, setBulletInput,
+    bulletRewritten, setBulletRewritten, bulletLoading, setBulletLoading,
+    bulletHistory, setBulletHistory,
+    voiceRememberOpen, setVoiceRememberOpen, voiceRememberNote, setVoiceRememberNote,
+    outcomeAskingConsent, setOutcomeAskingConsent,
+    voiceActionItems, setVoiceActionItems, actionItemsPanelOpen, setActionItemsPanelOpen,
+    voiceCompany, setVoiceCompany, voiceCompanyInput, setVoiceCompanyInput,
+    voiceCompanyPanelOpen, setVoiceCompanyPanelOpen,
+    firmDeadlines, setFirmDeadlines, voiceMemory, setVoiceMemory,
+    voiceFeedback, setVoiceFeedback,
+    voiceOverlayOpen, setVoiceOverlayOpen,
+    voiceBadgeLastSeen, setVoiceBadgeLastSeen,
+    voiceCalendarSyncKey, setVoiceCalendarSyncKey,
+    voiceScreenContext, setVoiceScreenContext,
+    pendingVoicePrompt, setPendingVoicePrompt,
+    scoreCardDillyStrip, setScoreCardDillyStrip,
+  } = useVoice();
 
   const [file, setFile] = useState<File | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
@@ -571,43 +603,7 @@ function Dashboard() {
     return c.score;
   }, [atsScoreHistory, viewingAudit, audit, savedAuditForCenter]);
 
-  /** Dilly conversations - persisted to localStorage, scoped per user */
-  const [voiceConvos, setVoiceConvos] = useState<VoiceConvo[]>([]);
-  /** IDs of convos currently "open" in the tab bar (browser-tab style) */
-  const [openVoiceConvIds, setOpenVoiceConvIds] = useState<string[]>([]);
-  const [activeVoiceConvId, setActiveVoiceConvId] = useState<string | null>(null);
-  const [voiceChatListOpen, setVoiceChatListOpen] = useState(false);
-  /** Voice avatar: index into VOICE_AVATAR_OPTIONS (0 to length-1), null = none selected. Predefined only, no custom uploads. */
-  const [voiceAvatarIndex, setVoiceAvatarIndex] = useState<number | null>(null);
-  const [voiceAvatarPickerOpen, setVoiceAvatarPickerOpen] = useState(false);
-  const [renamingVoiceConvId, setRenamingVoiceConvId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [voiceMessages, setVoiceMessages] = useState<VoiceConvo["messages"]>([]);
-  type VoiceMockInterviewSession = {
-    sessionContext: string;
-    questionIndex: number;
-    history: { q: string; a: string }[];
-    currentQuestion: string;
-    totalQuestions: number;
-    awaitingAnswer: boolean;
-  };
-  const [voiceMockInterviewSession, setVoiceMockInterviewSession] = useState<VoiceMockInterviewSession | null>(null);
-  const [voiceMessageQueue, setVoiceMessageQueue] = useState<string[]>([]);
-  const [voiceInput, setVoiceInput] = useState("");
-  const [voiceLoading, setVoiceLoading] = useState(false);
-  const [voiceStreamingText, setVoiceStreamingText] = useState<string>("");
-  const [voiceFollowUpSuggestions, setVoiceFollowUpSuggestions] = useState<string[]>([]);
-  const [mascotTapCount, setMascotTapCount] = useState(0);
-  /** Track the last audit timestamp so we can detect a fresh audit when entering Voice */
-  const [lastAuditTsOnVoiceEnter, setLastAuditTsOnVoiceEnter] = useState<number | null>(null);
-  const [memoryItems, setMemoryItems] = useState<MemoryItem[]>([]);
-  const [pendingSessionCaptureCard, setPendingSessionCaptureCard] = useState<SessionCapture | null>(null);
-  const [latestConversationOutput, setLatestConversationOutput] = useState<ConversationOutput | null>(null);
-  const [voiceRecapNonce, setVoiceRecapNonce] = useState(0);
-  const [voiceRecapForCard, setVoiceRecapForCard] = useState<VoiceSessionRecap | null>(null);
-  const [voiceApplicationsPreview, setVoiceApplicationsPreview] = useState<
-    { company: string; role?: string; status?: string; deadline?: string | null }[]
-  >([]);
+  /** Voice state — now from VoiceContext */
   const [currentCohortPulse, setCurrentCohortPulse] = useState<(UserCohortPulse & { cohort: CohortPulse }) | null>(null);
   const latestVoiceConvIdRef = useRef<string | null>(null);
   const voiceMessagesRef = useRef(voiceMessages);
@@ -615,16 +611,7 @@ function Dashboard() {
   const sessionCaptureShownRef = useRef<Set<string>>(new Set());
   const voiceMemoryLengthAtVoiceEnterRef = useRef(0);
   const prevVoiceActiveRef = useRef(false);
-  /** Bullet rewriter state */
-  const [bulletRewriterOpen, setBulletRewriterOpen] = useState(false);
-  const [bulletInput, setBulletInput] = useState("");
-  const [bulletRewritten, setBulletRewritten] = useState("");
-  const [bulletLoading, setBulletLoading] = useState(false);
-  const [bulletHistory, setBulletHistory] = useState<{ original: string; versions: string[] }>({ original: "", versions: [] });
-  const [voiceRememberOpen, setVoiceRememberOpen] = useState(false);
-  const [voiceRememberNote, setVoiceRememberNote] = useState("");
-  /** Outcome capture: when user said Yes (interview/offer), we ask consent before closing. */
-  const [outcomeAskingConsent, setOutcomeAskingConsent] = useState<"interview" | "offer" | null>(null);
+  /** Bullet rewriter, remember, outcome — now from VoiceContext */
   /** Calendar state */
   const [calendarMonth, setCalendarMonth] = useState<{ year: number; month: number }>(() => { const n = new Date(); return { year: n.getFullYear(), month: n.getMonth() }; });
   const prevTabForCalendarSnapRef = useRef<typeof mainAppTab | null>(null);
@@ -643,9 +630,7 @@ function Dashboard() {
   const [calRenameValue, setCalRenameValue] = useState("");
   const [calRenamingSubId, setCalRenamingSubId] = useState<{ parentId: string; subId: string } | null>(null);
   const [calRenameSubValue, setCalRenameSubValue] = useState("");
-  /** Action items extracted from Voice replies - { id, text, done, convId } - scoped per user */
-  const [voiceActionItems, setVoiceActionItems] = useState<{ id: string; text: string; done: boolean; convId: string | null }[]>([]);
-  const [actionItemsPanelOpen, setActionItemsPanelOpen] = useState(false);
+  /** voiceActionItems, actionItemsPanelOpen — now from VoiceContext */
   /** Evidence-based interview prep (POST /interview-prep): per-dimension question, strategy, script */
   const [interviewPrepEvidence, setInterviewPrepEvidence] = useState<{ dimensions: { name: string; question: string; strategy: string; script: string }[] } | null>(null);
   const [interviewPrepEvidenceLoading, setInterviewPrepEvidenceLoading] = useState(false);
@@ -667,16 +652,7 @@ function Dashboard() {
   /** Review tab sub-view — now from NavigationContext */
   /** Job search checklist (persisted to localStorage key per user) */
   const [jobChecklist, setJobChecklist] = useState<Record<string, boolean>>({});
-  /** Company target for voice context - scoped per user */
-  const [voiceCompany, setVoiceCompany] = useState<string>("");
-  const [voiceCompanyInput, setVoiceCompanyInput] = useState("");
-  const [voiceCompanyPanelOpen, setVoiceCompanyPanelOpen] = useState(false);
-  /** Firm deadline intelligence */
-  const [firmDeadlines, setFirmDeadlines] = useState<{ label: string; date?: string; note: string; source: "calendar" | "estimate"; disclaimer?: string }[]>([]);
-  /** Voice memory - store summaries of recent conversations - scoped per user */
-  const [voiceMemory, setVoiceMemory] = useState<string[]>([]);
-  /** Feedback ratings per message index: "up" | "down" | null */
-  const [voiceFeedback, setVoiceFeedback] = useState<Record<number, "up" | "down">>({});
+  /** voiceCompany, firmDeadlines, voiceMemory, voiceFeedback — now from VoiceContext */
   /** Offline state for connection banner */
   const [isOffline, setIsOffline] = useState(false);
   /** Inline error when profile save fails (onboarding) */
@@ -705,23 +681,10 @@ function Dashboard() {
   const [profilePhotoUploading, setProfilePhotoUploading] = useState(false);
   const [photoCropImageSrc, setPhotoCropImageSrc] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  /** Badge "seen" state: when user visits a tab then leaves, badge hides until new notification. Stores snapshot when dismissed. */
-  const [voiceBadgeLastSeen, setVoiceBadgeLastSeen] = useState<{ deadlinesWithin7: number; auditTs: number | null } | null>(null);
+  /** voiceBadgeLastSeen, voiceCalendarSyncKey, pendingVoicePrompt, voiceScreenContext, scoreCardDillyStrip, voiceOverlayOpen — now from VoiceContext */
   const [calendarBadgeLastSeen, setCalendarBadgeLastSeen] = useState<number | null>(null);
-  /** centerRefreshKey — now from AuditScoreContext */
-  /** Bump after Voice auto-saves deadlines so /profile refetch runs and stale in-flight profile loads cannot wipe new rows */
-  const [voiceCalendarSyncKey, setVoiceCalendarSyncKey] = useState(0);
   /** Career Center: collapsible "More" section (streamlining per cousin feedback) */
   const [centerMoreOpen, setCenterMoreOpen] = useState(false);
-  /** Report page: collapsible "More from your report" (same pattern as Career Center) */
-  /** When set, opening Dilly will auto-send this prompt (e.g. from Calendar "Prep with Dilly AI") */
-  const [pendingVoicePrompt, setPendingVoicePrompt] = useState<string | null>(null);
-  /** When user taps "Ask Dilly AI" from a screen: send this with the next Voice message only (Option C). */
-  const [voiceScreenContext, setVoiceScreenContext] = useState<{ current_screen: string; prompt?: string } | null>(null);
-  /** Dilly Presence: optional footnote on score card */
-  const [scoreCardDillyStrip, setScoreCardDillyStrip] = useState<string | null>(null);
-  /** Gemini-style floating overlay: when true, show pill at bottom instead of switching to Voice tab */
-  const [voiceOverlayOpen, setVoiceOverlayOpen] = useState(false);
   /** When Voice opens from `/audit/[id]`, backend context can reference this audit id until overlay closes. */
   const voiceAuditReportIdRef = useRef<string | null>(null);
   /** When Voice opens from certifications “Make it land”, backend gets cert_landing in context until overlay closes. */

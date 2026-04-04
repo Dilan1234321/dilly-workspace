@@ -7,6 +7,7 @@ import { AppProvider } from "@/context/AppContext";
 import { DillyVoiceNotificationProvider } from "@/context/DillyVoiceNotificationContext";
 import { NavigationProvider } from "@/contexts/NavigationContext";
 import { AuditScoreProvider } from "@/contexts/AuditScoreContext";
+import { VoiceProvider } from "@/contexts/VoiceContext";
 import { AppLaunchSequence } from "@/components/launch/AppLaunchSequence";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -15,6 +16,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AppProvider>
         <NavigationProvider>
           <AuditScoreProvider>
+            <VoiceProvider>
             <DillyVoiceNotificationProvider>
               <ToastProvider>
                 <AppLaunchSequence />
@@ -22,6 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 {children}
               </ToastProvider>
             </DillyVoiceNotificationProvider>
+          </VoiceProvider>
           </AuditScoreProvider>
         </NavigationProvider>
       </AppProvider>
