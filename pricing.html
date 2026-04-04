@@ -222,13 +222,17 @@
 
     /* ── PLAN CARDS ── */
     .p-plans {
-      max-width: 820px;
+      max-width: 1060px;
       margin: 0 auto;
       padding: 0 1.5rem 6rem;
       display: grid;
-      grid-template-columns: 1fr 1.55fr;
+      grid-template-columns: 1fr 1.3fr 1.55fr;
       gap: 1.25rem;
       align-items: start;
+    }
+
+    @media (max-width: 760px) {
+      .p-plans { grid-template-columns: 1fr; }
     }
 
     .p-plan {
@@ -253,6 +257,23 @@
       background: linear-gradient(90deg, transparent, rgba(123,159,255,0.6), transparent);
     }
 
+    .p-plan--elite {
+      border-color: rgba(245,185,66,0.4);
+      background: rgba(245,185,66,0.04);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .p-plan--elite::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(245,185,66,0.7), transparent);
+    }
+
+    .p-plan--elite .p-feat-rows li::before { color: #f5b942; }
+
     .p-badge {
       display: inline-block;
       font-size: 0.6rem;
@@ -264,6 +285,11 @@
       background: rgba(123,159,255,0.2);
       color: #7b9fff;
       margin-bottom: 1.25rem;
+    }
+
+    .p-badge--elite {
+      background: rgba(245,185,66,0.15);
+      color: #f5b942;
     }
 
     .p-plan-name {
@@ -696,34 +722,33 @@
     <!-- ── PLAN CARDS ── -->
     <section class="p-plans" aria-label="Plan comparison" id="plan-cards">
 
-      <!-- Free -->
-      <article class="p-plan" aria-label="Free plan">
-        <p class="p-plan-name">Free</p>
+      <!-- Starter -->
+      <article class="p-plan" aria-label="Dilly Starter plan">
+        <p class="p-plan-name">Dilly Starter</p>
         <p class="p-plan-price">$0<span class="p-plan-denom">/mo</span></p>
         <p class="p-plan-tagline">No card required. Start here, upgrade when you're ready to compete.</p>
         <ul class="p-plan-features">
           <li>Resume score vs. your actual cohort</li>
           <li>Basic ATS formatting check</li>
-          <li>3 AI coach messages per week</li>
+          <li>Standard AI coach usage</li>
           <li>Full job listing access across 22 fields</li>
           <li>Internship tracker</li>
         </ul>
         <a href="https://app.trydilly.com/" class="p-plan-cta p-plan-cta--free">Start for free</a>
       </article>
 
-      <!-- Pro -->
-      <article class="p-plan p-plan--pro" aria-label="Dilly Pro plan" id="plan-pro">
+      <!-- Dilly -->
+      <article class="p-plan p-plan--pro" aria-label="Dilly plan" id="plan-pro">
         <span class="p-badge">Most students choose this</span>
         <p class="p-plan-name">Dilly</p>
         <p class="p-plan-price">$9.99<span class="p-plan-denom">/mo</span></p>
-        <p class="p-plan-tagline">Students get 50% off the $19.99 list price. Every tool, one subscription.</p>
+        <p class="p-plan-tagline">Students get 50% off the $19.99 list price. Every tool, extended usage.</p>
 
         <div class="p-feat-group">
           <p class="p-feat-group-label">Resume &amp; AI</p>
           <ul class="p-feat-rows" id="feat-resume">
-            <li>Full job-tailored resume per posting from your experience (~15 seconds)</li>
+            <li>Full job-tailored resume per posting (~15 seconds)</li>
             <li>Line-by-line AI rewrites, track-aware, quantified bullets</li>
-            <li>Live editor with real-time per-bullet scoring</li>
             <li>Full ATS scans across 6 systems + parse preview &amp; fixes</li>
             <li>Dilly Score: Smart · Grit · Build, weighted to your track</li>
           </ul>
@@ -733,7 +758,6 @@
           <p class="p-feat-group-label">Jobs &amp; Pipeline</p>
           <ul class="p-feat-rows" id="feat-jobs">
             <li>Per-listing readiness: Ready / Almost / Gap + dimension bars</li>
-            <li>Personalized job matching to your profile &amp; trajectory</li>
             <li>Ask Dilly on any role: gap-driven action plans</li>
             <li>Application pipeline CRM (Saved to Offer) + auto entries</li>
             <li>Calendar, deadlines &amp; proactive nudges</li>
@@ -743,16 +767,37 @@
         <div class="p-feat-group">
           <p class="p-feat-group-label">Coach &amp; Compete</p>
           <ul class="p-feat-rows" id="feat-compete">
+            <li>Extended AI coach usage</li>
             <li>Cohort benchmarking &amp; percentiles across 22 fields</li>
-            <li>Track leaderboard, weekly movement &amp; dimension percentiles</li>
+            <li>Leaderboard, weekly movement &amp; dimension percentiles</li>
             <li>Interview prep mode + AI mock interviews</li>
-            <li>Score history &amp; trend lines</li>
-            <li>Priority access to new models, scanners &amp; coaching</li>
           </ul>
         </div>
 
         <a href="https://buy.stripe.com/9B614n2Mb23q62r0uh2wU00" class="p-plan-cta p-plan-cta--pro">Get Dilly, $9.99/mo</a>
-        <p class="p-plan-discount">Cancel anytime · No contracts · Starter plan stays $0 forever</p>
+        <p class="p-plan-discount">Cancel anytime · No contracts · Starter stays $0 forever</p>
+      </article>
+
+      <!-- Dilly Pro -->
+      <article class="p-plan p-plan--elite" aria-label="Dilly Pro plan" id="plan-elite">
+        <span class="p-badge p-badge--elite">Everything, no limits</span>
+        <p class="p-plan-name">Dilly Pro</p>
+        <p class="p-plan-price">$14.99<span class="p-plan-denom">/mo</span></p>
+        <p class="p-plan-tagline">Unlimited AI, recruiter-side view of your profile, and live interview breakdowns.</p>
+
+        <div class="p-feat-group">
+          <p class="p-feat-group-label">Everything in Dilly, plus</p>
+          <ul class="p-feat-rows" id="feat-elite">
+            <li>Unlimited AI coach usage</li>
+            <li>Recruiter profile view — see your profile exactly as a recruiter does</li>
+            <li>Live mock interview with detailed breakdown report</li>
+            <li>Priority access to every new feature before general release</li>
+            <li>Score history, trend lines &amp; trajectory insights</li>
+          </ul>
+        </div>
+
+        <a href="https://app.trydilly.com/" class="p-plan-cta" style="background:#f5b942;color:#060e1c;">Get Dilly Pro, $14.99/mo</a>
+        <p class="p-plan-discount" style="color:#f5b942;">Cancel anytime · No contracts</p>
       </article>
 
     </section>
