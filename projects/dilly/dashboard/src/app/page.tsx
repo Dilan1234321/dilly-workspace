@@ -147,6 +147,7 @@ import { TWENTY_X_MOMENTS, formatTwentyXCompact } from "@/lib/twentyXMoments";
 import { cn } from "@/lib/utils";
 import { useNavigation, type AppTab, type HiringSubView, type GetHiredSubTab } from "@/contexts/NavigationContext";
 import { useAppContext } from "@/context/AppContext";
+import { useAuditScore } from "@/contexts/AuditScoreContext";
 import { sanitizeVoiceAssistantReply } from "@/lib/voiceReplySanitize";
 import html2canvas from "html2canvas";
 import { PROFILE_THEMES, PROFILE_THEME_IDS, type ProfileThemeId } from "@/lib/profileThemes";
@@ -339,15 +340,27 @@ function Dashboard() {
     appProfile, setAppProfile,
     school, setSchool,
   } = useAppContext();
+  const {
+    audit, setAudit,
+    lastAudit, setLastAudit,
+    savedAuditForCenter, setSavedAuditForCenter,
+    viewingAudit, setViewingAudit,
+    auditHistory, setAuditHistory,
+    auditHistoryLoading, setAuditHistoryLoading,
+    atsScoreHistory, setAtsScoreHistory,
+    atsPeerPercentile, setAtsPeerPercentile,
+    doorEligibility, setDoorEligibility,
+    centerRefreshKey, setCenterRefreshKey,
+  } = useAuditScore();
 
   const [file, setFile] = useState<File | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState("");
-  const [audit, setAudit] = useState<AuditV2 | null>(null);
+  /** audit — now from AuditScoreContext */
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const [lastAudit, setLastAudit] = useState<AuditV2 | null>(null);
+  /** lastAudit — now from AuditScoreContext */
   const [copyFeedback, setCopyFeedback] = useState<"one-line" | "suggested" | "report-link" | "top-pct" | "shared" | null>(null);
   const [reportShareUrl, setReportShareUrl] = useState<string | null>(null);
   const [progressExplainer, setProgressExplainer] = useState<string | null>(null);
@@ -528,10 +541,7 @@ function Dashboard() {
 
   /** "Tailor This Audit For" - internship | full_time | exploring; defaults from profile or goals */
   const [applicationTarget, setApplicationTarget] = useState<string>("");
-  /** Audit history from GET /audit/history (for Career Center). peer_percentiles used for achievement tiers. */
-  const [auditHistory, setAuditHistory] = useState<{ id?: string; ts: number; scores: { smart: number; grit: number; build: number }; final_score: number; detected_track: string; candidate_name?: string; major?: string; peer_percentiles?: { smart?: number; grit?: number; build?: number }; page_count?: number; dilly_take?: string }[]>([]);
-  /** True while GET /audit/history is in flight for current user (avoids showing "Run resume audit" before we've loaded after re-login). */
-  const [auditHistoryLoading, setAuditHistoryLoading] = useState(false);
+  /** auditHistory, auditHistoryLoading — now from AuditScoreContext */
 
   // tab=voice in URL: always land on Career Center (never auto-open Voice on login or from links)
   useEffect(() => {
@@ -541,19 +551,7 @@ function Dashboard() {
     url.searchParams.delete("tab");
     if (typeof window !== "undefined") window.history.replaceState({}, "", url.pathname + url.search || "/");
   }, [searchParams, user?.subscribed]);
-  /** ATS score history + peer percentile from GET /ats-score/history (for Career Center). */
-  const [atsScoreHistory, setAtsScoreHistory] = useState<{ ts: number; score: number }[]>([]);
-  const [atsPeerPercentile, setAtsPeerPercentile] = useState<number | null>(null);
-  /** Door eligibility: one resume, one audit, many doors. GET /door-eligibility. */
-  const [doorEligibility, setDoorEligibility] = useState<{
-    doors: { id: string; label: string; short_label: string; description: string; eligible: boolean; gap_summary?: string; cta_label: string; cta_path: string }[];
-    eligible_count: number;
-    next_door: { id: string; short_label: string; gap_summary: string } | null;
-  } | null>(null);
-  /** Last audit loaded from localStorage so Career Center can show "Your numbers" after refresh */
-  const [savedAuditForCenter, setSavedAuditForCenter] = useState<AuditV2 | null>(null);
-  /** When viewing a previous audit from history - null means show current */
-  const [viewingAudit, setViewingAudit] = useState<AuditV2 | null>(null);
+  /** atsScoreHistory, atsPeerPercentile, doorEligibility, savedAuditForCenter, viewingAudit — now from AuditScoreContext */
   /** User clicked + to run new audit from Review tab - show upload flow even when audit exists */
   const [wantsNewAudit, setWantsNewAudit] = useState(false);
   /** Explicit ref for "current" audit - never overwritten when viewing history; ensures Back shows current scores */
@@ -710,8 +708,7 @@ function Dashboard() {
   /** Badge "seen" state: when user visits a tab then leaves, badge hides until new notification. Stores snapshot when dismissed. */
   const [voiceBadgeLastSeen, setVoiceBadgeLastSeen] = useState<{ deadlinesWithin7: number; auditTs: number | null } | null>(null);
   const [calendarBadgeLastSeen, setCalendarBadgeLastSeen] = useState<number | null>(null);
-  /** Bump to refetch profile + audit history (pull-to-refresh / refresh button) */
-  const [centerRefreshKey, setCenterRefreshKey] = useState(0);
+  /** centerRefreshKey — now from AuditScoreContext */
   /** Bump after Voice auto-saves deadlines so /profile refetch runs and stale in-flight profile loads cannot wipe new rows */
   const [voiceCalendarSyncKey, setVoiceCalendarSyncKey] = useState(0);
   /** Career Center: collapsible "More" section (streamlining per cousin feedback) */
