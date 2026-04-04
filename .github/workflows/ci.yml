@@ -1,6 +1,6 @@
-# Development automations: lint, test, API smoke on push/PR.
-# No OPENAI_API_KEY needed when MERIDIAN_USE_LLM is unset (rule-based audit).
-# Meridian dashboard: projects/meridian/dashboard · Dilly dashboard: projects/dilly/dashboard
+# Development automations: lint, test, build, API smoke on push/PR.
+# Dilly dashboard: projects/dilly/dashboard
+# @dilly/api is a local workspace package — install from projects/dilly/ root.
 
 name: CI
 
@@ -15,38 +15,7 @@ defaults:
     working-directory: .
 
 jobs:
-  # --- Meridian (legacy) dashboard ---
-  dashboard-lint:
-    name: Meridian dashboard lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: projects/meridian/dashboard/package-lock.json
-      - run: npm ci
-        working-directory: projects/meridian/dashboard
-      - run: npm run lint
-        working-directory: projects/meridian/dashboard
-
-  dashboard-test:
-    name: Meridian dashboard tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: projects/meridian/dashboard/package-lock.json
-      - run: npm ci
-        working-directory: projects/meridian/dashboard
-      - run: npm run test
-        working-directory: projects/meridian/dashboard
-
-  # --- Dilly dashboard (student app) ---
+  # --- Dilly dashboard ---
   dilly-dashboard-lint:
     name: Dilly dashboard lint + typecheck
     runs-on: ubuntu-latest
@@ -55,10 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: projects/dilly/dashboard/package-lock.json
-      - run: npm ci
-        working-directory: projects/dilly/dashboard
+      - run: npm install
+        working-directory: projects/dilly
       - run: npm run lint
         working-directory: projects/dilly/dashboard
       - run: npx tsc --noEmit
@@ -72,46 +39,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: projects/dilly/dashboard/package-lock.json
-      - run: npm ci
-        working-directory: projects/dilly/dashboard
+      - run: npm install
+        working-directory: projects/dilly
       - run: npm run test
         working-directory: projects/dilly/dashboard
-
-  api-smoke:
-    name: API smoke test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install API dependencies
-        run: pip install -r projects/meridian/api/requirements.txt
-      - name: Run smoke test (TestClient, no server)
-        run: python projects/meridian/scripts/smoke_test_path.py
-        env:
-          MERIDIAN_USE_LLM: "0"
-      - name: Run profile API test
-        run: python projects/meridian/scripts/test_profile_api.py
-
-  dashboard-build:
-    name: Meridian dashboard build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: projects/meridian/dashboard/package-lock.json
-      - run: npm ci
-        working-directory: projects/meridian/dashboard
-      - run: npm run build
-        working-directory: projects/meridian/dashboard
-        env:
-          NEXT_PUBLIC_API_URL: "https://api.example.com"
 
   dilly-dashboard-build:
     name: Dilly dashboard build
@@ -121,11 +52,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: projects/dilly/dashboard/package-lock.json
-      - run: npm ci
-        working-directory: projects/dilly/dashboard
+      - run: npm install
+        working-directory: projects/dilly
       - run: npm run build
         working-directory: projects/dilly/dashboard
         env:
           NEXT_PUBLIC_API_URL: "https://api.example.com"
+
+  # --- API ---
+  api-smoke:
+    name: API smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API dependencies
+        run: pip install -r projects/dilly/requirements.txt
+      - name: Run smoke test (TestClient, no server)
+        run: python projects/dilly/scripts/smoke_test_path.py
+        env:
+          MERIDIAN_USE_LLM: "0"
+      - name: Run profile API test
+        run: python projects/dilly/scripts/test_profile_api.py

@@ -19,12 +19,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install API dependencies
-        run: pip install -r projects/meridian/api/requirements.txt
+        run: pip install -r projects/dilly/requirements.txt
       - name: Verify training scores
-        run: python projects/meridian/scripts/verify_training_scores.py
+        run: python projects/dilly/scripts/verify_training_scores.py
         env:
           MERIDIAN_USE_LLM: "0"
-          # Optional: set OPENAI_API_KEY in repo secrets to use LLM for verification
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   parsing-regression:
@@ -36,6 +35,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install API dependencies
-        run: pip install -r projects/meridian/api/requirements.txt
+        run: pip install -r projects/dilly/requirements.txt
       - name: Parsing regression
-        run: python projects/meridian/scripts/parsing_regression.py
+        run: python projects/dilly/scripts/parsing_regression.py
