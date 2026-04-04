@@ -2,6 +2,72 @@
 @layer _ {}
 @import "tailwindcss";
 
+/*
+ * ══════════════════════════════════════════════════════════════════════
+ * CSS MODULE MIGRATION PLAN (Phase 10c audit — do NOT move CSS yet)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * This file is ~1,786 lines. Below is what SHOULD STAY global vs what
+ * COULD be co-located with feature components in a future CSS-module
+ * migration. Actual migration requires visual regression testing.
+ *
+ * KEEP GLOBAL (design system + resets):
+ *   Lines 11–169   :root variables, @theme — design tokens (palette,
+ *                   spacing, radii, shadows, Tailwind bridge)
+ *   Lines 170–212  Global base (html/body resets, font smoothing)
+ *   Lines 213–243  Scrollbar styles
+ *   Lines 232–243  Smooth text (inputs, textareas)
+ *   Lines 244–308  Typography helpers (.text-gradient, .text-balance, etc.)
+ *   Lines 309–368  Surface / Card system (.m-card, .m-card-elevated, etc.)
+ *   Lines 369–422  Button system (.m-btn, .m-btn-primary, etc.)
+ *   Lines 423–444  Form elements (.m-input, select, textarea)
+ *   Lines 592–602  Page content wrapper (.m-page-content)
+ *   Lines 673–689  Section dividers and headers
+ *   Lines 1653–1675 Utility helpers (.card-hover, .progress-glow, .m-divider)
+ *   Lines 1769–end Tab transition animations (shared across all tabs)
+ *
+ * COULD CO-LOCATE (feature-specific — candidates for CSS modules):
+ *   Lines 445–591  App shell: header + nav (.m-nav-*, .m-header-*)
+ *                  -> components/AppShell.module.css
+ *   Lines 603–672  Score / metric display (.m-score-*, .m-ring-*)
+ *                  -> components/score/Score.module.css
+ *   Lines 690–743  Auth / Login page (.auth-*, login animations)
+ *                  -> app/auth/Auth.module.css
+ *   Lines 744–840  Onboarding layout (.onboarding-*)
+ *                  -> app/onboarding/Onboarding.module.css
+ *   Lines 841–943  Edge glide animation (.edge-glide-*)
+ *                  -> components/EdgeGlide.module.css
+ *   Lines 944–1040 General animations (slide-up, pop-in, sticker-sheet, template, shimmer)
+ *                  -> could split per-component or keep as shared animations
+ *   Lines 1041–1501 Voice chat (~460 lines — largest feature block)
+ *                  -> features/voice/Voice.module.css
+ *                  Includes: .voice-msg-*, .voice-bubble-*, .voice-overlay-*,
+ *                  .voice-input-*, .voice-send-btn, .voice-avatar-*,
+ *                  .voice-viz-*, .voice-suggestions-*, .share-card-sticker-*,
+ *                  .share-card-picker-*
+ *   Lines 1502–1586 Calendar (~85 lines)
+ *                  -> features/calendar/Calendar.module.css
+ *                  Includes: .cal-*, .insights-bottom-sheet
+ *   Lines 1587–1613 Report / collapsible sections
+ *                  -> components/Report.module.css
+ *   Lines 1614–1630 Accent divider line
+ *                  -> components/AccentDivider.module.css (or keep global)
+ *   Lines 1631–1652 School theme: UTampa overrides (.school-theme-ut)
+ *                  -> lib/themes/utampa.module.css
+ *   Lines 1676–1768 Resume Editor (.m-resume-*)
+ *                  -> app/resume-edit/ResumeEditor.module.css
+ *
+ * PRIORITY ORDER for migration:
+ *   1. Voice chat (460 lines, self-contained, only used in VoiceTab)
+ *   2. Calendar (85 lines, self-contained, only used in CalendarTab)
+ *   3. Resume Editor (90 lines, only used on /resume-edit)
+ *   4. Onboarding (100 lines, only used on /onboarding)
+ *   5. Auth/Login (55 lines, only used on auth pages)
+ *   6. Score display (70 lines, used in multiple places — needs shared module)
+ *
+ * ══════════════════════════════════════════════════════════════════════
+ */
+
 /* ═══════════════════════════════════════════════════════════════════════
    DILLY CAREERS: Premium Design System
    Inspired by the logo: dark charcoal + warm taupe/beige
