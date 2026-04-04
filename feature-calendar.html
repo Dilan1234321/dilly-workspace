@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendar &amp; Deadlines: Dilly</title>
+  <meta name="description" content="Dilly sets your deadlines before you remember to. Proactive nudges, prep windows, and a pipeline that never goes cold.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: #0d0d0d;
+      overflow-x: hidden;
+    }
+    body { overflow-x: hidden; }
+
+    /* ── HERO ── */
+    #cal-hero {
+      min-height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 5rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* faint calendar grid background */
+    #cal-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(43,58,142,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(43,58,142,0.045) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 40%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 40%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .cal-eyebrow {
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.5;
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+
+    #cal-hero h1 {
+      font-size: clamp(2.6rem, 5.5vw, 5rem);
+      font-weight: 800;
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+      margin-bottom: 1.5rem;
+      position: relative;
+      max-width: 14ch;
+    }
+
+    #cal-hero-sub {
+      font-size: clamp(0.95rem, 1.3vw, 1.1rem);
+      color: #555;
+      line-height: 1.75;
+      max-width: 50ch;
+      margin-bottom: 2.75rem;
+      position: relative;
+    }
+
+    .cal-btn {
+      display: inline-block;
+      background: #2B3A8E;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.9rem 2.25rem;
+      border-radius: 100px;
+      transition: opacity 0.2s;
+      position: relative;
+    }
+    .cal-btn:hover { opacity: 0.85; }
+    .cal-btn--white { background: #fff; color: #2B3A8E; }
+
+    /* hero nudge card floating */
+    #cal-hero-card {
+      position: relative;
+      margin-top: 3.5rem;
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.12);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 16px 48px rgba(43,58,142,0.12), 0 2px 8px rgba(43,58,142,0.06);
+      max-width: 360px;
+      text-align: left;
+      animation: floatCard 3.5s ease-in-out infinite;
+    }
+    @keyframes floatCard {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    .cal-nudge-top {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .cal-nudge-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(43,58,142,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .cal-nudge-from {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #0d0d0d;
+    }
+    .cal-nudge-time {
+      font-size: 0.62rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.3);
+    }
+    .cal-nudge-msg {
+      font-size: 0.82rem;
+      color: #333;
+      line-height: 1.55;
+    }
+    .cal-nudge-msg strong { color: #2B3A8E; font-weight: 800; }
+
+    /* ── ALTERNATING SECTIONS ── */
+    .cal-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+      padding: 6rem clamp(2rem, 6vw, 7rem);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .cal-section--flip { direction: rtl; }
+    .cal-section--flip > * { direction: ltr; }
+
+    /* section dividers */
+    .cal-divider {
+      height: 1px;
+      background: rgba(43,58,142,0.07);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* text side */
+    .cal-text .cal-eyebrow { margin-bottom: 0.9rem; }
+
+    .cal-text h2 {
+      font-size: clamp(1.9rem, 3.2vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 1.1rem;
+    }
+
+    .cal-text p {
+      font-size: clamp(0.9rem, 1.1vw, 1rem);
+      color: #555;
+      line-height: 1.8;
+      max-width: 46ch;
+    }
+
+    /* visual side */
+    .cal-visual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── MINI CALENDAR ── */
+    .cal-mini {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.1);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(43,58,142,0.1);
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .cal-mini-header {
+      background: #2B3A8E;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cal-mini-month {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.04em;
+    }
+    .cal-mini-nav {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .cal-mini-nav span {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      color: rgba(255,255,255,0.8);
+      cursor: default;
+    }
+
+    .cal-mini-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      padding: 0.75rem 0.75rem 0;
+      gap: 0;
+    }
+    .cal-day-label {
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      text-align: center;
+      padding-bottom: 0.4rem;
+    }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #333;
+      border-radius: 50%;
+      position: relative;
+      cursor: default;
+    }
+    .cal-day.empty { color: transparent; }
+    .cal-day.today {
+      background: #2B3A8E;
+      color: #fff;
+      font-weight: 800;
+    }
+    .cal-day.has-event::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #2B3A8E;
+    }
+    .cal-day.today.has-event::after { background: rgba(255,255,255,0.6); }
+    .cal-day.deadline { color: #dc2626; font-weight: 800; }
+    .cal-day.deadline::after { background: #dc2626; }
+
+    .cal-mini-events {
+      padding: 0.75rem;
+    }
+    .cal-event-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.5rem 0.5rem;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .cal-event-row:hover { background: rgba(43,58,142,0.04); }
+    .cal-event-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .cal-event-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .cal-event-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #0d0d0d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cal-event-date {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: rgba(0,0,0,0.35);
+    }
+
+    /* ── NUDGE STACK ── */
+    .cal-nudge-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .cal-nudge-card {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.09);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 4px 16px rgba(43,58,142,0.07);
+      opacity: 0;
+      transform: translateX(20px);
+      transition: opacity 0.5s, transform 0.5s;
+    }
+    .cal-nudge-card.revealed {
+      opacity: 1;
+      transform: none;
+    }
+    .cal-nudge-card.urgent {
+      border-color: rgba(220,38,38,0.2);
+      background: rgba(220,38,38,0.02);
+    }
+
+    .cnc-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+    .cnc-company {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #0d0d0d;
+    }
+    .cnc-badge {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border-radius: 100px;
+    }
+    .cnc-badge.deadline { background: rgba(220,38,38,0.1); color: #dc2626; }
+    .cnc-badge.prep     { background: rgba(43,58,142,0.08); color: #2B3A8E; }
+    .cnc-badge.nudge    { background: rgba(22,163,74,0.1);  color: #15803d; }
+
+    .cnc-msg {
+      font-size: 0.75rem;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    /* ── PREP WINDOW VISUAL ── */
+    .cal-prep-visual {
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .cal-timeline {
+      position: relative;
+      padding-left: 1.5rem;
+    }
+    .cal-timeline::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(43,58,142,0.12);
+      border-radius: 2px;
+    }
+
+    .cal-tl-item {
+      position: relative;
+      padding: 0 0 1.5rem 1rem;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.45s, transform 0.45s;
+    }
+    .cal-tl-item.revealed { opacity: 1; transform: none; }
+    .cal-tl-item:last-child { padding-bottom: 0; }
+
+    .cal-tl-dot {
+      position: absolute;
+      left: -1.5rem;
+      top: 0.25rem;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #2B3A8E;
+      background: #fff;
+    }
+    .cal-tl-dot.filled { background: #2B3A8E; }
+
+    .cal-tl-date {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.45);
+      margin-bottom: 0.2rem;
+    }
+    .cal-tl-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #0d0d0d;
+      margin-bottom: 0.2rem;
+    }
+    .cal-tl-sub {
+      font-size: 0.72rem;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    /* ── CTA ── */
+    #cal-cta {
+      background: #2B3A8E;
+      padding: 6.5rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+    }
+    #cal-cta h2 {
+      font-size: clamp(2.2rem, 4.5vw, 4rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    #cal-cta p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.75;
+      max-width: 44ch;
+      margin: 0 auto 2.5rem;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 860px) {
+      .cal-section {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+        padding: 4rem clamp(1.5rem, 5vw, 3rem);
+      }
+      .cal-section--flip { direction: ltr; }
+      .cal-mini, .cal-nudge-stack, .cal-prep-visual { max-width: 100%; }
+      #cal-hero-card { max-width: 100%; }
+    }
+    @media (max-width: 480px) {
+      #cal-hero h1 { font-size: 2.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── NAV ── -->
+  <header class="page-hero" style="padding:0;min-height:0;background:#fff;position:sticky;top:0;z-index:200">
+    <div class="site-nav site-nav--inner">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link">ATS scanner</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link">Ask Dilly on any job</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link">Peer leaderboard</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Decide</span>
+                <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+              </div></div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row" style="display:flex;align-items:center;gap:1rem"><a href="https://www.instagram.com/joindilly" target="_blank" rel="noopener" aria-label="Dilly on Instagram" style="display:flex;align-items:center;color:inherit;opacity:0.6;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── HERO ── -->
+  <section id="cal-hero">
+    <p class="cal-eyebrow">Calendar &amp; events</p>
+    <h1>Deadlines you didn&rsquo;t have to set.</h1>
+    <p id="cal-hero-sub">Dilly watches every role you save and automatically adds its deadline, prep window, and follow-up nudge to your calendar. You focus on getting ready. It handles the rest.</p>
+    <a href="https://app.trydilly.com/" class="cal-btn">Start free &rarr;</a>
+
+    <!-- floating nudge card -->
+    <div id="cal-hero-card">
+      <div class="cal-nudge-top">
+        <div class="cal-nudge-icon">&#128276;</div>
+        <div>
+          <div class="cal-nudge-from">Dilly</div>
+          <div class="cal-nudge-time">Just now</div>
+        </div>
+      </div>
+      <div class="cal-nudge-msg"><strong>Goldman Sachs IBD</strong> deadline is in 3 days. Your resume is ready  -  submit before Tuesday at 11:59 PM ET.</div>
+    </div>
+  </section>
+
+  <div class="cal-divider"></div>
+
+  <!-- ── SECTION 1: Calendar overview (text left, visual right) ── -->
+  <div class="cal-section">
+    <div class="cal-text">
+      <p class="cal-eyebrow">Deadlines</p>
+      <h2>Every deadline,<br>already on your calendar.</h2>
+      <p>The moment you save a role, Dilly finds the application deadline and adds it. No Googling. No spreadsheet columns. Red dots for what&rsquo;s urgent, blue for what&rsquo;s coming. The full picture at a glance.</p>
+    </div>
+    <div class="cal-visual">
+      <div class="cal-mini" aria-label="Calendar preview">
+        <div class="cal-mini-header">
+          <span class="cal-mini-month">November 2025</span>
+          <div class="cal-mini-nav">
+            <span>&#8249;</span>
+            <span>&#8250;</span>
+          </div>
+        </div>
+        <div class="cal-mini-days">
+          <div class="cal-day-label">S</div>
+          <div class="cal-day-label">M</div>
+          <div class="cal-day-label">T</div>
+          <div class="cal-day-label">W</div>
+          <div class="cal-day-label">T</div>
+          <div class="cal-day-label">F</div>
+          <div class="cal-day-label">S</div>
+          <!-- week 1 -->
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day">1</div>
+          <!-- week 2 -->
+          <div class="cal-day">2</div>
+          <div class="cal-day">3</div>
+          <div class="cal-day has-event">4</div>
+          <div class="cal-day">5</div>
+          <div class="cal-day has-event">6</div>
+          <div class="cal-day">7</div>
+          <div class="cal-day">8</div>
+          <!-- week 3 -->
+          <div class="cal-day">9</div>
+          <div class="cal-day has-event">10</div>
+          <div class="cal-day">11</div>
+          <div class="cal-day has-event">12</div>
+          <div class="cal-day">13</div>
+          <div class="cal-day deadline has-event">14</div>
+          <div class="cal-day today has-event">15</div>
+          <!-- week 4 -->
+          <div class="cal-day">16</div>
+          <div class="cal-day has-event">17</div>
+          <div class="cal-day">18</div>
+          <div class="cal-day">19</div>
+          <div class="cal-day has-event">20</div>
+          <div class="cal-day deadline has-event">21</div>
+          <div class="cal-day">22</div>
+          <!-- week 5 -->
+          <div class="cal-day has-event">23</div>
+          <div class="cal-day">24</div>
+          <div class="cal-day">25</div>
+          <div class="cal-day has-event">26</div>
+          <div class="cal-day">27</div>
+          <div class="cal-day">28</div>
+          <div class="cal-day deadline has-event">29</div>
+          <!-- week 6 -->
+          <div class="cal-day">30</div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+          <div class="cal-day empty"></div>
+        </div>
+        <div class="cal-mini-events">
+          <div class="cal-event-row">
+            <div class="cal-event-dot" style="background:#dc2626"></div>
+            <div class="cal-event-text">
+              <div class="cal-event-name">Citadel  -  Application deadline</div>
+              <div class="cal-event-date">Nov 14 · Urgent</div>
+            </div>
+          </div>
+          <div class="cal-event-row">
+            <div class="cal-event-dot" style="background:#2B3A8E"></div>
+            <div class="cal-event-text">
+              <div class="cal-event-name">Goldman Sachs  -  Deadline</div>
+              <div class="cal-event-date">Nov 21</div>
+            </div>
+          </div>
+          <div class="cal-event-row">
+            <div class="cal-event-dot" style="background:#2B3A8E"></div>
+            <div class="cal-event-text">
+              <div class="cal-event-name">Morgan Stanley  -  Deadline</div>
+              <div class="cal-event-date">Nov 29</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-divider"></div>
+
+  <!-- ── SECTION 2: Proactive nudges (visual left, text right) ── -->
+  <div class="cal-section cal-section--flip">
+    <div class="cal-text">
+      <p class="cal-eyebrow">Nudges</p>
+      <h2>Proactive nudges before things go cold.</h2>
+      <p>Dilly watches the age of every application and nudges you at exactly the right moment: three days before a deadline, a week before an interview, or when a role you haven&rsquo;t touched in two weeks might be slipping away.</p>
+    </div>
+    <div class="cal-visual">
+      <div class="cal-nudge-stack" id="nudge-stack">
+        <div class="cal-nudge-card urgent">
+          <div class="cnc-top">
+            <span class="cnc-company">Citadel</span>
+            <span class="cnc-badge deadline">Deadline in 3 days</span>
+          </div>
+          <div class="cnc-msg">Your resume is ready. Submit before Nov 14 at 11:59 PM ET or the portal closes.</div>
+        </div>
+        <div class="cal-nudge-card">
+          <div class="cnc-top">
+            <span class="cnc-company">JPMorgan</span>
+            <span class="cnc-badge prep">Interview in 5 days</span>
+          </div>
+          <div class="cnc-msg">You have a screening call on Nov 20. Your Dilly prep deck is ready  -  3 questions flagged as high probability.</div>
+        </div>
+        <div class="cal-nudge-card">
+          <div class="cnc-top">
+            <span class="cnc-company">BlackRock</span>
+            <span class="cnc-badge nudge">Going cold</span>
+          </div>
+          <div class="cnc-msg">Applied 12 days ago with no response. Dilly suggests a brief follow-up now before week 3.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-divider"></div>
+
+  <!-- ── SECTION 3: Prep windows (text left, visual right) ── -->
+  <div class="cal-section">
+    <div class="cal-text">
+      <p class="cal-eyebrow">Prep windows</p>
+      <h2>Your prep schedule,<br>built automatically.</h2>
+      <p>When an interview lands, Dilly blocks prep time on your calendar in the days before it. Case prep, technical review, company research, each allocated to the right window based on your interview type and track.</p>
+    </div>
+    <div class="cal-visual">
+      <div class="cal-prep-visual" id="prep-timeline">
+        <div class="cal-timeline">
+          <div class="cal-tl-item">
+            <div class="cal-tl-dot filled"></div>
+            <div class="cal-tl-date">Nov 14 · Today</div>
+            <div class="cal-tl-title">Goldman Sachs  -  Interview confirmed</div>
+            <div class="cal-tl-sub">First round, 45 min technical + behavioral. Nov 19 at 2 PM EST.</div>
+          </div>
+          <div class="cal-tl-item">
+            <div class="cal-tl-dot filled"></div>
+            <div class="cal-tl-date">Nov 15 – 16 · 2 days</div>
+            <div class="cal-tl-title">Company research block</div>
+            <div class="cal-tl-sub">Dilly queued: recent deals, sector performance, likely interview themes.</div>
+          </div>
+          <div class="cal-tl-item">
+            <div class="cal-tl-dot filled"></div>
+            <div class="cal-tl-date">Nov 17 – 18 · 2 days</div>
+            <div class="cal-tl-title">Technical prep block</div>
+            <div class="cal-tl-sub">LBO walkthrough, DCF questions, 3 statements. Dilly pulled your weak spots from Dilly Score.</div>
+          </div>
+          <div class="cal-tl-item">
+            <div class="cal-tl-dot"></div>
+            <div class="cal-tl-date">Nov 19 · Interview day</div>
+            <div class="cal-tl-title">Goldman Sachs  -  First round</div>
+            <div class="cal-tl-sub">2:00 PM EST. Dial-in details added to calendar. Good luck.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CTA ── -->
+  <section id="cal-cta">
+    <h2>Never miss a deadline<br>that matters.</h2>
+    <p>Dilly tracks every role you save and builds your calendar automatically, so you spend time preparing, not administrating.</p>
+    <a href="https://app.trydilly.com/" class="cal-btn cal-btn--white">Start free &rarr;</a>
+  </section>
+
+  <script>
+  (function () {
+
+    /* ── SCROLL-TRIGGERED REVEALS ── */
+    var nudgeCards = Array.from(document.querySelectorAll('.cal-nudge-card'));
+    var tlItems    = Array.from(document.querySelectorAll('.cal-tl-item'));
+
+    var nudgeObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          nudgeCards.forEach(function (c, i) {
+            setTimeout(function () { c.classList.add('revealed'); }, i * 140);
+          });
+          nudgeObs.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+
+    if (nudgeCards.length) nudgeObs.observe(nudgeCards[0]);
+
+    var tlObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          tlItems.forEach(function (item, i) {
+            setTimeout(function () { item.classList.add('revealed'); }, i * 180);
+          });
+          tlObs.disconnect();
+        }
+      });
+    }, { threshold: 0.2 });
+
+    if (tlItems.length) tlObs.observe(tlItems[0]);
+
+  }());
+  </script>
+
+  <script src="dilly.js"></script>
+</body>
+</html>

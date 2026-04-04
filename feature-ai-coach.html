@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Coach: Dilly</title>
+  <meta name="description" content="The most powerful career advisor ever built for students.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: #0d0d0d;
+      scroll-snap-type: y mandatory;
+      overflow-x: hidden;
+    }
+
+    body { overflow-x: hidden; }
+
+    /* ── MAIN LAYOUT ── */
+    #coach-layout {
+      display: block;
+    }
+
+    /* LEFT: fixed face  -  sits below the navbar */
+    #face-col {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 44%;
+      height: calc(100vh - 64px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      background: #fff;
+      z-index: 10;
+    }
+
+    #face-circle {
+      width: min(420px, 36vw);
+      height: min(420px, 36vw);
+      border-radius: 50%;
+      background: #f5f6ff;
+      border: 1.5px solid rgba(43,58,142,0.12);
+      box-shadow: 0 8px 48px rgba(43,58,142,0.13);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: box-shadow 0.7s ease, background 0.7s ease, border-color 0.7s ease;
+    }
+
+    @keyframes face-pulse {
+      0%   { transform: scale(1); }
+      45%  { transform: scale(1.055); }
+      100% { transform: scale(1); }
+    }
+
+    #face-circle.mode-pulse {
+      animation: face-pulse 0.42s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    #face-circle.mode-reading {
+      background: #f5f6ff;
+      box-shadow: 0 8px 48px rgba(43,58,142,0.13);
+      border-color: rgba(43,58,142,0.12);
+    }
+
+    #face-circle.mode-interview {
+      background: #fff4f4;
+      box-shadow: 0 8px 64px rgba(200,60,60,0.2), 0 0 0 4px rgba(200,60,60,0.07);
+      border-color: rgba(200,60,60,0.18);
+    }
+
+    #face-circle.mode-strategy {
+      background: #f0f1fb;
+      box-shadow: 0 6px 32px rgba(43,58,142,0.09);
+      border-color: rgba(43,58,142,0.08);
+    }
+
+    #face-circle.mode-memory {
+      background: #edf1ff;
+      box-shadow: 0 12px 80px rgba(43,58,142,0.32), 0 0 0 8px rgba(43,58,142,0.08);
+      border-color: rgba(43,58,142,0.22);
+    }
+
+    #face-label {
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.4;
+    }
+
+    /* RIGHT: scrolling panels, offset to clear fixed face */
+    #panels-col {
+      margin-left: 44%;
+    }
+
+    .coach-panel {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      padding: 3rem clamp(2.5rem, 6vw, 6rem) 3rem clamp(1.5rem, 3vw, 3rem);
+      border-left: 1px solid rgba(43,58,142,0.07);
+    }
+
+    .panel-inner {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1);
+      will-change: opacity, transform;
+    }
+
+    .panel-inner.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .panel-num {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.4;
+      margin-bottom: 0.65rem;
+    }
+
+    .panel-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      margin-bottom: 1.4rem;
+    }
+
+    .panel-title {
+      font-size: clamp(2.2rem, 4vw, 3.8rem);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.025em;
+      color: #0d0d0d;
+      margin-bottom: 1.75rem;
+    }
+
+    .panel-body {
+      font-size: clamp(1rem, 1.35vw, 1.18rem);
+      line-height: 1.85;
+      color: #444;
+      max-width: 52ch;
+    }
+
+    /* ── DOTS ── */
+    #coach-dots {
+      position: fixed;
+      right: 1.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 300;
+    }
+
+    .coach-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(43,58,142,0.18);
+      transition: background 0.35s ease, transform 0.35s ease;
+    }
+
+    .coach-dot.active {
+      background: #2B3A8E;
+      transform: scale(1.6);
+    }
+
+    /* ── END / LOGO ── */
+    #coach-end {
+      height: 100vh;
+      scroll-snap-align: start;
+      margin-left: 44%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      background: #f5f6ff;
+    }
+
+    #coach-end img {
+      width: clamp(180px, 24vw, 300px);
+      opacity: 0.88;
+    }
+
+    .end-cta {
+      display: inline-block;
+      background: #2B3A8E;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 1rem 2.75rem;
+      border-radius: 100px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      html { scroll-snap-type: none; overflow: hidden; height: 100%; }
+      body { overflow: hidden; height: 100%; }
+
+      #coach-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 64px);
+        overflow: hidden;
+      }
+
+      /* TOP 30%: face */
+      #face-col {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 100%;
+        height: 30%;
+        min-height: 0;
+        padding: 0.75rem 1rem 0.5rem;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 1rem;
+        background: #fff;
+        border-bottom: 1px solid rgba(43,58,142,0.08);
+        overflow: hidden;
+      }
+
+      #face-circle {
+        width: min(100px, 22vw);
+        height: min(100px, 22vw);
+        flex-shrink: 0;
+      }
+
+      /* surface the face label/tagline next to the face */
+      #face-label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      /* BOTTOM 70%: horizontal scroll panels */
+      #panels-col {
+        display: flex;
+        flex-direction: row;
+        overflow-x: scroll;
+        overflow-y: visible;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        height: 70%;
+        margin-left: 0;
+        flex-shrink: 0;
+      }
+
+      .coach-panel {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        min-height: unset;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        border-left: none;
+        border-top: 1px solid rgba(43,58,142,0.07);
+        padding: 2rem 1.75rem 4rem;
+        overflow-y: auto;
+        box-sizing: border-box;
+      }
+
+      .panel-inner {
+        opacity: 1;
+        transform: none;
+      }
+
+      #coach-dots {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        right: auto;
+        gap: 6px;
+        height: auto;
+      }
+
+      #coach-dots .coach-dot {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 7px !important;
+        height: 7px !important;
+        min-width: 7px;
+        min-height: 7px;
+        max-width: 7px;
+        max-height: 7px;
+        flex-shrink: 0;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      /* Shrink oversized Meet Dilly heading on mobile */
+      .coach-panel .panel-title {
+        font-size: clamp(1.6rem, 7vw, 2.4rem) !important;
+        margin-bottom: 0.75rem !important;
+      }
+
+      .coach-panel {
+        padding: 1.5rem 1.5rem 3.5rem;
+      }
+
+      #coach-end {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        margin-left: 0;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── NAVBAR ── -->
+  <header class="page-hero" style="padding:0;min-height:0;background:#fff;position:sticky;top:0;z-index:200">
+    <div class="site-nav site-nav--inner">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Your resume</span>
+                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Search and track</span>
+                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Guidance</span>
+                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Decide</span>
+                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row" style="display:flex;align-items:center;gap:1rem"><a href="https://www.instagram.com/joindilly" target="_blank" rel="noopener" aria-label="Dilly on Instagram" style="display:flex;align-items:center;color:inherit;opacity:0.6;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── MAIN LAYOUT ── -->
+  <div id="coach-layout">
+
+    <!-- LEFT: sticky Dilly face -->
+    <div id="face-col">
+      <div id="face-circle">
+        <canvas id="dilly-face" width="480" height="480" style="display:block;width:100%;height:100%"></canvas>
+      </div>
+      <p id="face-label">Dilly &middot; AI Advisor</p>
+    </div>
+
+    <!-- RIGHT: 4 scrolling panels -->
+    <div id="panels-col">
+
+      <div class="coach-panel" data-panel="0">
+        <div class="panel-inner">
+          <p class="panel-eyebrow">Your career advisor</p>
+          <h2 class="panel-title" style="font-size:clamp(3rem,5.5vw,5.2rem);margin-bottom:1.5rem">Meet<br>Dilly.</h2>
+          <p class="panel-body">No advisor has ever read your resume this carefully. Dilly knows your scores, your gaps, your deadlines, and your saved roles before you say a word. Every answer is built from your actual data, not a generic template.</p>
+          <p class="panel-body" style="margin-top:1.25rem">Mock interviews that push back. Strategy that spans your whole semester. A thread that remembers every session. Dilly does not guess. It advises.</p>
+          <a href="https://app.trydilly.com/" style="display:inline-block;margin-top:2rem;background:#2B3A8E;color:#fff;font-family:inherit;font-size:0.85rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;padding:0.9rem 2.25rem;border-radius:100px">Start talking to Dilly &rarr;</a>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="1">
+        <div class="panel-inner">
+          <p class="panel-num">01 / 04</p>
+          <p class="panel-eyebrow">Knows you before you speak</p>
+          <h2 class="panel-title">The Resume<br>Reader</h2>
+          <p class="panel-body">Dilly reads every bullet. Every gap. Every signal. Before you say a word, it already knows your story better than you do and exactly what is holding you back. No advisor on earth has ever walked in this prepared.</p>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="2">
+        <div class="panel-inner">
+          <p class="panel-num">02 / 04</p>
+          <p class="panel-eyebrow">Pressure that builds you</p>
+          <h2 class="panel-title">The Mock<br>Interviewer</h2>
+          <p class="panel-body">Questions that adapt in real time. Follow-ups that go exactly where your answer was weakest. Not a question bank. A live session that gets harder the better you get, until you are genuinely ready for anything.</p>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="3">
+        <div class="panel-inner">
+          <p class="panel-num">03 / 04</p>
+          <p class="panel-eyebrow">The long game</p>
+          <h2 class="panel-title">The<br>Strategist</h2>
+          <p class="panel-body">Which role to prioritize. Which gap to close first. How to frame your offer when it comes. Dilly plays the long game across your entire semester, not just the next application. No career coach charges less and knows more.</p>
+        </div>
+      </div>
+
+      <div class="coach-panel" data-panel="4">
+        <div class="panel-inner">
+          <p class="panel-num">04 / 04</p>
+          <p class="panel-eyebrow">Every session, remembered</p>
+          <h2 class="panel-title">The Thread That<br>Never Forgets</h2>
+          <p class="panel-body">One continuous conversation. No re-explaining your major, your goals, your timeline. Dilly carries everything forward, session after session, improvement after improvement. The advisor that never loses the thread.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── NAVIGATION DOTS ── -->
+  <nav id="coach-dots" aria-label="Panel navigation">
+    <button class="coach-dot active" data-target="0" aria-label="Meet Dilly"></button>
+    <button class="coach-dot" data-target="1" aria-label="Panel 1"></button>
+    <button class="coach-dot" data-target="2" aria-label="Panel 2"></button>
+    <button class="coach-dot" data-target="3" aria-label="Panel 3"></button>
+    <button class="coach-dot" data-target="4" aria-label="Panel 4"></button>
+  </nav>
+
+  <!-- ── END / LOGO ── -->
+  <div id="coach-end">
+    <img src="dilly-wordmark.png" alt="Dilly">
+    <a href="https://app.trydilly.com/" class="end-cta">Start free &rarr;</a>
+  </div>
+
+  <script>
+  (function () {
+    /* ── DILLY FACE ENGINE ── */
+    var c = document.getElementById('dilly-face');
+    if (!c) return;
+    var ctx = c.getContext('2d'), W = c.width, H = c.height, NAVY = '#2B3A8E';
+    var pos = { x: 0, y: 0 }, vel = { x: 0, y: 0 }, tgt = { x: 0, y: 0 };
+    var smileTgt = 0.35, smileCur = 0.35;
+    var eyeScaleTgt = 1.0, eyeScaleCur = 1.0;
+    var eyeSkewTgt = 1.0, eyeSkewCur = 1.0, eyeSkewSide = 1;
+    var currentMode = 'reading';
+    var ptTimer, psTimer, skewTimer, skewResetTimer;
+
+    var modes = {
+      reading:   { moveInterval: 3200, maxDist: 10,  smileMin: 0.12, smileMax: 0.38, spring: 0.048, eyeScale: 1.0  },
+      interview: { moveInterval: 2200, maxDist: 7,   smileMin: -0.06,smileMax: 0.14, spring: 0.055, eyeScale: 0.92 },
+      strategy:  { moveInterval: 5500, maxDist: 3,   smileMin: 0.06, smileMax: 0.18, spring: 0.022, eyeScale: 0.85 },
+      memory:    { moveInterval: 3200, maxDist: 6,   smileMin: 0.45, smileMax: 0.68, spring: 0.042, eyeScale: 1.28 }
+    };
+
+    function conf() { return modes[currentMode] || modes.reading; }
+
+    function pickTarget() {
+      var m = conf(), a, d;
+      if (currentMode === 'interview') {
+        /* A: keep X close to center; C: bias movement vertically (slow nod) */
+        tgt.x = (Math.random() - 0.5) * m.maxDist * 0.45;
+        tgt.y = (Math.random() - 0.5) * m.maxDist * 1.8;
+      } else {
+        a = Math.random() * Math.PI * 2;
+        d = m.maxDist * (0.5 + Math.random() * 0.5);
+        tgt.x = Math.cos(a) * d;
+        tgt.y = Math.sin(a) * d;
+      }
+    }
+
+    function pickSmile() {
+      var m = conf();
+      smileTgt = m.smileMin + Math.random() * (m.smileMax - m.smileMin);
+    }
+
+    function scheduleTarget() {
+      clearTimeout(ptTimer);
+      pickTarget();
+      ptTimer = setTimeout(scheduleTarget, conf().moveInterval + Math.random() * 500);
+    }
+
+    function scheduleSmile() {
+      clearTimeout(psTimer);
+      pickSmile();
+      psTimer = setTimeout(scheduleSmile, conf().moveInterval * 0.75 + Math.random() * 400);
+    }
+
+    /* B: raised-eyebrow flicker — fires periodically in interview mode */
+    function triggerSkew() {
+      if (currentMode !== 'interview') return;
+      eyeSkewTgt = 1.26;
+      eyeSkewSide = Math.random() < 0.5 ? 1 : -1;
+      clearTimeout(skewResetTimer);
+      skewResetTimer = setTimeout(function () { eyeSkewTgt = 1.0; }, 750);
+      skewTimer = setTimeout(triggerSkew, 3000 + Math.random() * 2800);
+    }
+
+    window.setDillyMode = function (m) {
+      if (m === currentMode) return;
+      /* leaving interview — cancel skew */
+      if (currentMode === 'interview') {
+        clearTimeout(skewTimer); clearTimeout(skewResetTimer);
+        eyeSkewTgt = 1.0;
+      }
+      currentMode = m;
+      pickTarget();
+      pickSmile();
+      eyeScaleTgt = modes[m] ? modes[m].eyeScale : 1.0;
+      /* entering interview — schedule first skew */
+      if (m === 'interview') {
+        skewTimer = setTimeout(triggerSkew, 1800 + Math.random() * 1500);
+      }
+      var circle = document.getElementById('face-circle');
+      if (circle) {
+        circle.classList.remove('mode-pulse');
+        void circle.offsetWidth; /* reflow to restart animation */
+        circle.className = 'mode-' + m + ' mode-pulse';
+      }
+    };
+
+    function draw() {
+      var sp = conf().spring;
+      vel.x += ((tgt.x - pos.x) * sp - vel.x) * 0.22;
+      vel.y += ((tgt.y - pos.y) * sp - vel.y) * 0.22;
+      pos.x += vel.x;
+      pos.y += vel.y;
+      smileCur += (smileTgt - smileCur) * 0.065;
+      eyeScaleCur += (eyeScaleTgt - eyeScaleCur) * 0.065;
+      eyeSkewCur += (eyeSkewTgt - eyeSkewCur) * 0.07;
+
+      var s = (W * 0.44 / 2) / 19;
+      var eyeR = 2.8 * s * eyeScaleCur;
+      /* B: asymmetric eye — one side gets the skew multiplier */
+      var eyeRL = eyeR * (eyeSkewSide < 0 ? eyeSkewCur : 1.0);
+      var eyeRR = eyeR * (eyeSkewSide > 0 ? eyeSkewCur : 1.0);
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(W / 2 + pos.x, H / 2 + pos.y);
+      ctx.fillStyle = NAVY;
+
+      ctx.beginPath(); ctx.arc(-8 * s, -4 * s, eyeRL, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc( 8 * s, -4 * s, eyeRR, 0, Math.PI * 2); ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-8 * s, 5 * s);
+      ctx.quadraticCurveTo(0, 5 * s + smileCur * 9 * s, 8 * s, 5 * s);
+      ctx.strokeStyle = NAVY;
+      ctx.lineWidth = 2.2 * s;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      ctx.restore();
+      requestAnimationFrame(draw);
+    }
+
+    scheduleTarget();
+    scheduleSmile();
+    requestAnimationFrame(draw);
+
+    /* ── PANEL TRACKING ── */
+    var panels   = document.querySelectorAll('.coach-panel');
+    var inners   = document.querySelectorAll('.panel-inner');
+    var dots     = document.querySelectorAll('.coach-dot');
+    var modeMap  = ['memory', 'reading', 'interview', 'strategy', 'memory'];
+    var active   = -1;
+
+    function activate(idx) {
+      if (idx === active) return;
+      active = idx;
+      dots.forEach(function (d, i)   { d.classList.toggle('active', i === idx); });
+      inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
+      var m = modeMap[idx];
+      /* on first activate, snap eye scale and smile directly so it doesn't lerp from defaults */
+      if (active === idx && !window._dillyModeSet) {
+        eyeScaleCur = modes[m] ? modes[m].eyeScale : 1.0;
+        eyeScaleTgt = eyeScaleCur;
+        smileCur = modes[m] ? (modes[m].smileMin + modes[m].smileMax) / 2 : 0.35;
+        smileTgt = smileCur;
+        window._dillyModeSet = true;
+      }
+      window.setDillyMode(m);
+    }
+
+    var isMobile = window.innerWidth <= 780;
+    var panelsCol = document.getElementById('panels-col');
+
+    if (isMobile) {
+      panelsCol.addEventListener('scroll', function() {
+        var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
+        idx = Math.max(0, Math.min(idx, panels.length - 1));
+        activate(idx);
+      });
+    } else {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            activate(parseInt(entry.target.dataset.panel, 10));
+          }
+        });
+      }, { threshold: 0.5 });
+      panels.forEach(function (p) { observer.observe(p); });
+    }
+
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        var idx = parseInt(dot.dataset.target, 10);
+        if (isMobile) {
+          panelsCol.scrollTo({ left: idx * panelsCol.clientWidth, behavior: 'smooth' });
+        } else {
+          panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    activate(0);
+
+  }());
+  </script>
+
+  <script src="dilly.js"></script>
+</body>
+</html>

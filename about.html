@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About, Dilly</title>
+<meta name="description" content="Dilly was built by a college student who was tired of watching great people get filtered out. This is the tool we all deserved.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080809;--s1:#0a0a0c;--s2:#0f0f12;--s3:#141416;--s4:#1a1a1f;
+  --gold:#C9A84C;--gold-dim:rgba(201,168,76,.1);--gold-glow:rgba(201,168,76,.22);
+  --gold-border:rgba(201,168,76,.28);
+  --green:#34C759;--coral:#FF453A;--amber:#FF9F0A;--blue:#0A84FF;
+  --t1:#f5f5f7;--t2:#a1a1a6;--t3:#636366;--t4:#3a3a3c;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.1);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(8,8,9,.92);border-bottom:1px solid var(--bdr);padding:14px 0}
+.ni{max-width:1160px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between}
+.logo img{height:28px}
+.nl{display:flex;gap:28px;align-items:center}
+.nl a{color:var(--t2);font-size:13px;font-weight:500;transition:color .2s}.nl a:hover{color:var(--t1)}.nl a.act{color:var(--gold)}
+.nc{background:var(--gold);color:#1a1400;padding:9px 22px;border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:11px;letter-spacing:1px;transition:all .2s}.nc:hover{box-shadow:0 4px 20px var(--gold-glow);transform:translateY(-1px)}
+
+/* HERO */
+.hero{padding:140px 32px 80px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:1200px;height:700px;background:radial-gradient(ellipse at center top,rgba(201,168,76,.055) 0%,transparent 60%);pointer-events:none}
+.hero-inner{max-width:820px;margin:0 auto;position:relative}
+.kicker{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:20px}
+.hero h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(34px,5vw,60px);line-height:1.08;letter-spacing:-1px;margin-bottom:24px}
+.hero h1 em{font-style:italic;font-family:'Playfair Display',serif;color:var(--gold)}
+.hero-lead{font-size:19px;color:var(--t2);line-height:1.75;max-width:640px;margin:0 auto}
+
+/* STORY */
+.story{max-width:760px;margin:0 auto;padding:0 32px 80px}
+
+.story-block{margin-bottom:64px}
+.story-block h2{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(22px,3vw,32px);line-height:1.2;margin-bottom:20px}
+.story-block h2 em{font-style:italic;font-family:'Playfair Display',serif;color:var(--gold)}
+.story-block p{font-size:16px;color:var(--t2);line-height:1.85;margin-bottom:16px}
+.story-block p:last-child{margin-bottom:0}
+.story-block p strong{color:var(--t1);font-weight:600}
+
+/* PULL QUOTE */
+.pull-quote{background:rgba(201,168,76,.05);border-left:3px solid var(--gold);border-radius:0 16px 16px 0;padding:24px 28px;margin:36px 0;font-family:'Playfair Display',serif;font-style:italic;font-size:19px;color:var(--t1);line-height:1.65}
+.pull-quote cite{display:block;margin-top:12px;font-family:'DM Sans',sans-serif;font-style:normal;font-size:13px;color:var(--t3);font-weight:600;letter-spacing:1px}
+
+/* DIVIDER */
+.story-divider{width:60px;height:2px;background:var(--gold-dim);border-radius:2px;margin:48px 0}
+
+/* FOUNDER CARD */
+.founder-card{background:var(--s2);border:1px solid var(--bdr);border-radius:28px;padding:40px;margin:64px 0;display:flex;gap:32px;align-items:flex-start}
+.founder-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(201,168,76,.3),rgba(201,168,76,.05));border:1px solid var(--gold-border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:26px;font-weight:900;color:var(--gold)}
+.founder-info h3{font-family:'Cinzel',serif;font-weight:700;font-size:16px;margin-bottom:4px;color:var(--t1)}
+.founder-info .title{font-size:13px;color:var(--gold);margin-bottom:14px;letter-spacing:.5px}
+.founder-info p{font-size:14px;color:var(--t2);line-height:1.7}
+
+/* VALUES */
+.values{background:var(--s2);border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);padding:80px 32px;margin:0 0 80px}
+.values-inner{max-width:960px;margin:0 auto;text-align:center}
+.values h2{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(22px,3vw,34px);margin-bottom:12px}
+.values h2 em{font-style:italic;font-family:'Playfair Display',serif;color:var(--gold)}
+.values .sub{font-size:16px;color:var(--t2);margin-bottom:56px;max-width:500px;margin-left:auto;margin-right:auto}
+.values-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.v-card{background:var(--s3);border:1px solid var(--bdr);border-radius:20px;padding:32px 24px;text-align:left}
+.v-icon{font-size:28px;margin-bottom:16px}
+.v-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:14px;letter-spacing:1px;color:var(--t1);margin-bottom:10px}
+.v-card p{font-size:14px;color:var(--t2);line-height:1.65}
+
+/* MANIFESTO */
+.manifesto{max-width:760px;margin:0 auto;padding:0 32px 80px;text-align:center}
+.manifesto h2{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(26px,4vw,44px);line-height:1.15;margin-bottom:24px}
+.manifesto h2 em{font-style:italic;font-family:'Playfair Display',serif;color:var(--gold)}
+.manifesto p{font-size:17px;color:var(--t2);line-height:1.85;margin-bottom:20px}
+.manifesto p strong{color:var(--t1)}
+.manifesto .sig{font-family:'Playfair Display',serif;font-style:italic;font-size:22px;color:var(--gold);margin-top:40px}
+.manifesto .sig-sub{font-size:13px;color:var(--t3);margin-top:6px;letter-spacing:.5px}
+
+/* CTA */
+.about-cta{padding:80px 32px 100px;text-align:center;position:relative;overflow:hidden}
+.about-cta::before{content:'';position:absolute;bottom:-80px;left:50%;transform:translateX(-50%);width:900px;height:500px;background:radial-gradient(ellipse at center bottom,rgba(201,168,76,.07) 0%,transparent 65%);pointer-events:none}
+.about-cta h2{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(26px,4vw,46px);line-height:1.15;margin-bottom:16px}
+.about-cta h2 em{font-style:italic;font-family:'Playfair Display',serif;color:var(--gold)}
+.about-cta .sub{font-size:16px;color:var(--t2);margin-bottom:40px;max-width:480px;margin-left:auto;margin-right:auto}
+.cta-group{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn-big{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;border-radius:16px;font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;border:none;transition:all .25s;text-transform:uppercase}
+.btn-big.gold{background:var(--gold);color:#1a1400;box-shadow:0 4px 28px var(--gold-glow)}.btn-big.gold:hover{box-shadow:0 8px 40px rgba(201,168,76,.4);transform:translateY(-2px)}
+.btn-big.ghost{background:transparent;color:var(--t2);border:1px solid var(--bdr2)}.btn-big.ghost:hover{color:var(--t1);border-color:var(--t3)}
+
+/* FOOTER */
+footer{border-top:1px solid var(--bdr);padding:32px;text-align:center;font-size:13px;color:var(--t3)}
+footer a{color:var(--t3)}.footer a:hover{color:var(--t2)}
+
+/* MOBILE */
+@media(max-width:680px){
+  .founder-card{flex-direction:column;gap:20px}
+  .values-grid{grid-template-columns:1fr}
+  .nl{display:none}
+}
+</style>
+  <link rel="icon" type="image/png" href="favicon.png">
+</head>
+<body>
+
+<nav>
+  <div class="ni">
+    <a href="index.html" class="logo"><img src="dilly-wordmark.png" alt="Dilly" height="28"></a>
+    <div class="nl">
+      <a href="index.html">Home</a>
+      <a href="features.html">Features</a>
+      <a href="pricing.html">Pricing</a>
+      <a href="about.html" class="act">About</a>
+    </div>
+    <a href="pricing.html" class="nc">Get Dilly</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="kicker">The Story</div>
+    <h1>Built by a Student<br>Who Was <em>Tired of Losing.</em></h1>
+    <p class="hero-lead">Not losing at life, losing to a system that was never designed for people like us. A system that filters out great candidates before a single human being reads their name.</p>
+  </div>
+</section>
+
+<!-- STORY -->
+<div class="story">
+
+  <div class="story-block">
+    <h2>It Started With a <em>Rejection Email.</em></h2>
+    <p>I'm Dilan. I'm 20 years old, studying Data Science at the University of Tampa, and I built Dilly because I watched a friend, one of the smartest, most prepared people I know, get auto-rejected by three companies in the same week.</p>
+    <p>He never got a reason. He never got feedback. He just got three identical "we've decided to move forward with other candidates" emails, back to back, before anyone had ever looked at his resume.</p>
+    <p><strong>I knew something was wrong.</strong> Not with him. With the system.</p>
+  </div>
+
+  <div class="story-divider"></div>
+
+  <div class="story-block">
+    <h2>The System Is <em>Rigged Against You.</em></h2>
+    <p>Here's what nobody tells you freshman year: most companies don't read your resume first. A piece of software does. Applicant Tracking Systems, ATS, scan your resume for keywords, formatting, and structure before it ever reaches a recruiter. If your resume doesn't pass, it's gone. No callback. No explanation.</p>
+    <p>75% of resumes are rejected this way. <strong>Three out of four.</strong> And the students who don't know this are applying over and over into silence, thinking they're not good enough, when the real problem is a checkbox they never knew existed.</p>
+
+    <div class="pull-quote">
+      "I kept applying. I kept getting ignored. I thought I just wasn't ready. It turned out my resume had a table in it, and that one thing was breaking every ATS that touched it."
+      <cite>,  University of Tampa student, Junior year</cite>
+    </div>
+
+    <p>When I learned how this worked, I got angry. Not at companies, they're dealing with hundreds of applicants. I got angry that nobody was telling us. That the information existed, that tools existed, but they were either too expensive, too generic, or built for mid-career professionals who already had three jobs on their resume.</p>
+    <p><strong>Nobody was building this for us.</strong> So I did.</p>
+  </div>
+
+  <div class="story-divider"></div>
+
+  <div class="story-block">
+    <h2>What I Wanted to <em>Build.</em></h2>
+    <p>I didn't want to build another resume template generator. I didn't want to build a job board. I wanted to build the thing I wish I'd had, something that told me, honestly and specifically, where I stood and what to do about it.</p>
+    <p>Not a generic score. Not "add more keywords." I wanted a tool that compared me to the actual students competing for the same roles I wanted. That scanned my resume against the real ATS systems those companies use. That rewrote my bullet points the way a career advisor who actually knew my field would, not a bot regurgitating advice from 2018.</p>
+    <p>I wanted something that made me feel like I had a coach. Not a $200/hour coach that most of us can't afford. <strong>A coach that was always there, always updated, and cost less than a DoorDash order.</strong></p>
+    <p>That's Dilly.</p>
+  </div>
+
+  <!-- FOUNDER CARD -->
+  <div class="founder-card">
+    <div class="founder-avatar">D</div>
+    <div class="founder-info">
+      <h3>Dilan Kochhar</h3>
+      <div class="title">Founder · University of Tampa, Data Science · Class of 2027</div>
+      <p>I'm still in school. I'm still figuring things out. But I've talked to hundreds of students across dozens of majors, and the same thing keeps coming up: they work hard, they're qualified, and they don't know why they're not getting called back. Dilly exists to fix that. I'll keep building it until it does.</p>
+    </div>
+  </div>
+
+  <div class="story-block">
+    <h2>The Part That <em>Keeps Me Going.</em></h2>
+    <p>A few months after I launched Dilly, a student I'd never met sent me a message. She said she'd been applying for six months with no response. She ran her resume through Dilly, found out it was failing three different ATS systems for formatting reasons she'd never heard of, fixed them, and got two callbacks the following week.</p>
+    <p>She said: "I thought I just wasn't good enough."</p>
+    <p><strong>She was always good enough.</strong> She just didn't have the right information.</p>
+    <p>That's what this is about. Not giving anyone an unfair advantage, giving everyone the information that some people already have. The students with connected parents, alumni networks, expensive coaches. We deserve to know what they know. And now we do.</p>
+  </div>
+
+</div>
+
+<!-- VALUES -->
+<section class="values">
+  <div class="values-inner">
+    <h2>What Dilly <em>Stands For.</em></h2>
+    <p class="sub" style="margin-bottom:56px">Three things that don't change, no matter how much we grow.</p>
+    <div class="values-grid">
+      <div class="v-card">
+        <div class="v-icon">⚖️</div>
+        <h3>Honest Information</h3>
+        <p>Your score is real. Your rank is real. We don't inflate your confidence, we give you the truth so you can actually act on it. You can't fix what you don't know.</p>
+      </div>
+      <div class="v-card">
+        <div class="v-icon">🎯</div>
+        <h3>Specificity Over Noise</h3>
+        <p>Generic advice is worse than no advice, it makes you feel like you're doing something when you're not. Every piece of feedback Dilly gives is specific to you, your field, and your cohort.</p>
+      </div>
+      <div class="v-card">
+        <div class="v-icon">🤝</div>
+        <h3>Built for Us, by Us</h3>
+        <p>This was made by a college student for college students. Not a VC-backed startup optimizing for engagement. Someone who's still in the trenches, still learning, still building something they actually need.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MANIFESTO -->
+<div class="manifesto">
+  <h2>A Note to Every Student<br>Reading <em>This.</em></h2>
+  <p>You are not failing because you're not good enough. You're failing because nobody gave you the map.</p>
+  <p>The hiring process is opaque by design. The people who win are usually the ones with access, access to coaches, networks, information, feedback. <strong>That access shouldn't cost $200 an hour or depend on who your parents know.</strong></p>
+  <p>Dilly is my answer to that. Imperfect, still growing, built in a dorm room by someone who is also trying to figure it out, but built with the belief that every student deserves a fair shot if they're willing to put in the work.</p>
+  <p>You put in the work. Let Dilly make sure the system sees it.</p>
+  <div class="sig">,  Dilan</div>
+  <div class="sig-sub">Founder, Dilly · Made by a college student, for college students.</div>
+</div>
+
+<!-- CTA -->
+<section class="about-cta">
+  <h2>Ready to See Where<br>You <em>Actually</em> Stand?</h2>
+  <p class="sub">Start free. No credit card. Get your real score in 60 seconds.</p>
+  <div class="cta-group">
+    <a href="pricing.html" class="btn-big gold">Get Dilly, $9.99/mo ↗</a>
+    <a href="pricing.html" class="btn-big ghost">See What's Free</a>
+  </div>
+</section>
+
+</body>
+</html>

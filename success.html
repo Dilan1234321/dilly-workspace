@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You're In, Dilly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@1,400;1,700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#080809;--s2:#0f0f12;--gold:#C9A84C;--gold-glow:rgba(201,168,76,.22);--green:#34C759;--t1:#f5f5f7;--t2:#a1a1a6;--t3:#636366;--bdr:rgba(255,255,255,.06)}
+body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px 24px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px}
+.check{width:72px;height:72px;border-radius:50%;background:rgba(52,199,89,.12);border:1px solid rgba(52,199,89,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 32px;font-size:28px}
+h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(28px,5vw,44px);line-height:1.1;margin-bottom:16px}
+h1 em{font-style:italic;font-family:'Playfair Display',serif;color:var(--gold)}
+p{font-size:16px;color:var(--t2);line-height:1.75;margin-bottom:12px}
+.divider{width:48px;height:1px;background:var(--bdr);margin:32px auto}
+.next-steps{background:var(--s2);border:1px solid var(--bdr);border-radius:20px;padding:28px 32px;text-align:left;margin:32px 0}
+.next-steps h3{font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;color:var(--t3);text-transform:uppercase;margin-bottom:16px}
+.step{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;font-size:14px;color:var(--t2)}
+.step:last-child{margin-bottom:0}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--gold);color:#1a1400;font-family:'Cinzel',serif;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:14px;font-family:'Cinzel',serif;font-weight:700;font-size:12px;letter-spacing:1px;text-decoration:none;background:var(--gold);color:#1a1400;box-shadow:0 4px 24px var(--gold-glow);transition:all .2s;text-transform:uppercase}
+.btn:hover{box-shadow:0 6px 36px rgba(201,168,76,.35);transform:translateY(-1px)}
+</style>
+  <link rel="icon" type="image/png" href="favicon.png">
+</head>
+<body>
+<div class="wrap">
+  <div class="check">✓</div>
+  <h1>You're In.<br><em>Welcome to Dilly.</em></h1>
+  <p>Your subscription is confirmed. Download the app and run your first resume audit in the next 60 seconds.</p>
+  <div class="divider"></div>
+  <div class="next-steps">
+    <h3>What's next</h3>
+    <div class="step"><div class="step-num">1</div><span>Download Dilly from the App Store</span></div>
+    <div class="step"><div class="step-num">2</div><span>Sign in with the email you used at checkout</span></div>
+    <div class="step"><div class="step-num">3</div><span>Upload your resume, your first AI audit takes about 60 seconds</span></div>
+    <div class="step"><div class="step-num">4</div><span>See your cohort score, ATS results, and where to improve</span></div>
+  </div>
+  <a href="https://apps.apple.com/app/dilly" class="btn">Download Dilly ↗</a>
+</div>
+</body>
+</html>

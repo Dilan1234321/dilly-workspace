@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume editor: Dilly</title>
+  <meta name="description" content="Live per-bullet scoring and AI rewrites on your resume.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      scroll-snap-type: y mandatory;
+      overflow-x: hidden;
+    }
+
+    body { overflow-x: hidden; }
+
+    /* ── SPLIT LAYOUT ── */
+    #editor-layout { display: block; }
+
+    /* LEFT 40%: fixed before-resume */
+    #before-col {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 40%;
+      height: calc(100vh - 64px);
+      background: #f5f4f0;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem 2.25rem 1.5rem;
+      overflow: hidden;
+      z-index: 5;
+      border-right: 1px solid rgba(43,58,142,0.09);
+    }
+
+    /* Score display */
+    #score-display { margin-bottom: 1.25rem; flex-shrink: 0; }
+
+    #score-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.45;
+      margin-bottom: 0.2rem;
+    }
+
+    #score-val {
+      font-size: clamp(2.4rem, 3.5vw, 3.2rem);
+      font-weight: 800;
+      color: #2B3A8E;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    #score-track {
+      height: 3px;
+      background: rgba(43,58,142,0.12);
+      border-radius: 2px;
+      margin-top: 0.5rem;
+      overflow: hidden;
+    }
+
+    #score-fill {
+      height: 100%;
+      background: #2B3A8E;
+      border-radius: 2px;
+      width: 42%;
+      transition: width 0.9s cubic-bezier(0.22,1,0.36,1);
+    }
+
+    /* Resume mockup */
+    #resume-mock {
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .rm-name {
+      font-size: min(1rem, 2.2vw);
+      font-weight: 800;
+      color: #0d0d0d;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.1rem;
+    }
+
+    .rm-contact {
+      font-size: min(0.58rem, 1.3vw);
+      color: #aaa;
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+
+    .rm-section-label {
+      font-size: min(0.56rem, 1.2vw);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      border-bottom: 1px solid rgba(43,58,142,0.14);
+      padding-bottom: 0.2rem;
+      margin-bottom: 0.6rem;
+      margin-top: 0.85rem;
+    }
+
+    .rm-role-title {
+      font-size: min(0.65rem, 1.4vw);
+      font-weight: 700;
+      color: #444;
+      margin-bottom: 0.12rem;
+    }
+
+    .rm-bullet {
+      font-size: min(0.62rem, 1.35vw);
+      color: #bbb;
+      line-height: 1.55;
+      padding: 0.18rem 0.5rem 0.18rem 0.65rem;
+      border-left: 2px solid transparent;
+      margin-bottom: 0.6rem;
+      border-radius: 0 3px 3px 0;
+      transition: color 0.5s ease, border-color 0.5s ease, background 0.5s ease, font-weight 0.3s ease;
+    }
+
+    .rm-bullet.active {
+      color: #2B3A8E;
+      border-left-color: #2B3A8E;
+      background: rgba(43,58,142,0.06);
+      font-weight: 600;
+    }
+
+    .rm-bullet.improved {
+      color: #1a1a1a;
+      border-left-color: rgba(43,58,142,0.25);
+      background: transparent;
+      font-weight: 500;
+    }
+
+    /* RIGHT 60%: scrolling panels */
+    #panels-col { margin-left: 40%; }
+
+    .editor-panel {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      padding: 3rem clamp(2.5rem, 6vw, 6rem) 3rem clamp(1.5rem, 3vw, 3rem);
+      background: #fff;
+      border-left: 1px solid rgba(43,58,142,0.07);
+    }
+
+    .ep-inner {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1);
+      width: 100%;
+    }
+
+    .ep-inner.visible { opacity: 1; transform: translateY(0); }
+
+    .ep-num {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.38;
+      margin-bottom: 0.6rem;
+    }
+
+    .ep-category {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      margin-bottom: 1.75rem;
+    }
+
+    .ep-before {
+      font-size: clamp(1rem, 1.55vw, 1.25rem);
+      color: #ccc;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+      text-decoration: line-through;
+      text-decoration-color: rgba(43,58,142,0.25);
+    }
+
+    .ep-arrow {
+      display: block;
+      font-size: 1.2rem;
+      color: rgba(43,58,142,0.3);
+      margin-bottom: 1rem;
+    }
+
+    .ep-after {
+      font-size: clamp(1rem, 1.55vw, 1.25rem);
+      color: #0d0d0d;
+      line-height: 1.75;
+      font-weight: 600;
+      margin-bottom: 1.75rem;
+      min-height: 4em;
+    }
+
+    .ep-after .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: #2B3A8E;
+      vertical-align: text-bottom;
+      margin-left: 1px;
+      animation: blink 0.75s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .ep-delta {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(43,58,142,0.08);
+      color: #2B3A8E;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.35rem 0.9rem;
+      border-radius: 100px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .ep-delta.show { opacity: 1; }
+
+    /* ── DOTS ── */
+    #editor-dots {
+      position: fixed;
+      right: 1.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 300;
+    }
+
+    .editor-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(43,58,142,0.18);
+      transition: background 0.35s, transform 0.35s;
+    }
+
+    .editor-dot.active {
+      background: #2B3A8E;
+      transform: scale(1.6);
+    }
+
+    /* ── END ── */
+    #editor-end {
+      height: 100vh;
+      scroll-snap-align: start;
+      margin-left: 40%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      background: #f5f4f0;
+    }
+
+    #editor-end img { width: clamp(180px, 24vw, 300px); opacity: 0.88; }
+
+    .end-cta {
+      display: inline-block;
+      background: #2B3A8E;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 1rem 2.75rem;
+      border-radius: 100px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      html { scroll-snap-type: none; overflow: hidden; height: 100%; }
+      body { overflow: hidden; height: 100%; }
+
+      #editor-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 64px);
+        overflow: hidden;
+      }
+
+      /* TOP 30%: score only */
+      #before-col {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 100%;
+        height: 30%;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        background: #f5f4f0;
+        border-right: none;
+        border-bottom: 1px solid rgba(43,58,142,0.09);
+        overflow: hidden;
+        box-sizing: border-box;
+        text-align: center;
+      }
+
+      #score-display {
+        flex-shrink: 0;
+        padding: 0;
+        width: 100%;
+        max-width: 260px;
+        margin-bottom: 0;
+      }
+
+      #score-val {
+        font-size: clamp(2.8rem, 12vw, 4.5rem);
+      }
+
+      #resume-mock { display: none; }
+
+      /* BOTTOM 70%: horizontal scroll panels */
+      #panels-col {
+        display: flex;
+        flex-direction: row;
+        overflow-x: scroll;
+        overflow-y: visible;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        height: 70%;
+        margin-left: 0;
+        flex-shrink: 0;
+        background: #fff;
+      }
+
+      .editor-panel {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        min-height: unset;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        padding: 2rem 1.75rem 4rem;
+        overflow-y: auto;
+        box-sizing: border-box;
+      }
+
+      .ep-inner { opacity: 1; transform: none; }
+
+      #editor-dots {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        right: auto;
+        gap: 6px;
+        height: auto;
+      }
+
+      #editor-dots .editor-dot {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 7px !important;
+        height: 7px !important;
+        min-width: 7px;
+        min-height: 7px;
+        max-width: 7px;
+        max-height: 7px;
+        flex-shrink: 0;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      #editor-end {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        margin-left: 0;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        background: #f5f4f0;
+      }
+    }
+  </style>
+</head>
+<body class="feature-pro-page" data-nav-feature="editor">
+
+  <!-- ── NAVBAR ── -->
+  <header class="page-hero" style="padding:0;min-height:0;background:#fff;position:sticky;top:0;z-index:200">
+    <div class="site-nav site-nav--inner">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Your resume</span>
+                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Search and track</span>
+                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Guidance</span>
+                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Decide</span>
+                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row" style="display:flex;align-items:center;gap:1rem"><a href="https://www.instagram.com/joindilly" target="_blank" rel="noopener" aria-label="Dilly on Instagram" style="display:flex;align-items:center;color:inherit;opacity:0.6;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── SPLIT LAYOUT ── -->
+  <div id="editor-layout">
+
+    <!-- LEFT: fixed resume (before) -->
+    <div id="before-col">
+      <div id="score-display">
+        <p id="score-label">Dilly Score</p>
+        <div id="score-val">42</div>
+        <div id="score-track"><div id="score-fill"></div></div>
+      </div>
+
+      <div id="resume-mock">
+        <p class="rm-name">Alex Kim</p>
+        <p class="rm-contact">alex.kim@email.com &nbsp;·&nbsp; Tampa, FL &nbsp;·&nbsp; linkedin.com/in/alexkim</p>
+
+        <p class="rm-section-label">Experience</p>
+        <p class="rm-role-title">Student Volunteer &nbsp;&middot;&nbsp; Tampa General Hospital</p>
+        <div class="rm-bullet" id="rb-0">Helped with patient care</div>
+
+        <p class="rm-role-title">Team Member &nbsp;&middot;&nbsp; Senior Design Project</p>
+        <div class="rm-bullet" id="rb-1">Worked on a team project</div>
+
+        <p class="rm-role-title">Intern &nbsp;&middot;&nbsp; SalesForce Solutions</p>
+        <div class="rm-bullet" id="rb-2">Assisted manager with tasks</div>
+
+        <p class="rm-section-label">Leadership</p>
+        <p class="rm-role-title">Social Media Chair &nbsp;&middot;&nbsp; Pre-Med Club</p>
+        <div class="rm-bullet" id="rb-3">Did some marketing</div>
+
+        <p class="rm-section-label">Volunteer</p>
+        <p class="rm-role-title">Event Volunteer &nbsp;&middot;&nbsp; Food For Tampa Bay</p>
+        <div class="rm-bullet" id="rb-4">Helped at nonprofit</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: scrolling panels -->
+    <div id="panels-col">
+
+      <div class="editor-panel" data-panel="0">
+        <div class="ep-inner">
+          <p class="ep-category">Resume editor</p>
+          <h2 style="font-family:Montserrat,sans-serif;font-size:clamp(2.4rem,4.5vw,4rem);font-weight:800;line-height:1.0;letter-spacing:-0.025em;color:#0d0d0d;margin-bottom:1.5rem">Every bullet<br>is being graded.</h2>
+          <p style="font-size:clamp(1rem,1.35vw,1.18rem);line-height:1.85;color:#444;max-width:48ch;margin-bottom:1rem">Dilly reads each line and scores it in real time. Weak verbs, missing numbers, vague scope: it catches all of it.</p>
+          <p style="font-size:clamp(1rem,1.35vw,1.18rem);line-height:1.85;color:#444;max-width:48ch">Watch what happens when a resume full of generic bullets goes through the editor. Five rewrites. Scroll down to see each one.</p>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="1">
+        <div class="ep-inner">
+          <p class="ep-num">01 / 05</p>
+          <p class="ep-category">Experience</p>
+          <p class="ep-before">Helped with patient care</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-0"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-0">+13 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="2">
+        <div class="ep-inner">
+          <p class="ep-num">02 / 05</p>
+          <p class="ep-category">Project</p>
+          <p class="ep-before">Worked on a team project</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-1"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-1">+12 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="3">
+        <div class="ep-inner">
+          <p class="ep-num">03 / 05</p>
+          <p class="ep-category">Internship</p>
+          <p class="ep-before">Assisted manager with tasks</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-2"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-2">+9 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="4">
+        <div class="ep-inner">
+          <p class="ep-num">04 / 05</p>
+          <p class="ep-category">Leadership</p>
+          <p class="ep-before">Did some marketing</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-3"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-3">+8 pts</div>
+        </div>
+      </div>
+
+      <div class="editor-panel" data-panel="5">
+        <div class="ep-inner">
+          <p class="ep-num">05 / 05</p>
+          <p class="ep-category">Volunteer</p>
+          <p class="ep-before">Helped at nonprofit</p>
+          <span class="ep-arrow">&#8595;</span>
+          <p class="ep-after" id="after-4"><span class="cursor"></span></p>
+          <div class="ep-delta" id="delta-4">+7 pts</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── DOTS ── -->
+  <nav id="editor-dots" aria-label="Panel navigation">
+    <button class="editor-dot active" data-target="0" aria-label="Intro"></button>
+    <button class="editor-dot" data-target="1" aria-label="Bullet 1"></button>
+    <button class="editor-dot" data-target="2" aria-label="Bullet 2"></button>
+    <button class="editor-dot" data-target="3" aria-label="Bullet 3"></button>
+    <button class="editor-dot" data-target="4" aria-label="Bullet 4"></button>
+    <button class="editor-dot" data-target="5" aria-label="Bullet 5"></button>
+  </nav>
+
+  <!-- ── END / LOGO ── -->
+  <div id="editor-end">
+    <img src="dilly-wordmark.png" alt="Dilly">
+    <a href="https://app.trydilly.com/" class="end-cta">Open the editor &rarr;</a>
+  </div>
+
+  <script>
+  (function () {
+    var SCORES = [42, 55, 67, 76, 84, 91];
+    var AFTERS = [
+      'Supported 200+ patient visits weekly across vitals, intake, and EHR documentation, reducing nurse admin time by 15%',
+      'Led 4-person team to deliver inventory management app adopted by 3 local businesses within 8 weeks of launch',
+      'Owned weekly reporting pipeline for 12-person sales team, cutting prep time from 4 hours to 45 minutes',
+      'Grew club Instagram from 200 to 2,400 followers in 6 months through consistent content strategy and weekly story series',
+      'Coordinated 30 volunteers across 8 community events, collectively raising $14,000 for local food bank programs'
+    ];
+
+    var scoreVal  = document.getElementById('score-val');
+    var scoreFill = document.getElementById('score-fill');
+    var panels    = document.querySelectorAll('.editor-panel');
+    var inners    = document.querySelectorAll('.ep-inner');
+    var dots      = document.querySelectorAll('.editor-dot');
+    var bullets   = [0,1,2,3,4].map(function(i){ return document.getElementById('rb-'+i); });
+    var typed     = [false,false,false,false,false];
+    var current   = -1;
+
+    function animateScore(target) {
+      var from = parseInt(scoreVal.textContent, 10);
+      var t0 = null;
+      var dur = 900;
+      (function step(ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min((ts - t0) / dur, 1);
+        var e = 1 - Math.pow(1 - p, 3);
+        var v = Math.round(from + (target - from) * e);
+        scoreVal.textContent = v;
+        scoreFill.style.width = v + '%';
+        if (p < 1) requestAnimationFrame(step);
+      })(performance.now());
+    }
+
+    function typewrite(el, text, onDone) {
+      el.innerHTML = '<span class="cursor"></span>';
+      var cursor = el.querySelector('.cursor');
+      var i = 0;
+      (function tick() {
+        if (i < text.length) {
+          el.insertBefore(document.createTextNode(text[i++]), cursor);
+          setTimeout(tick, 20 + Math.random() * 20);
+        } else {
+          cursor.remove();
+          if (onDone) onDone();
+        }
+      })();
+    }
+
+    function activate(idx) {
+      if (idx === current) return;
+      current = idx;
+
+      dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+      inners.forEach(function(inn, i) { inn.classList.toggle('visible', i === idx); });
+      animateScore(SCORES[Math.min(idx, SCORES.length - 1)]);
+
+      var bi = idx - 1;
+      bullets.forEach(function(b, i) {
+        b.classList.remove('active', 'improved');
+        if (i < bi) b.classList.add('improved');
+        else if (i === bi) b.classList.add('active');
+      });
+
+      if (bi >= 0 && bi < 5 && !typed[bi]) {
+        typed[bi] = true;
+        var afterEl  = document.getElementById('after-' + bi);
+        var deltaEl  = document.getElementById('delta-' + bi);
+        if (afterEl) {
+          setTimeout(function() {
+            typewrite(afterEl, AFTERS[bi], function() {
+              if (deltaEl) deltaEl.classList.add('show');
+              if (bullets[bi]) {
+                bullets[bi].textContent = AFTERS[bi];
+                bullets[bi].classList.remove('active');
+                bullets[bi].classList.add('improved');
+              }
+            });
+          }, 450);
+        }
+      }
+    }
+
+    var isMobile = window.innerWidth <= 780;
+    var panelsCol = document.getElementById('panels-col');
+
+    if (isMobile) {
+      panelsCol.addEventListener('scroll', function() {
+        var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
+        idx = Math.max(0, Math.min(idx, panels.length - 1));
+        activate(idx);
+      });
+    } else {
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) activate(parseInt(e.target.dataset.panel, 10));
+        });
+      }, { threshold: 0.5 });
+      panels.forEach(function(p) { observer.observe(p); });
+    }
+
+    dots.forEach(function(dot) {
+      dot.addEventListener('click', function() {
+        var idx = parseInt(dot.dataset.target, 10);
+        if (isMobile) {
+          panelsCol.scrollTo({ left: idx * panelsCol.clientWidth, behavior: 'smooth' });
+        } else {
+          panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    activate(0);
+  }());
+  </script>
+
+  <script src="dilly.js"></script>
+</body>
+</html>

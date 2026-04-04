@@ -1,63 +1,6 @@
-# Local env (do not commit real API keys)
+.vercel
 .env
 .env.local
-*.env
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.Python
-venv/
-.venv/
-env/
-meridian_venv/
-*.egg-info/
-.eggs/
-
-# Node / Next.js
-node_modules/
-.next/
-out/
-.npm
-
-# IDE / OS
-.DS_Store
-.cursor/
-.Trash/
-
-# Logs and temp
-*.log
-*.tmp
-.cache/
-
-# Optional: uncomment to exclude resume PDFs (large)
-# assets/resumes/*.pdf
-# projects/meridian/reports/
-.claude/worktrees/
-meridian-website/
-
-# Local auth, locks, and profile payloads (do not push)
-memory/dilly_auth.json
-memory/dilly_auth.json.lock
-memory/meridian_auth.json
-memory/meridian_auth.json.lock
-memory/dilly_profiles/
-memory/dilly_profile_txt/
-memory/meridian_profiles/
-memory/recruiter_bookmarks/
-memory/recruiter_notes/
-memory/voice_feedback/
-meridian_api.pid
-projects/dilly/dilly_jobs.db
-projects/dilly/api/dilly.db
-
-# Local session store (do not push)
-memory/auth/
-
-# Archives and local symlinks
-*.zip
-meridian_core
-
-# Expo local cache
-**/.expo/
+.env*.local
+node_modules
+.claude/

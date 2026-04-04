@@ -1,20 +1,8 @@
 {
-  "name": "openclaw-workspace",
+  "name": "dilly-website",
+  "version": "1.0.0",
   "private": true,
-  "description": "Workspace root. Run dashboard: cd projects/dilly/dashboard && npm run dev",
-  "scripts": {
-    "dev": "cd projects/dilly/dashboard && npm run dev",
-    "build": "cd projects/dilly/dashboard && npm run build",
-    "dev:aplivio": "cd aplivio && npm run dev",
-    "build:aplivio": "cd aplivio && npm run build"
-  },
   "dependencies": {
-    "@expo-google-fonts/cinzel": "^0.4.2",
-    "expo-image-picker": "~55.0.13",
-    "expo-linking": "^55.0.5"
-  },
-  "devDependencies": {
-    "@types/react": "~19.2.10",
-    "typescript": "~5.9.2"
+    "stripe": "^17.7.0"
   }
 }

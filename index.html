@@ -1,1022 +1,501 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dilly — See How Competitive You Really Are</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #080809;
-    --s1: #0a0a0c;
-    --s2: #0f0f12;
-    --s3: #1a1a1f;
-    --gold: #C9A84C;
-    --gold-dim: rgba(201,168,76,0.12);
-    --gold-glow: rgba(201,168,76,0.25);
-    --blue: #0A84FF;
-    --green: #34C759;
-    --coral: #FF453A;
-    --amber: #FF9F0A;
-    --indigo: #5E5CE6;
-    --t1: #f5f5f7;
-    --t2: #a1a1a6;
-    --t3: #636366;
-    --border: rgba(255,255,255,0.06);
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--bg);
-    color: var(--t1);
-    font-family: 'DM Sans', -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-  }
-  img { display: block; max-width: 100%; }
-
-  /* ── NAV ─────────────────────────────────────────────── */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    padding: 16px 40px;
-    display: flex; align-items: center; justify-content: space-between;
-    background: rgba(8,8,9,0.85);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-  }
-  .nav-logo { font-family:'Cinzel',serif; font-weight:900; font-size:22px; color:var(--gold); letter-spacing:4px; text-transform:lowercase; }
-  .nav-links { display:flex; gap:32px; align-items:center; }
-  .nav-links a { font-size:14px; font-weight:500; color:var(--t2); text-decoration:none; transition:color .2s; }
-  .nav-links a:hover { color:var(--t1); }
-
-  /* ── BUTTONS ──────────────────────────────────────────── */
-  .btn-primary {
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--gold); color:#ffffff;
-    font-family:'Cinzel',serif; font-weight:700; font-size:13px; letter-spacing:.5px;
-    padding:12px 24px; border-radius:14px; text-decoration:none; border:none; cursor:pointer;
-    box-shadow:0 4px 24px rgba(201,168,76,0.25);
-    transition:transform .2s, box-shadow .2s;
-  }
-  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 32px rgba(201,168,76,0.35); }
-  .btn-secondary {
-    display:inline-flex; align-items:center; gap:6px;
-    background:transparent; color:var(--gold);
-    font-family:'Cinzel',serif; font-weight:700; font-size:13px; letter-spacing:.5px;
-    padding:12px 24px; border-radius:14px; text-decoration:none;
-    border:1px solid rgba(201,168,76,0.4); cursor:pointer;
-    transition:background .2s, border-color .2s;
-  }
-  .btn-secondary:hover { background:var(--gold-dim); border-color:var(--gold); }
-
-  /* ── SECTION HELPERS ──────────────────────────────────── */
-  .section { padding:100px 40px; max-width:1200px; margin:0 auto; }
-  .section-dark { background:var(--s1); max-width:100%; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
-  .section-dark > .section-inner { max-width:1200px; margin:0 auto; padding:100px 40px; }
-  .section-label {
-    font-family:'Cinzel',serif; font-weight:700; font-size:10px;
-    letter-spacing:3px; text-transform:uppercase; color:var(--gold); margin-bottom:16px;
-  }
-  .section-title {
-    font-family:'Cinzel',serif; font-weight:700;
-    font-size:clamp(24px,3vw,38px); color:var(--t1); margin-bottom:16px; line-height:1.25;
-  }
-  .section-subtitle { font-size:15px; color:var(--t2); line-height:1.7; max-width:560px; }
-
-  /* ── HERO ─────────────────────────────────────────────── */
-  .hero-ratio { margin-bottom:8px; }
-  .ratio-number {
-    font-family:'Playfair Display',serif; font-weight:900;
-    font-size:clamp(72px,12vw,128px); color:var(--coral); line-height:1; letter-spacing:-2px;
-    text-shadow:0 0 80px rgba(255,69,58,0.15);
-  }
-  .hero {
-    padding:160px 40px 80px; max-width:1200px; margin:0 auto;
-    display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; min-height:100vh;
-  }
-  .hero-content { max-width:560px; }
-  .hero-badge {
-    display:inline-flex; align-items:center; gap:8px;
-    padding:6px 14px; background:var(--s2); border:1px solid var(--border); border-radius:999px;
-    font-size:12px; font-weight:500; color:var(--t2); margin-bottom:28px;
-  }
-  .hero-badge .dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse-dot 2s ease-in-out infinite; }
-  @keyframes pulse-dot { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,199,89,0.4)} 50%{opacity:.8;box-shadow:0 0 0 6px rgba(52,199,89,0)} }
-
-  .hero h1 {
-    font-family:'Cinzel',serif; font-weight:900;
-    font-size:clamp(26px,3.5vw,42px); line-height:1.25; color:var(--t1); margin-bottom:20px;
-  }
-  .hero-subtext { font-size:16px; line-height:1.7; color:var(--t2); margin-bottom:36px; max-width:480px; }
-  .hero-cta-row { display:flex; gap:14px; margin-bottom:56px; flex-wrap:wrap; }
-
-  /* Hero Stats */
-  .hero-stats {
-    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
-    background:var(--border); border:1px solid var(--border); border-radius:16px; overflow:hidden;
-  }
-  .hero-stat { background:var(--s2); padding:20px 16px; text-align:center; }
-  .hero-stat-number { font-family:'Playfair Display',serif; font-weight:700; font-size:28px; color:var(--gold); margin-bottom:4px; line-height:1.1; }
-  .hero-stat-number.coral { color:var(--coral); }
-  .hero-stat-number.blue { color:var(--blue); }
-  .hero-stat-number.green { color:var(--green); }
-  .hero-stat-label { font-size:11px; font-weight:500; color:var(--t3); line-height:1.4; }
-
-  /* Hero Phone */
-  .hero-phone { display:flex; justify-content:center; align-items:center; position:relative; }
-  .phone-frame {
-    width:280px; border-radius:36px; border:2px solid rgba(255,255,255,0.08);
-    box-shadow:0 0 0 1px rgba(255,255,255,0.04),0 20px 80px rgba(0,0,0,0.6),0 0 120px rgba(201,168,76,0.08);
-    overflow:hidden; position:relative; animation:float 6s ease-in-out infinite;
-  }
-  .phone-frame img { width:100%; display:block; }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-  .phone-glow {
-    position:absolute; width:400px; height:400px;
-    background:radial-gradient(circle,rgba(201,168,76,0.08) 0%,transparent 70%);
-    border-radius:50%; z-index:-1;
-  }
-
-  /* ── TWO-COL FEATURE SECTIONS ────────────────────────── */
-  .feature-row {
-    display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;
-    padding:100px 40px; max-width:1200px; margin:0 auto;
-  }
-  .feature-row.reversed .feature-text { order:2; }
-  .feature-row.reversed .feature-phones { order:1; }
-  .feature-text .section-label { margin-bottom:12px; }
-  .feature-text h2 {
-    font-family:'Cinzel',serif; font-weight:700;
-    font-size:clamp(22px,3vw,34px); color:var(--t1); margin-bottom:16px; line-height:1.25;
-  }
-  .feature-text p { font-size:15px; color:var(--t2); line-height:1.7; margin-bottom:20px; max-width:440px; }
-  .feature-tag {
-    display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
-    background:var(--s2); border:1px solid var(--border); border-radius:999px;
-    font-size:11px; font-weight:600; color:var(--t2);
-  }
-  .feature-tag.green { color:var(--green); border-color:rgba(52,199,89,0.2); background:rgba(52,199,89,0.06); }
-  .feature-tag.amber { color:var(--amber); border-color:rgba(255,159,10,0.2); background:rgba(255,159,10,0.06); }
-  .feature-tag.coral { color:var(--coral); border-color:rgba(255,69,58,0.2); background:rgba(255,69,58,0.06); }
-  .feature-tags { display:flex; gap:8px; flex-wrap:wrap; }
-
-  .feature-phones { display:flex; justify-content:center; gap:16px; align-items:center; }
-  .feature-phone {
-    width:200px; border-radius:28px; border:2px solid rgba(255,255,255,0.06);
-    overflow:hidden; box-shadow:0 12px 60px rgba(0,0,0,0.5);
-    transition:transform .3s;
-  }
-  .feature-phone:hover { transform:translateY(-6px); }
-  .feature-phone.tilt-left { transform:rotate(-3deg); }
-  .feature-phone.tilt-right { transform:rotate(3deg); }
-  .feature-phone.tilt-left:hover { transform:rotate(-3deg) translateY(-6px); }
-  .feature-phone.tilt-right:hover { transform:rotate(3deg) translateY(-6px); }
-  .feature-phone img { width:100%; display:block; }
-  .feature-phone-single { width:240px; }
-
-  /* ── THREE PILLARS ───────────────────────────────────── */
-  .pillars-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:48px; }
-  .pillar-card {
-    background:var(--s2); border:1px solid var(--border); border-radius:20px; padding:28px 24px;
-    transition:transform .3s, box-shadow .3s;
-  }
-  .pillar-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.3); }
-  .pillar-icon {
-    width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center;
-    font-size:22px; margin-bottom:18px;
-  }
-  .pillar-icon.gold-bg { background:var(--gold-dim); }
-  .pillar-icon.blue-bg { background:rgba(10,132,255,0.1); }
-  .pillar-icon.indigo-bg { background:rgba(94,92,230,0.1); }
-  .pillar-card h3 { font-family:'Cinzel',serif; font-weight:700; font-size:15px; color:var(--t1); margin-bottom:10px; }
-  .pillar-card p { font-size:13px; color:var(--t2); line-height:1.6; margin-bottom:16px; }
-  .pillar-card .pillar-phone {
-    width:100%; border-radius:16px; border:1px solid var(--border); overflow:hidden; margin-top:8px;
-  }
-  .pillar-card .pillar-phone img { width:100%; display:block; }
-
-  /* ── SOCIAL PROOF STATS ──────────────────────────────── */
-  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:48px; }
-  .stat-card {
-    background:var(--s2); border:1px solid var(--border); border-radius:20px; padding:28px 20px; text-align:center;
-  }
-  .stat-card .stat-num { font-family:'Playfair Display',serif; font-weight:700; font-size:36px; margin-bottom:8px; }
-  .stat-card .stat-num.gold { color:var(--gold); }
-  .stat-card .stat-num.green { color:var(--green); }
-  .stat-card .stat-num.blue { color:var(--blue); }
-  .stat-card .stat-num.coral { color:var(--coral); }
-  .stat-card .stat-desc { font-size:13px; color:var(--t2); line-height:1.5; }
-
-  /* ── MORE FEATURES GRID ──────────────────────────────── */
-  .more-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:48px; }
-  .more-item { text-align:center; }
-  .more-item .more-phone {
-    width:100%; border-radius:20px; border:2px solid rgba(255,255,255,0.06);
-    overflow:hidden; margin-bottom:14px; box-shadow:0 8px 40px rgba(0,0,0,0.4);
-    transition:transform .3s;
-  }
-  .more-item .more-phone:hover { transform:translateY(-4px); }
-  .more-item .more-phone img { width:100%; display:block; }
-  .more-item h4 { font-family:'Cinzel',serif; font-weight:700; font-size:12px; color:var(--t1); margin-bottom:4px; letter-spacing:0.5px; }
-  .more-item p { font-size:11px; color:var(--t3); }
-
-  /* ── COMPARISON TABLE ────────────────────────────────── */
-  .compare-table { width:100%; border-collapse:collapse; margin-top:40px; }
-  .compare-table th, .compare-table td { padding:14px 16px; text-align:center; font-size:13px; border-bottom:1px solid var(--border); }
-  .compare-table th { font-family:'Cinzel',serif; font-weight:700; font-size:11px; letter-spacing:1px; color:var(--t2); text-transform:uppercase; }
-  .compare-table th:first-child, .compare-table td:first-child { text-align:left; color:var(--t2); font-weight:500; }
-  .compare-table td.check { color:var(--green); font-size:16px; }
-  .compare-table td.cross { color:var(--t3); font-size:16px; }
-  .compare-table td.tilde { color:var(--amber); }
-  .compare-table .dilly-col { color:var(--gold); font-weight:600; }
-  .compare-table tr:last-child td { border-bottom:none; font-weight:600; }
-
-  /* ── PRICING ─────────────────────────────────────────── */
-  .pricing-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:48px; max-width:800px; margin-left:auto; margin-right:auto; }
-  .price-card {
-    background:var(--s2); border:1px solid var(--border); border-radius:20px; padding:36px 28px;
-    position:relative;
-  }
-  .price-card.featured { border-color:rgba(201,168,76,0.3); }
-  .price-card.featured::before {
-    content:'MOST POPULAR'; position:absolute; top:-11px; left:50%; transform:translateX(-50%);
-    background:var(--gold); color:#1a1400; font-family:'Cinzel',serif; font-weight:700;
-    font-size:9px; letter-spacing:1.5px; padding:4px 14px; border-radius:999px;
-  }
-  .price-card .price-tier { font-family:'Cinzel',serif; font-weight:700; font-size:14px; color:var(--t1); margin-bottom:8px; }
-  .price-card .price-amount { font-family:'Playfair Display',serif; font-weight:700; font-size:42px; color:var(--gold); margin-bottom:4px; }
-  .price-card .price-amount span { font-size:16px; color:var(--t3); font-weight:400; }
-  .price-card .price-note { font-size:12px; color:var(--t3); margin-bottom:20px; }
-  .price-card .price-strike { text-decoration:line-through; color:var(--t3); font-size:14px; margin-left:8px; }
-  .price-card ul { list-style:none; margin-bottom:24px; }
-  .price-card ul li { font-size:13px; color:var(--t2); padding:6px 0; padding-left:20px; position:relative; }
-  .price-card ul li::before { content:'✓'; position:absolute; left:0; color:var(--green); font-weight:600; }
-
-  /* ── AMODEI SECTION ──────────────────────────────────── */
-  .amodei-section { padding:0 40px; }
-  .amodei-inner {
-    max-width:1000px; margin:0 auto; position:relative; padding:80px 60px;
-    background:linear-gradient(135deg,rgba(255,69,58,0.04) 0%,rgba(201,168,76,0.03) 50%,rgba(255,69,58,0.02) 100%);
-    border:1px solid rgba(255,69,58,0.12); border-radius:24px; text-align:center; overflow:hidden;
-  }
-  .amodei-inner::before {
-    content:''; position:absolute; top:-1px; left:50%; transform:translateX(-50%);
-    width:200px; height:2px; background:linear-gradient(90deg,transparent,var(--coral),transparent);
-  }
-  .amodei-inner::after {
-    content:''; position:absolute; top:0; left:0; right:0; bottom:0;
-    background:radial-gradient(ellipse at top center,rgba(255,69,58,0.06) 0%,transparent 60%); pointer-events:none;
-  }
-  .amodei-eyebrow {
-    font-family:'Cinzel',serif; font-weight:700; font-size:9px; letter-spacing:3px;
-    text-transform:uppercase; color:var(--coral); margin-bottom:32px;
-    position:relative; z-index:1; display:flex; align-items:center; justify-content:center; gap:10px;
-  }
-  .amodei-eyebrow .warning-icon {
-    width:14px; height:14px; border:1.5px solid var(--coral); border-radius:50%;
-    display:inline-flex; align-items:center; justify-content:center;
-    font-size:9px; font-weight:700; color:var(--coral); flex-shrink:0;
-  }
-  .amodei-quote {
-    font-family:'Playfair Display',serif; font-weight:400;
-    font-size:clamp(22px,3vw,32px); line-height:1.5; color:var(--t1); margin-bottom:28px;
-    position:relative; z-index:1; font-style:italic; max-width:800px; margin-left:auto; margin-right:auto;
-  }
-  .amodei-quote .highlight { color:var(--coral); font-style:italic; font-weight:600; }
-  .amodei-attribution { font-size:20px; font-weight:500; color:var(--t2); margin-bottom:8px; position:relative; z-index:1; }
-  .amodei-attribution strong { color:var(--t1); font-weight:600; }
-  .amodei-source { font-size:11px; color:var(--t3); margin-bottom:40px; position:relative; z-index:1; }
-  .amodei-cta-text { font-size:17px; font-weight:600; color:var(--gold); margin-bottom:20px; position:relative; z-index:1; }
-  .amodei-cta-sub {
-    font-size:14px; color:var(--t2); margin-bottom:28px; position:relative; z-index:1;
-    line-height:1.6; max-width:520px; margin-left:auto; margin-right:auto;
-  }
-  .amodei-btn-row { position:relative; z-index:1; }
-
-  /* ── FAQ ──────────────────────────────────────────────── */
-  .faq-list { max-width:700px; margin:40px auto 0; }
-  .faq-item { border-bottom:1px solid var(--border); }
-  .faq-item summary {
-    padding:18px 0; cursor:pointer; font-size:15px; font-weight:600; color:var(--t1);
-    list-style:none; display:flex; justify-content:space-between; align-items:center;
-  }
-  .faq-item summary::after { content:'+'; font-size:20px; color:var(--t3); transition:transform .2s; }
-  .faq-item[open] summary::after { transform:rotate(45deg); }
-  .faq-item p { padding:0 0 18px; font-size:14px; color:var(--t2); line-height:1.7; }
-
-  /* ── FINAL CTA ───────────────────────────────────────── */
-  .final-cta { text-align:center; padding:100px 40px; max-width:700px; margin:0 auto; }
-  .final-cta h2 { font-family:'Cinzel',serif; font-weight:900; font-size:clamp(24px,3.5vw,40px); color:var(--t1); margin-bottom:16px; line-height:1.2; }
-  .final-cta p { font-size:15px; color:var(--t2); margin-bottom:32px; line-height:1.6; }
-
-  /* ── FOOTER ──────────────────────────────────────────── */
-  footer { border-top:1px solid var(--border); padding:40px; text-align:center; }
-  footer p { font-size:12px; color:var(--t3); line-height:1.8; }
-  footer .footer-tagline { color:var(--t2); margin-bottom:4px; }
-
-  /* ── SCROLL ANIMATIONS ───────────────────────────────── */
-  .fade-up { opacity:0; transform:translateY(30px); transition:opacity .7s ease, transform .7s ease; }
-  .fade-up.visible { opacity:1; transform:translateY(0); }
-  .stagger-1{transition-delay:.1s} .stagger-2{transition-delay:.2s} .stagger-3{transition-delay:.3s} .stagger-4{transition-delay:.4s}
-
-  /* ── RESPONSIVE ──────────────────────────────────────── */
-  @media(max-width:900px){
-    nav{padding:14px 20px}
-    .nav-links a:not(.btn-primary){display:none}
-    .hero{grid-template-columns:1fr;padding:130px 20px 60px;gap:40px;min-height:auto}
-    .hero-phone{order:-1}
-    .phone-frame{width:220px}
-    .hero-stats{grid-template-columns:repeat(2,1fr)}
-    .pillars-grid{grid-template-columns:1fr}
-    .feature-row{grid-template-columns:1fr;gap:40px}
-    .feature-row.reversed .feature-text{order:1}
-    .feature-row.reversed .feature-phones{order:2}
-    .feature-phones{flex-wrap:wrap}
-    .feature-phone{width:160px}
-    .feature-phone-single{width:200px}
-    .stats-grid{grid-template-columns:repeat(2,1fr)}
-    .more-grid{grid-template-columns:repeat(2,1fr)}
-    .compare-table{font-size:11px}
-    .compare-table th,.compare-table td{padding:10px 8px}
-    .pricing-grid{grid-template-columns:1fr}
-    .amodei-inner{padding:48px 24px}
-    .section{padding:60px 20px}
-    .section-dark>.section-inner{padding:60px 20px}
-  }
-
-  .hamburger{display:none;background:none;border:none;cursor:pointer;padding:8px;z-index:200}
-  .hamburger span{display:block;width:24px;height:2px;background:var(--t2);margin:5px 0;transition:all .3s}
-  .hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
-  .hamburger.active span:nth-child(2){opacity:0}
-  .hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
-  .mob-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(8,8,9,.97);z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;opacity:0;visibility:hidden;transition:opacity .35s ease,visibility .35s ease;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-  .mob-ov.active{opacity:1;visibility:visible}
-  .mob-ov a{font-family:'Cinzel',serif;font-size:24px;color:var(--t1);text-decoration:none;font-weight:700;letter-spacing:2px;transform:translateY(20px);opacity:0;transition:transform .4s ease,opacity .4s ease,color .2s}
-  .mob-ov.active a{transform:translateY(0);opacity:1}
-  .mob-ov.active a:nth-child(1){transition-delay:.05s}
-  .mob-ov.active a:nth-child(2){transition-delay:.1s}
-  .mob-ov.active a:nth-child(3){transition-delay:.15s}
-  .mob-ov.active a:nth-child(4){transition-delay:.2s}
-  .mob-ov.active a:nth-child(5){transition-delay:.25s}
-  .mob-ov a:hover{color:var(--gold)}
-  .mob-close{position:absolute;top:24px;right:24px;background:none;border:none;cursor:pointer;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:background .2s}
-  .mob-close:hover{background:rgba(255,255,255,.08)}
-  .mob-close::before,.mob-close::after{content:'';position:absolute;width:22px;height:2px;background:var(--t2);transition:background .2s}
-  .mob-close::before{transform:rotate(45deg)}
-  .mob-close::after{transform:rotate(-45deg)}
-  .mob-close:hover::before,.mob-close:hover::after{background:var(--gold)}
-  .qsc{display:none;flex-direction:column;min-height:60vh}.qsc.active{display:flex}
-  @keyframes qFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-  .q-anim{animation:qFadeIn .35s ease forwards}
-  .q-opt-anim{animation:qFadeIn .3s ease forwards;opacity:0}
-  .q-opt-anim:nth-child(1){animation-delay:.05s}
-  .q-opt-anim:nth-child(2){animation-delay:.1s}
-  .q-opt-anim:nth-child(3){animation-delay:.15s}
-  .q-opt-anim:nth-child(4){animation-delay:.2s}
-  .q-opt-anim:nth-child(5){animation-delay:.25s}
-  .q-opt-anim:nth-child(6){animation-delay:.3s}
-  .q-opt-anim:nth-child(7){animation-delay:.35s}
-  .q-opt-anim:nth-child(8){animation-delay:.4s}
-  @media(max-width:768px){.hamburger{display:block}.nav-links{display:none}nav{padding:16px 20px}.hero{grid-template-columns:1fr;padding:120px 20px 60px;gap:40px;min-height:auto}.hero-phone{display:none}.hero-stats{grid-template-columns:repeat(2,1fr)}.section{padding:60px 20px}.section-dark>.section-inner{padding:60px 20px}.pillars-grid{grid-template-columns:1fr}.feature-row{grid-template-columns:1fr;gap:40px;padding:60px 20px}.feature-row.reversed .feature-text{order:1}.feature-row.reversed .feature-phones{order:2}.stats-grid{grid-template-columns:repeat(2,1fr)}.more-grid{grid-template-columns:repeat(2,1fr);gap:16px}.pricing-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}.compare-table{font-size:11px}.compare-table th,.compare-table td{padding:10px 6px}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dilly: See How Competitive You Really Are</title>
+  <meta name="description" content="Finally know you're ready.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/dilly.css">
 </head>
 <body>
-
-<!-- ═══════════════ NAV ═══════════════ -->
-<nav>
-  <div class="nav-logo">dilly</div>
-  <div class="nav-links">
-    <a href="features.html">Features</a>
-    <a href="pricing.html">Pricing</a>
-    <a href="#faq">FAQ</a>
-  </div>
-  <button class="hamburger" onclick="this.classList.toggle('active');document.getElementById('mobOv').classList.toggle('active');document.body.style.overflow=document.getElementById('mobOv').classList.contains('active')?'hidden':''"><span></span><span></span><span></span></button>
-</nav>
-<div class="mob-ov" id="mobOv"><button class="mob-close" onclick="document.querySelector('.hamburger').classList.remove('active');document.getElementById('mobOv').classList.remove('active');document.body.style.overflow=''" aria-label="Close menu"></button><a href="features.html">Features</a><a href="pricing.html">Pricing</a><a href="about.html">About</a><a href="#faq" onclick="document.querySelector('.hamburger').classList.remove('active');document.getElementById('mobOv').classList.remove('active');document.body.style.overflow=''">FAQ</a><a href="#quiz-section" onclick="document.querySelector('.hamburger').classList.remove('active');document.getElementById('mobOv').classList.remove('active');document.body.style.overflow=''" style="color:var(--gold)">Take the Quiz</a></div>
-
-<section style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:120px 20px 60px;position:relative" id="quiz-section">
-<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 30% 20%,rgba(201,168,76,.06),transparent 40%),radial-gradient(circle at 70% 80%,rgba(255,69,58,.04),transparent 40%)"></div>
-<div style="position:relative;z-index:1;max-width:640px;margin:0 auto;width:100%">
-<div class="qsc active" id="qsc-intro"><div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:24px"><div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:100px;font-size:13px;color:var(--gold);font-weight:600;letter-spacing:.5px;text-transform:uppercase">&#9889; 60-Second Career Quiz</div><h1 style="font-family:Cinzel,serif;font-size:clamp(36px,7vw,56px);line-height:1.05;letter-spacing:-.02em;font-weight:900">Will AI take <em style="color:var(--gold);font-style:italic;font-family:Playfair Display,serif">your</em> job?</h1><p style="font-size:17px;color:var(--t2);line-height:1.6;max-width:420px">AI is reshaping every industry. Find out how safe your career path is.</p><button onclick="qStart()" class="btn-primary" style="padding:18px 48px;font-size:15px;border-radius:100px">Find Out Now</button><div style="font-size:13px;color:var(--t3)">No signup required.</div><div id="qSaved"></div></div></div>
-<div class="qsc" id="qsc-qs"><div style="width:100%;height:3px;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden;margin-bottom:40px"><div id="qProg" style="height:100%;background:linear-gradient(90deg,var(--gold),#e0c068);border-radius:10px;transition:width .4s;width:0%"></div></div><div id="qNum" style="font-size:13px;color:var(--gold);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px"></div><div id="qTxt" style="font-family:Cinzel,serif;font-size:clamp(20px,4vw,28px);line-height:1.25;margin-bottom:32px"></div><div id="qOpts" style="display:flex;flex-direction:column;gap:12px"></div></div>
-<div class="qsc" id="qsc-load"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;min-height:40vh"><div style="width:64px;height:64px;border:3px solid rgba(255,255,255,.04);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></div><p id="qLoadT" style="color:var(--t2);font-size:15px;max-width:300px">Analyzing...</p></div></div>
-<div class="qsc" id="qsc-res"><div id="qRes" style="display:flex;flex-direction:column;gap:24px;padding-bottom:40px"></div></div>
-</div>
-<div id="scrollH" style="text-align:center;padding:24px;color:var(--t3);font-size:14px;animation:bounce 2s infinite">&#8595; Scroll to see the product &#8595;</div>
-</section>
-
-<!-- ═══════════════ HERO ═══════════════ -->
-<section class="hero">
-  <div class="hero-content">
-    <div class="hero-badge fade-up">
-      <span class="dot"></span>
-      Pre-Seed · Launching April 2026
+  <section class="hero-fullbleed" id="top" aria-label="Introduction">
+    <div class="hero-media" aria-hidden="true">
+      <div class="hero-bg-still"></div>
+      <video
+        class="hero-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        poster="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&amp;fit=crop&amp;w=1920&amp;q=85"
+      >
+        <source src="https://videos.pexels.com/video-files/3195398/3195398-hd_1920_1080_25fps.mp4" type="video/mp4">
+      </video>
     </div>
-    <div class="hero-ratio fade-up stagger-1">
-      <span class="ratio-number">2,263:1</span>
-    </div>
-    <h1 class="fade-up stagger-2">That's your student to career advisor ratio.</h1>
-    <p class="hero-subtext fade-up stagger-3">
-      You're on your own, and that's why we built Dilly. Upload your resume, get scored across Smart, Grit, and Build, see exactly where you stand against real internships, and get AI coaching that knows your gaps. The career center you were promised, in your pocket.
-    </p>
-    <div class="hero-cta-row fade-up stagger-4">
-      <a href="#quiz" class="btn-primary">See the Product →</a>
-      <a href="/cdn-cgi/l/email-protection#e2868b8e838ca28a878e8e8d868b8e8e9bcc818d8f" class="btn-secondary">Contact Founder</a>
-    </div>
-    <div class="hero-stats fade-up stagger-4">
-      <div class="hero-stat">
-        <div class="hero-stat-number">20M</div>
-        <div class="hero-stat-label">US undergrads</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-number coral">50%</div>
-        <div class="hero-stat-label">Entry-level jobs<br>at risk from AI</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-number blue">6</div>
-        <div class="hero-stat-label">ATS systems<br>scanned</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-number green">1</div>
-        <div class="hero-stat-label">Founder built<br>it all</div>
-      </div>
-    </div>
-  </div>
-  <div class="hero-phone fade-up stagger-2">
-    <div class="phone-glow"></div>
-    <div class="phone-frame">
-      <img src="dillyhome.png" alt="Dilly Home Screen">
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════ HOW DILLY WORKS ═══════════════ -->
-<section class="section fade-up" id="features">
-  <div class="section-label">How Dilly Works</div>
-  <div class="section-title">Three things. That's it.</div>
-  <div class="section-subtitle">No feature maze. No dashboard overload. Dilly does three things and does them better than anything else.</div>
-  <div class="pillars-grid">
-    <div class="pillar-card fade-up stagger-1">
-      <div class="pillar-icon gold-bg">📊</div>
-      <h3>See your score</h3>
-      <p>Upload your resume. Get scored on Smart, Grit, and Build. Know where you stand before applying.</p>
-      <div class="pillar-phone"><img src="dillynewaudit.png" alt="Resume Audit"></div>
-    </div>
-    <div class="pillar-card fade-up stagger-2">
-      <div class="pillar-icon blue-bg">🎯</div>
-      <h3>Know where you fit</h3>
-      <p>97 real internships from Stripe, Airbnb, Cloudflare. See your readiness per role with dimension breakdowns.</p>
-      <div class="pillar-phone"><img src="dillyinternshiplist.png" alt="Internship Listings"></div>
-    </div>
-    <div class="pillar-card fade-up stagger-3">
-      <div class="pillar-icon indigo-bg">💬</div>
-      <h3>Fix it with Dilly</h3>
-      <p>AI coaching that knows your resume, scores, applications, and deadlines. Specific plans for your gaps.</p>
-      <div class="pillar-phone"><img src="dillyai.png" alt="Dilly AI Coaching"></div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════ INTERNSHIP INTELLIGENCE ═══════════════ -->
-<div class="feature-row fade-up">
-  <div class="feature-text">
-    <div class="section-label">Internship Intelligence</div>
-    <h2>Every job tells you if you're ready</h2>
-    <p>Each internship shows your fit across Smart, Grit, and Build. See the company's ATS system. Get a personalized plan to close your gaps.</p>
-    <div class="feature-tags">
-      <span class="feature-tag green">Ready</span>
-      <span class="feature-tag amber">Almost</span>
-      <span class="feature-tag coral">Gap</span>
-    </div>
-  </div>
-  <div class="feature-phones">
-    <div class="feature-phone tilt-left"><img src="dillyinternshiplist.png" alt="Internship List"></div>
-    <div class="feature-phone tilt-right"><img src="dillyinternships.png" alt="Stripe Internship"></div>
-  </div>
-</div>
-
-<!-- ═══════════════ ATS SCANNER ═══════════════ -->
-<div class="feature-row reversed fade-up">
-  <div class="feature-text">
-    <div class="section-label">ATS Scanner</div>
-    <h2>Stop getting filtered by robots</h2>
-    <p>Your resume gets rejected by ATS systems before a human ever sees it. Dilly scans against Greenhouse, Workday, iCIMS, Taleo, Lever, and SuccessFactors.</p>
-    <span class="feature-tag">6 ATS systems · Real-time scoring</span>
-  </div>
-  <div class="feature-phones">
-    <div class="feature-phone feature-phone-single"><img src="dillyats.png" alt="ATS Scanner"></div>
-  </div>
-</div>
-
-<!-- ═══════════════ RESUME EDITOR ═══════════════ -->
-<div class="feature-row fade-up">
-  <div class="feature-text">
-    <div class="section-label">Resume Editor</div>
-    <h2>Every bullet gets a score</h2>
-    <p>Edit your resume with live scoring. Each bullet graded. See what "Good" looks like vs "Needs work." AI rewrites with quantified impact.</p>
-    <span class="feature-tag">Live bullet scoring · AI rewrites</span>
-  </div>
-  <div class="feature-phones">
-    <div class="feature-phone feature-phone-single"><img src="dillyresumeeditor.png" alt="Resume Editor"></div>
-  </div>
-</div>
-
-<!-- ═══════════════ SOCIAL PROOF ═══════════════ -->
-<div class="section-dark fade-up">
-  <div class="section-inner" style="text-align:center;">
-    <div class="section-label">Outcomes</div>
-    <div class="section-title">Results that compound</div>
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-num gold">3×</div>
-        <div class="stat-desc">More interview callbacks after targeted edits</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num green">24/7</div>
-        <div class="stat-desc">Career coaching in your pocket — no office hours</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num blue">6 sec</div>
-        <div class="stat-desc">Recruiters skim in 6 seconds. Make every line count.</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num coral">0</div>
-        <div class="stat-desc">Data sold. Ever. Your resume stays yours.</div>
+    <div class="hero-scrim" aria-hidden="true"></div>
+    <div class="hero-content hero-content--fullbleed">
+      <header class="site-nav site-nav--hero">
+        <a class="logo-lockup" href="index.html">
+          <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+        </a>
+        <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+        <nav class="nav-glass nav-glass--hero" aria-label="Primary">
+          <ul>
+            <li class="nav-dropdown">
+              <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+              <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+                <div class="nav-dropdown-inner">
+                  <div class="nav-dropdown-col">
+                    <span class="nav-dropdown-label">Your resume</span>
+                    <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                    <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                    <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                    <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li class="nav-dropdown">
+              <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+              <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+                <div class="nav-dropdown-inner">
+                  <div class="nav-dropdown-col">
+                    <span class="nav-dropdown-label">Search and track</span>
+                    <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                    <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                    <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                    <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li class="nav-dropdown">
+              <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+              <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+                <div class="nav-dropdown-inner">
+                  <div class="nav-dropdown-col">
+                    <span class="nav-dropdown-label">Guidance</span>
+                    <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                    <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li class="nav-dropdown">
+              <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+              <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+                <div class="nav-dropdown-inner">
+                  <div class="nav-dropdown-col">
+                    <span class="nav-dropdown-label">Decide</span>
+                    <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                    <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li><a class="nav-item" href="faq.html">FAQ</a></li>
+            <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+            <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+          </ul>
+        </nav>
+        <div class="nav-cta-row" style="display:flex;align-items:center;gap:1rem"><a href="https://www.instagram.com/joindilly" target="_blank" rel="noopener" aria-label="Dilly on Instagram" style="display:flex;align-items:center;color:inherit;opacity:0.6;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+          <a class="btn btn-primary btn-hero-cta" href="https://app.trydilly.com/">Start free</a>
+        </div>
+      </header>
+      <div class="hero-inner hero-inner--fullbleed">
+        <div class="hero-copy-cluster">
+          <p class="hero-kicker">Pre-seed · Launching April 2026</p>
+          <h1 class="hero-title hero-title--fullbleed">See how competitive you really are</h1>
+          <div class="hero-accent" aria-hidden="true"></div>
+          <p class="hero-lead hero-lead--fullbleed">Upload your resume, get scored across Smart, Grit, and Build, see where you stand against real internships, and get AI coaching that closes your gaps: the career center you were promised, in your pocket.</p>
+          <div class="hero-actions hero-actions--fullbleed">
+            <a class="btn btn-primary btn-hero-primary" href="https://app.trydilly.com/">Start free</a>
+            <a class="btn btn-ghost btn-hero-secondary" href="quiz.html">Take the quiz</a>
+          </div>
+          <div class="hero-meta hero-meta--fullbleed">
+            <div><strong class="mono">2,263:1</strong> student to advisor ratio</div>
+            <div><strong class="mono">20M</strong> US undergrads</div>
+            <div><strong class="mono">6</strong> ATS systems scanned</div>
+            <div><strong class="mono">.edu</strong> required to join</div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- ═══════════════ MORE FEATURES ═══════════════ -->
-<section class="section fade-up" style="text-align:center;">
-  <div class="section-label">Everything Else</div>
-  <div class="section-title">And there's more inside</div>
-  <div class="more-grid">
-    <div class="more-item fade-up stagger-1">
-      <div class="more-phone"><img src="dillyrank.png" alt="Leaderboard"></div>
-      <h4>Leaderboard</h4>
-      <p>See where you rank</p>
+
+  <section class="section verification-fair-section" id="verified-pool" aria-labelledby="verified-pool-heading">
+    <div class="section-inner">
+      <div class="section-head">
+        <p class="section-eyebrow">A fairer playing field</p>
+        <h2 class="section-title" id="verified-pool-heading">Real students. Not noise.</h2>
+        <p class="section-desc">Open job boards let anyone sign up, so inboxes fill with spray-and-pray apps, bots, and profiles that do not hold up. Real students compete in a polluted pool. Dilly is built for the cohort campus hiring is supposed to serve.</p>
+      </div>
+      <blockquote class="verification-quote">
+        <p>“Roughly six in ten applications we see through the big open boards are junk, automated volume, filler, or materials that do not match reality. The people who did the work still vanish in that pile.”</p>
+        <cite>Hiring manager, early-career recruiting</cite>
+      </blockquote>
+      <div class="verification-split">
+        <div>
+          <h3>Why applying can feel hopeless</h3>
+          <p>Platforms like LinkedIn and Handshake optimize for reach, not proof of student status. That openness is why spam applications and questionable profiles are common, and why silence in your inbox is not always about you. It is often a numbers game where signal drowns.</p>
+        </div>
+        <div>
+          <h3>How Dilly changes the math</h3>
+          <p>You need a <strong>.edu</strong> email to sign up. Everyone on Dilly is a <strong>verified student at the gate</strong>. When recruiters use Dilly or see a Dilly applicant, they are not guessing whether they are looking at the open-internet flood, they are looking at enrolled students. Your application competes with peers, not with automation at scale.</p>
+        </div>
+      </div>
     </div>
-    <div class="more-item fade-up stagger-2">
-      <div class="more-phone"><img src="dillyinternshiptracker.png" alt="Tracker"></div>
-      <h4>Tracker</h4>
-      <p>Pipeline CRM</p>
+  </section>
+
+  <!-- ═══════════════ SCREENSHOT CAROUSEL ═══════════════ -->
+  <section style="padding:clamp(5rem,10vw,8rem) 0;background:#fff;border-top:1px solid rgba(0,0,0,0.06)">
+    <div style="max-width:1200px;margin:0 auto;padding:0 clamp(1.5rem,5vw,4rem);text-align:center;margin-bottom:3.5rem">
+      <p style="font-family:Montserrat,sans-serif;font-size:0.7rem;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:#2B3A8E;margin:0 0 1rem">The full picture</p>
+      <h2 style="font-family:Cinzel,Georgia,serif;font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:700;color:#001b44;margin:0">Every tool. One platform.</h2>
+      <p style="font-size:1rem;line-height:1.75;color:rgba(26,26,34,0.6);max-width:500px;margin:1rem auto 0">Built for the work of getting hired  -  not just the resume.</p>
     </div>
-    <div class="more-item fade-up stagger-3">
-      <div class="more-phone"><img src="dillycalendar.png" alt="Calendar"></div>
-      <h4>Calendar</h4>
-      <p>Deadlines & events</p>
+    <div style="position:relative;overflow:hidden" id="dilly-carousel">
+      <div id="carousel-track" style="display:flex;transition:transform 0.45s cubic-bezier(0.4,0,0.2,1);will-change:transform">
+        <div style="min-width:100%;padding:0 clamp(1.5rem,5vw,4rem);box-sizing:border-box">
+          <img src="screenshot-ats.png" alt="ATS Scanner" style="width:100%;max-width:1100px;display:block;margin:0 auto;border-radius:16px;box-shadow:0 24px 80px rgba(0,20,60,0.13)">
+          <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">ATS Scanner  -  see exactly what recruiters see</p>
+        </div>
+        <div style="min-width:100%;padding:0 clamp(1.5rem,5vw,4rem);box-sizing:border-box">
+          <img src="screenshot-resume.png" alt="Resume Editor" style="width:100%;max-width:1100px;display:block;margin:0 auto;border-radius:16px;box-shadow:0 24px 80px rgba(0,20,60,0.13)">
+          <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">Resume Editor  -  every bullet scored and improved</p>
+        </div>
+        <div style="min-width:100%;padding:0 clamp(1.5rem,5vw,4rem);box-sizing:border-box">
+          <img src="screenshot-score.png" alt="Dilly Score" style="width:100%;max-width:1100px;display:block;margin:0 auto;border-radius:16px;box-shadow:0 24px 80px rgba(0,20,60,0.13)">
+          <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">Dilly Score  -  know where you stand vs your cohort</p>
+        </div>
+        <div style="min-width:100%;padding:0 clamp(1.5rem,5vw,4rem);box-sizing:border-box">
+          <img src="screenshot-jobs.png" alt="Jobs" style="width:100%;max-width:1100px;display:block;margin:0 auto;border-radius:16px;box-shadow:0 24px 80px rgba(0,20,60,0.13)">
+          <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">Internship matching  -  roles ranked for your exact profile</p>
+        </div>
+        <div style="min-width:100%;padding:0 clamp(1.5rem,5vw,4rem);box-sizing:border-box">
+          <img src="screenshot-tracker.png" alt="Application Tracker" style="width:100%;max-width:1100px;display:block;margin:0 auto;border-radius:16px;box-shadow:0 24px 80px rgba(0,20,60,0.13)">
+          <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">Application tracker  -  your full pipeline in one place</p>
+        </div>
+      </div>
+      <button onclick="carouselPrev()" aria-label="Previous" style="position:absolute;left:clamp(0.5rem,2vw,1.5rem);top:45%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#001b44;z-index:10">&#8592;</button>
+      <button onclick="carouselNext()" aria-label="Next" style="position:absolute;right:clamp(0.5rem,2vw,1.5rem);top:45%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#001b44;z-index:10">&#8594;</button>
     </div>
-    <div class="more-item fade-up stagger-4">
-      <div class="more-phone"><img src="dillyaiscores.png" alt="AI Coaching"></div>
-      <h4>AI Coaching</h4>
-      <p>Job-specific advice</p>
+    <div style="display:flex;justify-content:center;gap:0.5rem;margin-top:2rem">
+      <button onclick="carouselGo(0)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:1;transition:opacity 0.2s"></button>
+      <button onclick="carouselGo(1)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
+      <button onclick="carouselGo(2)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
+      <button onclick="carouselGo(3)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
+      <button onclick="carouselGo(4)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
     </div>
-  </div>
-</section>
+  </section>
+  <script>
+  (function(){
+    var idx=0,total=5;
+    var track=document.getElementById('carousel-track');
+    var dots=document.querySelectorAll('.cdot');
+    function go(n){
+      idx=(n+total)%total;
+      track.style.transform='translateX(-'+idx*100+'%)';
+      dots.forEach(function(d,i){d.style.opacity=i===idx?'1':'0.2'});
+    }
+    window.carouselNext=function(){go(idx+1)};
+    window.carouselPrev=function(){go(idx-1)};
+    window.carouselGo=function(n){go(n)};
+    var timer=setInterval(function(){go(idx+1)},5000);
+    var el=document.getElementById('dilly-carousel');
+    el.addEventListener('mouseenter',function(){clearInterval(timer)});
+    el.addEventListener('mouseleave',function(){timer=setInterval(function(){go(idx+1)},5000)});
+    track.addEventListener('touchstart',function(e){window._csx=e.touches[0].clientX},{passive:true});
+    track.addEventListener('touchend',function(e){var dx=e.changedTouches[0].clientX-window._csx;if(Math.abs(dx)>40){dx<0?go(idx+1):go(idx-1)}},{passive:true});
+  })();
+  </script>
 
-<!-- ═══════════════ AMODEI QUOTE ═══════════════ -->
-<section class="amodei-section fade-up" style="padding-top:40px; padding-bottom:100px;">
-  <div class="amodei-inner">
-    <div class="amodei-eyebrow">
-      <span class="warning-icon">!</span>
-      The world is changing
+  <section class="section" id="personas">
+    <div class="section-inner" data-tabs>
+      <div class="section-head">
+        <p class="section-eyebrow">How can Dilly help you?</p>
+        <h2 class="section-title">Pick who you are</h2>
+        <p class="section-desc">We will show you exactly what Dilly does for your situation: same platform, personalized path.</p>
+      </div>
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab-btn is-active" data-tab="p-student" role="tab" aria-selected="true">Student</button>
+        <button type="button" class="tab-btn" data-tab="p-hs" role="tab" aria-selected="false">High schooler</button>
+        <button type="button" class="tab-btn" data-tab="p-district" role="tab" aria-selected="false">School district</button>
+        <button type="button" class="tab-btn" data-tab="p-parent" role="tab" aria-selected="false">Parent</button>
+        <button type="button" class="tab-btn" data-tab="p-recruiter" role="tab" aria-selected="false">Recruiter</button>
+        <button type="button" class="tab-btn" data-tab="p-job" role="tab" aria-selected="false">Job seeker</button>
+        <button type="button" class="tab-btn" data-tab="p-employed" role="tab" aria-selected="false">Employed</button>
+      </div>
+      <div id="p-student" class="tab-panel persona-card is-active" role="tabpanel">
+        <h3>College student</h3>
+        <p>Get a career readiness score, match to real internships, and AI resume rewrites tuned to your track, in a network where everyone had to verify as a student, so your effort is not buried under open-board noise.</p>
+        <ul class="persona-list">
+          <li>Dilly Score across Smart, Grit, and Build</li>
+          <li>Gap analysis per listing + <strong>Tailor resume</strong> from their real experience (or paste any job)</li>
+          <li>ATS formatting intelligence</li>
+          <li><strong>.edu-only</strong> community: you compete with verified students, not the whole internet</li>
+        </ul>
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Get your score</a>
+      </div>
+      <div id="p-hs" class="tab-panel persona-card" role="tabpanel">
+        <h3>High school student</h3>
+        <p>Get a head start before college applications. Build your score, discover what strong candidates actually look like, and show up freshman year knowing exactly what to do first.</p>
+        <ul class="persona-list">
+          <li>Dilly Score across Smart, Grit, and Build, see where you stand before freshman year</li>
+          <li>Understand what recruiters look for so you can build toward it early</li>
+          <li>AI coach that gives real, specific advice, not generic motivational tips</li>
+          <li>Start building your resume before most students even think about it</li>
+        </ul>
+        <span class="btn btn-ghost" style="pointer-events:none;opacity:0.7">Coming soon</span>
+      </div>
+      <div id="p-district" class="tab-panel persona-card" role="tabpanel">
+        <h3>School district</h3>
+        <p>Give every student in your district a career readiness baseline. Track progress across cohorts, identify gaps early, and show outcomes that matter to families and boards.</p>
+        <ul class="persona-list">
+          <li>Cohort-level readiness dashboard across schools</li>
+          <li>Early signal on which students need college-prep support</li>
+          <li>Supplement your counselors, not replace them</li>
+          <li>Shareable outcomes data for district reporting</li>
+        </ul>
+        <span class="btn btn-ghost" style="pointer-events:none;opacity:0.7">Coming soon</span>
+      </div>
+      <div id="p-parent" class="tab-panel persona-card" role="tabpanel">
+        <h3>Parent</h3>
+        <p>See your child’s career readiness score, track progress, and know they are on the right path.</p>
+        <ul class="persona-list">
+          <li>Readiness visibility over time</li>
+          <li>Clear milestones and gaps</li>
+          <li>Peace of mind without micromanaging</li>
+        </ul>
+        <span class="btn btn-ghost" style="pointer-events:none;opacity:0.7">Coming soon</span>
+      </div>
+      <div id="p-recruiter" class="tab-panel persona-card" role="tabpanel">
+        <h3>I hire or recruit</h3>
+        <p>Browse pre-scored candidates ranked by readiness. Every account is tied to a <strong>.edu</strong>, so your pipeline is students who passed verification, not the open-board flood.</p>
+        <ul class="persona-list">
+          <li>Ranked pipeline by readiness</li>
+          <li>100% student-verified at sign-up (enrolled cohort, not anonymous profiles)</li>
+          <li>Less noise, more signal than high-volume public boards</li>
+          <li>Built for high-volume campus hiring</li>
+        </ul>
+        <span class="btn btn-ghost" style="pointer-events:none;opacity:0.7">Coming soon</span>
+      </div>
+      <div id="p-job" class="tab-panel persona-card" role="tabpanel">
+        <h3>Looking for a job</h3>
+        <p>See where you stand, get AI resume help, and find opportunities matched to your strengths.</p>
+        <ul class="persona-list">
+          <li>Role-level readiness</li>
+          <li>Targeted rewrites and plans</li>
+          <li>Application tracker</li>
+        </ul>
+        <span class="btn btn-ghost" style="pointer-events:none;opacity:0.7">Coming soon</span>
+      </div>
+      <div id="p-employed" class="tab-panel persona-card" role="tabpanel">
+        <h3>Currently employed</h3>
+        <p>Future-proof your career. See how AI is changing your field and what skills to build next.</p>
+        <ul class="persona-list">
+          <li>Skill gap visibility</li>
+          <li>Benchmark against cohort trends</li>
+          <li>Coaching with your real profile</li>
+        </ul>
+        <span class="btn btn-ghost" style="pointer-events:none;opacity:0.7">Coming soon</span>
+      </div>
     </div>
-    <blockquote class="amodei-quote">
-      "I worry that entry-level white-collar jobs are going to be first augmented, but before long <span class="highlight">replaced by AI systems</span>… We may indeed have a <span class="highlight">serious employment crisis</span> on our hands."
-    </blockquote>
-    <div class="amodei-attribution">
-      <strong>Dario Amodei</strong> — CEO, Anthropic
+  </section>
+
+
+  <section class="section toolkit-showcase" aria-labelledby="toolkit-heading">
+    <div class="toolkit-showcase-bg" aria-hidden="true"></div>
+    <span class="toolkit-watermark font-display" aria-hidden="true">Toolkit</span>
+    <div class="section-inner toolkit-showcase-inner">
+      <header class="toolkit-showcase-head">
+        <div class="toolkit-showcase-intro">
+          <p class="section-eyebrow">Product depth</p>
+          <h2 id="toolkit-heading" class="section-title toolkit-showcase-title">Everything inside the toolkit</h2>
+          <p class="section-desc toolkit-showcase-lead">Resume intelligence, internship matching, six-engine ATS simulation, and coaching tied to your real applications, one app, one spine, one score that moves when you do.</p>
+        </div>
+        <ul class="toolkit-kpis" aria-label="Platform scale">
+          <li class="toolkit-kpi">
+            <span class="toolkit-kpi-value mono">6</span>
+            <span class="toolkit-kpi-label">ATS engines</span>
+          </li>
+          <li class="toolkit-kpi">
+            <span class="toolkit-kpi-value mono">22</span>
+            <span class="toolkit-kpi-label">cohort fields</span>
+          </li>
+          <li class="toolkit-kpi">
+            <span class="toolkit-kpi-value mono">1</span>
+            <span class="toolkit-kpi-label">unified score</span>
+          </li>
+        </ul>
+      </header>
+
+      <div class="toolkit-bento" data-toolkit-bento>
+        <a class="toolkit-card toolkit-card--hero" href="feature-dilly-score.html">
+          <span class="toolkit-card-shine" aria-hidden="true"></span>
+          <span class="toolkit-card-idx" aria-hidden="true">01</span>
+          <div class="toolkit-card-icon" aria-hidden="true">
+            <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 36V12l16-6 16 6v24l-16 6-16-6Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M24 6v36M8 12l16 8 16-8" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity="0.5"/><circle cx="24" cy="22" r="3" fill="currentColor" opacity="0.85"/></svg>
+          </div>
+          <span class="toolkit-card-tag">Core</span>
+          <h3 class="toolkit-card-title">Resume audit &amp; Dilly Score</h3>
+          <p class="toolkit-card-desc">Weighted 0, 100 dimensions with track-aware signals so you always know what to fix first.</p>
+          <div class="toolkit-card-meter" aria-hidden="true">
+            <span class="toolkit-meter-seg toolkit-meter-seg--smart">Smart</span>
+            <span class="toolkit-meter-seg toolkit-meter-seg--grit">Grit</span>
+            <span class="toolkit-meter-seg toolkit-meter-seg--build">Build</span>
+          </div>
+          <div class="toolkit-card-chips">
+            <span class="chip">Smart</span><span class="chip">Grit</span><span class="chip">Build</span>
+          </div>
+          <span class="toolkit-card-link">Explore <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="toolkit-card toolkit-card--ats" href="feature-ats.html">
+          <span class="toolkit-card-shine" aria-hidden="true"></span>
+          <span class="toolkit-card-idx" aria-hidden="true">02</span>
+          <div class="toolkit-card-icon" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="14" width="28" height="22" rx="2" stroke="currentColor" stroke-width="1.35"/><path d="M14 20h20M14 26h12M14 32h16" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity="0.55"/><path d="M32 8v6M36 12l-8 8" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg>
+          </div>
+          <span class="toolkit-card-tag">ATS</span>
+          <h3 class="toolkit-card-title">Pass the robots</h3>
+          <p class="toolkit-card-desc">Six vendor-style scans plus parse preview, fix what breaks before a human opens the file.</p>
+          <div class="toolkit-card-chips">
+            <span class="chip">6 systems</span><span class="chip">Parse preview</span>
+          </div>
+          <span class="toolkit-card-link">Open scanner <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="toolkit-card toolkit-card--jobs" href="feature-internships.html">
+          <span class="toolkit-card-shine" aria-hidden="true"></span>
+          <span class="toolkit-card-idx" aria-hidden="true">03</span>
+          <div class="toolkit-card-icon" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 18h20v18H14V18Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M18 18v-4a6 6 0 0 1 12 0v4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/><path d="M16 26h16M16 30h10" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity="0.55"/><circle cx="30" cy="34" r="2" fill="currentColor"/></svg>
+          </div>
+          <span class="toolkit-card-tag">Jobs</span>
+          <h3 class="toolkit-card-title">Internship intelligence</h3>
+          <p class="toolkit-card-desc">Per-role readiness, <strong>Tailor resume</strong> from your experience, and gaps you can close, including roles you paste in yourself.</p>
+          <div class="toolkit-card-chips">
+            <span class="chip">Tailor resume</span><span class="chip">Gap analysis</span>
+          </div>
+          <span class="toolkit-card-link">See matching <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="toolkit-card toolkit-card--editor" href="feature-resume-editor.html">
+          <span class="toolkit-card-shine" aria-hidden="true"></span>
+          <span class="toolkit-card-idx" aria-hidden="true">04</span>
+          <div class="toolkit-card-icon" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28 10l10 10-16 16H12v-10L28 10Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M22 16l10 10M18 28l4 4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity="0.45"/></svg>
+          </div>
+          <span class="toolkit-card-tag">Editor</span>
+          <h3 class="toolkit-card-title">Live bullet scoring</h3>
+          <p class="toolkit-card-desc">Every line graded as you type, with AI rewrites aimed at quantified impact.</p>
+          <div class="toolkit-card-chips">
+            <span class="chip">Real-time</span><span class="chip">Before / after</span>
+          </div>
+          <span class="toolkit-card-link">Open editor <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="toolkit-card toolkit-card--coach" href="feature-ai-coach.html">
+          <span class="toolkit-card-shine" aria-hidden="true"></span>
+          <span class="toolkit-card-idx" aria-hidden="true">05</span>
+          <div class="toolkit-card-icon" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="19" cy="13" r="7" stroke="currentColor" stroke-width="1.35"/><path d="M6 40c0-8 5.8-13 13-13s13 5 13 13" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/><rect x="31" y="21" width="11" height="15" rx="2" stroke="currentColor" stroke-width="1.35"/><path d="M34 26h5M34 30h5M34 34h3" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/><path d="M34 21v-2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg>
+          </div>
+          <span class="toolkit-card-tag">AI</span>
+          <h3 class="toolkit-card-title">Dilly coach</h3>
+          <p class="toolkit-card-desc">One thread that already knows your resume, scores, applications, and deadlines.</p>
+          <div class="toolkit-card-chips">
+            <span class="chip">Mock interviews</span><span class="chip">Plans</span>
+          </div>
+          <span class="toolkit-card-link">Meet the coach <span aria-hidden="true">→</span></span>
+        </a>
+
+        <a class="toolkit-card toolkit-card--more" href="features.html">
+          <span class="toolkit-card-shine" aria-hidden="true"></span>
+          <span class="toolkit-card-idx" aria-hidden="true">06</span>
+          <div class="toolkit-card-icon" aria-hidden="true">
+            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 14h8v8h-8v-8ZM28 14h8v8h-8v-8ZM12 28h8v8h-8v-8ZM28 28h8v8h-8v-8Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round" opacity="0.9"/><path d="M20 18h8M20 32h8M18 20v8M32 20v8" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity="0.35"/></svg>
+          </div>
+          <span class="toolkit-card-tag">More</span>
+          <h3 class="toolkit-card-title">Leaderboard, tracker, calendar</h3>
+          <p class="toolkit-card-desc">Peer rankings by track, pipeline CRM from Saved to Offer, and nudges that respect your week.</p>
+          <div class="toolkit-card-chips">
+            <span class="chip">Full feature hub →</span>
+          </div>
+          <span class="toolkit-card-link">View everything <span aria-hidden="true">→</span></span>
+        </a>
+      </div>
     </div>
-    <div class="amodei-source">Fox Interview, March 2026</div>
-    <div class="amodei-cta-text">The students who adapt will win. The rest won't.</div>
-    <div class="amodei-cta-sub">
-      Dilly doesn't just scan your resume, it shows you exactly where you stand, what's missing, and how to close the gap before AI closes the door.
+  </section>
+
+  <section class="section" style="background:var(--surface)">
+    <div class="section-inner">
+      <div class="split-card surface-panel">
+        <div class="split-visual split-visual--ratio" role="img" aria-label="1 career advisor for every 2,263 students">
+          <span class="split-ratio-value mono">1:2,263</span>
+        </div>
+        <div class="split-body">
+          <h2>The average career advisor to student ratio</h2>
+          <p>You are on your own. That is why we built Dilly. Most career centers cannot scale to real 1:1 guidance; Dilly gives you a continuous read on how you compare and what to do next.</p>
+          <p>Entry-level roles are shifting fast. The students who adapt early will win the interviews everyone else is guessing about.</p>
+          <a class="btn btn-primary" href="https://app.trydilly.com/">See where you stand</a>
+        </div>
+      </div>
     </div>
-    <div class="amodei-btn-row">
-      <a href="#quiz" class="btn-primary">Get Your Dilly Score →</a>
+  </section>
+
+  <section class="section">
+    <div class="section-inner">
+      <div class="stats-band">
+        <div class="stat-item"><strong>50%</strong><span>Entry-level jobs at risk from AI disruption. Know your edge</span></div>
+        <div class="stat-item"><strong>6 sec</strong><span>Average recruiter skim before yes or no</span></div>
+        <div class="stat-item"><strong>0</strong><span>Data sold. Your resume stays yours</span></div>
+        <div class="stat-item"><strong>3×</strong><span>More callbacks after targeted edits (typical user outcome)</span></div>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ═══════════════ COMPARISON TABLE ═══════════════ -->
-<div class="section-dark fade-up">
-  <div class="section-inner" style="text-align:center;">
-    <div class="section-label">Why Dilly</div>
-    <div class="section-title">Not another resume scanner</div>
-    <table class="compare-table">
-      <thead>
-        <tr>
-          <th>Feature</th>
-          <th class="dilly-col">Dilly</th>
-          <th>Jobscan</th>
-          <th>VMock</th>
-          <th>ChatGPT</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Three-dimension scoring</td><td class="check dilly-col">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
-        <tr><td>ATS scanning (6 systems)</td><td class="check dilly-col">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
-        <tr><td>Real internship matching</td><td class="check dilly-col">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
-        <tr><td>AI coaching with context</td><td class="check dilly-col">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="tilde">~</td></tr>
-        <tr><td>Live bullet scoring</td><td class="check dilly-col">✓</td><td class="cross">✗</td><td class="check">✓</td><td class="cross">✗</td></tr>
-        <tr><td>Application tracker</td><td class="check dilly-col">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
-        <tr><td>Peer leaderboard</td><td class="check dilly-col">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
-        <tr><td>Mobile-first</td><td class="check dilly-col">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td></tr>
-        <tr><td>Price</td><td class="dilly-col">$9.99/mo</td><td>$49.95/mo</td><td>$119/yr</td><td>$20/mo</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- ═══════════════ PRICING ═══════════════ -->
-<section class="section fade-up" id="pricing" style="text-align:center;">
-  <div class="section-label">Pricing</div>
-  <div class="section-title">Cheaper than a DoorDash order</div>
-  <div class="section-subtitle" style="margin:0 auto 0;">One subscription. Every tool you need to get hired. No contracts, cancel anytime.</div>
-  <div class="pricing-grid">
-    <div class="price-card">
-      <div class="price-tier">dilly lite</div>
-      <div class="price-amount">$0</div>
-      <div class="price-note">Forever free</div>
-      <ul>
-        <li>1 resume audit</li>
-        <li>Browse all internships</li>
-        <li>1 ATS audit</li>
-        <li>Readiness badges</li>
-        <li>Basic profile</li>
-      </ul>
-      <a href="#quiz" class="btn-secondary" style="width:100%;justify-content:center;">Get Started Free</a>
+  <section class="section" id="compare" style="background:var(--surface)">
+    <div class="section-inner">
+      <div class="section-head">
+        <p class="section-eyebrow">Compare</p>
+        <h2 class="section-title">Not another generic resume scanner</h2>
+      </div>
+      <div class="compare-wrap surface-panel">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Dilly</th>
+              <th>Jobscan</th>
+              <th>VMock</th>
+              <th>Quinncia</th>
+              <th>Claude / ChatGPT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="compare-row--key"><td><strong>Smart, Grit &amp; Build scoring (track-weighted)</strong></td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td></tr>
+            <tr><td>ATS &amp; formatting intelligence (multi-vendor style)</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-partial">~</td><td class="compare-yes">✓</td><td class="compare-no">✗</td></tr>
+            <tr><td>Resume vs job description match</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-partial">~</td><td class="compare-partial">~</td></tr>
+            <tr class="compare-row--key"><td><strong>Tailor resume per posting from your real profile</strong></td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-partial">~</td><td class="compare-partial">~</td><td class="compare-partial">~</td></tr>
+            <tr class="compare-row--key"><td><strong>Curated listings + fit labels (Ready / Almost / Gap)</strong></td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td></tr>
+            <tr><td>Full-profile coach (resume + scores + apps + deadlines)</td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-partial">~</td><td class="compare-partial">~</td><td class="compare-partial">~</td></tr>
+            <tr><td>Live bullet scoring &amp; rewrite suggestions</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td></tr>
+            <tr class="compare-row--key"><td><strong>Application tracker + career calendar</strong></td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td></tr>
+            <tr class="compare-row--key"><td><strong>Peer leaderboard &amp; track rankings</strong></td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-partial">~</td><td class="compare-partial">~</td><td class="compare-no">✗</td></tr>
+            <tr><td>AI mock interviews</td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-partial">~</td></tr>
+            <tr><td>Native mobile apps (iOS &amp; Android)</td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td></tr>
+            <tr><td>From</td><td class="mono">$9.99/mo</td><td class="mono">$49.95/mo</td><td class="mono">$119/yr</td><td>Campus pricing</td><td>Free + paid tiers</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:1rem;font-size:0.72rem;color:rgba(0,0,0,0.4);line-height:1.5">LinkedIn Premium ($79.99/mo) leads on network size and job board reach — it's the best tool if you already know what you're doing. Dilly is built for the step before that: figuring out where you actually stand.</p>
+      </div>
     </div>
-    <div class="price-card featured">
-      <div class="price-tier">Dilly</div>
-      <div class="price-amount">$9.99<span>/mo</span></div>
-      <ul>
-        <li>Unlimited resume audits</li>
-        <li>Unlimited AI coaching</li>
-        <li>ATS scanning (6 systems)</li>
-        <li>Gap analysis per job</li>
-        <li>Ask Dilly on any listing</li>
-        <li>Resume Editor with scoring</li>
-        <li>Application Tracker</li>
-        <li>Calendar & deadlines</li>
-        <li>Interview prep mode</li>
-        <li>Leaderboard ranking</li>
-        <li>Proactive nudges</li>
-        <li>Score history & trends</li>
-      </ul>
-      <a href="#quiz" class="btn-primary" style="width:100%;justify-content:center;">Join as Founding Member →</a>
+  </section>
+
+  <section class="cta-band" id="quiz">
+    <h2>Ready to see where you stand?</h2>
+    <p>No signup required for the guided path quiz. Get a personalized read on what to do first.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center">
+      <a class="btn btn-primary" href="quiz.html">Take the full quiz</a>
+      <a class="btn btn-ghost" href="https://app.trydilly.com/">Open app</a>
     </div>
-  </div>
-</section>
-
-<!-- ═══════════════ FAQ ═══════════════ -->
-<section class="section fade-up" id="faq" style="text-align:center;">
-  <div class="section-label">FAQ</div>
-  <div class="section-title">Questions?</div>
-  <div class="faq-list" style="text-align:left;">
-    <details class="faq-item">
-      <summary>How does scoring work?</summary>
-      <p>Dilly scores your resume across three dimensions: Smart (academic rigor, GPA signals, certifications), Grit (leadership, quantified impact, extracurriculars), and Build (track-specific proof — deployed projects, internships, clinical hours). Each dimension is scored out of 100, and your composite Dilly Score tells you exactly where you stand.</p>
-    </details>
-    <details class="faq-item">
-      <summary>Is my data safe?</summary>
-      <p>.edu email required. We never sell your data. Your resume is encrypted and stays yours. No recruiter sees anything without your explicit opt-in.</p>
-    </details>
-    <details class="faq-item">
-      <summary>What if I don't have much experience?</summary>
-      <p>That's exactly when Dilly helps the most. Most students don't know what's missing — Dilly shows you the specific gaps and gives you a concrete plan to close them, even if you're starting from scratch.</p>
-    </details>
-    <details class="faq-item">
-      <summary>How is Dilly different from ChatGPT?</summary>
-      <p>ChatGPT gives generic advice. Dilly knows your actual resume, your scores, your applications, your deadlines, and your target companies. It gives you specific, actionable coaching — not "add more action verbs."</p>
-    </details>
-    <details class="faq-item">
-      <summary>Can I cancel anytime?</summary>
-      <p>Yes. Cancel through the App Store anytime. No lock-in. Your data stays even if you downgrade to the free tier.</p>
-    </details>
-  </div>
-</section>
-
-<!-- ═══════════════ FINAL CTA ═══════════════ -->
-<section class="final-cta fade-up" id="quiz">
-  <h2>Your career is a system. Build it like one.</h2>
-  <p>Join students who run Dilly before every application.</p>
-  <a href="#" class="btn-primary">Get Your Dilly Score →</a>
-</section>
-
-<!-- ═══════════════ FOOTER ═══════════════ -->
-<footer>
-  <p class="footer-tagline">© 2026 Dilly. The career center in your pocket.</p>
-  <p>.edu verified · No data sold · Made with care</p>
-</footer>
-
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => { if(entry.isIntersecting) entry.target.classList.add('visible'); });
-  }, { threshold: 0.1 });
-  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
-</script>
-<script>
-
-const C={
-cs:{name:"Computer Science / Software Engineering",short:"CS",base:{a:20,ad:85,d:95},
-qs:[
-{q:"AI can now write production-quality code. How does this change the role of a software engineer?",o:[
-{t:"The job shifts to architecture and system design — AI handles implementation, humans handle decisions",s:{a:-10,ad:15,d:10}},
-{t:"Engineers become AI managers — reviewing, debugging, and orchestrating AI-generated code",s:{a:-15,ad:20,d:5}},
-{t:"The best engineers will be the ones who deeply understand fundamentals, regardless of AI tools",s:{a:5,ad:5,d:10}},
-{t:"Software engineering becomes more about product thinking and less about writing code",s:{a:-5,ad:10,d:5}}
-]},
-{q:"You're choosing your first full-time role after graduation. Which matters most to you?",o:[
-{t:"Working on cutting-edge technology at a company pushing boundaries",s:{a:-15,ad:15,d:15}},
-{t:"Stability and a clear career ladder at a large, established company",s:{a:10,ad:-5,d:5}},
-{t:"Building something from scratch at a startup where I wear many hats",s:{a:-5,ad:15,d:5}},
-{t:"High compensation and prestige — I want the most competitive offer possible",s:{a:0,ad:5,d:10}}
-]},
-{q:"A junior developer at your company gets replaced by an AI coding tool. What's your reaction?",o:[
-{t:"Inevitable — the role was mostly translating specs into code. Higher-level work is safe.",s:{a:-5,ad:10,d:5}},
-{t:"Concerning — it shows that even technical roles aren't immune to automation",s:{a:10,ad:0,d:-5}},
-{t:"An opportunity — someone needs to build, train, and manage these AI tools",s:{a:-15,ad:15,d:10}},
-{t:"Overhyped — AI handles simple tasks but complex engineering still needs humans",s:{a:5,ad:-5,d:5}}
-]},
-{q:"What does 'proof that you can engineer' look like in 2026?",o:[
-{t:"Deployed products with real users — the code matters less than the impact",s:{a:-10,ad:10,d:10}},
-{t:"Deep contributions to complex systems — performance optimization, distributed systems",s:{a:-5,ad:10,d:15}},
-{t:"Open source contributions and technical writing that shows how you think",s:{a:0,ad:10,d:5}},
-{t:"Competitive programming and algorithmic problem solving at a high level",s:{a:5,ad:0,d:5}}
-]},
-{q:"It's 2030. What does the average software engineering job look like?",o:[
-{t:"Engineers mostly prompt and guide AI systems, reviewing output and making architectural calls",s:{a:-15,ad:15,d:5}},
-{t:"The job looks similar to today but with better tools — fundamentals still matter most",s:{a:5,ad:0,d:10}},
-{t:"Only specialists survive — generalist 'full-stack' developers are fully automated",s:{a:10,ad:5,d:-5}},
-{t:"Engineering merges with product management — the line between building and deciding disappears",s:{a:-5,ad:10,d:5}}
-]}
-],r:{f:["AI code generation is real but engineering is more than writing code","Junior implementation tasks face the most risk","System design, product thinking, and AI orchestration are growing"],rec:[{i:"🏗️",t:"Focus on what AI can't do: architecture decisions, user empathy, and debugging complex systems."},{i:"🤖",t:"Learn to orchestrate AI — the engineer who manages AI tools effectively is the new 10x engineer."},{i:"🚀",t:"Ship products, not just code. Impact matters more than implementation."},{i:"📊",t:"Get your full Dilly Build score to see how your projects compare to what companies actually want."}]}},
-
-biz:{name:"Business / Finance / Accounting",short:"Business",base:{a:45,ad:55,d:70},
-qs:[
-{q:"An AI tool can now build a complete financial model in 30 seconds. What becomes the valuable skill?",o:[
-{t:"Knowing which assumptions to feed the model — garbage in, garbage out",s:{a:-10,ad:15,d:10}},
-{t:"Communicating the results to stakeholders who don't speak finance",s:{a:-5,ad:10,d:5}},
-{t:"Building relationships with clients who trust your judgment, not a machine's",s:{a:-10,ad:5,d:10}},
-{t:"Understanding the business context that no model can capture",s:{a:-5,ad:10,d:5}}
-]},
-{q:"You're advising a friend choosing between two career paths in business. Which do you recommend?",o:[
-{t:"Corporate strategy at a Fortune 500 — learn how big organizations make decisions",s:{a:0,ad:5,d:10}},
-{t:"Startup operations — build the playbook for a company that doesn't have one yet",s:{a:-10,ad:15,d:5}},
-{t:"Investment banking — the hours are brutal but the skills and network are unmatched",s:{a:0,ad:5,d:10}},
-{t:"Management consulting — see 10 industries in 2 years and figure out what you love",s:{a:-5,ad:10,d:10}}
-]},
-{q:"Your accounting firm just adopted AI that automates 70% of audit procedures. What happens to junior accountants?",o:[
-{t:"They become reviewers and exception handlers — AI does the work, humans verify",s:{a:5,ad:5,d:0}},
-{t:"The role shifts to client advisory — understanding the story behind the numbers",s:{a:-10,ad:10,d:5}},
-{t:"Fewer junior roles exist, but the ones that remain are more interesting and better paid",s:{a:10,ad:5,d:-5}},
-{t:"The smart ones pivot to building and managing the AI tools that replaced the manual work",s:{a:-15,ad:15,d:10}}
-]},
-{q:"What separates a forgettable business student from one who gets recruited by top firms?",o:[
-{t:"Real experience making decisions with real money — investments, businesses, or client work",s:{a:-10,ad:10,d:10}},
-{t:"The ability to tell a compelling story with data — not just analysis, but persuasion",s:{a:-5,ad:10,d:5}},
-{t:"A network built through genuine relationships, not just LinkedIn connections",s:{a:-5,ad:5,d:10}},
-{t:"Technical skills that most business students don't have — coding, data viz, automation",s:{a:-15,ad:15,d:10}}
-]},
-{q:"It's 2030. What does entry-level finance look like?",o:[
-{t:"AI handles modeling and analysis. Humans handle judgment, ethics, and relationships.",s:{a:-5,ad:10,d:5}},
-{t:"The entry point moves up — you need 2 years of AI-augmented experience just to start",s:{a:10,ad:0,d:-5}},
-{t:"Finance merges with data science — you can't do one without understanding the other",s:{a:-10,ad:10,d:10}},
-{t:"Client-facing roles grow while back-office roles shrink dramatically",s:{a:5,ad:5,d:5}}
-]}
-],r:{f:["Routine financial analysis is being automated rapidly","Client relationships and strategic judgment can't be automated","Business students who combine finance with technology are in highest demand"],rec:[{i:"🤝",t:"Your human skills — judgment, relationships, persuasion — are your moat against AI."},{i:"💻",t:"Add one technical skill to your toolkit. Even basic Python makes you rare in business."},{i:"📈",t:"Build proof that you can make real decisions — case competitions, investments, side businesses."},{i:"📊",t:"Get your full Dilly score to see where you stand against what top firms hire for."}]}},
-
-health:{name:"Healthcare / Nursing / Pre-Med",short:"Healthcare",base:{a:10,ad:40,d:95},
-qs:[
-{q:"AI now diagnoses certain conditions more accurately than doctors. What role does the physician play?",o:[
-{t:"The translator — patients need someone to explain what the AI found and what it means for their life",s:{a:-15,ad:10,d:10}},
-{t:"The decision-maker — AI suggests, but a human must decide treatment considering the whole patient",s:{a:-10,ad:5,d:10}},
-{t:"The researcher — physicians who advance AI in medicine will define the next era of healthcare",s:{a:-10,ad:20,d:10}},
-{t:"The caregiver — the emotional and physical presence that no screen can replace",s:{a:-15,ad:0,d:5}}
-]},
-{q:"Two pre-med students apply to the same program. Same GPA, same MCAT. What actually differentiates them?",o:[
-{t:"Depth of clinical experience — not hours logged, but the complexity of what they've seen",s:{a:-5,ad:10,d:10}},
-{t:"Research with real contributions — not just washing beakers, but advancing knowledge",s:{a:-5,ad:15,d:10}},
-{t:"Leadership in healthcare settings — running a health org, organizing a clinic, managing volunteers",s:{a:-5,ad:10,d:5}},
-{t:"A unique perspective — coming from a non-traditional background that brings diversity to medicine",s:{a:0,ad:10,d:5}}
-]},
-{q:"A hospital replaces its medical coding department with AI. What does this signal for healthcare careers?",o:[
-{t:"Administrative and data-entry healthcare roles face the most risk — clinical roles are safe",s:{a:-10,ad:5,d:5}},
-{t:"It's a preview — diagnostic roles like radiology and pathology could be next",s:{a:10,ad:5,d:0}},
-{t:"Healthcare is becoming a two-track field: tech-enabled clinicians and everyone else",s:{a:0,ad:10,d:5}},
-{t:"The freed-up resources mean more investment in direct patient care roles",s:{a:-5,ad:5,d:10}}
-]},
-{q:"What kind of healthcare professional will be most valuable in 10 years?",o:[
-{t:"Clinicians who use AI as a tool — augmented diagnosis, personalized treatment plans",s:{a:-10,ad:15,d:10}},
-{t:"Specialists in areas requiring physical presence — surgery, emergency medicine, therapy",s:{a:-15,ad:0,d:10}},
-{t:"Those at the intersection of healthcare and technology — health informatics, digital health",s:{a:-5,ad:20,d:10}},
-{t:"Primary care providers — the human relationship at the center of ongoing care",s:{a:-10,ad:0,d:10}}
-]},
-{q:"You have one summer before applications. How do you spend it?",o:[
-{t:"Intensive clinical immersion — ER volunteering, shadowing multiple specialties",s:{a:-5,ad:5,d:10}},
-{t:"Research position in a lab doing work I can actually present or publish",s:{a:-5,ad:15,d:5}},
-{t:"Health tech internship — building tools that improve patient care at scale",s:{a:-5,ad:15,d:10}},
-{t:"Global health experience — working in underserved communities abroad",s:{a:-5,ad:10,d:5}}
-]}
-],r:{f:["Healthcare is one of the most AI-resistant career paths","But administrative and diagnostic roles face real automation","The best clinicians will be those who use AI as a superpower"],rec:[{i:"🏥",t:"Your career is fundamentally safe — humans will always need human care."},{i:"🔬",t:"The differentiator is depth of experience, not breadth. Go deep in clinical or research."},{i:"🤖",t:"Understanding health technology gives you an edge most clinicians won't have."},{i:"📊",t:"Get your Dilly Build score to see how your preparation compares."}]}},
-
-mktg:{name:"Marketing / Communications / Media",short:"Marketing",base:{a:50,ad:65,d:60},
-qs:[
-{q:"AI generates a month of social media content in 10 minutes. What's left for the marketer?",o:[
-{t:"Strategy — knowing WHAT to say and WHO to say it to. AI handles the production.",s:{a:-10,ad:10,d:10}},
-{t:"Taste and curation — AI generates options, humans choose which ones resonate",s:{a:-5,ad:10,d:5}},
-{t:"Relationships — influencer partnerships, community building, brand trust can't be automated",s:{a:-10,ad:5,d:10}},
-{t:"Analysis — measuring what actually worked and why, then adjusting the strategy",s:{a:-5,ad:10,d:5}}
-]},
-{q:"Two marketing candidates interview for the same role. What actually gets one hired over the other?",o:[
-{t:"A portfolio of campaigns with measurable business results — revenue, conversions, growth",s:{a:-10,ad:10,d:10}},
-{t:"An audience they've already built — proof they understand how to earn attention",s:{a:-5,ad:10,d:10}},
-{t:"Strategic thinking — they can diagnose a brand's problem and propose a solution on the spot",s:{a:-5,ad:10,d:5}},
-{t:"Versatility across channels — content, paid, email, events, partnerships",s:{a:0,ad:5,d:5}}
-]},
-{q:"A brand fires its content team and uses AI to generate all copy and visuals. What happens?",o:[
-{t:"Short-term savings, long-term brand erosion — AI content all starts to look and sound the same",s:{a:-5,ad:5,d:5}},
-{t:"It works for commodity content but fails for anything requiring cultural nuance or creativity",s:{a:0,ad:5,d:5}},
-{t:"Smart move if they keep a small strategic team directing the AI output",s:{a:-10,ad:10,d:5}},
-{t:"They'll hire the team back in 6 months when engagement drops",s:{a:5,ad:0,d:5}}
-]},
-{q:"What's the most underrated skill in marketing right now?",o:[
-{t:"Data literacy — being able to prove ROI and make decisions with numbers, not gut feelings",s:{a:-10,ad:15,d:10}},
-{t:"Storytelling — the ability to make people FEEL something in an age of content overload",s:{a:-5,ad:5,d:10}},
-{t:"Community building — turning customers into advocates who do your marketing for you",s:{a:-5,ad:10,d:10}},
-{t:"Speed and adaptability — the marketer who ships fast and iterates beats the one who plans forever",s:{a:-5,ad:10,d:5}}
-]},
-{q:"It's 2030. What does the marketing department look like?",o:[
-{t:"Tiny strategic team using AI to do what 50 people used to do — fewer marketers, higher paid",s:{a:5,ad:10,d:0}},
-{t:"Split into two: creative strategists and marketing technologists who build AI workflows",s:{a:-10,ad:10,d:5}},
-{t:"More marketers than ever because AI lowers the barrier and every company needs a voice",s:{a:-5,ad:5,d:10}},
-{t:"Marketing merges with product — growth teams that build features, not just campaigns",s:{a:-10,ad:10,d:10}}
-]}
-],r:{f:["Content production is being commoditized by AI","Strategy, data analysis, and relationship skills are growing in value","Marketers who use AI produce 10x more but need human judgment to direct it"],rec:[{i:"📊",t:"Learn to measure everything. Data-driven marketers command premium salaries."},{i:"🎯",t:"Build a portfolio of RESULTS — campaigns with real metrics beat beautiful mockups."},{i:"🤖",t:"The best marketing role in 2026 is being the person who directs AI creative tools."},{i:"📊",t:"Get your Dilly score to see how your marketing skills compare to what companies hire for."}]}},
-
-edu:{name:"Education / Social Sciences / Humanities",short:"Education",base:{a:30,ad:40,d:50},
-qs:[
-{q:"An AI tutor can now teach calculus better than most human teachers. What's the teacher's new role?",o:[
-{t:"The mentor — helping students find meaning, motivation, and direction that AI can't provide",s:{a:-15,ad:5,d:10}},
-{t:"The facilitator — designing learning experiences where AI handles content and humans handle growth",s:{a:-10,ad:15,d:10}},
-{t:"The equity bridge — ensuring technology helps all students, not just privileged ones",s:{a:-10,ad:10,d:5}},
-{t:"The community builder — schools are about socialization and belonging, not just knowledge transfer",s:{a:-10,ad:5,d:5}}
-]},
-{q:"Two humanities graduates compete for the same job. What actually separates them?",o:[
-{t:"One can write, analyze, AND use technology — the other can only write and analyze",s:{a:-10,ad:15,d:10}},
-{t:"One has applied their thinking to real organizations through internships and projects",s:{a:-5,ad:10,d:10}},
-{t:"One has a clear narrative connecting their education to a specific career path",s:{a:-5,ad:10,d:5}},
-{t:"One has built a public body of work — writing, research, or community impact that's visible",s:{a:-5,ad:10,d:5}}
-]},
-{q:"A school district automates grading, lesson planning, and parent communications with AI. What changes for teachers?",o:[
-{t:"More time for what matters — small group instruction, mentoring, and student relationships",s:{a:-10,ad:5,d:10}},
-{t:"The role becomes more specialized — teachers focus on pedagogy while AI handles administration",s:{a:-5,ad:10,d:5}},
-{t:"Fewer teaching positions but the remaining ones are more respected and better paid",s:{a:10,ad:5,d:-5}},
-{t:"Teachers become learning designers — curating and adapting AI-generated curriculum",s:{a:-5,ad:15,d:5}}
-]},
-{q:"What's the biggest career advantage a humanities/social sciences education gives you?",o:[
-{t:"Critical thinking and communication — skills that transfer to any industry",s:{a:-5,ad:5,d:5}},
-{t:"Understanding human behavior — valuable in UX research, policy, marketing, and product",s:{a:-10,ad:10,d:10}},
-{t:"Ethical reasoning — someone needs to guide how AI is deployed in society",s:{a:-5,ad:10,d:5}},
-{t:"Research methodology — the ability to find truth in complexity",s:{a:0,ad:10,d:5}}
-]},
-{q:"It's 2030. Which education/humanities career paths are thriving?",o:[
-{t:"EdTech — the people designing how AI teaches are in massive demand",s:{a:-10,ad:15,d:15}},
-{t:"Counseling and social work — the mental health crisis guarantees demand for decades",s:{a:-15,ad:0,d:10}},
-{t:"AI ethics and policy — every company needs people who understand the human implications",s:{a:-10,ad:15,d:10}},
-{t:"Teaching remains essential — but the best teachers use AI to be 10x more effective",s:{a:-5,ad:10,d:5}}
-]}
-],r:{f:["Human-centered roles are among the most AI-resistant","Administrative education tasks face real automation","EdTech and AI ethics are booming new paths for humanities graduates"],rec:[{i:"💡",t:"Your ability to think critically and communicate clearly is more valuable than ever in an AI world."},{i:"🚀",t:"Connect your education to emerging fields — EdTech, AI policy, UX research, content strategy."},{i:"💻",t:"One technical skill transforms your career options. Even basic data literacy opens doors."},{i:"📊",t:"Get your Dilly score to discover career paths you haven't considered."}]}},
-
-eng:{name:"Engineering (Mechanical, Civil, Electrical)",short:"Engineering",base:{a:25,ad:55,d:80},
-qs:[
-{q:"AI generates 50 optimized structural designs in the time it takes an engineer to sketch one. What becomes the engineer's value?",o:[
-{t:"Judgment — knowing which of those 50 designs actually works in the real world with real constraints",s:{a:-5,ad:10,d:10}},
-{t:"Integration — engineering doesn't happen in isolation, someone needs to connect systems together",s:{a:-5,ad:10,d:5}},
-{t:"Innovation — AI optimizes within known parameters, engineers define new parameters",s:{a:-10,ad:10,d:10}},
-{t:"Accountability — when a bridge fails, a human is responsible, not an algorithm",s:{a:0,ad:5,d:5}}
-]},
-{q:"You're choosing your engineering specialty. What guides your decision?",o:[
-{t:"Where the growth is — robotics, energy, AI-hardware, aerospace",s:{a:-10,ad:10,d:15}},
-{t:"What I'm fascinated by — passion sustains you through the hard parts",s:{a:0,ad:5,d:5}},
-{t:"Where I can have the most impact — sustainability, infrastructure, healthcare devices",s:{a:-5,ad:10,d:10}},
-{t:"Where the compensation is highest — I want maximum ROI on this difficult degree",s:{a:0,ad:5,d:10}}
-]},
-{q:"A company replaces its drafting team with AI-powered CAD automation. What does this mean for engineering?",o:[
-{t:"The entry point changes — you need to arrive with higher-level skills than before",s:{a:10,ad:5,d:0}},
-{t:"Engineers who can program and customize these AI tools become the most valuable",s:{a:-15,ad:15,d:10}},
-{t:"Physical engineering work is safe — you can't automate site visits, testing, and manufacturing oversight",s:{a:-5,ad:0,d:10}},
-{t:"It's the same pattern as every engineering revolution — tools change, engineers adapt",s:{a:0,ad:5,d:5}}
-]},
-{q:"What separates an engineer who gets hired from one who doesn't?",o:[
-{t:"They've built something tangible — a robot, a structure, a device — not just solved textbook problems",s:{a:-10,ad:10,d:10}},
-{t:"They can communicate engineering concepts to non-engineers — business people, customers, regulators",s:{a:-5,ad:10,d:5}},
-{t:"They have cross-disciplinary skills — an ME who can code, an EE who understands manufacturing",s:{a:-10,ad:10,d:10}},
-{t:"Strong fundamentals — they can derive from first principles, not just plug into formulas",s:{a:5,ad:5,d:10}}
-]},
-{q:"It's 2030. What does engineering work look like?",o:[
-{t:"Engineers manage AI design tools and focus on constraints, testing, and real-world validation",s:{a:-5,ad:10,d:5}},
-{t:"More interdisciplinary — the line between software, hardware, and systems engineering blurs completely",s:{a:-10,ad:10,d:10}},
-{t:"Two tracks: AI-augmented design engineers and hands-on field/manufacturing engineers",s:{a:0,ad:5,d:5}},
-{t:"Engineering becomes more creative — AI handles optimization, humans handle invention",s:{a:-5,ad:10,d:10}}
-]}
-],r:{f:["Physical-world engineering is hard to automate","AI is transforming design tools but not replacing engineering judgment","Engineers who code and understand AI tools are in highest demand"],rec:[{i:"🔧",t:"Build something real. Tangible proof of engineering ability beats any credential."},{i:"💻",t:"Coding is non-negotiable for modern engineers. Python or MATLAB fluency multiplies your value."},{i:"🤖",t:"Learn AI applications in your specific field — it's the biggest differentiator."},{i:"📊",t:"Get your Dilly Build score to see how your projects compare to what companies want."}]}},
-
-data:{name:"Data Science / Analytics / AI",short:"Data Science",base:{a:15,ad:90,d:98},
-qs:[
-{q:"You're in the field building AI. But AI can now automate data analysis itself. What does this mean for data scientists?",o:[
-{t:"The bar rises — basic analysis is automated, so data scientists need to solve harder problems",s:{a:5,ad:5,d:5}},
-{t:"The role evolves into AI engineering — building and deploying the systems, not just analyzing data",s:{a:-15,ad:10,d:10}},
-{t:"Domain expertise becomes king — anyone can run a model, few can interpret results in context",s:{a:-5,ad:10,d:10}},
-{t:"Data scientists become AI product managers — deciding what to build and why",s:{a:-10,ad:10,d:5}}
-]},
-{q:"Two data scientists apply for the same role. Same degree, same GPA. What gets one hired?",o:[
-{t:"One has deployed models in production. The other has only worked in notebooks.",s:{a:-10,ad:10,d:10}},
-{t:"One can explain their work to a CEO. The other can only present to other data scientists.",s:{a:-5,ad:10,d:5}},
-{t:"One chose a domain — healthcare, finance, climate — and went deep. The other stayed generalist.",s:{a:-5,ad:10,d:10}},
-{t:"One has contributed to open source or published research. The other has only done coursework.",s:{a:-5,ad:10,d:5}}
-]},
-{q:"A company builds an internal AI that answers any analytics question from natural language. What happens to the data team?",o:[
-{t:"Junior analyst roles disappear. Senior roles become more strategic and better compensated.",s:{a:10,ad:5,d:0}},
-{t:"The data team shifts to building and maintaining AI systems rather than answering ad-hoc questions.",s:{a:-10,ad:10,d:10}},
-{t:"Data literacy spreads across the company. The data team focuses on harder, unsolved problems.",s:{a:-5,ad:10,d:5}},
-{t:"Nothing changes much — people still need data scientists to ask the right questions, not just answer them.",s:{a:0,ad:5,d:5}}
-]},
-{q:"What's the most important skill for a data scientist in 2026 that wasn't important in 2020?",o:[
-{t:"LLM engineering — fine-tuning, prompt engineering, RAG systems, and AI agents",s:{a:-15,ad:15,d:15}},
-{t:"ML ops and production engineering — getting models out of notebooks and into the real world",s:{a:-10,ad:10,d:10}},
-{t:"Causal inference and experimentation — understanding WHY, not just predicting WHAT",s:{a:0,ad:10,d:5}},
-{t:"AI ethics and safety — someone needs to ensure these systems are fair and reliable",s:{a:-5,ad:10,d:5}}
-]},
-{q:"It's 2030. What does the data science career path look like?",o:[
-{t:"'Data scientist' as a title barely exists — it's split into ML engineer, AI researcher, and analytics engineer",s:{a:5,ad:5,d:5}},
-{t:"Data science merges with software engineering — you can't do one without the other",s:{a:-10,ad:10,d:10}},
-{t:"Fewer data scientists but each one is 10x more impactful using AI tools",s:{a:0,ad:10,d:5}},
-{t:"The field expands — every company needs AI expertise and there aren't enough people",s:{a:-5,ad:5,d:15}}
-]}
-],r:{f:["You're building the future — data science and AI talent is in extreme demand","Basic analytics is being automated by the tools you build","The future belongs to ML engineers, AI researchers, and domain-expert data scientists"],rec:[{i:"🏗️",t:"Move beyond analysis into building. Deployed systems beat notebooks every time."},{i:"🎯",t:"Pick a domain. A data scientist who deeply understands healthcare or finance is worth 3x a generalist."},{i:"🤖",t:"LLMs, agents, and applied AI — this is where the entire field is heading."},{i:"📊",t:"Get your Dilly Build score to see how your projects compare to what AI companies hire for."}]}},
-
-design:{name:"Design / Creative Arts",short:"Design",base:{a:40,ad:70,d:65},
-qs:[
-{q:"AI generates 100 logo concepts in 30 seconds. What's the designer's role now?",o:[
-{t:"The editor and curator — choosing which output resonates and refining it with human taste",s:{a:-5,ad:10,d:5}},
-{t:"The strategist — AI doesn't know the brand, the audience, or the business problem being solved",s:{a:-10,ad:10,d:10}},
-{t:"The researcher — understanding users deeply enough to direct AI toward the right solution",s:{a:-10,ad:10,d:10}},
-{t:"The storyteller — connecting design decisions to human emotions and cultural context",s:{a:-5,ad:10,d:5}}
-]},
-{q:"Two designers apply for a product design role. Same school, similar portfolios. What's the tiebreaker?",o:[
-{t:"One shows the thinking behind their work — research, iterations, trade-offs, results",s:{a:-5,ad:10,d:10}},
-{t:"One has shipped real features that real users interact with — not just mockups",s:{a:-10,ad:10,d:10}},
-{t:"One can prototype and code — they don't just design, they build",s:{a:-10,ad:10,d:10}},
-{t:"One has a distinctive point of view — their work is recognizable and opinionated",s:{a:-5,ad:10,d:5}}
-]},
-{q:"A startup replaces its 5-person design team with 1 designer using AI tools. What does this mean for the industry?",o:[
-{t:"Fewer designer jobs but each one is more senior, more strategic, and better paid",s:{a:5,ad:5,d:0}},
-{t:"Design becomes a superpower for non-designers — product managers, marketers, and founders can now 'design'",s:{a:10,ad:5,d:-5}},
-{t:"The 1 remaining designer is more powerful than the original 5 — AI is a force multiplier, not a replacement",s:{a:-10,ad:10,d:5}},
-{t:"It creates a split — production design disappears but design thinking and strategy become more valuable",s:{a:0,ad:10,d:5}}
-]},
-{q:"What type of design work is most resilient to AI?",o:[
-{t:"UX research and user understanding — AI can't sit across from a user and feel their frustration",s:{a:-10,ad:5,d:10}},
-{t:"Design systems and principles — the meta-work of defining how things should look and behave",s:{a:-5,ad:10,d:10}},
-{t:"Physical and spatial design — interiors, architecture, products you can touch",s:{a:-10,ad:0,d:10}},
-{t:"Creative direction — having a vision that unifies hundreds of AI-generated outputs into a coherent brand",s:{a:-5,ad:10,d:5}}
-]},
-{q:"It's 2030. What does a successful design career look like?",o:[
-{t:"Design director who manages AI creative pipelines — 1 person, the output of 20",s:{a:-5,ad:10,d:5}},
-{t:"Product designer who research, designs, AND ships — the full-stack designer",s:{a:-10,ad:10,d:10}},
-{t:"Independent creator with AI tools — building and selling directly, no company needed",s:{a:-5,ad:10,d:5}},
-{t:"Specialized in one area AI struggles with — complex systems, accessibility, service design",s:{a:-5,ad:5,d:10}}
-]}
-],r:{f:["Visual production is being commoditized but design thinking is more valuable than ever","Designers who use AI as a tool produce 10x more than those who compete against it","UX research, strategy, and creative direction are the growth areas"],rec:[{i:"🎨",t:"Move up the value chain. AI handles production — you handle strategy and research."},{i:"🏗️",t:"Ship real products, not just mockups. The designer who can build is worth 3x."},{i:"🤖",t:"Master AI creative tools. Be the designer who produces 10 concepts while others do 1."},{i:"📊",t:"Get your Dilly Build score to see how your portfolio compares."}]}}
-};
-
-let cq=0,tot={a:0,ad:0,d:0},sel=null,qs=[];
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
-function startQuiz(){cq=0;tot={a:0,ad:0,d:0};sel=null;qs=[];show('question-screen');renderCohort()}
-function renderCohort(){document.getElementById('progress').style.width='0%';document.getElementById('q-number').textContent='STEP 1 — CHOOSE YOUR FIELD';document.getElementById('q-text').textContent="What's your field of study or career interest?";const k='ABCDEFGH',c=document.getElementById('options');c.innerHTML='';Object.entries(C).forEach(([key,v],i)=>{const b=document.createElement('button');b.className='option';b.innerHTML=`<span class="option-key">${k[i]}</span><span>${v.name}</span>`;b.onclick=()=>pickCohort(key);c.appendChild(b)})}
-function pickCohort(k){sel=C[k];tot.a+=sel.base.a;tot.ad+=sel.base.ad;tot.d+=sel.base.d;qs=sel.qs;cq=0;renderQ()}
-function renderQ(){const p=cq/qs.length*100;document.getElementById('progress').style.width=p+'%';document.getElementById('q-number').textContent=`QUESTION ${cq+1} OF ${qs.length} — ${sel.short}`;document.getElementById('q-text').textContent=qs[cq].q;const k='ABCD',c=document.getElementById('options');c.innerHTML='';qs[cq].o.forEach((o,i)=>{const b=document.createElement('button');b.className='option';b.innerHTML=`<span class="option-key">${k[i]}</span><span>${o.t}</span>`;b.onclick=()=>pick(i);c.appendChild(b)})}
-function pick(i){const s=qs[cq].o[i].s;tot.a+=(s.a||0);tot.ad+=(s.ad||0);tot.d+=(s.d||0);cq++;if(cq>=qs.length){show('loading-screen');document.getElementById('loading-text').textContent=`Analyzing your ${sel.short} career against AI disruption trends...`;setTimeout(results,2500)}else renderQ()}
-function results(){const ar=Math.max(5,Math.min(95,50+tot.a)),sf=100-ar,ad=Math.max(5,Math.min(95,50+tot.ad)),dm=Math.max(5,Math.min(95,50+tot.d));let lv,cl,em,msg;if(sf>=75){lv='LOW RISK';cl='var(--green)';em='🛡️';msg=`Your ${sel.short} career path is well-positioned against AI disruption. You're building skills that complement AI rather than compete with it. But don't get complacent — students who actively prepare will pull ahead.`}else if(sf>=55){lv='MODERATE RISK';cl='var(--yellow)';em='⚠️';msg=`Your ${sel.short} career is in a transition zone. Some tasks will be automated, but strategic and human elements become more valuable. Students who adapt now will thrive while others scramble.`}else if(sf>=35){lv='HIGH RISK';cl='var(--orange)';em='🔥';msg=`Your ${sel.short} career path faces real disruption. Many entry-level roles are being transformed by AI right now. You have time to pivot, but every month you wait, the gap grows.`}else{lv='CRITICAL RISK';cl='var(--red)';em='🚨';msg=`Your trajectory in ${sel.short} puts you directly in AI's path. Entry-level roles you're targeting are among the most vulnerable. This wake-up call could save your career if you act now.`}
-const rc=sel.r.rec,fc=sel.r.f,r=document.getElementById('results');r.innerHTML=`<div class="result-card animate-in"><div class="risk-label" style="color:${cl}">${em} ${lv}</div><div class="risk-score" style="color:${cl}">${sf}</div><div class="risk-subtitle">AI Safety Score for ${sel.short} — out of 100</div><div class="risk-meter"><div class="risk-meter-fill" id="mf" style="width:0%;background:${cl}"></div></div><div class="risk-meter-labels"><span>Critical Risk</span><span>AI-Proof</span></div></div><div class="breakdown animate-in delay-1"><div class="breakdown-item"><span class="breakdown-label">Your Field</span><span class="breakdown-value">${sel.short}</span></div><div class="breakdown-item"><span class="breakdown-label">Automation Exposure</span><span class="breakdown-value" style="color:${ar>60?'var(--red)':ar>40?'var(--yellow)':'var(--green)'}">${ar}%</span></div><div class="breakdown-item"><span class="breakdown-label">Your Adaptability</span><span class="breakdown-value" style="color:${ad>60?'var(--green)':ad>40?'var(--yellow)':'var(--red)'}">${ad}/100</span></div><div class="breakdown-item"><span class="breakdown-label">${sel.short} Demand (2030)</span><span class="breakdown-value" style="color:${dm>60?'var(--green)':dm>40?'var(--yellow)':'var(--red)'}">${dm}/100</span></div></div><div class="reco-card animate-in delay-2"><h3>${msg.split('.')[0]}.</h3><p>${msg}</p><div class="factors"><div class="factors-title">Key factors for ${sel.short}</div>${fc.map(f=>`<div class="factors-item">• ${f}</div>`).join('')}</div><div class="reco-actions">${rc.map(r=>`<div class="reco-action"><span class="reco-action-icon">${r.i}</span><span>${r.t}</span></div>`).join('')}</div></div><div class="cta-section animate-in delay-3"><h3>This quiz is just the surface.</h3><p>Dilly gives you a complete career readiness score — Smart, Grit, and Build — personalized to your exact ${sel.short} goals. See where you stand and what to do about it.</p><a href="https://hellodilly.com" class="cta-btn">Get Your Full Dilly Score →</a></div><div class="share-row animate-in delay-4"><button class="share-btn" onclick="share(${sf},'${lv}','${sel.short}')">📤 Share My Score</button><button class="share-btn" onclick="copy(${sf},'${lv}','${sel.short}')">📋 Copy Result</button></div><div class="retake animate-in delay-5" onclick="startQuiz()">↻ Retake Quiz</div>`;show('results-screen');setTimeout(()=>{document.getElementById('mf').style.width=sf+'%'},300)}
-function share(s,l,f){const t=`My AI Safety Score for ${f} is ${s}/100 (${l}). Will AI take YOUR job? hellodilly.com/quiz`;if(navigator.share)navigator.share({title:'Will AI Take My Job?',text:t,url:'https://hellodilly.com/quiz'});else copy(s,l,f)}
-function copy(s,l,f){const t=`My AI Safety Score for ${f} is ${s}/100 (${l}). Will AI take YOUR job? Find out: hellodilly.com/quiz`;navigator.clipboard.writeText(t).then(()=>{const b=document.querySelectorAll('.share-btn');b[1].textContent='✓ Copied!';setTimeout(()=>b[1].textContent='📋 Copy Result',2000)})}
+  </section>
 
 
-function qShowS(id){document.querySelectorAll('.qsc').forEach(function(s){s.classList.remove('active')});var el=document.getElementById('qsc-'+id);if(el)el.classList.add('active');var h=document.getElementById('scrollH');if(h)h.style.display=(id==='intro')?'block':'none'}
-function qMkBtn(txt,key,onclick){var b=document.createElement('button');b.className='q-opt-anim';b.style.cssText='padding:18px 22px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;cursor:pointer;font-size:15px;color:#f5f5f7;text-align:left;display:flex;align-items:center;gap:14px;transition:border-color .2s,background .2s,transform .2s;width:100%';b.onmouseenter=function(){this.style.borderColor='#C9A84C';this.style.background='rgba(201,168,76,.08)';this.style.transform='translateX(4px)'};b.onmouseleave=function(){this.style.borderColor='rgba(255,255,255,.08)';this.style.background='rgba(255,255,255,.04)';this.style.transform='none'};b.innerHTML='<span style="min-width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#636366;flex-shrink:0">'+key+'</span><span>'+txt+'</span>';b.onclick=onclick;return b}
-function qStart(){cq=0;tot={a:0,ad:0,d:0};sel=null;qs=[];qShowS('qs');qRC()}
-function qRC(){document.getElementById('qProg').style.width='0%';var qn=document.getElementById('qNum');var qt=document.getElementById('qTxt');qn.className='q-anim';qt.className='q-anim';qn.textContent='STEP 1 \u2014 CHOOSE YOUR FIELD';qt.textContent="What\u2019s your field of study or career interest?";var k='ABCDEFGH',c=document.getElementById('qOpts');c.innerHTML='';Object.entries(C).forEach(function(e,i){c.appendChild(qMkBtn(e[1].name,k[i],function(){qPC(e[0])}))})}
-function qPC(k){sel=C[k];tot.a+=sel.base.a;tot.ad+=sel.base.ad;tot.d+=sel.base.d;qs=sel.qs;cq=0;qRQ()}
-function qRQ(){document.getElementById('qProg').style.width=(cq/qs.length*100)+'%';var qn=document.getElementById('qNum');var qt=document.getElementById('qTxt');qn.classList.remove('q-anim');qt.classList.remove('q-anim');void qn.offsetWidth;qn.classList.add('q-anim');qt.classList.add('q-anim');qn.textContent='QUESTION '+(cq+1)+' OF '+qs.length+' \u2014 '+sel.short;qt.textContent=qs[cq].q;var k='ABCD',c=document.getElementById('qOpts');c.innerHTML='';qs[cq].o.forEach(function(o,i){c.appendChild(qMkBtn(o.t,k[i],function(){qPK(i)}))})}
-function qPK(i){var s=qs[cq].o[i].s;tot.a+=(s.a||0);tot.ad+=(s.ad||0);tot.d+=(s.d||0);cq++;if(cq>=qs.length){qShowS('load');document.getElementById('qLoadT').textContent='Analyzing your '+sel.short+' career against AI disruption trends...';setTimeout(qRES,2500)}else qRQ()}
-function qRES(){var ar=Math.max(5,Math.min(95,50+tot.a)),sf=100-ar,ad=Math.max(5,Math.min(95,50+tot.ad)),dm=Math.max(5,Math.min(95,50+tot.d));var lv,cl,em,msg;if(sf>=75){lv='LOW RISK';cl='#34C759';em='\ud83d\udee1\ufe0f';msg='Your '+sel.short+' career is well-positioned against AI. You are building skills that complement AI rather than compete with it.'}else if(sf>=55){lv='MODERATE RISK';cl='#FF9F0A';em='\u26a0\ufe0f';msg='Your '+sel.short+' career is in transition. Some tasks will be automated, but strategic and human elements become more valuable.'}else if(sf>=35){lv='HIGH RISK';cl='#FF9F0A';em='\ud83d\udd25';msg='Your '+sel.short+' career faces real disruption. Many entry-level roles are being transformed by AI right now.'}else{lv='CRITICAL RISK';cl='#FF453A';em='\ud83d\udea8';msg='Your '+sel.short+' trajectory puts you in AI\'s crosshairs. Entry-level roles are among the most vulnerable.'}var rc=sel.r.rec,fc=sel.r.f,r=document.getElementById('qRes');r.innerHTML='<div style="background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:32px;text-align:center"><div style="font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;color:'+cl+'">'+em+' '+lv+'</div><div style="font-family:Playfair Display,serif;font-size:72px;line-height:1;margin-bottom:4px;color:'+cl+'">'+sf+'</div><div style="font-size:15px;color:#a1a1a6;margin-bottom:20px">AI Safety Score for '+sel.short+'</div><div style="width:100%;height:8px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;margin-bottom:8px"><div id="qM" style="height:100%;border-radius:10px;transition:width 1.5s;width:0%;background:'+cl+'"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:#636366"><span>Critical</span><span>AI-Proof</span></div></div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Field</span><span style="font-weight:700">'+sel.short+'</span></div><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Automation</span><span style="font-weight:700;color:'+(ar>60?'#FF453A':ar>40?'#FF9F0A':'#34C759')+'">'+ar+'%</span></div><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Adaptability</span><span style="font-weight:700;color:'+(ad>60?'#34C759':ad>40?'#FF9F0A':'#FF453A')+'">'+ad+'/100</span></div><div style="display:flex;justify-content:space-between;padding:16px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px"><span style="color:#a1a1a6">Demand 2030</span><span style="font-weight:700;color:'+(dm>60?'#34C759':dm>40?'#FF9F0A':'#FF453A')+'">'+dm+'/100</span></div></div><div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:24px"><h3 style="font-family:Cinzel,serif;font-size:20px;margin-bottom:12px">'+msg.split('.')[0]+'.</h3><p style="font-size:14px;color:#a1a1a6;line-height:1.7;margin-bottom:16px">'+msg+'</p><div style="margin-bottom:16px;padding:12px 16px;background:rgba(255,255,255,.03);border-radius:12px"><div style="font-size:12px;color:#C9A84C;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Key factors</div>'+fc.map(function(f){return '<div style="font-size:13px;color:#a1a1a6;padding:4px 0">\u2022 '+f+'</div>'}).join('')+'</div><div style="display:flex;flex-direction:column;gap:8px">'+rc.map(function(x){return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,.03);border-radius:12px;font-size:14px"><span style="font-size:18px">'+x.i+'</span><span>'+x.t+'</span></div>'}).join('')+'</div></div><div style="background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(201,168,76,.04));border:1px solid rgba(201,168,76,.2);border-radius:20px;padding:28px;text-align:center"><h3 style="font-family:Cinzel,serif;font-size:22px;margin-bottom:8px">This quiz is just the surface.</h3><p style="font-size:14px;color:#a1a1a6;margin-bottom:20px">Dilly gives you a complete career readiness score for '+sel.short+'.</p><a href="#pricing" class="btn-primary">Get Your Full Dilly Score \u2192</a></div><div style="display:flex;gap:10px;justify-content:center"><button onclick="qSH('+sf+')" style="padding:12px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:100px;color:#f5f5f7;font-size:14px;font-weight:600;cursor:pointer">\ud83d\udce4 Share</button><button id="qCB" onclick="qCP('+sf+')" style="padding:12px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:100px;color:#f5f5f7;font-size:14px;font-weight:600;cursor:pointer">\ud83d\udccb Copy</button></div><div onclick="qStart()" style="text-align:center;padding:16px;color:#636366;font-size:14px;cursor:pointer">\u21bb Retake Quiz</div><div style="text-align:center;padding:8px;font-size:13px;color:#C9A84C">\u2713 Score saved</div>';qShowS('res');setTimeout(function(){var m=document.getElementById('qM');if(m)m.style.width=sf+'%'},300);try{document.cookie='dilly_quiz='+encodeURIComponent(JSON.stringify({score:sf,level:lv,field:sel.short}))+';max-age=31536000;path=/'}catch(e){}}
-function qSH(s){var t='My AI Safety Score is '+s+'/100. Will AI take YOUR job? hellodilly.com';if(navigator.share)navigator.share({title:'Will AI Take My Job?',text:t,url:'https://hellodilly.com'});else qCP(s)}
-function qCP(s){navigator.clipboard.writeText('My AI Safety Score is '+s+'/100. Take the quiz: hellodilly.com').then(function(){var b=document.getElementById('qCB');if(b){b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='\ud83d\udccb Copy'},2000)}})}
-try{document.cookie.split(';').forEach(function(c){c=c.trim();if(c.startsWith('dilly_quiz=')){var s=JSON.parse(decodeURIComponent(c.substring(11)));var el=document.getElementById('qSaved');if(el&&s.score){var cl=s.score>=75?'#34C759':s.score>=55?'#FF9F0A':'#FF453A';el.innerHTML='<div style="margin-top:16px;padding:16px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:16px"><div style="font-size:13px;color:#636366;margin-bottom:4px">Your last result</div><div style="font-size:28px;font-weight:800;color:'+cl+'">'+s.score+'/100</div><div style="font-size:13px;color:#636366">'+s.field+' \u00b7 '+s.level+'</div></div>'}}})}catch(e){}
-
-</script>
+  <script src="dilly.js"></script>
 </body>
 </html>

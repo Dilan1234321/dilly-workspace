@@ -1,242 +1,864 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Features — Dilly</title>
-<meta name="description" content="Resume scoring, AI coaching, ATS scanning, internship matching, and more. See every feature inside the Dilly app.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#080809;--s1:#0a0a0c;--s2:#0f0f12;--s3:#1a1a1f;--gold:#C9A84C;--gdim:rgba(201,168,76,.12);--green:#34C759;--coral:#FF453A;--amber:#FF9F0A;--blue:#0A84FF;--t1:#f5f5f7;--t2:#a1a1a6;--t3:#636366;--bdr:rgba(255,255,255,.06)}
-html{scroll-behavior:smooth}body{background:var(--bg);color:var(--t1);font-family:'DM Sans',sans-serif;overflow-x:hidden;line-height:1.6}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:rgba(8,8,9,.85);border-bottom:1px solid var(--bdr);padding:16px 0;transition:padding .3s}
-.ni{max-width:1200px;margin:0 auto;padding:0 32px;display:flex;align-items:center;justify-content:space-between}
-.logo{display:block}.logo img{height:26px;display:block}
-.nl{display:flex;gap:28px;align-items:center}.nl a{color:var(--t2);text-decoration:none;font-size:13px;font-weight:500;transition:color .2s}.nl a:hover{color:var(--t1)}.nl a.act{color:var(--gold)}
-.nc{background:var(--gold);color:#1a1400;padding:9px 20px;border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:11px;letter-spacing:1px;text-decoration:none}
-.mm{display:none;background:0;border:0;color:var(--t1);font-size:24px;cursor:pointer}
-section{padding:100px 32px}.si{max-width:1200px;margin:0 auto}
-.sl{font-family:'Cinzel',serif;font-weight:700;font-size:10px;letter-spacing:3px;color:var(--gold);margin-bottom:10px}
-.st{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(26px,3.5vw,40px);line-height:1.2;margin-bottom:14px}
-.ss{font-size:15px;color:var(--t2);max-width:520px;line-height:1.7}
-.fu{opacity:0;transform:translateY(24px);transition:all .6s cubic-bezier(.16,1,.3,1)}.fu.v{opacity:1;transform:translateY(0)}
-.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}
-footer{border-top:1px solid var(--bdr);padding:40px 32px;text-align:center;color:var(--t3);font-size:12px}
-footer .fl{display:flex;gap:20px;justify-content:center;margin-bottom:12px}
-footer a{color:var(--t3);text-decoration:none;font-size:12px}footer a:hover{color:var(--t2)}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Features: Dilly</title>
+  <meta name="description" content="Resume scoring, ATS scanning, internship matching, pipeline, calendar, AI coach, and leaderboard  -  one system, one score language.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Page hero */
-.ph{padding:160px 32px 80px;text-align:center;position:relative}
-.ph::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(201,168,76,.04) 0%,transparent 65%);pointer-events:none}
-.ph h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(32px,5vw,52px);margin-bottom:16px}
-.ph h1 .g{color:var(--gold)}
-.ph p{font-size:17px;color:var(--t2);max-width:560px;margin:0 auto;line-height:1.7}
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: #0d0d0d;
+      overflow-x: hidden;
+    }
+    body { overflow-x: hidden; }
 
-/* Feature row */
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:80px 0;border-bottom:1px solid var(--bdr)}
-.fr:last-child{border-bottom:0}
-.fr.rv{direction:rtl}.fr.rv>*{direction:ltr}
-.fr-text h3{font-family:'Cinzel',serif;font-weight:700;font-size:24px;margin-bottom:10px}
-.fr-text p{font-size:14px;color:var(--t2);line-height:1.7;margin-bottom:16px}
-.fr-text .tag{display:inline-flex;align-items:center;gap:6px;background:var(--gdim);border:1px solid rgba(201,168,76,.15);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--gold);font-weight:600;margin-right:6px;margin-bottom:6px}
-.fr-phones{display:flex;gap:14px;justify-content:center}
-.fr-phone{width:220px;border-radius:28px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.06)}
-.fr-phone img{width:100%;display:block}
-.fr-phone.tl{transform:rotate(-3deg) translateY(12px)}
-.fr-phone.tr{transform:rotate(3deg) translateY(12px)}
+    /* ── NAV (in-flow) ── */
+    #ft-nav { background: #fff; border-bottom: 1px solid rgba(43,58,142,0.08); }
+    #ft-nav .site-nav--inner {
+      position: relative !important;
+      top: auto !important; left: auto !important;
+      width: 100% !important;
+      background: #fff !important;
+    }
+    :root.light #ft-nav .site-nav--inner { background: #fff !important; border-bottom: none !important; }
 
-/* Highlight box */
-.hbox{background:var(--s2);border:1px solid var(--bdr);border-radius:14px;padding:16px 20px;margin-top:16px;font-size:13px;color:var(--t2);line-height:1.7}
-.hbox strong{color:var(--gold)}
+    /* ── HERO ── */
+    #ft-hero {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 5.5rem clamp(1.5rem, 5vw, 4rem) 4rem;
+      text-align: center;
+    }
+    .ft-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.5;
+      margin-bottom: 1.1rem;
+    }
+    #ft-hero h1 {
+      font-size: clamp(2.4rem, 5vw, 4.25rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.0;
+      margin-bottom: 1.25rem;
+    }
+    #ft-hero p {
+      font-size: clamp(0.93rem, 1.3vw, 1.08rem);
+      color: #555;
+      line-height: 1.8;
+      max-width: 54ch;
+      margin: 0 auto 2.25rem;
+    }
+    .ft-hero-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .ft-btn-primary {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.8rem 2rem;
+      border-radius: 100px;
+      background: #2B3A8E;
+      color: #fff;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .ft-btn-primary:hover { opacity: 0.87; transform: translateY(-1px); }
+    .ft-btn-ghost {
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.8rem 1.75rem;
+      border-radius: 100px;
+      background: transparent;
+      color: #2B3A8E;
+      border: 1.5px solid rgba(43,58,142,0.2);
+      transition: border-color 0.2s;
+    }
+    .ft-btn-ghost:hover { border-color: #2B3A8E; }
 
-/* CTA band */
-.cta-band{text-align:center;padding:80px 32px;background:radial-gradient(ellipse at center,rgba(201,168,76,.03) 0%,transparent 70%)}
-.cta-band h2{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(24px,3.5vw,38px);margin-bottom:16px}
-.cta-band p{color:var(--t2);font-size:15px;margin-bottom:28px}
-.bg{background:var(--gold);color:#1a1400;padding:16px 32px;border-radius:14px;font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:1px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 28px rgba(201,168,76,.2);transition:all .3s}
-.bg:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(201,168,76,.35)}
+    /* hero metrics */
+    .ft-hero-metrics {
+      display: flex;
+      gap: 3rem;
+      justify-content: center;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+    .ft-metric-val {
+      display: block;
+      font-size: 2rem;
+      font-weight: 800;
+      color: #2B3A8E;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .ft-metric-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #aaa;
+      letter-spacing: 0.04em;
+      margin-top: 0.3rem;
+      display: block;
+    }
 
-@media(max-width:900px){
-.fr,.fr.rv{grid-template-columns:1fr;text-align:center;direction:ltr;gap:32px}
-.nl{display:none}.mm{display:block}
-.fr-phone{width:180px}
-}
-</style>
+    /* ── THREE MOTIONS ── */
+    #ft-motions {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem clamp(1.5rem, 4vw, 3rem);
+    }
+    .ft-section-head {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .ft-section-eyebrow {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.4);
+      margin-bottom: 0.7rem;
+    }
+    .ft-section-title {
+      font-size: clamp(1.6rem, 3vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+    }
+    .ft-section-desc {
+      font-size: 0.9rem;
+      color: #666;
+      line-height: 1.75;
+      max-width: 52ch;
+      margin: 0 auto;
+    }
+
+    .ft-pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    @media (max-width: 768px) { .ft-pillars { grid-template-columns: 1fr; } }
+
+    .ft-pillar {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.07);
+      border-radius: 18px;
+      padding: 2rem 1.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .ft-pillar::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .ft-pillar--strengthen::before { background: linear-gradient(90deg, #2B3A8E, #4f63c4); }
+    .ft-pillar--search::before     { background: linear-gradient(90deg, #0369a1, #38bdf8); }
+    .ft-pillar--sharpen::before    { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+
+    .ft-pillar-icon {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .ft-pillar h3 {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .ft-pillar p {
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.7;
+    }
+    .ft-pillar-links {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .ft-pillar-link {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #2B3A8E;
+      text-decoration: none;
+      letter-spacing: 0.02em;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+    }
+    .ft-pillar-link:hover { opacity: 1; }
+
+    /* ── SPLIT SECTION ── */
+    .ft-split-section {
+      background: #f8f9fc;
+      padding: 5rem clamp(1.5rem, 4vw, 3rem);
+    }
+    .ft-split {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+    @media (max-width: 768px) {
+      .ft-split { grid-template-columns: 1fr; gap: 2.5rem; }
+      .ft-split--rev .ft-split-visual { order: -1; }
+    }
+    .ft-split h2 {
+      font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .ft-split p {
+      font-size: 0.88rem;
+      color: #555;
+      line-height: 1.8;
+      margin-bottom: 0.75rem;
+    }
+    .ft-checklist {
+      list-style: none;
+      margin-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .ft-checklist li {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #333;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+    .ft-checklist li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #2B3A8E;
+      font-weight: 800;
+    }
+
+    .ft-split-visual {
+      background: linear-gradient(135deg, #f0f1f8 0%, #e8eaf4 100%);
+      border-radius: 20px;
+      border: 1px solid rgba(43,58,142,0.08);
+      aspect-ratio: 4/3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .ft-split-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 20px;
+      display: block;
+    }
+
+    /* score spine visual */
+    .ft-spine-demo {
+      width: 100%;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .ft-spine-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .ft-spine-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      width: 60px;
+      flex-shrink: 0;
+      color: rgba(43,58,142,0.5);
+    }
+    .ft-spine-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: rgba(43,58,142,0.08);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .ft-spine-bar {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #2B3A8E, #4f63c4);
+    }
+    .ft-spine-val {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #2B3A8E;
+      width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── ONBOARDING ARC ── */
+    #ft-arc {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem clamp(1.5rem, 4vw, 3rem);
+    }
+    .ft-arc-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    @media (max-width: 900px)  { .ft-arc-steps { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px)  { .ft-arc-steps { grid-template-columns: 1fr; } }
+
+    .ft-arc-step {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.07);
+      border-radius: 16px;
+      padding: 1.5rem;
+      position: relative;
+    }
+    .ft-arc-week {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      margin-bottom: 0.5rem;
+    }
+    .ft-arc-step h3 {
+      font-size: 0.9rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #0d0d0d;
+      margin-bottom: 0.4rem;
+    }
+    .ft-arc-step p {
+      font-size: 0.78rem;
+      color: #777;
+      line-height: 1.6;
+    }
+    .ft-arc-num {
+      position: absolute;
+      top: 1.25rem;
+      right: 1.25rem;
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: rgba(43,58,142,0.06);
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    /* ── STATS ── */
+    #ft-stats {
+      background: #2B3A8E;
+      padding: 3.5rem clamp(1.5rem, 5vw, 4rem);
+    }
+    .ft-stats-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2rem;
+      text-align: center;
+    }
+    @media (max-width: 640px) { .ft-stats-inner { grid-template-columns: repeat(2, 1fr); } }
+    .ft-stat-num {
+      display: block;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .ft-stat-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.06em;
+      line-height: 1.4;
+    }
+
+    /* ── FEATURE GRID ── */
+    #ft-grid-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem clamp(1.5rem, 4vw, 3rem);
+    }
+    .ft-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    @media (max-width: 900px) { .ft-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .ft-grid { grid-template-columns: 1fr; } }
+
+    .ft-tile {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.07);
+      border-radius: 18px;
+      padding: 1.75rem;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: border-color 0.2s, transform 0.18s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .ft-tile:hover {
+      border-color: rgba(43,58,142,0.22);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(43,58,142,0.08);
+    }
+    .ft-tile-tag {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.5;
+    }
+    .ft-tile h3 {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #0d0d0d;
+      margin-top: 0.1rem;
+    }
+    .ft-tile p {
+      font-size: 0.8rem;
+      color: #777;
+      line-height: 1.65;
+      flex: 1;
+    }
+    .ft-tile-chips {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: 0.25rem;
+    }
+    .ft-chip {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0.2rem 0.55rem;
+      border-radius: 100px;
+      background: rgba(43,58,142,0.06);
+      color: rgba(43,58,142,0.55);
+    }
+    .ft-tile-arrow {
+      position: absolute;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      font-size: 0.85rem;
+      color: rgba(43,58,142,0.2);
+      transition: color 0.15s, transform 0.15s;
+    }
+    .ft-tile:hover .ft-tile-arrow { color: #2B3A8E; transform: translateX(2px); }
+
+    /* ── QUOTE ── */
+    .ft-quote-section {
+      background: #f8f9fc;
+      padding: 4rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+    }
+    blockquote {
+      font-size: clamp(1.1rem, 2vw, 1.5rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.55;
+      color: #0d0d0d;
+      max-width: 56ch;
+      margin: 0 auto;
+    }
+    blockquote cite {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      margin-top: 1rem;
+      font-style: normal;
+    }
+
+    /* ── CTA BAND ── */
+    #ft-cta {
+      background: #2B3A8E;
+      padding: 5rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+    }
+    #ft-cta h2 {
+      font-size: clamp(1.8rem, 3.5vw, 3rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.8rem;
+    }
+    #ft-cta p { font-size: 0.95rem; color: rgba(255,255,255,0.5); margin-bottom: 2rem; }
+  </style>
 </head>
 <body>
 
-<nav><div class="ni">
-  <a href="index.html" class="logo"><img src="dillywordmark.png" alt="Dilly"></a>
-  <div class="nl">
-    <a href="features.html" class="act">Features</a><a href="index.html#pricing">Pricing</a><a href="index.html#faq">FAQ</a>
-    <a href="index.html#quiz" class="nc">GET YOUR SCORE</a>
+  <!-- NAV -->
+  <div id="ft-nav">
+    <div class="site-nav site-nav--inner" style="background:#fff;">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link">ATS scanner</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link">Ask Dilly on any job</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link">Peer leaderboard</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Decide</span>
+                <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+              </div></div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row" style="display:flex;align-items:center;gap:1rem"><a href="https://www.instagram.com/joindilly" target="_blank" rel="noopener" aria-label="Dilly on Instagram" style="display:flex;align-items:center;color:inherit;opacity:0.6;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
   </div>
-  <button class="mm" onclick="let n=document.querySelector('.nl');n.style.display=n.style.display==='flex'?'none':'flex'">☰</button>
-</div></nav>
 
-<div class="ph">
-  <h1>Everything inside <span class="g">Dilly</span></h1>
-  <p>Resume intelligence, AI coaching, internship matching, ATS scanning — one app, one system, one score. Here's what you get.</p>
-</div>
+  <!-- HERO -->
+  <div id="ft-hero">
+    <p class="ft-eyebrow">Product library</p>
+    <h1>One system.<br>Nine surfaces.<br>Zero guesswork.</h1>
+    <p>Dilly is not a loose bundle of tools. Resume scoring, editing, ATS checks, internship intelligence, pipeline, calendar, Ask Dilly, AI coach, and leaderboard all read the same underlying profile.</p>
+    <div class="ft-hero-actions">
+      <a class="ft-btn-primary" href="https://app.trydilly.com/">Open the app</a>
+      <a class="ft-btn-ghost" href="quiz.html">Take the quiz</a>
+    </div>
+    <div class="ft-hero-metrics">
+      <div>
+        <span class="ft-metric-val">9</span>
+        <span class="ft-metric-label">Deep-dive feature pages</span>
+      </div>
+      <div>
+        <span class="ft-metric-val">3</span>
+        <span class="ft-metric-label">Core score dimensions</span>
+      </div>
+      <div>
+        <span class="ft-metric-val">6+</span>
+        <span class="ft-metric-label">ATS engines modeled</span>
+      </div>
+      <div>
+        <span class="ft-metric-val">1</span>
+        <span class="ft-metric-label">Pipeline from save to offer</span>
+      </div>
+    </div>
+  </div>
 
-<section><div class="si">
+  <!-- THREE MOTIONS -->
+  <section id="ft-motions">
+    <div class="ft-section-head">
+      <p class="ft-section-eyebrow">Three motions</p>
+      <h2 class="ft-section-title">How students move through Dilly</h2>
+      <p class="ft-section-desc">Most people cycle through strengthen, search, and sharpen on repeat. Every feature maps cleanly to one of these three.</p>
+    </div>
+    <div class="ft-pillars">
+      <div class="ft-pillar ft-pillar--strengthen">
+        <span class="ft-pillar-icon">◆</span>
+        <h3>Strengthen</h3>
+        <p>Make the file defensible before you apply anywhere. Dilly Score, resume editor, and ATS scanner run on the same signal, one fix lifts all three.</p>
+        <div class="ft-pillar-links">
+          <a href="feature-dilly-score.html" class="ft-pillar-link">→ Dilly Score</a>
+          <a href="feature-resume-editor.html" class="ft-pillar-link">→ Resume editor</a>
+          <a href="feature-ats.html" class="ft-pillar-link">→ ATS scanner</a>
+        </div>
+      </div>
+      <div class="ft-pillar ft-pillar--search">
+        <span class="ft-pillar-icon">◇</span>
+        <h3>Search</h3>
+        <p>Browse and track without losing context. Internship matching, application tracker, and calendar keep browse-to-apply-to-interview coherent.</p>
+        <div class="ft-pillar-links">
+          <a href="feature-internships.html" class="ft-pillar-link">→ Internship matching</a>
+          <a href="feature-tracker.html" class="ft-pillar-link">→ Application tracker</a>
+          <a href="feature-calendar.html" class="ft-pillar-link">→ Calendar</a>
+        </div>
+      </div>
+      <div class="ft-pillar ft-pillar--sharpen">
+        <span class="ft-pillar-icon">◎</span>
+        <h3>Sharpen</h3>
+        <p>Add depth, practice interviews, and benchmark against peers. Ask Dilly, AI coach, and the leaderboard close the loop between score and skill.</p>
+        <div class="ft-pillar-links">
+          <a href="feature-ask-dilly.html" class="ft-pillar-link">→ Ask Dilly</a>
+          <a href="feature-ai-coach.html" class="ft-pillar-link">→ AI coach</a>
+          <a href="feature-leaderboard.html" class="ft-pillar-link">→ Leaderboard</a>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<!-- 1. Resume Audit -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">CORE FEATURE</div>
-    <h3>Resume Audit & Dilly Score</h3>
-    <p>Upload your resume and get scored across three dimensions — Smart (academics & rigor), Grit (leadership & impact), and Build (proof & projects). Each dimension is 0-100, weighted by your career track. See exactly what's holding you back and what to improve first.</p>
-    <div class="tag">Smart · Grit · Build</div>
-    <div class="tag">0-100 per dimension</div>
-    <div class="hbox"><strong>Example:</strong> "Your Grit score is held back by vague verbs. Change 'assisted with' to 'supported 200+ visits/week' — quantify impact."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillynewaudit.png" alt="New Audit"></div>
-    <div class="fr-phone tr"><img src="dillyhome.png" alt="Home Screen"></div>
-  </div>
-</div>
+  <!-- WHY ONE SCORE -->
+  <section class="ft-split-section">
+    <div class="ft-split ft-split--rev">
+      <div class="ft-split-visual">
+        <div class="ft-spine-demo">
+          <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(43,58,142,0.35);margin-bottom:0.5rem">Your Dilly Score</div>
+          <div class="ft-spine-row">
+            <span class="ft-spine-label">Smart</span>
+            <div class="ft-spine-bar-wrap"><div class="ft-spine-bar" style="width:74%;background:linear-gradient(90deg,#2B3A8E,#7b9fff)"></div></div>
+            <span class="ft-spine-val">74</span>
+          </div>
+          <div class="ft-spine-row">
+            <span class="ft-spine-label">Grit</span>
+            <div class="ft-spine-bar-wrap"><div class="ft-spine-bar" style="width:88%;background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div></div>
+            <span class="ft-spine-val">88</span>
+          </div>
+          <div class="ft-spine-row">
+            <span class="ft-spine-label">Build</span>
+            <div class="ft-spine-bar-wrap"><div class="ft-spine-bar" style="width:41%;background:linear-gradient(90deg,#0369a1,#5ecfb0)"></div></div>
+            <span class="ft-spine-val">41</span>
+          </div>
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(43,58,142,0.07);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.7rem;font-weight:700;color:rgba(43,58,142,0.4);letter-spacing:0.06em">Composite</span>
+            <span style="font-size:1.8rem;font-weight:800;color:#2B3A8E;letter-spacing:-0.04em">68</span>
+          </div>
+          <div style="margin-top:0.75rem;background:rgba(43,58,142,0.05);border-radius:10px;padding:0.75rem;font-size:0.75rem;color:#555;line-height:1.5">
+            <strong style="color:#0d0d0d;font-weight:700">Build gap detected.</strong> Your Build score (41) is 20 points below Goldman's implied target. Deploy one project before applications open.
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2>Why "one score" is the spine</h2>
+        <p>When every surface agrees on Smart, Grit, and Build, you stop translating between a resume grader, a job board, and a chatbot. Improvements in the editor show up in listings. Coach answers match your gap bars.</p>
+        <p>That integration is the product thesis: fewer tabs, fewer contradictions, faster iteration while you still have semesters to work with.</p>
+        <ul class="ft-checklist">
+          <li>Shared dimensions across audit, jobs, and coach</li>
+          <li>Tracker and calendar inherit context from saved roles</li>
+          <li>Leaderboard reflects the same signals you are optimizing</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-<!-- 2. Dilly AI -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">AI COACHING</div>
-    <h3>Dilly AI — Your Career Coach</h3>
-    <p>A floating AI chat that knows your resume, your scores, your applications, and your deadlines. Ask anything — "Am I ready for Stripe?" — and get specific advice based on your actual gaps. Coach mode for strategy, Practice mode for mock interviews.</p>
-    <div class="tag">Knows your full context</div>
-    <div class="tag">Mock interviews</div>
-    <div class="hbox"><strong>Example:</strong> "Your Build gap is the real problem — 16 points. Stripe wants interns who've shipped something real. Pick one project, get it to production in 4-6 weeks."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillyai.png" alt="AI Scores"></div>
-    <div class="fr-phone tr"><img src="dillyaiscores.png" alt="AI Gaps"></div>
-  </div>
-</div>
+  <!-- ONBOARDING ARC -->
+  <section id="ft-arc">
+    <div class="ft-section-head">
+      <p class="ft-section-eyebrow">First thirty days</p>
+      <h2 class="ft-section-title">A realistic onboarding arc</h2>
+      <p class="ft-section-desc">Most people who use Dilly well follow the same four-week pattern.</p>
+    </div>
+    <div class="ft-arc-steps">
+      <div class="ft-arc-step">
+        <span class="ft-arc-num">1</span>
+        <p class="ft-arc-week">Week 1</p>
+        <h3>Audit your file</h3>
+        <p>Upload, score, ATS scan. Fix structural blockers before worrying about poetic edits.</p>
+      </div>
+      <div class="ft-arc-step">
+        <span class="ft-arc-num">2</span>
+        <p class="ft-arc-week">Week 2</p>
+        <h3>Edit the lowest bullets</h3>
+        <p>Editor sprints on the weakest lines. Save five target roles; read gap labels honestly.</p>
+      </div>
+      <div class="ft-arc-step">
+        <span class="ft-arc-num">3</span>
+        <p class="ft-arc-week">Week 3</p>
+        <h3>Move two to Applied</h3>
+        <p>Promote applications in tracker. Load deadlines into calendar. Run Ask Dilly on your top pick.</p>
+      </div>
+      <div class="ft-arc-step">
+        <span class="ft-arc-num">4</span>
+        <p class="ft-arc-week">Week 4</p>
+        <h3>Practice and benchmark</h3>
+        <p>Coach mock block on behavioral gaps. Check leaderboard trend, not day noise.</p>
+      </div>
+    </div>
+  </section>
 
-<!-- 3. Internships -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">JOB INTELLIGENCE</div>
-    <h3>Internship Matching with Gap Analysis</h3>
-    <p>97 real internships from Stripe, Airbnb, Cloudflare, Coinbase, Pinterest, and more. Each listing shows your readiness — Ready, Almost, or Gap — with Smart/Grit/Build bars comparing your scores to what the role requires. A gold personalized insight tells you exactly how to close your gaps.</p>
-    <div class="tag" style="color:var(--green);background:rgba(52,199,89,.1);border-color:rgba(52,199,89,.2)">Ready</div>
-    <div class="tag" style="color:var(--amber);background:rgba(255,159,10,.1);border-color:rgba(255,159,10,.2)">Almost</div>
-    <div class="tag" style="color:var(--coral);background:rgba(255,69,58,.1);border-color:rgba(255,69,58,.2)">Gap</div>
-    <div class="hbox"><strong>Example:</strong> "Your Build is 72, but Stripe wants 88 (16 point gap). They want shipped products, not tutorials. Deploy one project and you're competitive."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillyinternshiplist.png" alt="Listings"></div>
-    <div class="fr-phone tr"><img src="dillyinternships.png" alt="Stripe Gap"></div>
-  </div>
-</div>
+  <!-- STATS -->
+  <section id="ft-stats">
+    <div class="ft-stats-inner">
+      <div>
+        <span class="ft-stat-num">9</span>
+        <span class="ft-stat-label">Dedicated product stories</span>
+      </div>
+      <div>
+        <span class="ft-stat-num">3</span>
+        <span class="ft-stat-label">Core dimensions</span>
+      </div>
+      <div>
+        <span class="ft-stat-num">6+</span>
+        <span class="ft-stat-label">ATS engines modeled</span>
+      </div>
+      <div>
+        <span class="ft-stat-num">1</span>
+        <span class="ft-stat-label">Pipeline from save to offer</span>
+      </div>
+    </div>
+  </section>
 
-<!-- 4. ATS Scanner -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">ATS INTELLIGENCE</div>
-    <h3>ATS Scanner — Pass the Robots</h3>
-    <p>Your resume gets rejected by ATS systems before a human ever sees it. Dilly scans against all 6 major systems — Greenhouse, Workday, iCIMS, Taleo, Lever, and SuccessFactors. See your score per system, what the ATS extracts from your resume, and exactly what formatting to fix.</p>
-    <div class="tag">6 ATS systems</div>
-    <div class="tag">Parse preview</div>
-    <div class="tag">Fix with Dilly</div>
-    <div class="hbox"><strong>Example:</strong> "Workday: 67%. Your two-column layout breaks parsing — merge into single column. Contact info in header — Taleo ignores headers, move to body."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillyats.png" alt="ATS Full"></div>
-  </div>
-</div>
+  <!-- FEATURE GRID -->
+  <section id="ft-grid-section">
+    <div class="ft-section-head">
+      <p class="ft-section-eyebrow">Explore</p>
+      <h2 class="ft-section-title">Feature library</h2>
+      <p class="ft-section-desc">Each tile opens a full scroll experience: hero, demo, workflows, stats, and related modules.</p>
+    </div>
+    <div class="ft-grid">
+      <a class="ft-tile" href="feature-dilly-score.html">
+        <span class="ft-tile-tag">Core</span>
+        <h3>Dilly Score</h3>
+        <p>Smart, Grit, and Build: weighted 0–100 dimensions with track-aware signals so you know what to fix first.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">Audit</span><span class="ft-chip">Gap analysis</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-resume-editor.html">
+        <span class="ft-tile-tag">Editing</span>
+        <h3>Resume editor</h3>
+        <p>Per-bullet scoring, live feedback, and AI rewrites that push toward quantified impact.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">Live score</span><span class="ft-chip">AI rewrites</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-ats.html">
+        <span class="ft-tile-tag">ATS</span>
+        <h3>ATS scanner</h3>
+        <p>Multi-system checks, parse preview, and concrete formatting fixes before a human sees your file.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">6+ parsers</span><span class="ft-chip">Parse preview</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-internships.html">
+        <span class="ft-tile-tag">Jobs</span>
+        <h3>Internship matching</h3>
+        <p>Real listings with Ready, Almost, or Gap labels. Tailor resume on every card from your profile.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">Tailor resume</span><span class="ft-chip">Gap analysis</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-tracker.html">
+        <span class="ft-tile-tag">Pipeline</span>
+        <h3>Application tracker</h3>
+        <p>Saved to Offer kanban with entries that sync when you apply from inside Dilly.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">Kanban</span><span class="ft-chip">Auto-sync</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-calendar.html">
+        <span class="ft-tile-tag">Deadlines</span>
+        <h3>Calendar and events</h3>
+        <p>Deadlines, interviews, and fairs in one grid with nudges so nothing slips.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">Nudges</span><span class="ft-chip">Career fairs</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-ask-dilly.html">
+        <span class="ft-tile-tag">Deep intel</span>
+        <h3>Ask Dilly</h3>
+        <p>Company-specific prompts and action plans generated from your real gap data, not generic advice.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">Action plans</span><span class="ft-chip">Gap-driven</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-ai-coach.html">
+        <span class="ft-tile-tag">AI</span>
+        <h3>AI coach</h3>
+        <p>Chat that knows your resume, scores, applications, and deadlines. Strategy and mock interviews.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">Full context</span><span class="ft-chip">Mock interview</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+      <a class="ft-tile" href="feature-leaderboard.html">
+        <span class="ft-tile-tag">Competition</span>
+        <h3>Peer leaderboard</h3>
+        <p>Rankings by track, podium moments, weekly movement, and percentile per dimension.</p>
+        <div class="ft-tile-chips"><span class="ft-chip">By track</span><span class="ft-chip">Percentile</span></div>
+        <span class="ft-tile-arrow">→</span>
+      </a>
+    </div>
+  </section>
 
-<!-- 5. Resume Editor -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">EDITING</div>
-    <h3>Resume Editor with Live Scoring</h3>
-    <p>Every bullet point gets a score. See what "Good" looks like versus "Needs work" in real time. AI suggests specific rewrites — turning vague descriptions into quantified, impactful statements. Watch your overall score climb as you edit.</p>
-    <div class="tag">Per-bullet scores</div>
-    <div class="tag">AI rewrite suggestions</div>
-    <div class="hbox"><strong>Before:</strong> "Helped with patient care"<br><strong>After:</strong> "Supported 200+ patient visits/week — vitals, intake, EHR — reducing nurse admin load by ~15%"</div>
+  <!-- QUOTE -->
+  <div class="ft-quote-section">
+    <blockquote>
+      "The problem isn't that students don't have the tools. They do. It's that there's nothing that ties it all together."
+      <cite>Dilan (Dilly) Kochhar</cite>
+    </blockquote>
   </div>
-  <div class="fr-phones">
-    <div class="fr-phone"><img src="dillyresumeeditor.png" alt="Editor"></div>
-  </div>
-</div>
 
-<!-- 6. Leaderboard -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">COMPETITION</div>
-    <h3>Peer Leaderboard</h3>
-    <p>See where you rank against other students in your track. Podium display, weekly movement, percentiles by dimension. Know if you're in the top 10% or have work to do. The competitive pressure drives improvement.</p>
-    <div class="tag">Track-specific rankings</div>
-    <div class="tag">Weekly movement</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone"><img src="dillyrank.png" alt="Leaderboard"></div>
-  </div>
-</div>
+  <!-- CTA -->
+  <section id="ft-cta">
+    <h2>Ready to see where you stand?</h2>
+    <p>Take the short quiz or start free in the app.</p>
+    <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+      <a class="ft-btn-primary" href="quiz.html" style="font-size:0.85rem;padding:0.9rem 2.25rem">Take the quiz</a>
+      <a class="ft-btn-ghost" href="https://app.trydilly.com/" style="font-size:0.85rem;padding:0.9rem 2rem;border-color:rgba(255,255,255,0.3);color:#fff">Start free</a>
+    </div>
+  </section>
 
-<!-- 7. Application Tracker -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">PIPELINE</div>
-    <h3>Internship Tracker</h3>
-    <p>Track every application from Saved to Applied to Interviewing to Offer. One tap to move between stages. See your full pipeline at a glance. When you apply from the Internships tab, it auto-creates the tracker entry.</p>
-    <div class="tag">Saved → Applied → Interviewing → Offer</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone"><img src="dillyinternshiptracker.png" alt="Tracker"></div>
-  </div>
-</div>
-
-<!-- 8. Calendar -->
-<div class="fr rv fu">
-  <div class="fr-text">
-    <div class="sl">DEADLINES</div>
-    <h3>Calendar & Events</h3>
-    <p>Never miss a deadline. Add application deadlines, interviews, career fairs, and events. Monthly grid view with upcoming events. Dilly nudges you when deadlines approach.</p>
-    <div class="tag">Deadlines</div>
-    <div class="tag">Interviews</div>
-    <div class="tag">Career fairs</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="dillycalendar.png" alt="Calendar"></div>
-    <div class="fr-phone tr"><img src="dillycalendarevent.png" alt="Event"></div>
-  </div>
-</div>
-
-<!-- 9. Ask Dilly per Job -->
-<div class="fr fu">
-  <div class="fr-text">
-    <div class="sl">DEEP INTELLIGENCE</div>
-    <h3>Ask Dilly About Any Job</h3>
-    <p>Tap "Ask Dilly" on any internship listing. Dilly auto-generates a prompt with your specific gaps for that role and gives you a detailed action plan — which skills to build, which projects to highlight, how to position your experience.</p>
-    <div class="tag">Auto-prompt from gap data</div>
-    <div class="tag">Company-specific advice</div>
-    <div class="hbox"><strong>Example:</strong> "For the Stripe SWE Intern role: your Smart is 9.75 points below their bar. Do 3-4 LeetCode mediums per week on arrays, graphs, dynamic programming. Practice reasoning out loud — Stripe rewards structural thinking."</div>
-  </div>
-  <div class="fr-phones">
-    <div class="fr-phone tl"><img src="images/dilly-ai-stripe.png" alt="Stripe Advice"></div>
-    <div class="fr-phone tr"><img src="images/internships-cloudflare.png" alt="Cloudflare"></div>
-  </div>
-</div>
-
-</div></section>
-
-<div class="cta-band">
-  <h2>Ready to see where you stand?</h2>
-  <p>Take the 60-second quiz and get your estimated Dilly Score.</p>
-  <a href="index.html#quiz" class="bg">See My Estimated Score →</a>
-</div>
-
-<footer><div class="fl"><a href="features.html">Features</a><a href="index.html#pricing">Pricing</a><a href="about.html">About</a><a href="index.html#faq">FAQ</a></div>
-<p>© 2026 Dilly. The career center in your pocket.</p></footer>
-
-<script>
-const ob=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('v')})},{threshold:.1});
-document.querySelectorAll('.fu').forEach(el=>ob.observe(el));
-window.addEventListener('scroll',()=>{document.querySelector('nav').style.padding=window.scrollY>50?'10px 0':'16px 0'});
-</script>
+  <script src="dilly.js"></script>
 </body>
 </html>

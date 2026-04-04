@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS Scanner: Dilly</title>
+  <meta name="description" content="See exactly how the six biggest ATS systems parse your resume, before you submit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fff;
+      color: #0d0d0d;
+      overflow-x: hidden;
+    }
+    body { overflow-x: hidden; }
+
+    /* ── HERO ── */
+    #ats-hero {
+      padding: 5rem clamp(1.5rem, 5vw, 6rem) 4rem;
+      max-width: 820px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .ats-eyebrow {
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #2B3A8E;
+      opacity: 0.5;
+      margin-bottom: 1.1rem;
+    }
+
+    #ats-hero h1 {
+      font-size: clamp(2.2rem, 4.5vw, 4rem);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+    }
+
+    #ats-hero p {
+      font-size: clamp(0.92rem, 1.2vw, 1.05rem);
+      line-height: 1.8;
+      color: #555;
+      max-width: 52ch;
+      margin: 0 auto;
+    }
+
+    /* ── DEMO SHELL ── */
+    #ats-demo {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 3vw, 2.5rem) 5rem;
+    }
+
+    /* system tabs */
+    #ats-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .ats-tab {
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 0.45rem 1rem;
+      border-radius: 100px;
+      border: 1.5px solid rgba(43,58,142,0.18);
+      background: transparent;
+      color: rgba(43,58,142,0.55);
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .ats-tab:hover {
+      border-color: rgba(43,58,142,0.4);
+      color: #2B3A8E;
+    }
+    .ats-tab.active {
+      background: #2B3A8E;
+      border-color: #2B3A8E;
+      color: #fff;
+    }
+
+    /* two-pane */
+    #ats-panes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+
+    .ats-pane {
+      border: 1px solid rgba(43,58,142,0.1);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .ats-pane-header {
+      padding: 0.75rem 1.25rem;
+      background: #f5f6ff;
+      border-bottom: 1px solid rgba(43,58,142,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .ats-pane-title {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.5);
+    }
+
+    .ats-sample-btn {
+      font-family: inherit;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+      border: 1.5px solid rgba(43,58,142,0.22);
+      background: transparent;
+      color: #2B3A8E;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ats-sample-btn:hover { background: rgba(43,58,142,0.07); border-color: rgba(43,58,142,0.4); }
+    .ats-sample-btn.good  { border-color: rgba(22,163,74,0.35); color: #15803d; }
+    .ats-sample-btn.good:hover  { background: rgba(22,163,74,0.07); }
+    .ats-sample-btn.meh   { border-color: rgba(234,179,8,0.45); color: #92400e; }
+    .ats-sample-btn.meh:hover   { background: rgba(234,179,8,0.07); }
+    .ats-sample-btn.bad   { border-color: rgba(220,38,38,0.35); color: #dc2626; }
+    .ats-sample-btn.bad:hover   { background: rgba(220,38,38,0.07); }
+
+    #ats-sample-group {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #ats-sample-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      margin-right: 0.15rem;
+    }
+
+    /* input pane */
+    #ats-input {
+      width: 100%;
+      min-height: 480px;
+      padding: 1.25rem;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.78rem;
+      line-height: 1.65;
+      color: #333;
+      border: none;
+      outline: none;
+      resize: vertical;
+      background: #fff;
+    }
+    #ats-input::placeholder { color: rgba(0,0,0,0.22); }
+
+    /* word count / char indicator */
+    #ats-input-footer {
+      padding: 0.5rem 1.25rem;
+      border-top: 1px solid rgba(43,58,142,0.06);
+      background: #fafbff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    #ats-word-count {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: rgba(43,58,142,0.35);
+      letter-spacing: 0.06em;
+    }
+
+    .ats-scan-btn {
+      font-family: inherit;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.5rem 1.4rem;
+      border-radius: 100px;
+      border: none;
+      background: #2B3A8E;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .ats-scan-btn:hover { opacity: 0.85; }
+    .ats-scan-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* results pane */
+    #ats-results-body {
+      padding: 1.25rem;
+      min-height: 480px;
+    }
+
+    .ats-empty {
+      height: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      color: rgba(43,58,142,0.25);
+    }
+    .ats-empty-icon {
+      font-size: 2.5rem;
+      opacity: 0.4;
+    }
+    .ats-empty p {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-align: center;
+      max-width: 22ch;
+      line-height: 1.5;
+    }
+
+    /* scanning animation */
+    #ats-scanning {
+      display: none;
+      height: 480px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+    #ats-scanning.visible { display: flex; }
+
+    .ats-scan-ring {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid rgba(43,58,142,0.12);
+      border-top-color: #2B3A8E;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #ats-scan-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: rgba(43,58,142,0.5);
+      letter-spacing: 0.08em;
+    }
+
+    /* result rows */
+    #ats-result-list { display: none; }
+    #ats-result-list.visible { display: block; }
+
+    .ats-section-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.35);
+      margin: 1.1rem 0 0.5rem;
+    }
+    .ats-section-label:first-child { margin-top: 0; }
+
+    .ats-field {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid rgba(43,58,142,0.06);
+    }
+    .ats-field:last-child { border-bottom: none; }
+
+    .ats-field-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 900;
+      margin-top: 0.05rem;
+    }
+    .ats-field-icon.ok   { background: rgba(22,163,74,0.12);  color: #16a34a; }
+    .ats-field-icon.warn { background: rgba(234,179,8,0.15);  color: #b45309; }
+    .ats-field-icon.fail { background: rgba(220,38,38,0.1);   color: #dc2626; }
+
+    .ats-field-content { flex: 1; min-width: 0; }
+    .ats-field-key {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: rgba(0,0,0,0.45);
+      letter-spacing: 0.04em;
+      margin-bottom: 0.15rem;
+    }
+    .ats-field-val {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #0d0d0d;
+      word-break: break-word;
+    }
+    .ats-field-val.missing {
+      font-style: italic;
+      color: rgba(0,0,0,0.28);
+      font-weight: 400;
+    }
+    .ats-field-note {
+      font-size: 0.68rem;
+      color: #b45309;
+      margin-top: 0.15rem;
+      line-height: 1.45;
+    }
+
+    /* score badge */
+    #ats-score-bar {
+      display: none;
+      padding: 1rem 1.25rem;
+      border-top: 1px solid rgba(43,58,142,0.07);
+      background: #fafbff;
+      align-items: center;
+      gap: 1rem;
+    }
+    #ats-score-bar.visible { display: flex; }
+
+    #ats-score-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(43,58,142,0.45);
+      white-space: nowrap;
+    }
+
+    #ats-score-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(43,58,142,0.08);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    #ats-score-fill {
+      height: 100%;
+      border-radius: 100px;
+      width: 0;
+      transition: width 0.9s cubic-bezier(0.22,1,0.36,1);
+    }
+    #ats-score-pct {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #2B3A8E;
+      white-space: nowrap;
+      min-width: 3ch;
+      text-align: right;
+    }
+
+    /* issues strip */
+    #ats-issues {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 3vw, 2.5rem) 2rem;
+      display: none;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    #ats-issues.visible { display: flex; }
+
+    .ats-issue-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.4rem 0.85rem;
+      border-radius: 100px;
+      border: 1.5px solid;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.35s, transform 0.35s;
+    }
+    .ats-issue-chip.show { opacity: 1; transform: none; }
+    .ats-issue-chip.warn { border-color: rgba(180,83,9,0.3); color: #b45309; background: rgba(234,179,8,0.07); }
+    .ats-issue-chip.fail { border-color: rgba(220,38,38,0.25); color: #dc2626; background: rgba(220,38,38,0.05); }
+    .ats-issue-chip.ok   { border-color: rgba(22,163,74,0.25); color: #16a34a; background: rgba(22,163,74,0.05); }
+
+    /* ── EXPLAINER STRIP ── */
+    #ats-systems {
+      background: #f5f6ff;
+      padding: 5rem clamp(1.5rem, 5vw, 6rem);
+    }
+    #ats-systems-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    #ats-systems h2 {
+      font-size: clamp(1.8rem, 3vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+    }
+    #ats-systems-sub {
+      font-size: 0.92rem;
+      color: #555;
+      line-height: 1.75;
+      max-width: 52ch;
+      margin-bottom: 3rem;
+    }
+    #ats-sys-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    .ats-sys-card {
+      background: #fff;
+      border: 1px solid rgba(43,58,142,0.09);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+    .ats-sys-name {
+      font-size: 1rem;
+      font-weight: 800;
+      margin-bottom: 0.4rem;
+    }
+    .ats-sys-share {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #2B3A8E;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.65rem;
+    }
+    .ats-sys-desc {
+      font-size: 0.77rem;
+      color: #666;
+      line-height: 1.65;
+    }
+
+    /* ── CTA ── */
+    #ats-cta {
+      background: #2B3A8E;
+      padding: 6rem clamp(1.5rem, 5vw, 6rem);
+      text-align: center;
+    }
+    #ats-cta h2 {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    #ats-cta p {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.75;
+      max-width: 44ch;
+      margin: 0 auto 2.5rem;
+    }
+    .ats-btn {
+      display: inline-block;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.9rem 2.25rem;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .ats-btn:hover { opacity: 0.85; }
+    .ats-btn--white { background: #fff; color: #2B3A8E; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      #ats-panes {
+        grid-template-columns: 1fr;
+      }
+      #ats-input { min-height: 260px; }
+      #ats-scanning, .ats-empty { height: 260px; }
+      #ats-sys-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      #ats-hero h1 { font-size: 2rem; }
+      #ats-sys-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── NAV ── -->
+  <header class="page-hero" style="padding:0;min-height:0;background:#fff;position:sticky;top:0;z-index:200">
+    <div class="site-nav site-nav--inner">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Your resume</span>
+                <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Search and track</span>
+                <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Guidance</span>
+                <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+              </div></div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner"><div class="nav-dropdown-col">
+                <span class="nav-dropdown-label">Decide</span>
+                <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+              </div></div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row" style="display:flex;align-items:center;gap:1rem"><a href="https://www.instagram.com/joindilly" target="_blank" rel="noopener" aria-label="Dilly on Instagram" style="display:flex;align-items:center;color:inherit;opacity:0.6;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── HERO ── -->
+  <section id="ats-hero">
+    <p class="ats-eyebrow">ATS Scanner</p>
+    <h1>See what the bots<br>see, before you submit.</h1>
+    <p>Paste your resume below. The scanner checks it against the parsing logic of the six biggest ATS systems and shows you exactly what gets extracted, what gets mangled, and what gets dropped entirely.</p>
+  </section>
+
+  <!-- ── DEMO ── -->
+  <div id="ats-demo">
+
+    <!-- system selector -->
+    <div id="ats-tabs" role="tablist" aria-label="ATS system">
+      <button class="ats-tab active" data-sys="greenhouse" role="tab" aria-selected="true">Greenhouse</button>
+      <button class="ats-tab" data-sys="lever"       role="tab" aria-selected="false">Lever</button>
+      <button class="ats-tab" data-sys="workday"     role="tab" aria-selected="false">Workday</button>
+      <button class="ats-tab" data-sys="icims"       role="tab" aria-selected="false">iCIMS</button>
+      <button class="ats-tab" data-sys="taleo"       role="tab" aria-selected="false">Taleo</button>
+      <button class="ats-tab" data-sys="ashby"       role="tab" aria-selected="false">Ashby</button>
+    </div>
+
+    <!-- two panes -->
+    <div id="ats-panes">
+
+      <!-- LEFT: input -->
+      <div class="ats-pane">
+        <div class="ats-pane-header">
+          <span class="ats-pane-title">Your resume text</span>
+          <div id="ats-sample-group">
+            <span id="ats-sample-label">Try:</span>
+            <button class="ats-sample-btn good" data-quality="good" type="button">Strong</button>
+            <button class="ats-sample-btn meh"  data-quality="meh"  type="button">Mediocre</button>
+            <button class="ats-sample-btn bad"  data-quality="bad"  type="button">Weak</button>
+          </div>
+        </div>
+        <textarea id="ats-input" spellcheck="false" placeholder="Paste your resume here as plain text, or click &quot;Load sample&quot; to see a demo scan."></textarea>
+        <div id="ats-input-footer">
+          <span id="ats-word-count">0 words</span>
+          <button class="ats-scan-btn" id="ats-scan-btn" type="button" disabled>Scan resume</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: results -->
+      <div class="ats-pane">
+        <div class="ats-pane-header">
+          <span class="ats-pane-title" id="ats-result-title">Parse result</span>
+        </div>
+        <div id="ats-results-body">
+          <div class="ats-empty" id="ats-empty-state">
+            <span class="ats-empty-icon">&#128269;</span>
+            <p>Paste your resume and hit Scan to see how this ATS reads it</p>
+          </div>
+          <div id="ats-scanning">
+            <div class="ats-scan-ring"></div>
+            <span id="ats-scan-label">Parsing with Greenhouse&hellip;</span>
+          </div>
+          <div id="ats-result-list"></div>
+        </div>
+        <div id="ats-score-bar">
+          <span id="ats-score-label">Parse score</span>
+          <div id="ats-score-track"><div id="ats-score-fill"></div></div>
+          <span id="ats-score-pct"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- issues strip -->
+  <div id="ats-issues" aria-live="polite"></div>
+
+  <!-- ── SYSTEMS ── -->
+  <section id="ats-systems">
+    <div id="ats-systems-inner">
+      <h2>Six systems.<br>Six different parsers.</h2>
+      <p id="ats-systems-sub">Every ATS extracts your resume differently. A bullet that reads perfectly in Greenhouse might get swallowed by Workday. Dilly scans all six so you know where the gaps are before a recruiter sees a broken profile.</p>
+      <div id="ats-sys-grid">
+        <div class="ats-sys-card">
+          <p class="ats-sys-name">Greenhouse</p>
+          <p class="ats-sys-share">~30% of tech internships</p>
+          <p class="ats-sys-desc">Strong structured parser. Handles standard formats well. Trips on tables, columns, and graphics. Skills extraction requires keyword density.</p>
+        </div>
+        <div class="ats-sys-card">
+          <p class="ats-sys-name">Lever</p>
+          <p class="ats-sys-share">~18% of startup roles</p>
+          <p class="ats-sys-desc">Good at free-form text. Struggles with unusual date formats and multi-column layouts. Strong at pulling LinkedIn-style summaries.</p>
+        </div>
+        <div class="ats-sys-card">
+          <p class="ats-sys-name">Workday</p>
+          <p class="ats-sys-share">~25% of enterprise roles</p>
+          <p class="ats-sys-desc">Notoriously strict. Drops anything it can&rsquo;t categorize. Requires consistent section headers. Education parsing is particularly fragile.</p>
+        </div>
+        <div class="ats-sys-card">
+          <p class="ats-sys-name">iCIMS</p>
+          <p class="ats-sys-share">~12% of finance roles</p>
+          <p class="ats-sys-desc">Aggressive skills matching against job description keywords. Low tolerance for non-standard formatting. Bullets must be clearly delimited.</p>
+        </div>
+        <div class="ats-sys-card">
+          <p class="ats-sys-name">Taleo</p>
+          <p class="ats-sys-share">~20% of large enterprise</p>
+          <p class="ats-sys-desc">Oldest and least forgiving. Requires rigid section headers. Dates must be explicit MM/YYYY. Summary sections often dropped entirely.</p>
+        </div>
+        <div class="ats-sys-card">
+          <p class="ats-sys-name">Ashby</p>
+          <p class="ats-sys-share">~8% of high-growth startups</p>
+          <p class="ats-sys-desc">Modern, flexible parser. Best at handling varied formats. Weakest at skills inference, must be explicitly listed to be counted.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ── -->
+  <section id="ats-cta">
+    <h2>Stop losing applications<br>to bad formatting.</h2>
+    <p>Dilly scans all six systems and tells you exactly how to fix every failure before you submit.</p>
+    <a href="https://app.trydilly.com/" class="ats-btn ats-btn--white">Start free &rarr;</a>
+  </section>
+
+  <script>
+  (function () {
+
+    /* ── SAMPLE RESUMES ── */
+    var SAMPLE_GOOD = [
+      'ALEX JOHNSON',
+      'alex.johnson@email.com | (555) 214-8890 | linkedin.com/in/alexjohnson | github.com/alexjohnson',
+      '',
+      'EDUCATION',
+      'University of Tampa, Tampa FL',
+      'B.S. Finance, GPA: 3.7 | Expected May 2026',
+      'Relevant coursework: Financial Modeling, Corporate Finance, Derivatives, Data Analytics',
+      '',
+      'EXPERIENCE',
+      'Goldman Sachs  -  Investment Banking Summer Analyst | New York, NY | Jun 2024 – Aug 2024',
+      '• Built 3-statement LBO model for $420M consumer goods acquisition, presented to MD',
+      '• Automated weekly portfolio reporting in Excel VBA, saving 6 hours/week across team',
+      '• Supported live M&A deal with $1.2B enterprise value; coordinated diligence materials',
+      '',
+      'Raymond James  -  Equity Research Intern | Tampa, FL | Jan 2024 – May 2024',
+      '• Initiated coverage on 4 mid-cap industrials companies; published 12-page equity reports',
+      '• Built DCF and comps models for each coverage; average model accuracy within 3.2%',
+      '',
+      'PROJECTS',
+      'Personal Trading Algorithm  -  Python, pandas, yfinance',
+      '• Built momentum strategy backtested on S&P 500 constituents (2018–2024); 11.4% alpha',
+      '',
+      'SKILLS',
+      'Excel (advanced), Python, SQL, Bloomberg Terminal, FactSet, Capital IQ, PowerPoint',
+      '',
+      'ACTIVITIES',
+      'Investment Club  -  VP of Research | CFA Institute Research Challenge Participant',
+    ].join('\n');
+
+    var SAMPLE_MEH = [
+      'Jamie Lee',
+      'jamielee93@gmail.com | 813-555-0192',
+      '',
+      'Objective: Looking for a finance internship where I can use my skills and grow professionally.',
+      '',
+      'Education',
+      'University of South Florida',
+      'Business Administration, Finance Concentration',
+      'GPA: 3.1',
+      '',
+      'Work Experience',
+      'Bank of America  -  Teller (Part-time)',
+      'Handled customer transactions and assisted with account inquiries',
+      'Learned banking systems and improved customer service',
+      '',
+      'Target  -  Sales Associate',
+      'Summer 2023',
+      'Helped customers find products, worked the register',
+      '',
+      'Skills',
+      'Microsoft Excel, Word, PowerPoint',
+      'Good communicator, team player, detail oriented',
+      '',
+      'Activities',
+      'Finance Club member',
+      'Volunteer at food bank',
+    ].join('\n');
+
+    var SAMPLE_BAD = [
+      'RESUME',
+      '',
+      'Chris',
+      'chris_smith_1999@hotmail.com',
+      '',
+      'I am a motivated student looking for opportunities in the financial sector. I am a hard worker and quick learner who is passionate about finance and investments. I have always been interested in business since I was young.',
+      '',
+      'SCHOOL',
+      'Currently attending college for business',
+      '',
+      'JOBS',
+      'Worked at McDonalds for 2 years',
+      'Worked at a local accounting firm last summer doing stuff',
+      '',
+      'SKILLS',
+      'I know Excel a little bit',
+      'Good at math',
+      'Microsoft Office',
+    ].join('\n');
+
+    var SAMPLE = SAMPLE_GOOD;
+
+    /* ── PARSER RULES (pure regex / string logic  -  zero AI, zero network) ── */
+
+    var SYSTEMS = {
+      greenhouse: { name: 'Greenhouse', strictness: 0.82 },
+      lever:      { name: 'Lever',      strictness: 0.78 },
+      workday:    { name: 'Workday',    strictness: 0.62 },
+      icims:      { name: 'iCIMS',      strictness: 0.70 },
+      taleo:      { name: 'Taleo',      strictness: 0.55 },
+      ashby:      { name: 'Ashby',      strictness: 0.88 },
+    };
+
+    /* field extraction helpers */
+    function extractEmail (text) {
+      var m = text.match(/[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}/);
+      return m ? m[0] : null;
+    }
+    function extractPhone (text) {
+      var m = text.match(/\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/);
+      return m ? m[0] : null;
+    }
+    function extractLinkedIn (text) {
+      var m = text.match(/linkedin\.com\/in\/[\w-]+/i);
+      return m ? m[0] : null;
+    }
+    function extractGitHub (text) {
+      var m = text.match(/github\.com\/[\w-]+/i);
+      return m ? m[0] : null;
+    }
+    function extractName (text) {
+      var lines = text.trim().split('\n').filter(function(l) { return l.trim(); });
+      if (!lines.length) return null;
+      var first = lines[0].trim();
+      /* rough check: name line is usually short and has no @ or digits */
+      if (first.length < 60 && !first.match(/@|\d{3}|http/)) return first;
+      return null;
+    }
+    function extractSection (text, headers) {
+      for (var i = 0; i < headers.length; i++) {
+        var re = new RegExp('(?:^|\\n)' + headers[i] + '\\s*\\n([\\s\\S]*?)(?=\\n[A-Z][A-Z ]{2,}\\n|$)', 'i');
+        var m  = text.match(re);
+        if (m) return m[1].trim();
+      }
+      return null;
+    }
+    function extractGPA (text) {
+      var m = text.match(/GPA[\s:]+([0-9.]+)/i);
+      return m ? m[1] : null;
+    }
+    function extractDates (text) {
+      var found = text.match(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)\s+\d{4}/gi);
+      return found ? found : text.match(/\d{4}/g);
+    }
+    function extractSkills (text) {
+      var sec = extractSection(text, ['SKILLS', 'TECHNICAL SKILLS', 'CORE SKILLS']);
+      if (!sec) return null;
+      var skills = sec.split(/[,\n]/).map(function(s) { return s.replace(/[•\-*]/g,'').trim(); }).filter(function(s) { return s.length > 1 && s.length < 40; });
+      return skills.slice(0, 8);
+    }
+    function countBullets (text) {
+      return (text.match(/^[\s]*[•\-\*]/mg) || []).length;
+    }
+    function hasTable (text) {
+      return /\t.*\t/.test(text) || /\|.*\|/.test(text);
+    }
+    function hasColumns (text) {
+      /* heuristic: many lines starting mid-line with lots of leading spaces */
+      var lines = text.split('\n');
+      var indented = lines.filter(function(l) { return /^ {10,}/.test(l); });
+      return indented.length > 3;
+    }
+
+    /* build result fields per system */
+    function parse (text, sysKey) {
+      var sys = SYSTEMS[sysKey];
+      var strictness = sys.strictness;
+      var fields = [];
+      var warnings = [];
+
+      var name    = extractName(text);
+      var email   = extractEmail(text);
+      var phone   = extractPhone(text);
+      var li      = extractLinkedIn(text);
+      var gh      = extractGitHub(text);
+      var gpa     = extractGPA(text);
+      var skills  = extractSkills(text);
+      var bullets = countBullets(text);
+      var hasTab  = hasTable(text);
+      var hasCols = hasColumns(text);
+
+      var edu  = extractSection(text, ['EDUCATION']);
+      var exp  = extractSection(text, ['EXPERIENCE', 'WORK EXPERIENCE', 'PROFESSIONAL EXPERIENCE']);
+      var proj = extractSection(text, ['PROJECTS', 'PROJECT EXPERIENCE']);
+
+      /* name */
+      fields.push({ section: 'Contact', key: 'Full name', val: name, status: name ? 'ok' : 'fail',
+        note: name ? null : 'Name not detected on first line. Some ATS systems require the name alone on line 1.' });
+
+      /* email */
+      fields.push({ section: 'Contact', key: 'Email', val: email, status: email ? 'ok' : 'fail',
+        note: email ? null : 'No email address found.' });
+
+      /* phone */
+      fields.push({ section: 'Contact', key: 'Phone', val: phone, status: phone ? 'ok' : 'warn',
+        note: phone ? null : 'Phone number not detected. Some systems require it for candidate profiles.' });
+
+      /* linkedin */
+      var liOk = !!li;
+      fields.push({ section: 'Contact', key: 'LinkedIn URL', val: li,
+        status: liOk ? 'ok' : (strictness < 0.70 ? 'warn' : 'warn'),
+        note: liOk ? null : 'No LinkedIn URL found. Recommended for most systems.' });
+
+      /* education */
+      if (edu) {
+        var gpaStatus = gpa ? (sysKey === 'taleo' ? 'warn' : 'ok') : 'warn';
+        fields.push({ section: 'Education', key: 'School detected', val: edu.split('\n')[0] || null, status: 'ok' });
+        fields.push({ section: 'Education', key: 'GPA', val: gpa, status: gpaStatus,
+          note: (!gpa && sysKey === 'workday') ? 'Workday often marks candidates with missing GPA as incomplete.' : (gpa && sysKey === 'taleo' ? 'Taleo sometimes misreads GPA when not in 0.0/4.0 format.' : null) });
+        var dates = extractDates(edu);
+        var dateOk = dates && dates.length >= 1;
+        fields.push({ section: 'Education', key: 'Graduation date', val: dates ? dates[dates.length - 1] : null,
+          status: dateOk ? 'ok' : 'fail',
+          note: !dateOk ? 'No graduation date detected. Required by Workday and Taleo.' : null });
+      } else {
+        fields.push({ section: 'Education', key: 'Education section', val: null, status: 'fail',
+          note: 'No EDUCATION section found. Use a clear all-caps header.' });
+      }
+
+      /* experience */
+      if (exp) {
+        var expLines  = exp.split('\n').filter(function(l) { return l.trim(); });
+        var jobTitles = expLines.filter(function(l) { return /intern|analyst|associate|engineer|manager|developer|assistant/i.test(l) && l.length < 100; });
+        fields.push({ section: 'Experience', key: 'Roles found', val: jobTitles.length ? jobTitles[0].trim().substring(0, 55) + (jobTitles[0].length > 55 ? '…' : '') : null,
+          status: jobTitles.length > 0 ? 'ok' : 'warn',
+          note: jobTitles.length === 0 ? 'Job titles not clearly detected. Ensure each role starts its own line.' : null });
+        fields.push({ section: 'Experience', key: 'Bullet count', val: bullets + ' bullets detected',
+          status: bullets >= 3 ? 'ok' : 'warn',
+          note: bullets < 3 ? 'Low bullet density. ATS keyword scoring favors 3–6 bullets per role.' : null });
+
+        /* workday / taleo flag tables */
+        if ((sysKey === 'workday' || sysKey === 'taleo') && (hasTab || hasCols)) {
+          fields.push({ section: 'Experience', key: 'Layout warning', val: 'Table or columns detected',
+            status: 'fail', note: sysKey === 'workday' ? 'Workday drops all content inside tables. Convert to plain bullet lines.' : 'Taleo strips multi-column sections. Use single-column layout only.' });
+        }
+      } else {
+        fields.push({ section: 'Experience', key: 'Experience section', val: null, status: 'fail',
+          note: 'No EXPERIENCE section detected. Use a clear all-caps header.' });
+      }
+
+      /* skills */
+      if (skills && skills.length) {
+        fields.push({ section: 'Skills', key: 'Skills extracted', val: skills.slice(0, 5).join(', ') + (skills.length > 5 ? ' +' + (skills.length - 5) + ' more' : ''),
+          status: skills.length >= 5 ? 'ok' : 'warn',
+          note: skills.length < 5 ? 'Fewer than 5 skills extracted. Add a dedicated SKILLS section with comma-separated items.' : null });
+      } else {
+        fields.push({ section: 'Skills', key: 'Skills section', val: null, status: sysKey === 'ashby' ? 'fail' : 'warn',
+          note: sysKey === 'ashby' ? 'Ashby requires an explicit skills list, it does not infer from bullets.' : 'No SKILLS section found. Keyword matching will be weak.' });
+      }
+
+      /* system-specific extras */
+      if (sysKey === 'greenhouse') {
+        fields.push({ section: 'Extras', key: 'GitHub / portfolio', val: gh,
+          status: gh ? 'ok' : 'warn',
+          note: gh ? null : 'Greenhouse surfaces GitHub links in the candidate profile. Add yours.' });
+      }
+      if (sysKey === 'lever') {
+        var hasSummary = /SUMMARY|OBJECTIVE|PROFILE/i.test(text);
+        fields.push({ section: 'Extras', key: 'Summary / intro', val: hasSummary ? 'Found' : null,
+          status: hasSummary ? 'ok' : 'warn',
+          note: hasSummary ? null : 'Lever scores candidates higher when a brief intro paragraph is present.' });
+      }
+      if (sysKey === 'taleo') {
+        var hasMMYYYY = /\b(0[1-9]|1[0-2])\/\d{4}\b/.test(text);
+        fields.push({ section: 'Extras', key: 'Date format (MM/YYYY)', val: hasMMYYYY ? 'Detected' : 'Not found',
+          status: hasMMYYYY ? 'ok' : 'fail',
+          note: hasMMYYYY ? null : 'Taleo requires MM/YYYY date format. Month names or year-only dates may fail.' });
+      }
+
+      /* score: fraction of ok fields */
+      var okCount   = fields.filter(function(f) { return f.status === 'ok';   }).length;
+      var warnCount = fields.filter(function(f) { return f.status === 'warn'; }).length;
+      var score     = Math.round((okCount + warnCount * 0.5) / fields.length * 100);
+
+      /* top issues for chip strip */
+      var issues = fields.filter(function(f) { return f.status !== 'ok' && f.note; })
+        .map(function(f) { return { text: f.key, status: f.status }; });
+
+      return { fields: fields, score: score, issues: issues };
+    }
+
+    /* ── DOM REFS ── */
+    var textarea  = document.getElementById('ats-input');
+    var scanBtn   = document.getElementById('ats-scan-btn');
+    var sampleBtn = null; /* removed  -  replaced by group buttons below */
+    var wordCount = document.getElementById('ats-word-count');
+    var tabs      = Array.from(document.querySelectorAll('.ats-tab'));
+    var emptyEl   = document.getElementById('ats-empty-state');
+    var scanningEl= document.getElementById('ats-scanning');
+    var resultList= document.getElementById('ats-result-list');
+    var scoreBar  = document.getElementById('ats-score-bar');
+    var scoreFill = document.getElementById('ats-score-fill');
+    var scorePct  = document.getElementById('ats-score-pct');
+    var scanLabel = document.getElementById('ats-scan-label');
+    var issuesEl  = document.getElementById('ats-issues');
+    var resultTitle = document.getElementById('ats-result-title');
+
+    var currentSys   = 'greenhouse';
+    var lastResult   = null;
+
+    /* word count */
+    textarea.addEventListener('input', function () {
+      var words = textarea.value.trim().split(/\s+/).filter(Boolean).length;
+      wordCount.textContent = words + (words === 1 ? ' word' : ' words');
+      scanBtn.disabled = words < 10;
+    });
+
+    /* sample buttons */
+    var SAMPLES = { good: SAMPLE_GOOD, meh: SAMPLE_MEH, bad: SAMPLE_BAD };
+    document.querySelectorAll('#ats-sample-group [data-quality]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        textarea.value = SAMPLES[btn.dataset.quality] || SAMPLE_GOOD;
+        textarea.dispatchEvent(new Event('input'));
+      });
+    });
+
+    /* tabs */
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t) { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected','true');
+        currentSys = tab.dataset.sys;
+        if (lastResult) {
+          runScan(false); /* rescan without animation delay */
+        }
+      });
+    });
+
+    /* scan */
+    scanBtn.addEventListener('click', function () { runScan(true); });
+
+    function runScan (animate) {
+      var sysName = SYSTEMS[currentSys].name;
+      resultTitle.textContent = sysName + ' · Parse result';
+      scanLabel.textContent   = 'Parsing with ' + sysName + '\u2026';
+
+      emptyEl.style.display    = 'none';
+      resultList.classList.remove('visible');
+      scoreBar.classList.remove('visible');
+      issuesEl.classList.remove('visible');
+      issuesEl.innerHTML = '';
+
+      if (animate) {
+        scanningEl.classList.add('visible');
+        setTimeout(function () { showResult(parse(textarea.value, currentSys)); }, 900 + Math.random() * 400);
+      } else {
+        scanningEl.classList.remove('visible');
+        showResult(parse(textarea.value, currentSys));
+      }
+    }
+
+    function showResult (result) {
+      lastResult = result;
+      scanningEl.classList.remove('visible');
+
+      /* build field list grouped by section */
+      var html       = '';
+      var lastSection = '';
+      result.fields.forEach(function (f) {
+        if (f.section !== lastSection) {
+          html += '<p class="ats-section-label">' + f.section + '</p>';
+          lastSection = f.section;
+        }
+        var iconChar = f.status === 'ok' ? '\u2713' : (f.status === 'warn' ? '!' : '\u00d7');
+        html += '<div class="ats-field">';
+        html += '<span class="ats-field-icon ' + f.status + '">' + iconChar + '</span>';
+        html += '<div class="ats-field-content">';
+        html += '<div class="ats-field-key">' + f.key + '</div>';
+        html += '<div class="ats-field-val' + (f.val ? '' : ' missing') + '">' + (f.val ? escHtml(f.val) : 'Not detected') + '</div>';
+        if (f.note) html += '<div class="ats-field-note">' + escHtml(f.note) + '</div>';
+        html += '</div></div>';
+      });
+
+      resultList.innerHTML = html;
+      resultList.classList.add('visible');
+
+      /* score bar */
+      var pct = result.score;
+      var col = pct >= 75 ? '#16a34a' : (pct >= 50 ? '#b45309' : '#dc2626');
+      scoreFill.style.background = col;
+      scoreFill.style.width      = '0';
+      scorePct.style.color       = col;
+      scorePct.textContent       = pct + '%';
+      scoreBar.classList.add('visible');
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { scoreFill.style.width = pct + '%'; });
+      });
+
+      /* issues chips */
+      if (result.issues.length) {
+        issuesEl.innerHTML = '<span style="font-size:0.62rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(43,58,142,0.4);align-self:center">Flagged:</span>';
+        result.issues.forEach(function (iss, i) {
+          var chip = document.createElement('span');
+          chip.className = 'ats-issue-chip ' + iss.status;
+          chip.textContent = iss.text;
+          issuesEl.appendChild(chip);
+          setTimeout(function () { chip.classList.add('show'); }, 80 + i * 60);
+        });
+        issuesEl.classList.add('visible');
+      }
+    }
+
+    function escHtml (s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+  }());
+  </script>
+
+  <script src="dilly.js"></script>
+</body>
+</html>

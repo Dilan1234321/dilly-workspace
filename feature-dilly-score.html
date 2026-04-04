@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dilly Score: Dilly</title>
+  <meta name="description" content="Career readiness scoring across Smart, Grit, and Build with track-aware weights.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="css/dilly.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      background: #060e1c !important;
+      color: #f4f4f8 !important;
+    }
+
+    html {
+      scroll-snap-type: y mandatory;
+      overflow-y: scroll;
+    }
+
+    /* ── NAVBAR override: dark on the score page ── */
+    /* site-nav--inner is position:fixed in dilly.css, so target it directly */
+    body[data-nav-feature="score"] .site-nav--inner {
+      background: rgba(6,14,28,0.92) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    }
+
+    body[data-nav-feature="score"] .site-nav--inner .logo-wordmark { filter: brightness(0) invert(1); }
+    body[data-nav-feature="score"] .site-nav--inner .nav-item,
+    body[data-nav-feature="score"] .site-nav--inner .nav-item--dropdown { color: rgba(255,255,255,0.75); }
+    body[data-nav-feature="score"] .site-nav--inner .nav-item--signin { color: rgba(255,255,255,0.55); }
+    body[data-nav-feature="score"] .site-nav--inner .menu-toggle span { background: rgba(255,255,255,0.8); }
+
+    /* Wrapper header: 0-height spacer so scroll-snap panels start at y=0 (desktop) */
+    .score-nav { padding: 0; min-height: 0; border: none; }
+    @media (max-width: 780px) {
+      .score-nav { height: 76px; min-height: 76px; }
+    }
+
+    /* ── SPLIT LAYOUT ── */
+    #score-layout { display: block; }
+
+    /* LEFT 44%: fixed radar */
+    #radar-col {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 44%;
+      height: calc(100vh - 64px);
+      background: #060e1c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      border-right: 1px solid rgba(255,255,255,0.04);
+    }
+
+    #radar-svg {
+      width: min(340px, 80%);
+      height: min(340px, 80%);
+      overflow: visible;
+    }
+
+    /* Composite score below radar */
+    #composite-wrap {
+      margin-top: 1.5rem;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+
+    #composite-wrap.visible { opacity: 1; }
+
+    #composite-num {
+      font-size: clamp(2.8rem, 4vw, 4.2rem);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    #composite-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-top: 0.3rem;
+    }
+
+    /* ── RIGHT: scrolling panels ── */
+    #panels-col { margin-left: 44%; }
+
+    .score-panel {
+      height: 100vh;
+      scroll-snap-align: start;
+      display: flex;
+      align-items: center;
+      padding: 3rem 4.5rem;
+      background: #060e1c;
+      border-left: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .sp-inner {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .sp-inner.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .sp-eyebrow {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .sp-eyebrow--smart { color: #7b9fff; }
+    .sp-eyebrow--grit  { color: #a78bff; }
+    .sp-eyebrow--build { color: #5ecfb0; }
+    .sp-eyebrow--intro { color: rgba(255,255,255,0.4); }
+
+    .sp-title {
+      font-size: clamp(2.2rem, 3.8vw, 3.8rem);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .sp-body {
+      font-size: clamp(0.88rem, 1.15vw, 1rem);
+      color: rgba(255,255,255,0.5);
+      line-height: 1.75;
+      max-width: 400px;
+    }
+
+    /* Live score counter badge */
+    .sp-score-badge {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.35rem;
+    }
+
+    .sp-score-num {
+      font-size: clamp(3rem, 5vw, 5.5rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .sp-score-num--smart { color: #7b9fff; text-shadow: 0 0 28px rgba(123,159,255,0.6); }
+    .sp-score-num--grit  { color: #a78bff; text-shadow: 0 0 28px rgba(167,139,255,0.6); }
+    .sp-score-num--build { color: #5ecfb0; text-shadow: 0 0 28px rgba(94,207,176,0.6); }
+
+    .sp-score-denom {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* ── DOTS ── */
+    #score-dots {
+      position: fixed;
+      right: 1.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      z-index: 300;
+    }
+
+    .score-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(255,255,255,0.18);
+      transition: background 0.35s, transform 0.35s;
+    }
+
+    .score-dot.active {
+      background: #fff;
+      transform: scale(1.6);
+    }
+
+    /* ── END ── */
+    #score-end {
+      height: 100vh;
+      scroll-snap-align: start;
+      margin-left: 44%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #060e1c;
+      border-left: 1px solid rgba(255,255,255,0.04);
+      gap: 2rem;
+    }
+
+    #score-end img {
+      width: min(200px, 50%);
+      filter: brightness(0) invert(1);
+      opacity: 0.7;
+    }
+
+    .end-cta {
+      display: inline-block;
+      background: #fff;
+      color: #060e1c;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 1rem 2.75rem;
+      border-radius: 100px;
+    }
+
+    /* ── MOBILE ── */
+    @media (max-width: 780px) {
+      html { scroll-snap-type: none !important; overflow: hidden !important; }
+      body { overflow: hidden !important; }
+
+      #score-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 76px);
+        overflow: hidden;
+      }
+
+      #radar-col {
+        position: relative;
+        top: auto; left: auto;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        max-height: none;
+        flex-shrink: 0;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding: 1rem 1rem 0.75rem;
+        padding-top: calc(76px + 0.75rem);
+        flex-direction: row;
+        gap: 1rem;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #radar-svg {
+        width: min(100px, 26vw);
+        height: min(100px, 26vw);
+        flex-shrink: 0;
+      }
+
+      #composite-wrap {
+        margin-top: 0;
+        text-align: left;
+        opacity: 1 !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      #composite-num {
+        font-size: clamp(2.4rem, 10vw, 3.2rem);
+        color: #fff;
+      }
+
+      #composite-label { font-size: 0.6rem; letter-spacing: 0.16em; }
+
+      /* mobile-only sub-scores strip */
+      #mobile-subscores {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+      }
+      .mob-sub { display: flex; flex-direction: column; }
+      .mob-sub-val { font-size: 0.9rem; font-weight: 800; line-height: 1; }
+      .mob-sub-lbl { font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-top: 0.1rem; }
+      .mob-sub-val--smart { color: #7b9fff; }
+      .mob-sub-val--grit  { color: #a78bff; }
+      .mob-sub-val--build { color: #5ecfb0; }
+
+      #panels-col {
+        display: flex;
+        flex-direction: row;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        flex: 1;
+        min-height: 0;
+        margin-left: 0;
+      }
+
+      .score-panel {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        min-height: unset;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+        padding: 1.75rem 1.5rem 5rem;
+        align-items: flex-start;
+        justify-content: flex-start;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .sp-inner {
+        opacity: 1 !important;
+        transform: none !important;
+        max-width: 100%;
+      }
+
+      .sp-title { font-size: clamp(1.6rem, 7vw, 2.2rem) !important; }
+      .sp-score-num { font-size: clamp(2.5rem, 10vw, 4rem) !important; }
+      .sp-body { font-size: 0.85rem !important; }
+
+      #score-dots {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        position: fixed;
+        bottom: 1.1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto; right: auto;
+        gap: 6px;
+        height: auto;
+        background: rgba(6,14,28,0.6);
+        padding: 0.35rem 0.7rem;
+        border-radius: 100px;
+        backdrop-filter: blur(8px);
+      }
+
+      #score-dots .score-dot {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 6px !important; height: 6px !important;
+        min-width: 6px; min-height: 6px;
+        max-width: 6px; max-height: 6px;
+        flex-shrink: 0;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      #score-end {
+        width: 100vw;
+        min-width: 100vw;
+        height: 100%;
+        margin-left: 0;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
+    }
+  </style>
+</head>
+<body data-nav-feature="score">
+
+  <!-- ── NAVBAR ── -->
+  <header class="score-nav">
+    <div class="site-nav site-nav--inner">
+      <a class="logo-lockup" href="index.html">
+        <img class="logo-wordmark" src="dilly-wordmark.png" alt="Dilly" width="260" height="76" decoding="async">
+      </a>
+      <button type="button" class="menu-toggle" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="nav-glass" aria-label="Primary">
+        <ul>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Resume &amp; AI</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Resume and AI">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Your resume</span>
+                  <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
+                  <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
+                  <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
+                  <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Jobs &amp; pipeline</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Jobs and pipeline">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Search and track</span>
+                  <a href="feature-internships.html" class="nav-dropdown-link" data-nav-feature="internships">Internship matching</a>
+                  <a href="feature-tracker.html" class="nav-dropdown-link" data-nav-feature="tracker">Application tracker</a>
+                  <a href="feature-calendar.html" class="nav-dropdown-link" data-nav-feature="calendar">Calendar and events</a>
+                  <a href="feature-ask-dilly.html" class="nav-dropdown-link" data-nav-feature="ask-dilly">Ask Dilly on any job</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Guidance</span>
+                  <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
+                  <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li class="nav-dropdown">
+            <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Pricing &amp; plans</button>
+            <div class="nav-dropdown-panel" role="region" aria-label="Pricing and plans">
+              <div class="nav-dropdown-inner">
+                <div class="nav-dropdown-col">
+                  <span class="nav-dropdown-label">Decide</span>
+                  <a href="pricing.html" class="nav-dropdown-link">View plans</a>
+                  <a href="index.html#compare" class="nav-dropdown-link">Compare tools</a>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li><a class="nav-item" href="faq.html">FAQ</a></li>
+          <li><a class="nav-item" href="quiz.html">Quiz</a></li>
+          <li><a class="nav-item nav-item--signin" href="signin.html">Sign in</a></li>
+        </ul>
+      </nav>
+      <div class="nav-cta-row" style="display:flex;align-items:center;gap:1rem"><a href="https://www.instagram.com/joindilly" target="_blank" rel="noopener" aria-label="Dilly on Instagram" style="display:flex;align-items:center;color:inherit;opacity:0.6;transition:opacity 0.2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.5"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+        <a class="btn btn-primary" href="https://app.trydilly.com/">Start free</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── SPLIT LAYOUT ── -->
+  <div id="score-layout">
+
+    <!-- LEFT: radar -->
+    <div id="radar-col">
+      <svg id="radar-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-teal" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Grid circles -->
+        <circle cx="200" cy="200" r="35"  fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="70"  fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="105" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="140" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+
+        <!-- Axis lines -->
+        <!-- Smart: top (200, 60) -->
+        <line x1="200" y1="200" x2="200" y2="57" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <!-- Grit: bottom-right (321, 270) -->
+        <line x1="200" y1="200" x2="322" y2="270" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <!-- Build: bottom-left (79, 270) -->
+        <line x1="200" y1="200" x2="78" y2="270" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+        <!-- Axis tick marks at 100% -->
+        <circle cx="200" cy="60"  r="3" fill="rgba(255,255,255,0.15)"/>
+        <circle cx="321" cy="270" r="3" fill="rgba(255,255,255,0.15)"/>
+        <circle cx="79"  cy="270" r="3" fill="rgba(255,255,255,0.15)"/>
+
+        <!-- Score polygon (filled dynamically) -->
+        <polygon id="radar-poly"
+          points="200,200 200,200 200,200"
+          fill="rgba(100,130,255,0.12)"
+          stroke="rgba(100,130,255,0.5)"
+          stroke-width="1.5"
+          stroke-linejoin="round"
+          filter="url(#glow-blue)"/>
+
+        <!-- Glow polygon overlay (softer, wider blur) -->
+        <polygon id="radar-poly-glow"
+          points="200,200 200,200 200,200"
+          fill="none"
+          stroke="rgba(100,130,255,0.25)"
+          stroke-width="6"
+          stroke-linejoin="round"
+          style="filter:blur(8px)"/>
+
+        <!-- Vertex dots (shown when axis is active) -->
+        <circle id="dot-smart" cx="200" cy="200" r="5" fill="#7b9fff" opacity="0" filter="url(#glow-blue)"/>
+        <circle id="dot-grit"  cx="200" cy="200" r="5" fill="#a78bff" opacity="0" filter="url(#glow-purple)"/>
+        <circle id="dot-build" cx="200" cy="200" r="5" fill="#5ecfb0" opacity="0" filter="url(#glow-teal)"/>
+
+        <!-- Axis labels -->
+        <text x="200" y="42" text-anchor="middle" fill="rgba(123,159,255,0.7)" font-size="11" font-weight="700" letter-spacing="2" font-family="inherit">SMART</text>
+        <text x="342" y="284" text-anchor="start"  fill="rgba(167,139,255,0.7)" font-size="11" font-weight="700" letter-spacing="2" font-family="inherit">GRIT</text>
+        <text x="58"  y="284" text-anchor="end"    fill="rgba(94,207,176,0.7)"  font-size="11" font-weight="700" letter-spacing="2" font-family="inherit">BUILD</text>
+      </svg>
+
+      <div id="composite-wrap">
+        <div id="composite-num">68</div>
+        <div id="composite-label">Dilly Score</div>
+        <div id="mobile-subscores">
+          <div class="mob-sub"><span class="mob-sub-val mob-sub-val--smart">74</span><span class="mob-sub-lbl">Smart</span></div>
+          <div class="mob-sub"><span class="mob-sub-val mob-sub-val--grit">88</span><span class="mob-sub-lbl">Grit</span></div>
+          <div class="mob-sub"><span class="mob-sub-val mob-sub-val--build">41</span><span class="mob-sub-lbl">Build</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: panels -->
+    <div id="panels-col">
+
+      <!-- Panel 0: intro -->
+      <div class="score-panel" data-panel="0">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--intro">Dilly Score</p>
+          <h2 class="sp-title">Your career DNA,<br>rendered live.</h2>
+          <p class="sp-body">Three dimensions. One number. Dilly reads your resume, grades each axis, and shows you exactly where you stand against every role you care about.</p>
+        </div>
+      </div>
+
+      <!-- Panel 1: Smart -->
+      <div class="score-panel" data-panel="1">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--smart">Dimension 01</p>
+          <h2 class="sp-title">Smart</h2>
+          <div class="sp-score-badge">
+            <span class="sp-score-num sp-score-num--smart" id="counter-smart">0</span>
+            <span class="sp-score-denom">/100</span>
+          </div>
+          <p class="sp-body">Academic sharpness, analytical thinking, and domain knowledge relative to the role. Pulled from your coursework, GPA signals, certifications, and the depth of your bullet points.</p>
+        </div>
+      </div>
+
+      <!-- Panel 2: Grit -->
+      <div class="score-panel" data-panel="2">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--grit">Dimension 02</p>
+          <h2 class="sp-title">Grit</h2>
+          <div class="sp-score-badge">
+            <span class="sp-score-num sp-score-num--grit" id="counter-grit">0</span>
+            <span class="sp-score-denom">/100</span>
+          </div>
+          <p class="sp-body">Drive, persistence, and proof that you follow through. Dilly looks for volume of experience, leadership roles, side projects, and evidence of doing hard things without being told to.</p>
+        </div>
+      </div>
+
+      <!-- Panel 3: Build -->
+      <div class="score-panel" data-panel="3">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--build">Dimension 03</p>
+          <h2 class="sp-title">Build</h2>
+          <div class="sp-score-badge">
+            <span class="sp-score-num sp-score-num--build" id="counter-build">0</span>
+            <span class="sp-score-denom">/100</span>
+          </div>
+          <p class="sp-body">Tangible output. Code shipped, models built, campaigns run, products launched. The Build score rewards proof of work over claims of skill. A high Build score is rare and hard to fake.</p>
+        </div>
+      </div>
+
+      <!-- Panel 4: combined -->
+      <div class="score-panel" data-panel="4">
+        <div class="sp-inner">
+          <p class="sp-eyebrow sp-eyebrow--intro">Your score</p>
+          <h2 class="sp-title">One number.<br>Every role.</h2>
+          <p class="sp-body">Dilly combines Smart, Grit, and Build with track-aware weights. A finance role weighs Smart and Grit higher. A product role weights Build. The same profile scores differently across tracks, which is exactly how hiring works.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── DOTS ── -->
+  <nav id="score-dots" aria-label="Panel navigation">
+    <button class="score-dot active" data-target="0" aria-label="Intro"></button>
+    <button class="score-dot" data-target="1" aria-label="Smart"></button>
+    <button class="score-dot" data-target="2" aria-label="Grit"></button>
+    <button class="score-dot" data-target="3" aria-label="Build"></button>
+    <button class="score-dot" data-target="4" aria-label="Combined"></button>
+  </nav>
+
+  <!-- ── END ── -->
+  <div id="score-end">
+    <img src="dilly-wordmark.png" alt="Dilly">
+    <a href="https://app.trydilly.com/" class="end-cta">See your Dilly Score &rarr;</a>
+  </div>
+
+  <script>
+  (function () {
+    var SMART = 74, GRIT = 88, BUILD = 41;
+    /* radar geometry */
+    var CX = 200, CY = 200, R = 140;
+    /* axis unit vectors (SVG coords, y-down) */
+    /* Smart: up    */ var SX = 0,                           SY = -1;
+    /* Grit:  BR    */ var GX = Math.sin(Math.PI * 2 / 3),  GY = Math.cos(Math.PI * 2 / 3);
+    /* Build: BL    */ var BX = -Math.sin(Math.PI * 2 / 3), BY = Math.cos(Math.PI * 2 / 3);
+
+    var poly      = document.getElementById('radar-poly');
+    var polyGlow  = document.getElementById('radar-poly-glow');
+    var dotSmart  = document.getElementById('dot-smart');
+    var dotGrit   = document.getElementById('dot-grit');
+    var dotBuild  = document.getElementById('dot-build');
+    var cntSmart  = document.getElementById('counter-smart');
+    var cntGrit   = document.getElementById('counter-grit');
+    var cntBuild  = document.getElementById('counter-build');
+    var compWrap  = document.getElementById('composite-wrap');
+    var compNum   = document.getElementById('composite-num');
+
+    /* current animated values */
+    var curSmart = 0, curGrit = 0, curBuild = 0;
+    var tgtSmart = 0, tgtGrit = 0, tgtBuild = 0;
+    var rafId = null;
+
+    function pt(ux, uy, score) {
+      var t = score / 100;
+      return (CX + R * t * ux).toFixed(2) + ',' + (CY + R * t * uy).toFixed(2);
+    }
+
+    function updateSVG() {
+      var pts = pt(SX, SY, curSmart) + ' ' + pt(GX, GY, curGrit) + ' ' + pt(BX, BY, curBuild);
+      poly.setAttribute('points', pts);
+      polyGlow.setAttribute('points', pts);
+
+      dotSmart.setAttribute('cx', (CX + R * (curSmart / 100) * SX).toFixed(2));
+      dotSmart.setAttribute('cy', (CY + R * (curSmart / 100) * SY).toFixed(2));
+      dotGrit.setAttribute('cx',  (CX + R * (curGrit  / 100) * GX).toFixed(2));
+      dotGrit.setAttribute('cy',  (CY + R * (curGrit  / 100) * GY).toFixed(2));
+      dotBuild.setAttribute('cx', (CX + R * (curBuild / 100) * BX).toFixed(2));
+      dotBuild.setAttribute('cy', (CY + R * (curBuild / 100) * BY).toFixed(2));
+
+      cntSmart.textContent = Math.round(curSmart);
+      cntGrit.textContent  = Math.round(curGrit);
+      cntBuild.textContent = Math.round(curBuild);
+    }
+
+    function ease(cur, tgt) {
+      var diff = tgt - cur;
+      if (Math.abs(diff) < 0.2) return tgt;
+      return cur + diff * 0.07;
+    }
+
+    function tick() {
+      curSmart = ease(curSmart, tgtSmart);
+      curGrit  = ease(curGrit,  tgtGrit);
+      curBuild = ease(curBuild, tgtBuild);
+      updateSVG();
+
+      var done = Math.abs(curSmart - tgtSmart) < 0.2 &&
+                 Math.abs(curGrit  - tgtGrit)  < 0.2 &&
+                 Math.abs(curBuild - tgtBuild) < 0.2;
+      if (!done) { rafId = requestAnimationFrame(tick); }
+      else {
+        curSmart = tgtSmart; curGrit = tgtGrit; curBuild = tgtBuild;
+        updateSVG();
+      }
+    }
+
+    function animateTo(s, g, b) {
+      tgtSmart = s; tgtGrit = g; tgtBuild = b;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    var panels  = Array.from(document.querySelectorAll('.score-panel'));
+    var inners  = Array.from(document.querySelectorAll('.sp-inner'));
+    var dots    = Array.from(document.querySelectorAll('.score-dot'));
+    var active  = -1;
+
+    /* dot opacity driven by how far each axis is filled */
+    function updateDotOpacity() {
+      dotSmart.setAttribute('opacity', curSmart > 2 ? 1 : 0);
+      dotGrit.setAttribute('opacity',  curGrit  > 2 ? 1 : 0);
+      dotBuild.setAttribute('opacity', curBuild > 2 ? 1 : 0);
+    }
+
+    /* patch tick to also update dot opacity */
+    var _tick = tick;
+    function tickFull() {
+      curSmart = ease(curSmart, tgtSmart);
+      curGrit  = ease(curGrit,  tgtGrit);
+      curBuild = ease(curBuild, tgtBuild);
+      updateSVG();
+      updateDotOpacity();
+      var done = Math.abs(curSmart - tgtSmart) < 0.2 &&
+                 Math.abs(curGrit  - tgtGrit)  < 0.2 &&
+                 Math.abs(curBuild - tgtBuild) < 0.2;
+      if (!done) { rafId = requestAnimationFrame(tickFull); }
+      else {
+        curSmart = tgtSmart; curGrit = tgtGrit; curBuild = tgtBuild;
+        updateSVG(); updateDotOpacity();
+      }
+    }
+
+    function animateToFull(s, g, b) {
+      tgtSmart = s; tgtGrit = g; tgtBuild = b;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tickFull);
+    }
+
+    var stateMap = [
+      [0, 0, 0],
+      [SMART, 0, 0],
+      [SMART, GRIT, 0],
+      [SMART, GRIT, BUILD],
+      [SMART, GRIT, BUILD]
+    ];
+
+    function activate(idx) {
+      if (idx === active) return;
+      active = idx;
+      dots.forEach(function (d, i)   { d.classList.toggle('active', i === idx); });
+      inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
+      var s = stateMap[idx];
+      animateToFull(s[0], s[1], s[2]);
+      if (idx === 4 || idx === 5) {
+        compWrap.classList.add('visible');
+      } else {
+        compWrap.classList.remove('visible');
+      }
+    }
+
+    var isMobile = window.innerWidth <= 780;
+    var panelsCol = document.getElementById('panels-col');
+    var mobileSubscores = document.getElementById('mobile-subscores');
+
+    /* hide sub-scores on desktop */
+    if (!isMobile && mobileSubscores) mobileSubscores.style.display = 'none';
+
+    if (isMobile) {
+      panelsCol.addEventListener('scroll', function () {
+        var idx = Math.round(panelsCol.scrollLeft / panelsCol.clientWidth);
+        idx = Math.max(0, Math.min(idx, panels.length - 1));
+        /* animate radar per panel on mobile too */
+        var s = stateMap[idx] || [SMART, GRIT, BUILD];
+        animateToFull(s[0] || SMART, s[1] || GRIT, s[2] || BUILD);
+        dots.forEach(function (d, i) { d.classList.toggle('active', i === idx); });
+        inners.forEach(function (inn, i) { inn.classList.toggle('visible', i === idx); });
+      });
+    } else {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) activate(parseInt(entry.target.dataset.panel, 10));
+        });
+      }, { threshold: 0.5 });
+      panels.forEach(function (p) { observer.observe(p); });
+    }
+
+    dots.forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        var idx = parseInt(dot.dataset.target, 10);
+        if (isMobile) {
+          panelsCol.scrollTo({ left: idx * panelsCol.clientWidth, behavior: 'smooth' });
+        } else {
+          panels[idx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    activate(0);
+    /* on mobile: override activate(0)'s reset  -  show full radar from the start */
+    if (isMobile) {
+      animateToFull(SMART, GRIT, BUILD);
+      compWrap.classList.add('visible');
+    }
+  }());
+  </script>
+
+  <script src="dilly.js"></script>
+</body>
+</html>
