@@ -145,6 +145,7 @@ import { mapHistoryToAuditRecords, mergeHistoryWithLatest } from "@/components/a
 import { getDillyNoticedCard, markNoticedSeen } from "@/lib/dillyNoticed";
 import { TWENTY_X_MOMENTS, formatTwentyXCompact } from "@/lib/twentyXMoments";
 import { cn } from "@/lib/utils";
+import { useNavigation, type AppTab, type HiringSubView, type GetHiredSubTab } from "@/contexts/NavigationContext";
 import { sanitizeVoiceAssistantReply } from "@/lib/voiceReplySanitize";
 import html2canvas from "html2canvas";
 import { PROFILE_THEMES, PROFILE_THEME_IDS, type ProfileThemeId } from "@/lib/profileThemes";
@@ -326,6 +327,10 @@ export default function DashboardPage() {
 function Dashboard() {
   const router = useRouter();
   const { toast } = useToast();
+  const {
+    state: { mainAppTab, reviewSubView, getHiredSubTab, readyCheckCompany, jobsPanelInitialFilter },
+    setMainAppTab, setReviewSubView, setGetHiredSubTab, setReadyCheckCompany, setJobsPanelInitialFilter,
+  } = useNavigation();
   const [school, setSchool] = useState<SchoolConfig | null>(null);
   const [onboardingNeeded, setOnboardingNeeded] = useState<boolean | null>(() => {
     if (typeof window === "undefined") return null;
@@ -386,15 +391,10 @@ function Dashboard() {
   const voiceRenameInputRef = useRef<HTMLInputElement>(null);
   /** When edit profile was opened from Settings (?from=settings), close should go back to /settings */
   const fromSettingsWhenEditingProfileRef = useRef(false);
-  /** Main app shell: which tab is active (Career Center = home, Hiring Manager = audit, Dilly = chat) */
-  const [mainAppTab, setMainAppTab] = useState<"center" | "hiring" | "voice" | "resources" | "calendar" | "practice" | "rank" | "score" | "memory" | "actions" | "voice_history" | "certifications" | "career_playbook" | "settings" | "profile_details" | "ready_check" | "edit">("center");
-  const [readyCheckCompany, setReadyCheckCompany] = useState<string | null>(null);
+  /** Main app shell: which tab is active — now from NavigationContext */
   /** After deep link `/?tab=resources&view=applications`, scroll once the Get Hired panel mounts. */
   const scrollApplicationsOnResourcesRef = useRef(false);
-  /** Get Hired: Applications (tracker) vs Jobs (matches) */
-  const [getHiredSubTab, setGetHiredSubTab] = useState<"applications" | "jobs">("applications");
-  /** Deep link `view=jobs&type=…` → JobsPanel filter (consumed on mount inside panel). */
-  const [jobsPanelInitialFilter, setJobsPanelInitialFilter] = useState<JobFilterKey | null>(null);
+  /** Get Hired sub-tab + filter — now from NavigationContext */
   /** Profile loaded from API for Career Center */
   const [appProfile, setAppProfile] = useState<AppProfile | null>(null);
   const [stickerSheetOpen, setStickerSheetOpen] = useState(false);
@@ -675,8 +675,7 @@ function Dashboard() {
   const [readyCheckLoading, setReadyCheckLoading] = useState(false);
   /** Vs Your Peers: cohort stats from GET /peer-cohort-stats (Insights) */
   const [cohortStats, setCohortStats] = useState<{ track: string; cohort_n: number; use_fallback: boolean; avg: { smart: number; grit: number; build: number }; p25: { smart: number; grit: number; build: number }; p75: { smart: number; grit: number; build: number }; how_to_get_ahead: string } | null>(null);
-  /** Review tab sub-view: home (landing), upload, report, or insights */
-  const [reviewSubView, setReviewSubView] = useState<"home" | "upload" | "report" | "insights" | "dimensions">("home");
+  /** Review tab sub-view — now from NavigationContext */
   /** Job search checklist (persisted to localStorage key per user) */
   const [jobChecklist, setJobChecklist] = useState<Record<string, boolean>>({});
   /** Company target for voice context - scoped per user */
