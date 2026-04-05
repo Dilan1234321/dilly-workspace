@@ -8,9 +8,9 @@ into knowledge/company_hiring_criteria.json without overwriting existing rules.
 All ingested entries use source=career_page and confidence=inferred so we can
 show "we have many company guidelines from public career pages" when reaching out.
 
-Usage (from workspace root or projects/meridian):
-  python projects/meridian/scripts/ingest_public_company_guidelines.py [--dry-run]
-  python projects/meridian/scripts/ingest_public_company_guidelines.py --merge-scraped  # also merge scraped_criteria.json if present
+Usage (from workspace root or projects/dilly):
+  python projects/dilly/scripts/ingest_public_company_guidelines.py [--dry-run]
+  python projects/dilly/scripts/ingest_public_company_guidelines.py --merge-scraped  # also merge scraped_criteria.json if present
 
 See docs/HIRING_GUIDELINES_PUBLIC_SOURCES.md.
 """
@@ -21,7 +21,7 @@ import os
 import sys
 from pathlib import Path
 
-# Paths relative to project root (projects/meridian)
+# Paths relative to project root (projects/dilly)
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 WORKSPACE_ROOT = PROJECT_ROOT.parent.parent
@@ -69,7 +69,7 @@ def seed_entries_to_rules(seed_data: dict) -> list[dict]:
             "confidence": CONFIDENCE_INFERRED,
             "criteria_source": (c.get("criteria_source") or "Public career page / industry guide").strip(),
             "criteria_for_llm": (c.get("criteria_for_llm") or "").strip(),
-            "meridian_scores": c.get("meridian_scores"),
+            "dilly_scores": c.get("meridian_scores"),
         }
         if not rule["criteria_for_llm"]:
             continue
@@ -103,7 +103,7 @@ def scraped_to_rules(scraped_data: dict) -> list[dict]:
             "confidence": CONFIDENCE_INFERRED,
             "criteria_source": url or "Public career page",
             "criteria_for_llm": criteria_for_llm,
-            "meridian_scores": None,
+            "dilly_scores": None,
         }
         rules.append(rule)
     return rules

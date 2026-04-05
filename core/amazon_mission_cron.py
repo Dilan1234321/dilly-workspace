@@ -20,7 +20,7 @@ def log_progress(msg):
 def update_desktop_brief(msg):
     try:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        update_dir = "/Users/dilankochhar/Desktop/Meridian_Updates"
+        update_dir = "/Users/dilankochhar/Desktop/Dilly_Updates"
         os.makedirs(update_dir, exist_ok=True)
         filename = f"amazon_live_intel_{timestamp}.md"
         with open(os.path.join(update_dir, filename), "w") as f:

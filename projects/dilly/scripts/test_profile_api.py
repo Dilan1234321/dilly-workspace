@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test the profile API: create session → GET /profile → PATCH /profile → verify file on disk.
-Run from workspace root: python projects/meridian/scripts/test_profile_api.py
+Run from workspace root: python projects/dilly/scripts/test_profile_api.py
 """
 import os
 import sys

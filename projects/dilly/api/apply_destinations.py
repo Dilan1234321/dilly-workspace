@@ -1,14 +1,14 @@
 """
-Meridian Apply destinations: which jobs support "Apply on Meridian."
-Maps job_id (from meridian_jobs.db) -> application_email.
-Fill via career center pipeline or employer opt-in; then we show "Apply on Meridian" and send to this email.
+Dilly Apply destinations: which jobs support "Apply on Dilly."
+Maps job_id (from dilly_jobs.db) -> application_email.
+Fill via career center pipeline or employer opt-in; then we show "Apply on Dilly" and send to this email.
 """
 
 import json
 import os
 
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
-_DEST_PATH = os.path.join(_WORKSPACE_ROOT, "memory", "meridian_apply_destinations.json")
+_DEST_PATH = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_apply_destinations.json")
 
 
 def _load() -> dict[str, str]:

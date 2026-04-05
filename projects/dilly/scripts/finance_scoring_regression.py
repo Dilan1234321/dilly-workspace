@@ -5,8 +5,8 @@ match expected signals and score bands for a fixed set of resume snippets.
 Aligned to FINANCE_SCORING_SPEC.md and tracks.audit_finance.
 
 Usage (from workspace root):
-  python projects/meridian/scripts/finance_scoring_regression.py [--fixtures PATH]
-  Default fixtures: projects/meridian/scripts/fixtures/finance_scoring_regression_expected.json
+  python projects/dilly/scripts/finance_scoring_regression.py [--fixtures PATH]
+  Default fixtures: projects/dilly/scripts/fixtures/finance_scoring_regression_expected.json
 
 Exit: 0 if all pass, 1 if any mismatch.
 """

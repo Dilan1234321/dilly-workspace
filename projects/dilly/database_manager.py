@@ -2,9 +2,9 @@ import json
 import os
 import datetime
 
-DB_PATH = "projects/meridian/meridian_database.json"
+DB_PATH = "projects/dilly/dilly_database.json"
 
-class MeridianDatabase:
+class DillyDatabase:
     def __init__(self):
         self.data = self._load()
 
@@ -39,5 +39,5 @@ class MeridianDatabase:
 
 if __name__ == "__main__":
     # Test logic
-    db = MeridianDatabase()
+    db = DillyDatabase()
     print("Database initialized.")

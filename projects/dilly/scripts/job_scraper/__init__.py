@@ -1,5 +1,5 @@
 """
-Meridian Job Scraper — Ethical and legal sources only.
+Dilly Job Scraper — Ethical and legal sources only.
 
 Sources:
 - Greenhouse Job Board API (public, no auth for listing)

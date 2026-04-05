@@ -290,7 +290,7 @@ async def gap_analysis(request: Request, body: dict = Body(...)):
     if not target or len(target) > 300:
         raise HTTPException(status_code=400, detail="Provide target (company, role, or track) under 300 chars.")
     from dilly_core.llm_client import is_llm_available, get_chat_completion, get_light_model
-    _GAP_SYSTEM = """You are Meridian. Perform a deep resume gap analysis for a student applying for a specific target. Identify what is MISSING or WEAK. Be specific. Output a JSON object with "gaps" (array of 3-6 short strings), "summary" (one sentence). Output ONLY the JSON object."""
+    _GAP_SYSTEM = """You are Dilly. Perform a deep resume gap analysis for a student applying for a specific target. Identify what is MISSING or WEAK. Be specific. Output a JSON object with "gaps" (array of 3-6 short strings), "summary" (one sentence). Output ONLY the JSON object."""
     context = f"Target: {target}\n"
     context += f"Track: {(audit.get('detected_track') or '')}\n"
     scores = audit.get("scores") or {}

@@ -10,12 +10,12 @@ import time
 import uuid
 from typing import Any, Dict, List
 
-# Allow "projects.dilly.*" imports when run from projects/meridian/api (uvicorn main:app)
+# Allow "projects.dilly.*" imports when run from projects/dilly/api (uvicorn main:app)
 _API_DIR = os.path.dirname(os.path.abspath(__file__))
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_API_DIR, ".."))
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
-os.chdir(_WORKSPACE_ROOT)  # so paths like projects/meridian/... resolve
+os.chdir(_WORKSPACE_ROOT)  # so paths like projects/dilly/... resolve
 
 # Load .env from workspace root when present (e.g. DILLY_USE_LLM, OPENAI_API_KEY, RECRUITER_API_KEY)
 _ENV_PATH = os.path.join(_WORKSPACE_ROOT, ".env")
@@ -31,12 +31,12 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Reques
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from starlette.middleware.gzip import GZipMiddleware
-from projects.dilly.meridian_resume_auditor import MeridianResumeAuditor
+from projects.dilly.dilly_resume_auditor import DillyResumeAuditor
 from projects.dilly.api.schemas import AuditResponse, AuditResponseV2, Benchmarks, AuditRecommendation
 import re
 
 app = FastAPI(
-    title="Meridian AI API",
+    title="Dilly AI API",
     description="Career-acceleration API for students: resume audit, ATS, voice, jobs, recruiter search.",
     version="1.0.0",
     openapi_tags=[
@@ -45,7 +45,7 @@ app = FastAPI(
         {"name": "audit", "description": "Resume audit, badge, snapshot, leaderboard, explain-delta, ready-check"},
         {"name": "voice", "description": "Dilly chat, stream, tools (gap scan, interview prep, etc.)"},
         {"name": "ats", "description": "ATS analysis, keyword density, vendor sim, rewrite, gap analysis"},
-        {"name": "report", "description": "Report PDF, email to parent, apply through Meridian"},
+        {"name": "report", "description": "Report PDF, email to parent, apply through Dilly"},
         {"name": "jobs", "description": "Job recommendations, required scores, door eligibility"},
         {"name": "recruiter", "description": "Recruiter search, candidate detail, company advice (API key required)"},
         {"name": "health", "description": "Health check"},
@@ -158,6 +158,7 @@ from projects.dilly.api.routers import internal_voice_extract as internal_voice_
 from projects.dilly.api.routers import internal_voice_agent as internal_voice_agent_router
 from projects.dilly.api.routers import ai as ai_router
 from projects.dilly.api.routers import calendar_feed as calendar_feed_router
+from projects.dilly.api.routers import interview_prep as interview_prep_router
 from projects.dilly.api.routers import cron_jobs_cleanup
 app.include_router(cron_jobs_cleanup.router)
 app.include_router(auth_router.router)
@@ -195,6 +196,7 @@ app.include_router(internal_voice_extract_router.router)
 app.include_router(internal_voice_agent_router.router)
 app.include_router(ai_router.router)
 app.include_router(calendar_feed_router.router)
+app.include_router(interview_prep_router.router)
 
 benchmarks = Benchmarks()
 
@@ -248,7 +250,7 @@ async def _catch_all(request: Request, exc: Exception):
 
 
 # Report PDF cleanup on startup (remove expired files)
-_REPORTS_DIR = os.path.join(_WORKSPACE_ROOT, "memory", "meridian_reports")
+_REPORTS_DIR = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_reports")
 _REPORT_EXPIRY_DAYS = 7
 _REPORT_EXPIRY_SEC = _REPORT_EXPIRY_DAYS * 86400
 

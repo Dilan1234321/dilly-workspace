@@ -13,7 +13,7 @@ router = APIRouter(tags=["waitlist"])
 
 _ROUTER_DIR = os.path.dirname(os.path.abspath(__file__))
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", ".."))
-_WAITLIST_FILE = os.path.join(_WORKSPACE_ROOT, "memory", "meridian_waitlist.txt")
+_WAITLIST_FILE = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_waitlist.txt")
 
 
 @router.post("/waitlist", summary="Join waitlist")

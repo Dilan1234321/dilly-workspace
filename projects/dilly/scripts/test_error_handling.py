@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test UTampa error handling and stability: file type, file size, 500 handler, 504 timeout.
-Run from workspace root: python projects/meridian/scripts/test_error_handling.py
+Run from workspace root: python projects/dilly/scripts/test_error_handling.py
 """
 import asyncio
 import io
@@ -105,7 +105,7 @@ def test_audit_v2_timeout_returns_504():
 
     with (
         patch.object(api_main, "_require_subscribed", return_value={"email": "test@spartans.ut.edu"}),
-        patch.object(api_main, "MeridianResumeAuditor", return_value=fake_auditor),
+        patch.object(api_main, "DillyResumeAuditor", return_value=fake_auditor),
         patch.object(asyncio, "wait_for", side_effect=_mock_wait_for),
     ):
         client = TestClient(app)
@@ -122,7 +122,7 @@ def test_audit_v2_timeout_returns_504():
     print(f"  POST /audit/v2 (timeout) -> 504 OK: {detail[:55]}...")
 
 def main():
-    print("Testing Meridian error handling...")
+    print("Testing Dilly error handling...")
     test_health()
     test_audit_v2_requires_auth()
     test_file_type_rejected()

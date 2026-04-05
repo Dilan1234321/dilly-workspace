@@ -307,8 +307,8 @@ def audit_formatting(
     File pairing: pure_resumes/pure_{email}.txt <-> parsed_resumes/{email}.txt
 
     Args:
-        pure_dir: Directory containing pure_*.txt files (default: projects/meridian/pure_resumes).
-        parsed_dir: Directory containing {email}.txt parsed files (default: projects/meridian/parsed_resumes).
+        pure_dir: Directory containing pure_*.txt files (default: projects/dilly/pure_resumes).
+        parsed_dir: Directory containing {email}.txt parsed files (default: projects/dilly/parsed_resumes).
         pair: Optional (pure_path, parsed_path) to run on a single pair instead of scanning dirs.
         check_wrong_section: Flag content in heuristically wrong sections.
         check_duplicated: Flag same normalized content in multiple sections.

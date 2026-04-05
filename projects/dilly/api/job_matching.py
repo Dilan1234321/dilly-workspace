@@ -1,5 +1,5 @@
 """
-Meridian Job Matching — Personalize job recommendations from profile, resume, and audit.
+Dilly Job Matching — Personalize job recommendations from profile, resume, and audit.
 
 Uses rule-based filtering + LLM for "why" bullets and final match percentage.
 
@@ -166,7 +166,7 @@ def _user_scores_from_audit(audit: dict | None) -> dict[str, float | str]:
 
 def _target_reach_and_gap(required: dict, user: dict) -> tuple[str, str | None]:
     """
-    Compare required Meridian scores to user scores.
+    Compare required Dilly scores to user scores.
     Return (match_tier, to_land_this). match_tier is "target" or "reach".
     to_land_this is a short sentence for reach jobs (what to raise); None for target.
     """

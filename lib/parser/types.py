@@ -1,5 +1,5 @@
 """
-Meridian Resume Parser - Type definitions for the four-layer architecture.
+Dilly Resume Parser - Type definitions for the four-layer architecture.
 """
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, TypedDict

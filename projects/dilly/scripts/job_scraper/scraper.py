@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Meridian Job Scraper — Ethical and legal sources only.
+Dilly Job Scraper — Ethical and legal sources only.
 
 Sources:
 1. Greenhouse Job Board API — public, no auth. GET https://boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true
@@ -247,7 +247,7 @@ def run_job_scraper(
     """Run the job scraper. Returns stats."""
     script_dir = Path(__file__).resolve().parent
     project_root = script_dir.parent.parent
-    db = Path(db_path) if db_path else Path(project_root / "meridian_jobs.db")
+    db = Path(db_path) if db_path else Path(project_root / "dilly_jobs.db")
 
     stats = {"greenhouse": 0, "usajobs": 0, "total_inserted": 0, "errors": []}
 

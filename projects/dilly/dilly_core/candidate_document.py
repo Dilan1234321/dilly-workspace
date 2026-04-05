@@ -12,7 +12,7 @@ Quality bar: Mercor-grade. Output is consistent, structured, and embedding-optim
 - Supports all current audit shapes (V1/V2, findings vs audit_findings, evidence vs evidence_quotes)
 
 Used by: embedding pipeline (on audit complete), future recruiter search.
-Ref: projects/meridian/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
+Ref: projects/dilly/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ MAX_AUDIT_SECTION_CHARS = 1_400
 MAX_DILLY_TAKE_CHARS = 400
 MAX_RECOMMENDATION_CHARS_EACH = 280
 MAX_RECOMMENDATIONS = 5
-MAX_PROFILE_NARRATIVE_CHARS = 2_400  # What they told Meridian (voice, goals, etc.)
+MAX_PROFILE_NARRATIVE_CHARS = 2_400  # What they told Dilly (voice, goals, etc.)
 
 
 def _normalize_str(value: Any) -> str:
@@ -175,7 +175,7 @@ def _build_resume_block(resume_text: str | None, audit: dict) -> str:
 
 
 def _build_audit_block(audit: dict) -> str:
-    """Track, scores, meridian take, recommendations. Structured for embedding."""
+    """Track, scores, dilly take, recommendations. Structured for embedding."""
     track = _normalize_str(audit.get("detected_track"))
     scores = audit.get("scores") or {}
     smart = _safe_int(scores.get("smart"))
@@ -241,13 +241,13 @@ def _build_voice_data_block(profile: dict) -> str:
             if text:
                 items_by_type[t].append(text)
         if items_by_type["skill"]:
-            parts.append("Additional skills (told Meridian): " + "; ".join(items_by_type["skill"][:20]))
+            parts.append("Additional skills (told Dilly): " + "; ".join(items_by_type["skill"][:20]))
         if items_by_type["project"]:
-            parts.append("Additional projects (told Meridian): " + "; ".join(items_by_type["project"][:10]))
+            parts.append("Additional projects (told Dilly): " + "; ".join(items_by_type["project"][:10]))
         if items_by_type["experience"]:
-            parts.append("Additional experience (told Meridian): " + "; ".join(items_by_type["experience"][:10]))
+            parts.append("Additional experience (told Dilly): " + "; ".join(items_by_type["experience"][:10]))
         if items_by_type["other"]:
-            parts.append("Other (told Meridian): " + "; ".join(items_by_type["other"][:10]))
+            parts.append("Other (told Dilly): " + "; ".join(items_by_type["other"][:10]))
 
     expansion = profile.get("experience_expansion")
     if isinstance(expansion, list) and expansion:
@@ -286,14 +286,14 @@ def build_candidate_document(
 ) -> str:
     """
     Build a single candidate document string from profile, audit, optional resume, and optional narrative.
-    This is the text we embed for semantic search (recruiter matching). Includes everything Meridian
-    knows so that what the student told Meridian (e.g. in Voice or profile) is searchable.
+    This is the text we embed for semantic search (recruiter matching). Includes everything Dilly
+    knows so that what the student told Dilly (e.g. in Voice or profile) is searchable.
 
     Args:
-        profile: Meridian profile (name, major, majors, track, goals, career_goal, application_target, job_locations, minors, etc.)
+        profile: Dilly profile (name, major, majors, track, goals, career_goal, application_target, job_locations, minors, etc.)
         audit: Latest audit (scores, detected_track, findings, evidence, recommendations, dilly_take)
         resume_text: Optional full or structured resume text. If None, uses audit evidence/findings.
-        profile_narrative: Optional full text of what Meridian knows (e.g. dilly_profile_txt content). When present, included so matching reflects voice/profile-only info.
+        profile_narrative: Optional full text of what Dilly knows (e.g. dilly_profile_txt content). When present, included so matching reflects voice/profile-only info.
 
     Returns:
         Single string suitable for embedding. Never exceeds TOTAL_CHAR_CAP.
@@ -308,7 +308,7 @@ def build_candidate_document(
 
     if profile_narrative and profile_narrative.strip():
         narrative = _truncate(profile_narrative.strip(), MAX_PROFILE_NARRATIVE_CHARS)
-        sections.append(("What they told Meridian", narrative))
+        sections.append(("What they told Dilly", narrative))
 
     voice_block = _build_voice_data_block(profile)
     if voice_block:
@@ -320,7 +320,7 @@ def build_candidate_document(
 
     audit_block = _build_audit_block(audit)
     if audit_block:
-        sections.append(("Meridian assessment", audit_block))
+        sections.append(("Dilly assessment", audit_block))
 
     if not sections:
         return "No profile or audit data."

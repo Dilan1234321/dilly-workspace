@@ -1,8 +1,8 @@
 """
-Meridian Company-to-ATS Lookup.
+Dilly Company-to-ATS Lookup.
 
 Maps well-known companies to the ATS vendor they use. When a student says
-"I'm applying to Amazon," Meridian auto-identifies Workday and highlights
+"I'm applying to Amazon," Dilly auto-identifies Workday and highlights
 that vendor's simulation results.
 
 Sources: Published job boards, careers pages, and ATS vendor customer lists.

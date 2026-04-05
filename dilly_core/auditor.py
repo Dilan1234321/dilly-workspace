@@ -1,5 +1,5 @@
 """
-Meridian Auditor - Full pipeline: extract text → signals → scoring + track audit.
+Dilly Auditor - Full pipeline: extract text → signals → scoring + track audit.
 Uses only proven data (zero hallucination). Call from FastAPI or CLI.
 """
 

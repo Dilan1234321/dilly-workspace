@@ -1,5 +1,5 @@
 """
-Meridian Per-ATS Vendor Simulation.
+Dilly Per-ATS Vendor Simulation.
 
 Simulates how four major ATS platforms would each parse and score the same
 resume. Each vendor has different parsing engines, tolerance levels, and quirks.

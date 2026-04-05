@@ -1,5 +1,5 @@
 """
-Meridian Core - Scoring Engine (Ground Truth V6.5).
+Dilly Core - Scoring Engine (Ground Truth V6.5).
 Implements Smart Score, Grit Score, and International (Global Grit) multiplier.
 Zero-hallucination: only evidence present in the provided signals affects scores.
 """

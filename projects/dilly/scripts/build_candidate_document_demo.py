@@ -3,14 +3,14 @@
 See the candidate document builder in action.
 
 Run with no args → uses sample data so you see the output immediately.
-Run with an email → uses that user's profile + latest audit (if any) from Meridian storage.
+Run with an email → uses that user's profile + latest audit (if any) from Dilly storage.
 
 Run from the workspace root (the folder that contains 'projects/'):
 
-  python3 projects/meridian/scripts/build_candidate_document_demo.py
-  python3 projects/meridian/scripts/build_candidate_document_demo.py your@email.edu
+  python3 projects/dilly/scripts/build_candidate_document_demo.py
+  python3 projects/dilly/scripts/build_candidate_document_demo.py your@email.edu
 
-If you're already in projects/meridian/dashboard/, run:
+If you're already in projects/dilly/dashboard/, run:
 
   python3 ../scripts/build_candidate_document_demo.py
 """
@@ -18,7 +18,7 @@ If you're already in projects/meridian/dashboard/, run:
 import sys
 import os
 
-# So we can import from api and dilly_core (script is in projects/meridian/scripts/)
+# So we can import from api and dilly_core (script is in projects/dilly/scripts/)
 _ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)

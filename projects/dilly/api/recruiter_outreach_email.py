@@ -7,12 +7,12 @@ def build_recruiter_outreach_subject(company: str | None, job_title: str | None)
     company = (company or "").strip()
     job_title = (job_title or "").strip()
     if company and job_title:
-        return f"Recruiter outreach via Meridian: {job_title} at {company}"
+        return f"Recruiter outreach via Dilly: {job_title} at {company}"
     if company:
-        return f"Recruiter outreach via Meridian: {company}"
+        return f"Recruiter outreach via Dilly: {company}"
     if job_title:
-        return f"Recruiter outreach via Meridian: {job_title}"
-    return "Recruiter outreach via Meridian"
+        return f"Recruiter outreach via Dilly: {job_title}"
+    return "Recruiter outreach via Dilly"
 
 
 def build_recruiter_outreach_html(
@@ -32,7 +32,7 @@ def build_recruiter_outreach_html(
     message = (message or "").strip()
 
     header = f"<p>Hi {student_name},</p>"
-    intro_parts = [f"<strong>{recruiter_name}</strong> reached out to you via Meridian"]
+    intro_parts = [f"<strong>{recruiter_name}</strong> reached out to you via Dilly"]
     if company and job_title:
         intro_parts.append(f"about <strong>{job_title}</strong> at <strong>{company}</strong>")
     elif company:
@@ -55,7 +55,7 @@ def build_recruiter_outreach_html(
 
     safety = (
         "<p style=\"color:#a3a3a3;font-size:12px;margin-top:10px;\">"
-        "Safety: Meridian never asks you to share passwords or pay for opportunities. "
+        "Safety: Dilly never asks you to share passwords or pay for opportunities. "
         f"If this message seems suspicious, forward it to support. Recruiter contact: { _escape_html(recruiter_email) }."
         "</p>"
     )

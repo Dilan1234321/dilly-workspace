@@ -1,5 +1,5 @@
 """
-Central error handling for the Meridian API.
+Central error handling for the Dilly API.
 Use these helpers so every error returns a consistent envelope: { error, code, detail, request_id }.
 Frontend can branch on `code` for UX (e.g. show "Sign in" for UNAUTHORIZED).
 """

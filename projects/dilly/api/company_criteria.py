@@ -1,7 +1,7 @@
 """
 Company hiring criteria — only list jobs from companies we have verified criteria for.
 
-Meridian premium standard: we confidently know each company's hiring guidelines
+Dilly premium standard: we confidently know each company's hiring guidelines
 and apply them to students. If we can't, we don't list their jobs.
 """
 
@@ -11,7 +11,7 @@ import os
 import re
 from pathlib import Path
 
-# Resolve criteria path: prefer relative to this file (api/ -> meridian/knowledge/)
+# Resolve criteria path: prefer relative to this file (api/ -> dilly/knowledge/)
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _CRITERIA_PATH_REL = os.path.normpath(os.path.join(_THIS_DIR, "..", "knowledge", "company_hiring_criteria.json"))
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_THIS_DIR, "..", "..", ".."))
@@ -72,8 +72,8 @@ def job_is_verified(job: dict) -> tuple[bool, str | None]:
 
 def get_job_required_scores(job: dict) -> dict | None:
     """
-    Return meridian_scores for this job (min_smart, min_grit, min_build, min_final_score, track)
-    if the matching rule has meridian_scores. Otherwise None.
+    Return dilly_scores for this job (min_smart, min_grit, min_build, min_final_score, track)
+    if the matching rule has dilly_scores. Otherwise None.
     """
     source = (job.get("source") or "").strip().lower()
     company = (job.get("company") or "").strip()
@@ -142,7 +142,7 @@ def get_all_companies() -> list[dict]:
             "slug": slug,
             "display_name": display_name,
             "source": src,
-            "meridian_scores": rule.get("meridian_scores"),
+            "dilly_scores": rule.get("meridian_scores"),
             "criteria_source": rule.get("criteria_source"),
             "confidence": rule.get("confidence"),
         })
@@ -168,7 +168,7 @@ def get_company_by_slug(slug: str) -> dict | None:
                 "display_name": display_name,
                 "source": src,
                 "company_pattern": pat,
-                "meridian_scores": rule.get("meridian_scores"),
+                "dilly_scores": rule.get("meridian_scores"),
                 "criteria_for_llm": rule.get("criteria_for_llm"),
                 "criteria_source": rule.get("criteria_source"),
                 "confidence": rule.get("confidence"),

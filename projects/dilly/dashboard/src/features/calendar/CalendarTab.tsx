@@ -56,6 +56,9 @@ export function CalendarTab({
   const [feedToken, setFeedToken] = useState<string | null>(appProfile?.calendar_feed_token ?? null);
   const [showSubscribe, setShowSubscribe] = useState(false);
   const [feedCopied, setFeedCopied] = useState(false);
+  const [generatingPrepSchedule, setGeneratingPrepSchedule] = useState<string | null>(null);
+  const [prepDeck, setPrepDeck] = useState<any | null>(null);
+  const [loadingPrepDeck, setLoadingPrepDeck] = useState<string | null>(null);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const allDeadlines: DillyDeadline[] = (appProfile?.deadlines || []).filter((d) => d.date && d.label);
@@ -175,6 +178,56 @@ export function CalendarTab({
       return { ...dl, reminder_days: next };
     });
     await saveProfile({ deadlines: updated });
+  };
+
+  const handleGeneratePrepSchedule = async (dl: DillyDeadline) => {
+    setGeneratingPrepSchedule(dl.id);
+    try {
+      const { dilly } = await import("@/lib/dilly");
+      const res = await dilly.fetch("/calendar/generate-prep-schedule", {
+        method: "POST",
+        body: JSON.stringify({
+          interview_date: dl.date,
+          company: dl.label.replace(/interview|final round|phone screen/gi, "").trim() || dl.label,
+          role: "Interview",
+          track: appProfile?.track || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.saved > 0) {
+        toast(`Added ${data.saved} prep blocks to your calendar`, "success");
+        // Force profile refresh by saving empty patch
+        await saveProfile({});
+      } else {
+        toast("Could not generate prep schedule", "error");
+      }
+    } catch {
+      toast("Failed to generate prep schedule", "error");
+    } finally {
+      setGeneratingPrepSchedule(null);
+    }
+  };
+
+  const handleViewPrepDeck = async (dl: DillyDeadline) => {
+    setLoadingPrepDeck(dl.id);
+    try {
+      const { dilly } = await import("@/lib/dilly");
+      const company = dl.label.replace(/interview|final round|phone screen/gi, "").trim() || dl.label;
+      const res = await dilly.fetch("/interview/prep-deck", {
+        method: "POST",
+        body: JSON.stringify({
+          company,
+          role: "Interview",
+          track: appProfile?.track || undefined,
+        }),
+      });
+      const data = await res.json();
+      setPrepDeck(data);
+    } catch {
+      toast("Failed to load prep deck", "error");
+    } finally {
+      setLoadingPrepDeck(null);
+    }
   };
 
   const handleGenerateFeedToken = async () => {
@@ -510,6 +563,12 @@ export function CalendarTab({
                               {dl.type === "application" && (
                                 <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-[6px]" style={{ background: "rgba(52,199,89,0.15)", color: "rgb(52,199,89)" }}>APP</span>
                               )}
+                              {dl.type === "interview" && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-[6px]" style={{ background: "rgba(255,159,10,0.15)", color: "rgb(255,159,10)" }}>INTERVIEW</span>
+                              )}
+                              {dl.type === "prep" && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-[6px]" style={{ background: "rgba(147,51,234,0.15)", color: "rgb(147,51,234)" }}>PREP</span>
+                              )}
                             </div>
                             <p className="text-xs mt-0.5" style={{ color: isCompleted ? "var(--t3)" : urgentColor }}>
                               {isCompleted ? "Done" : daysAway < 0 ? "Deadline passed" : daysAway === 0 ? "Less than a day away" : `${daysAway}d away`}
@@ -543,6 +602,28 @@ export function CalendarTab({
                                     </button>
                                   );
                                 })}
+                              </div>
+                            )}
+                            {dl.type === "interview" && !isCompleted && daysAway > 0 && (
+                              <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleGeneratePrepSchedule(dl)}
+                                  disabled={generatingPrepSchedule === dl.id}
+                                  className="text-[10px] px-2 py-0.5 rounded-[6px] transition-colors"
+                                  style={{ background: "rgba(147,51,234,0.1)", color: "rgb(147,51,234)", border: "1px solid rgba(147,51,234,0.3)" }}
+                                >
+                                  {generatingPrepSchedule === dl.id ? "Generating..." : "Generate prep schedule"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewPrepDeck(dl)}
+                                  disabled={loadingPrepDeck === dl.id}
+                                  className="text-[10px] px-2 py-0.5 rounded-[6px] transition-colors"
+                                  style={{ background: "rgba(91,141,239,0.1)", color: "rgb(91,141,239)", border: "1px solid rgba(91,141,239,0.3)" }}
+                                >
+                                  {loadingPrepDeck === dl.id ? "Loading..." : "View prep deck"}
+                                </button>
                               </div>
                             )}
                           </>

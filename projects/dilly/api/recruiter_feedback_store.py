@@ -10,7 +10,7 @@ Append-only log to memory/recruiter_feedback.jsonl. Each line is JSON:
 }
 
 Used by POST /recruiter/feedback. Phase 1: log only. Phase 2+: feedback_score and re-ranking.
-Ref: projects/meridian/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md §4, §5.3
+Ref: projects/dilly/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md §4, §5.3
 """
 
 import json

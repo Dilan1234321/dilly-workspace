@@ -1,7 +1,7 @@
 """
 Infer career track from job description and optional title.
 
-Used by jd_to_meridian_scores to anchor score inference to track benchmarks.
+Used by jd_to_dilly_scores to anchor score inference to track benchmarks.
 Returns one of: Tech, Pre-Health, Pre-Law, Business, Finance, Consulting,
 Science, Communications, Education, Arts, Humanities, or None if unclear.
 """

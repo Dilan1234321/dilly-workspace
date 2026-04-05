@@ -97,7 +97,7 @@ def _persist_voice_detected_deadlines(email: str, detected: list[dict]) -> list[
                 continue
             existing_keys.add(key)
             new_rows.append(
-                {"id": str(uuid.uuid4()), "label": label, "date": date_str, "createdBy": "meridian"}
+                {"id": str(uuid.uuid4()), "label": label, "date": date_str, "createdBy": "dilly"}
             )
         if not new_rows:
             return []

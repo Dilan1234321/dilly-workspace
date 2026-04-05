@@ -6,11 +6,11 @@ import subprocess
 # Set up absolute base path
 BASE_PATH = "/Users/dilankochhar/.openclaw/workspace"
 sys.path.append(BASE_PATH)
-sys.path.append(os.path.join(BASE_PATH, "projects/meridian"))
+sys.path.append(os.path.join(BASE_PATH, "projects/dilly"))
 
-from projects.dilly.meridian_engine import MeridianAI
-from projects.dilly.meridian_resume_auditor import MeridianResumeAuditor
-from projects.dilly.database_manager import MeridianDatabase
+from projects.dilly.dilly_engine import DillyAI
+from projects.dilly.dilly_resume_auditor import DillyResumeAuditor
+from projects.dilly.database_manager import DillyDatabase
 import pypdf
 
 LOG_FILE = os.path.join(BASE_PATH, "core/memory/2026-02-27.md")
@@ -23,13 +23,13 @@ def log_progress(msg):
 
 def run_audits_on_new_resumes():
     log_progress("Scanning for new resumes in assets/resumes...")
-    db = MeridianDatabase()
+    db = DillyDatabase()
     resume_folder = os.path.join(BASE_PATH, "assets/resumes")
     
     for file in os.listdir(resume_folder):
         if file.endswith(".pdf"):
             log_progress(f"Auditing {file}...")
-            auditor = MeridianResumeAuditor(os.path.join(resume_folder, file))
+            auditor = DillyResumeAuditor(os.path.join(resume_folder, file))
             if auditor.extract_text():
                 analysis = auditor.analyze_content()
                 # Use filename as candidate name if unknown
@@ -47,8 +47,8 @@ def find_and_train():
         if file.endswith(".csv") and file != "Resume.csv":
             log_progress(f"Found new training data: {file}. Integrating...")
             try:
-                from train_brain import MeridianBrainTrainer
-                trainer = MeridianBrainTrainer(os.path.join(assets_dir, file), model_name="campus")
+                from train_brain import DillyBrainTrainer
+                trainer = DillyBrainTrainer(os.path.join(assets_dir, file), model_name="campus")
                 trainer.train()
                 log_progress(f"Model evolved with data from {file}.")
                 new_data_found = True
@@ -60,11 +60,11 @@ def find_and_train():
 def update_desktop_note(msg):
     try:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        update_dir = "/Users/dilankochhar/Desktop/Meridian_Updates"
+        update_dir = "/Users/dilankochhar/Desktop/Dilly_Updates"
         os.makedirs(update_dir, exist_ok=True)
         filename = f"auto_status_{timestamp}.md"
         with open(os.path.join(update_dir, filename), "w") as f:
-            f.write(f"# Meridian Auto-Update\n\n{msg}")
+            f.write(f"# Dilly Auto-Update\n\n{msg}")
         log_progress(f"Desktop update sync'd: {filename}")
     except Exception as e:
         log_progress(f"Desktop sync failed: {e}")
@@ -91,7 +91,7 @@ def main():
     try:
         # Benchmark Dilan's resume
         resume_path = os.path.join(BASE_PATH, "assets/resumes/resume.pdf")
-        auditor = MeridianResumeAuditor(resume_path)
+        auditor = DillyResumeAuditor(resume_path)
         if auditor.extract_text():
             analysis = auditor.analyze_content()
             score = analysis['metrics']['grit_score']

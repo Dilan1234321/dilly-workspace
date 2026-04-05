@@ -128,8 +128,19 @@ class Trigger:
     evaluate: Callable[[dict[str, Any]], dict[str, Any]]
 
 
+_DEFAULT_REMINDER_DAYS = [1, 3, 7, 14]
+
+_REMINDER_MESSAGES: dict[int, str] = {
+    14: "Two weeks until {label}",
+    7: "{label} is next week",
+    3: "{label} in 3 days — prep time",
+    1: "{label} is tomorrow",
+}
+
+
 def _trigger_deadline_reminder(ctx: dict[str, Any]) -> dict[str, Any]:
-    """Fires when days_remaining matches any value in a deadline's reminder_days array."""
+    """Fires when days_remaining matches any value in a deadline's reminder_days array.
+    Falls back to defaults [1, 3, 7, 14] when no custom reminder_days are set."""
     today: date = ctx["today"]
     deadlines = [d for d in (ctx.get("deadlines") or []) if isinstance(d, dict)]
     for d in deadlines:
@@ -143,15 +154,20 @@ def _trigger_deadline_reminder(ctx: dict[str, Any]) -> dict[str, Any]:
             continue
         reminder_days = d.get("reminder_days")
         if not isinstance(reminder_days, list) or not reminder_days:
-            continue
+            reminder_days = _DEFAULT_REMINDER_DAYS
         if days in reminder_days:
+            label = d.get("label") or "Upcoming deadline"
+            nudge = _REMINDER_MESSAGES.get(days, f"{label} in {days} days")
+            if "{label}" in nudge:
+                nudge = nudge.format(label=label)
             return {
                 "fired": True,
                 "data": {
-                    "deadline_label": d.get("label") or "Upcoming deadline",
+                    "deadline_label": label,
                     "deadline_id": d.get("id") or "",
                     "days_remaining": days,
                     "reminder_type": "per_deadline",
+                    "nudge_message": nudge,
                     "current_score": (ctx.get("latest_audit") or {}).get("final_score"),
                 },
             }
@@ -492,6 +508,65 @@ def _trigger_ritual_missed(ctx: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _trigger_interview_prep_ready(ctx: dict[str, Any]) -> dict[str, Any]:
+    """Fires 2 days before an interview deadline. Suggests viewing the prep deck."""
+    today: date = ctx["today"]
+    deadlines = [d for d in (ctx.get("deadlines") or []) if isinstance(d, dict)]
+    for d in deadlines:
+        if d.get("completedAt"):
+            continue
+        d_type = str(d.get("type") or "").strip().lower()
+        if d_type != "interview":
+            continue
+        dd = _to_date(d.get("date"))
+        if not dd:
+            continue
+        days_until = days_between(today, dd)
+        if days_until == 2:
+            label = d.get("label") or "Upcoming interview"
+            company = label  # label typically includes company name
+            return {
+                "fired": True,
+                "data": {
+                    "deadline_label": label,
+                    "deadline_id": d.get("id") or "",
+                    "company": company,
+                    "days_remaining": days_until,
+                },
+            }
+    return {"fired": False}
+
+
+def _trigger_application_going_cold(ctx: dict[str, Any]) -> dict[str, Any]:
+    """Fires when an application has status 'applied' with no status change for >10 days."""
+    today: date = ctx["today"]
+    for app in (ctx.get("applications") or []):
+        if not isinstance(app, dict):
+            continue
+        status = str(app.get("status") or "").strip().lower()
+        if status != "applied":
+            continue
+        applied_at = _to_date(
+            app.get("applied_at") or app.get("updated_at") or app.get("created_at") or app.get("createdAt")
+        )
+        if not applied_at:
+            continue
+        days_since = days_between(applied_at, today)
+        if days_since > 10:
+            company = str(app.get("company") or "").strip() or "a company"
+            role = str(app.get("role") or "").strip()
+            return {
+                "fired": True,
+                "data": {
+                    "company": company,
+                    "role": role,
+                    "days_since_applied": days_since,
+                    "message": f"Your {company} application has been quiet for {days_since} days. Want follow-up templates?",
+                },
+            }
+    return {"fired": False}
+
+
 def _trigger_deep_dive_overdue(ctx: dict[str, Any]) -> dict[str, Any]:
     latest = ctx.get("latest_audit")
     profile = ctx.get("profile") or {}
@@ -526,11 +601,13 @@ TRIGGERS: list[Trigger] = [
     Trigger("AUDIT_STALE_RECRUITING", 5, 7, _trigger_audit_stale_recruiting),
     Trigger("APPLIED_ATS_MISMATCH", 6, 7, _trigger_applied_ats_mismatch),
     Trigger("APPLICATION_SILENCE", 7, 5, _trigger_application_silence),
-    Trigger("ACTION_ITEMS_PENDING", 8, 4, _trigger_action_items_pending),
-    Trigger("COHORT_MOVING_USER_FLAT", 9, 7, _trigger_cohort_moving_user_flat),
-    Trigger("RELATIONSHIP_FOLLOWUP", 10, 7, _trigger_relationship_followup),
-    Trigger("RITUAL_MISSED", 11, 7, _trigger_ritual_missed),
-    Trigger("DEEP_DIVE_OVERDUE", 12, 21, _trigger_deep_dive_overdue),
+    Trigger("APPLICATION_GOING_COLD", 8, 5, _trigger_application_going_cold),
+    Trigger("ACTION_ITEMS_PENDING", 9, 4, _trigger_action_items_pending),
+    Trigger("COHORT_MOVING_USER_FLAT", 10, 7, _trigger_cohort_moving_user_flat),
+    Trigger("RELATIONSHIP_FOLLOWUP", 11, 7, _trigger_relationship_followup),
+    Trigger("RITUAL_MISSED", 12, 7, _trigger_ritual_missed),
+    Trigger("DEEP_DIVE_OVERDUE", 13, 21, _trigger_deep_dive_overdue),
+    Trigger("INTERVIEW_PREP_READY", 1, 2, _trigger_interview_prep_ready),
 ]
 
 

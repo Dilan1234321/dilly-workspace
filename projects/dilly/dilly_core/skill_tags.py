@@ -21,7 +21,7 @@ Contract:
 - Output: list[str], 0 to MAX_SKILL_TAGS elements, sorted, each non-empty. Never None.
 - When a key is missing or wrong type: that source contributes nothing; no exception.
 
-Ref: projects/meridian/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md §3
+Ref: projects/dilly/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md §3
 """
 
 from __future__ import annotations
@@ -368,7 +368,7 @@ def llm_extract_skill_tags(
 
     canon_set = sorted(set(all_vocab().values()))
     system = (
-        "You are Meridian's skill extraction engine. Given a candidate's resume text "
+        "You are Dilly's skill extraction engine. Given a candidate's resume text "
         "and a canonical tag list, extract every skill/competency the candidate demonstrably has.\n"
         "Return ONLY strict JSON: {\"tags\": [{\"tag\": ..., \"confidence\": ..., \"evidence\": ...}, ...]}.\n"
         "Rules:\n"
@@ -505,7 +505,7 @@ def extract_skill_tags_from_parser(parsed: Any) -> list[str]:
 def extract_skill_tags_from_profile(profile: dict | None) -> list[str]:
     """
     Extract skill tags from profile text: career_goal, goals list, application_target, track.
-    Ensures what the student told Meridian (e.g. in Voice or profile) is reflected in matching.
+    Ensures what the student told Dilly (e.g. in Voice or profile) is reflected in matching.
     """
     if not profile or not isinstance(profile, dict):
         return []
@@ -593,7 +593,7 @@ def extract_skill_tags_from_voice_data(profile: dict | None) -> list[str]:
     """
     Extract skill tags from Voice-captured data: beyond_resume items and experience_expansion entries.
     Scans the free-text 'text' fields in beyond_resume, and skills/tools_used lists in experience_expansion.
-    This ensures skills captured via natural conversation with Meridian Voice count for recruiter matching.
+    This ensures skills captured via natural conversation with Dilly Voice count for recruiter matching.
     """
     if not profile or not isinstance(profile, dict):
         return []
@@ -657,7 +657,7 @@ def extract_skill_tags(
     Combine skill tags from parser, profile, audit, and Voice-captured data.
     Order: parser → profile → audit → voice data.
     Deduped, sorted, capped at MAX_SKILL_TAGS.
-    Ensures everything the student told Meridian (Voice convos, deep-dive) feeds into recruiter matching.
+    Ensures everything the student told Dilly (Voice convos, deep-dive) feeds into recruiter matching.
     Returns list[str], never None; elements are non-empty.
     """
     tags: list[str] = []

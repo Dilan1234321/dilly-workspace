@@ -3,7 +3,7 @@
 Build LLM training data from your resume set.
 Supports PDF (with optional OCR for image/blurry PDFs) and DOCX.
 
-Runs the rule-based Meridian auditor on every file in RESUME_DIR and saves
+Runs the rule-based Dilly auditor on every file in RESUME_DIR and saves
 (resume excerpt, scores, findings) as few-shot examples for the LLM.
 
 Usage (from workspace root):
@@ -13,7 +13,7 @@ Usage (from workspace root):
 Optional env:
   MERIDIAN_PDF_OCR_THRESHOLD=100  — below this many chars from pypdf we try OCR (default 100). OCR needs: pip install pdf2image pytesseract; system: poppler, tesseract-ocr.
 
-Output: projects/meridian/prompts/training_data.json
+Output: projects/dilly/prompts/training_data.json
 """
 
 import json
@@ -28,14 +28,14 @@ if WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, WORKSPACE_ROOT)
 
 RESUME_DIR = os.environ.get("RESUME_DIR", os.path.join(WORKSPACE_ROOT, "assets", "resumes"))
-OUTPUT_PATH = os.environ.get("MERIDIAN_TRAINING_DATA")
+OUTPUT_PATH = os.environ.get("DILLY_TRAINING_DATA") or os.environ.get("MERIDIAN_TRAINING_DATA")
 if not OUTPUT_PATH:
     OUTPUT_PATH = os.path.join(WORKSPACE_ROOT, "projects", "dilly", "prompts", "training_data.json")
 OUTPUT_PATH = os.path.abspath(OUTPUT_PATH)
 # Per-example resume length cap for few-shot (keep prompt size manageable)
-EXCERPT_CHARS = int(os.environ.get("MERIDIAN_EXCERPT_CHARS", "2400"))
+EXCERPT_CHARS = int(os.environ.get("DILLY_EXCERPT_CHARS") or os.environ.get("MERIDIAN_EXCERPT_CHARS", "2400"))
 # Min chars from native PDF extraction below which we try OCR (when pdf2image + pytesseract available)
-PDF_OCR_THRESHOLD = int(os.environ.get("MERIDIAN_PDF_OCR_THRESHOLD", "100"))
+PDF_OCR_THRESHOLD = int(os.environ.get("DILLY_PDF_OCR_THRESHOLD") or os.environ.get("MERIDIAN_PDF_OCR_THRESHOLD", "100"))
 
 
 def _person_key_from_filename(filename: str) -> str:

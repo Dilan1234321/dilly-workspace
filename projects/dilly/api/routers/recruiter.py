@@ -154,8 +154,8 @@ async def recruiter_jd_fit(request: Request, body: dict = Body(...)):
     if not jd:
         raise HTTPException(status_code=400, detail="job_description is required.")
     try:
-        from dilly_core.jd_to_meridian_scores import jd_to_meridian_scores
-        result = jd_to_meridian_scores(jd, job_title=title)
+        from dilly_core.jd_to_dilly_scores import jd_to_dilly_scores
+        result = jd_to_dilly_scores(jd, job_title=title)
         return result
     except Exception:
         raise HTTPException(status_code=500, detail="Could not infer Dilly fit from job description.")

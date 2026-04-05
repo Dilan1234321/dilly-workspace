@@ -8,15 +8,15 @@ WORKSPACE_ROOT = os.getcwd() # Use CWD since OpenClaw runs from workspace root
 if WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, WORKSPACE_ROOT)
 
-from projects.dilly.meridian_resume_auditor import MeridianResumeAuditor
+from projects.dilly.dilly_resume_auditor import DillyResumeAuditor
 
 RESUME_DIR = "assets/resumes"
-REPORT_DIR = "projects/meridian/reports"
+REPORT_DIR = "projects/dilly/reports"
 STATE_FILE = "memory/heartbeat-state.json"
 
 def run_audit(file_path):
     print(f"Auditing: {file_path}")
-    auditor = MeridianResumeAuditor(file_path)
+    auditor = DillyResumeAuditor(file_path)
     if not auditor.extract_text():
         print(f"Failed to extract text from {file_path}")
         return

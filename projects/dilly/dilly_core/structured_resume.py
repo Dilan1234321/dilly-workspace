@@ -1,7 +1,7 @@
 """
-Structured resume output for Meridian.
+Structured resume output for Dilly.
 Builds a labeled, sectioned text file from ParsedResume so the LLM and code
-can reliably use which block is which. Writes to projects/meridian/parsed_resumes/.
+can reliably use which block is which. Writes to projects/dilly/parsed_resumes/.
 Applies rule-based cleanup (acronym sections dropped, bullet-only lines merged) for every file.
 """
 
@@ -775,7 +775,7 @@ def build_structured_resume_text(parsed: ParsedResume, display_name_override: Op
 
 
 def get_parsed_resumes_dir() -> str:
-    """Return path to projects/meridian/parsed_resumes (create if needed)."""
+    """Return path to projects/dilly/parsed_resumes (create if needed)."""
     # Resolve from cwd or from this file
     base = os.getcwd()
     if "projects" not in os.listdir(base):

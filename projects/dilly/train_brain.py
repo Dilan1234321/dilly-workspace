@@ -7,11 +7,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 
-class MeridianBrainTrainer:
+class DillyBrainTrainer:
     def __init__(self, csv_path, model_name):
         self.csv_path = csv_path
         self.model_name = model_name
-        self.model_dir = f"projects/meridian/models/{model_name}"
+        self.model_dir = f"projects/dilly/models/{model_name}"
         os.makedirs(self.model_dir, exist_ok=True)
         self.vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
         self.model = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -34,7 +34,7 @@ class MeridianBrainTrainer:
             legal_advocacy = sum(1 for w in ['clerk', 'litigation', 'legal', 'policy', 'advocacy', 'moot court', 'debate', 'pro bono', 'docket', 'compliance'] if w in text)
             service_dedication = sum(1 for w in ['volunteer', 'non-profit', 'community', 'mission', 'outreach', 'service', 'teach', 'mentor'] if w in text)
 
-            # Meridian Truth Standard: Integrated Specialized Valuation
+            # Dilly Truth Standard: Integrated Specialized Valuation
             if self.model_name == "campus":
                 # Campus favors Leadership, Tech, and Research output
                 return (impact * 10) + (leadership * 20) + (tech * 10) + (manual_grit * 15) + (clinical_research * 12) + (legal_advocacy * 8)
@@ -52,10 +52,10 @@ class MeridianBrainTrainer:
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        print(f"Training Meridian {self.model_name} Brain on {X_train.shape[0]} samples...")
+        print(f"Training Dilly {self.model_name} Brain on {X_train.shape[0]} samples...")
         self.model.fit(X_train, y_train)
         
-        with open(os.path.join(self.model_dir, "meridian_brain.pkl"), "wb") as f:
+        with open(os.path.join(self.model_dir, "dilly_brain.pkl"), "wb") as f:
             pickle.dump(self.model, f)
         with open(os.path.join(self.model_dir, "vectorizer.pkl"), "wb") as f:
             pickle.dump(self.vectorizer, f)
@@ -67,5 +67,5 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", default="pro")
     args = parser.parse_args()
     
-    trainer = MeridianBrainTrainer(args.csv, args.model_name)
+    trainer = DillyBrainTrainer(args.csv, args.model_name)
     trainer.train()

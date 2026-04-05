@@ -49,7 +49,7 @@ class ReportEmailToParentRequest(BaseModel):
     student_name: Optional[str] = Field(None, description="Student name for personalization")
 
 
-class ApplyThroughMeridianRequest(BaseModel):
+class ApplyThroughDillyRequest(BaseModel):
     job_id: str = Field(..., min_length=1, description="Job ID to apply to")
     note: Optional[str] = Field(None, max_length=2000, description="Optional note to recruiter")
     report_url: Optional[str] = Field(None, description="Optional resume/report URL to attach")

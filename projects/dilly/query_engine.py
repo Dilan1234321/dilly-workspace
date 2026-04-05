@@ -2,7 +2,7 @@ import json
 import os
 import argparse
 
-DB_PATH = "/Users/dilankochhar/.openclaw/workspace/projects/meridian/meridian_database.json"
+DB_PATH = "/Users/dilankochhar/.openclaw/workspace/projects/dilly/dilly_database.json"
 
 def load_db():
     if not os.path.exists(DB_PATH):
@@ -38,7 +38,7 @@ def query(major=None, grad_year=None, min_grit=0, visa=None):
     # Rank by Grit Score
     filtered.sort(key=lambda x: x['metrics'].get('grit_score', 0), reverse=True)
     
-    print(f"\n--- Meridian Search Results ({len(filtered)} found) ---")
+    print(f"\n--- Dilly Search Results ({len(filtered)} found) ---")
     for c in filtered:
         m = c['metadata']
         met = c['metrics']
@@ -46,7 +46,7 @@ def query(major=None, grad_year=None, min_grit=0, visa=None):
     print("-" * 40)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Query the Meridian Talent Database")
+    parser = argparse.ArgumentParser(description="Query the Dilly Talent Database")
     parser.add_argument("--major", help="Filter by major")
     parser.add_argument("--grad", help="Filter by graduation year")
     parser.add_argument("--grit", type=int, default=0, help="Minimum grit score")

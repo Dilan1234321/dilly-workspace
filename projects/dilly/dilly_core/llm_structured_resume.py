@@ -1,8 +1,8 @@
 """
-Meridian LLM Structured Resume - Normalize parsed resume into canonical format using few-shot learning.
+Dilly LLM Structured Resume - Normalize parsed resume into canonical format using few-shot learning.
 When MERIDIAN_USE_LLM and OPENAI_API_KEY are set, the LLM receives raw parser sections and outputs
 the canonical [SECTION]\\ncontent format so nothing is dropped (e.g. Relevant Experience, Volunteer, Affiliations).
-Few-shot examples are loaded from projects/meridian/prompts/resume_normalizer_examples.json.
+Few-shot examples are loaded from projects/dilly/prompts/resume_normalizer_examples.json.
 """
 
 import json
@@ -11,8 +11,8 @@ import os
 import re
 from typing import TYPE_CHECKING, List, Optional
 
-logger = logging.getLogger("meridian.normalizer")
-if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
+logger = logging.getLogger("dilly.normalizer")
+if os.environ.get("DILLY_DEBUG_NORMALIZER") or os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
     logger.setLevel(logging.DEBUG)
     if not logger.handlers:
         logger.addHandler(logging.StreamHandler())
@@ -38,7 +38,7 @@ CANONICAL_SECTION_ORDER = [
     "[CERTIFICATIONS]",
 ]
 
-SYSTEM_PROMPT = """You are Meridian's resume normalizer. You receive raw resume sections from a parser (section headers may vary: "Relevant Experience", "Leadership Experience", "Volunteer | ...", "Affiliations", etc.). Your job is to output ONE cleaned resume using ONLY the canonical section labels and format below. Do not add markdown, explanations, or content outside the format.
+SYSTEM_PROMPT = """You are Dilly's resume normalizer. You receive raw resume sections from a parser (section headers may vary: "Relevant Experience", "Leadership Experience", "Volunteer | ...", "Affiliations", etc.). Your job is to output ONE cleaned resume using ONLY the canonical section labels and format below. Do not add markdown, explanations, or content outside the format.
 
 CANONICAL SECTIONS (use exactly these labels, in this order):
 1. [CONTACT / TOP]: Name, Email, Phone, Location, LinkedIn if present. No GPA here.
@@ -88,7 +88,7 @@ MAP non-standard headers into canonical sections:
 - "Honors & Awards" → [HONORS]
 Do not create sections for acronyms (GPA, FL, CITI, etc.); fold that content into the right section. Preserve all factual content; do not invent or omit. Output ONLY the cleaned resume text."""
 
-CORRECTION_SYSTEM_PROMPT = """You are Meridian's resume normalizer. Your previous output had specific issues that must be fixed.
+CORRECTION_SYSTEM_PROMPT = """You are Dilly's resume normalizer. Your previous output had specific issues that must be fixed.
 
 You will receive: (1) the list of issues, (2) your previous output, (3) the raw resume sections. You MUST fix every issue in the list. Do not skip any.
 
@@ -212,7 +212,7 @@ def validate_normalized_output(raw_sections_text: str, normalized_output: str) -
 
 
 def _find_normalizer_examples_path() -> Optional[str]:
-    """Locate resume_normalizer_examples.json under workspace or projects/meridian/prompts."""
+    """Locate resume_normalizer_examples.json under workspace or projects/dilly/prompts."""
     _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     for candidate in (
         os.path.join(os.getcwd(), "projects", "dilly", "prompts", "resume_normalizer_examples.json"),
@@ -234,8 +234,8 @@ def _find_normalizer_live_path() -> Optional[str]:
 
 
 # Max live examples to keep on disk and to include in the next prompt
-NORMALIZER_LIVE_MAX_EXAMPLES = int(os.environ.get("MERIDIAN_NORMALIZER_LIVE_MAX", "30"))
-NORMALIZER_LIVE_IN_PROMPT = int(os.environ.get("MERIDIAN_NORMALIZER_LIVE_IN_PROMPT", "3"))
+NORMALIZER_LIVE_MAX_EXAMPLES = int(os.environ.get("DILLY_NORMALIZER_LIVE_MAX") or os.environ.get("MERIDIAN_NORMALIZER_LIVE_MAX", "30"))
+NORMALIZER_LIVE_IN_PROMPT = int(os.environ.get("DILLY_NORMALIZER_LIVE_IN_PROMPT") or os.environ.get("MERIDIAN_NORMALIZER_LIVE_IN_PROMPT", "3"))
 # Max chars per stored example to avoid huge files
 NORMALIZER_LIVE_INPUT_MAX = 15000
 NORMALIZER_LIVE_OUTPUT_MAX = 12000
@@ -246,7 +246,7 @@ def _append_normalizer_example(raw_sections: str, normalized_output: str) -> Non
     Append one (input, output) to resume_normalizer_live.json so the next resume
     benefits from this example. Best-effort; does not raise.
     """
-    if os.environ.get("MERIDIAN_NORMALIZER_LIVE_LEARN", "1").strip().lower() in ("0", "false", "no"):
+    if os.environ.get("DILLY_NORMALIZER_LIVE_LEARN") or os.environ.get("MERIDIAN_NORMALIZER_LIVE_LEARN", "1").strip().lower() in ("0", "false", "no"):
         return
     path = _find_normalizer_live_path()
     if not path or not os.path.isdir(os.path.dirname(path)):
@@ -305,7 +305,7 @@ def _build_few_shot_prefix() -> str:
     """Build user message prefix from loaded examples. Falls back to minimal inline example if file missing."""
     examples = _load_normalizer_examples()
     if not examples:
-        return "Normalize the following raw sections into Meridian canonical format. Use section labels: [CONTACT / TOP], [SUMMARY / OBJECTIVE], [EDUCATION], [RELEVANT COURSEWORK], [PROFESSIONAL EXPERIENCE], [RESEARCH], [CAMPUS INVOLVEMENT], [VOLUNTEER EXPERIENCE], [PROJECTS], [PUBLICATIONS / PRESENTATIONS], [SKILLS], [HONORS], [CERTIFICATIONS]. For experience/research/campus/volunteer use Company:, Role:, Date:, Location:, Description: per entry. Output ONLY the cleaned resume.\n\n---\n"
+        return "Normalize the following raw sections into Dilly canonical format. Use section labels: [CONTACT / TOP], [SUMMARY / OBJECTIVE], [EDUCATION], [RELEVANT COURSEWORK], [PROFESSIONAL EXPERIENCE], [RESEARCH], [CAMPUS INVOLVEMENT], [VOLUNTEER EXPERIENCE], [PROJECTS], [PUBLICATIONS / PRESENTATIONS], [SKILLS], [HONORS], [CERTIFICATIONS]. For experience/research/campus/volunteer use Company:, Role:, Date:, Location:, Description: per entry. Output ONLY the cleaned resume.\n\n---\n"
     parts = ["Below are example inputs (raw sections) and the exact output format you must produce.\n"]
     for i, ex in enumerate(examples, 1):
         parts.append(f"Example {i} - Input (raw sections):\n{ex['input'].strip()}\n\nExample {i} - Your output must look like this (canonical format):\n{ex['output'].strip()}\n\n---\n")
@@ -363,26 +363,26 @@ def normalize_resume_with_llm(parsed: "ParsedResume") -> Optional[str]:
 
         # Self-check: detect issues and run one corrective pass if needed
         issues = validate_normalized_output(raw_text, out)
-        if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
+        if os.environ.get("DILLY_DEBUG_NORMALIZER") or os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
             import sys
-            print(f"[Meridian normalizer] Validation found {len(issues)} issue(s).", file=sys.stderr)
+            print(f"[Dilly normalizer] Validation found {len(issues)} issue(s).", file=sys.stderr)
         if issues:
             logger.info("Normalizer validation found %d issue(s), running correction pass.", len(issues))
-            if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
+            if os.environ.get("DILLY_DEBUG_NORMALIZER") or os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
                 import sys
-                print(f"[Meridian normalizer] Running correction pass...", file=sys.stderr)
+                print(f"[Dilly normalizer] Running correction pass...", file=sys.stderr)
             for issue in issues:
                 logger.debug("  - %s", issue)
             corrected = _correct_resume_with_llm(raw_text, out, issues)
             if corrected and corrected.strip():
                 logger.info("Normalizer correction pass returned %d chars.", len(corrected))
-                if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
-                    print(f"[Meridian normalizer] Correction returned {len(corrected)} chars.", file=sys.stderr)
+                if os.environ.get("DILLY_DEBUG_NORMALIZER") or os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
+                    print(f"[Dilly normalizer] Correction returned {len(corrected)} chars.", file=sys.stderr)
                 _append_normalizer_example(raw_text, corrected.strip())
                 return corrected.strip()
             logger.warning("Normalizer correction pass returned empty or failed; keeping first pass output.")
-            if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
-                print("[Meridian normalizer] Correction returned empty or failed; keeping first pass.", file=sys.stderr)
+            if os.environ.get("DILLY_DEBUG_NORMALIZER") or os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
+                print("[Dilly normalizer] Correction returned empty or failed; keeping first pass.", file=sys.stderr)
         _append_normalizer_example(raw_text, out)
         return out
     except Exception as e:

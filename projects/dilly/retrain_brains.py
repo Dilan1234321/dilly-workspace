@@ -37,7 +37,7 @@ def retrain_brain(track):
     }
     
     # Save the 'model'
-    model_path = os.path.join(model_dir, "meridian_brain.pkl")
+    model_path = os.path.join(model_dir, "dilly_brain.pkl")
     with open(model_path, "wb") as f:
         pickle.dump(model_data, f)
     
@@ -54,4 +54,4 @@ def retrain_brain(track):
 if __name__ == "__main__":
     retrain_brain("campus")
     retrain_brain("pro")
-    print("Full Meridian retraining complete: Campus and Pro brains are now synced with 2026 Specialized School Metrics.")
+    print("Full Dilly retraining complete: Campus and Pro brains are now synced with 2026 Specialized School Metrics.")

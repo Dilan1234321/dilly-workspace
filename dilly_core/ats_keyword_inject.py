@@ -1,5 +1,5 @@
 """
-Meridian ATS Contextual Keyword Injection.
+Dilly ATS Contextual Keyword Injection.
 
 Given keyword analysis results, identifies keywords that need stronger placement
 and suggests exactly which bullet to add them to + a concrete rewrite.

@@ -1,7 +1,7 @@
 """
 Red-flag checks on parsed resume text: recruiter turn-offs and common issues.
-Voice: Meridian Hiring Manager (see MERIDIAN_HIRING_MANAGER.md).
-Rule-based; no PII beyond what's in the resume. All message copy should sound like Meridian Hiring Manager.
+Voice: Dilly Hiring Manager (see MERIDIAN_HIRING_MANAGER.md).
+Rule-based; no PII beyond what's in the resume. All message copy should sound like Dilly Hiring Manager.
 """
 
 import re

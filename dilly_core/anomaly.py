@@ -1,6 +1,6 @@
 """
 Score-based anomaly detection: flag contradictions between academics and track-specific proof.
-Voice: Meridian Hiring Manager (see MERIDIAN_HIRING_MANAGER.md).
+Voice: Dilly Hiring Manager (see MERIDIAN_HIRING_MANAGER.md).
 E.g. high GPA + very low Build → High-Risk / Low-Velocity. Pure logic, no I/O.
 """
 

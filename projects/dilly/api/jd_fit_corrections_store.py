@@ -15,7 +15,7 @@ Append-only log to memory/jd_fit_corrections.jsonl. Each line is JSON:
   "ts": "ISO8601"
 }
 
-Used by jd_to_meridian_scores to load corrections as few-shot examples.
+Used by jd_to_dilly_scores to load corrections as few-shot examples.
 """
 
 import json

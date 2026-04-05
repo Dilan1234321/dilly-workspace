@@ -23,7 +23,7 @@ def send_verification_email(to_email: str, code: str, school: dict | None) -> tu
     )
 
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
-    from_addr = os.environ.get("MERIDIAN_EMAIL_FROM", DEFAULT_FROM).strip()
+    from_addr = os.environ.get("DILLY_EMAIL_FROM") or os.environ.get("DILLY_EMAIL_FROM", DEFAULT_FROM).strip()
 
     html = build_verification_email_html(code, school)
     subject = build_verification_email_subject(school)
@@ -56,7 +56,7 @@ def send_report_to_parent(to_email: str, student_name: str, report_url: str) -> 
         build_report_shared_subject,
     )
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
-    from_addr = os.environ.get("MERIDIAN_EMAIL_FROM", DEFAULT_FROM).strip()
+    from_addr = os.environ.get("DILLY_EMAIL_FROM") or os.environ.get("DILLY_EMAIL_FROM", DEFAULT_FROM).strip()
     subject = build_report_shared_subject(student_name)
     html = build_report_shared_html(student_name, report_url)
     if not api_key:
@@ -72,8 +72,8 @@ def send_report_to_parent(to_email: str, student_name: str, report_url: str) -> 
         return False
 
 
-# Apply-through-Meridian: from address for application emails (recruiters see this)
-APPLY_FROM_ENV = "MERIDIAN_APPLY_EMAIL_FROM"
+# Apply-through-Dilly: from address for application emails (recruiters see this)
+APPLY_FROM_ENV = "DILLY_APPLY_EMAIL_FROM"
 DEFAULT_APPLY_FROM = "Dilly Apply <onboarding@resend.dev>"
 
 
@@ -86,7 +86,7 @@ def _build_apply_email_html(
     company: str,
     note: str | None,
 ) -> str:
-    """Plain, recruiter-friendly HTML for Apply-through-Meridian."""
+    """Plain, recruiter-friendly HTML for Apply-through-Dilly."""
     lines = [
         f"<p><strong>{student_name}</strong> applied to <strong>{job_title}</strong> at <strong>{company}</strong> through Dilly.</p>",
         "<p>This applicant is a <strong>verified .edu student</strong>. No fakes, no bots.</p>",
@@ -143,7 +143,7 @@ def send_milestone_to_parent(to_email: str, student_name: str, milestone_type: s
         build_milestone_subject,
     )
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
-    from_addr = os.environ.get("MERIDIAN_EMAIL_FROM", DEFAULT_FROM).strip()
+    from_addr = os.environ.get("DILLY_EMAIL_FROM") or os.environ.get("DILLY_EMAIL_FROM", DEFAULT_FROM).strip()
     subject = build_milestone_subject(milestone_type, student_name)
     html = build_milestone_html(milestone_type, student_name, extra)
     if not api_key:
@@ -152,7 +152,7 @@ def send_milestone_to_parent(to_email: str, student_name: str, milestone_type: s
 
 
 # Recruiter → student outreach relay
-RECRUITER_FROM_ENV = "MERIDIAN_RECRUITER_EMAIL_FROM"
+RECRUITER_FROM_ENV = "DILLY_RECRUITER_EMAIL_FROM"
 DEFAULT_RECRUITER_FROM = "Dilly Recruiter <onboarding@resend.dev>"
 
 

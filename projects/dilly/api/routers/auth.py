@@ -228,7 +228,7 @@ async def auth_beta_unlock(request: Request, body: BetaUnlockRequest):
         set_subscribed(u["email"], True)
     except Exception:
         raise errors.internal("Could not unlock account.")
-    return {"ok": True, "message": "Welcome to the Meridian beta. You're in."}
+    return {"ok": True, "message": "Welcome to the Dilly beta. You're in."}
 
 
 @router.post("/create-checkout-session")
@@ -254,7 +254,7 @@ async def create_checkout_session(request: Request):
             line_items=[{"price": os.environ.get("STRIPE_PRICE_ID"), "quantity": 1}],
             success_url=success_url,
             cancel_url=cancel_url,
-            metadata={"meridian_email": email},
+            metadata={"dilly_email": email},
         )
         return {"url": session.url}
     except Exception:
@@ -263,7 +263,7 @@ async def create_checkout_session(request: Request):
 
 @router.post("/create-gift-checkout-session")
 async def create_gift_checkout_session(request: Request, body: GiftCheckoutRequest):
-    """Create Stripe Checkout for Gift Meridian. Body: { recipient_email (.edu), months: 6|12 }. No auth."""
+    """Create Stripe Checkout for Gift Dilly. Body: { recipient_email (.edu), months: 6|12 }. No auth."""
     recipient_email = (body.recipient_email or "").strip().lower()
     months = body.months if body.months in (6, 12) else 6
     if not recipient_email or ".edu" not in recipient_email:
@@ -378,7 +378,7 @@ async def stripe_webhook(request: Request):
                     pass
         else:
             email = (
-                (session.get("customer_email") or session.get("customer_details", {}).get("email") or meta.get("meridian_email") or "")
+                (session.get("customer_email") or session.get("customer_details", {}).get("email") or meta.get("dilly_email") or "")
                 .strip()
                 .lower()
             )

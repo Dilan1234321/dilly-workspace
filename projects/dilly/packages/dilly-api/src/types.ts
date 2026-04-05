@@ -288,7 +288,7 @@ export type DillyDeadline = {
   id: string;
   label: string;
   date: string;
-  type?: "deadline" | "interview" | "career_fair" | "application";
+  type?: "deadline" | "interview" | "career_fair" | "application" | "prep";
   /** camelCase JS convention — preferred. */
   subDeadlines?: DillySubDeadline[];
   /** Legacy snake_case alias — prefer subDeadlines. */
@@ -299,6 +299,44 @@ export type DillyDeadline = {
   completedAt?: number | null;
   /** Per-deadline reminder preferences: days before deadline to send reminders (e.g. [1, 3, 7]). */
   reminder_days?: number[];
+  /** Prep schedule sub-type (only when type is "prep"). */
+  prep_type?: "company_research" | "technical_prep" | "behavioral_prep" | "day_of";
+};
+
+// ─── Prep Schedule & Prep Deck ────────────────────────────────────────────
+
+export type PrepBlock = {
+  id: string;
+  label: string;
+  date: string;
+  type: "prep";
+  prep_type: "company_research" | "technical_prep" | "behavioral_prep" | "day_of";
+  createdBy: "dilly";
+};
+
+export type PrepDeckQuestion = {
+  question: string;
+  category: string;
+  probability: "high" | "medium" | "low";
+  why_flagged: string;
+  prep_tip: string;
+};
+
+export type PrepDeckGap = {
+  dimension: string;
+  gap: number;
+  focus: string;
+};
+
+export type PrepDeck = {
+  company: string;
+  role: string;
+  track: string;
+  track_label: string;
+  questions: PrepDeckQuestion[];
+  dimension_gaps: PrepDeckGap[];
+  company_insights: string;
+  generated_at: string;
 };
 
 export type DetectedDeadline = {

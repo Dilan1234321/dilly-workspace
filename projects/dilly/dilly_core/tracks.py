@@ -1,5 +1,5 @@
 """
-Meridian Core - Multi-track audit modules.
+Dilly Core - Multi-track audit modules.
 Tracks: Pre-Health, Pre-Law, Tech, Science, Business, Finance, Consulting, Communications, Education, Arts, Humanities.
 Every major maps to a track; unknown majors fall back to Humanities.
 Finance: dedicated cohort for Big Four, investment banking, asset management, and financial firms.

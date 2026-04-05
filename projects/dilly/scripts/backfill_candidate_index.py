@@ -2,16 +2,16 @@
 """
 Backfill candidate index for recruiter semantic search.
 
-Iterates all Meridian profiles that have at least one audit, builds the candidate
+Iterates all Dilly profiles that have at least one audit, builds the candidate
 document, embeds it, and saves candidate_index.json in the user's profile folder.
 Assumes every student consents to being visible to recruiters (joining the app = consent).
 
 Run from the workspace root (the folder that contains 'projects/' and 'memory/'):
 
-  python3 projects/meridian/scripts/backfill_candidate_index.py
-  python3 projects/meridian/scripts/backfill_candidate_index.py --force   # reindex even if index exists
-  python3 projects/meridian/scripts/backfill_candidate_index.py --dry-run
-  python3 projects/meridian/scripts/backfill_candidate_index.py --limit 10
+  python3 projects/dilly/scripts/backfill_candidate_index.py
+  python3 projects/dilly/scripts/backfill_candidate_index.py --force   # reindex even if index exists
+  python3 projects/dilly/scripts/backfill_candidate_index.py --dry-run
+  python3 projects/dilly/scripts/backfill_candidate_index.py --limit 10
 
 Requires OPENAI_API_KEY for embeddings. Skips users with no audits.
 """

@@ -3,7 +3,7 @@ import os
 
 # Redirect all "projects.dilly.X" imports to the repo root equivalents.
 # e.g. "projects.dilly.api.routers.auth" -> "api.routers.auth"
-#      "projects.dilly.meridian_resume_auditor" -> "meridian_resume_auditor"
+#      "projects.dilly.dilly_resume_auditor" -> "dilly_resume_auditor"
 
 _here = os.path.dirname(os.path.abspath(__file__))
 _repo_root = os.path.normpath(os.path.join(_here, '..', '..'))

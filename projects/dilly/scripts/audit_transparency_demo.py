@@ -7,7 +7,7 @@ import json
 import os
 import sys
 
-# Run from workspace root (script is in projects/meridian/scripts → go up 3 to workspace)
+# Run from workspace root (script is in projects/dilly/scripts → go up 3 to workspace)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "..", ".."))
 if WORKSPACE not in sys.path:

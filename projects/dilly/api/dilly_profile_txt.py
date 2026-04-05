@@ -1,6 +1,6 @@
 """
-Meridian profile (full text): one .txt per user in memory/dilly_profile_txt/.
-Filename = safe email (e.g. user@example.com.txt). Content = everything Meridian knows.
+Dilly profile (full text): one .txt per user in memory/dilly_profile_txt/.
+Filename = safe email (e.g. user@example.com.txt). Content = everything Dilly knows.
 Write on new/updated data (audit complete, profile/transcript/voice updates).
 Optional: read [RESUME] from this file for indexing when present (eventual replacement for parsed_resumes).
 """
@@ -20,7 +20,7 @@ _PARSED_RESUMES_DIR = os.path.join(_WORKSPACE_ROOT, "projects", "dilly", "parsed
 
 def write_dilly_profile_txt(email: str) -> str | None:
     """
-    Build and write the full Meridian profile .txt for this user.
+    Build and write the full Dilly profile .txt for this user.
     Loads profile, latest audit, and resume from parsed_resumes; writes to memory/dilly_profile_txt/{email}.txt.
     Returns path written, or None on failure.
     """
@@ -33,7 +33,7 @@ def write_dilly_profile_txt(email: str) -> str | None:
         from projects.dilly.api.profile_store import get_profile
         from projects.dilly.api.audit_history_pg import get_audits
     except Exception as e:
-        sys.stderr.write(f"Meridian profile txt: import error: {e}\n")
+        sys.stderr.write(f"Dilly profile txt: import error: {e}\n")
         return None
 
     profile = get_profile(email)
@@ -65,7 +65,7 @@ def write_dilly_profile_txt(email: str) -> str | None:
 
 def get_dilly_profile_txt_content(email: str, max_chars: int = 12000) -> str:
     """
-    Read the full Meridian profile .txt for this user (everything Meridian knows).
+    Read the full Dilly profile .txt for this user (everything Dilly knows).
     Used for recruiter matching so embedding reflects profile + voice data, not just resume.
     Returns empty string if no file or read error. Optionally truncates to max_chars.
     """
@@ -101,7 +101,7 @@ _TOP_LEVEL_SECTIONS = frozenset({
 
 def get_resume_from_dilly_profile(email: str) -> str:
     """
-    Read resume content from the user's Meridian profile .txt ([RESUME] section).
+    Read resume content from the user's Dilly profile .txt ([RESUME] section).
     Use for indexing when the profile file exists; falls back to empty if no file or no section.
     """
     email = (email or "").strip().lower()

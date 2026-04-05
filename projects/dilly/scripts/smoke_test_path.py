@@ -2,7 +2,7 @@
 """
 Smoke test: sign-in → upload → audit → results → PDF → share.
 Uses TestClient and real auth store; runs one real PDF from assets/resumes.
-Run from workspace root: python projects/meridian/scripts/smoke_test_path.py
+Run from workspace root: python projects/dilly/scripts/smoke_test_path.py
 """
 import io
 import os

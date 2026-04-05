@@ -1,7 +1,7 @@
 import sys
 import json
 import os
-from projects.dilly.meridian_v7_2 import MeridianV7_2_Med
+from projects.dilly.dilly_auditor_v7 import DillyAuditorV7
 
 def run_test():
     if len(sys.argv) < 2:
@@ -13,7 +13,7 @@ def run_test():
         print(f"Error: File {file_path} not found.")
         return
 
-    engine = MeridianV7_2_Med(file_path)
+    engine = DillyAuditorV7(file_path)
     if engine.extract_text():
         result = engine.audit()
         

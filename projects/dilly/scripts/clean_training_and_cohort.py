@@ -4,14 +4,14 @@ Clean training_data.json (LLM few-shot examples only):
 - Names: ONLY the person's name (no contact, phone, long line). Derive from filename when needed.
 - Remove bad parses: junk names (Teamwork, T H, EDUCATION, etc.) and junk majors (Profits, Present, Europe, etc.)
 - Keep only examples with valid name + valid major.
-Beta cohort removed; Meridian uses only few-shot from training_data.json.
+Beta cohort removed; Dilly uses only few-shot from training_data.json.
 """
 import json
 import os
 import re
 import sys
 
-# Paths: script is in projects/meridian/scripts/ -> workspace root is 3 levels up
+# Paths: script is in projects/dilly/scripts/ -> workspace root is 3 levels up
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE = os.path.dirname(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 TRAINING_PATH = os.path.join(WORKSPACE, "projects", "dilly", "prompts", "training_data.json")

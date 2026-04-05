@@ -1,10 +1,10 @@
 """
-Rebuild candidate_index.json for all active Meridian profiles.
+Rebuild candidate_index.json for all active Dilly profiles.
 
 Usage:
   source .venv/bin/activate
   export OPENAI_API_KEY=...
-  python3 projects/meridian/scripts/reindex_all_candidates.py
+  python3 projects/dilly/scripts/reindex_all_candidates.py
 """
 
 from __future__ import annotations

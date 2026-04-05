@@ -1,5 +1,5 @@
 """
-Report router: POST/GET report/pdf, report/email-to-parent, apply-through-meridian.
+Report router: POST/GET report/pdf, report/email-to-parent, apply-through-dilly.
 """
 
 import os
@@ -20,12 +20,12 @@ from projects.dilly.api.openapi_helpers import ERROR_RESPONSES
 from projects.dilly.api.constants import ERR_REPORT_500
 from projects.dilly.api.schemas import (
     ReportEmailToParentRequest,
-    ApplyThroughMeridianRequest,
+    ApplyThroughDillyRequest,
 )
 
 router = APIRouter(tags=["report"])
 
-_REPORTS_DIR = os.path.join(_WORKSPACE_ROOT, "memory", "meridian_reports")
+_REPORTS_DIR = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_reports")
 _REPORT_EXPIRY_DAYS = 7
 
 
@@ -53,7 +53,7 @@ def _generate_report_pdf(audit: dict, output_path: str) -> None:
     scores = audit.get("scores") or {}
     s, g, b = scores.get("smart", 0), scores.get("grit", 0), scores.get("build", 0)
     final = audit.get("final_score", (s + g + b) / 3 if (s or g or b) else 0)
-    story.append(Paragraph("<font size=20 color='#0f172a'>Meridian Report</font>", styles["Title"]))
+    story.append(Paragraph("<font size=20 color='#0f172a'>Dilly Report</font>", styles["Title"]))
     story.append(Spacer(1, 12))
     story.append(Paragraph(f"<b>{name}</b> · {track} Track", styles["Normal"]))
     story.append(Spacer(1, 16))
@@ -133,9 +133,9 @@ async def report_email_to_parent(request: Request, body: ReportEmailToParentRequ
     return {"sent": sent}
 
 
-@router.post("/apply-through-meridian")
-async def apply_through_meridian(request: Request, body: ApplyThroughMeridianRequest):
-    """Send application email to recruiter (Apply on Meridian). Requires job_id and optional note."""
+@router.post("/apply-through-dilly")
+async def apply_through_dilly(request: Request, body: ApplyThroughDillyRequest):
+    """Send application email to recruiter (Apply on Dilly). Requires job_id and optional note."""
     deps.require_subscribed(request)
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
@@ -149,7 +149,7 @@ async def apply_through_meridian(request: Request, body: ApplyThroughMeridianReq
 
     to_email = get_application_email(job_id)
     if not to_email:
-        raise errors.bad_request("This job does not accept applications through Meridian.")
+        raise errors.bad_request("This job does not accept applications through Dilly.")
     job = get_job_by_id(job_id)
     if not job:
         raise errors.not_found("Job not found.")

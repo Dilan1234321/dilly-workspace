@@ -8,9 +8,9 @@ Voice-captured data to the profile txt builder.
 
 Run from the workspace root:
 
-  python3 projects/meridian/scripts/backfill_dilly_profile_txt.py
-  python3 projects/meridian/scripts/backfill_dilly_profile_txt.py --dry-run
-  python3 projects/meridian/scripts/backfill_dilly_profile_txt.py --limit 10
+  python3 projects/dilly/scripts/backfill_dilly_profile_txt.py
+  python3 projects/dilly/scripts/backfill_dilly_profile_txt.py --dry-run
+  python3 projects/dilly/scripts/backfill_dilly_profile_txt.py --limit 10
 """
 
 import argparse

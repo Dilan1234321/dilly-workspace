@@ -1,5 +1,5 @@
 """
-Meridian Resume Parser - Layout-agnostic, high-accuracy extraction for all resume formats.
+Dilly Resume Parser - Layout-agnostic, high-accuracy extraction for all resume formats.
 Handles messy PDF extraction, multi-column layouts, and inconsistent section headers.
 Single source of truth for: name, major, GPA, education block, and normalized text.
 """

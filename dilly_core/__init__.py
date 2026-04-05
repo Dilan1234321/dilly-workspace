@@ -1,5 +1,5 @@
 """
-Meridian Core - Ground Truth V6.5 scoring and Vantage Alpha track logic.
+Dilly Core - Ground Truth V6.5 scoring and Vantage Alpha track logic.
 Zero-hallucination: only claims proven by extracted data affect scores.
 """
 

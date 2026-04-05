@@ -129,7 +129,7 @@ def evaluate_llm_leave_one_out(examples: list) -> tuple[dict, list]:
     from dilly_core.llm_auditor import run_audit_llm
 
     prev_few = os.environ.get("MERIDIAN_FEW_SHOT")
-    os.environ["MERIDIAN_FEW_SHOT"] = "0"  # zero-shot for fair accuracy eval
+    os.environ["DILLY_FEW_SHOT"] = "0"  # zero-shot for fair accuracy eval
 
     results = {"name": 0, "major": 0, "track": 0, "all": 0, "n": 0}
     failures = []
@@ -188,9 +188,9 @@ def evaluate_llm_leave_one_out(examples: list) -> tuple[dict, list]:
             })
 
     if prev_few is not None:
-        os.environ["MERIDIAN_FEW_SHOT"] = prev_few
+        os.environ["DILLY_FEW_SHOT"] = prev_few
     else:
-        os.environ.pop("MERIDIAN_FEW_SHOT", None)
+        os.environ.pop("DILLY_FEW_SHOT", None)
     return results, failures
 
 

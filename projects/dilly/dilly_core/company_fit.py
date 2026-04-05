@@ -2,7 +2,7 @@
 Company fit — threshold-based comparison of Smart/Grit/Build against company bars.
 
 Used as a secondary contextual layer: "You meet 2/3 bars; gap in Build."
-Canonical Meridian score stays primary; this is a fit overlay when viewing a company.
+Canonical Dilly score stays primary; this is a fit overlay when viewing a company.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def _get_company_by_slug(slug: str) -> dict | None:
             return {
                 "slug": slug,
                 "display_name": display_name,
-                "meridian_scores": rule.get("meridian_scores"),
+                "dilly_scores": rule.get("meridian_scores"),
                 "confidence": rule.get("confidence", ""),
             }
     return None
@@ -93,7 +93,7 @@ def get_company_fit(
 ) -> CompanyFitResult | None:
     """
     Compare user's Smart, Grit, Build against company thresholds.
-    Returns CompanyFitResult or None if company has no meridian_scores.
+    Returns CompanyFitResult or None if company has no dilly_scores.
     """
     company_slug = (company_slug or "").strip().lower().replace(" ", "-")
     if not company_slug:

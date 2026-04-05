@@ -13,7 +13,7 @@ Contract:
 - save_candidate_embedding(email, embedding, skill_tags?, model?): returns True/False. Creates folder if needed.
 - load_candidate_embedding(email): returns dict(embedding, model, skill_tags, updated_at) or None. Never raises.
 - index_candidate_after_audit(email, profile?, audit?, resume_text?): returns True if saved, False otherwise. Never raises.
-Ref: projects/meridian/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
+Ref: projects/dilly/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
 """
 
 from __future__ import annotations
@@ -209,9 +209,9 @@ def index_candidate_after_audit(
     resume_text: str | None = None,
 ) -> bool:
     """
-    Build candidate document from Meridian profile + audit + resume + profile narrative, embed, save.
+    Build candidate document from Dilly profile + audit + resume + profile narrative, embed, save.
     Uses full profile (goals, career_goal, track, etc.) and optional dilly_profile_txt content
-    so recruiter matching reflects everything the student told Meridian, not just resume.
+    so recruiter matching reflects everything the student told Dilly, not just resume.
     Call after append_audit or on profile update. Returns True if index was saved, False otherwise.
     """
     if not email or not (email or "").strip():
@@ -225,7 +225,7 @@ def index_candidate_after_audit(
         from dilly_core.skill_tags import extract_skill_tags
     except ImportError:
         return False
-    # Load profile narrative (full .txt) when present so matching uses what they told Meridian
+    # Load profile narrative (full .txt) when present so matching uses what they told Dilly
     profile_narrative = ""
     try:
         from projects.dilly.api.dilly_profile_txt import get_dilly_profile_txt_content

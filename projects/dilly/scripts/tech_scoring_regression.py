@@ -5,8 +5,8 @@ expected signals and score bands for a fixed set of resume snippets. Run after
 scoring or extraction changes to avoid regressions.
 
 Usage (from workspace root):
-  python projects/meridian/scripts/tech_scoring_regression.py [--fixtures PATH]
-  Default fixtures: projects/meridian/scripts/fixtures/tech_scoring_regression_expected.json
+  python projects/dilly/scripts/tech_scoring_regression.py [--fixtures PATH]
+  Default fixtures: projects/dilly/scripts/fixtures/tech_scoring_regression_expected.json
 
 Exit: 0 if all pass, 1 if any mismatch.
 """

@@ -1,6 +1,6 @@
 """
 Legacy dummy data generator. Beta cohort has been removed.
-Meridian uses only LLM few-shot examples from projects/meridian/prompts/training_data.json.
+Dilly uses only LLM few-shot examples from projects/dilly/prompts/training_data.json.
 To add examples: run batch_audit_real.py on resumes in assets/resumes, or use /audit/v2 (auto-appends to training_data).
 """
 import random
@@ -62,4 +62,4 @@ def generate_beta_cohort(count=100):
 
 if __name__ == "__main__":
     generate_beta_cohort()
-    print("Beta cohort removed. Meridian uses only few-shot examples from prompts/training_data.json.")
+    print("Beta cohort removed. Dilly uses only few-shot examples from prompts/training_data.json.")

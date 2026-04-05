@@ -1,5 +1,5 @@
 """
-Company recruiter advice — real tips from recruiters for Meridian users, keyed by company slug.
+Company recruiter advice — real tips from recruiters for Dilly users, keyed by company slug.
 
 Stored in memory/company_recruiter_advice.json. Structure:
 {
@@ -7,7 +7,7 @@ Stored in memory/company_recruiter_advice.json. Structure:
   "figma": [ ... ]
 }
 
-When recruiters personally give Meridian users advice, it can be added here (manually or via recruiter UI).
+When recruiters personally give Dilly users advice, it can be added here (manually or via recruiter UI).
 """
 
 import json

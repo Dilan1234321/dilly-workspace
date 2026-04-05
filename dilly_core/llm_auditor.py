@@ -212,14 +212,14 @@ def _get_cohort_prompt(track: str | None) -> str:
 
 
 def _find_training_data_path() -> str | None:
-    """Locate training_data.json (prompts/training_data.json under workspace or projects/meridian)."""
+    """Locate training_data.json (prompts/training_data.json under workspace or projects/dilly)."""
     _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     candidates = [
         os.path.join(os.getcwd(), "projects", "dilly", "prompts", "training_data.json"),
         os.path.join(os.getcwd(), "prompts", "training_data.json"),
         os.path.join(_root, "projects", "dilly", "prompts", "training_data.json"),
     ]
-    env_path = os.environ.get("MERIDIAN_TRAINING_DATA")
+    env_path = os.environ.get("DILLY_TRAINING_DATA") or os.environ.get("MERIDIAN_TRAINING_DATA")
     if env_path and os.path.isfile(env_path):
         return env_path
     for p in candidates:
@@ -284,7 +284,7 @@ def _build_few_shot_block(examples: List[dict]) -> str:
     if not examples:
         return ""
     lines = [
-        "Below are example audits from the Meridian rule-based engine (trained on your resume set). Grade the next resume in the same style and scale.",
+        "Below are example audits from the Dilly rule-based engine (trained on your resume set). Grade the next resume in the same style and scale.",
         "",
     ]
     for i, ex in enumerate(examples, 1):
@@ -599,10 +599,10 @@ def run_audit_llm(
         # Pre-detect track so we can ask the LLM to evaluate as that field's recruiter
         track_hint = get_track_from_major_and_text(major or "Unknown", raw_text)
         few_shot_block = ""
-        if os.environ.get("MERIDIAN_FEW_SHOT", "1").strip().lower() in ("1", "true", "yes"):
+        if os.environ.get("DILLY_FEW_SHOT") or os.environ.get("MERIDIAN_FEW_SHOT", "1").strip().lower() in ("1", "true", "yes"):
             examples = _load_few_shot_examples(
-                max_examples=int(os.environ.get("MERIDIAN_FEW_SHOT_N", "3")),
-                max_chars_per_excerpt=int(os.environ.get("MERIDIAN_EXCERPT_CHARS", "2400")),
+                max_examples=int(os.environ.get("DILLY_FEW_SHOT_N") or os.environ.get("MERIDIAN_FEW_SHOT_N", "3")),
+                max_chars_per_excerpt=int(os.environ.get("DILLY_EXCERPT_CHARS") or os.environ.get("MERIDIAN_EXCERPT_CHARS", "2400")),
             )
             few_shot_block = _build_few_shot_block(examples)
         # Merge application_target_label into supplementary context when provided

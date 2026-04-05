@@ -21,6 +21,8 @@ _ROUTES: dict[str, str] = {
     "RELATIONSHIP_FOLLOWUP": "/career",
     "RITUAL_MISSED": "/voice?prompt=weekly_review",
     "DEEP_DIVE_OVERDUE": "/voice?prompt=resume_deep_dive",
+    "APPLICATION_GOING_COLD": "/applications",
+    "INTERVIEW_PREP_READY": "/dashboard?tab=calendar",
 }
 
 

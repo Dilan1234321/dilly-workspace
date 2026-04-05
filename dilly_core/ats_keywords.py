@@ -1,5 +1,5 @@
 """
-Meridian ATS Keyword Density & Placement Analysis.
+Dilly ATS Keyword Density & Placement Analysis.
 
 Goes beyond "missing keywords" to show WHERE keywords appear, HOW they're used,
 and whether they're in context (experience bullets) or bare (skills list).

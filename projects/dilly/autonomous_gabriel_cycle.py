@@ -7,11 +7,11 @@ import subprocess
 
 # Paths
 BASE_DIR = "/Users/dilankochhar/.openclaw/workspace"
-PROJECT_DIR = os.path.join(BASE_DIR, "projects/meridian")
-AUDITOR_SCRIPT = os.path.join(PROJECT_DIR, "meridian_resume_auditor.py")
+PROJECT_DIR = os.path.join(BASE_DIR, "projects/dilly")
+AUDITOR_SCRIPT = os.path.join(PROJECT_DIR, "dilly_resume_auditor.py")
 OPTIMIZER_SCRIPT = os.path.join(PROJECT_DIR, "optimize_resume.py")
 GABRIEL_RESUME = "/Users/dilankochhar/Desktop/All else/Gabriel mfugale resume.pdf"
-DATABASE_PATH = os.path.join(PROJECT_DIR, "meridian_database.json")
+DATABASE_PATH = os.path.join(PROJECT_DIR, "dilly_database.json")
 LOG_FILE = os.path.join(PROJECT_DIR, "autonomous_run.log")
 
 def log(message):
@@ -21,7 +21,7 @@ def log(message):
     print(message)
 
 def run_autonomous_cycle():
-    log("--- Starting Autonomous Meridian Cycle: Gabriel ---")
+    log("--- Starting Autonomous Dilly Cycle: Gabriel ---")
     
     # 1. Audit Gabriel's Resume
     log(f"Auditing resume: {GABRIEL_RESUME}")

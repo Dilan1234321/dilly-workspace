@@ -1,8 +1,8 @@
 """
-Meridian Profile (full text): one structured .txt per user with details for job matching and resume improvement.
+Dilly Profile (full text): one structured .txt per user with details for job matching and resume improvement.
 
 Sections: Identity, Resume, Audit, Goals, Deadlines, Job locations, Achievements, Transcript.
-No chat logs or voice conversation history—only user details Meridian should use to match them to jobs and improve their resume.
+No chat logs or voice conversation history—only user details Dilly should use to match them to jobs and improve their resume.
 Written to memory/dilly_profile_txt/{email}.txt. No length caps; keep each section concise.
 """
 
@@ -18,7 +18,7 @@ def build_dilly_profile_txt(
     resume_text: str | None = None,
 ) -> str:
     """
-    Build the full Meridian profile text from profile dict, latest audit, and resume.
+    Build the full Dilly profile text from profile dict, latest audit, and resume.
     Returns a single structured string with [SECTION] headers. Used for writing to {email}.txt.
     """
     profile = profile or {}
@@ -118,7 +118,7 @@ def build_dilly_profile_txt(
     lines.append("")
 
     # ----- [VOICE_CAPTURED] -----
-    # Skills, tools, experiences the student told Meridian Voice that aren't on their resume.
+    # Skills, tools, experiences the student told Dilly Voice that aren't on their resume.
     lines.append("[VOICE_CAPTURED]")
     beyond = profile.get("beyond_resume")
     expansion = profile.get("experience_expansion")
@@ -135,16 +135,16 @@ def build_dilly_profile_txt(
             if text:
                 by_type[t].append(text)
         if by_type["skill"]:
-            lines.append("Skills (told Meridian): " + ", ".join(by_type["skill"][:25]))
+            lines.append("Skills (told Dilly): " + ", ".join(by_type["skill"][:25]))
             had_voice = True
         if by_type["project"]:
-            lines.append("Projects (told Meridian): " + ", ".join(by_type["project"][:12]))
+            lines.append("Projects (told Dilly): " + ", ".join(by_type["project"][:12]))
             had_voice = True
         if by_type["experience"]:
-            lines.append("Experiences (told Meridian): " + ", ".join(by_type["experience"][:12]))
+            lines.append("Experiences (told Dilly): " + ", ".join(by_type["experience"][:12]))
             had_voice = True
         if by_type["other"]:
-            lines.append("Other (told Meridian): " + ", ".join(by_type["other"][:10]))
+            lines.append("Other (told Dilly): " + ", ".join(by_type["other"][:10]))
             had_voice = True
     if isinstance(expansion, list) and expansion:
         for entry in expansion[:10]:

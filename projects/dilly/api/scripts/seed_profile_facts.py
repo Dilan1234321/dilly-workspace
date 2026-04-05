@@ -196,7 +196,7 @@ def _facts_from_audit(audit: dict, email: str) -> list[dict]:
             elif score and float(score) < 45:
                 add("weakness", f"Low {dim.capitalize()} score", f"Scored {int(float(score))}/100 on {dim.capitalize()} — room to improve")
 
-    # Dilly take / meridian take
+    # Dilly take / dilly take
     take = audit.get("dilly_take") or audit.get("meridian_take") or ""
     if take.strip() and len(take.strip()) > 20:
         add("personality", "Dilly's assessment", take.strip()[:500])

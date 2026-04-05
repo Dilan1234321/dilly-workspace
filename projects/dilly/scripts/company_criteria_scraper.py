@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Ethical company criteria scraper for Meridian.
+Ethical company criteria scraper for Dilly.
 
 Scrapes PUBLIC career pages to extract what companies look for in candidates.
 Respects robots.txt, rate limits, and only targets legal/ethical sources.
 
 Usage:
-  python projects/meridian/scripts/company_criteria_scraper.py [--dry-run] [--output knowledge/scraped_criteria.json]
+  python projects/dilly/scripts/company_criteria_scraper.py [--dry-run] [--output knowledge/scraped_criteria.json]
 
 Sources: Company career pages, "what we look for" sections, job requirement pages.
 All data is public (no login required). We cite source URLs for every criterion.
@@ -33,7 +33,7 @@ except ImportError:
     print("Install beautifulsoup4: pip install beautifulsoup4")
     raise
 
-USER_AGENT = "Meridian-Research-Bot/1.0 (+https://trydilly.com)"
+USER_AGENT = "Dilly-Research-Bot/1.0 (+https://trydilly.com)"
 REQUEST_DELAY_SEC = 2.0  # Minimum seconds between requests per domain
 
 # Curated list of public career pages. Only include pages that are clearly public.

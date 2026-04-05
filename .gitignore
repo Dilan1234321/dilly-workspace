@@ -4,3 +4,8 @@
 .env*.local
 node_modules
 .claude/
+
+# Database files (local data, not for version control)
+dilly_database.json
+dilly_users.db
+*.db

@@ -4,7 +4,7 @@ import numpy as np
 import os
 import pypdf
 
-class MeridianWorkshop:
+class DillyWorkshop:
     def __init__(self, resume_path="assets/resumes/resume.pdf"):
         self.resume_path = resume_path
         self.base_path = os.path.dirname(os.path.abspath(__file__))
@@ -54,7 +54,7 @@ class MeridianWorkshop:
 if __name__ == "__main__":
     # Resolve paths relative to workspace
     ws_resume = "/Users/dilankochhar/.openclaw/workspace/assets/resumes/resume.pdf"
-    workshop = MeridianWorkshop(ws_resume)
+    workshop = DillyWorkshop(ws_resume)
     analysis = workshop.run_gap_analysis()
     
     print("\n--- MERIDIAN RESUME WORKSHOP: GAP ANALYSIS ---")

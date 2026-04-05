@@ -4,10 +4,10 @@ Rebuild missing memory/dilly_profiles/<id>/profile.json files from memory/dilly_
 Safety:
 - NEVER overwrites an existing profile.json
 - Only writes when the folder exists and profile.json is missing
-- Uses stable id = sha256(email)[:16] (same as projects/meridian/api/profile_store.py)
+- Uses stable id = sha256(email)[:16] (same as projects/dilly/api/profile_store.py)
 
 Usage:
-  python3 projects/meridian/scripts/rebuild_profile_json_from_profile_txt.py
+  python3 projects/dilly/scripts/rebuild_profile_json_from_profile_txt.py
 """
 
 from __future__ import annotations

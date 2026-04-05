@@ -5,11 +5,11 @@ import docx2txt
 import json
 import pickle
 
-# Load Meridian Engine for Scoring
+# Load Dilly Engine for Scoring
 def get_score(text, track="pro"):
     try:
-        base_path = "projects/meridian/models"
-        model_path = os.path.join(base_path, track, "meridian_brain.pkl")
+        base_path = "projects/dilly/models"
+        model_path = os.path.join(base_path, track, "dilly_brain.pkl")
         vec_path = os.path.join(base_path, track, "vectorizer.pkl")
         with open(model_path, "rb") as f: model = pickle.load(f)
         with open(vec_path, "rb") as f: vectorizer = pickle.load(f)

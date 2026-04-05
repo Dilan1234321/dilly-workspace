@@ -1,5 +1,5 @@
 """
-Family plan: one parent payment for up to N students. Stored in memory/meridian_families.json.
+Family plan: one parent payment for up to N students. Stored in memory/dilly_families.json.
 Schema: list of { id, parent_email, slots, student_emails: [], stripe_subscription_id?, created_at }.
 """
 
@@ -13,7 +13,7 @@ import time
 _WORKSPACE_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
 )
-_FAMILY_FILE = os.path.join(_WORKSPACE_ROOT, "memory", "meridian_families.json")
+_FAMILY_FILE = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_families.json")
 _LOCK_FILE = _FAMILY_FILE + ".lock"
 
 

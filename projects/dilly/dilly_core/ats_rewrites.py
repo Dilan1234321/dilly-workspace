@@ -1,5 +1,5 @@
 """
-Meridian "Fix It For Me" — ATS-Optimized Bullet Rewrites.
+Dilly "Fix It For Me" — ATS-Optimized Bullet Rewrites.
 
 Takes resume bullets and ATS issues, returns rewritten versions that are:
 1. ATS-parseable (strong verb first, no passive voice)

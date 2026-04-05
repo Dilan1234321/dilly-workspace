@@ -41,7 +41,7 @@ class ApplicationEntry(BaseModel):
     applied_at: Optional[str] = None       # ISO date string
     deadline: Optional[str] = None         # ISO date string
     match_pct: Optional[int] = None
-    job_id: Optional[str] = None           # job listing ID if from Meridian
+    job_id: Optional[str] = None           # job listing ID if from Dilly
     job_url: Optional[str] = None
     notes: Optional[str] = None
     next_action: Optional[str] = None

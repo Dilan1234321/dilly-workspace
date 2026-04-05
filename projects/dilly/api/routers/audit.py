@@ -38,7 +38,7 @@ from projects.dilly.api.constants import (
     APPLICATION_TARGET_VALUES,
 )
 from projects.dilly.api.schemas import AuditResponse, AuditResponseV2, Benchmarks, AuditRecommendation
-from projects.dilly.meridian_resume_auditor import MeridianResumeAuditor
+from projects.dilly.dilly_resume_auditor import DillyResumeAuditor
 from dilly_core.llm_client import is_llm_available
 from dilly_core.evidence_quotes import get_fallback_evidence_quotes
 from projects.dilly.api.resume_loader import load_parsed_resume_for_voice as _load_parsed_resume_for_voice
@@ -215,7 +215,7 @@ async def audit_resume(request: Request, file: UploadFile = File(...)):
         os.remove(temp_path)
         raise errors.validation_error(ERR_FILE_TOO_BIG, status_code=413)
     try:
-        auditor = MeridianResumeAuditor(temp_path)
+        auditor = DillyResumeAuditor(temp_path)
         if not auditor.extract_text():
             raise errors.internal(ERR_EXTRACT)
         auditor.analyze_content()
@@ -310,7 +310,7 @@ async def audit_resume_v2(
         raise errors.validation_error(ERR_FILE_TOO_BIG, status_code=413)
     try:
         # Roll back to legacy parser path for stable major/track detection.
-        auditor = MeridianResumeAuditor(temp_path)
+        auditor = DillyResumeAuditor(temp_path)
         extract_ok = auditor.extract_text()
         if not extract_ok:
             raise errors.internal(ERR_EXTRACT)
@@ -2123,7 +2123,7 @@ async def audit_batch(request: Request, files: list[UploadFile] = File(...), coh
         try:
             with open(temp_path, "wb") as buf:
                 shutil.copyfileobj(up.file, buf)
-            auditor = MeridianResumeAuditor(temp_path)
+            auditor = DillyResumeAuditor(temp_path)
             if not auditor.extract_text():
                 results.append({"filename": up.filename, "error": "Failed to extract text"})
                 continue

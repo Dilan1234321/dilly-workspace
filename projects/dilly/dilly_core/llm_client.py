@@ -26,7 +26,7 @@ def get_chat_completion(
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return None
-    model = (model or os.environ.get("MERIDIAN_LLM_MODEL") or "claude-sonnet-4-20250514").strip()
+    model = (model or os.environ.get("DILLY_LLM_MODEL") or os.environ.get("MERIDIAN_LLM_MODEL") or "claude-sonnet-4-20250514").strip()
     try:
         client = Anthropic(api_key=api_key, timeout=45.0)
         response = client.messages.create(
@@ -61,7 +61,7 @@ def stream_chat_completion(
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return
-    model = (model or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
+    model = (model or os.environ.get("DILLY_LLM_MODEL_LIGHT") or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
     try:
         client = Anthropic(api_key=api_key)
         with client.messages.stream(
@@ -81,13 +81,13 @@ def stream_chat_completion(
 def get_light_model() -> str:
     """Return the 'light' model name for cheaper calls (Voice, explain-delta).
     Reads MERIDIAN_LLM_MODEL_LIGHT env var; defaults to claude-haiku-4-5."""
-    return (os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
+    return (os.environ.get("DILLY_LLM_MODEL_LIGHT") or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
 
 
 def get_strong_model() -> str:
     """Return the 'strong' model for complex reasoning (deep-dive Voice questions).
     Reads MERIDIAN_LLM_MODEL env var; defaults to claude-sonnet-4."""
-    return (os.environ.get("MERIDIAN_LLM_MODEL") or "claude-sonnet-4-20250514").strip()
+    return (os.environ.get("DILLY_LLM_MODEL") or os.environ.get("MERIDIAN_LLM_MODEL") or "claude-sonnet-4-20250514").strip()
 
 
 def get_chat_completion_with_tools(
@@ -111,7 +111,7 @@ def get_chat_completion_with_tools(
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return None
-    model = (model or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
+    model = (model or os.environ.get("DILLY_LLM_MODEL_LIGHT") or os.environ.get("MERIDIAN_LLM_MODEL_LIGHT") or "claude-haiku-4-5-20251001").strip()
 
     # Convert OpenAI-style tools to Anthropic format
     anthropic_tools = []

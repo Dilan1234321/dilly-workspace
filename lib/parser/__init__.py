@@ -1,5 +1,5 @@
 """
-Meridian Resume Parser - Four-layer architecture.
+Dilly Resume Parser - Four-layer architecture.
 parse_resume(buffer, mime_type) -> ParsedResume
 """
 import time

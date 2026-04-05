@@ -1,5 +1,5 @@
 """
-Meridian ATS Section Reorder Suggestions.
+Dilly ATS Section Reorder Suggestions.
 
 Per-vendor preferred section order based on parsing behavior.
 Workday, Greenhouse, iCIMS, and Lever each have different preferences.

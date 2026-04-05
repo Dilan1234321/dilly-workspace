@@ -2,7 +2,7 @@
 Lightweight eval harness for recruiter semantic matching.
 
 Usage:
-  python3 projects/meridian/scripts/recruiter_search_eval.py
+  python3 projects/dilly/scripts/recruiter_search_eval.py
 
 This prints top-10 candidates for a few role descriptions with component scores.
 Edit TEST_CASES to add expected emails (optional) for a crude precision@10 proxy.
@@ -184,7 +184,7 @@ def main() -> None:
                 f"{i:02d}. {c.get('name','—')}  <{email or '—'}>\n"
                 f"    match={c.get('match_score')}  sem={c.get('semantic_score')}  "
                 f"skill={c.get('skill_fit_score')}  must_q={c.get('must_have_quality')}  "
-                f"mer={c.get('meridian_fit_score')}  fb={c.get('feedback_score')}\n"
+                f"mer={c.get('dilly_fit_score')}  fb={c.get('feedback_score')}\n"
                 f"    majors={c.get('majors') or c.get('major')}  school={c.get('school_id')}  track={c.get('track')}\n"
             )
         if tc.expected_emails:

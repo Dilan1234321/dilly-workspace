@@ -202,7 +202,7 @@ def run_audit():
     candidates.sort(key=lambda x: x["final_score"], reverse=True)
     
     # Sync Desktop Spreadsheet
-    output_path = "/Users/dilankochhar/Desktop/Meridian_Cohort_Leaderboard.csv"
+    output_path = "/Users/dilankochhar/Desktop/Dilly_Cohort_Leaderboard.csv"
     try:
         with open(output_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=["name", "track", "smart_score", "grit_score", "build_score", "final_score"])

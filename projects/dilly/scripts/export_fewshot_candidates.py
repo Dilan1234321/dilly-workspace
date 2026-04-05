@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Read memory/meridian_audit_log.jsonl and list candidates suitable for few-shot examples.
+Read memory/dilly_audit_log.jsonl and list candidates suitable for few-shot examples.
 Use --min-final to filter by final score; --use-for-fewshot to only list entries marked use_for_fewshot.
 Output: summary stats and list of log entries (track, scores) so you can curate training_data.json.
 """
@@ -10,7 +10,7 @@ import os
 import sys
 
 WORKSPACE = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-LOG_PATH = os.path.join(WORKSPACE, "memory", "meridian_audit_log.jsonl")
+LOG_PATH = os.path.join(WORKSPACE, "memory", "dilly_audit_log.jsonl")
 
 
 def main():

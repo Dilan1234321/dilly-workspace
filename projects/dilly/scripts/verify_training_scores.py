@@ -10,7 +10,7 @@ import os
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MERIDIAN_DIR = os.path.dirname(SCRIPT_DIR)  # projects/meridian
+MERIDIAN_DIR = os.path.dirname(SCRIPT_DIR)  # projects/dilly
 WORKSPACE_ROOT = os.path.dirname(os.path.dirname(MERIDIAN_DIR))
 if WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, WORKSPACE_ROOT)

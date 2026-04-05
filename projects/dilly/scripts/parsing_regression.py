@@ -4,7 +4,7 @@ Parsing regression: assert that the parser still produces expected name/email/ma
 for a fixed set of resumes. Run after parser or structured-resume changes to avoid regressions.
 
 Usage (from workspace root):
-  python projects/meridian/scripts/parsing_regression.py [--sources DIR] [--fixtures PATH]
+  python projects/dilly/scripts/parsing_regression.py [--sources DIR] [--fixtures PATH]
   Default: sources = assets/resumes, fixtures = scripts/fixtures/parsing_regression_expected.json
 
 Exit: 0 if all pass, 1 if any mismatch. CI can run this as a gate.
@@ -25,8 +25,8 @@ os.chdir(_WORKSPACE)
 
 def extract_raw_text(path: str) -> str:
     try:
-        from meridian_resume_auditor import MeridianResumeAuditor
-        auditor = MeridianResumeAuditor(path)
+        from dilly_resume_auditor import DillyResumeAuditor
+        auditor = DillyResumeAuditor(path)
         if auditor.extract_text():
             return (auditor.raw_text or "").strip()
     except Exception:

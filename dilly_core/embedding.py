@@ -12,7 +12,7 @@ Contract:
 - Input: text (str). Optional model, max_chars (default 8192).
 - Output: list[float] (length = model dimension) or None.
 - When key missing or API fails: None. Never raises.
-Ref: projects/meridian/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
+Ref: projects/dilly/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
 """
 
 from __future__ import annotations

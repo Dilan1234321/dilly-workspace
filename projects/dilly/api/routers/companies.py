@@ -1,5 +1,5 @@
 """
-Companies: list verified companies and full Meridian breakdown per company.
+Companies: list verified companies and full Dilly breakdown per company.
 
 - GET /companies — list companies (slug, display_name, source, score requirements).
 - GET /companies/{slug} — full breakdown for signed-in user: company info, score requirements,
@@ -32,7 +32,7 @@ async def list_companies():
 @router.get("/companies/{slug}")
 async def get_company_breakdown(request: Request, slug: str):
     """
-    Full Meridian breakdown for this company: score requirements, your scores vs bar,
+    Full Dilly breakdown for this company: score requirements, your scores vs bar,
     available jobs/internships, certifications track, real recruiter advice.
     Requires signed-in user for personalized scores and job list.
     """
@@ -77,8 +77,8 @@ async def get_company_breakdown(request: Request, slug: str):
     recruiter_advice = get_recruiter_advice_for_company(slug)
 
     # Track for certifications (frontend filters certs by this)
-    meridian_scores = company.get("meridian_scores") or {}
-    track = meridian_scores.get("track")
+    dilly_scores = company.get("meridian_scores") or {}
+    track = dilly_scores.get("track")
 
     # Voice-friendly bullets for "What they look for" and "Listen with Dilly"
     criteria = (company.get("criteria_for_llm") or "").strip()
@@ -93,7 +93,7 @@ async def get_company_breakdown(request: Request, slug: str):
         gr = user_scores.get("grit")
         bu = user_scores.get("build")
         if sm is not None and gr is not None and bu is not None:
-            if meridian_scores:
+            if dilly_scores:
                 fit_result = get_company_fit(float(sm), float(gr), float(bu), slug)
                 if fit_result:
                     company_fit = {
@@ -116,7 +116,7 @@ async def get_company_breakdown(request: Request, slug: str):
             "slug": company.get("slug"),
             "display_name": company.get("display_name"),
             "source": company.get("source"),
-            "meridian_scores": meridian_scores,
+            "dilly_scores": dilly_scores,
             "criteria_for_llm": company.get("criteria_for_llm"),
             "criteria_source": company.get("criteria_source"),
             "confidence": company.get("confidence"),
@@ -147,7 +147,7 @@ async def get_company_guidelines(slug: str):
         "display_name": company.get("display_name"),
         "criteria_source": company.get("criteria_source"),
         "confidence": company.get("confidence"),
-        "meridian_scores": company.get("meridian_scores"),
+        "dilly_scores": company.get("meridian_scores"),
         "criteria_for_llm": criteria,
         "voice_friendly_bullets": bullets,
     }

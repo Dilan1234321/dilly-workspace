@@ -1,6 +1,6 @@
 """
-Gift Meridian: parent buys 6 or 12 months for a student. Redemption by student .edu email.
-Stored in memory/meridian_gift_redemptions.json. Schema: list of { recipient_email, months, code, expires_at, redeemed_at?, created_at }.
+Gift Dilly: parent buys 6 or 12 months for a student. Redemption by student .edu email.
+Stored in memory/dilly_gift_redemptions.json. Schema: list of { recipient_email, months, code, expires_at, redeemed_at?, created_at }.
 """
 
 import fcntl
@@ -13,7 +13,7 @@ import time
 _WORKSPACE_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
 )
-_GIFT_FILE = os.path.join(_WORKSPACE_ROOT, "memory", "meridian_gift_redemptions.json")
+_GIFT_FILE = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_gift_redemptions.json")
 _LOCK_FILE = _GIFT_FILE + ".lock"
 
 

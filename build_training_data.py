@@ -3,8 +3,8 @@
 Build LLM training data from resumes in assets/resumes/.
 Run from workspace root:  python build_training_data.py
 
-Reads PDFs from assets/resumes/, runs the rule-based Meridian auditor on each,
-and writes projects/meridian/prompts/training_data.json for few-shot.
+Reads PDFs from assets/resumes/, runs the rule-based Dilly auditor on each,
+and writes projects/dilly/prompts/training_data.json for few-shot.
 """
 
 import os

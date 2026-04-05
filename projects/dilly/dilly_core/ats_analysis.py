@@ -1,5 +1,5 @@
 """
-Meridian ATS Analysis Engine — the most comprehensive student-facing ATS analyzer built.
+Dilly ATS Analysis Engine — the most comprehensive student-facing ATS analyzer built.
 
 Goes far deeper than Quinncia's four-ATS simulation:
 1. Parseability analysis — detect real formatting issues that break ATS parsing
@@ -44,7 +44,7 @@ class ATSIssue:
     title: str             # short label
     detail: str            # what ATS can't do / the problem
     fix: str               # actionable fix with specific rewrite when possible
-    meridian_reads: Optional[str] = None  # what Meridian understood despite the ATS problem
+    dilly_reads: Optional[str] = None  # what Dilly understood despite the ATS problem
     line: Optional[str] = None  # triggering line if available
 
 
@@ -109,7 +109,7 @@ class ATSAnalysisResult:
             "score": self.score,
             "issues": [
                 {"category": i.category, "severity": i.severity, "title": i.title,
-                 "detail": i.detail, "fix": i.fix, "meridian_reads": i.meridian_reads,
+                 "detail": i.detail, "fix": i.fix, "dilly_reads": i.dilly_reads,
                  "line": i.line}
                 for i in self.issues
             ],
@@ -160,7 +160,7 @@ def ats_analysis_result_from_dict(d: Optional[dict]) -> Optional[ATSAnalysisResu
                 title=str(i.get("title") or ""),
                 detail=str(i.get("detail") or ""),
                 fix=str(i.get("fix") or ""),
-                meridian_reads=i.get("meridian_reads"),
+                dilly_reads=i.get("dilly_reads"),
                 line=i.get("line"),
             )
         )
@@ -317,22 +317,22 @@ def _check_multi_column(raw_text: str, parsed: ParsedResume) -> Optional[ATSIssu
             large_gap_lines += 1
     total = max(len([l for l in lines if l.strip()]), 1)
     if (tab_lines + large_gap_lines) / total > 0.20 and (tab_lines + large_gap_lines) >= 5:
-        # Build what Meridian extracted despite the columns
+        # Build what Dilly extracted despite the columns
         extracted_parts = []
         if parsed.name and parsed.name != "Unknown":
             extracted_parts.append(f"your name ({parsed.name})")
         sections_found = [k for k in (parsed.sections or {}) if k != "_top"]
         if sections_found:
             extracted_parts.append(f"{len(sections_found)} section(s): {', '.join(s.title() for s in sections_found[:4])}")
-        meridian = f"I extracted {', '.join(extracted_parts)} from the columns." if extracted_parts else "I separated the columns and extracted your content."
-        meridian += " Move sidebar content (skills, contact info) to the top or bottom in a single column."
+        dilly_msg = f"I extracted {', '.join(extracted_parts)} from the columns." if extracted_parts else "I separated the columns and extracted your content."
+        dilly_msg += " Move sidebar content (skills, contact info) to the top or bottom in a single column."
         return ATSIssue(
             category="parseability",
             severity="critical",
             title="Multi-column layout detected",
             detail="ATS systems read left-to-right, top-to-bottom. Multi-column layouts cause skills and dates to get assigned to the wrong roles.",
             fix="Reformat to a single-column layout. Move sidebar content (skills, contact) to the top or bottom.",
-            meridian_reads=meridian,
+            dilly_reads=dilly_msg,
         )
     return None
 
@@ -344,7 +344,7 @@ def _check_table_layout(raw_text: str, parsed: ParsedResume) -> Optional[ATSIssu
     lines = [l for l in raw_text.split("\n") if l.strip()]
     tab_heavy = sum(1 for l in lines if l.count("\t") >= 3)
     if tab_heavy >= 3:
-        # Show what Meridian extracted from the table mess
+        # Show what Dilly extracted from the table mess
         parts = []
         if parsed.name and parsed.name != "Unknown":
             parts.append(parsed.name)
@@ -353,15 +353,15 @@ def _check_table_layout(raw_text: str, parsed: ParsedResume) -> Optional[ATSIssu
         exp_count = sum(1 for k in (parsed.sections or {}) if "experience" in k.lower() or "work" in k.lower())
         if exp_count:
             parts.append("experience section")
-        meridian = f"I read through the table structure and extracted: {', '.join(parts)}." if parts else "I parsed the table content anyway."
-        meridian += " Replace tables with bullet points so ATS can read it the same way I did."
+        dilly_msg = f"I read through the table structure and extracted: {', '.join(parts)}." if parts else "I parsed the table content anyway."
+        dilly_msg += " Replace tables with bullet points so ATS can read it the same way I did."
         return ATSIssue(
             category="parseability",
             severity="critical",
             title="Table-based layout detected",
             detail="ATS parsers extract table cells out of order or skip them entirely. Workday, iCIMS, and Taleo all struggle with tables.",
             fix="Replace tables with simple bullet points and line breaks. Use bold text or colons for structure instead of table columns.",
-            meridian_reads=meridian,
+            dilly_reads=dilly_msg,
         )
     if re.search(r"<table|<tr|<td", raw_text, re.IGNORECASE):
         return ATSIssue(
@@ -370,7 +370,7 @@ def _check_table_layout(raw_text: str, parsed: ParsedResume) -> Optional[ATSIssu
             title="HTML table markup in resume",
             detail="Some DOCX templates embed HTML tables. ATS parsers may extract this as raw markup instead of content.",
             fix="Recreate the resume in a simple template without tables. Use Google Docs or a plain Word template.",
-            meridian_reads="I can read through HTML markup, but ATS will show raw code instead of your content. Re-export from a clean template.",
+            dilly_reads="I can read through HTML markup, but ATS will show raw code instead of your content. Re-export from a clean template.",
         )
     return None
 
@@ -392,31 +392,31 @@ def _check_non_standard_headers(sections: Dict[str, str]) -> List[ATSIssue]:
                 suggested = "Education"
             elif any(w in content.lower() for w in ("python", "java", "excel", "skill", "proficien")):
                 suggested = "Skills"
-            meridian = f"I found content under \"{key}\" and identified it as {suggested}. Rename to \"{suggested}\" so ATS maps it correctly."
+            dilly_msg = f"I found content under \"{key}\" and identified it as {suggested}. Rename to \"{suggested}\" so ATS maps it correctly."
             if content_preview:
-                meridian += f" Content starts with: \"{content_preview}...\""
+                dilly_msg += f" Content starts with: \"{content_preview}...\""
             issues.append(ATSIssue(
                 category="parseability",
                 severity="warning",
                 title=f"Non-standard header: \"{key}\"",
                 detail=f"ATS systems like Workday and iCIMS expect standard headers (Experience, Education, Skills). \"{key}\" won't be recognized.",
                 fix=f"Rename \"{key}\" to \"{suggested}\".",
-                meridian_reads=meridian,
+                dilly_reads=dilly_msg,
                 line=key,
             ))
         elif lower not in STANDARD_ATS_HEADERS and len(lower) > 5:
             matched = any(std in lower or lower in std for std in STANDARD_ATS_HEADERS)
             if not matched and not any(h in lower for h in SECTION_HEADERS):
-                meridian = f"I can read the content under \"{key}\"."
+                dilly_msg = f"I can read the content under \"{key}\"."
                 if content_preview:
-                    meridian += f" It contains: \"{content_preview}...\" Consider renaming to a standard header."
+                    dilly_msg += f" It contains: \"{content_preview}...\" Consider renaming to a standard header."
                 issues.append(ATSIssue(
                     category="parseability",
                     severity="info",
                     title=f"Unusual header: \"{key}\"",
                     detail=f"Some ATS systems may not map \"{key}\" to a standard field. Your data could end up in an \"Other\" bucket that recruiters rarely search.",
                     fix=f"Consider using a standard header that ATS systems recognize.",
-                    meridian_reads=meridian,
+                    dilly_reads=dilly_msg,
                     line=key,
                 ))
     return issues
@@ -444,14 +444,14 @@ def _check_contact_placement(raw_text: str) -> Optional[ATSIssue]:
             found_parts.append(f"email ({email_m.group(0)})")
         if phone_m:
             found_parts.append(f"phone ({phone_m.group(0).strip()})")
-        meridian = f"I found your {' and '.join(found_parts)} at the bottom of the resume. Move {'them' if len(found_parts) > 1 else 'it'} to the top, right under your name — ATS often strips footer content."
+        dilly_msg = f"I found your {' and '.join(found_parts)} at the bottom of the resume. Move {'them' if len(found_parts) > 1 else 'it'} to the top, right under your name — ATS often strips footer content."
         return ATSIssue(
             category="parseability",
             severity="warning",
             title="Contact info buried at bottom",
             detail="ATS parsers expect name, email, and phone at the top. Contact info in footers is often stripped or missed entirely.",
             fix="Move your email and phone number to the top of the resume, directly under your name.",
-            meridian_reads=meridian,
+            dilly_reads=dilly_msg,
         )
     return None
 
@@ -464,7 +464,7 @@ def _check_encoding_issues(raw_text: str, parsed: ParsedResume) -> Optional[ATSI
     replacement_chars = raw_text.count("\ufffd")
     if len(mojibake) >= 2 or replacement_chars >= 3:
         sample = mojibake[0] if mojibake else ""
-        # Show what Meridian managed to extract despite corruption
+        # Show what Dilly managed to extract despite corruption
         parts = []
         if parsed.name and parsed.name != "Unknown":
             parts.append(f"name: {parsed.name}")
@@ -472,15 +472,15 @@ def _check_encoding_issues(raw_text: str, parsed: ParsedResume) -> Optional[ATSI
             parts.append(f"major: {parsed.major}")
         if parsed.gpa:
             parts.append(f"GPA: {parsed.gpa}")
-        meridian = f"Despite the corrupted characters, I extracted {', '.join(parts)}." if parts else "I tried to read through the corruption."
-        meridian += " Re-export as a fresh PDF from Word or Google Docs so ATS can read it cleanly too."
+        dilly_msg = f"Despite the corrupted characters, I extracted {', '.join(parts)}." if parts else "I tried to read through the corruption."
+        dilly_msg += " Re-export as a fresh PDF from Word or Google Docs so ATS can read it cleanly too."
         return ATSIssue(
             category="parseability",
             severity="critical",
             title="Encoding/character corruption detected",
             detail="Your resume contains garbled characters, likely from copy-pasting between applications or saving in the wrong format. ATS will extract these as garbage.",
             fix="Re-export your resume as a fresh PDF from Word or Google Docs. Don't copy-paste from a web page into a template.",
-            meridian_reads=meridian,
+            dilly_reads=dilly_msg,
             line=sample[:80] if sample else None,
         )
     return None
@@ -505,10 +505,10 @@ def _check_graphics_markers(raw_text: str, sections: Dict[str, str]) -> Optional
                     skill_names.append(clean)
         if skill_names:
             skills_str = ", ".join(skill_names[:5])
-            meridian = f"I can see the skills behind the graphics: {skills_str}. ATS can't read star ratings or progress bars — list these as plain text instead."
+            dilly_msg = f"I can see the skills behind the graphics: {skills_str}. ATS can't read star ratings or progress bars — list these as plain text instead."
             fix = f"Replace the graphic ratings with a text list: \"{', '.join(skill_names[:5])}\". Add proficiency levels in words if needed: \"Python (advanced)\"."
         else:
-            meridian = "I detected skill rating graphics. ATS sees empty space where you see stars. List your skills as plain text."
+            dilly_msg = "I detected skill rating graphics. ATS sees empty space where you see stars. List your skills as plain text."
             fix = "Replace graphic skill ratings with a simple skills list. If proficiency matters, use words: \"Python (advanced)\", \"Excel (intermediate)\"."
         return ATSIssue(
             category="parseability",
@@ -516,7 +516,7 @@ def _check_graphics_markers(raw_text: str, sections: Dict[str, str]) -> Optional
             title="Skill rating graphics detected",
             detail="Star ratings, progress bars, and skill-level graphics are invisible to ATS. The system can't tell if you rated yourself 3/5 or 5/5 in Python.",
             fix=fix,
-            meridian_reads=meridian,
+            dilly_reads=dilly_msg,
         )
     if len(shape_chars) >= 5:
         return ATSIssue(
@@ -525,7 +525,7 @@ def _check_graphics_markers(raw_text: str, sections: Dict[str, str]) -> Optional
             title="Decorative symbols in resume",
             detail="Shape characters (■, ◆, ★) may not parse correctly in all ATS systems. Some extract them as question marks or drop them.",
             fix="Use standard bullet characters (•) or simple dashes (-) instead of decorative shapes.",
-            meridian_reads="I can read past the decorative symbols, but ATS might drop or mangle them. Stick with • or - for bullets.",
+            dilly_reads="I can read past the decorative symbols, but ATS might drop or mangle them. Stick with • or - for bullets.",
         )
     return None
 
@@ -945,14 +945,14 @@ def _check_date_issues(
             examples.append(f"\"{abbrev_m.group(0)}\"")
         if numeric_m:
             examples.append(f"\"{numeric_m.group(0)}\"")
-        meridian = f"I found dates in {len(formats)} formats ({', '.join(examples[:3])}). I can read all of them, but ATS may misparse some. Pick one format and use it everywhere."
+        dilly_msg = f"I found dates in {len(formats)} formats ({', '.join(examples[:3])}). I can read all of them, but ATS may misparse some. Pick one format and use it everywhere."
         issues.append(ATSIssue(
             category="dates",
             severity="warning",
             title="Mixed date formats",
             detail=f"Resume uses {len(formats)} different date formats: {', '.join(formats)}. ATS parsers extract dates more reliably when they're consistent.",
             fix="Pick one format (e.g., \"January 2024\" or \"Jan 2024\") and use it everywhere.",
-            meridian_reads=meridian,
+            dilly_reads=dilly_msg,
         ))
 
     for key, content in sections.items():
@@ -960,17 +960,17 @@ def _check_date_issues(
         if not any(ek in lower_key for ek in ("experience", "employment", "work")):
             continue
         if content.strip() and not _RE_DATE_RANGE.search(content):
-            # Count roles Meridian found
+            # Count roles Dilly found
             role_lines = [l for l in content.split("\n") if l.strip() and not l.strip().startswith(("•", "-", "*"))]
             role_count = min(len(role_lines), 5)
-            meridian = f"I found {role_count} possible role(s) in your \"{key}\" section but no dates on any of them. Add \"Month YYYY – Month YYYY\" to each role so ATS can calculate your experience."
+            dilly_msg = f"I found {role_count} possible role(s) in your \"{key}\" section but no dates on any of them. Add \"Month YYYY – Month YYYY\" to each role so ATS can calculate your experience."
             issues.append(ATSIssue(
                 category="dates",
                 severity="critical",
                 title=f"No dates in \"{key}\" section",
                 detail="Experience without dates is a red flag. ATS cannot calculate your years of experience, and recruiters can't verify your timeline.",
                 fix="Add start and end dates (e.g., \"June 2023 – Present\") to every role.",
-                meridian_reads=meridian,
+                dilly_reads=dilly_msg,
             ))
 
     for key in sections:
@@ -981,17 +981,17 @@ def _check_date_issues(
                 edu_content, re.IGNORECASE,
             )
             if not grad_m:
-                # Try to identify what school Meridian found
+                # Try to identify what school Dilly found
                 uni_m = re.search(r"(?:University|College|Institute)\s+(?:of\s+)?[A-Za-z]+", edu_content, re.IGNORECASE)
                 school_name = uni_m.group(0) if uni_m else "your school"
-                meridian = f"I found {school_name} in your education but no graduation date. Add \"Expected May 2027\" so ATS knows your class year."
+                dilly_msg = f"I found {school_name} in your education but no graduation date. Add \"Expected May 2027\" so ATS knows your class year."
                 issues.append(ATSIssue(
                     category="dates",
                     severity="warning",
                     title="No graduation date in Education",
                     detail="ATS uses graduation date to determine your class year and eligibility for entry-level programs.",
                     fix="Add expected graduation date: \"Expected May 2027\" or \"December 2026\".",
-                    meridian_reads=meridian,
+                    dilly_reads=dilly_msg,
                 ))
             break
 
@@ -1171,16 +1171,16 @@ def run_ats_analysis(
         # Find an example bullet to suggest a rewrite
         sample_bullet = bullet_lines[0] if bullet_lines else ""
         sample_clean = re.sub(r"^[•\-*●\u2022]\s*", "", sample_bullet).strip()[:80]
-        meridian = f"I read all {len(bullet_lines)} of your bullets — none include a number."
+        dilly_msg = f"I read all {len(bullet_lines)} of your bullets — none include a number."
         if sample_clean:
-            meridian += f" For example, \"{sample_clean}\" — can you add a count, percentage, or outcome?"
+            dilly_msg += f" For example, \"{sample_clean}\" — can you add a count, percentage, or outcome?"
         issues.append(ATSIssue(
             category="content",
             severity="warning",
             title="No quantified results in bullets",
             detail="Bullets with numbers (\"increased sales 27%\", \"managed team of 5\") score higher in ATS keyword matching and recruiter scanning.",
             fix="Add at least 2-3 bullets with measurable outcomes: percentages, dollar amounts, team sizes, counts.",
-            meridian_reads=meridian,
+            dilly_reads=dilly_msg,
         ))
     elif bullet_lines and quantified / len(bullet_lines) < 0.2:
         issues.append(ATSIssue(
@@ -1189,7 +1189,7 @@ def run_ats_analysis(
             title="Few quantified results",
             detail=f"Only {quantified} of {len(bullet_lines)} bullets include numbers. ATS and recruiters prioritize quantified achievements.",
             fix="Aim for at least 30% of your bullets to include a number, percentage, or measurable outcome.",
-            meridian_reads=f"I found numbers in {quantified} out of {len(bullet_lines)} bullets. ATS and recruiters both scan for metrics — add more.",
+            dilly_reads=f"I found numbers in {quantified} out of {len(bullet_lines)} bullets. ATS and recruiters both scan for metrics — add more.",
         ))
 
     # Content: weak action verbs
@@ -1210,7 +1210,7 @@ def run_ats_analysis(
                 if after_weak and after_weak[0].islower():
                     after_weak = after_weak[0].lower() + after_weak[1:]
                 suggested = f"{strong} {after_weak}" if after_weak else f"{strong} [describe what you did]"
-                meridian = f"Your bullet says \"{wv}\". Rewrite as: \"{suggested}\""
+                dilly_msg = f"Your bullet says \"{wv}\". Rewrite as: \"{suggested}\""
                 weak_found += 1
                 if weak_found <= 3:
                     issues.append(ATSIssue(
@@ -1219,7 +1219,7 @@ def run_ats_analysis(
                         title="Weak action verb",
                         detail=f"\"{wv}\" is passive and generic. ATS keyword matching works better with strong, specific verbs.",
                         fix=f"Replace \"{wv}\" with a strong verb: led, built, launched, increased, reduced, designed, managed.",
-                        meridian_reads=meridian,
+                        dilly_reads=dilly_msg,
                         line=b[:120],
                     ))
                 break

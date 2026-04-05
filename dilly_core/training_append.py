@@ -19,7 +19,7 @@ def _get_training_data_path() -> Optional[str]:
         os.path.join(os.getcwd(), "prompts", "training_data.json"),
         os.path.join(_root, "projects", "dilly", "prompts", "training_data.json"),
     ]
-    env_path = os.environ.get("MERIDIAN_TRAINING_DATA")
+    env_path = os.environ.get("DILLY_TRAINING_DATA") or os.environ.get("MERIDIAN_TRAINING_DATA")
     if env_path and os.path.isfile(env_path):
         return env_path
     for p in candidates:
@@ -33,8 +33,8 @@ def _get_training_data_path() -> Optional[str]:
     return os.path.join(os.getcwd(), "projects", "dilly", "prompts", "training_data.json")
 
 
-MAX_EXCERPT_CHARS = int(os.environ.get("MERIDIAN_EXCERPT_CHARS", "2400"))
-MAX_EXAMPLES = int(os.environ.get("MERIDIAN_TRAINING_MAX_EXAMPLES", "500"))
+MAX_EXCERPT_CHARS = int(os.environ.get("DILLY_EXCERPT_CHARS") or os.environ.get("MERIDIAN_EXCERPT_CHARS", "2400"))
+MAX_EXAMPLES = int(os.environ.get("DILLY_TRAINING_MAX_EXAMPLES") or os.environ.get("MERIDIAN_TRAINING_MAX_EXAMPLES", "500"))
 
 
 def append_audit_to_training(
@@ -50,7 +50,7 @@ def append_audit_to_training(
     """
     path = _get_training_data_path()
     if not path:
-        logger.warning("Meridian: training data path not found; skip append.")
+        logger.warning("Dilly: training data path not found; skip append.")
         return False
 
     excerpt = (resume_text or "")[:MAX_EXCERPT_CHARS]
@@ -117,8 +117,8 @@ def append_audit_to_training(
         with open(tmp_path, "w") as f:
             json.dump(data, f, indent=2)
         os.replace(tmp_path, path)
-        logger.info("Meridian: upserted 1 audit to training_data (%s)", path)
+        logger.info("Dilly: upserted 1 audit to training_data (%s)", path)
         return True
     except Exception as e:
-        logger.warning("Meridian: failed to append audit to training_data: %s", e)
+        logger.warning("Dilly: failed to append audit to training_data: %s", e)
         return False

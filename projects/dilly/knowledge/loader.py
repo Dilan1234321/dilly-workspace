@@ -1,5 +1,5 @@
 """
-Meridian Knowledge Loader
+Dilly Knowledge Loader
 Loads track-specific knowledge files for use in gap scanning, auditing, and Voice context.
 """
 

@@ -1,5 +1,5 @@
 """
-Jobs: recommended jobs, JD→Meridian scores, job required-scores, door eligibility.
+Jobs: recommended jobs, JD→Dilly scores, job required-scores, door eligibility.
 """
 import os
 import json
@@ -9,7 +9,7 @@ from fastapi import APIRouter, Body, HTTPException, Request
 
 from projects.dilly.api import deps
 from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
-from projects.dilly.api.schemas import ApplyThroughMeridianRequest
+from projects.dilly.api.schemas import ApplyThroughDillyRequest
 
 router = APIRouter(tags=["jobs"])
 
@@ -55,8 +55,8 @@ async def get_jobs_page(request: Request):
 
 
 @router.post("/apply-through-dilly")
-async def apply_through_dilly(request: Request, body: ApplyThroughMeridianRequest):
-    """Alias for Apply through Dilly (same as apply-through-meridian)."""
+async def apply_through_dilly(request: Request, body: ApplyThroughDillyRequest):
+    """Alias for Apply through Dilly (same as apply-through-dilly)."""
     deps.require_subscribed(request)
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
@@ -96,15 +96,15 @@ async def apply_through_dilly(request: Request, body: ApplyThroughMeridianReques
     return {"sent": sent, "job_id": job_id, "company": company, "title": title}
 
 
-@router.post("/jd-meridian-scores")
-async def jd_to_meridian_scores_endpoint(request: Request, body: dict = Body(...)):
-    """Infer Meridian score requirements from a job description. Auth required. Body: { job_description, job_title? }."""
+@router.post("/jd-dilly-scores")
+async def jd_to_dilly_scores_endpoint(request: Request, body: dict = Body(...)):
+    """Infer Dilly score requirements from a job description. Auth required. Body: { job_description, job_title? }."""
     deps.require_auth(request)
     jd = (body or {}).get("job_description") or ""
     title = (body or {}).get("job_title")
     try:
-        from dilly_core.jd_to_meridian_scores import jd_to_meridian_scores
-        result = jd_to_meridian_scores(jd.strip(), job_title=title.strip() if title else None)
+        from dilly_core.jd_to_dilly_scores import jd_to_dilly_scores
+        result = jd_to_dilly_scores(jd.strip(), job_title=title.strip() if title else None)
         return result
     except Exception:
         raise HTTPException(status_code=500, detail="Could not infer score requirements from job description.")
@@ -112,12 +112,12 @@ async def jd_to_meridian_scores_endpoint(request: Request, body: dict = Body(...
 
 @router.get("/jobs/{job_id}/required-scores")
 async def get_job_required_scores_endpoint(request: Request, job_id: str):
-    """Return required Meridian scores for this job. Company criteria or JD-inferred. Auth required."""
+    """Return required Dilly scores for this job. Company criteria or JD-inferred. Auth required."""
     deps.require_auth(request)
     try:
         from projects.dilly.api.job_matching import get_job_by_id
         from projects.dilly.api.company_criteria import get_job_required_scores
-        from dilly_core.jd_to_meridian_scores import jd_to_required_scores_for_job
+        from dilly_core.jd_to_dilly_scores import jd_to_required_scores_for_job
         job = get_job_by_id(job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found or not available.")

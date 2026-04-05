@@ -1,9 +1,9 @@
 """
 Recruiter semantic search: load indexed candidates, embed role, k-NN + filters + score blend.
 
-Used by POST /recruiter/search. The matching engine only considers candidates in Meridian profiles:
+Used by POST /recruiter/search. The matching engine only considers candidates in Dilly profiles:
 - Candidate pool is exclusively memory/dilly_profiles (one folder per user: profile.json + candidate_index.json).
-- No other source (e.g. parsed_resumes, external DB) is used. Only users who have a Meridian profile folder
+- No other source (e.g. parsed_resumes, external DB) is used. Only users who have a Dilly profile folder
   with both profile and index are searchable by recruiters.
 
 Quality bar (Mercor-grade):
@@ -13,9 +13,9 @@ Quality bar (Mercor-grade):
 - Documented contract: see below.
 
 Contract:
-- load_indexed_candidates(): returns list of dicts from meridian_profiles only (email, candidate_id, embedding, skill_tags, major, majors, school_id, job_locations, track, smart, grit, build, final_score, name). Skips bad/missing data; never raises.
+- load_indexed_candidates(): returns list of dicts from dilly_profiles only (email, candidate_id, embedding, skill_tags, major, majors, school_id, job_locations, track, smart, grit, build, final_score, name). Skips bad/missing data; never raises.
 - search(role_description, filters?, sort?, limit?, offset?, required_skills?, min_smart?, min_grit?, min_build?): returns {"candidates": [...], "total": N}. Candidates exclude embedding. On embed failure or ImportError returns {"candidates": [], "total": 0}. Filter keys: major (list or single), school_id, cities (list), track; min_smart/min_grit/min_build applied as hard cut. Sort may include top_pct_sgb (avg top % for Smart/Grit/Build vs peers), top_pct_final, top_pct_ats, top_pct_general (blend); lower top % = stronger vs cohort; missing metrics sort last.
-Ref: projects/meridian/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
+Ref: projects/dilly/docs/RECRUITER_SEMANTIC_MATCHING_SPEC.md
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-# Resolve workspace root (this file is in projects/meridian/api/)
+# Resolve workspace root (this file is in projects/dilly/api/)
 _API_DIR = os.path.dirname(os.path.abspath(__file__))
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_API_DIR, "..", "..", ".."))
 # Recruiter pool: only memory/dilly_profiles. Do not add other sources (e.g. parsed_resumes alone).
@@ -224,7 +224,7 @@ def _llm_rerank_candidates(role_description: str, candidates: list[dict[str, Any
             "semantic_score": c.get("semantic_score"),
             "skill_fit_score": c.get("skill_fit_score"),
             "must_have_quality": c.get("must_have_quality"),
-            "meridian_fit_score": c.get("meridian_fit_score"),
+            "dilly_fit_score": c.get("dilly_fit_score"),
         }
         if c.get("experience_highlights"):
             card["experience_highlights"] = c["experience_highlights"]
@@ -238,7 +238,7 @@ def _llm_rerank_candidates(role_description: str, candidates: list[dict[str, Any
         cards.append(card)
 
     system = (
-        "You are Meridian's recruiter-grade reranker. Be CANDID and DIRECT — never sugarcoat.\n"
+        "You are Dilly's recruiter-grade reranker. Be CANDID and DIRECT — never sugarcoat.\n"
         "Given a job description and rich candidate cards, rerank candidates by likely fit.\n"
         "Each card may include: skill_tags_v2, tag_evidence (proof per skill), "
         "experience_highlights (company, role, bullets), dilly_take (one-line audit summary), "
@@ -248,7 +248,7 @@ def _llm_rerank_candidates(role_description: str, candidates: list[dict[str, Any
         "2. Depth of relevant experience — prefer candidates who BUILT, SHIPPED, or LED projects "
         "over those who merely listed a skill.\n"
         "3. Application target alignment (if candidate seeks internship and JD is internship, that's a plus).\n"
-        "4. Meridian scores (smart, grit, build) as tiebreakers.\n\n"
+        "4. Dilly scores (smart, grit, build) as tiebreakers.\n\n"
         "HONESTY RULES:\n"
         "- If a candidate is genuinely an exceptional match, SAY SO clearly. Don't hold back.\n"
         "- If a candidate has gaps, NAME the gaps. Don't paper over weaknesses.\n"
@@ -266,7 +266,7 @@ def _llm_rerank_candidates(role_description: str, candidates: list[dict[str, Any
         "rerank_score (CRITICAL): Assign each candidate their TRUE fit percentage 0-100. "
         "Use the full range: exceptional matches 75-100, strong 55-74, moderate 35-54, developing 15-34, poor fit 0-14. "
         "Every candidate must get a DIFFERENT score — use decimals (e.g. 27.3, 27.8, 26.4, 28.1) so no two are identical. "
-        "Consider semantic_score, skill_fit_score, meridian_fit_score as inputs, but apply your judgment: "
+        "Consider semantic_score, skill_fit_score, dilly_fit_score as inputs, but apply your judgment: "
         "someone with weak evidence for key skills should score lower; someone with proven depth should score higher.\n\n"
         "Return strict JSON: an array of objects, one per candidate, each with: "
         "candidate_id (string), rerank_score (0-100 number, one decimal, UNIQUE per candidate), "
@@ -577,7 +577,7 @@ def _llm_extract_jd_tags(role_description: str) -> dict[str, list[str]]:
 
     canon = sorted(set(all_vocab().values()))
     system = (
-        "You extract job requirements into Meridian canonical tags.\n"
+        "You extract job requirements into Dilly canonical tags.\n"
         "Return ONLY strict JSON: {\"must_have\": [..], \"nice_to_have\": [..]}.\n"
         "Rules:\n"
         "- Tags MUST be chosen from the provided canonical list only.\n"
@@ -707,7 +707,7 @@ def _extract_role_skills_from_description(role_description: str) -> list[str]:
     return spec["must_have"] + spec["nice_to_have"]
 
 
-def _meridian_fit_score(
+def _dilly_fit_score(
     candidate_smart: float,
     candidate_grit: float,
     candidate_build: float,
@@ -905,7 +905,7 @@ def _load_indexed_candidates_impl() -> list[dict[str, Any]]:
 
 def load_indexed_candidates() -> list[dict[str, Any]]:
     """
-    Load all candidates from Meridian profiles only (memory/dilly_profiles).
+    Load all candidates from Dilly profiles only (memory/dilly_profiles).
     Cached for 5 minutes; invalidated when profiles dir mtime changes.
     """
     global _candidates_cache
@@ -937,7 +937,7 @@ def search(
     skip_typo_correction: bool = False,
 ) -> dict[str, Any]:
     """
-    Embed role, compute semantic + skill_fit + meridian_fit, filter, sort, paginate.
+    Embed role, compute semantic + skill_fit + dilly_fit, filter, sort, paginate.
     Returns { "candidates": [...], "total": N }.
     Uses caches and parallelization for faster response.
     """
@@ -1061,7 +1061,7 @@ def search(
         # Must-have quality: how well does strong evidence back the critical requirements
         must_quality = _must_have_quality_score(must_have, cand_tags, tag_ev) if must_have else 100.0
 
-        mer = _meridian_fit_score(
+        mer = _dilly_fit_score(
             c.get("smart") or 0, c.get("grit") or 0, c.get("build") or 0,
             min_smart, min_grit, min_build,
         )
@@ -1093,7 +1093,7 @@ def search(
             "must_have_quality": round(must_quality, 1) if must_have else None,
             "must_have_tags": must_have,
             "nice_to_have_tags": nice_to_have,
-            "meridian_fit_score": mer,
+            "dilly_fit_score": mer,
             "feedback_score": fb,
         })
 
@@ -1292,7 +1292,7 @@ def find_similar_candidates(candidate_id: str, limit: int = 6, role_description:
             cand_tags = c.get("skill_tags_v2") or c.get("skill_tags") or []
             tag_ev = c.get("tag_evidence") if isinstance(c.get("tag_evidence"), dict) else {}
             skill = round(_skill_fit_score(role_skills, cand_tags, tag_ev), 2) if role_skills else 50.0
-            mer = _meridian_fit_score(c_smart, c_grit, c.get("build") or 0, None, None, None)
+            mer = _dilly_fit_score(c_smart, c_grit, c.get("build") or 0, None, None, None)
             fb = feedback_scores.get(cid, 50.0)
             fb = max(0.0, min(100.0, float(fb)))
             fb = 35.0 + 0.3 * fb

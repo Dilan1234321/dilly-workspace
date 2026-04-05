@@ -1,7 +1,7 @@
 """
 Peer benchmarking: compute percentile of this candidate's scores vs same-track cohort.
-Cohort = only meridian_audit_log.jsonl (real Meridian profiles who have been audited).
-We do NOT use training_data.json — peer comparison is exclusively vs other Meridian users.
+Cohort = only dilly_audit_log.jsonl (real Dilly profiles who have been audited).
+We do NOT use training_data.json — peer comparison is exclusively vs other Dilly users.
 When same-track cohort has < 3, fall back to all-track cohort so percentiles still show.
 """
 
@@ -11,14 +11,14 @@ from typing import Dict, Tuple
 
 _API_DIR = os.path.dirname(os.path.abspath(__file__))
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_API_DIR, "..", "..", ".."))
-_LOG_PATH = os.path.join(_WORKSPACE_ROOT, "memory", "meridian_audit_log.jsonl")
+_LOG_PATH = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_audit_log.jsonl")
 _MIN_COHORT = 3
 
 
 def _load_cohort_by_track() -> Dict[str, list]:
-    """Load all (track -> list of { smart, grit, build }) from meridian_audit_log only (real Meridian profiles)."""
+    """Load all (track -> list of { smart, grit, build }) from dilly_audit_log only (real Dilly profiles)."""
     by_track: Dict[str, list] = {}
-    # Audit log only — real Meridian users who have been audited (no PII)
+    # Audit log only — real Dilly users who have been audited (no PII)
     if os.path.isfile(_LOG_PATH):
         try:
             with open(_LOG_PATH, "r", encoding="utf-8") as f:
@@ -54,7 +54,7 @@ def percentile_of(value: float, sorted_values: list) -> int:
 
 def get_peer_percentiles(track: str, scores: Dict[str, float]) -> Tuple[Dict[str, int] | None, int, bool]:
     """
-    Compare this candidate's scores to the same-track cohort (Meridian profiles only, from audit log).
+    Compare this candidate's scores to the same-track cohort (Dilly profiles only, from audit log).
     If same-track has < MIN_COHORT, use all-track cohort so percentiles still show.
     Returns (percentiles_dict, cohort_n, use_fallback).
     - percentiles_dict: { smart, grit, build } 0-100, or None if no cohort has >= MIN_COHORT.
@@ -93,7 +93,7 @@ def _quartile(sorted_vals: list, p: float) -> float:
 def get_cohort_stats(track: str) -> dict | None:
     """
     Return anonymized cohort stats for "Vs Your Peers" full comparison.
-    Same cohort as get_peer_percentiles (Meridian profiles only, from audit log).
+    Same cohort as get_peer_percentiles (Dilly profiles only, from audit log).
     Returns: cohort_n, use_fallback, avg/mid/p25/p75 for smart, grit, build; how_to_get_ahead (short copy).
     """
     by_track = _load_cohort_by_track()
@@ -124,7 +124,7 @@ def get_cohort_stats(track: str) -> dict | None:
 
 
 def _load_cohort_finals_by_track() -> Dict[str, list]:
-    """track -> list of final scores from meridian_audit_log (same cohort source as SGB percentiles)."""
+    """track -> list of final scores from dilly_audit_log (same cohort source as SGB percentiles)."""
     by_track: Dict[str, list] = {}
     if os.path.isfile(_LOG_PATH):
         try:
@@ -150,7 +150,7 @@ def _load_cohort_finals_by_track() -> Dict[str, list]:
 
 def get_peer_percentile_final(track: str, final_score: float) -> Tuple[int | None, int, bool]:
     """
-    Percentile (0–100) of final_score vs Meridian audit-log cohort, same track selection as get_peer_percentiles.
+    Percentile (0–100) of final_score vs Dilly audit-log cohort, same track selection as get_peer_percentiles.
     Returns (percentile or None if cohort too small, cohort_n, use_fallback).
     """
     by_track = _load_cohort_finals_by_track()
