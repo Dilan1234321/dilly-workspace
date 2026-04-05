@@ -7,6 +7,7 @@ from dilly_core.scoring import (
     MAJOR_MULTIPLIERS,
     compute_smart_score,
     compute_grit_score,
+    compute_build_score,
     apply_international_multiplier,
     extract_scoring_signals,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "MAJOR_MULTIPLIERS",
     "compute_smart_score",
     "compute_grit_score",
+    "compute_build_score",
     "apply_international_multiplier",
     "extract_scoring_signals",
     "audit_pre_health",

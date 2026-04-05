@@ -13,6 +13,7 @@ from dilly_core.scoring import (
     extract_scoring_signals,
     compute_smart_score,
     compute_grit_score,
+    compute_build_score,
     apply_international_multiplier,
 )
 from dilly_core.tracks import (
@@ -903,7 +904,12 @@ def run_audit(
             grit_score = min(100.0, grit_score + bonus)
             evidence_grit.append(f"Security-specific metrics in bullets: +{bonus} pts (Cybersecurity).")
     track_result = run_track_audit(track, signals, raw_text)
-    build_score = track_result.build_score
+    # Rule-based Build score (22-cohort-aware) blended with track audit
+    rule_build_score, rule_build_evidence = compute_build_score(
+        signals, raw_text, track=track,
+    )
+    # Blend: 60% rule-based (cohort-aware, deterministic) + 40% track audit (legacy)
+    build_score = round(rule_build_score * 0.60 + track_result.build_score * 0.40, 2)
     ws, wg, wb = get_composite_weights(track)
     final_score = round((smart_score * ws) + (grit_score * wg) + (build_score * wb), 2)
     snippets = _extract_resume_snippets(raw_text, track)
@@ -911,7 +917,9 @@ def run_audit(
         evidence_smart.append("From your resume: \"" + snippets["smart"][0] + "\".")
     if snippets.get("grit"):
         evidence_grit.append("From your resume: \"" + snippets["grit"][0] + "\".")
-    evidence_build = list(track_result.findings)[:2] if getattr(track_result, "findings", None) else []
+    evidence_build = list(rule_build_evidence[:4])
+    if getattr(track_result, "findings", None):
+        evidence_build.extend(track_result.findings[:2])
     if snippets.get("build"):
         evidence_build.append("From your resume: \"" + snippets["build"][0] + "\".")
     audit_findings: List[str] = []

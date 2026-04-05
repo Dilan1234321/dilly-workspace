@@ -583,6 +583,560 @@ def apply_international_multiplier(grit_score: float, has_international: bool) -
     return round(adjusted, 2), ["International educational markers: Global Grit +10% applied."]
 
 
+# ---------------------------------------------------------------------------
+# Build Score — 22-cohort-aware, rule-based, deterministic.
+# Parallel to compute_smart_score and compute_grit_score.
+# ---------------------------------------------------------------------------
+
+# Per-cohort Build keywords: domain-specific terms that signal "shipped proof"
+# for each of the 22 career tracks. Keywords are matched case-insensitively
+# against raw resume text. Each hit earns points; domain-relevant hits score
+# higher than generic ones.
+
+COHORT_BUILD_KEYWORDS: dict[str, dict] = {
+    # 1. Software Engineering & CS
+    "software_engineering_cs": {
+        "domain_keywords": [
+            "deployed", "github", "open source", "open-source", "ci/cd", "microservices",
+            "distributed", "api", "full-stack", "fullstack", "backend", "frontend",
+            "docker", "kubernetes", "react", "node", "django", "flask", "spring",
+            "aws", "gcp", "azure", "terraform", "devops", "rest api", "graphql",
+            "typescript", "javascript", "python", "java", "golang", "rust",
+            "leetcode", "system design", "scalable", "users", "production",
+        ],
+        "portfolio_keywords": ["github.com", "github.io", "vercel.app", "netlify.app", "herokuapp"],
+        "domain_weight": 3,
+    },
+    # 2. Data Science & Analytics
+    "data_science_analytics": {
+        "domain_keywords": [
+            "machine learning", "ml model", "deep learning", "neural network",
+            "kaggle", "jupyter", "pandas", "scikit-learn", "sklearn", "tensorflow",
+            "pytorch", "data pipeline", "etl", "dashboard", "tableau", "power bi",
+            "a/b test", "ab test", "experiment", "statistical", "regression",
+            "classification", "nlp", "natural language", "computer vision",
+            "snowflake", "databricks", "sagemaker", "bigquery", "sql",
+            "model accuracy", "precision", "recall", "f1", "auc",
+        ],
+        "portfolio_keywords": ["kaggle.com", "github.com", "colab", "nbviewer"],
+        "domain_weight": 3,
+    },
+    # 3. Finance & Accounting
+    "finance_accounting": {
+        "domain_keywords": [
+            "dcf", "lbo", "valuation", "financial model", "pitch deck",
+            "bloomberg", "capital iq", "factset", "excel", "vba",
+            "investment banking", "equity research", "asset management",
+            "portfolio management", "trading", "fixed income", "derivatives",
+            "m&a", "mergers", "acquisitions", "due diligence", "deal",
+            "audit", "gaap", "ifrs", "sox", "tax", "cpa", "cfa",
+            "financial analysis", "budgeting", "forecasting", "p&l",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+    # 4. Consulting & Strategy
+    "consulting_strategy": {
+        "domain_keywords": [
+            "case competition", "case study", "strategy", "mece",
+            "client-facing", "client facing", "deliverable", "pro-bono",
+            "pro bono", "consulting club", "market sizing", "implementation",
+            "process improvement", "stakeholder", "recommendation",
+            "framework", "operations improvement", "cost reduction",
+            "revenue growth", "efficiency", "bcg", "mckinsey", "bain",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+    # 5. Marketing & Advertising
+    "marketing_advertising": {
+        "domain_keywords": [
+            "campaign", "social media", "seo", "sem", "google ads",
+            "meta ads", "tiktok", "content marketing", "email marketing",
+            "conversion", "ctr", "click-through", "roas", "roi",
+            "impressions", "engagement", "followers", "brand", "creative",
+            "copywriting", "analytics", "google analytics", "hubspot",
+            "mailchimp", "hootsuite", "buffer", "canva", "adobe",
+            "influencer", "pr ", "public relations", "media buy",
+        ],
+        "portfolio_keywords": ["behance.net", "dribbble.com"],
+        "domain_weight": 3,
+    },
+    # 6. Management & Operations
+    "management_operations": {
+        "domain_keywords": [
+            "process improvement", "supply chain", "six sigma", "lean",
+            "operations", "logistics", "inventory", "erp", "sap",
+            "project management", "pmp", "agile", "scrum", "kanban",
+            "cost reduction", "efficiency", "kpi", "headcount",
+            "cross-functional", "stakeholder management", "vendor",
+            "quality assurance", "qa", "sop", "standard operating",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 3,
+    },
+    # 7. Healthcare & Clinical
+    "healthcare_clinical": {
+        "domain_keywords": [
+            "clinical", "patient", "hospital", "shadowing", "emt",
+            "cna", "bls", "cpr", "phlebotomy", "hipaa", "ehr",
+            "medical", "nursing", "surgery", "triage", "vital signs",
+            "charting", "scribing", "direct patient care", "bedside",
+            "volunteer", "clinic", "physician", "provider",
+            "patient encounter", "clinical hours", "rotation",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 3,
+    },
+    # 8. Cybersecurity & IT
+    "cybersecurity_it": {
+        "domain_keywords": [
+            "security+", "comptia", "ceh", "oscp", "pccet",
+            "ctf", "hackthebox", "tryhackme", "picoctf", "bug bounty",
+            "penetration test", "pen test", "vulnerability", "siem",
+            "splunk", "crowdstrike", "sentinel", "edr", "ids", "ips",
+            "incident response", "soc", "threat hunting", "mitre",
+            "owasp", "firewall", "nmap", "wireshark", "burp suite",
+            "malware analysis", "forensics", "home lab",
+        ],
+        "portfolio_keywords": ["hackthebox.com", "tryhackme.com", "github.com"],
+        "domain_weight": 3,
+    },
+    # 9. Law & Government
+    "law_government": {
+        "domain_keywords": [
+            "moot court", "mock trial", "law review", "legal research",
+            "paralegal", "legal clinic", "brief", "legislation",
+            "policy paper", "constitutional", "statutory", "regulatory",
+            "government intern", "federal", "state government",
+            "advocacy", "lobbying", "compliance", "legal writing",
+            "doj", "public defender", "district attorney", "ngo",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+    # 10. Biotech & Pharmaceutical
+    "biotech_pharmaceutical": {
+        "domain_keywords": [
+            "wet lab", "bsl-2", "bsl2", "glp", "gmp", "fda",
+            "clinical trial", "drug discovery", "assay", "pcr",
+            "western blot", "cell culture", "sequencing", "hplc",
+            "mass spectrometry", "chromatography", "bioprocessing",
+            "pharmacology", "toxicology", "formulation", "patent",
+            "publication", "poster presentation", "conference",
+            "thesis", "grant", "nih", "nsf",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+    # 11. Mechanical & Aerospace Engineering
+    "mechanical_aerospace_engineering": {
+        "domain_keywords": [
+            "solidworks", "catia", "nx", "autocad", "cad",
+            "fea", "cfd", "simulation", "ansys", "abaqus",
+            "3d print", "cnc", "machining", "manufacturing",
+            "prototype", "fsae", "sae", "aiaa", "asme",
+            "senior design", "capstone", "thermodynamics",
+            "fe exam", "fundamentals of engineering",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+    # 12. Electrical & Computer Engineering
+    "electrical_computer_engineering": {
+        "domain_keywords": [
+            "pcb", "altium", "kicad", "eagle", "fpga", "verilog",
+            "vhdl", "embedded", "microcontroller", "arduino", "raspberry pi",
+            "stm32", "arm", "risc-v", "signal processing", "circuit",
+            "oscilloscope", "labview", "matlab", "simulink",
+            "ieee", "robotics", "sensor", "firmware", "vlsi",
+        ],
+        "portfolio_keywords": ["github.com"],
+        "domain_weight": 4,
+    },
+    # 13. Design & Creative Arts
+    "design_creative_arts": {
+        "domain_keywords": [
+            "figma", "sketch", "adobe", "photoshop", "illustrator",
+            "indesign", "after effects", "premiere", "xd",
+            "case study", "user research", "usability test",
+            "wireframe", "prototype", "design system", "ui/ux",
+            "ux", "ui", "interaction design", "information architecture",
+            "typography", "branding", "logo", "visual design",
+            "motion design", "animation", "3d", "illustration",
+        ],
+        "portfolio_keywords": ["behance.net", "dribbble.com", "figma.com", "cargo.site"],
+        "domain_weight": 3,
+    },
+    # 14. Education & Human Development
+    "education_human_development": {
+        "domain_keywords": [
+            "student teaching", "classroom", "curriculum", "lesson plan",
+            "tutoring", "mentoring", "praxis", "teaching certification",
+            "certified teacher", "iep", "special education",
+            "differentiated instruction", "assessment", "pedagogy",
+            "bloom", "udl", "classroom management", "google classroom",
+            "canvas", "learning management",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 3,
+    },
+    # 15. Social Sciences & Nonprofit
+    "social_sciences_nonprofit": {
+        "domain_keywords": [
+            "community", "nonprofit", "non-profit", "ngo",
+            "grant", "fundraising", "advocacy", "volunteer",
+            "americorps", "peace corps", "policy brief",
+            "social impact", "outreach", "program coordinator",
+            "case management", "community organizing",
+            "social work", "united way", "habitat for humanity",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 3,
+    },
+    # 16. Media & Communications
+    "media_communications": {
+        "domain_keywords": [
+            "byline", "published", "article", "feature story",
+            "journalism", "editorial", "newsroom", "broadcast",
+            "podcast", "video production", "documentary",
+            "social media", "content creator", "audience",
+            "ap style", "press release", "media kit",
+            "editor", "producer", "reporter", "correspondent",
+        ],
+        "portfolio_keywords": ["medium.com", "substack.com"],
+        "domain_weight": 3,
+    },
+    # 17. Life Sciences & Research
+    "life_sciences_research": {
+        "domain_keywords": [
+            "publication", "paper", "journal", "first author", "co-author",
+            "poster", "conference", "reu", "research assistant",
+            "lab technique", "pcr", "western blot", "cell culture",
+            "microscopy", "sequencing", "bioinformatics", "spss",
+            "graphpad", "r ", "statistical analysis", "thesis",
+            "pi ", "principal investigator", "iacuc", "irb",
+        ],
+        "portfolio_keywords": ["orcid.org", "scholar.google.com", "pubmed"],
+        "domain_weight": 4,
+    },
+    # 18. Economics & Public Policy
+    "economics_public_policy": {
+        "domain_keywords": [
+            "econometrics", "regression", "stata", "causal inference",
+            "instrumental variable", "difference-in-difference", "did",
+            "rdd", "panel data", "time series", "macro", "micro",
+            "policy analysis", "think tank", "federal reserve",
+            "brookings", "thesis", "working paper", "nber",
+            "world bank", "imf", "policy brief",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+    # 19. Entrepreneurship & Innovation
+    "entrepreneurship_innovation": {
+        "domain_keywords": [
+            "startup", "founded", "co-founded", "launched", "mvp",
+            "revenue", "users", "customers", "pitch competition",
+            "incubator", "accelerator", "y combinator", "techstars",
+            "venture", "angel", "seed", "funding", "raised",
+            "product-market fit", "customer discovery", "lean startup",
+            "product hunt", "beta", "waitlist",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 3,
+    },
+    # 20. Physical Sciences & Math
+    "physical_sciences_math": {
+        "domain_keywords": [
+            "research paper", "thesis", "publication", "pre-print",
+            "putnam", "usamo", "amc", "imo", "competition math",
+            "proof", "real analysis", "abstract algebra", "topology",
+            "computational", "matlab", "julia", "fortran",
+            "national lab", "reu", "nsf", "doe",
+            "simulation", "modeling", "experiment",
+        ],
+        "portfolio_keywords": ["arxiv.org", "orcid.org"],
+        "domain_weight": 4,
+    },
+    # 21. Chemical & Biomedical Engineering
+    "chemical_biomedical_engineering": {
+        "domain_keywords": [
+            "aspen", "comsol", "hysys", "chemcad",
+            "bioprocessing", "bioreactor", "fermentation",
+            "chromatography", "mass spectrometry", "hplc",
+            "gmp", "fda", "biomaterials", "tissue engineering",
+            "medical device", "polymer", "thermodynamics",
+            "transport phenomena", "reaction kinetics",
+            "fe exam", "fundamentals of engineering",
+            "co-op", "coop",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+    # 22. Civil & Environmental Engineering
+    "civil_environmental_engineering": {
+        "domain_keywords": [
+            "autocad", "civil 3d", "revit", "gis", "arcgis",
+            "structural", "geotechnical", "hydraulic", "surveying",
+            "asce", "leed", "nepa", "clean water act",
+            "construction", "site observation", "field work",
+            "fe exam", "fundamentals of engineering",
+            "concrete", "steel", "sustainability", "stormwater",
+            "infrastructure", "transportation",
+        ],
+        "portfolio_keywords": [],
+        "domain_weight": 4,
+    },
+}
+
+# Legacy keys: map old cohort names to canonical keys
+_COHORT_BUILD_ALIASES: dict[str, str] = {
+    "design_creative": "design_creative_arts",
+    "legal_compliance": "law_government",
+    "education_teaching": "education_human_development",
+}
+
+# Map 11-track names to their best-matching cohort key for Build scoring
+_TRACK_TO_COHORT: dict[str, str] = {
+    "Pre-Health": "healthcare_clinical",
+    "Pre-Law": "law_government",
+    "Tech": "software_engineering_cs",
+    "Science": "life_sciences_research",
+    "Business": "management_operations",
+    "Finance": "finance_accounting",
+    "Consulting": "consulting_strategy",
+    "Communications": "media_communications",
+    "Education": "education_human_development",
+    "Arts": "design_creative_arts",
+    "Humanities": "social_sciences_nonprofit",
+}
+
+# More specific major-to-cohort overrides within a track
+# (e.g., a "Data Science" major on the "Tech" track uses data_science_analytics cohort)
+_MAJOR_TO_COHORT_OVERRIDE: dict[str, str] = {
+    "Data Science": "data_science_analytics",
+    "Cybersecurity": "cybersecurity_it",
+    "Actuarial Science": "data_science_analytics",
+    "Business Information Technology": "data_science_analytics",
+    "Management Information Systems": "data_science_analytics",
+    "Mathematics with Computer Science": "software_engineering_cs",
+    "Financial Enterprise Systems": "finance_accounting",
+    "Biochemistry": "biotech_pharmaceutical",
+    "Biochemistry and Allied Health": "biotech_pharmaceutical",
+    "Chemistry": "chemical_biomedical_engineering",
+    "Physics": "physical_sciences_math",
+    "Mathematics": "physical_sciences_math",
+    "Marine Science": "life_sciences_research",
+    "Marine Biology": "life_sciences_research",
+    "Environmental Science": "civil_environmental_engineering",
+    "Environmental Studies": "civil_environmental_engineering",
+    "Biology": "life_sciences_research",
+    "Biomedical Sciences": "biotech_pharmaceutical",
+    "Nursing": "healthcare_clinical",
+    "Public Health": "healthcare_clinical",
+    "Health Science": "healthcare_clinical",
+    "Economics": "economics_public_policy",
+    "Marketing": "marketing_advertising",
+    "International Business": "management_operations",
+    "Entrepreneurship": "entrepreneurship_innovation",
+    "Advertising and Public Relations": "media_communications",
+    "Journalism": "media_communications",
+    "Communication": "media_communications",
+    "Graphic Design": "design_creative_arts",
+    "Design": "design_creative_arts",
+    "Animation": "design_creative_arts",
+    "Film and Media Arts": "media_communications",
+    "Political Science": "economics_public_policy",
+    "Sociology": "social_sciences_nonprofit",
+    "Psychology": "social_sciences_nonprofit",
+}
+
+
+def _resolve_cohort_key(cohort: str = "", track: str = "", major: str = "") -> str:
+    """Resolve a cohort key from cohort hint, track, and major. Returns canonical cohort key."""
+    # Direct cohort key provided
+    if cohort:
+        key = cohort.strip()
+        if key in COHORT_BUILD_KEYWORDS:
+            return key
+        if key in _COHORT_BUILD_ALIASES:
+            return _COHORT_BUILD_ALIASES[key]
+    # Major-specific override (more precise than track)
+    if major and major.strip() in _MAJOR_TO_COHORT_OVERRIDE:
+        return _MAJOR_TO_COHORT_OVERRIDE[major.strip()]
+    # Track-based fallback
+    if track and track.strip() in _TRACK_TO_COHORT:
+        return _TRACK_TO_COHORT[track.strip()]
+    return "management_operations"  # safe default
+
+
+def compute_build_score(
+    signals: ScoringSignals,
+    raw_text: str = "",
+    *,
+    cohort: str = "",
+    track: str = "",
+) -> Tuple[float, List[str]]:
+    """
+    Build Score = domain-specific keyword evidence + project signals + quantified
+    impact + portfolio links + certifications. Cohort-aware: what counts as "Build"
+    in Finance differs from SWE differs from Healthcare.
+
+    Returns (score 0-100, evidence_list). Deterministic — same inputs always produce
+    the same score.
+
+    Parameters:
+        signals: ScoringSignals extracted from the resume
+        raw_text: raw resume text for keyword detection
+        cohort: 22-cohort key (e.g. "software_engineering_cs"); optional
+        track: 11-track name (e.g. "Tech"); used as fallback if cohort not provided
+    """
+    import re
+
+    evidence: List[str] = []
+    cohort_key = _resolve_cohort_key(cohort=cohort, track=track, major=signals.major)
+    cohort_config = COHORT_BUILD_KEYWORDS.get(cohort_key, COHORT_BUILD_KEYWORDS["management_operations"])
+    domain_kw = cohort_config["domain_keywords"]
+    portfolio_kw = cohort_config.get("portfolio_keywords", [])
+    domain_weight = cohort_config.get("domain_weight", 3)
+
+    text_lower = (raw_text or "").lower()
+
+    # ── 1. Domain-specific keyword hits (primary Build signal) ──
+    domain_hits = []
+    for kw in domain_kw:
+        if kw in text_lower:
+            domain_hits.append(kw)
+    domain_pts = len(domain_hits) * domain_weight
+    # Diminishing returns: cap effective keyword hits at 12
+    if len(domain_hits) > 12:
+        domain_pts = 12 * domain_weight + (len(domain_hits) - 12) * 1
+    domain_pts = min(domain_pts, 45)  # cap at 45 to leave room for other signals
+    if domain_hits:
+        shown = domain_hits[:5]
+        extra = len(domain_hits) - len(shown)
+        suffix = f" (+{extra} more)" if extra else ""
+        evidence.append(
+            f"{len(domain_hits)} domain-relevant Build keywords detected "
+            f"({', '.join(shown)}{suffix}): +{domain_pts:.0f} pts."
+        )
+    else:
+        evidence.append(
+            f"No domain-specific tools/skills mentioned for {cohort_key.replace('_', ' ').title()} track (-0)."
+        )
+
+    # ── 2. Projects section / substantive entries ──
+    project_pts = 0.0
+    project_kw = ["project", "projects", "personal project", "side project", "capstone", "senior design", "thesis"]
+    project_hits = sum(1 for kw in project_kw if kw in text_lower)
+    if project_hits >= 3:
+        project_pts = 12
+        evidence.append(f"Strong projects section ({project_hits} project indicators): +{project_pts:.0f} pts.")
+    elif project_hits >= 1:
+        project_pts = 7
+        evidence.append(f"Projects section detected ({project_hits} indicator{'s' if project_hits > 1 else ''}): +{project_pts:.0f} pts.")
+
+    # ── 3. Quantified outcomes / impact ──
+    impact_pts = 0.0
+    impact_count = signals.quantifiable_impact_count
+    if impact_count >= 5:
+        impact_pts = 15
+        evidence.append(f"{impact_count} quantified outcomes (%, $, users): +{impact_pts:.0f} pts.")
+    elif impact_count >= 3:
+        impact_pts = 10
+        evidence.append(f"{impact_count} quantified outcomes: +{impact_pts:.0f} pts.")
+    elif impact_count >= 1:
+        impact_pts = 5
+        evidence.append(f"{impact_count} quantified outcome{'s' if impact_count > 1 else ''}: +{impact_pts:.0f} pts.")
+
+    # ── 4. Portfolio / GitHub / Behance / Dribbble links ──
+    portfolio_pts = 0.0
+    generic_portfolio = ["github.com", "gitlab.com", "bitbucket.org", "behance.net",
+                         "dribbble.com", "portfolio", "linkedin.com/in"]
+    all_portfolio = list(set(generic_portfolio + portfolio_kw))
+    portfolio_found = [p for p in all_portfolio if p in text_lower]
+    if portfolio_found:
+        portfolio_pts = min(8, len(portfolio_found) * 4)
+        evidence.append(f"Portfolio/profile links ({', '.join(portfolio_found[:3])}): +{portfolio_pts:.0f} pts.")
+
+    # ── 5. Deployed app / live link (especially valuable for tech/design) ──
+    deploy_pts = 0.0
+    if getattr(signals, "deployed_app_or_live_link", False):
+        deploy_pts = 8
+        evidence.append(f"Deployed app or live link detected: +{deploy_pts:.0f} pts.")
+
+    # ── 6. Published work / presentations ──
+    publish_pts = 0.0
+    publish_kw = ["published", "publication", "poster presentation", "conference presentation",
+                  "journal", "presented at", "co-author", "first author", "peer-reviewed"]
+    publish_hits = sum(1 for kw in publish_kw if kw in text_lower)
+    if publish_hits >= 3:
+        publish_pts = 10
+        evidence.append(f"Strong publication/presentation record ({publish_hits} signals): +{publish_pts:.0f} pts.")
+    elif publish_hits >= 1:
+        publish_pts = 5
+        evidence.append(f"Published work or presentations detected: +{publish_pts:.0f} pts.")
+
+    # ── 7. Certifications (cohort-relevant) ──
+    cert_pts = 0.0
+    certs = getattr(signals, "certifications_list", []) or []
+    if certs:
+        cert_pts = min(10, len(certs) * 3)
+        evidence.append(f"{len(certs)} certification signal{'s' if len(certs) > 1 else ''}: +{cert_pts:.0f} pts.")
+
+    # ── 8. Hackathon mentions (valuable for tech/entrepreneurship) ──
+    hack_pts = 0.0
+    if getattr(signals, "hackathon_mention", False):
+        hack_pts = 5
+        evidence.append(f"Hackathon participation/win: +{hack_pts:.0f} pts.")
+
+    # ── 9. Recognized employer (industry internship) ──
+    employer_pts = 0.0
+    if getattr(signals, "recognized_tech_employer", False):
+        employer_pts = 8
+        evidence.append(f"Internship at recognized employer: +{employer_pts:.0f} pts.")
+
+    # ── 10. Competitive programming / competitions ──
+    comp_pts = 0.0
+    if getattr(signals, "competitive_programming", False):
+        comp_pts = 5
+        evidence.append(f"Competitive programming/competitions: +{comp_pts:.0f} pts.")
+    # Actuarial exams (special case)
+    act_exams = getattr(signals, "actuarial_exams_passed", 0) or 0
+    if act_exams > 0:
+        act_pts = min(15, act_exams * 5)
+        comp_pts += act_pts
+        evidence.append(f"{act_exams} actuarial exam{'s' if act_exams > 1 else ''} passed: +{act_pts:.0f} pts.")
+
+    # ── 11. Research longevity bonus ──
+    research_pts = 0.0
+    research_years = getattr(signals, "research_longevity_years", 0.0) or 0.0
+    if research_years >= 2.0:
+        research_pts = 8
+        evidence.append(f"{research_years:.0f}+ years research longevity: +{research_pts:.0f} pts.")
+    elif research_years >= 1.0:
+        research_pts = 4
+        evidence.append(f"{research_years:.0f}+ years research: +{research_pts:.0f} pts.")
+
+    # ── 12. Clinical hours (healthcare-specific) ──
+    clinical_pts = 0.0
+    clinical_years = getattr(signals, "longitudinal_clinical_years", 0.0) or 0.0
+    if clinical_years >= 2.0:
+        clinical_pts = 10
+        evidence.append(f"{clinical_years:.0f}+ years clinical experience: +{clinical_pts:.0f} pts.")
+    elif clinical_years >= 0.5:
+        clinical_pts = 5
+        evidence.append(f"Clinical experience detected: +{clinical_pts:.0f} pts.")
+
+    # ── Aggregate ──
+    raw = (domain_pts + project_pts + impact_pts + portfolio_pts + deploy_pts +
+           publish_pts + cert_pts + hack_pts + employer_pts + comp_pts +
+           research_pts + clinical_pts)
+    score = min(100.0, max(0.0, raw))
+    return round(score, 2), evidence
+
+
 def get_tech_outcome_tied_signals(
     raw_text: str,
     tech_keywords: List[str] | None = None,
