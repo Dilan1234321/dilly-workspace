@@ -312,7 +312,6 @@ async def audit_resume_v2(
         # Roll back to legacy parser path for stable major/track detection.
         auditor = MeridianResumeAuditor(temp_path)
         extract_ok = auditor.extract_text()
-        print(f"[DEBUG audit-v2] extract_ok: {extract_ok}, raw_text length: {len(auditor.raw_text or '')}")
         if not extract_ok:
             raise errors.internal(ERR_EXTRACT)
         text = auditor.raw_text
@@ -320,7 +319,6 @@ async def audit_resume_v2(
             auditor.analyze_content()
         from dilly_core.resume_parser import parse_resume
         parsed = parse_resume(text, filename=file.filename)
-        print(f"[DEBUG audit-v2] parsed name: {getattr(parsed, 'name', None)}, major: {getattr(parsed, 'major', None)}")
         from dilly_core.auditor import name_from_filename
         candidate_name = parsed.name
         if not candidate_name or candidate_name == "Unknown" or ("prediction" in candidate_name.lower() or "well-educated" in candidate_name.lower()):
@@ -531,8 +529,6 @@ async def audit_resume_v2(
                 update_parsed_resume_cohort(_parsed_resume_path, result.track)
             except Exception as e:
                 sys.stderr.write(f"Dilly: failed to update cohort in parsed resume: {e}\n")
-        print(f"[DEBUG audit-v2] SCORES — smart: {result.smart_score}, grit: {result.grit_score}, build: {result.build_score}, final: {result.final_score}")
-        print(f"[DEBUG audit-v2] track: {result.track}, candidate_name: {result.candidate_name}")
         scores = {
             "smart": result.smart_score,
             "grit": result.grit_score,

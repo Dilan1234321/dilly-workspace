@@ -363,26 +363,16 @@ def normalize_resume_with_llm(parsed: "ParsedResume") -> Optional[str]:
 
         # Self-check: detect issues and run one corrective pass if needed
         issues = validate_normalized_output(raw_text, out)
-        if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
-            import sys
-            print(f"[Meridian normalizer] Validation found {len(issues)} issue(s).", file=sys.stderr)
         if issues:
             logger.info("Normalizer validation found %d issue(s), running correction pass.", len(issues))
-            if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
-                import sys
-                print(f"[Meridian normalizer] Running correction pass...", file=sys.stderr)
             for issue in issues:
                 logger.debug("  - %s", issue)
             corrected = _correct_resume_with_llm(raw_text, out, issues)
             if corrected and corrected.strip():
                 logger.info("Normalizer correction pass returned %d chars.", len(corrected))
-                if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
-                    print(f"[Meridian normalizer] Correction returned {len(corrected)} chars.", file=sys.stderr)
                 _append_normalizer_example(raw_text, corrected.strip())
                 return corrected.strip()
             logger.warning("Normalizer correction pass returned empty or failed; keeping first pass output.")
-            if os.environ.get("MERIDIAN_DEBUG_NORMALIZER", "").strip().lower() in ("1", "true", "yes"):
-                print("[Meridian normalizer] Correction returned empty or failed; keeping first pass.", file=sys.stderr)
         _append_normalizer_example(raw_text, out)
         return out
     except Exception as e:

@@ -17,7 +17,6 @@ router = APIRouter(tags=["jobs"])
 
 _ROUTER_DIR = os.path.dirname(os.path.abspath(__file__))
 _DB_PATH = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "dilly_jobs.db"))
-print(f"[jobs_listings] DB path: {_DB_PATH}, exists: {os.path.isfile(_DB_PATH)}", flush=True)
 
 
 @router.get("/internships/listings")
