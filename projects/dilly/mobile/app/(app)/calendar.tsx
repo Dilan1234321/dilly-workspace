@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ const AMBER = '#FF9F0A';
 const CORAL = '#FF453A';
 const BLUE  = '#0A84FF';
 const INDIGO = '#5E5CE6';
+const PURPLE = '#AF52DE';
 
 const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -34,9 +35,14 @@ interface CalendarEvent {
   id: string;
   title: string;
   date: string; // ISO date string YYYY-MM-DD
-  type: 'deadline' | 'interview' | 'career_fair' | 'custom';
+  type: 'deadline' | 'interview' | 'career_fair' | 'custom' | 'application' | 'prep';
   notes?: string;
   completedAt?: string | null;
+  reminder_days?: number[];
+  prep_type?: string;
+  createdBy?: string;
+  company?: string;
+  role?: string;
 }
 
 type EventType = CalendarEvent['type'];
@@ -46,7 +52,34 @@ const EVENT_CONFIG: Record<EventType, { color: string; icon: string; label: stri
   interview:   { color: CORAL,  icon: 'people-outline',        label: 'Interview' },
   career_fair: { color: BLUE,   icon: 'business-outline',      label: 'Career Fair' },
   custom:      { color: INDIGO, icon: 'calendar-outline',      label: 'Event' },
+  application: { color: GREEN,  icon: 'briefcase-outline',     label: 'Application' },
+  prep:        { color: PURPLE, icon: 'book-outline',          label: 'Prep' },
 };
+
+// ── Prep Deck types ──
+
+interface PrepQuestion {
+  question: string;
+  category: string;
+  probability: string;
+  why_flagged: string;
+  prep_tip: string;
+}
+
+interface DimensionGap {
+  dimension: string;
+  gap: number;
+  focus: string;
+}
+
+interface PrepDeck {
+  company: string;
+  role: string;
+  track_label: string;
+  questions: PrepQuestion[];
+  dimension_gaps: DimensionGap[];
+  company_insights: string;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -100,6 +133,12 @@ function getMonthGrid(year: number, month: number): (number | null)[][] {
   return weeks;
 }
 
+const REMINDER_OPTIONS = [
+  { days: 1, label: '1 day' },
+  { days: 3, label: '3 days' },
+  { days: 7, label: '1 week' },
+];
+
 // ── This Week Summary ─────────────────────────────────────────────────────────
 
 function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
@@ -113,9 +152,10 @@ function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
     return d >= now && d <= endOfWeek && !e.completedAt;
   });
 
-  const deadlines = thisWeek.filter(e => e.type === 'deadline').length;
+  const deadlines = thisWeek.filter(e => e.type === 'deadline' || e.type === 'application').length;
   const interviews = thisWeek.filter(e => e.type === 'interview').length;
-  const other = thisWeek.length - deadlines - interviews;
+  const prepBlocks = thisWeek.filter(e => e.type === 'prep').length;
+  const other = thisWeek.length - deadlines - interviews - prepBlocks;
 
   if (thisWeek.length === 0) {
     return (
@@ -151,6 +191,12 @@ function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
             <Text style={cs.weekStatText}>{interviews} interview{interviews > 1 ? 's' : ''}</Text>
           </View>
         )}
+        {prepBlocks > 0 && (
+          <View style={cs.weekStat}>
+            <View style={[cs.weekStatDot, { backgroundColor: PURPLE }]} />
+            <Text style={cs.weekStatText}>{prepBlocks} prep block{prepBlocks > 1 ? 's' : ''}</Text>
+          </View>
+        )}
         {other > 0 && (
           <View style={cs.weekStat}>
             <View style={[cs.weekStatDot, { backgroundColor: BLUE }]} />
@@ -162,7 +208,7 @@ function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
       {thisWeek.length > 0 && (() => {
         const next = thisWeek.sort((a, b) => daysUntil(a.date) - daysUntil(b.date))[0];
         const days = daysUntil(next.date);
-        const cfg = EVENT_CONFIG[next.type];
+        const cfg = EVENT_CONFIG[next.type] || EVENT_CONFIG.custom;
         return (
           <View style={cs.weekNext}>
             <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
@@ -170,7 +216,7 @@ function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
               <Text style={{ color: cfg.color, fontWeight: '700' }}>
                 {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`}
               </Text>
-              {' — '}{next.title}
+              {' \u2014 '}{next.title}
             </Text>
           </View>
         );
@@ -242,7 +288,7 @@ function MonthGrid({ year, month, events, selectedDay, onSelectDay }: {
                 {dayEvents.length > 0 && (
                   <View style={cs.dotRow}>
                     {dayEvents.slice(0, 3).map((type, ti) => (
-                      <View key={ti} style={[cs.eventDot, { backgroundColor: EVENT_CONFIG[type].color }]} />
+                      <View key={ti} style={[cs.eventDot, { backgroundColor: (EVENT_CONFIG[type] || EVENT_CONFIG.custom).color }]} />
                     ))}
                   </View>
                 )}
@@ -255,12 +301,116 @@ function MonthGrid({ year, month, events, selectedDay, onSelectDay }: {
   );
 }
 
+// ── Reminder Toggles ──────────────────────────────────────────────────────────
+
+function ReminderToggles({ event, onUpdate }: { event: CalendarEvent; onUpdate: (days: number[]) => void }) {
+  const current = event.reminder_days || [];
+  return (
+    <View style={cs.reminderRow}>
+      <Text style={cs.reminderLabel}>REMINDERS</Text>
+      <View style={cs.reminderChips}>
+        {REMINDER_OPTIONS.map(opt => {
+          const active = current.includes(opt.days);
+          return (
+            <AnimatedPressable
+              key={opt.days}
+              style={[cs.reminderChip, active && cs.reminderChipActive]}
+              onPress={() => {
+                const next = active ? current.filter(d => d !== opt.days) : [...current, opt.days];
+                onUpdate(next);
+              }}
+              scaleDown={0.95}
+            >
+              {active && <Ionicons name="checkmark" size={10} color={BLUE} style={{ marginRight: 3 }} />}
+              <Text style={[cs.reminderChipText, active && { color: BLUE }]}>{opt.label}</Text>
+            </AnimatedPressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ── Prep Deck Modal ───────────────────────────────────────────────────────────
+
+function PrepDeckModalMobile({ deck, onClose }: { deck: PrepDeck; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const probColor: Record<string, string> = { high: CORAL, medium: AMBER, low: GREEN };
+
+  return (
+    <Modal visible animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View style={cs.modalOverlay}>
+        <View style={[cs.prepDeckSheet, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={cs.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={cs.modalTitle}>Interview Prep Deck</Text>
+              <Text style={cs.prepDeckSub}>{deck.company} - {deck.role} ({deck.track_label})</Text>
+            </View>
+            <AnimatedPressable onPress={onClose} scaleDown={0.9} hitSlop={12}>
+              <Ionicons name="close" size={20} color={colors.t2} />
+            </AnimatedPressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+            {/* Dimension gaps */}
+            {deck.dimension_gaps.length > 0 && (
+              <View style={cs.prepSection}>
+                <Text style={cs.prepSectionLabel}>YOUR GAP AREAS</Text>
+                {deck.dimension_gaps.map(g => (
+                  <View key={g.dimension} style={cs.gapCard}>
+                    <Text style={cs.gapDim}>{g.dimension}</Text>
+                    <Text style={cs.gapPts}>{g.gap} pts gap</Text>
+                    <Text style={cs.gapFocus}>{g.focus}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Company insights */}
+            <View style={cs.insightCard}>
+              <Text style={cs.insightLabel}>COMPANY INSIGHT</Text>
+              <Text style={cs.insightText}>{deck.company_insights}</Text>
+            </View>
+
+            {/* Questions */}
+            <View style={cs.prepSection}>
+              <Text style={cs.prepSectionLabel}>PREDICTED QUESTIONS ({deck.questions.length})</Text>
+              {deck.questions.map((q, i) => (
+                <View key={i} style={cs.questionCard}>
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+                    <View style={[cs.probBadge, { backgroundColor: (probColor[q.probability] || '#999') + '20' }]}>
+                      <Text style={[cs.probBadgeText, { color: probColor[q.probability] || '#999' }]}>{q.probability}</Text>
+                    </View>
+                    <View style={cs.catBadge}>
+                      <Text style={cs.catBadgeText}>{q.category}</Text>
+                    </View>
+                  </View>
+                  <Text style={cs.questionText}>{q.question}</Text>
+                  {q.why_flagged ? <Text style={cs.whyFlagged}>{q.why_flagged}</Text> : null}
+                  {q.prep_tip ? <Text style={cs.prepTip}>Tip: {q.prep_tip}</Text> : null}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ── Event Card ────────────────────────────────────────────────────────────────
 
-function EventCard({ event, onComplete, onDelete }: {
-  event: CalendarEvent; onComplete: () => void; onDelete: () => void;
+function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGeneratePrepSchedule, onViewPrepDeck, loadingPrepSchedule, loadingPrepDeck }: {
+  event: CalendarEvent;
+  onComplete: () => void;
+  onDelete: () => void;
+  onUpdateReminders: (days: number[]) => void;
+  onGeneratePrepSchedule: () => void;
+  onViewPrepDeck: () => void;
+  loadingPrepSchedule: boolean;
+  loadingPrepDeck: boolean;
 }) {
-  const cfg = EVENT_CONFIG[event.type];
+  const cfg = EVENT_CONFIG[event.type] || EVENT_CONFIG.custom;
   const days = daysUntil(event.date);
   const isUrgent = days <= 2 && days >= 0;
   const isPast = days < 0;
@@ -289,6 +439,39 @@ function EventCard({ event, onComplete, onDelete }: {
           )}
         </View>
         {event.notes ? <Text style={cs.eventNotes} numberOfLines={2}>{event.notes}</Text> : null}
+
+        {/* Reminder toggles for deadlines/interviews/applications */}
+        {(event.type === 'deadline' || event.type === 'interview' || event.type === 'application') && (
+          <ReminderToggles event={event} onUpdate={onUpdateReminders} />
+        )}
+
+        {/* Prep schedule button for interviews */}
+        {event.type === 'interview' && event.company && (
+          <AnimatedPressable
+            style={[cs.actionBtn, { backgroundColor: PURPLE + '15', borderColor: PURPLE + '30' }]}
+            onPress={onGeneratePrepSchedule}
+            scaleDown={0.97}
+          >
+            <Ionicons name="book-outline" size={12} color={PURPLE} />
+            <Text style={[cs.actionBtnText, { color: PURPLE }]}>
+              {loadingPrepSchedule ? 'Generating...' : 'Generate Prep Schedule'}
+            </Text>
+          </AnimatedPressable>
+        )}
+
+        {/* Prep deck button for interviews */}
+        {event.type === 'interview' && event.company && (
+          <AnimatedPressable
+            style={[cs.actionBtn, { backgroundColor: AMBER + '15', borderColor: AMBER + '30' }]}
+            onPress={onViewPrepDeck}
+            scaleDown={0.97}
+          >
+            <Ionicons name="reader-outline" size={12} color={AMBER} />
+            <Text style={[cs.actionBtnText, { color: AMBER }]}>
+              {loadingPrepDeck ? 'Loading...' : 'View Prep Deck'}
+            </Text>
+          </AnimatedPressable>
+        )}
       </View>
       <View style={cs.eventActions}>
         {!event.completedAt && (
@@ -408,6 +591,9 @@ export default function CalendarScreen() {
   const [loading, setLoading]       = useState(true);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showAdd, setShowAdd]       = useState(false);
+  const [prepDeck, setPrepDeck]     = useState<PrepDeck | null>(null);
+  const [loadingPrepScheduleId, setLoadingPrepScheduleId] = useState<string | null>(null);
+  const [loadingPrepDeckId, setLoadingPrepDeckId] = useState<string | null>(null);
 
   // Current month view
   const now = new Date();
@@ -430,6 +616,11 @@ export default function CalendarScreen() {
             type: (d.type as EventType) || 'deadline',
             notes: d.notes || d.prep || undefined,
             completedAt: d.completedAt || null,
+            reminder_days: Array.isArray(d.reminder_days) ? d.reminder_days : undefined,
+            prep_type: d.prep_type || undefined,
+            createdBy: d.createdBy || undefined,
+            company: d.company || undefined,
+            role: d.role || undefined,
           }));
         setEvents(mapped);
       } catch {}
@@ -448,6 +639,11 @@ export default function CalendarScreen() {
         type: e.type,
         notes: e.notes || '',
         completedAt: e.completedAt || null,
+        reminder_days: e.reminder_days || [],
+        prep_type: e.prep_type || undefined,
+        createdBy: e.createdBy || undefined,
+        company: e.company || undefined,
+        role: e.role || undefined,
       }));
       await dilly.fetch('/profile', {
         method: 'PATCH',
@@ -470,6 +666,85 @@ export default function CalendarScreen() {
       { text: 'Delete', style: 'destructive', onPress: () => saveEvents(events.filter(e => e.id !== id)) },
     ]);
   }
+
+  // Update reminders
+  const handleUpdateReminders = useCallback(async (eventId: string, reminderDays: number[]) => {
+    setEvents(prev => prev.map(e => e.id === eventId ? { ...e, reminder_days: reminderDays } : e));
+    try {
+      const res = await dilly.fetch('/profile');
+      const data = await res.json();
+      const deadlines: any[] = data?.deadlines || [];
+      const dl = deadlines.find((d: any) => d.id === eventId);
+      if (dl) {
+        dl.reminder_days = reminderDays;
+        await dilly.fetch('/profile', {
+          method: 'PATCH',
+          body: JSON.stringify({ deadlines }),
+        });
+      }
+    } catch {}
+  }, []);
+
+  // Generate prep schedule
+  const handleGeneratePrepSchedule = useCallback(async (event: CalendarEvent) => {
+    if (!event.company || !event.date) return;
+    setLoadingPrepScheduleId(event.id);
+    try {
+      const res = await dilly.fetch('/calendar/generate-prep-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interview_date: event.date,
+          company: event.company,
+          role: event.role || event.title,
+        }),
+      });
+      const data = await res.json();
+      if (data.blocks && data.blocks.length > 0) {
+        const newPrepEvents: CalendarEvent[] = data.blocks.map((b: any) => ({
+          id: b.id,
+          title: b.label,
+          date: b.date.slice(0, 10),
+          type: 'prep' as const,
+          prep_type: b.prep_type,
+          createdBy: 'dilly',
+          company: event.company,
+        }));
+        setEvents(prev => {
+          const ids = new Set(newPrepEvents.map(e => e.id));
+          const kept = prev.filter(e => !ids.has(e.id));
+          return [...kept, ...newPrepEvents];
+        });
+        Alert.alert('Prep Schedule', `${data.blocks.length} prep blocks added for ${event.company}`);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not generate prep schedule');
+    } finally {
+      setLoadingPrepScheduleId(null);
+    }
+  }, []);
+
+  // Generate prep deck
+  const handleViewPrepDeck = useCallback(async (event: CalendarEvent) => {
+    if (!event.company) return;
+    setLoadingPrepDeckId(event.id);
+    try {
+      const res = await dilly.fetch('/interview/prep-deck', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company: event.company,
+          role: event.role || event.title,
+        }),
+      });
+      const data = await res.json();
+      setPrepDeck(data);
+    } catch {
+      Alert.alert('Error', 'Could not generate prep deck');
+    } finally {
+      setLoadingPrepDeckId(null);
+    }
+  }, []);
 
   // Navigate months
   function prevMonth() {
@@ -507,6 +782,9 @@ export default function CalendarScreen() {
 
   return (
     <View style={[cs.container, { paddingTop: insets.top }]}>
+
+      {/* Prep Deck Modal */}
+      {prepDeck && <PrepDeckModalMobile deck={prepDeck} onClose={() => setPrepDeck(null)} />}
 
       {/* Nav bar */}
       <FadeInView delay={0}>
@@ -583,6 +861,11 @@ export default function CalendarScreen() {
                 event={event}
                 onComplete={() => handleComplete(event.id)}
                 onDelete={() => handleDelete(event.id)}
+                onUpdateReminders={(days) => handleUpdateReminders(event.id, days)}
+                onGeneratePrepSchedule={() => handleGeneratePrepSchedule(event)}
+                onViewPrepDeck={() => handleViewPrepDeck(event)}
+                loadingPrepSchedule={loadingPrepScheduleId === event.id}
+                loadingPrepDeck={loadingPrepDeckId === event.id}
               />
             ))
           )}
@@ -633,7 +916,7 @@ const cs = StyleSheet.create({
     backgroundColor: GOLD + '20', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2,
   },
   weekBadgeText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, color: GOLD },
-  weekStats: { flexDirection: 'row', gap: 16, marginBottom: 10 },
+  weekStats: { flexDirection: 'row', gap: 16, marginBottom: 10, flexWrap: 'wrap' },
   weekStat: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   weekStatDot: { width: 6, height: 6, borderRadius: 3 },
   weekStatText: { fontSize: 12, color: colors.t2 },
@@ -670,6 +953,26 @@ const cs = StyleSheet.create({
   gridDayNumSelected: { color: GOLD, fontWeight: '700' },
   dotRow: { flexDirection: 'row', gap: 2, marginTop: 3 },
   eventDot: { width: 4, height: 4, borderRadius: 2 },
+
+  // Reminders
+  reminderRow: { marginTop: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.b1 },
+  reminderLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1, color: colors.t3, marginBottom: 6 },
+  reminderChips: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  reminderChip: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.s3, borderRadius: 8, borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 8, paddingVertical: 5,
+  },
+  reminderChipActive: { backgroundColor: BLUE + '15', borderColor: BLUE + '30' },
+  reminderChipText: { fontSize: 10, color: colors.t3, fontWeight: '600' },
+
+  // Action buttons
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderRadius: 10, borderWidth: 1,
+    paddingVertical: 8, marginTop: 6,
+  },
+  actionBtnText: { fontSize: 11, fontWeight: '600' },
 
   // List
   listHeader: {
@@ -747,4 +1050,37 @@ const cs = StyleSheet.create({
     backgroundColor: GOLD, borderRadius: 12, paddingVertical: 14, marginTop: 6,
   },
   modalBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.5, color: '#FFFFFF' },
+
+  // Prep Deck Modal
+  prepDeckSheet: {
+    backgroundColor: colors.s1, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, paddingTop: 16, maxHeight: '90%', flex: 1,
+  },
+  prepDeckSub: { fontSize: 11, color: colors.t3, marginTop: 2 },
+  prepSection: { marginBottom: 16 },
+  prepSectionLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1.5, color: colors.t3, marginBottom: 8 },
+  gapCard: {
+    backgroundColor: CORAL + '10', borderRadius: 12, borderWidth: 1, borderColor: CORAL + '25',
+    padding: 12, marginBottom: 6,
+  },
+  gapDim: { fontSize: 13, fontWeight: '700', color: CORAL },
+  gapPts: { fontSize: 11, color: colors.t2, marginTop: 2 },
+  gapFocus: { fontSize: 11, color: colors.t3, marginTop: 4, lineHeight: 16 },
+  insightCard: {
+    backgroundColor: BLUE + '10', borderRadius: 12, borderWidth: 1, borderColor: BLUE + '25',
+    padding: 12, marginBottom: 16,
+  },
+  insightLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1.5, color: BLUE, marginBottom: 6 },
+  insightText: { fontSize: 12, color: colors.t2, lineHeight: 18 },
+  questionCard: {
+    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+    padding: 12, marginBottom: 6,
+  },
+  probBadge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  probBadgeText: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  catBadge: { backgroundColor: colors.s3, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  catBadgeText: { fontSize: 9, fontWeight: '600', color: colors.t3 },
+  questionText: { fontSize: 14, fontWeight: '600', color: colors.t1, lineHeight: 20 },
+  whyFlagged: { fontSize: 11, color: AMBER, marginTop: 6 },
+  prepTip: { fontSize: 11, color: colors.t3, marginTop: 4, lineHeight: 16 },
 });
