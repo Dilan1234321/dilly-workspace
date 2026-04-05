@@ -1134,3 +1134,81 @@ async def mock_interview_turn(request: Request, body: dict = Body(...)):
         return JSONResponse(content={"error": "Invalid response format."}, status_code=500)
     except Exception as exc:
         return JSONResponse(content={"error": str(exc)[:200]}, status_code=500)
+
+
+@router.post("/voice/execute-action")
+async def execute_action_endpoint(request: Request):
+    """Execute a dilly_agent action from desktop AI tools.
+
+    Accepts: { action: str, data: dict }
+    Returns: { success: bool, message: str, data?: dict }
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(
+            content={"success": False, "message": "Invalid JSON body."},
+            status_code=400,
+        )
+
+    action = str(body.get("action") or "").strip()
+    params = body.get("data") if isinstance(body.get("data"), dict) else {}
+
+    if not action:
+        return JSONResponse(
+            content={"success": False, "message": "Missing 'action' field."},
+            status_code=400,
+        )
+
+    from projects.dilly.api.dilly_agent.action_types import ALL_ACTIONS
+
+    if action.upper() not in ALL_ACTIONS:
+        return JSONResponse(
+            content={"success": False, "message": f"Unknown action: {action}"},
+            status_code=400,
+        )
+
+    try:
+        result = execute_action(
+            action=action,
+            extracted_data=params,
+            uid=email,
+            conv_id="desktop",
+            confirmed=bool(body.get("confirmed", False)),
+        )
+    except Exception as exc:
+        return JSONResponse(
+            content={"success": False, "message": f"Action failed: {str(exc)[:200]}"},
+            status_code=500,
+        )
+
+    if isinstance(result, dict) and result.get("guarded"):
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": result.get("reason", "Action requires confirmation."),
+                "data": result,
+            },
+        )
+
+    if isinstance(result, dict) and result.get("skipped"):
+        return JSONResponse(
+            content={
+                "success": False,
+                "message": result.get("reason", "Action skipped."),
+                "data": result,
+            },
+        )
+
+    return JSONResponse(
+        content={
+            "success": True,
+            "message": f"Action {action} executed successfully.",
+            "data": result if isinstance(result, dict) else {},
+        },
+    )

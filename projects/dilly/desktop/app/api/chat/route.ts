@@ -30,21 +30,28 @@ export async function POST(req: Request) {
 
   const richContext = await fetchRichContext(authToken);
 
+  // When context loading fails, inject a notice so the model knows responses may be less personalized.
+  const contextFailed = !richContext || !!(richContext as unknown as Record<string, unknown>)?._contextError;
+  const contextNotice = contextFailed
+    ? "\n\nNote: Could not load your full profile. Responses may be less personalized."
+    : "";
+
   const system = buildSystemPrompt(
     mode,
-    richContext,
+    contextFailed ? null : richContext,
     richContext?.dilly_narrative ?? undefined,
-  );
+  ) + contextNotice;
 
   const tools = buildTools(authToken);
 
-  // AI Gateway model string. Run `vercel link && vercel env pull` for OIDC credentials.
-  const model = "anthropic/claude-sonnet-4.6";
+  // AI Gateway model string (resolves to same model as claude-sonnet-4-20250514 in the API).
+  // Run `vercel link && vercel env pull` for OIDC credentials.
+  const model = "anthropic/claude-sonnet-4-6";
 
   const result = streamText({
     model,
     system,
-    messages: await convertToModelMessages(messages),
+    messages: (await convertToModelMessages(messages)).slice(-30),
     tools,
     stopWhen: stepCountIs(5),
     onFinish: async ({ toolCalls }) => {

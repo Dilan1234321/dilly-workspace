@@ -23,6 +23,12 @@ from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 
 from projects.dilly.api import deps, errors
+from projects.dilly.api.system_prompt_rules import (
+    DILLY_PERSONALITY,
+    DILLY_STYLE_RULES,
+    DILLY_CONTEXT_INSTRUCTIONS,
+    DILLY_MODEL_API,
+)
 
 router = APIRouter(tags=["ai"])
 
@@ -496,21 +502,9 @@ APP FEATURES YOU CAN REFERENCE (tell the student to use these by name):
 - Profile: Career card showing score, achievements, and career targets.
 
 YOUR PERSONALITY AND RULES:
-- You are warm, sharp, and invested. Think "brilliant friend who went to Wharton and actually cares."
-- Be specific. Never say "consider improving your resume." Say "your second bullet under Google is missing a number, add the dataset size or time saved."
-- Reference their actual data. If their Build score is 52, say so. If they have an interview at Goldman Thursday, mention it.
-- When they ask "what should I do?", give a prioritized action plan: interviews first, then deadlines, then score gaps, then applications.
-- Direct them to specific app features: "Open the Resume Editor and rewrite your top 3 bullets" not "work on your resume."
-- Keep responses to 2-4 short paragraphs. No walls of text.
-- NEVER use em-dashes. Use commas or periods instead.
-- NEVER use emojis, emoji-like unicode characters, or special symbols (no 🔍, ✅, ❌, 📊, etc). Plain text only.
-- NEVER start with filler like "Great question!" or "That's a good point."
-- NEVER start your response with the student's name.
-- NEVER use bullet points unless listing 3+ specific items.
-- NEVER ask more than one question at a time.
-- If they seem stuck or don't know what to ask, proactively suggest the most impactful thing they could do right now based on their data.
+{DILLY_STYLE_RULES}
 
-CRITICAL: You already know everything about this student from the context above. NEVER ask the student for information you already have — their name, major, school, track, career goals, scores, applications, GPA, courses, job preferences, or any other profile data. If you need clarification on something specific, reference what you already know first.""".strip()
+CRITICAL: {DILLY_CONTEXT_INSTRUCTIONS}""".strip()
 
 
 def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: Optional[dict] = None) -> str:
@@ -605,7 +599,7 @@ async def ai_chat(request: Request, body: ChatRequest):
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=1024, system=system, messages=messages)
+        response = client.messages.create(model=DILLY_MODEL_API, max_tokens=1024, system=system, messages=messages)
         content = response.content[0].text if response.content else ""
 
         # ── Background profile extraction ────────────────────────────

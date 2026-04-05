@@ -148,7 +148,7 @@ async function generateRewrites(
 
   for (const bullet of weakBullets.slice(0, 5)) {
     const { text } = await generateText({
-      model: "anthropic/claude-sonnet-4.6",
+      model: "anthropic/claude-sonnet-4-6",
       prompt: `Rewrite this resume bullet to score higher. Add specific metrics, numbers, and impact. Keep it to one line (under 120 characters).
 
 Original (score ${bullet.score}/100): "${bullet.text}"

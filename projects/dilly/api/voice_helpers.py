@@ -11,6 +11,10 @@ import time
 from typing import Any
 
 from projects.dilly.api.output_safety import REDIRECT_MESSAGE
+from projects.dilly.api.system_prompt_rules import (
+    DILLY_STYLE_RULES,
+    DILLY_CONTEXT_INSTRUCTIONS,
+)
 
 # Prompt constants and cohort expertise extracted to voice_prompt_constants.py
 from projects.dilly.api.voice_prompt_constants import (

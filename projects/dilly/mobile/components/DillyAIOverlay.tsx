@@ -188,7 +188,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     // Paid user — no limits
     await incrementAIMessage();
     const userMsg: Message = { id: ++_msgId, role: 'user', content: text };
-    const apiHistory = [...currentMessages, userMsg].map(m => ({ role: m.role, content: m.content }));
+    const apiHistory = [...currentMessages, userMsg].map(m => ({ role: m.role, content: m.content })).slice(-30);
     const newHistory: Message[] = [...currentMessages, userMsg];
     setMessages(newHistory);
     setInput('');

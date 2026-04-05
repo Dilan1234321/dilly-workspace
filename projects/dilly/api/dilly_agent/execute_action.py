@@ -19,6 +19,15 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _safe_save_profile(uid: str, data: dict[str, Any]) -> bool:
+    """Save profile data, returning True on success, False on failure."""
+    try:
+        save_profile(uid, data)
+        return True
+    except Exception:
+        return False
+
+
 def _safe_date(iso: str) -> date | None:
     try:
         return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).date()
@@ -31,13 +40,46 @@ def _deadline_exists(deadlines: list[dict[str, Any]], label: str) -> bool:
     return any(" ".join(str(d.get("label") or "").strip().lower().split()) == key for d in deadlines if isinstance(d, dict))
 
 
+def _normalize_company(name: str) -> str:
+    """Normalize company name for fuzzy matching: strip suffixes, lowercase, collapse whitespace."""
+    n = " ".join(str(name or "").strip().lower().split())
+    # Strip common corporate suffixes
+    for suffix in (" inc", " inc.", " llc", " llc.", " ltd", " ltd.", " corp", " corp.",
+                    " corporation", " co", " co.", " group", " holdings", " partners",
+                    " & co", " & co.", " plc", " plc."):
+        if n.endswith(suffix):
+            n = n[: -len(suffix)].strip()
+    return n
+
+
+def _company_fuzzy_match(a: str, b: str) -> bool:
+    """Check if two company names match fuzzily."""
+    na = _normalize_company(a)
+    nb = _normalize_company(b)
+    if not na or not nb:
+        return False
+    # Exact match after normalization
+    if na == nb:
+        return True
+    # One contains the other (e.g. "Goldman" matches "Goldman Sachs")
+    if na in nb or nb in na:
+        return True
+    return False
+
+
 def _application_exists(apps: list[dict[str, Any]], company: str, role: str) -> bool:
     c = " ".join(str(company or "").strip().lower().split())
     r = " ".join(str(role or "").strip().lower().split())
     for app in apps:
         if not isinstance(app, dict):
             continue
-        if " ".join(str(app.get("company") or "").strip().lower().split()) == c and " ".join(str(app.get("role") or "").strip().lower().split()) == r:
+        app_company = " ".join(str(app.get("company") or "").strip().lower().split())
+        app_role = " ".join(str(app.get("role") or "").strip().lower().split())
+        # Exact match
+        if app_company == c and app_role == r:
+            return True
+        # Fuzzy company match with exact role
+        if _company_fuzzy_match(app_company, c) and app_role == r:
             return True
     return False
 
@@ -66,7 +108,8 @@ def execute_action(action: str, extracted_data: dict[str, Any], uid: str, conv_i
             return {"skipped": True, "reason": "Duplicate deadline."}
         row = {"id": str(uuid.uuid4()), "label": label, "date": date_iso, "createdBy": "voice", "source": "voice", "completedAt": None}
         deadlines.append(row)
-        save_profile(uid, {"deadlines": deadlines})
+        if not _safe_save_profile(uid, {"deadlines": deadlines}):
+            return {"skipped": True, "reason": "Failed to save deadline. Try again."}
         return row
 
     if a == "CREATE_SUB_DEADLINE":
@@ -177,7 +220,8 @@ def execute_action(action: str, extracted_data: dict[str, Any], uid: str, conv_i
         goal = str(data.get("career_goal") or data.get("value") or "").strip()
         if not goal:
             return {"skipped": True, "reason": "Missing career goal."}
-        save_profile(uid, {"career_goal": goal})
+        if not _safe_save_profile(uid, {"career_goal": goal}):
+            return {"skipped": True, "reason": "Failed to save career goal. Try again."}
         return {"career_goal": goal}
 
     if a == "ADD_TARGET_COMPANY":
@@ -227,14 +271,16 @@ def execute_action(action: str, extracted_data: dict[str, Any], uid: str, conv_i
         major = str(data.get("major") or data.get("value") or "").strip()
         if not major:
             return {"skipped": True, "reason": "Missing major."}
-        save_profile(uid, {"major": major})
+        if not _safe_save_profile(uid, {"major": major}):
+            return {"skipped": True, "reason": "Failed to save major. Try again."}
         return {"major": major}
 
     if a == "UPDATE_TRACK":
         track = str(data.get("track") or data.get("value") or "").strip()
         if not track:
             return {"skipped": True, "reason": "Missing track."}
-        save_profile(uid, {"track": track})
+        if not _safe_save_profile(uid, {"track": track}):
+            return {"skipped": True, "reason": "Failed to save track. Try again."}
         return {"track": track}
 
     if a == "UPDATE_JOB_LOCATIONS":
@@ -244,7 +290,8 @@ def execute_action(action: str, extracted_data: dict[str, Any], uid: str, conv_i
         if not isinstance(locs, list):
             return {"skipped": True, "reason": "Missing job_locations."}
         cleaned = [str(x).strip() for x in locs if str(x).strip()]
-        save_profile(uid, {"job_locations": cleaned})
+        if not _safe_save_profile(uid, {"job_locations": cleaned}):
+            return {"skipped": True, "reason": "Failed to save job locations. Try again."}
         return {"job_locations": cleaned}
 
     if a == "UPDATE_APPLICATION_TARGET":
@@ -252,7 +299,8 @@ def execute_action(action: str, extracted_data: dict[str, Any], uid: str, conv_i
         label = str(data.get("application_target_label") or "").strip() or None
         if not target:
             return {"skipped": True, "reason": "Missing application target."}
-        save_profile(uid, {"application_target": target, "application_target_label": label})
+        if not _safe_save_profile(uid, {"application_target": target, "application_target_label": label}):
+            return {"skipped": True, "reason": "Failed to save application target. Try again."}
         return {"application_target": target, "application_target_label": label}
 
     if a == "CREATE_APPLICATION":

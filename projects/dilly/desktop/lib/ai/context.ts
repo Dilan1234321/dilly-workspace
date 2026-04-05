@@ -82,19 +82,25 @@ export interface RichContext {
   graduation_year?: string | number;
 }
 
-/** Fetch rich context server-side before calling streamText. */
+/** Fetch rich context server-side before calling streamText.
+ *  Returns context with an optional `_contextError` field when the fetch fails
+ *  so callers can inject a degraded-experience notice. */
 export async function fetchRichContext(
   authToken: string,
-): Promise<RichContext | null> {
+): Promise<(RichContext & { _contextError?: string }) | null> {
   try {
     const res = await fetch(`${API_BASE}/ai/context`, {
       headers: { Authorization: `Bearer ${authToken}` },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`[context] /ai/context returned ${res.status}: ${await res.text().catch(() => "")}`);
+      return { _contextError: `Context API returned ${res.status}` } as RichContext & { _contextError: string };
+    }
     return (await res.json()) as RichContext;
-  } catch {
-    return null;
+  } catch (err) {
+    console.error("[context] Failed to fetch rich context:", err);
+    return { _contextError: String(err) } as RichContext & { _contextError: string };
   }
 }
 
