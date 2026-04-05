@@ -4,6 +4,8 @@
 .env*.local
 node_modules
 .claude/
+__pycache__/
+*.pyc
 
 # Database files (local data, not for version control)
 dilly_database.json
