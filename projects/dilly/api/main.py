@@ -70,25 +70,11 @@ app = FastAPI(
 
 
 from projects.dilly.api import deps
-
-# Default origins when CORS_ORIGINS is unset. 3000 = internal dashboard (projects/dilly/dashboard);
-# 3001 = student-facing app (projects/dilly/student). If you set CORS_ORIGINS, include every origin you need (additive in your env list).
-_CORS_ORIGINS = [
-    o.strip() for o in (os.environ.get("CORS_ORIGINS") or "").split(",") if o.strip()
-] or [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:3002",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-    "http://127.0.0.1:3002",
-    "https://trydilly.com",
-    "https://www.trydilly.com",
-]
+from projects.dilly.api.config import config
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_CORS_ORIGINS,
+    allow_origins=config.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -255,20 +241,18 @@ async def _catch_all(request: Request, exc: Exception):
 
 
 # Report PDF cleanup on startup (remove expired files)
-_REPORTS_DIR = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_reports")
-_REPORT_EXPIRY_DAYS = 7
-_REPORT_EXPIRY_SEC = _REPORT_EXPIRY_DAYS * 86400
+_REPORT_EXPIRY_SEC = config.report_expiry_days * 86400
 
 
 def _reports_cleanup() -> None:
     """Remove report PDFs older than expiry."""
-    if not os.path.isdir(_REPORTS_DIR):
+    if not os.path.isdir(config.reports_dir):
         return
     now = time.time()
-    for name in os.listdir(_REPORTS_DIR):
+    for name in os.listdir(config.reports_dir):
         if not name.endswith(".pdf"):
             continue
-        path = os.path.join(_REPORTS_DIR, name)
+        path = os.path.join(config.reports_dir, name)
         try:
             if now - os.path.getmtime(path) > _REPORT_EXPIRY_SEC:
                 os.remove(path)
@@ -279,12 +263,11 @@ def _reports_cleanup() -> None:
 @app.on_event("startup")
 def _on_startup() -> None:
     _reports_cleanup()
-    # So operators know where to put RECRUITER_API_KEY and if it loaded
-    recruiter_key_set = bool((os.environ.get("RECRUITER_API_KEY") or "").strip())
+    recruiter_key_set = bool(config.recruiter_api_key.strip())
     print(f"[API] .env loaded from: {_ENV_PATH}", flush=True)
     print(f"[API] RECRUITER_API_KEY: {'set' if recruiter_key_set else 'NOT SET (add to .env and restart)'}", flush=True)
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=config.api_host, port=config.api_port)

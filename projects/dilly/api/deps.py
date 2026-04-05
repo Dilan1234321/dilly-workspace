@@ -113,15 +113,16 @@ async def require_internal_key(request: Request) -> None:
     cron callers keep working without code changes.
     """
     from fastapi import HTTPException
+    from projects.dilly.api.config import config
 
     key = (request.headers.get("X-Internal-Key") or "").strip()
-    expected = (os.environ.get("DILLY_INTERNAL_KEY") or "").strip()
+    expected = config.internal_api_key.strip()
 
     # Also honour the legacy CRON_SECRET for backwards compatibility
     if not key:
         key = (request.headers.get("x-cron-secret") or "").strip()
     if not expected:
-        expected = (os.environ.get("CRON_SECRET") or "").strip()
+        expected = config.cron_secret.strip()
 
     if not expected or key != expected:
         raise HTTPException(status_code=403, detail="Internal endpoint")
@@ -129,9 +130,11 @@ async def require_internal_key(request: Request) -> None:
 
 def is_dev_allowed(request: Request) -> bool:
     """True when DILLY_DEV=1, localhost, or by default (pay-button bypass). Set DILLY_DEV_UNLOCK=0 in prod to require real payment."""
-    if os.environ.get("DILLY_DEV_UNLOCK", "1").strip().lower() in ("0", "false", "no"):
+    from projects.dilly.api.config import config
+
+    if not config.dev_unlock:
         return False
-    if os.environ.get("DILLY_DEV", "").strip().lower() in ("1", "true", "yes"):
+    if config.dev_mode:
         return True
     client = request.client
     if client and client.host in ("127.0.0.1", "localhost", "::1"):
