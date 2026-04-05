@@ -87,7 +87,7 @@ function getResponseSuggestions(text: string): string[] {
   if (t.includes('smart') || t.includes('academic') || t.includes('gpa')) chips.push('How do I raise my Smart score?');
   if (t.includes('grit') || t.includes('leadership') || t.includes('club')) chips.push('What builds Grit fastest?');
   if (t.includes('build') || t.includes('project') || t.includes('portfolio')) chips.push('What project should I build?');
-  if (t.includes('interview')) chips.push('Give me a mock interview question');
+  if (t.includes('interview')) chips.push('Help me prep for my interview');
   if (t.includes('apply') || t.includes('internship') || t.includes('company')) chips.push('Where should I apply first?');
   if (t.includes('linkedin')) chips.push('How do I optimize my LinkedIn?');
   if (t.includes('network') || t.includes('recruiter') || t.includes('coffee')) chips.push('How do I reach out to recruiters?');

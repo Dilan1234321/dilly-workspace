@@ -11,7 +11,7 @@ const GREEN = '#34C759';
 const PRICING_URL = 'https://hellodilly.com/pricing.html';
 
 const FEATURES = [
-  { icon: 'chatbubble-ellipses', label: 'Unlimited Dilly AI', sub: 'Coaching, interview prep, mock interviews' },
+  { icon: 'chatbubble-ellipses', label: 'Unlimited Dilly AI', sub: 'Coaching and interview prep' },
   { icon: 'document-text', label: 'Unlimited Audits', sub: 'Re-score every time you improve your resume' },
   { icon: 'shield-checkmark', label: 'ATS Compatibility', sub: 'Scan against every major ATS system' },
   { icon: 'git-compare', label: 'Gap Analysis', sub: 'Smart/Grit/Build breakdown per job listing' },

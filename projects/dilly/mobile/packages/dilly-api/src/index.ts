@@ -77,8 +77,6 @@ export type {
   VisualType,
   VoiceConversation,
   VoiceConvo,
-  VoiceMockTurn,
-  VoiceMockTurnDisplay,
   VoiceTone,
 } from "./types";
 

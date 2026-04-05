@@ -91,40 +91,6 @@ export type AuditHistorySummaryRow = {
 
 // ─── Voice / Chat ─────────────────────────────────────────────────────────
 
-/** In-chat mock-interview assistant turn — richer display type for Voice. */
-export type VoiceMockTurnDisplay =
-  | {
-      kind: "question";
-      number: number;
-      total: number;
-      text: string;
-    }
-  | {
-      kind: "feedback";
-      questionNumber: number;
-      total: number;
-      score: number | null;
-      label: string | null;
-      feedback: string | null;
-      strengths: string[];
-      improvements: string[];
-      nextQuestion: string | null;
-      isFinal: boolean;
-      sessionScore: number | null;
-    }
-  | {
-      kind: "complete";
-      sessionScore: number | null;
-      summaryLines: string[];
-    };
-
-/** Simple message type used by the older mock-interview API. */
-export interface VoiceMockTurn {
-  type: "question" | "answer" | "feedback" | "complete";
-  content: string;
-  score?: number;
-}
-
 export type ChatMode = "coaching" | "practice";
 
 /** One message inside a VoiceConvo. */
@@ -132,7 +98,6 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   ts?: number;
-  mockTurn?: VoiceMockTurnDisplay;
 }
 
 /** A persisted Voice conversation (GET /voice/history). */
