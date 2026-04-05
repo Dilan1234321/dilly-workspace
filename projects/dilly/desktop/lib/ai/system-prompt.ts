@@ -91,6 +91,121 @@ function buildRichPrompt(r: RichContext, narrative?: string): string {
 
   const memoryBlock = narrative ? `WHAT YOU KNOW FROM PAST CONVERSATIONS:\n${narrative}` : "";
 
+  // ── Academic profile block ──────────────────────────────────
+  const academicParts: string[] = [];
+  if (r.transcript_gpa) academicParts.push(`GPA: ${r.transcript_gpa}`);
+  if (r.graduation_year) academicParts.push(`Graduation year: ${r.graduation_year}`);
+  if (r.preProfessional) {
+    const label = typeof r.preProfessional === "string" ? r.preProfessional : "Yes";
+    academicParts.push(`Pre-professional track: ${label}`);
+  }
+  if (r.target_school) academicParts.push(`Target graduate/professional school: ${r.target_school}`);
+  if (r.transcript_courses?.length)
+    academicParts.push(`Key courses: ${r.transcript_courses.slice(0, 10).join(", ")}`);
+  if (r.transcript_honors?.length)
+    academicParts.push(`Honors/Awards: ${r.transcript_honors.slice(0, 10).join(", ")}`);
+  const academicBlock = academicParts.length
+    ? "ACADEMIC PROFILE:\n" + academicParts.map((p) => `  - ${p}`).join("\n")
+    : "";
+
+  // ── Beyond resume block ─────────────────────────────────────
+  const brLines: string[] = [];
+  if (r.beyond_resume?.length) {
+    const byType: Record<string, string[]> = {};
+    for (const item of r.beyond_resume) {
+      const t = (item.type || "other").toLowerCase();
+      const text = (item.text || "").trim().slice(0, 120);
+      if (text) {
+        if (!byType[t]) byType[t] = [];
+        byType[t].push(text);
+      }
+    }
+    const typeLabels: [string, string][] = [
+      ["skill", "Skills"],
+      ["project", "Projects"],
+      ["experience", "Experiences"],
+      ["person", "People mentioned"],
+      ["company", "Companies"],
+      ["other", "Other"],
+    ];
+    for (const [tName, label] of typeLabels) {
+      if (byType[tName]?.length) brLines.push(`  - ${label}: ${byType[tName].slice(0, 15).join(", ")}`);
+    }
+  }
+  if (r.experience_expansion?.length) {
+    for (const entry of r.experience_expansion.slice(0, 6)) {
+      const role = (entry.role_label || "").trim();
+      const org = (entry.organization || "").trim();
+      const labelExp = org ? `${role} at ${org}` : role;
+      if (!labelExp) continue;
+      const sub: string[] = [];
+      if (entry.skills?.length) sub.push("skills: " + entry.skills.slice(0, 10).join(", "));
+      if (entry.tools_used?.length) sub.push("tools: " + entry.tools_used.slice(0, 10).join(", "));
+      if (sub.length) brLines.push(`  - ${labelExp}: ${sub.join("; ")}`);
+    }
+  }
+  const beyondBlock = brLines.length
+    ? "BEYOND THE RESUME (captured skills, tools, projects from conversations):\n" + brLines.join("\n")
+    : "";
+
+  // ── Preferences block ───────────────────────────────────────
+  const prefParts: string[] = [];
+  if (r.job_locations?.length) prefParts.push(`Preferred work locations: ${r.job_locations.slice(0, 8).join(", ")}`);
+  if (r.job_location_scope) prefParts.push(`Location scope: ${r.job_location_scope}`);
+  if (r.voice_biggest_concern) prefParts.push(`Biggest concern: ${r.voice_biggest_concern.slice(0, 200)}`);
+  const prefBlock = prefParts.length
+    ? "PREFERENCES:\n" + prefParts.map((p) => `  - ${p}`).join("\n")
+    : "";
+
+  // ── Achievements block ──────────────────────────────────────
+  const achievementsBlock =
+    r.achievements?.length
+      ? `UNLOCKED ACHIEVEMENTS: ${r.achievements.slice(0, 15).join(", ")}. Celebrate these when relevant.`
+      : "";
+
+  // ── Cohort expertise block ──────────────────────────────────
+  const COHORT_EXPERTISE: Record<string, string> = {
+    "Software Engineering & CS":
+      "You know algorithmic complexity, data structures, system design (CAP theorem, microservices), core languages (Python, Java, Go, TypeScript, C++), modern frameworks, DevOps, and FAANG hiring bars.",
+    "Data Science & Analytics":
+      "You know the full DS stack (pandas, scikit-learn, PyTorch, SQL), ML fundamentals, deep learning architectures, cloud ML platforms, and data engineering tools.",
+    "Finance & Accounting":
+      "You know financial modeling (DCF, LBO, comps), valuation, corporate finance, accounting standards (GAAP/IFRS), and recruiting paths (IB, PE, AM, corp finance).",
+    "Consulting & Strategy":
+      "You know case interview frameworks, market sizing, profitability cases, MBB vs Big 4 vs boutique, and consulting career ladders.",
+    "Management & Operations":
+      "You know operations management, supply chain, project management frameworks, and general management recruiting.",
+    "Life Sciences & Research":
+      "You know wet lab techniques (PCR, Western blot, CRISPR), computational biology tools, research hierarchy, and career tracks (PhD, industry R&D, regulatory).",
+    "Healthcare & Clinical":
+      "You know pre-med paths (MCAT, clinical hours, research), healthcare administration, public health careers, and medical school admissions.",
+    "Law & Government":
+      "You know pre-law paths (LSAT, personal statement, public interest vs biglaw), government careers, policy analysis, and law school admissions.",
+    "Media & Communications":
+      "You know journalism, PR, digital marketing, social media strategy, content creation, and media industry recruiting.",
+    "Education":
+      "You know teaching certifications, EdTech careers, curriculum design, and education policy paths.",
+    "Design & Creative Arts":
+      "You know UX/UI design tools (Figma, Sketch), portfolio requirements, design thinking, and creative industry recruiting.",
+  };
+  const trackToRich: Record<string, string> = {
+    Tech: "Software Engineering & CS",
+    Finance: "Finance & Accounting",
+    Consulting: "Consulting & Strategy",
+    Business: "Management & Operations",
+    Science: "Life Sciences & Research",
+    "Pre-Health": "Healthcare & Clinical",
+    "Pre-Law": "Law & Government",
+    Communications: "Media & Communications",
+    Education: "Education",
+    Arts: "Design & Creative Arts",
+  };
+  const richCohort = trackToRich[r.cohort] || "";
+  const expertiseText = richCohort ? COHORT_EXPERTISE[richCohort] : "";
+  const cohortExpertiseBlock = expertiseText
+    ? `FIELD EXPERTISE:\nYou have deep expertise in ${richCohort}. ${expertiseText}`
+    : "";
+
   return `You are Dilly, an AI career coach embedded in a career acceleration app for college students. You are not just a chatbot. You are the student's personal career strategist who can see their entire dashboard.
 
 You have tools available to take actions on behalf of the student. When the student asks you to do something (add a deadline, track an application, run an audit, etc.), USE YOUR TOOLS to do it. Don't just tell them how, actually do it for them.
@@ -100,6 +215,7 @@ ${r.pronouns ? `Pronouns: ${r.pronouns}` : ""}
 School: ${r.school}
 Major: ${r.major}${r.minor ? `, Minor: ${r.minor}` : ""}
 Cohort: ${r.cohort}
+${r.graduation_year ? `Graduation: ${r.graduation_year}` : ""}
 ${r.tagline ? `Tagline: ${r.tagline}` : ""}
 
 ${scoreBlock}
@@ -115,6 +231,16 @@ ${historyBlock}
 ${resumeBlock}
 
 ${memoryBlock}
+
+${academicBlock}
+
+${beyondBlock}
+
+${prefBlock}
+
+${achievementsBlock}
+
+${cohortExpertiseBlock}
 
 APP FEATURES YOU CAN REFERENCE:
 - Resume Editor: Edit resume sections with live bullet scoring (0-100 per bullet).
@@ -134,5 +260,7 @@ YOUR PERSONALITY AND RULES:
 - NEVER use em-dashes, emojis, or filler phrases.
 - NEVER start with the student's name.
 - NEVER use bullet points unless listing 3+ items.
-- NEVER ask more than one question at a time.`.trim();
+- NEVER ask more than one question at a time.
+
+CRITICAL: You already know everything about this student from the context above. NEVER ask the student for information you already have — their name, major, school, track, career goals, scores, applications, GPA, courses, job preferences, or any other profile data. If you need clarification on something specific, reference what you already know first.`.trim();
 }

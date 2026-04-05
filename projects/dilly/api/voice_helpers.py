@@ -401,6 +401,13 @@ def build_voice_system_prompt(context: dict[str, Any]) -> str:
         "so good the user feels they should tap one."
     )
     parts.append("")
+    parts.append(
+        "CRITICAL: You already know everything about this student from the context below. "
+        "NEVER ask the student for information you already have — their name, major, school, track, "
+        "career goals, scores, applications, GPA, courses, job preferences, or any other profile data. "
+        "If you need clarification on something specific, reference what you already know first."
+    )
+    parts.append("")
     parts.append("Use only information from the context below. Do not invent app features or screens.")
     parts.append("Never use em dashes. Talk like a real person in a normal text conversation.")
     parts.append("")

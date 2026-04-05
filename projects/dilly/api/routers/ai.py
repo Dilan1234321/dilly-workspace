@@ -160,6 +160,24 @@ def _build_rich_context(email: str) -> dict:
     has_resume = len(resume_text.strip()) > 50
     has_editor_resume = False
 
+    # ── New context fields from voice/profile ──────────────────────
+    beyond_resume = profile.get("beyond_resume") or []
+    experience_expansion = profile.get("experience_expansion") or []
+    transcript_gpa = profile.get("transcript_gpa")
+    transcript_courses = profile.get("transcript_courses") or []
+    transcript_honors = profile.get("transcript_honors") or []
+    job_locations = profile.get("job_locations") or []
+    job_location_scope = profile.get("job_location_scope") or ""
+    target_school = profile.get("target_school") or ""
+    voice_onboarding_answers = profile.get("voice_onboarding_answers") or []
+    voice_biggest_concern = profile.get("voice_biggest_concern") or ""
+    pre_professional = profile.get("preProfessional") or profile.get("pre_professional_track") or False
+    graduation_year = profile.get("graduation_year") or profile.get("grad_year") or ""
+
+    # Achievements — unlocked achievement names
+    achievements_raw = profile.get("achievements") or {}
+    unlocked_achievements = [k for k, v in achievements_raw.items() if isinstance(v, dict) and v.get("unlockedAt")] if isinstance(achievements_raw, dict) else []
+
     # Dilly Profile facts — everything Dilly has learned about this user
     profile_facts_text = ""
     try:
@@ -233,6 +251,19 @@ def _build_rich_context(email: str) -> dict:
         "resume_snippet": resume_text[:5000] if resume_text else "",
         "nudges": nudges,
         "profile_facts_text": profile_facts_text,
+        "beyond_resume": beyond_resume,
+        "experience_expansion": experience_expansion,
+        "transcript_gpa": transcript_gpa,
+        "transcript_courses": transcript_courses,
+        "transcript_honors": transcript_honors,
+        "job_locations": job_locations,
+        "job_location_scope": job_location_scope,
+        "target_school": target_school,
+        "voice_onboarding_answers": voice_onboarding_answers,
+        "voice_biggest_concern": voice_biggest_concern,
+        "achievements": unlocked_achievements,
+        "preProfessional": pre_professional,
+        "graduation_year": graduation_year,
     }
 
 
@@ -319,6 +350,119 @@ def _build_rich_system_prompt(r: dict) -> str:
 {profile_facts}
 """
 
+    # ── Academic profile block ────────────────────────────────────
+    academic_parts: list[str] = []
+    if r.get("transcript_gpa"):
+        academic_parts.append(f"GPA: {r['transcript_gpa']}")
+    if r.get("graduation_year"):
+        academic_parts.append(f"Graduation year: {r['graduation_year']}")
+    if r.get("preProfessional"):
+        pre = r["preProfessional"]
+        label = pre if isinstance(pre, str) else "Yes"
+        academic_parts.append(f"Pre-professional track: {label}")
+    if r.get("target_school"):
+        academic_parts.append(f"Target graduate/professional school: {r['target_school']}")
+    if r.get("transcript_courses"):
+        academic_parts.append(f"Key courses: {', '.join(str(c) for c in r['transcript_courses'][:10])}")
+    if r.get("transcript_honors"):
+        academic_parts.append(f"Honors/Awards: {', '.join(str(h) for h in r['transcript_honors'][:10])}")
+    academic_block = ""
+    if academic_parts:
+        academic_block = "ACADEMIC PROFILE:\n" + "\n".join(f"  - {p}" for p in academic_parts) + "\n"
+
+    # ── Beyond resume block ───────────────────────────────────────
+    beyond_block = ""
+    beyond_resume = r.get("beyond_resume") or []
+    experience_expansion = r.get("experience_expansion") or []
+    if beyond_resume or experience_expansion:
+        br_lines: list[str] = []
+        if beyond_resume:
+            by_type: dict[str, list[str]] = {}
+            for item in beyond_resume:
+                if not isinstance(item, dict):
+                    continue
+                t = (item.get("type") or "other").strip().lower()
+                text = (item.get("text") or "").strip()[:120]
+                if text:
+                    by_type.setdefault(t, []).append(text)
+            for t_name, label in [("skill", "Skills"), ("project", "Projects"), ("experience", "Experiences"), ("person", "People mentioned"), ("company", "Companies"), ("other", "Other")]:
+                if t_name in by_type:
+                    br_lines.append(f"  - {label}: {', '.join(by_type[t_name][:15])}")
+        if experience_expansion:
+            for entry in experience_expansion[:6]:
+                if not isinstance(entry, dict):
+                    continue
+                role = (entry.get("role_label") or "").strip()
+                org = (entry.get("organization") or "").strip()
+                label_exp = f"{role} at {org}" if org else role
+                if not label_exp:
+                    continue
+                sub: list[str] = []
+                skills = [s for s in (entry.get("skills") or []) if s][:10]
+                tools = [t for t in (entry.get("tools_used") or []) if t][:10]
+                if skills:
+                    sub.append("skills: " + ", ".join(str(s) for s in skills))
+                if tools:
+                    sub.append("tools: " + ", ".join(str(t) for t in tools))
+                if sub:
+                    br_lines.append(f"  - {label_exp}: {'; '.join(sub)}")
+        if br_lines:
+            beyond_block = "BEYOND THE RESUME (captured skills, tools, projects from conversations):\n" + "\n".join(br_lines) + "\n"
+
+    # ── Preferences block ─────────────────────────────────────────
+    pref_parts: list[str] = []
+    if r.get("job_locations"):
+        pref_parts.append(f"Preferred work locations: {', '.join(str(l) for l in r['job_locations'][:8])}")
+    if r.get("job_location_scope"):
+        pref_parts.append(f"Location scope: {r['job_location_scope']}")
+    if r.get("voice_biggest_concern"):
+        pref_parts.append(f"Biggest concern: {r['voice_biggest_concern'][:200]}")
+    pref_block = ""
+    if pref_parts:
+        pref_block = "PREFERENCES:\n" + "\n".join(f"  - {p}" for p in pref_parts) + "\n"
+
+    # ── Achievements block ────────────────────────────────────────
+    achievements_block = ""
+    achievements = r.get("achievements") or []
+    if achievements:
+        achievements_block = f"UNLOCKED ACHIEVEMENTS: {', '.join(str(a) for a in achievements[:15])}. Celebrate these when relevant.\n"
+
+    # ── Cohort expertise block ────────────────────────────────────
+    cohort_expertise_block = ""
+    try:
+        from projects.dilly.api.voice_prompt_constants import COHORT_EXPERTISE_DEEP
+        from projects.dilly.academic_taxonomy import MAJOR_TO_COHORT
+        # Resolve rich cohorts from major/minor
+        rich_cohorts: list[str] = []
+        seen_cohorts: set[str] = set()
+        track_to_rich: dict[str, str] = {
+            "Tech": "Software Engineering & CS", "Finance": "Finance & Accounting",
+            "Consulting": "Consulting & Strategy", "Business": "Management & Operations",
+            "Science": "Life Sciences & Research", "Pre-Health": "Healthcare & Clinical",
+            "Pre-Law": "Law & Government", "Communications": "Media & Communications",
+            "Education": "Education", "Arts": "Design & Creative Arts",
+            "Humanities": "Humanities & Liberal Arts",
+        }
+        if cohort in track_to_rich:
+            c = track_to_rich[cohort]
+            if c not in seen_cohorts:
+                seen_cohorts.add(c)
+                rich_cohorts.append(c)
+        for m in ([major] if major else []):
+            c = MAJOR_TO_COHORT.get(m)
+            if c and c != "General" and c not in seen_cohorts:
+                seen_cohorts.add(c)
+                rich_cohorts.append(c)
+        if rich_cohorts:
+            ce_lines = [f"You have deep expertise in {', '.join(rich_cohorts)}."]
+            for rc in rich_cohorts[:3]:
+                expertise = COHORT_EXPERTISE_DEEP.get(rc)
+                if expertise:
+                    ce_lines.append(expertise[:500])
+            cohort_expertise_block = "FIELD EXPERTISE:\n" + "\n".join(ce_lines) + "\n"
+    except Exception:
+        pass
+
     return f"""You are Dilly, an AI career coach embedded in a career acceleration app for college students. You are not just a chatbot. You are the student's personal career strategist who can see their entire dashboard.
 
 STUDENT: {name}
@@ -326,6 +470,7 @@ STUDENT: {name}
 School: {school}
 Major: {major}{f", Minor: {r.get('minor')}" if r.get("minor") else ""}
 Cohort: {cohort}
+{f"Graduation: {r.get('graduation_year')}" if r.get("graduation_year") else ""}
 {f"Tagline: {r.get('tagline')}" if r.get("tagline") else ""}
 
 {score_block}
@@ -335,6 +480,11 @@ Cohort: {cohort}
 {history_block}
 {resume_block}
 {profile_block}
+{academic_block}
+{beyond_block}
+{pref_block}
+{achievements_block}
+{cohort_expertise_block}
 APP FEATURES YOU CAN REFERENCE (tell the student to use these by name):
 - Resume Editor: Edit resume sections with live bullet scoring. Each bullet gets scored 0-100 in real time.
 - New Audit: Upload a PDF or re-audit from the editor. Shows before/after score comparison.
@@ -358,7 +508,9 @@ YOUR PERSONALITY AND RULES:
 - NEVER start your response with the student's name.
 - NEVER use bullet points unless listing 3+ specific items.
 - NEVER ask more than one question at a time.
-- If they seem stuck or don't know what to ask, proactively suggest the most impactful thing they could do right now based on their data.""".strip()
+- If they seem stuck or don't know what to ask, proactively suggest the most impactful thing they could do right now based on their data.
+
+CRITICAL: You already know everything about this student from the context above. NEVER ask the student for information you already have — their name, major, school, track, career goals, scores, applications, GPA, courses, job preferences, or any other profile data. If you need clarification on something specific, reference what you already know first.""".strip()
 
 
 def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: Optional[dict] = None) -> str:

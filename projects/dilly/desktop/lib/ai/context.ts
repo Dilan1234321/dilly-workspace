@@ -61,6 +61,25 @@ export interface RichContext {
   resume_snippet: string;
   nudges: Array<{ priority: string; message: string }>;
   dilly_narrative?: string;
+  beyond_resume?: Array<{ type?: string; text?: string }>;
+  experience_expansion?: Array<{
+    role_label?: string;
+    organization?: string;
+    skills?: string[];
+    tools_used?: string[];
+    omitted?: string[];
+  }>;
+  transcript_gpa?: number | string | null;
+  transcript_courses?: string[];
+  transcript_honors?: string[];
+  job_locations?: string[];
+  job_location_scope?: string;
+  target_school?: string;
+  voice_onboarding_answers?: string[];
+  voice_biggest_concern?: string;
+  achievements?: string[];
+  preProfessional?: boolean | string;
+  graduation_year?: string | number;
 }
 
 /** Fetch rich context server-side before calling streamText. */
