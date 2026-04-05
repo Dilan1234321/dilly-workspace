@@ -1,161 +1,222 @@
 """
-File-based auth store: verification codes, users, sessions.
-Stores data in memory/auth/ as JSON. No Postgres required.
+Postgres-backed auth store (canonical implementation).
+Verification codes, users, sessions — all in the users/sessions/verification_codes tables.
 """
 
-import json
 import os
 import secrets
-import threading
 import time
 
-_WORKSPACE_ROOT = os.path.normpath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
-)
-_AUTH_DIR = os.path.join(_WORKSPACE_ROOT, "memory", "auth")
-_CODES_FILE = os.path.join(_AUTH_DIR, "verification_codes.json")
-_USERS_FILE = os.path.join(_AUTH_DIR, "users.json")
-_SESSIONS_FILE = os.path.join(_AUTH_DIR, "sessions.json")
+import psycopg2
+import psycopg2.extras
+from projects.dilly.api.database import get_db
 
-_VERIFICATION_CODE_EXPIRY_SEC = 600
-_SESSION_EXPIRY_SEC = 30 * 86400
-_MAGIC_LINK_EXPIRY_SEC = 900
-
-_lock = threading.Lock()
+_MAGIC_LINK_EXPIRY_SEC = 900       # 15 min
+_VERIFICATION_CODE_EXPIRY_SEC = 600  # 10 min
+_VERIFICATION_CODE_LENGTH = 6
+_SESSION_EXPIRY_SEC = 30 * 86400   # 30 days
 
 
-def _ensure_dir() -> None:
-    os.makedirs(_AUTH_DIR, exist_ok=True)
-
-
-def _load(path: str) -> dict:
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def _save(path: str, data: dict) -> None:
-    _ensure_dir()
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-# ── Verification codes ────────────────────────────────────────────────────────
+# ── 1. store_verification_code (create_verification_code) ─────────────────────
 
 def create_verification_code(email: str) -> str:
+    """Create a 6-digit verification code for email. Replaces any existing unused code."""
     email = (email or "").strip().lower()
     if not email:
         raise ValueError("Email required")
-    code = "".join(secrets.choice("0123456789") for _ in range(6))
-    expires_at = time.time() + _VERIFICATION_CODE_EXPIRY_SEC
-    with _lock:
-        codes = _load(_CODES_FILE)
-        codes[email] = {"code": code, "expires_at": expires_at, "used": False}
-        _save(_CODES_FILE, codes)
+    code = "".join(secrets.choice("0123456789") for _ in range(_VERIFICATION_CODE_LENGTH))
+    expires_at = _pg_ts(time.time() + _VERIFICATION_CODE_EXPIRY_SEC)
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # Invalidate prior unused codes for this email
+        cur.execute(
+            "UPDATE verification_codes SET used = true WHERE email = %s AND used = false",
+            (email,),
+        )
+        cur.execute(
+            """
+            INSERT INTO verification_codes (email, code, expires_at)
+            VALUES (%s, %s, %s)
+            """,
+            (email, code, expires_at),
+        )
     return code
 
 
+# ── 2. get_verification_code ───────────────────────────────────────────────────
+
+def _get_verification_code_row(email: str, code: str) -> dict | None:
+    """Return the verification_codes row for (email, code) if valid and unused."""
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            """
+            SELECT * FROM verification_codes
+            WHERE email = %s AND code = %s AND used = false AND expires_at > now()
+            """,
+            (email, code),
+        )
+        return cur.fetchone()
+
+
+# ── 3. mark_code_used (consumed inside verify_verification_code) ───────────────
+
+def _mark_code_used(row_id: str) -> None:
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("UPDATE verification_codes SET used = true WHERE id = %s", (str(row_id),))
+
+
 def verify_verification_code(email: str, code: str) -> bool:
+    """Verify code for email. Returns True if valid and marks it used."""
     email = (email or "").strip().lower()
     code = (code or "").strip()
-    if not email or not code or len(code) != 6 or not code.isdigit():
+    if not email or not code or len(code) != _VERIFICATION_CODE_LENGTH or not code.isdigit():
         return False
-    with _lock:
-        codes = _load(_CODES_FILE)
-        entry = codes.get(email)
-        if not entry or entry.get("used") or entry.get("expires_at", 0) < time.time():
-            return False
-        if entry.get("code") != code:
-            return False
-        codes[email]["used"] = True
-        _save(_CODES_FILE, codes)
+    row = _get_verification_code_row(email, code)
+    if not row:
+        return False
+    _mark_code_used(row["id"])
     return True
 
 
-# ── Users ─────────────────────────────────────────────────────────────────────
+# ── 4. create_user (upsert) ────────────────────────────────────────────────────
 
 def _upsert_user(email: str) -> dict:
-    users = _load(_USERS_FILE)
-    if email not in users:
-        users[email] = {"email": email, "subscribed": False, "created_at": time.time()}
-        _save(_USERS_FILE, users)
-    return users[email]
+    """Insert user if not exists. Returns the row."""
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            """
+            INSERT INTO users (email, subscribed)
+            VALUES (%s, false)
+            ON CONFLICT (email) DO NOTHING
+            """,
+            (email,),
+        )
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        return dict(cur.fetchone())
 
+
+# ── 5. get_user_by_email ───────────────────────────────────────────────────────
+
+def get_user_by_email(email: str) -> dict | None:
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+# ── 6. get_user_by_id ─────────────────────────────────────────────────────────
+
+def get_user_by_id(user_id: str) -> dict | None:
+    if not user_id:
+        return None
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+# ── 7. create_session ─────────────────────────────────────────────────────────
+
+def create_session(email: str) -> str:
+    """Create a 30-day session for email. Returns session token."""
+    email = (email or "").strip().lower()
+    if not email:
+        raise ValueError("Email required")
+    user = _upsert_user(email)
+    token = secrets.token_urlsafe(32)
+    expires_at = _pg_ts(time.time() + _SESSION_EXPIRY_SEC)
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            """
+            INSERT INTO sessions (user_id, token, expires_at)
+            VALUES (%s, %s, %s)
+            """,
+            (user["id"], token, expires_at),
+        )
+    return token
+
+
+# ── 8. validate_session (get_session) ─────────────────────────────────────────
+
+def get_session(token: str) -> dict | None:
+    """Validate session token. Returns {email, subscribed} or None."""
+    if not token or not token.strip():
+        return None
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            """
+            SELECT u.email, u.subscribed, u.id
+            FROM sessions s
+            JOIN users u ON u.id = s.user_id
+            WHERE s.token = %s AND s.expires_at > now()
+            """,
+            (token.strip(),),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {"email": row["email"], "subscribed": bool(row["subscribed"])}
+
+
+# ── delete_session (logout) ───────────────────────────────────────────────────
+
+def delete_session(token: str) -> bool:
+    if not token or not token.strip():
+        return False
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("DELETE FROM sessions WHERE token = %s", (token.strip(),))
+        return (cur.rowcount or 0) > 0
+
+
+# ── set_subscribed ────────────────────────────────────────────────────────────
 
 def set_subscribed(email: str, subscribed: bool) -> None:
     email = (email or "").strip().lower()
     if not email:
         return
-    with _lock:
-        users = _load(_USERS_FILE)
-        users.setdefault(email, {"email": email, "created_at": time.time()})["subscribed"] = subscribed
-        _save(_USERS_FILE, users)
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "UPDATE users SET subscribed = %s, updated_at = now() WHERE email = %s",
+            (subscribed, email),
+        )
 
 
-def list_active_subscribed_users() -> list:
-    return [e for e, u in _load(_USERS_FILE).items() if u.get("subscribed")]
+# ── list_active_subscribed_users ──────────────────────────────────────────────
+
+def list_active_subscribed_users() -> list[str]:
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT email FROM users WHERE subscribed = true ORDER BY email")
+        return [r["email"] for r in cur.fetchall()]
 
 
-# ── Sessions ──────────────────────────────────────────────────────────────────
-
-def create_session(email: str) -> str:
-    email = (email or "").strip().lower()
-    if not email:
-        raise ValueError("Email required")
-    token = secrets.token_urlsafe(32)
-    expires_at = time.time() + _SESSION_EXPIRY_SEC
-    with _lock:
-        _upsert_user(email)
-        sessions = _load(_SESSIONS_FILE)
-        sessions[token] = {"email": email, "expires_at": expires_at}
-        _save(_SESSIONS_FILE, sessions)
-    return token
-
-
-def get_session(token: str) -> dict | None:
-    if not token or not token.strip():
-        return None
-    sessions = _load(_SESSIONS_FILE)
-    entry = sessions.get(token.strip())
-    if not entry or entry.get("expires_at", 0) < time.time():
-        return None
-    email = entry.get("email", "")
-    subscribed = _load(_USERS_FILE).get(email, {}).get("subscribed", False)
-    return {"email": email, "subscribed": bool(subscribed)}
-
-
-def delete_session(token: str) -> bool:
-    if not token or not token.strip():
-        return False
-    with _lock:
-        sessions = _load(_SESSIONS_FILE)
-        if token.strip() in sessions:
-            del sessions[token.strip()]
-            _save(_SESSIONS_FILE, sessions)
-            return True
-    return False
-
+# ── delete_user_and_sessions ──────────────────────────────────────────────────
 
 def delete_user_and_sessions(email: str) -> None:
     email = (email or "").strip().lower()
     if not email:
         return
-    with _lock:
-        users = _load(_USERS_FILE)
-        users.pop(email, None)
-        _save(_USERS_FILE, users)
-        sessions = _load(_SESSIONS_FILE)
-        for t in [t for t, s in sessions.items() if s.get("email") == email]:
-            del sessions[t]
-        _save(_SESSIONS_FILE, sessions)
+    with get_db() as conn:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("DELETE FROM users WHERE email = %s", (email,))
 
 
-# ── Magic tokens (in-memory, short-lived) ─────────────────────────────────────
+# ── magic-link (kept for compatibility; not migrated to DB table) ─────────────
+# Magic tokens are low-volume and short-lived (15 min). Keep in memory dict.
 
-_MAGIC_TOKENS: dict = {}
-
+_MAGIC_TOKENS: dict[str, dict] = {}
 
 def create_magic_token(email: str) -> str:
     email = (email or "").strip().lower()
@@ -165,11 +226,20 @@ def create_magic_token(email: str) -> str:
     _MAGIC_TOKENS[token] = {"email": email, "expires_at": time.time() + _MAGIC_LINK_EXPIRY_SEC}
     return token
 
-
 def verify_magic_token(token: str) -> str | None:
     if not token:
         return None
     entry = _MAGIC_TOKENS.pop(token, None)
-    if not entry or entry["expires_at"] < time.time():
+    if not entry:
+        return None
+    if entry["expires_at"] < time.time():
         return None
     return entry["email"]
+
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _pg_ts(unix_ts: float) -> str:
+    """Convert a Unix timestamp to a Postgres-compatible ISO string."""
+    import datetime
+    return datetime.datetime.utcfromtimestamp(unix_ts).strftime("%Y-%m-%d %H:%M:%S")

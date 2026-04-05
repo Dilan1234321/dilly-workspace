@@ -101,7 +101,7 @@ def _newest_audit_for_leaderboard_track(audits: list, want_track: str) -> dict |
 
 
 def _collect_track_entries(want_track: str) -> list[dict[str, Any]]:
-    from projects.dilly.api.audit_history_pg import get_audits as _get_audits
+    from projects.dilly.api.audit_history import get_audits as _get_audits
     from projects.dilly.api.profile_store import is_leaderboard_participating
 
     profiles_dir = os.path.join(_WORKSPACE_ROOT, "memory", "dilly_profiles")
@@ -171,7 +171,7 @@ _GLOBAL_TOP_N = 100
 
 def _collect_global_leaderboard_entries() -> list[dict[str, Any]]:
     """One row per opted-in user: score from newest audit matching their profile cohort (or detected track)."""
-    from projects.dilly.api.audit_history_pg import get_audits as _get_audits
+    from projects.dilly.api.audit_history import get_audits as _get_audits
     from projects.dilly.api.profile_store import is_leaderboard_participating
     from projects.dilly.api.schools import get_track_category
 
@@ -260,7 +260,7 @@ def build_global_leaderboard_payload(
 
     student_in = next((e for e in full if e["email"] == email), None)
     if not student_in and email:
-        from projects.dilly.api.audit_history_pg import get_audits as _get_audits
+        from projects.dilly.api.audit_history import get_audits as _get_audits
         from projects.dilly.api.profile_store import get_profile
         from projects.dilly.api.schools import get_track_category
 
@@ -585,7 +585,7 @@ def build_leaderboard_page_payload(
     # Inject current user if they are not already in the pool (e.g. opted out) but have a matching audit
     student_in = next((e for e in raw if e["email"] == email), None)
     if not student_in and email:
-        from projects.dilly.api.audit_history_pg import get_audits as _get_audits
+        from projects.dilly.api.audit_history import get_audits as _get_audits
         from projects.dilly.api.profile_store import get_profile
 
         prof = get_profile(email) or {}

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from dilly_core.llm_client import get_chat_completion
-from projects.dilly.api.audit_history_pg import get_audits
+from projects.dilly.api.audit_history import get_audits
 from projects.dilly.api.build_summary_lines import build_summary_lines
 from projects.dilly.api.conversation_output_store import create_action_items, save_conversation_output
 from projects.dilly.api.estimate_conversation_score_impact import estimate_conversation_score_impact

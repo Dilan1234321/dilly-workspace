@@ -56,7 +56,7 @@ class ChatResponse(BaseModel):
 
 def _build_rich_context(email: str) -> dict:
     from projects.dilly.api.profile_store import get_profile, get_profile_folder_path
-    from projects.dilly.api.audit_history_pg import get_audits
+    from projects.dilly.api.audit_history import get_audits
     from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
 
     profile = get_profile(email) or {}

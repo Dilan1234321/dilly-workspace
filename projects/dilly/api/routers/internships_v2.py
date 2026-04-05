@@ -65,7 +65,7 @@ def _ensure_student(email: str, cur, conn) -> str | None:
     # Load from file store
     try:
         from projects.dilly.api.profile_store import ensure_profile_exists
-        from projects.dilly.api.audit_history_pg import get_audits
+        from projects.dilly.api.audit_history import get_audits
         p = ensure_profile_exists(email)
     except Exception:
         return None

@@ -161,25 +161,4 @@ def _find_profile_by_feed_token(token: str) -> dict | None:
     except Exception:
         pass
 
-    # Fallback: try the file-based profile store
-    try:
-        from projects.dilly.api.profile_store_file import _PROFILES_DIR
-        import json
-
-        if not os.path.isdir(_PROFILES_DIR):
-            return None
-        for folder_name in os.listdir(_PROFILES_DIR):
-            profile_path = os.path.join(_PROFILES_DIR, folder_name, "profile.json")
-            if not os.path.isfile(profile_path):
-                continue
-            try:
-                with open(profile_path, "r", encoding="utf-8") as f:
-                    p = json.load(f)
-                if isinstance(p, dict) and p.get("calendar_feed_token") == token:
-                    return p
-            except Exception:
-                continue
-    except Exception:
-        pass
-
     return None

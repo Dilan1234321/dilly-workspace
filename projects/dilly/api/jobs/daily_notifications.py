@@ -12,8 +12,8 @@ from zoneinfo import ZoneInfo
 
 from dilly_core.ats_company_lookup import lookup_company_ats
 from projects.dilly.api.ats_score_history import get_ats_scores
-from projects.dilly.api.audit_history_pg import get_audits
-from projects.dilly.api.auth_store_pg import list_active_subscribed_users
+from projects.dilly.api.audit_history import get_audits
+from projects.dilly.api.auth_store import list_active_subscribed_users
 from projects.dilly.api.generate_notification_message import generate_notification_message
 from projects.dilly.api.notification_deeplink import get_deep_link
 from projects.dilly.api.notification_store import (

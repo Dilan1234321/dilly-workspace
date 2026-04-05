@@ -1,13 +1,18 @@
 """
-Dilly ATS Analysis Engine — the most comprehensive student-facing ATS analyzer built.
+Dilly ATS Analysis Engine — deep diagnostic for the full audit pipeline.
 
-Goes far deeper than Quinncia's four-ATS simulation:
+Used by /ats-analysis-from-audit, /ats-vendor-sim, and dilly_core/ats_vendors.py.
+Provides the comprehensive analysis:
 1. Parseability analysis — detect real formatting issues that break ATS parsing
 2. Extraction simulation — show exactly what an ATS extracts (and what it misses)
 3. Formatting checklist — auto-detected pass/fail for every formatting rule
 4. Section completeness — required vs. optional sections by career track
 5. Date consistency — flag mixed formats and missing dates
 6. ATS readiness composite — single status combining all checks
+
+BOUNDARY: For the lightweight per-vendor quick-check (used by /ats-check and
+/gap-analysis), see projects/dilly/api/ats_engine.py.  The two modules are
+complementary: ats_engine.py = fast per-vendor score; this module = full diagnostic.
 
 No LLM calls. Pure rule-based analysis on raw text + parsed resume data.
 """

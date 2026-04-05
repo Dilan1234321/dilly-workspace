@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from projects.dilly.api import deps, errors
 from projects.dilly.api.cohort_scoring_weights import COHORT_SCORING_WEIGHTS
 from projects.dilly.api.profile_store import get_profile, save_profile
-from projects.dilly.api.audit_history_pg import get_audits
+from projects.dilly.api.audit_history import get_audits
 
 router = APIRouter(tags=["interview_prep"])
 

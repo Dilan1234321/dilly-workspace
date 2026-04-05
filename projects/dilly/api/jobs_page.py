@@ -184,7 +184,7 @@ def _applied_job_ids(apps: list[dict]) -> set[str]:
 
 def build_jobs_page_payload(*, email: str, subscribed: bool) -> dict[str, Any]:
     from projects.dilly.api.profile_store import get_profile
-    from projects.dilly.api.audit_history_pg import get_audits
+    from projects.dilly.api.audit_history import get_audits
     from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
     from projects.dilly.api.job_matching import get_recommended_jobs as match_jobs
     from projects.dilly.api.apply_destinations import get_application_email

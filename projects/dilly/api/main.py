@@ -10,12 +10,15 @@ import time
 import uuid
 from typing import Any, Dict, List
 
-# Allow "projects.dilly.*" imports when run from projects/dilly/api (uvicorn main:app)
+# Allow "projects.dilly.*" and "dilly_core.*" imports when run from projects/dilly/api/
+# (e.g. uvicorn main:app).  The redirector in projects/dilly/projects/dilly/__init__.py
+# handles "projects.dilly.X" -> "X" resolution once this directory is on sys.path.
+# NOTE: os.chdir() is intentionally NOT used here — it is unsafe in a multi-worker
+# web server.  All file-system paths use absolute paths derived from _WORKSPACE_ROOT.
 _API_DIR = os.path.dirname(os.path.abspath(__file__))
 _WORKSPACE_ROOT = os.path.normpath(os.path.join(_API_DIR, ".."))
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
-os.chdir(_WORKSPACE_ROOT)  # so paths like projects/dilly/... resolve
 
 # Load .env from workspace root when present (e.g. DILLY_USE_LLM, OPENAI_API_KEY, RECRUITER_API_KEY)
 _ENV_PATH = os.path.join(_WORKSPACE_ROOT, ".env")
@@ -27,7 +30,7 @@ except ImportError:
 
 from dilly_core.llm_client import is_llm_available
 from dilly_core.evidence_quotes import get_fallback_evidence_quotes
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Request
+from fastapi import Depends, FastAPI, UploadFile, File, Form, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from starlette.middleware.gzip import GZipMiddleware
@@ -183,17 +186,19 @@ app.include_router(habits_router.router)
 app.include_router(internships_v2_router.router)
 app.include_router(push_router.router)
 app.include_router(notifications_router.router)
-app.include_router(internal_notifications_router.router)
+# Internal routers require DILLY_INTERNAL_KEY (or legacy CRON_SECRET) header
+_internal_deps = [Depends(deps.require_internal_key)]
+app.include_router(internal_notifications_router.router, dependencies=_internal_deps)
 app.include_router(memory_router.router)
-app.include_router(internal_memory_router.router)
+app.include_router(internal_memory_router.router, dependencies=_internal_deps)
 app.include_router(ready_check_router.router)
-app.include_router(internal_ready_check_router.router)
+app.include_router(internal_ready_check_router.router, dependencies=_internal_deps)
 app.include_router(cohort_pulse_router.router)
-app.include_router(internal_cohort_pulse_router.router)
+app.include_router(internal_cohort_pulse_router.router, dependencies=_internal_deps)
 app.include_router(actions_router.router)
 app.include_router(voice_history_router.router)
-app.include_router(internal_voice_extract_router.router)
-app.include_router(internal_voice_agent_router.router)
+app.include_router(internal_voice_extract_router.router, dependencies=_internal_deps)
+app.include_router(internal_voice_agent_router.router, dependencies=_internal_deps)
 app.include_router(ai_router.router)
 app.include_router(calendar_feed_router.router)
 app.include_router(interview_prep_router.router)

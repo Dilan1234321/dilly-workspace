@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from dilly_core.llm_client import get_chat_completion
-from projects.dilly.api.audit_history_pg import get_audits
+from projects.dilly.api.audit_history import get_audits
 from projects.dilly.api.memory_surface_store import (
     get_memory_surface,
     save_memory_surface,

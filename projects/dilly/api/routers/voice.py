@@ -126,7 +126,7 @@ def _reindex_candidate_for_voice(email: str) -> None:
         return
     try:
         from projects.dilly.api.candidate_index import index_candidate_after_audit
-        from projects.dilly.api.audit_history_pg import get_audits
+        from projects.dilly.api.audit_history import get_audits
         from projects.dilly.api.profile_store import get_profile
         profile = get_profile(email) or {}
         audits = get_audits(email)
@@ -424,7 +424,7 @@ async def voice_proactive_nudges(request: Request):
         deadlines = profile.get("deadlines") or []
         audits = []
         try:
-            from projects.dilly.api.audit_history_pg import get_audits
+            from projects.dilly.api.audit_history import get_audits
             audits = get_audits(email)
         except Exception:
             pass

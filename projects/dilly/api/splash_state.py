@@ -8,7 +8,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from projects.dilly.api.audit_history_pg import get_audits
+from projects.dilly.api.audit_history import get_audits
 from projects.dilly.api.cohort_config import assign_cohort, get_recruiter_bar, get_reference_phrase
 from projects.dilly.api.routers.applications import _load_applications
 

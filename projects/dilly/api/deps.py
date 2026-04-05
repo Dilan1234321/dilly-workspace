@@ -46,24 +46,15 @@ def bearer_user(request: Request) -> dict | None:
     token = auth[7:].strip()
     if not token:
         return None
-    # Try Postgres auth first (production), fall back to file-based auth (dev/CI)
     try:
-        from projects.dilly.api.auth_store_pg import get_session
+        from projects.dilly.api.auth_store import get_session
         from projects.dilly.api.family_store import is_student_in_any_family
 
         user = get_session(token)
         if user and not user.get("subscribed"):
             if is_student_in_any_family(user.get("email") or ""):
                 user = {**user, "subscribed": True}
-        if user:
-            return user
-    except Exception:
-        pass
-    # Fallback: file-based auth store (used by smoke tests and local dev without Postgres)
-    try:
-        from projects.dilly.api.auth_store import get_session as get_session_file
-
-        return get_session_file(token)
+        return user
     except Exception:
         return None
 
@@ -110,6 +101,30 @@ def require_recruiter(request: Request) -> None:
     #     header_key = header_key or auth[7:].strip()
     # if not header_key or header_key != key:
     #     raise errors.unauthorized("Invalid or missing recruiter API key.")
+
+
+# ---------------------------------------------------------------------------
+# Internal endpoint protection
+# ---------------------------------------------------------------------------
+async def require_internal_key(request: Request) -> None:
+    """Reject requests to internal endpoints unless X-Internal-Key matches DILLY_INTERNAL_KEY.
+
+    Also accepts the legacy X-Cron-Secret / CRON_SECRET headers so existing
+    cron callers keep working without code changes.
+    """
+    from fastapi import HTTPException
+
+    key = (request.headers.get("X-Internal-Key") or "").strip()
+    expected = (os.environ.get("DILLY_INTERNAL_KEY") or "").strip()
+
+    # Also honour the legacy CRON_SECRET for backwards compatibility
+    if not key:
+        key = (request.headers.get("x-cron-secret") or "").strip()
+    if not expected:
+        expected = (os.environ.get("CRON_SECRET") or "").strip()
+
+    if not expected or key != expected:
+        raise HTTPException(status_code=403, detail="Internal endpoint")
 
 
 def is_dev_allowed(request: Request) -> bool:

@@ -27,7 +27,7 @@ def _synthetic_initials(idx: int) -> str:
 
 
 def _leaderboard_scores_for_track(track: str) -> list[float]:
-    from projects.dilly.api.audit_history_pg import get_audits as _get_audits
+    from projects.dilly.api.audit_history import get_audits as _get_audits
     from projects.dilly.api.leaderboard_page import _newest_audit_for_leaderboard_track
     from projects.dilly.api.profile_store import is_leaderboard_participating
 
@@ -181,7 +181,7 @@ def build_score_page_payload(
     focus_audit_id: str | None = None,
 ) -> dict[str, Any]:
     from projects.dilly.api.profile_store import get_profile
-    from projects.dilly.api.audit_history_pg import get_audits, normalize_audit_id_key
+    from projects.dilly.api.audit_history import get_audits, normalize_audit_id_key
     from projects.dilly.api.schools import get_school_from_email, SCHOOLS
     from projects.dilly.api.peer_benchmark import get_cohort_stats
 

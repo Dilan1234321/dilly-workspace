@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from dilly_core.llm_client import get_chat_completion, is_llm_available
-from projects.dilly.api.audit_history_pg import get_audits
-from projects.dilly.api.auth_store_pg import list_active_subscribed_users
+from projects.dilly.api.audit_history import get_audits
+from projects.dilly.api.auth_store import list_active_subscribed_users
 from projects.dilly.api.cohort_pulse_store import (
     current_week_start_iso,
     upsert_cohort_pulse,

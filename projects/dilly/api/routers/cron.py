@@ -58,7 +58,7 @@ def setup_users_table(token: str = ""):
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS pre_professional_track TEXT",
         ]:
             cur.execute(stmt)
-        # -- Sessions table (auth_store_pg) --
+        # -- Sessions table (auth_store) --
         cur.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
                 id SERIAL PRIMARY KEY,
@@ -69,7 +69,7 @@ def setup_users_table(token: str = ""):
             )
         """)
 
-        # -- Verification codes table (auth_store_pg) --
+        # -- Verification codes table (auth_store) --
         cur.execute("""
             CREATE TABLE IF NOT EXISTS verification_codes (
                 id SERIAL PRIMARY KEY,
@@ -81,7 +81,7 @@ def setup_users_table(token: str = ""):
             )
         """)
 
-        # -- Audit results table (audit_history_pg) --
+        # -- Audit results table (audit_history) --
         cur.execute("""
             CREATE TABLE IF NOT EXISTS audit_results (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -164,7 +164,7 @@ def admin_delete_account(token: str = "", email: str = ""):
 
     # 3. Auth: user + sessions
     try:
-        from projects.dilly.api.auth_store_pg import delete_user_and_sessions
+        from projects.dilly.api.auth_store import delete_user_and_sessions
         delete_user_and_sessions(email)
     except Exception:
         traceback.print_exc()

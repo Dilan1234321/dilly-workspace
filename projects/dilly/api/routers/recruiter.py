@@ -704,7 +704,7 @@ async def recruiter_get_candidate(request: Request, candidate_id: str, role_desc
     if not email:
         raise HTTPException(status_code=404, detail="Candidate not found.")
     from projects.dilly.api.profile_store import get_profile
-    from projects.dilly.api.audit_history_pg import get_audits
+    from projects.dilly.api.audit_history import get_audits
     from projects.dilly.api.dilly_profile_txt import (
         get_dilly_profile_txt_content,
         parse_structured_experience_from_profile_txt,
@@ -868,7 +868,7 @@ def _get_ask_ai_context_bundle(candidate_id: str, role_description: str) -> dict
     Returns {"name": str, "context": str} or None if candidate missing.
     """
     from projects.dilly.api.profile_store import get_profile
-    from projects.dilly.api.audit_history_pg import get_audits
+    from projects.dilly.api.audit_history import get_audits
     from projects.dilly.api.dilly_profile_txt import (
         get_dilly_profile_txt_content,
         parse_structured_experience_from_profile_txt,
@@ -1803,7 +1803,7 @@ async def recruiter_compare(request: Request, body: dict = Body(...)):
             return None
 
     from projects.dilly.api.dilly_profile_txt import get_dilly_profile_txt_content, parse_structured_experience_from_profile_txt
-    from projects.dilly.api.audit_history_pg import get_audits
+    from projects.dilly.api.audit_history import get_audits
 
     email_a = load_email(cid_a)
     email_b = load_email(cid_b)
@@ -1981,7 +1981,7 @@ async def recruiter_export_shortlist(request: Request):
     key = deps.get_recruiter_key(request)
     from projects.dilly.api.recruiter_bookmark_store import get_all
     from projects.dilly.api.profile_store import get_profile
-    from projects.dilly.api.audit_history_pg import get_audits
+    from projects.dilly.api.audit_history import get_audits
     data = get_all(key)
     all_ids = list(data.get("bookmarks") or [])
     for ids in (data.get("collections") or {}).values():

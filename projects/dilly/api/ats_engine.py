@@ -1,8 +1,15 @@
 """
-ATS Scoring Engine — rule-based resume compatibility checker.
+ATS Scoring Engine — lightweight rule-based resume compatibility checker.
 
-Scores a resume's text against 6 major ATS systems using formatting and
-content heuristics. No LLM calls, no external dependencies.
+This is the QUICK-CHECK module used by /ats-check and /gap-analysis endpoints.
+It scores raw resume text against 7 major ATS systems using formatting and
+content heuristics.  No LLM calls, no external dependencies.
+
+BOUNDARY: For the DEEP analysis (parseability, extraction simulation, formatting
+checklist, section completeness, date consistency, and ATS-readiness composite),
+see dilly_core/ats_analysis.py.  That module is used by /ats-analysis-from-audit,
+/ats-vendor-sim, and the broader audit pipeline.  The two modules are complementary:
+ats_engine.py = fast per-vendor score; dilly_core/ats_analysis.py = full diagnostic.
 
 Each system has different parsing characteristics:
 - Greenhouse / Lever / Ashby: modern, lenient

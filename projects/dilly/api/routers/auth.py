@@ -52,7 +52,7 @@ async def send_magic_link(request: Request, body: AuthSendCodeRequest):
             "Dilly isn't available at your school yet.",
         )
     try:
-        from projects.dilly.api.auth_store_pg import create_magic_token
+        from projects.dilly.api.auth_store import create_magic_token
         token = create_magic_token(email)
     except ValueError as e:
         raise errors.validation_error(str(e))
@@ -79,7 +79,7 @@ async def send_verification_code(request: Request, body: AuthSendCodeRequest):
             "Dilly isn't available at your school yet.",
         )
     try:
-        from projects.dilly.api.auth_store_pg import create_verification_code
+        from projects.dilly.api.auth_store import create_verification_code
         from projects.dilly.api.email_sender import send_verification_email
         code = create_verification_code(email)
         school = get_school_from_email(email)
@@ -103,7 +103,7 @@ async def auth_verify_code(request: Request, body: AuthVerifyCodeRequest):
     from projects.dilly.api.schools import get_school_from_email
     if not get_school_from_email(email):
         raise errors.validation_error("Dilly isn't available at your school yet.")
-    from projects.dilly.api.auth_store_pg import (
+    from projects.dilly.api.auth_store import (
         verify_verification_code,
         create_session,
         get_session,
@@ -152,7 +152,7 @@ async def auth_verify(request: Request, token: str = ""):
     if not token:
         raise errors.bad_request("Missing token.")
     try:
-        from projects.dilly.api.auth_store_pg import verify_magic_token, create_session
+        from projects.dilly.api.auth_store import verify_magic_token, create_session
         email = verify_magic_token(token)
     except Exception:
         raise errors.validation_error("Invalid or expired link.")
@@ -164,7 +164,7 @@ async def auth_verify(request: Request, token: str = ""):
         ensure_profile_exists(email)
     except Exception:
         pass
-    from projects.dilly.api.auth_store_pg import get_session
+    from projects.dilly.api.auth_store import get_session
     user = get_session(session_token)
     return {
         "token": session_token,
@@ -188,7 +188,7 @@ async def auth_logout(request: Request):
     token = auth.removeprefix("Bearer ").strip() if auth.lower().startswith("bearer ") else ""
     if token:
         try:
-            from projects.dilly.api.auth_store_pg import delete_session
+            from projects.dilly.api.auth_store import delete_session
             delete_session(token)
         except Exception:
             pass
@@ -204,7 +204,7 @@ async def auth_dev_unlock(request: Request):
     if not u:
         raise errors.unauthorized("Not signed in.")
     try:
-        from projects.dilly.api.auth_store_pg import set_subscribed
+        from projects.dilly.api.auth_store import set_subscribed
         set_subscribed(u["email"], True)
     except Exception:
         raise errors.internal("Could not update account.")
@@ -224,7 +224,7 @@ async def auth_beta_unlock(request: Request, body: BetaUnlockRequest):
     if code != expected:
         raise errors.forbidden("Invalid beta code.")
     try:
-        from projects.dilly.api.auth_store_pg import set_subscribed
+        from projects.dilly.api.auth_store import set_subscribed
         set_subscribed(u["email"], True)
     except Exception:
         raise errors.internal("Could not unlock account.")
@@ -325,7 +325,7 @@ async def redeem_gift(request: Request, body: RedeemGiftRequest):
     code = (body.code or "").strip()
     try:
         from projects.dilly.api.gift_store import redeem_gift as do_redeem
-        from projects.dilly.api.auth_store_pg import set_subscribed
+        from projects.dilly.api.auth_store import set_subscribed
         from projects.dilly.api.profile_store import ensure_profile_exists, save_profile
         if not do_redeem(code, email):
             raise errors.bad_request("Invalid or already redeemed code, or code is for a different email.")
@@ -383,7 +383,7 @@ async def stripe_webhook(request: Request):
                 .lower()
             )
             if email:
-                from projects.dilly.api.auth_store_pg import set_subscribed
+                from projects.dilly.api.auth_store import set_subscribed
                 from projects.dilly.api.profile_store import save_profile, ensure_profile_exists
                 set_subscribed(email, True)
                 ensure_profile_exists(email)

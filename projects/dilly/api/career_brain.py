@@ -37,7 +37,7 @@ def _load_applications(email: str) -> list[dict]:
 
 def _get_audits(email: str) -> list[dict]:
     try:
-        from projects.dilly.api.audit_history_pg import get_audits
+        from projects.dilly.api.audit_history import get_audits
         return get_audits(email)
     except Exception:
         return []
