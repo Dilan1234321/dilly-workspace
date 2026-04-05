@@ -9,12 +9,8 @@ import { useToast } from "@/hooks/useToast";
 import { useBulletRewriter } from "@/hooks/useBulletRewriter";
 import { useCompanyDeadlines } from "@/hooks/useCompanyDeadlines";
 import { useVoiceChatManagement } from "@/hooks/useVoiceChat";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { LoaderOne } from "@/components/ui/loader-one";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { VoiceAvatar } from "@/components/VoiceAvatarButton";
-import { VoiceInputWithMic } from "@/components/VoiceInputWithMic";
 import { AppProfileHeader } from "@/components/career-center";
 import { dilly } from "@/lib/dilly";
 import { sanitizeVoiceAssistantReply } from "@/lib/voiceReplySanitize";
@@ -27,10 +23,8 @@ import {
 } from "@/lib/dillyUtils";
 import { buildFollowUpSuggestions } from "@/lib/voiceUtils";
 import {
-  wantsMockInterview,
   wantsEndMockInterview,
-  VOICE_MOCK_INTERVIEW_TOTAL,
-  buildMockInterviewSessionContext,
+  wantsMockInterview,
 } from "@/lib/voiceMockInterview";
 import { getEffectiveCohortLabel } from "@/lib/trackDefinitions";
 import { playSound } from "@/lib/sounds";
@@ -46,6 +40,13 @@ import { VoiceEmptyState } from "@/features/voice/VoiceEmptyState";
 import { CompanyPanel } from "@/features/voice/CompanyPanel";
 import { ActionItemsPanel } from "@/features/voice/ActionItemsPanel";
 import { VoiceMessageList } from "@/features/voice/VoiceMessageList";
+import { BulletRewriterPanel } from "@/features/voice/BulletRewriterPanel";
+import { VoiceTabBar } from "@/features/voice/VoiceTabBar";
+import { VoiceInputBar } from "@/features/voice/VoiceInputBar";
+
+// Extracted logic
+import { handleMockInterviewAnswer, handleMockInterviewStart } from "@/features/voice/mockInterviewHandlers";
+import { processVoiceStream } from "@/features/voice/processVoiceStream";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -383,286 +384,53 @@ export function VoiceTab({
       return;
     }
 
+    // ── Mock interview: answer flow ──────────────────────────────────────
     if (voiceMockInterviewSession?.awaitingAnswer) {
-      const sess = voiceMockInterviewSession;
-      if (!localStorage.getItem("dilly_auth_token")) {
-        toast("Sign in to continue.", "error");
-        mockVoiceFinally();
-        return;
-      }
-      if (!user?.subscribed) {
-        toast("Subscription required for mock interviews.", "error");
-        setVoiceMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content:
-              "Mock interviews need an active subscription. You can still use Dilly AI for general interview prep in chat.",
-            ts: Date.now(),
-          },
-        ]);
-        mockVoiceFinally();
-        return;
-      }
+      const mockDeps = {
+        toast,
+        setUser,
+        setVoiceMessages,
+        setVoiceMockInterviewSession,
+        setVoiceConvos,
+        latestVoiceConvIdRef,
+        convIdForMock,
+        userSubscribed: !!user?.subscribed,
+        displayAudit,
+        detectedTrack: displayAudit?.detected_track as string | undefined,
+        applicationTargetLabel: appProfile?.application_target_label as string | undefined,
+      };
       try {
-        const newHistory = [...sess.history, { q: sess.currentQuestion, a: text }];
-        const newIndex = sess.questionIndex + 1;
-        const res = await dilly.fetch(`/voice/mock-interview`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            question_index: newIndex,
-            answer: text,
-            session_context: sess.sessionContext,
-            total_questions: sess.totalQuestions,
-            history: newHistory.slice(-4).map((h) => ({ q: h.q, a: h.a })),
-          }),
-        });
-        if (latestVoiceConvIdRef.current !== convIdForMock) return;
-        if (res.status === 401) {
-          try {
-            localStorage.removeItem("dilly_auth_token");
-          } catch {
-            /* ignore */
-          }
-          setUser(null);
-          toast("Session expired \u2014 sign in again.", "error");
-          return;
-        }
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          setVoiceMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content:
-                typeof (err as { error?: string }).error === "string"
-                  ? (err as { error: string }).error
-                  : "Could not score that answer. Check your connection and try again.",
-              ts: Date.now(),
-            },
-          ]);
-          return;
-        }
-        const data = (await res.json()) as Record<string, unknown>;
-        if (latestVoiceConvIdRef.current !== convIdForMock) return;
-        const scoreRaw = data.score;
-        const score =
-          typeof scoreRaw === "number"
-            ? scoreRaw
-            : scoreRaw != null && !Number.isNaN(Number(scoreRaw))
-              ? Number(scoreRaw)
-              : null;
-        const sessionRaw = data.session_score;
-        const sessionScore =
-          typeof sessionRaw === "number"
-            ? sessionRaw
-            : sessionRaw != null && !Number.isNaN(Number(sessionRaw))
-              ? Number(sessionRaw)
-              : null;
-        const strengths = Array.isArray(data.strengths) ? data.strengths.map(String) : [];
-        const improvements = Array.isArray(data.improvements) ? data.improvements.map(String) : [];
-        const nextQ = data.next_question != null ? String(data.next_question).trim() : "";
-        const isFinal = Boolean(data.is_final);
-        const feedbackText =
-          typeof data.feedback === "string" && data.feedback.trim()
-            ? data.feedback.trim()
-            : "Here's feedback on your answer.";
-
-        const feedbackTurn = {
-          kind: "feedback" as const,
-          questionNumber: newIndex,
-          total: sess.totalQuestions,
-          score: score != null && Number.isFinite(score) ? score : null,
-          label: typeof data.label === "string" ? data.label : null,
-          feedback: typeof data.feedback === "string" ? data.feedback : null,
-          strengths,
-          improvements,
-          nextQuestion: nextQ && !isFinal ? nextQ : null,
-          isFinal,
-          sessionScore: sessionScore != null && Number.isFinite(sessionScore) ? sessionScore : null,
-        };
-
-        setVoiceMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: feedbackText,
-            ts: Date.now(),
-            mockTurn: feedbackTurn,
-          },
-        ]);
-
-        if (isFinal) {
-          setVoiceMockInterviewSession(null);
-        } else if (!nextQ) {
-          setVoiceMockInterviewSession(null);
-          setVoiceMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content:
-                "Mock interview paused (no next question returned). Ask me to start a mock interview again when you're ready.",
-              ts: Date.now(),
-            },
-          ]);
-        } else {
-          setVoiceMockInterviewSession({
-            ...sess,
-            questionIndex: newIndex,
-            history: newHistory,
-            currentQuestion: nextQ,
-            awaitingAnswer: true,
-          });
-        }
-      } catch {
-        if (latestVoiceConvIdRef.current === convIdForMock) {
-          setVoiceMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content:
-                "Dilly couldn't reach the mock interview service. Check your connection and try again.",
-              ts: Date.now(),
-            },
-          ]);
-        }
+        await handleMockInterviewAnswer(text, voiceMockInterviewSession, mockDeps);
       } finally {
         mockVoiceFinally();
       }
       return;
     }
 
+    // ── Mock interview: start flow ───────────────────────────────────────
     if (!voiceMockInterviewSession && wantsMockInterview(text)) {
-      if (!localStorage.getItem("dilly_auth_token")) {
-        toast("Sign in to continue.", "error");
-        mockVoiceFinally();
-        return;
-      }
-      if (!user?.subscribed) {
-        toast("Subscription required for mock interviews.", "error");
-        setVoiceMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content:
-              "Mock interviews need an active subscription. You can still ask me to help you prep for interviews in chat.",
-            ts: Date.now(),
-          },
-        ]);
-        mockVoiceFinally();
-        return;
-      }
-      const ctx = buildMockInterviewSessionContext(
-        displayAudit ?? null,
-        displayAudit?.detected_track ?? undefined,
-        appProfile?.application_target_label ?? undefined,
-      );
+      const mockDeps = {
+        toast,
+        setUser,
+        setVoiceMessages,
+        setVoiceMockInterviewSession,
+        setVoiceConvos,
+        latestVoiceConvIdRef,
+        convIdForMock,
+        userSubscribed: !!user?.subscribed,
+        displayAudit,
+        detectedTrack: displayAudit?.detected_track as string | undefined,
+        applicationTargetLabel: appProfile?.application_target_label as string | undefined,
+      };
       try {
-        const res = await dilly.fetch(`/voice/mock-interview`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            question_index: 0,
-            answer: null,
-            session_context: ctx,
-            total_questions: VOICE_MOCK_INTERVIEW_TOTAL,
-            history: [],
-          }),
-        });
-        if (latestVoiceConvIdRef.current !== convIdForMock) return;
-        if (res.status === 401) {
-          try {
-            localStorage.removeItem("dilly_auth_token");
-          } catch {
-            /* ignore */
-          }
-          setUser(null);
-          toast("Session expired \u2014 sign in again.", "error");
-          return;
-        }
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          setVoiceMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content:
-                typeof (err as { error?: string }).error === "string"
-                  ? (err as { error: string }).error
-                  : "Couldn't start the mock interview. Try again in a moment.",
-              ts: Date.now(),
-            },
-          ]);
-          return;
-        }
-        const data = (await res.json()) as Record<string, unknown>;
-        if (latestVoiceConvIdRef.current !== convIdForMock) return;
-        const firstQ = data.next_question != null ? String(data.next_question).trim() : "";
-        if (!firstQ) {
-          setVoiceMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content: "I couldn't generate a first question. Try starting the mock interview again.",
-              ts: Date.now(),
-            },
-          ]);
-          return;
-        }
-        setVoiceMockInterviewSession({
-          sessionContext: ctx,
-          questionIndex: 0,
-          history: [],
-          currentQuestion: firstQ,
-          totalQuestions: VOICE_MOCK_INTERVIEW_TOTAL,
-          awaitingAnswer: true,
-        });
-        if (convIdForMock) {
-          setVoiceConvos((prev) =>
-            prev.map((c) =>
-              c.id === convIdForMock
-                ? { ...c, title: "Mock interview", updatedAt: Date.now() }
-                : c,
-            ),
-          );
-        }
-        setVoiceMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: firstQ,
-            ts: Date.now(),
-            mockTurn: {
-              kind: "question" as const,
-              number: 1,
-              total: VOICE_MOCK_INTERVIEW_TOTAL,
-              text: firstQ,
-            },
-          },
-        ]);
-      } catch {
-        if (latestVoiceConvIdRef.current === convIdForMock) {
-          setVoiceMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content:
-                "Dilly couldn't start the mock interview. Check your connection and try again.",
-              ts: Date.now(),
-            },
-          ]);
-        }
+        await handleMockInterviewStart(mockDeps);
       } finally {
         mockVoiceFinally();
       }
       return;
     }
 
+    // ── Normal voice chat ────────────────────────────────────────────────
     const userLikedLast = voiceLastLikedRef.current;
     if (userLikedLast) voiceLastLikedRef.current = false;
     const activeConvo = convId ? voiceConvos.find((c) => c.id === convId) : null;
@@ -761,201 +529,26 @@ export function VoiceTab({
         }
         return;
       }
-      // Stream reading
+      // Stream reading — extracted
       const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = "";
-      let streamedText = "";
-      let assistantReplyCommitted = false;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        const lines = accumulated.split("\n");
-        accumulated = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.slice(6).trim();
-          if (!raw) continue;
-          try {
-            const evt = JSON.parse(raw);
-            if (typeof evt.t === "string" && evt.t.length > 0) {
-              streamedText += evt.t;
-              const forDisplay = streamedText.replace(/\n\s*SUGGESTIONS:\s*[\s\S]*$/i, "").trim();
-              setVoiceStreamingText(forDisplay);
-            }
-            if (evt.done === true) {
-              setVoiceStreamingText("");
-              const cleaned = (streamedText || "")
-                .replace(/\n\s*SUGGESTIONS:\s*[\s\S]*$/i, "")
-                .trim();
-              const finalMsg =
-                sanitizeVoiceAssistantReply(cleaned) || cleaned || "Dilly had trouble responding.";
-              if (!assistantReplyCommitted) {
-                assistantReplyCommitted = true;
-                setVoiceMessages((m) => [
-                  ...m,
-                  { role: "assistant", content: finalMsg, ts: Date.now() },
-                ]);
-                const summary = `[${new Date().toLocaleDateString()}] You asked: "${text.slice(0, 80)}". Dilly said: "${finalMsg.slice(0, 120)}"`;
-                setVoiceMemory((prev) => [...prev.slice(-9), summary]);
-              }
-              streamedText = "";
-              const baseSuggestions = Array.isArray(evt.suggestions) ? evt.suggestions : [];
-              const displayAuditForChip = viewingAudit ?? audit ?? savedAuditForCenter;
-              let suggestionsToSet = baseSuggestions;
-              if (displayAuditForChip?.scores) {
-                const traj = computeScoreTrajectory(displayAuditForChip);
-                const hasGain =
-                  traj &&
-                  (["smart", "grit", "build"] as const).some((dim) => {
-                    const delta = (traj[dim] ?? 0) - (displayAuditForChip.scores[dim] ?? 0);
-                    return delta >= 3;
-                  });
-                if (hasGain && !baseSuggestions.includes("What's my score potential?")) {
-                  suggestionsToSet = [...baseSuggestions, "What's my score potential?"];
-                }
-              }
-              setVoiceFollowUpSuggestions((prev) =>
-                suggestionsToSet.length > 0
-                  ? suggestionsToSet
-                  : prev.length > 0
-                    ? prev
-                    : suggestionsToSet,
-              );
-              if (evt.title && typeof evt.title === "string" && convId) {
-                setVoiceConvos((prev) =>
-                  prev.map((c) =>
-                    c.id === convId
-                      ? { ...c, title: (evt.title as string).slice(0, 60), updatedAt: Date.now() }
-                      : c,
-                  ),
-                );
-              }
-              if (
-                Array.isArray(evt.deadlines_auto_saved) &&
-                evt.deadlines_auto_saved.length > 0
-              ) {
-                mergeVoiceAutoSavedDeadlines(evt.deadlines_auto_saved as DillyDeadline[]);
-              }
-              if (Array.isArray(evt.action_items) && evt.action_items.length > 0) {
-                const count = (evt.action_items as string[]).length;
-                setVoiceActionItems((prev) => {
-                  if (prev.length >= 8) return prev;
-                  const existingTexts = prev.map((i) => i.text.toLowerCase());
-                  const stopWords = new Set([
-                    "a","an","the","and","or","to","in","on","of","for","your",
-                    "you","with","by","at","is","are","it","this","that","be",
-                    "as","up","so","if","its",
-                  ]);
-                  const keywordsOf = (s: string) =>
-                    s.toLowerCase().split(/\W+/).filter((w) => w.length > 3 && !stopWords.has(w));
-                  const isDuplicate = (incoming: string) =>
-                    existingTexts.some((existing) => {
-                      const kIn = keywordsOf(incoming);
-                      const kEx = keywordsOf(existing);
-                      const overlap = kIn.filter((w) => kEx.includes(w)).length;
-                      return overlap >= 3 || (kIn.length <= 3 && overlap >= 2);
-                    });
-                  const deduped = (evt.action_items as string[]).filter((t) => !isDuplicate(t));
-                  if (deduped.length === 0) return prev;
-                  const space = 8 - prev.length;
-                  if (space <= 0) return prev;
-                  const newItems = deduped
-                    .slice(0, space)
-                    .map((t) => ({ id: safeUuid(), text: t, done: false, convId }));
-                  return [...prev, ...newItems];
-                });
-                setVoiceMessages((m) => [
-                  ...m,
-                  {
-                    role: "assistant",
-                    content: `I added ${count} task${count !== 1 ? "s" : ""} to your tasks.`,
-                    ts: Date.now(),
-                  },
-                ]);
-              }
-              if (
-                evt.voice_onboarding_complete ||
-                (evt.profile_updates && typeof evt.profile_updates === "object")
-              ) {
-                const updates = (evt.profile_updates || {}) as Record<string, unknown>;
-                if (Object.keys(updates).length > 0) {
-                  setAppProfile((prev) => (prev ? { ...prev, ...updates } : prev));
-                  if (Array.isArray(updates.voice_memory)) {
-                    setVoiceMemory(updates.voice_memory as string[]);
-                  }
-                }
-                if (evt.voice_onboarding_complete && activeVoiceConvId) {
-                  setVoiceConvos((prev) =>
-                    prev.map((c) =>
-                      c.id === activeVoiceConvId ? { ...c, title: "Onboarding complete" } : c,
-                    ),
-                  );
-                }
-              }
-              if (
-                evt.deadline_added &&
-                typeof evt.deadline_added === "object" &&
-                evt.deadline_added.label &&
-                evt.deadline_added.date
-              ) {
-                const current = appProfile?.deadlines || [];
-                const newDl: DillyDeadline = {
-                  id: safeUuid(),
-                  label: (evt.deadline_added as { label: string }).label,
-                  date: (evt.deadline_added as { date: string }).date,
-                };
-                if (!current.some((d) => d.label === newDl.label && d.date === newDl.date)) {
-                  saveProfile({ deadlines: [...current, newDl] });
-                }
-              }
-              if (
-                evt.action_item_added &&
-                typeof evt.action_item_added === "object" &&
-                (evt.action_item_added as { text?: string }).text
-              ) {
-                const itemText = (evt.action_item_added as { text: string }).text.trim();
-                if (itemText) {
-                  setVoiceActionItems((prev) => {
-                    if (prev.length >= 8) return prev;
-                    const existingTexts = prev.map((i) => i.text.toLowerCase());
-                    if (existingTexts.includes(itemText.toLowerCase())) return prev;
-                    return [
-                      ...prev,
-                      { id: safeUuid(), text: itemText, done: false, convId: convId ?? undefined },
-                    ];
-                  });
-                  setVoiceMessages((m) => [
-                    ...m,
-                    {
-                      role: "assistant",
-                      content: "I added 1 task to your tasks.",
-                      ts: Date.now(),
-                    },
-                  ]);
-                }
-              }
-            }
-          } catch {
-            /* bad JSON chunk - skip */
-          }
-        }
-      }
-      // Edge case: stream ended without done event
-      if (!assistantReplyCommitted && streamedText.trim()) {
-        assistantReplyCommitted = true;
-        setVoiceStreamingText("");
-        const cleaned = streamedText.replace(/\n\s*SUGGESTIONS:\s*[\s\S]*$/i, "").trim();
-        const finalMsg =
-          sanitizeVoiceAssistantReply(cleaned) || cleaned || "Dilly had trouble responding.";
-        setVoiceMessages((m) => [
-          ...m,
-          { role: "assistant", content: finalMsg, ts: Date.now() },
-        ]);
-        const summary = `[${new Date().toLocaleDateString()}] You asked: "${text.slice(0, 80)}". Dilly said: "${finalMsg.slice(0, 120)}"`;
-        setVoiceMemory((prev) => [...prev.slice(-9), summary]);
-      }
+      await processVoiceStream(reader, {
+        convId,
+        text,
+        setVoiceStreamingText,
+        setVoiceMessages,
+        setVoiceFollowUpSuggestions,
+        setVoiceConvos,
+        setVoiceMemory,
+        setAppProfile,
+        setVoiceActionItems,
+        mergeVoiceAutoSavedDeadlines,
+        saveProfile,
+        viewingAudit,
+        audit,
+        savedAuditForCenter,
+        appProfile,
+        activeVoiceConvId,
+      });
     } catch {
       setVoiceStreamingText("");
       setVoiceMessages((m) => [
@@ -1103,315 +696,39 @@ export function VoiceTab({
 
                   {/* Bullet rewriter panel */}
                   {bulletRewriterOpen && (
-                    <div className="voice-chat-container mb-3 p-4 sm:p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="voice-avatar w-7 h-7 rounded-full flex items-center justify-center shrink-0">
-                            <span
-                              className="text-[10px] font-bold"
-                              style={{ color: theme.primary }}
-                            >
-                              M
-                            </span>
-                          </div>
-                          <p className="text-slate-200 text-sm font-semibold">Bullet Rewriter</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBulletRewriterOpen(false);
-                            setBulletRewritten("");
-                            setBulletHistory({ original: "", versions: [] });
-                          }}
-                          className="text-slate-600 hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-white/5"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                      <p className="text-slate-500 text-[12px] mb-3 leading-relaxed">
-                        Paste a resume bullet. Dilly will rewrite it based on your audit, without
-                        changing the facts.
-                      </p>
-                      <textarea
-                        value={bulletInput}
-                        onChange={(e) => setBulletInput(e.target.value)}
-                        placeholder="Paste Your Resume Bullet Here\u2026"
-                        rows={3}
-                        className="voice-input-field w-full px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 resize-none mb-3"
-                      />
-                      {bulletRewritten && (
-                        <div className="mb-3">
-                          <div className="grid grid-cols-2 gap-2 mb-3">
-                            <div>
-                              <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-600 mb-1.5">
-                                Before
-                              </p>
-                              <div
-                                className="px-3 py-2.5 m-rounded-card text-slate-500 text-xs leading-relaxed"
-                                style={{
-                                  background: "rgba(239,68,68,0.06)",
-                                  border: "1px solid rgba(239,68,68,0.12)",
-                                }}
-                              >
-                                {bulletHistory.original || bulletInput}
-                              </div>
-                            </div>
-                            <div>
-                              <p
-                                className="text-[9px] font-semibold uppercase tracking-widest mb-1.5"
-                                style={{ color: theme.primary }}
-                              >
-                                After
-                              </p>
-                              <div
-                                className="px-3 py-2.5 m-rounded-card text-slate-200 text-xs leading-relaxed select-all"
-                                style={{
-                                  background: `rgba(200,16,46,0.08)`,
-                                  border: `1px solid rgba(200,16,46,0.2)`,
-                                }}
-                              >
-                                {bulletRewritten}
-                              </div>
-                            </div>
-                          </div>
-                          {(() => {
-                            const dimKey = displayAudit?.recommendations?.find(
-                              (r) =>
-                                typeof r === "object" &&
-                                r !== null &&
-                                (
-                                  (r as { current_line?: string | null }).current_line || ""
-                                )
-                                  .toLowerCase()
-                                  .includes(bulletInput.slice(0, 30).toLowerCase()),
-                            )?.score_target;
-                            if (!dimKey) return null;
-                            return (
-                              <p className="text-[11px] mb-2" style={{ color: theme.primary }}>
-                                This strengthens your{" "}
-                                {(dimKey as string).charAt(0).toUpperCase() +
-                                  (dimKey as string).slice(1)}{" "}
-                                signal.
-                              </p>
-                            );
-                          })()}
-                          {bulletHistory.versions.length > 1 && (
-                            <div className="mb-2">
-                              <p className="text-slate-600 text-[10px] font-medium uppercase tracking-widest mb-1.5">
-                                Previous versions
-                              </p>
-                              <div className="space-y-1.5">
-                                {bulletHistory.versions.slice(0, -1).map((v, i) => (
-                                  <div
-                                    key={i}
-                                    className="px-3 py-2 rounded-lg text-slate-500 text-[12px] leading-relaxed"
-                                    style={{ background: "rgba(255,255,255,0.03)" }}
-                                  >
-                                    {v}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              "Make it shorter",
-                              "Add more numbers",
-                              "Stronger action verb",
-                              "Less jargon",
-                            ].map((inst) => (
-                              <button
-                                key={inst}
-                                type="button"
-                                onClick={() => handleBulletRewrite(inst)}
-                                disabled={bulletLoading}
-                                className="voice-suggestion-chip text-[11.5px] px-3 py-1 text-slate-400 hover:text-slate-200"
-                              >
-                                {inst}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleBulletRewrite()}
-                        disabled={bulletLoading || !bulletInput.trim()}
-                        className="voice-send-btn text-white text-sm font-medium px-5 py-2 w-full flex items-center justify-center gap-2"
-                      >
-                        {bulletLoading ? (
-                          <LoaderOne color="white" size={8} />
-                        ) : (
-                          <>{bulletRewritten ? "Rewrite again" : "Rewrite this bullet"}</>
-                        )}
-                      </button>
-                    </div>
+                    <BulletRewriterPanel
+                      theme={theme}
+                      bulletInput={bulletInput}
+                      setBulletInput={setBulletInput}
+                      bulletRewritten={bulletRewritten}
+                      setBulletRewritten={setBulletRewritten}
+                      bulletLoading={bulletLoading}
+                      bulletHistory={bulletHistory}
+                      setBulletHistory={setBulletHistory}
+                      setBulletRewriterOpen={setBulletRewriterOpen}
+                      handleBulletRewrite={handleBulletRewrite}
+                      displayAudit={displayAudit as Record<string, unknown> | null}
+                    />
                   )}
 
                   {/* Tab bar */}
-                  <div className="flex items-center gap-2 mb-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setVoiceChatListOpen((v) => !v)}
-                      className={`shrink-0 p-2 rounded-lg transition-colors ${voiceChatListOpen ? "text-white bg-slate-700/50" : "text-slate-500 hover:text-slate-200 hover:bg-slate-700/50"}`}
-                      aria-label="All chats"
-                      title="All chats"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"
-                        />
-                      </svg>
-                    </button>
-                    <TabsList className="flex-1 justify-start h-auto p-1 m-rounded-card bg-slate-800/60 text-slate-400 overflow-x-auto flex-nowrap">
-                      {openConvos.map((c) => (
-                        <TabsTrigger
-                          key={c.id}
-                          value={c.id}
-                          className="group/tab rounded-lg pl-3 pr-1.5 py-1.5 text-xs font-medium data-[state=active]:bg-slate-700 data-[state=active]:text-slate-100 shrink-0 max-w-[140px] flex items-center gap-1"
-                        >
-                          {renamingVoiceConvId === c.id ? (
-                            <form
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                commitRename();
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <input
-                                ref={voiceRenameInputRef}
-                                type="text"
-                                value={renameValue}
-                                onChange={(e) => setRenameValue(e.target.value)}
-                                onBlur={commitRename}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Escape") {
-                                    setRenamingVoiceConvId(null);
-                                    setRenameValue("");
-                                  }
-                                }}
-                                className="voice-input-field w-24 px-2 py-0.5 text-xs text-slate-100 bg-transparent border-b border-slate-500"
-                              />
-                            </form>
-                          ) : (
-                            <>
-                              <span
-                                className="truncate flex-1 min-w-0"
-                                onDoubleClick={(e) => {
-                                  e.stopPropagation();
-                                  startRename(c.id);
-                                }}
-                                title="Double-click to rename"
-                              >
-                                {c.title}
-                              </span>
-                              <span
-                                role="button"
-                                tabIndex={0}
-                                aria-label="Close tab"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  closeTab(c.id);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    closeTab(c.id);
-                                  }
-                                }}
-                                className="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded text-slate-500 hover:text-slate-200 hover:bg-slate-600/50 transition-colors touch-manipulation cursor-pointer"
-                              >
-                                <svg
-                                  className="w-3.5 h-3.5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth={2}
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </span>
-                            </>
-                          )}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    <button
-                      type="button"
-                      onClick={startNewChat}
-                      className="shrink-0 p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-700/50 transition-colors"
-                      aria-label="New chat"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 4.5v15m7.5-7.5h-15"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        hapticLight();
-                        setMainAppTab("settings");
-                      }}
-                      className="shrink-0 p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-700/50 transition-colors"
-                      aria-label="Dilly settings"
-                      title="Dilly settings"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                  <VoiceTabBar
+                    openConvos={openConvos}
+                    effectiveActiveId={effectiveActiveId}
+                    renamingVoiceConvId={renamingVoiceConvId}
+                    renameValue={renameValue}
+                    voiceChatListOpen={voiceChatListOpen}
+                    voiceRenameInputRef={voiceRenameInputRef}
+                    setVoiceChatListOpen={setVoiceChatListOpen}
+                    setRenamingVoiceConvId={setRenamingVoiceConvId}
+                    setRenameValue={setRenameValue}
+                    openChat={openChat}
+                    closeTab={closeTab}
+                    startNewChat={startNewChat}
+                    startRename={startRename}
+                    commitRename={commitRename}
+                    setMainAppTab={setMainAppTab}
+                  />
 
                   {/* Chat messages */}
                   <VoiceMessageList
@@ -1447,151 +764,26 @@ export function VoiceTab({
         </div>
 
         {/* Sticky bottom bar: suggestions + input */}
-        <div className="sticky bottom-0 shrink-0 pt-2 pb-40 bg-[var(--m-bg)]/95 backdrop-blur-sm border-t border-slate-800/60 -mx-4 px-4 sm:-mx-0 sm:px-0 min-w-0 max-w-full">
-          {/* Follow-up suggestions */}
-          {!voiceLoading &&
-            !voiceMockInterviewSession &&
-            voiceFollowUpSuggestions.length > 0 && (
-              <div className="mb-3">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500 mb-2">
-                  Suggested follow-ups
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {voiceFollowUpSuggestions.slice(0, 5).map((s, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => {
-                        setVoiceFollowUpSuggestions((prev) =>
-                          prev.filter((_, j) => j !== i),
-                        );
-                        sendVoice(s);
-                      }}
-                      className="voice-chip text-left text-xs px-3 py-2 rounded-xl border border-[var(--m-border)] text-slate-300 hover:text-slate-100 hover:border-[var(--dilly-primary)] hover:bg-[var(--dilly-primary)]/10 transition-colors max-w-full break-words line-clamp-2"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          {voiceRememberOpen && (
-            <div
-              className="mb-2 p-3 m-rounded-card flex gap-2"
-              style={{
-                backgroundColor: "var(--m-surface-2)",
-                border: "1px solid var(--m-border)",
-              }}
-            >
-              <Input
-                value={voiceRememberNote}
-                onChange={(e) => setVoiceRememberNote(e.target.value)}
-                placeholder="Notes for Dilly to remember (e.g. I'm targeting consulting)"
-                className="flex-1 text-sm bg-slate-800/70 border-[var(--ut-border)] text-slate-100"
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
-                  const note = voiceRememberNote.trim();
-                  if (!note) return;
-                  if (!localStorage.getItem("dilly_auth_token")) return;
-                  const notes = [
-                    ...((appProfile as { voice_notes?: string[] })?.voice_notes ?? []),
-                    note,
-                  ].slice(-20);
-                  dilly
-                    .fetch(`/profile`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ voice_notes: notes }),
-                    })
-                    .then((res) => {
-                      if (res.ok) return res.json();
-                      throw new Error("Save failed");
-                    })
-                    .then((p) => {
-                      setAppProfile((prev) =>
-                        prev ? { ...prev, voice_notes: p.voice_notes ?? [] } : prev,
-                      );
-                      setVoiceRememberNote("");
-                      setVoiceRememberOpen(false);
-                      toast("Saved. Dilly will remember.", "success");
-                    })
-                    .catch(() => toast("Could not save", "error"));
-                }}
-              />
-              <Button
-                // @ts-expect-error -- pre-existing: cva VariantProps not exposing size
-                size="sm"
-                onClick={async () => {
-                  const note = voiceRememberNote.trim();
-                  if (!note) return;
-                  if (!localStorage.getItem("dilly_auth_token")) return;
-                  const notes = [
-                    ...((appProfile as { voice_notes?: string[] })?.voice_notes ?? []),
-                    note,
-                  ].slice(-20);
-                  try {
-                    const res = await dilly.fetch(`/profile`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ voice_notes: notes }),
-                    });
-                    if (res.ok) {
-                      const p = await res.json();
-                      setAppProfile((prev) =>
-                        prev ? { ...prev, voice_notes: p.voice_notes ?? [] } : prev,
-                      );
-                      setVoiceRememberNote("");
-                      setVoiceRememberOpen(false);
-                      toast("Saved. Dilly will remember.", "success");
-                    }
-                  } catch {
-                    toast("Could not save", "error");
-                  }
-                }}
-                disabled={!voiceRememberNote.trim()}
-              >
-                Add
-              </Button>
-              <button
-                type="button"
-                onClick={() => {
-                  setVoiceRememberOpen(false);
-                  setVoiceRememberNote("");
-                }}
-                className="text-slate-500 hover:text-slate-300 p-1"
-                aria-label="Close"
-              >
-                {"\u00d7"}
-              </button>
-            </div>
-          )}
-          <div className="voice-input-area">
-            <VoiceInputWithMic
-              value={voiceInput}
-              onChange={setVoiceInput}
-              onSend={sendVoice}
-              isLoading={voiceLoading}
-              disabled={false}
-              autoFocus={
-                mainAppTab === "voice" &&
-                !voiceOverlayOpen &&
-                !voiceChatListOpen &&
-                !voiceRememberOpen &&
-                !bulletRewriterOpen
-              }
-              placeholder="Tell Dilly AI anything\u2026"
-              rotatingExamples={[
-                "I had coffee with Sarah from Goldman",
-                "I just got rejected from McKinsey",
-                "I'm stressed about my interview tomorrow",
-                "I bombed the behavioral question",
-                "I got an offer from Goldman",
-                "I'm switching from consulting to tech",
-              ]}
-            />
-          </div>
-        </div>
+        <VoiceInputBar
+          voiceInput={voiceInput}
+          setVoiceInput={setVoiceInput}
+          sendVoice={sendVoice}
+          voiceLoading={voiceLoading}
+          voiceMockInterviewSession={voiceMockInterviewSession}
+          voiceFollowUpSuggestions={voiceFollowUpSuggestions}
+          setVoiceFollowUpSuggestions={setVoiceFollowUpSuggestions}
+          voiceRememberOpen={voiceRememberOpen}
+          setVoiceRememberOpen={setVoiceRememberOpen}
+          voiceRememberNote={voiceRememberNote}
+          setVoiceRememberNote={setVoiceRememberNote}
+          appProfile={appProfile}
+          setAppProfile={setAppProfile}
+          toast={toast}
+          mainAppTab={mainAppTab}
+          voiceOverlayOpen={voiceOverlayOpen}
+          voiceChatListOpen={voiceChatListOpen}
+          bulletRewriterOpen={bulletRewriterOpen}
+        />
       </Tabs>
     </section>
   );
