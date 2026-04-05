@@ -177,7 +177,35 @@ async def add_application(request: Request, body: AddApplicationRequest):
     except Exception:
         raise errors.internal("Could not save application.")
 
-    return {"ok": True, "application": new_app.model_dump()}
+    # ── Auto-import deadline to calendar ────────────────────────────────────
+    deadline_added = False
+    if body.deadline:
+        try:
+            from projects.dilly.api.profile_store import get_profile, save_profile
+            profile = get_profile(email) or {}
+            deadlines = profile.get("deadlines") if isinstance(profile.get("deadlines"), list) else []
+            label = f"{(body.company or '').strip()} \u2014 {(body.role or 'Application').strip()} deadline"
+            # Check for duplicate (same label + date)
+            already_exists = any(
+                d.get("label") == label and d.get("date") == body.deadline
+                for d in deadlines if isinstance(d, dict)
+            )
+            if not already_exists:
+                new_deadline = {
+                    "id": str(_uuid.uuid4()),
+                    "label": label,
+                    "date": body.deadline,
+                    "type": "application",
+                    "createdBy": "dilly",
+                    "subDeadlines": [],
+                }
+                deadlines.append(new_deadline)
+                save_profile(email, {"deadlines": deadlines})
+                deadline_added = True
+        except Exception:
+            pass  # Non-critical; don't fail the application save
+
+    return {"ok": True, "application": new_app.model_dump(), "deadline_added": deadline_added}
 
 
 @router.patch("/applications/{app_id}")

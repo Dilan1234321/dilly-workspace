@@ -157,6 +157,7 @@ from projects.dilly.api.routers import voice_history as voice_history_router
 from projects.dilly.api.routers import internal_voice_extract as internal_voice_extract_router
 from projects.dilly.api.routers import internal_voice_agent as internal_voice_agent_router
 from projects.dilly.api.routers import ai as ai_router
+from projects.dilly.api.routers import calendar_feed as calendar_feed_router
 from projects.dilly.api.routers import cron_jobs_cleanup
 app.include_router(cron_jobs_cleanup.router)
 app.include_router(auth_router.router)
@@ -193,6 +194,7 @@ app.include_router(voice_history_router.router)
 app.include_router(internal_voice_extract_router.router)
 app.include_router(internal_voice_agent_router.router)
 app.include_router(ai_router.router)
+app.include_router(calendar_feed_router.router)
 
 benchmarks = Benchmarks()
 

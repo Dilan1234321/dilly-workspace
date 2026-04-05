@@ -297,6 +297,8 @@ export type DillyDeadline = {
   completed?: boolean;
   /** Unix timestamp when completed; richer than the boolean `completed`. */
   completedAt?: number | null;
+  /** Per-deadline reminder preferences: days before deadline to send reminders (e.g. [1, 3, 7]). */
+  reminder_days?: number[];
 };
 
 export type DetectedDeadline = {
@@ -654,6 +656,9 @@ export type AppProfile = {
 
   /** Deadlines (stored on profile for quick access) */
   deadlines?: DillyDeadline[];
+
+  /** Calendar feed token for iCal subscription (random, not the auth token). */
+  calendar_feed_token?: string | null;
 
   /** UI state */
   theme?: ProfileThemeId;

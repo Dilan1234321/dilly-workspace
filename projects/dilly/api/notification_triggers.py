@@ -128,6 +128,36 @@ class Trigger:
     evaluate: Callable[[dict[str, Any]], dict[str, Any]]
 
 
+def _trigger_deadline_reminder(ctx: dict[str, Any]) -> dict[str, Any]:
+    """Fires when days_remaining matches any value in a deadline's reminder_days array."""
+    today: date = ctx["today"]
+    deadlines = [d for d in (ctx.get("deadlines") or []) if isinstance(d, dict)]
+    for d in deadlines:
+        if d.get("completedAt"):
+            continue
+        dd = _to_date(d.get("date"))
+        if not dd:
+            continue
+        days = days_between(today, dd)
+        if days < 0:
+            continue
+        reminder_days = d.get("reminder_days")
+        if not isinstance(reminder_days, list) or not reminder_days:
+            continue
+        if days in reminder_days:
+            return {
+                "fired": True,
+                "data": {
+                    "deadline_label": d.get("label") or "Upcoming deadline",
+                    "deadline_id": d.get("id") or "",
+                    "days_remaining": days,
+                    "reminder_type": "per_deadline",
+                    "current_score": (ctx.get("latest_audit") or {}).get("final_score"),
+                },
+            }
+    return {"fired": False}
+
+
 def _trigger_deadline_critical(ctx: dict[str, Any]) -> dict[str, Any]:
     today: date = ctx["today"]
     deadlines = [d for d in (ctx.get("deadlines") or []) if isinstance(d, dict)]
@@ -488,6 +518,7 @@ def _trigger_deep_dive_overdue(ctx: dict[str, Any]) -> dict[str, Any]:
 
 
 TRIGGERS: list[Trigger] = [
+    Trigger("DEADLINE_REMINDER", 0, 1, _trigger_deadline_reminder),
     Trigger("DEADLINE_CRITICAL", 1, 1, _trigger_deadline_critical),
     Trigger("DEADLINE_ATS_RISK", 2, 3, _trigger_deadline_ats_risk),
     Trigger("COHORT_PULSE_MONDAY", 3, 7, _trigger_cohort_pulse_monday),

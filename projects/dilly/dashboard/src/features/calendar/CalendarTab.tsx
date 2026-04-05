@@ -52,6 +52,10 @@ export function CalendarTab({
   const [calRenameValue, setCalRenameValue] = useState("");
   const [calRenamingSubId, setCalRenamingSubId] = useState<{ parentId: string; subId: string } | null>(null);
   const [calRenameSubValue, setCalRenameSubValue] = useState("");
+  const [reminderEditId, setReminderEditId] = useState<string | null>(null);
+  const [feedToken, setFeedToken] = useState<string | null>(appProfile?.calendar_feed_token ?? null);
+  const [showSubscribe, setShowSubscribe] = useState(false);
+  const [feedCopied, setFeedCopied] = useState(false);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const allDeadlines: DillyDeadline[] = (appProfile?.deadlines || []).filter((d) => d.date && d.label);
@@ -157,6 +161,47 @@ export function CalendarTab({
     setCalRenameSubValue("");
   };
 
+  const REMINDER_OPTIONS = [
+    { value: 1, label: "1 day before" },
+    { value: 3, label: "3 days before" },
+    { value: 7, label: "1 week before" },
+  ] as const;
+
+  const handleToggleReminder = async (deadlineId: string, days: number) => {
+    const updated = allDeadlines.map((dl) => {
+      if (dl.id !== deadlineId) return dl;
+      const current = dl.reminder_days || [];
+      const next = current.includes(days) ? current.filter((d) => d !== days) : [...current, days].sort((a, b) => a - b);
+      return { ...dl, reminder_days: next };
+    });
+    await saveProfile({ deadlines: updated });
+  };
+
+  const handleGenerateFeedToken = async () => {
+    try {
+      const { dilly } = await import("@/lib/dilly");
+      const res = await dilly.fetch("/calendar/generate-feed-token", { method: "POST" });
+      const data = await res.json();
+      if (data.ok && data.feed_token) {
+        setFeedToken(data.feed_token);
+        setShowSubscribe(true);
+      }
+    } catch {
+      toast("Could not generate calendar link. Try again.", "error");
+    }
+  };
+
+  const handleCopyFeedUrl = () => {
+    if (!feedToken) return;
+    const baseUrl = window.location.origin.replace("://", "://").replace(/^https?/, "webcal");
+    const feedUrl = `${baseUrl}/api/calendar/feed/${feedToken}.ics`;
+    navigator.clipboard.writeText(feedUrl).then(() => {
+      setFeedCopied(true);
+      toast("Calendar URL copied!", "success");
+      setTimeout(() => setFeedCopied(false), 3000);
+    });
+  };
+
   // eslint-disable-next-line react-hooks/purity -- intentional
   const now = Date.now();
   const upcomingWithPrep = allDeadlines
@@ -207,6 +252,23 @@ export function CalendarTab({
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
               Export
+            </button>
+          )}
+          {allDeadlines.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (feedToken) {
+                  setShowSubscribe((v) => !v);
+                } else {
+                  handleGenerateFeedToken();
+                }
+              }}
+              className="text-xs font-medium px-3 py-2 rounded-[12px] flex items-center gap-1.5 transition-colors"
+              style={{ border: "1px solid var(--b1)", color: "var(--t2)", background: "var(--s2)" }}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.54a4.5 4.5 0 00-6.364-6.364L4.5 8.25" /></svg>
+              Subscribe
             </button>
           )}
           <button
@@ -283,6 +345,42 @@ export function CalendarTab({
         </div>
       )}
 
+      {/* Subscribe to calendar panel */}
+      {showSubscribe && feedToken && (
+        <div className="voice-chat-container p-4 mb-4 cal-confirm-card cal-drawer" style={{ borderLeft: "4px solid var(--blue)" }}>
+          <p className="font-semibold text-sm mb-2 flex items-center gap-2" style={{ color: "var(--t1)" }}>
+            <svg className="w-4 h-4" style={{ color: "var(--blue)" }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.54a4.5 4.5 0 00-6.364-6.364L4.5 8.25" /></svg>
+            Subscribe to Calendar
+          </p>
+          <p className="text-xs mb-3" style={{ color: "var(--t3)" }}>
+            Add your Dilly deadlines to Google Calendar or any calendar app. They will stay in sync automatically.
+          </p>
+          <div className="flex items-center gap-2 mb-3">
+            <button
+              type="button"
+              onClick={handleCopyFeedUrl}
+              className="text-xs font-semibold px-4 py-2 rounded-[12px] flex items-center gap-1.5 transition-opacity hover:opacity-90"
+              style={{ background: "var(--blue)", color: "#fff" }}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+              {feedCopied ? "Copied!" : "Copy Calendar URL"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSubscribe(false)}
+              className="text-xs px-2 py-2 transition-colors"
+              style={{ color: "var(--t3)" }}
+            >
+              Close
+            </button>
+          </div>
+          <div className="text-[11px] space-y-1" style={{ color: "var(--t3)" }}>
+            <p><strong>Google Calendar:</strong> Other calendars (+) &rarr; From URL &rarr; paste the link</p>
+            <p><strong>Apple Calendar:</strong> File &rarr; New Calendar Subscription &rarr; paste the link</p>
+          </div>
+        </div>
+      )}
+
       {/* Month navigation */}
       <div className="flex items-center justify-between mb-3 px-1">
         <button
@@ -340,7 +438,9 @@ export function CalendarTab({
                 {hasDeadlines && (
                   <div className="space-y-0.5 overflow-hidden">
                     {(entry?.main || []).slice(0, 2).map((dl) => (
-                      <span key={dl.id} className="cal-pill cal-pill-main truncate">{dl.label}</span>
+                      <span key={dl.id} className={`cal-pill truncate ${dl.type === "application" ? "cal-pill-application" : "cal-pill-main"}`}
+                        style={dl.type === "application" ? { background: "rgba(52,199,89,0.15)", color: "rgb(52,199,89)", borderColor: "rgba(52,199,89,0.3)" } : undefined}
+                      >{dl.label}</span>
                     ))}
                     {(entry?.sub || []).slice(0, 1).map(({ sub }, i) => (
                       <span key={i} className="cal-pill cal-pill-sub truncate">{sub.label}</span>
@@ -400,15 +500,51 @@ export function CalendarTab({
                           </form>
                         ) : (
                           <>
-                            <p
-                              className={`text-sm font-medium truncate cursor-text transition-colors ${isCompleted ? "line-through" : ""}`}
-                              style={{ color: isCompleted ? "var(--t3)" : "var(--t1)" }}
-                              onClick={() => { setCalRenamingId(dl.id); setCalRenameValue(dl.label); }}
-                              title={isCompleted ? "Done (stays on calendar)" : "Click to rename"}
-                            >{dl.label}{isCompleted ? " ✓" : ""}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p
+                                className={`text-sm font-medium truncate cursor-text transition-colors ${isCompleted ? "line-through" : ""}`}
+                                style={{ color: isCompleted ? "var(--t3)" : "var(--t1)" }}
+                                onClick={() => { setCalRenamingId(dl.id); setCalRenameValue(dl.label); }}
+                                title={isCompleted ? "Done (stays on calendar)" : "Click to rename"}
+                              >{dl.label}{isCompleted ? " ✓" : ""}</p>
+                              {dl.type === "application" && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-[6px]" style={{ background: "rgba(52,199,89,0.15)", color: "rgb(52,199,89)" }}>APP</span>
+                              )}
+                            </div>
                             <p className="text-xs mt-0.5" style={{ color: isCompleted ? "var(--t3)" : urgentColor }}>
                               {isCompleted ? "Done" : daysAway < 0 ? "Deadline passed" : daysAway === 0 ? "Less than a day away" : `${daysAway}d away`}
                             </p>
+                            {!isCompleted && (
+                              <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => setReminderEditId((v) => v === dl.id ? null : dl.id)}
+                                  className="text-[10px] px-1.5 py-0.5 rounded-[6px] transition-colors"
+                                  style={{ color: "var(--t3)", border: "1px solid var(--b1)" }}
+                                >
+                                  {(dl.reminder_days?.length ?? 0) > 0 ? `Reminders (${dl.reminder_days!.length})` : "Set reminders"}
+                                </button>
+                                {reminderEditId === dl.id && REMINDER_OPTIONS.map((opt) => {
+                                  const active = (dl.reminder_days || []).includes(opt.value);
+                                  return (
+                                    <button
+                                      key={opt.value}
+                                      type="button"
+                                      onClick={() => handleToggleReminder(dl.id, opt.value)}
+                                      className="text-[10px] px-2 py-0.5 rounded-[6px] transition-colors"
+                                      style={{
+                                        background: active ? "var(--bdim)" : "transparent",
+                                        color: active ? "var(--blue)" : "var(--t3)",
+                                        border: `1px solid ${active ? "var(--blue)" : "var(--b1)"}`,
+                                        fontWeight: active ? 600 : 400,
+                                      }}
+                                    >
+                                      {opt.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
@@ -550,8 +686,12 @@ export function CalendarTab({
               const isRenamingThis = calRenamingId === dl.id;
               return (
                 <div key={dl.id} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-[12px] flex items-center justify-center shrink-0 mt-0.5" style={{ background: "var(--bdim)", border: "1px solid var(--blue)" }}>
-                    <svg className="w-4 h-4" style={{ color: "var(--blue)" }} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+                  <div className="w-8 h-8 rounded-[12px] flex items-center justify-center shrink-0 mt-0.5" style={{ background: dl.type === "application" ? "rgba(52,199,89,0.1)" : "var(--bdim)", border: `1px solid ${dl.type === "application" ? "rgb(52,199,89)" : "var(--blue)"}` }}>
+                    {dl.type === "application" ? (
+                      <svg className="w-4 h-4" style={{ color: "rgb(52,199,89)" }} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4" style={{ color: "var(--blue)" }} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -577,7 +717,9 @@ export function CalendarTab({
                             title="Click to rename"
                           >{dl.label}</p>
                           {urgentBadge && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-[8px]" style={{ background: daysAway <= 3 ? "rgba(255,69,58,0.15)" : daysAway <= 7 ? "var(--adim)" : "var(--adim)", color: daysAway <= 3 ? "var(--coral)" : "var(--amber)" }}>{urgentBadge}</span>}
+                          {dl.type === "application" && <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-[6px]" style={{ background: "rgba(52,199,89,0.15)", color: "rgb(52,199,89)" }}>APP</span>}
                           {dl.createdBy === "dilly" && <span className="text-[10px] px-1.5 py-0.5 rounded-[8px]" style={{ color: "var(--t3)", background: "var(--s3)" }}>by Dilly</span>}
+                          {(dl.reminder_days?.length ?? 0) > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-[6px]" style={{ color: "var(--t3)", background: "var(--s3)" }}>Reminders: {dl.reminder_days!.join(", ")}d</span>}
                         </>
                       )}
                     </div>
