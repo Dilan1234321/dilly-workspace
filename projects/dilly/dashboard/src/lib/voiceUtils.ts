@@ -2,6 +2,8 @@
  * Voice-related utilities: storage keys, intro state, greeting text.
  */
 
+import type { AuditV2, AppProfile } from "@/types/dilly";
+
 export function voiceStorageKey(kind: string, email?: string | null): string {
   return email ? `dilly_voice_${kind}_${email}` : `dilly_voice_${kind}`;
 }
@@ -52,4 +54,92 @@ export function getDillyVoiceEmptyGreeting(
     return "Hey! I'm Dilly, your career coach. I'm built to talk to you about YOU! You can talk to me like I was born and raised in your resume, because I kind of was. What's on your mind?";
   }
   return short;
+}
+
+// ── Smart follow-up suggestions ─────────────────────────────────────────────
+
+export interface BuildFollowUpSuggestionsInput {
+  isFreshAudit: boolean;
+  displayAudit: AuditV2 | null;
+  prevAuditScores: { smart: number; grit: number; build: number } | null;
+  appProfile: AppProfile | null;
+  effectiveTrack: string | null;
+}
+
+/**
+ * Pure function: compute context-aware follow-up suggestions from audit/deadlines.
+ * Extracted from VoiceTab so it can be tested independently.
+ */
+export function buildFollowUpSuggestions({
+  isFreshAudit,
+  displayAudit,
+  prevAuditScores,
+  appProfile,
+  effectiveTrack,
+}: BuildFollowUpSuggestionsInput): string[] {
+  const LOW = 40; // matches LOW_SCORE_THRESHOLD from dillyUtils
+  const s: string[] = [];
+  if (isFreshAudit && displayAudit?.scores) {
+    s.push("How do I interpret my new audit scores?");
+  }
+  if (displayAudit?.scores) {
+    const dims = [
+      { k: "smart", v: displayAudit.scores.smart, label: "Smart" },
+      { k: "grit", v: displayAudit.scores.grit, label: "Grit" },
+      { k: "build", v: displayAudit.scores.build, label: "Build" },
+    ] as const;
+    const lowest = dims.reduce((a, b) => (b.v < a.v ? b : a));
+    if (lowest.v < LOW) {
+      s.push(`Why is my ${lowest.label} score low and what's the fastest way to improve it?`);
+    }
+    s.push(
+      `My ${lowest.label} score is ${Math.round(lowest.v)}. What exactly should I do to raise it?`,
+    );
+  }
+  const justMissedForChip = appProfile?.deadlines?.find(
+    (d) =>
+      !d.completedAt &&
+      (() => {
+        try {
+          const daysSincePassed = (Date.now() - new Date(d.date).getTime()) / 86400000;
+          return daysSincePassed > 0 && daysSincePassed <= 1;
+        } catch {
+          return false;
+        }
+      })(),
+  );
+  if (justMissedForChip) {
+    s.push(`I missed my deadline for "${justMissedForChip.label}". What should I do now?`);
+  } else {
+    const soonestDeadline = appProfile?.deadlines?.find(
+      (d) =>
+        !d.completedAt &&
+        (() => {
+          try {
+            const days = (new Date(d.date).getTime() - Date.now()) / 86400000;
+            return days >= 0 && days < 14;
+          } catch {
+            return false;
+          }
+        })(),
+    );
+    if (soonestDeadline) {
+      s.push(`I have "${soonestDeadline.label}" coming up. What should I do right now?`);
+    } else {
+      s.push("What should I do this week to stand out to recruiters?");
+    }
+  }
+  const topFinding = displayAudit?.audit_findings?.[0];
+  if (topFinding && topFinding.length < 100) {
+    s.push(`How do I fix: "${topFinding.slice(0, 60)}..."?`);
+  } else {
+    if (effectiveTrack) s.push(`What do ${effectiveTrack} recruiters actually look for?`);
+  }
+  s.push("How can I rewrite my weakest bullet to sound more impactful?");
+  if (prevAuditScores && displayAudit?.scores) {
+    const deltaGrit = displayAudit.scores.grit - prevAuditScores.grit;
+    const dir = deltaGrit >= 0 ? "up" : "down";
+    s.push(`My Grit score went ${dir} since my last audit. Why?`);
+  }
+  return s.slice(0, 5);
 }
