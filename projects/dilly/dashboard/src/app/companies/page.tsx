@@ -32,8 +32,6 @@ export default function CompaniesPage() {
   const [industryFilter, setIndustryFilter] = useState<string>("all");
   const [roleTypeFilter, setRoleTypeFilter] = useState<RoleTypeFilter>("all");
 
-  const theme = { primary: school?.theme?.primary ?? "#C8102E" };
-
   const industries = useMemo(() => {
     const tracks = new Set<string>();
     companies.forEach((c) => {

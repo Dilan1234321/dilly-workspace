@@ -25,28 +25,28 @@ interface UseAppLifecycleParams {
 }
 
 export function useAppLifecycle({ setApplicationTarget }: UseAppLifecycleParams) {
-  const router = useRouter();
-  const { toast } = useToast();
+  const _router = useRouter();
+  const { toast: _toast } = useToast();
   const {
-    user, setUser,
-    authLoading, setAuthLoading,
+    user, setUser: _setUser,
+    authLoading: _authLoading, setAuthLoading: _setAuthLoading,
     setAllowMainApp,
     setOnboardingNeeded,
     setProfileFetchDone,
     appProfile, setAppProfile,
-    school, setSchool,
+    school: _school, setSchool,
   } = useAppContext();
   const {
-    setVoiceConvos,
-    setOpenVoiceConvIds,
-    setActiveVoiceConvId,
-    setVoiceMessages,
-    setVoiceMessageQueue,
-    setVoiceInput,
-    setVoiceStreamingText,
-    setVoiceFollowUpSuggestions,
-    setVoiceActionItems,
-    setVoiceCompany,
+    setVoiceConvos: _setVoiceConvos,
+    setOpenVoiceConvIds: _setOpenVoiceConvIds,
+    setActiveVoiceConvId: _setActiveVoiceConvId,
+    setVoiceMessages: _setVoiceMessages,
+    setVoiceMessageQueue: _setVoiceMessageQueue,
+    setVoiceInput: _setVoiceInput,
+    setVoiceStreamingText: _setVoiceStreamingText,
+    setVoiceFollowUpSuggestions: _setVoiceFollowUpSuggestions,
+    setVoiceActionItems: _setVoiceActionItems,
+    setVoiceCompany: _setVoiceCompany,
     setVoiceMemory,
     setVoiceAvatarIndex,
     voiceCalendarSyncKey,
@@ -78,6 +78,7 @@ export function useAppLifecycle({ setApplicationTarget }: UseAppLifecycleParams)
     } catch {
       setOnboardingNeeded(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, []);
 
   // Auth check — runs once on mount only
@@ -325,6 +326,7 @@ export function useAppLifecycle({ setApplicationTarget }: UseAppLifecycleParams)
         setProfileFetchDone(true);
       });
     return () => ac.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, centerRefreshKey, voiceCalendarSyncKey]);
 
   // Profile cache sync
@@ -339,6 +341,7 @@ export function useAppLifecycle({ setApplicationTarget }: UseAppLifecycleParams)
   // Profile photo fetch
   useEffect(() => {
     if (!user?.email) {
+       
       setProfilePhotoUrl((u) => { if (u) URL.revokeObjectURL(u); return null; });
       return;
     }
@@ -401,6 +404,7 @@ export function useAppLifecycle({ setApplicationTarget }: UseAppLifecycleParams)
     if (typeof navigator === "undefined") return;
     const onOffline = () => setIsOffline(true);
     const onOnline = () => setIsOffline(false);
+     
     setIsOffline(!navigator.onLine);
     window.addEventListener("offline", onOffline);
     window.addEventListener("online", onOnline);

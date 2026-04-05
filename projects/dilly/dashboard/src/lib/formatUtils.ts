@@ -46,9 +46,6 @@ export function getTopThreeActions(audit: AuditV2 | null | undefined): TopAction
   const items: TopActionItem[] = [];
   const recs = audit.recommendations ?? [];
   const redFlags = audit.red_flags ?? [];
-  const scores = audit.scores ?? { smart: 0, grit: 0, build: 0 };
-  const keys: DimensionKey[] = ["smart", "grit", "build"];
-  const weakest = keys.reduce((acc, k) => (scores[k] < acc.score ? { key: k, score: scores[k] } : acc), { key: keys[0], score: scores[keys[0]] });
 
   // 1. Red flags first (max 2)
   for (let i = 0; i < Math.min(2, redFlags.length) && items.length < 3; i++) {

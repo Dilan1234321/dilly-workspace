@@ -1,6 +1,6 @@
 "use client";
 
-import { getProfileFrame, getProfileFrameLabel, type ProfileFrame } from "@/lib/profileFrame";
+import { getProfileFrameLabel, type ProfileFrame } from "@/lib/profileFrame";
 
 type Props = {
   photoUrl: string | null;

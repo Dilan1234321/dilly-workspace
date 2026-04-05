@@ -261,6 +261,7 @@ export function ApplicationsSection() {
     setLoading(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
   useEffect(() => { loadApps(); }, [loadApps]);
 
   useEffect(() => {

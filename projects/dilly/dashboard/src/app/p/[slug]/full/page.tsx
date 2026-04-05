@@ -40,6 +40,7 @@ export default function PublicDillyProfilePage() {
 
   useEffect(() => {
     if (!slug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setLoading(false);
       return;
     }

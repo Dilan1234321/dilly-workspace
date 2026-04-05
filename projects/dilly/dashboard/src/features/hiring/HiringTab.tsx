@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef } from "react";
 import { ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import { getEffectiveCohortLabel, getPlaybookForTrack } from "@/lib/trackDefinitions";
 import { QUICK_TIPS } from "@/lib/quickTips";
@@ -27,7 +27,6 @@ import {
   computeScoreTrajectory,
   getStrongestSignalSentence,
   scoresCrossedMilestones,
-  readLastAtsScoreCache,
 } from "@/lib/dillyUtils";
 import { dilly } from "@/lib/dilly";
 import { AppProfileHeader } from "@/components/career-center";
@@ -94,7 +93,7 @@ export function HiringTab({
     auditHistory, setAuditHistory, auditHistoryLoading,
     setCenterRefreshKey,
   } = useAuditScore();
-  const { state: { mainAppTab, reviewSubView }, setMainAppTab, setReviewSubView } = useNavigation();
+  const { state: { mainAppTab: _mainAppTab, reviewSubView }, setMainAppTab, setReviewSubView } = useNavigation();
   const { voiceAvatarIndex } = useVoice();
   const { toast } = useToast();
   const { showVoiceNotification } = useDillyVoiceNotification();
@@ -418,7 +417,7 @@ export function HiringTab({
   if (reviewSubView === "insights") {
     const displayAudit = latestAuditRef.current ?? audit ?? savedAuditForCenter;
     const trackForPlaybook = getEffectiveCohortLabel(displayAudit?.detected_track, appProfile?.track) || null;
-    const playbook = trackForPlaybook ? getPlaybookForTrack(trackForPlaybook) : null;
+    const _playbook = trackForPlaybook ? getPlaybookForTrack(trackForPlaybook) : null;
     return (
       <section className="w-full max-w-[min(375px,100vw)] mx-auto px-3 sm:px-5 pt-0 pb-40 min-w-0 animate-fade-up overflow-x-hidden" aria-label="Insights">
         <Button type="button" variant="ghost" size="sm" onClick={() => setReviewSubView("home")} className="mb-4 text-slate-400 hover:text-slate-200 -ml-1 min-h-[44px]">← Back</Button>

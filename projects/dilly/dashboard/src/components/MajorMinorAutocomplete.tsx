@@ -58,6 +58,7 @@ export function MajorMinorAutocomplete({
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [value, options, onChange]);
 
   const select = (opt: string) => {

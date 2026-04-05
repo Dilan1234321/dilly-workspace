@@ -118,7 +118,7 @@ export default function TemplatesPage() {
   const [isExiting, setIsExiting] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
 
-  const handleNavigateAway = useCallback((path: string) => {
+  const _handleNavigateAway = useCallback((path: string) => {
     if (isExiting) return;
     setIsExiting(true);
     pageRef.current?.classList.add("template-pop-out");

@@ -70,7 +70,7 @@ function Waves({ className = "" }: { className?: string }) {
   );
 }
 
-const SILHOUETTES = [PalmTrees, Minarets, Dolphins, Sun, Waves];
+const _SILHOUETTES = [PalmTrees, Minarets, Dolphins, Sun, Waves];
 
 /**
  * Premium onboarding layout: Dilly design system

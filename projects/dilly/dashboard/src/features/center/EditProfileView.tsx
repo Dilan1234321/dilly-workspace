@@ -9,7 +9,7 @@ import { MajorMinorAutocomplete } from "@/components/MajorMinorAutocomplete";
 import { CityChipsInput } from "@/components/CityChipsInput";
 
 import { useAppContext } from "@/context/AppContext";
-import { useAuditScore } from "@/contexts/AuditScoreContext";
+
 import { useVoice } from "@/contexts/VoiceContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useToast } from "@/hooks/useToast";

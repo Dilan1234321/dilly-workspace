@@ -52,7 +52,7 @@ export function oneLineSummary(audit: AuditV2 | null | undefined): string {
   if (!audit) return "";
   const take = audit.dilly_take;
   if (take && take.trim()) return take.trim();
-  const { scores, audit_findings, recommendations, detected_track } = audit;
+  const { scores, audit_findings: _audit_findings, recommendations, detected_track } = audit;
   const keys: DimensionKey[] = ["smart", "grit", "build"];
   const low = keys.reduce(
     (acc, k) => (scores[k] < acc.score ? { key: k, score: scores[k] } : acc),

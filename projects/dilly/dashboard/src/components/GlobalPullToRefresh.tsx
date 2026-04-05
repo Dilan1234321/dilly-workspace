@@ -133,7 +133,6 @@ export function GlobalPullToRefresh() {
             </g>
           </svg>
         ) : null}
-        {/* eslint-disable-next-line @next/next/no-img-element -- public asset, same as rest of app */}
         <img
           src="/dilly-logo.png"
           alt=""

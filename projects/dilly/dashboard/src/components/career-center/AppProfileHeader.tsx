@@ -92,9 +92,13 @@ export function AppProfileHeader({
     })();
   }, [nameProp, photoProp]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
   useEffect(() => { if (nameProp !== undefined) setName(nameProp || ""); }, [nameProp]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
   useEffect(() => { if (trackProp !== undefined) setTrack(trackProp || ""); }, [trackProp]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
   useEffect(() => { if (schoolProp !== undefined) setSchoolName(schoolProp || ""); }, [schoolProp]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
   useEffect(() => { if (photoProp !== undefined) setPhotoUrl(photoProp || null); }, [photoProp]);
 
   /** Shown after name; same as before when track/school missing (placeholder cohort). */

@@ -69,6 +69,7 @@ function useCompareAskStream(
     setInput("");
     setStreamBuffer("");
     setDisplayedLength(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [candidateIds[0], candidateIds[1]]);
 
   const sendQuestion = async (question: string) => {

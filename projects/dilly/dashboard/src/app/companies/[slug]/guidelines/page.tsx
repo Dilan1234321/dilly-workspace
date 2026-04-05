@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { dilly } from "@/lib/dilly";
 import { LoaderOne } from "@/components/ui/loader-one";
-import { Button } from "@/components/ui/button";
+
 
 /**
  * Public company guidelines page (no auth).
@@ -30,6 +30,7 @@ export default function CompanyGuidelinesPage() {
 
   useEffect(() => {
     if (!slug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setLoading(false);
       return;
     }

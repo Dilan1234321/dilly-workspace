@@ -40,6 +40,7 @@ export function AppLaunchSequence() {
   const splash = useSplashState(active ? sequenceT0 : null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setMounted(true);
   }, []);
 

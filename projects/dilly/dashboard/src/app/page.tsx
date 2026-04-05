@@ -14,12 +14,11 @@ import {
   GOALS_ALL,
   readLastAtsScoreCache,
   getDillyVoiceEmptyGreeting,
-  voiceStorageKey,
   profilePhotoCacheKey,
 } from "@/lib/dillyUtils";
 import { isUnlocked } from "@/lib/achievements";
 import { dilly } from "@/lib/dilly";
-import { DEFAULT_VOICE_AVATAR_INDEX, VOICE_AVATAR_OPTIONS, getVoiceAvatarUrl } from "@/lib/voiceAvatars";
+import { VOICE_AVATAR_OPTIONS, getVoiceAvatarUrl } from "@/lib/voiceAvatars";
 import {
   ACHIEVEMENT_DEFINITIONS,
   ACHIEVEMENT_BORDER_COLORS,
@@ -71,7 +70,7 @@ import { useDeepLinks } from "@/hooks/useDeepLinks";
 import { useDataFetching } from "@/hooks/useDataFetching";
 
 /** Validate LinkedIn profile URL. Accepts linkedin.com/in/username format. */
-function isValidLinkedInUrl(url: string): boolean {
+function _isValidLinkedInUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed) return true;
   return /^(https?:\/\/)?(www\.)?linkedin\.com\/in\/[\w\-]+\/?$/i.test(trimmed);
@@ -84,12 +83,12 @@ export default function DashboardPage() {
 function Dashboard() {
   const router = useRouter();
   const {
-    state: { mainAppTab, reviewSubView, getHiredSubTab, readyCheckCompany, jobsPanelInitialFilter },
-    setMainAppTab, setReviewSubView, setGetHiredSubTab, setReadyCheckCompany, setJobsPanelInitialFilter,
+    state: { mainAppTab, reviewSubView, getHiredSubTab: _getHiredSubTab, readyCheckCompany, jobsPanelInitialFilter: _jobsPanelInitialFilter },
+    setMainAppTab, setReviewSubView, setGetHiredSubTab: _setGetHiredSubTab, setReadyCheckCompany, setJobsPanelInitialFilter: _setJobsPanelInitialFilter,
   } = useNavigation();
   const {
-    user, setUser,
-    authLoading, setAuthLoading,
+    user, setUser: _setUser,
+    authLoading, setAuthLoading: _setAuthLoading,
     allowMainApp,
     appProfile, setAppProfile,
     school,
@@ -114,10 +113,10 @@ function Dashboard() {
     voiceFollowUpSuggestions,
     lastAuditTsOnVoiceEnter, setLastAuditTsOnVoiceEnter,
     voiceMemory,
-    voiceApplicationsPreview,
+    voiceApplicationsPreview: _voiceApplicationsPreview,
     voiceOverlayOpen, setVoiceOverlayOpen,
     voiceBadgeLastSeen, setVoiceBadgeLastSeen,
-    pendingVoicePrompt,
+    pendingVoicePrompt: _pendingVoicePrompt,
     voiceAvatarPickerOpen, setVoiceAvatarPickerOpen,
     setVoiceAvatarIndex,
     setVoiceFollowUpSuggestions,
@@ -127,12 +126,12 @@ function Dashboard() {
   // ── Remaining local state (render-only or prop-passing) ─────────────────
   const [file, setFile] = useState<File | null>(null);
   const [pasteText, setPasteText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
+  const [_pdfError, _setPdfError] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<"one-line" | "suggested" | "report-link" | "top-pct" | "shared" | null>(null);
-  const [reportShareUrl, setReportShareUrl] = useState<string | null>(null);
+  const [_reportShareUrl, _setReportShareUrl] = useState<string | null>(null);
   const [downloadFeedback, setDownloadFeedback] = useState<"snapshot" | "pdf" | null>(null);
-  const [applicationTarget, setApplicationTarget] = useState<string>("");
+  const [_applicationTarget, setApplicationTarget] = useState<string>("");
   const latestAuditRef = useRef<AuditV2 | null>(null);
   const voiceEndRef = useRef<HTMLDivElement>(null);
   const voiceSendRef = useRef<((text?: string) => void) | null>(null);
@@ -143,7 +142,7 @@ function Dashboard() {
   const shareCardRef = useRef<HTMLDivElement>(null);
 
   // ── Extracted hooks ─────────────────────────────────────────────────────
-  const { saveProfile, profileSaveError, setProfileSaveError } = useProfileActions();
+  const { saveProfile, profileSaveError: _profileSaveError, setProfileSaveError: _setProfileSaveError } = useProfileActions();
 
   const {
     navigateToAuditReport,
@@ -156,11 +155,11 @@ function Dashboard() {
     habits,
     proactiveLines,
     proactiveNudges,
-    recommendedJobs,
-    jobsLoading,
-    cohortStats,
-    progressExplainer,
-    progressExplainerLoading,
+    recommendedJobs: _recommendedJobs,
+    jobsLoading: _jobsLoading,
+    cohortStats: _cohortStats,
+    progressExplainer: _progressExplainer,
+    progressExplainerLoading: _progressExplainerLoading,
   } = useDataFetching({ latestAuditRef, setApplicationTarget });
 
   const {
@@ -182,7 +181,7 @@ function Dashboard() {
     profilePhotoUploading, setProfilePhotoUploading,
     photoCropImageSrc, setPhotoCropImageSrc,
     photoInputRef,
-    signOut,
+    signOut: _signOut,
   } = useAppLifecycle({ setApplicationTarget });
 
   const {
@@ -203,7 +202,7 @@ function Dashboard() {
 
   const {
     stickerSheetOpen, setStickerSheetOpen,
-    fromSettingsWhenEditingProfileRef,
+    fromSettingsWhenEditingProfileRef: _fromSettingsWhenEditingProfileRef,
     wantsNewAudit, setWantsNewAudit,
     pasteMode, setPasteMode,
   } = useDeepLinks({
@@ -225,12 +224,12 @@ function Dashboard() {
   const [editJobLocationScope, setEditJobLocationScope] = useState<"specific" | "domestic" | "international" | null>(null);
   const [editLinkedIn, setEditLinkedIn] = useState("");
   const [editProfileSaving, setEditProfileSaving] = useState(false);
-  const [primaryGoalSaving, setPrimaryGoalSaving] = useState(false);
-  const [primaryGoalInput, setPrimaryGoalInput] = useState("");
-  const [primaryGoalEditing, setPrimaryGoalEditing] = useState(false);
-  const [appTargetLabelEditing, setAppTargetLabelEditing] = useState(false);
-  const [appTargetLabelInput, setAppTargetLabelInput] = useState("");
-  const [appTargetLabelSaving, setAppTargetLabelSaving] = useState(false);
+  const [_primaryGoalSaving, _setPrimaryGoalSaving] = useState(false);
+  const [_primaryGoalInput, setPrimaryGoalInput] = useState("");
+  const [_primaryGoalEditing, _setPrimaryGoalEditing] = useState(false);
+  const [_appTargetLabelEditing, _setAppTargetLabelEditing] = useState(false);
+  const [_appTargetLabelInput, setAppTargetLabelInput] = useState("");
+  const [_appTargetLabelSaving, _setAppTargetLabelSaving] = useState(false);
   const [centerMoreOpen, setCenterMoreOpen] = useState(false);
 
   // Insights panel state
@@ -256,6 +255,7 @@ function Dashboard() {
   useEffect(() => {
     const val = appProfile?.career_goal?.trim() || (appProfile?.goals?.length ? (GOALS_ALL.find((o) => o.key === appProfile!.goals![0])?.label ?? appProfile!.goals![0]) : "") || "";
     setPrimaryGoalInput(val);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [appProfile?.career_goal, appProfile?.goals]);
 
   useEffect(() => {
@@ -283,6 +283,7 @@ function Dashboard() {
     setEditingProfile(true);
     setMainAppTab("center");
     router.replace("/");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.subscribed, appProfile, school]);
 
   // ── Insight handlers ─────────────────────────────────────────────────────

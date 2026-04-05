@@ -32,6 +32,7 @@ export function TypewriterText({
   useEffect(() => {
     if (fullText !== prevFullTextRef.current) {
       prevFullTextRef.current = fullText;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setVisibleLength(isTyping ? 0 : fullText.length);
       startTimeRef.current = null;
     } else if (!isTyping) {

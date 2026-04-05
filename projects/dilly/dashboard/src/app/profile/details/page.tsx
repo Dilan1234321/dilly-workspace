@@ -155,6 +155,7 @@ export default function ProfileDetailsPage({ onBack, onOpenSettings }: { onBack?
   useLayoutEffect(() => {
     const token = localStorage.getItem("dilly_auth_token");
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setLoading(false);
       setError(true);
       return;

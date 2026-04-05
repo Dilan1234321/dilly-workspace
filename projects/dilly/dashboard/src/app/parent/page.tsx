@@ -24,6 +24,7 @@ function ParentView() {
 
   useEffect(() => {
     if (!token.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setError("Missing link. Your student can generate a new invite link in Settings → Share with parent.");
       return;
     }
@@ -36,7 +37,7 @@ function ParentView() {
     return (
       <div className="m-app min-h-screen flex flex-col items-center justify-center p-6">
         <div className="max-w-[375px] text-center">
-          <h1 className="text-lg font-semibold text-[var(--m-text)] mb-2">Couldn't load progress</h1>
+          <h1 className="text-lg font-semibold text-[var(--m-text)] mb-2">Couldn&apos;t load progress</h1>
           <p className="text-sm text-[var(--m-text-3)] mb-4">{error}</p>
           <Link href="/" className="text-sm text-[var(--dilly-primary)] hover:underline">Go to Dilly</Link>
         </div>
@@ -102,11 +103,11 @@ function ParentView() {
             </>
           ) : (
             <div className="m-rounded-card p-4" style={{ backgroundColor: "var(--m-surface-2)", border: "1px solid var(--m-border)" }}>
-              <p className="text-sm text-[var(--m-text-3)]">No audit yet. When {name} runs a resume audit, you'll see scores and status here.</p>
+              <p className="text-sm text-[var(--m-text-3)]">No audit yet. When {name} runs a resume audit, you&apos;ll see scores and status here.</p>
             </div>
           )}
           <p className="text-center text-[11px] text-[var(--m-text-4)]">
-            Dilly · We don't sell your data. <Link href="https://trydilly.com/for-parents.html" className="underline">For parents</Link>
+            Dilly · We don&apos;t sell your data. <Link href="https://trydilly.com/for-parents.html" className="underline">For parents</Link>
           </p>
         </div>
       </main>

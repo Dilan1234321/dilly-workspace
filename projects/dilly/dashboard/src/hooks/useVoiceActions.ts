@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { useAuditScore } from "@/contexts/AuditScoreContext";
 import { useVoice } from "@/contexts/VoiceContext";
@@ -7,7 +7,7 @@ import { getEffectiveCohortLabel } from "@/lib/trackDefinitions";
 import { computeScoreTrajectory, safeUuid } from "@/lib/dillyUtils";
 import { DILLY_PRESENCE_VOICE_ADDENDUM } from "@/lib/voice/presenceSystemPrompt";
 import { getAchievementsReferenceForVoice, ACHIEVEMENT_DEFINITIONS, type AchievementId } from "@/lib/achievements";
-import type { VoiceConvo, DillyDeadline, AuditV2 } from "@/types/dilly";
+import type { VoiceConvo, DillyDeadline } from "@/types/dilly";
 import type { TransitionSource } from "@/lib/dillyPresence";
 
 /** First message for the "Help Dilly know you better" resume deep-dive flow. */
@@ -91,10 +91,10 @@ export function useVoiceActions({ proactiveLines, proactiveNudges, habits }: Use
     voiceApplicationsPreview,
     setVoiceOverlayOpen,
     voiceScreenContext, setVoiceScreenContext,
-    pendingVoicePrompt, setPendingVoicePrompt,
+    pendingVoicePrompt: _pendingVoicePrompt, setPendingVoicePrompt,
     setVoiceMockInterviewSession,
-    voiceMessages,
-    voiceCalendarSyncKey, setVoiceCalendarSyncKey,
+    voiceMessages: _voiceMessages,
+    voiceCalendarSyncKey: _voiceCalendarSyncKey, setVoiceCalendarSyncKey,
   } = useVoice();
   const { showVoiceNotification } = useDillyVoiceNotification();
 
@@ -146,6 +146,7 @@ export function useVoiceActions({ proactiveLines, proactiveNudges, habits }: Use
   );
 
   const openVoiceWithNewChatRef = useRef(openVoiceWithNewChat);
+  // eslint-disable-next-line react-hooks/refs -- intentional
   openVoiceWithNewChatRef.current = openVoiceWithNewChat;
 
   /** Open Voice from a specific screen with optional prompt. */

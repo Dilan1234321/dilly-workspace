@@ -118,7 +118,7 @@ export default function AchievementsPage() {
             const def = ACHIEVEMENT_DEFINITIONS[id];
             const unlocked = isUnlocked(id, achievements);
             const isManual = MANUAL_UNLOCK_IDS.includes(id);
-            const onShareCard = shareCard.includes(id);
+
 
             return (
               <div

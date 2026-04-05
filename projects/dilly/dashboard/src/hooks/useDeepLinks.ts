@@ -12,7 +12,7 @@ import {
   auditStorageKey,
   stashAuditForReportHandoff,
 } from "@/lib/dillyUtils";
-import { PRE_PROFESSIONAL_TRACKS } from "@/lib/trackDefinitions";
+
 import type { AuditV2 } from "@/types/dilly";
 
 interface UseDeepLinksParams {
@@ -54,6 +54,7 @@ export function useDeepLinks({
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (searchParams.get("openStickerSheet") === "1") {
+       
       setStickerSheetOpen(true);
       const url = new URL(window.location.href);
       url.searchParams.delete("openStickerSheet");
@@ -123,6 +124,7 @@ export function useDeepLinks({
     } else if (tab === "insights" || sub === "insights") {
       setMainAppTab("hiring"); setReviewSubView("insights"); applied = true;
     } else if (tab === "upload" || sub === "upload") {
+       
       setMainAppTab("hiring"); setReviewSubView("upload"); setWantsNewAudit(true);
       if (searchParams.get("paste") === "1") { setPasteMode(true); }
       applied = true;
@@ -142,6 +144,7 @@ export function useDeepLinks({
       url.searchParams.delete("share");
       window.history.replaceState({}, "", url.pathname + url.search || "/");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [searchParams, router]);
 
   // Scroll to applications
@@ -161,6 +164,7 @@ export function useDeepLinks({
     const url = new URL(typeof window !== "undefined" ? window.location.href : "http://localhost/");
     url.searchParams.delete("tab");
     if (typeof window !== "undefined") window.history.replaceState({}, "", url.pathname + url.search || "/");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [searchParams, user?.subscribed]);
 
   // Legacy reviewSubView === "report" redirect
@@ -170,6 +174,7 @@ export function useDeepLinks({
     const id = (da?.id || auditHistory[0]?.id || "").trim();
     setReviewSubView("home");
     if (id) replaceToAuditReport(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, reviewSubView, viewingAudit, audit, savedAuditForCenter, auditHistory, replaceToAuditReport]);
 
   // Handle redirects from standalone Jobs page
@@ -193,6 +198,7 @@ export function useDeepLinks({
         setReviewSubView("home");
       }
     } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.subscribed]);
 
   // Edit profile from settings
@@ -202,6 +208,7 @@ export function useDeepLinks({
     fromSettingsWhenEditingProfileRef.current = true;
     setMainAppTab("center");
     router.replace("/");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.subscribed, appProfile, school]);
 
   // Clear stale pending Voice prompt

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { AppProfileHeader, CareerCenterMinibar } from "@/components/career-center";
@@ -208,7 +208,7 @@ function parseStructuredText(text: string, name?: string): ResumeSection[] {
       const entries: ExperienceEntry[] = parseExperienceEntries(content);
       if (entries.length > 0) {
         sections.push({
-          key: expKey as any,
+          key: expKey as ResumeSection["key"],
           label: SECTION_LABELS[expKey],
           experiences: entries,
         });
@@ -247,7 +247,7 @@ function parseStructuredText(text: string, name?: string): ResumeSection[] {
         .filter(Boolean);
       if (lineArr.length > 0) {
         sections.push({
-          key: simpleKey as any,
+          key: simpleKey as ResumeSection["key"],
           label: SECTION_LABELS[simpleKey],
           simple: { id: safeUuid(), lines: lineArr },
         });
@@ -518,6 +518,7 @@ function BulletRow({
   useEffect(() => {
     if (scoreTimerRef.current) clearTimeout(scoreTimerRef.current);
     if (!bullet.text.trim() || bullet.text.trim().split(/\s+/).length < 4) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setBulletScore(null);
       return;
     }
@@ -802,9 +803,9 @@ function SectionCard({
   if (EXPERIENCE_KEYS.has(section.key)) {
     const sec = section as { key: string; label: string; experiences: ExperienceEntry[] };
     const updateEntry = (id: string, entry: ExperienceEntry) =>
-      onChange({ ...section, experiences: sec.experiences.map((e) => (e.id === id ? entry : e)) } as any);
+      onChange({ ...section, experiences: sec.experiences.map((e) => (e.id === id ? entry : e)) } as ResumeSection);
     const removeEntry = (id: string) =>
-      onChange({ ...section, experiences: sec.experiences.filter((e) => e.id !== id) } as any);
+      onChange({ ...section, experiences: sec.experiences.filter((e) => e.id !== id) } as ResumeSection);
     const addEntry = () =>
       onChange({
         ...section,
@@ -812,7 +813,7 @@ function SectionCard({
           ...sec.experiences,
           { id: safeUuid(), company: "", role: "", date: "", location: "", bullets: [] },
         ],
-      } as any);
+      } as ResumeSection);
 
     return (
       <div className="m-resume-section-card">
@@ -843,14 +844,14 @@ function SectionCard({
   if (section.key === "projects") {
     const sec = section as { key: "projects"; label: string; projects: ProjectEntry[] };
     const updateProject = (id: string, proj: ProjectEntry) =>
-      onChange({ ...section, projects: sec.projects.map((p) => (p.id === id ? proj : p)) } as any);
+      onChange({ ...section, projects: sec.projects.map((p) => (p.id === id ? proj : p)) } as ResumeSection);
     const removeProject = (id: string) =>
-      onChange({ ...section, projects: sec.projects.filter((p) => p.id !== id) } as any);
+      onChange({ ...section, projects: sec.projects.filter((p) => p.id !== id) } as ResumeSection);
     const addProject = () =>
       onChange({
         ...section,
         projects: [...sec.projects, { id: safeUuid(), name: "", date: "", location: "", bullets: [] }],
-      } as any);
+      } as ResumeSection);
 
     return (
       <div className="m-resume-section-card">
@@ -884,21 +885,21 @@ function SectionCard({
     const updateLine = (i: number, v: string) => {
       const next = [...lines];
       next[i] = v;
-      onChange({ ...section, simple: { ...sec.simple, lines: next } } as any);
+      onChange({ ...section, simple: { ...sec.simple, lines: next } } as ResumeSection);
     };
     const addLine = () =>
-      onChange({ ...section, simple: { ...sec.simple, lines: [...lines, ""] } } as any);
+      onChange({ ...section, simple: { ...sec.simple, lines: [...lines, ""] } } as ResumeSection);
     const removeLine = (i: number) => {
       if (lines.length <= 1) return;
       const next = lines.filter((_, idx) => idx !== i);
-      onChange({ ...section, simple: { ...sec.simple, lines: next } } as any);
+      onChange({ ...section, simple: { ...sec.simple, lines: next } } as ResumeSection);
     };
 
     const isMultiLine = section.key === "summary_objective" || section.key === "publications_presentations";
 
     return (
       <div className="m-resume-section-card">
-        <SectionHeader label={section.label} icon={section.key as any} />
+        <SectionHeader label={section.label} icon={section.key as string} />
         <div className="px-4 pb-5 space-y-2">
           {lines.map((line, i) => (
             <div key={i} className="flex items-start gap-2">
@@ -1259,7 +1260,7 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [router, initialAudit]);
 
   const doSave = useCallback(async (currentSections: ResumeSection[], opts?: { silent?: boolean }): Promise<boolean> => {
@@ -1362,7 +1363,7 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
       };
     } else if (EXPERIENCE_KEYS.has(key)) {
       newSection = {
-        key: key as any,
+        key: key as ResumeSection["key"],
         label,
         experiences: [{ id: safeUuid(), company: "", role: "", date: "", location: "", bullets: [] }],
       };
@@ -1373,7 +1374,7 @@ export default function ResumeEditPage({ onBack, initialAudit }: { onBack?: () =
         projects: [{ id: safeUuid(), name: "", date: "", location: "", bullets: [] }],
       };
     } else {
-      newSection = { key: key as any, label, simple: { id: safeUuid(), lines: [""] } };
+      newSection = { key: key as ResumeSection["key"], label, simple: { id: safeUuid(), lines: [""] } };
     }
     setSections((prev) => [...prev, newSection]);
     setDirty(true);

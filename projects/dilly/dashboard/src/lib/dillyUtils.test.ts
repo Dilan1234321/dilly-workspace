@@ -15,7 +15,7 @@ import {
   DIMENSIONS,
   LOW_SCORE_THRESHOLD,
 } from "./dillyUtils";
-import type { AuditV2, DimensionKey } from "@/types/dilly";
+import type { AuditV2 } from "@/types/dilly";
 
 function mockAudit(overrides: Partial<AuditV2> = {}): AuditV2 {
   return {

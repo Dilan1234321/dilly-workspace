@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRecruiterBookmarks } from "@/hooks/useRecruiterBookmarks";
 import { useRecruiterNotes } from "@/hooks/useRecruiterNotes";
 import { AskAIChat } from "@/components/recruiter/AskAIChat";
-import Link from "next/link";
+
 
 const RECRUITER_SEARCH_STATE_KEY = "dilly_recruiter_search_state";
 
@@ -139,6 +139,7 @@ type CandidateDetail = {
   linkedin_url?: string | null;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future use
 function pronounObject(pronouns: string | null | undefined): "him" | "her" | "them" {
   const p = (pronouns || "").toLowerCase();
   if (/he|him|his/.test(p)) return "him";
@@ -246,6 +247,7 @@ type ProfileCollectionMenuProps = {
   onSelect: () => void;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future use
 function ProfileCollectionMenu({ candidateId, bookmarks, onClose, onSelect }: ProfileCollectionMenuProps) {
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);

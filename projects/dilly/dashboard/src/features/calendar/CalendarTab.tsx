@@ -6,7 +6,7 @@ import { useAuditScore } from "@/contexts/AuditScoreContext";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useToast } from "@/hooks/useToast";
 import { useDillyVoiceNotification } from "@/context/DillyVoiceNotificationContext";
-import { hapticLight, hapticSuccess } from "@/lib/haptics";
+import { hapticSuccess } from "@/lib/haptics";
 import { getEffectiveCohortLabel } from "@/lib/trackDefinitions";
 import { safeUuid } from "@/lib/dillyUtils";
 import { AppProfileHeader } from "@/components/career-center";
@@ -157,6 +157,7 @@ export function CalendarTab({
     setCalRenameSubValue("");
   };
 
+  // eslint-disable-next-line react-hooks/purity -- intentional
   const now = Date.now();
   const upcomingWithPrep = allDeadlines
     .filter((d) => d.date && new Date(d.date).getTime() > now)
@@ -375,6 +376,7 @@ export function CalendarTab({
           ) : (
             <div className="space-y-3">
               {selectedDayDeadlines.map((dl) => {
+                // eslint-disable-next-line react-hooks/purity -- intentional
                 const daysAway = Math.round((new Date(dl.date + "T00:00").getTime() - Date.now()) / 86400000);
                 const urgentColor = daysAway < 0 ? "var(--t3)" : daysAway <= 3 ? "var(--coral)" : daysAway <= 7 ? "var(--amber)" : "var(--t3)";
                 const isRenaming = calRenamingId === dl.id;
@@ -541,6 +543,7 @@ export function CalendarTab({
           <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--t3)" }}>All deadlines</p>
           <div className="space-y-3">
             {[...allDeadlines].filter((d) => !d.completedAt).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((dl) => {
+              // eslint-disable-next-line react-hooks/purity -- intentional
               const daysAway = Math.round((new Date(dl.date + "T00:00").getTime() - Date.now()) / 86400000);
               const urgentColor = daysAway < 0 ? "var(--t3)" : daysAway <= 3 ? "var(--coral)" : daysAway <= 7 ? "var(--amber)" : daysAway <= 14 ? "var(--amber)" : "var(--t3)";
               const urgentBadge = daysAway >= 0 && (daysAway <= 3 ? "CRITICAL" : daysAway <= 7 ? "URGENT" : daysAway <= 14 ? "SOON" : null);

@@ -12,6 +12,7 @@ const DIM: { key: "smart" | "grit" | "build"; label: string; color: string }[] =
 function useStaggerCount(target: number, delayMs: number, durationMs: number): number {
   const [v, setV] = useState(0);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setV(0);
     const start = performance.now() + delayMs;
     let frame: number;

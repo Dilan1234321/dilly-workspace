@@ -14,7 +14,7 @@ export function getMascotMood(
   const pct = displayAudit.peer_percentiles ?? { smart: 50, grit: 50, build: 50 };
   const dims = ["smart", "grit", "build"] as const;
   const topPcts = dims.map((k) => Math.max(1, 100 - (pct[k] ?? 50)));
-  const bestTopPct = Math.min(...topPcts);
+  const _bestTopPct = Math.min(...topPcts);
   const anyTop25 = topPcts.some((t) => t <= 25);
 
   if (anyTop25) return "celebrating";

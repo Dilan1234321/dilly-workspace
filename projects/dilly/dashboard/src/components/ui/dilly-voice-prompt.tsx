@@ -39,7 +39,7 @@ const DillyVoicePrompt = React.forwardRef<HTMLDivElement, DillyVoicePromptProps>
       value,
       onChange,
       onSend,
-      isLoading = false,
+      isLoading: _isLoading = false,
       disabled = false,
       placeholder = "Message Dilly AI…",
       className,
@@ -65,6 +65,7 @@ const DillyVoicePrompt = React.forwardRef<HTMLDivElement, DillyVoicePromptProps>
     const [twPhraseIndex, setTwPhraseIndex] = React.useState(0);
     const [twCharIndex, setTwCharIndex] = React.useState(0);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
     const examples = rotatingExamples?.length ? rotatingExamples : [];
     const showTypewriter = examples.length > 0 && !value.trim() && !focused && !disabled;
 
@@ -140,6 +141,7 @@ const DillyVoicePrompt = React.forwardRef<HTMLDivElement, DillyVoicePromptProps>
         cancelAnimationFrame(raf1);
         cancelAnimationFrame(raf2);
       };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
     }, [autoFocus, disabled]);
 
     const effectivePlaceholder = showTypewriter ? " " : placeholder;

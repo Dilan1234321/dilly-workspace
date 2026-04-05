@@ -22,9 +22,11 @@ type Props = {
 export function DillyHomeInsight({ uid, profile, context, voiceAvatarIndex, emphases = [], refreshKey = 0 }: Props) {
   const [insight, setInsight] = useState<string | null | undefined>(undefined);
   const contextRef = useRef(context);
+  // eslint-disable-next-line react-hooks/refs -- intentional
   contextRef.current = context;
   /** Parent often passes a new `profile` object identity each render — must not be an effect dependency. */
   const profileRef = useRef(profile);
+  // eslint-disable-next-line react-hooks/refs -- intentional
   profileRef.current = profile;
 
   useEffect(() => {

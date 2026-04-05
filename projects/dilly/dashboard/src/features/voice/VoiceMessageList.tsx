@@ -9,7 +9,7 @@ import { VoiceMockInterviewBanner, VoiceMockInterviewTurn } from "@/components/v
 import { ProfilePhotoWithFrame } from "@/components/ProfilePhotoWithFrame";
 import { MascotAvatar, getMascotMood } from "@/components/MascotAvatar";
 import { getProfileFrame } from "@/lib/profileFrame";
-import { getVoiceAvatarUrl } from "@/lib/voiceAvatars";
+
 import { VoiceVisualDedupProvider, VoiceDedupScrollRoot } from "@/components/VoiceChatVisualDedup";
 import type { VoiceMockInterviewSession } from "@/contexts/VoiceContext";
 import type { DillyVoiceChatScoresBundle } from "@/lib/voiceVisualTypes";

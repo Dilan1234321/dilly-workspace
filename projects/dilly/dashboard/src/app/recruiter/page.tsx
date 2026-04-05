@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   Legend,
   ResponsiveContainer,
   Cell,
@@ -626,6 +625,7 @@ function BookmarksSidebar({ bookmarks, apiKey }: BookmarksSidebarProps) {
     }
     const idsToFetch = [...new Set([...allIds, ...Object.keys(candidatesWithNotes)])].slice(0, 80);
     if (idsToFetch.length === 0) {
+       
       setCandidateNames({});
       return;
     }
@@ -639,6 +639,7 @@ function BookmarksSidebar({ bookmarks, apiKey }: BookmarksSidebarProps) {
         setCandidateNames(map);
       })
       .catch(() => setCandidateNames({}));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [apiKey, allIds.join(","), Object.keys(candidatesWithNotes).join(",")]);
 
   const handleCreateCollection = async () => {
@@ -857,6 +858,7 @@ export default function RecruiterPage() {
 
   useEffect(() => {
     setCompareAskOpen(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [compareSelection[0]?.candidate_id, compareSelection[1]?.candidate_id]);
 
   useEffect(() => {

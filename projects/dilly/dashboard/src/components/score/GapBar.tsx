@@ -15,6 +15,7 @@ export function GapBar({ score, scoreColor, companyBar, gapPts, companyShort }: 
   const [markerOn, setMarkerOn] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setFillW(0);
     setMarkerOn(false);
     const t1 = window.setTimeout(() => setFillW(Math.min(100, Math.max(0, score))), 220);

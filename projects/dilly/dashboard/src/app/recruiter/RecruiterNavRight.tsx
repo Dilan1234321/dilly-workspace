@@ -21,6 +21,7 @@ export function RecruiterNavRight() {
   const [serverHint, setServerHint] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setHasKey(!!getRecruiterKey());
     const onKeyChange = () => setHasKey(!!getRecruiterKey());
     window.addEventListener("recruiter-key-changed", onKeyChange);

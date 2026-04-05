@@ -22,8 +22,10 @@ export function VoiceTypewriterText({ fullText, cursorColor = "var(--m-accent)",
   const startTimeRef = useRef<number | null>(null);
   const rafRef = useRef<number>(0);
   const visibleLenRef = useRef(0);
+  // eslint-disable-next-line react-hooks/refs -- intentional
   visibleLenRef.current = visibleLength;
   const onProgressRef = useRef(onProgress);
+  // eslint-disable-next-line react-hooks/refs -- intentional
   onProgressRef.current = onProgress;
 
   // When fullText shrinks (e.g. switch convos), reset

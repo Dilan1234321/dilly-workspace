@@ -60,7 +60,7 @@ function oneLineHook(data: PublicProfile): string {
   const track = (data.track || data.detected_track || "").trim() || "your field";
   const scores = data.scores ?? { smart: 0, grit: 0, build: 0 };
   const name = data.candidate_name || data.name || "Student";
-  const audit: AuditV2 = {
+  const _audit: AuditV2 = {
     scores,
     audit_findings: data.audit_findings ?? [],
     recommendations: [],
@@ -115,6 +115,7 @@ function SixSecondProfilePage() {
 
   useEffect(() => {
     if (!slug) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setLoading(false);
       setError("Invalid profile");
       return;

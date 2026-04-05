@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { cn } from "@/lib/utils";
 import { API_BASE, RECRUITER_API_KEY_STORAGE } from "@/lib/dillyUtils";
 

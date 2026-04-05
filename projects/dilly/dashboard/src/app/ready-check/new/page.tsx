@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppProfileHeader } from "@/components/career-center";
 import { CompanyInput } from "@/components/ready-check/CompanyInput";

@@ -5,7 +5,7 @@ import { useAppContext } from "@/context/AppContext";
 import { useAuditScore } from "@/contexts/AuditScoreContext";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { useToast } from "@/hooks/useToast";
+
 import { hapticLight } from "@/lib/haptics";
 import { getEffectiveCohortLabel, getPlaybookForTrack, getTrackTips } from "@/lib/trackDefinitions";
 import {
@@ -70,7 +70,7 @@ export function ResourcesTab({
 
   // ── Local state (was page-level, only used here) ──────────────────────────
   const [readyCheckTarget, setReadyCheckTarget] = useState("");
-  const [readyCheckResult, setReadyCheckResult] = useState<{ verdict: string; summary: string; gaps: string[] } | null>(null);
+
   const [jobChecklist, setJobChecklist] = useState<Record<string, boolean>>({});
 
   // Job checklist localStorage persistence
@@ -93,6 +93,7 @@ export function ResourcesTab({
   }, [JOB_CHECKLIST_STORAGE_KEY, jobChecklist]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/refs -- intentional
   const displayAudit = latestAuditRef.current ?? audit ?? savedAuditForCenter;
   const trackForPlaybook = getEffectiveCohortLabel(displayAudit?.detected_track, appProfile?.track) || null;
   const playbook = trackForPlaybook ? getPlaybookForTrack(trackForPlaybook) : null;
@@ -109,6 +110,7 @@ export function ResourcesTab({
     <section className="max-w-[390px] mx-auto pb-40 px-4 min-w-0 overflow-hidden animate-fade-up min-h-full" aria-label="Get Hired" style={{ background: "var(--bg)" }}>
       <AppProfileHeader
         name={appProfile?.name ?? undefined}
+        // eslint-disable-next-line react-hooks/refs -- intentional
         track={getEffectiveCohortLabel((latestAuditRef.current ?? audit ?? savedAuditForCenter)?.detected_track, appProfile?.track)}
         schoolName={school?.name ?? undefined}
         photoUrl={profilePhotoUrl ?? undefined}

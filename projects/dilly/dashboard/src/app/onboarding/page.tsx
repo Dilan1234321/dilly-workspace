@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -169,7 +169,7 @@ export default function OnboardingPage() {
   // ── Auth state ──
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [token, setToken] = useState<string | null>(null);
+  const [_token, setToken] = useState<string | null>(null);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState("");
@@ -191,7 +191,7 @@ export default function OnboardingPage() {
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanStep, setScanStep] = useState(0);
-  const [scanDone, setScanDone] = useState(false);
+
   const [scanError, setScanError] = useState("");
 
   // ── Results state ──
@@ -1259,7 +1259,7 @@ export default function OnboardingPage() {
 
       /* ── RESULTS ── */
       case "results":
-        const score = auditResult?.final_score ?? 0;
+        const _score = auditResult?.final_score ?? 0;
         const scores = auditResult?.scores ?? { smart: 0, grit: 0, build: 0 };
         return (
           <div style={{ textAlign: "center" }}>

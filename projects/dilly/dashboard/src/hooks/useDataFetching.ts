@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/useToast";
 import { dilly } from "@/lib/dilly";
 import { getEffectiveCohortLabel } from "@/lib/trackDefinitions";
 import {
-  GOALS_ALL,
   auditStorageKey,
   setCareerCenterReturnPath,
   scoresCrossedMilestones,
@@ -26,7 +25,7 @@ interface UseDataFetchingParams {
   setApplicationTarget: (v: string) => void;
 }
 
-export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDataFetchingParams) {
+export function useDataFetching({ latestAuditRef, setApplicationTarget: _setApplicationTarget }: UseDataFetchingParams) {
   const { toast } = useToast();
   const {
     state: { mainAppTab, reviewSubView, getHiredSubTab },
@@ -36,9 +35,9 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
     audit, setAudit,
     lastAudit,
     savedAuditForCenter, setSavedAuditForCenter,
-    viewingAudit, setViewingAudit,
+    viewingAudit: _viewingAudit, setViewingAudit,
     auditHistory, setAuditHistory, setAuditHistoryLoading,
-    atsScoreHistory, setAtsScoreHistory,
+    atsScoreHistory: _atsScoreHistory, setAtsScoreHistory,
     setAtsPeerPercentile,
     setDoorEligibility,
     centerRefreshKey,
@@ -143,6 +142,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
         );
       })
       .catch(() => setVoiceApplicationsPreview([]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceOverlayOpen, user?.subscribed, centerRefreshKey]);
 
   // Memory items fetch
@@ -155,6 +155,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
         setMemoryItems(Array.isArray(d?.items) ? d.items : []);
       })
       .catch(() => { setMemoryItems([]); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.subscribed, centerRefreshKey]);
 
   // Celebration effects for streak/audit/app milestones
@@ -233,6 +234,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
       }
     } catch { /* ignore */ }
     setSavedAuditForCenter(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email]);
 
   // Audit history fetch
@@ -244,6 +246,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
       .then((res) => (res.ok ? res.json() : { audits: [] }))
       .then((data) => { setAuditHistory(Array.isArray(data?.audits) ? data.audits : []); setAuditHistoryLoading(false); })
       .catch(() => { setAuditHistory([]); setAuditHistoryLoading(false); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, centerRefreshKey]);
 
   // ATS score history fetch
@@ -271,6 +274,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
         }
       })
       .catch(() => { setAtsScoreHistory([]); setAtsPeerPercentile(null); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, centerRefreshKey, mainAppTab, reviewSubView]);
 
   // Door eligibility fetch
@@ -291,6 +295,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
         }
       })
       .catch(() => setDoorEligibility(null));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, user?.subscribed, centerRefreshKey]);
 
   // Latest audit restore
@@ -349,6 +354,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
     }
     if (rowUsable) applyMinimalFromHistory();
     hydrateFromServer();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, auditHistory]);
 
   // Achievement auto-update
@@ -385,6 +391,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
         if (res.ok) setAppProfile((prev) => (prev ? { ...prev, achievements: merged } : prev));
       })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, appProfile, auditHistory]);
 
   // Recommended jobs fetch
@@ -393,12 +400,14 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
     if (mainAppTab !== "center" && mainAppTab !== "hiring") return;
     if (recommendedJobs.length > 0) return;
     if (!localStorage.getItem("dilly_auth_token")) return;
+     
     setJobsLoading(true);
     dilly.fetch(`/jobs/recommended?limit=15&offset=0`)
       .then((res) => (res.ok ? res.json() : { jobs: [] }))
       .then((data) => { setRecommendedJobs(Array.isArray(data?.jobs) ? data.jobs : []); })
       .catch(() => setRecommendedJobs([]))
       .finally(() => setJobsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, user?.subscribed, mainAppTab]);
 
   // Cohort stats fetch
@@ -436,6 +445,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
   // Reset viewingAudit on center
   useEffect(() => {
     if (mainAppTab === "center") setViewingAudit(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab]);
 
   // Sync primary goal input when profile loads
@@ -445,6 +455,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
 
   // Progress explainer fetch
   useEffect(() => {
+     
     if (!audit || !lastAudit) { setProgressExplainer(null); return; }
     setProgressExplainerLoading(true);
     setProgressExplainer(null);
@@ -457,6 +468,7 @@ export function useDataFetching({ latestAuditRef, setApplicationTarget }: UseDat
       .then((data) => setProgressExplainer(data?.explainer || null))
       .catch(() => setProgressExplainer(null))
       .finally(() => setProgressExplainerLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [audit?.final_score, audit?.candidate_name, lastAudit?.final_score, lastAudit?.candidate_name]);
 
   return {

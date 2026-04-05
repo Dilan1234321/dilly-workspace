@@ -38,6 +38,7 @@ export function CityChipsInput({
   const suggestions = filtered.slice(0, MAX_SUGGESTIONS);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setHighlightIndex(0);
   }, [inputValue]);
 

@@ -71,6 +71,7 @@ export default function CompanyDetailPage() {
   useEffect(() => {
     const token = typeof localStorage !== "undefined" ? localStorage.getItem("dilly_auth_token") : null;
     if (!token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setAuthLoading(false);
       router.replace("/");
       return;
@@ -89,6 +90,7 @@ export default function CompanyDetailPage() {
 
   useEffect(() => {
     if (!slug || !user?.subscribed) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setLoading(true);
     setError(null);
     dilly.fetch(`/companies/${encodeURIComponent(slug)}`)
@@ -204,7 +206,7 @@ export default function CompanyDetailPage() {
             )}
           </div>
           {!your_scores && (
-            <p className="text-xs text-slate-500 mt-2">Your scores vs this bar appear when they're on your profile.</p>
+            <p className="text-xs text-slate-500 mt-2">Your scores vs this bar appear when they&apos;re on your profile.</p>
           )}
         </section>
 

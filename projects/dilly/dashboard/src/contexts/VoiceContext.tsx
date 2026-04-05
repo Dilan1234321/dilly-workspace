@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState, useRef } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 import type { VoiceConvo, MemoryItem, SessionCapture, ConversationOutput } from "@/types/dilly";
 import type { VoiceSessionRecap } from "@/lib/voiceSessionRecap";
 

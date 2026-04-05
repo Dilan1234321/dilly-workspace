@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState, useCallback } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 import type { AuditV2 } from "@/types/dilly";
 
 // ── Types ──────────────────────────────────────────────────────────────────────

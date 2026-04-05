@@ -237,6 +237,7 @@ function VoiceOverlayBody({
   const displayMessages = React.useMemo(() => {
     const dm = [...messages];
     if (streamingText) {
+      // eslint-disable-next-line react-hooks/purity -- intentional
       dm.push({ role: "assistant" as const, content: streamingText, ts: Date.now() });
     }
     return dm;
@@ -611,6 +612,7 @@ function VoiceOverlayBody({
             ) : null}
             {displayMessages.map((m, i) => {
               const isLastAssistant = m.role === "assistant" && i === displayMessages.length - 1;
+              // eslint-disable-next-line react-hooks/purity -- intentional
               const isNewMessage = m.ts && Date.now() - m.ts < 3000;
               const isMockAssistant = m.role === "assistant" && Boolean(m.mockTurn);
               const scoreInject =

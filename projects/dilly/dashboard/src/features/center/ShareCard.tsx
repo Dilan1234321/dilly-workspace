@@ -2,7 +2,7 @@
 
 import React from "react";
 import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
+
 import { DownloadDoneIcon } from "@/components/ui/animated-state-icons";
 import { AchievementSticker } from "@/components/AchievementSticker";
 

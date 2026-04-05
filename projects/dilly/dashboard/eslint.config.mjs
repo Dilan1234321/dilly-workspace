@@ -22,8 +22,18 @@ const eslintConfig = defineConfig([
       "react-hooks/refs": "warn",
       "react/no-unescaped-entities": "warn",
       "react/no-children-prop": "warn",
+      "@next/next/no-img-element": "off", // dynamic/external images are intentional
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ]);

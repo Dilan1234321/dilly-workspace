@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useCallback } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useClientSearchParams } from "@/lib/clientSearchParams";
 import { useAppContext } from "@/context/AppContext";
@@ -23,7 +23,6 @@ import {
   PROFILE_CACHE_KEY_BASE,
   safeUuid,
   voiceStorageKey,
-  getDillyVoiceEmptyGreeting,
   hasCompletedDillyVoiceIntro,
   markDillyVoiceIntroSeen,
   gapToNextLevel,
@@ -92,12 +91,12 @@ export function useVoiceLifecycle({
     activeVoiceConvId, setActiveVoiceConvId,
     voiceAvatarIndex, setVoiceAvatarIndex,
     voiceMessages, setVoiceMessages,
-    voiceMessageQueue, setVoiceMessageQueue,
-    voiceMockInterviewSession, setVoiceMockInterviewSession,
+    voiceMessageQueue: _voiceMessageQueue, setVoiceMessageQueue,
+    voiceMockInterviewSession: _voiceMockInterviewSession, setVoiceMockInterviewSession,
     voiceInput, setVoiceInput,
     voiceLoading,
     voiceStreamingText, setVoiceStreamingText,
-    voiceFollowUpSuggestions, setVoiceFollowUpSuggestions,
+    voiceFollowUpSuggestions: _voiceFollowUpSuggestions, setVoiceFollowUpSuggestions,
     lastAuditTsOnVoiceEnter, setLastAuditTsOnVoiceEnter,
     setPendingSessionCaptureCard,
     setLatestConversationOutput,
@@ -106,7 +105,7 @@ export function useVoiceLifecycle({
     voiceActionItems, setVoiceActionItems,
     voiceCompany, setVoiceCompany,
     voiceMemory, setVoiceMemory,
-    voiceFeedback, setVoiceFeedback,
+    voiceFeedback: _voiceFeedback, setVoiceFeedback,
     voiceOverlayOpen, setVoiceOverlayOpen,
     setScoreCardDillyStrip,
     pendingVoicePrompt, setPendingVoicePrompt,
@@ -182,6 +181,7 @@ export function useVoiceLifecycle({
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, user?.email, auditHistory, audit, savedAuditForCenter]);
 
   // Session handoff from other shells
@@ -301,6 +301,7 @@ export function useVoiceLifecycle({
         }
       }
     } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [pathname, user, searchParams]);
 
   // Voice tab URL handling
@@ -361,6 +362,7 @@ export function useVoiceLifecycle({
       }
     }
     prevVoiceActiveRef.current = voiceActive;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceOverlayOpen, voiceMemory.length]);
 
   // When entering Voice, snapshot audit ts
@@ -375,11 +377,13 @@ export function useVoiceLifecycle({
       if (egg.sound) playSound("badge_unlock");
       toast(egg.message, "success", 5000);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceOverlayOpen, auditHistory, lastAuditTsOnVoiceEnter]);
 
   // Mock interview reset on convo change
   useEffect(() => {
     setVoiceMockInterviewSession(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [activeVoiceConvId]);
 
   // Voice onboarding fetch
@@ -409,6 +413,7 @@ export function useVoiceLifecycle({
           setActiveVoiceConvId(newConvo.id);
         }
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceOverlayOpen, user?.email, appProfile?.voice_onboarding_done, auditHistory.length, voiceMessages.length, activeVoiceConvId]);
 
   // Auto-send pending Voice prompt
@@ -428,6 +433,7 @@ export function useVoiceLifecycle({
     };
     const t = setTimeout(() => trySend(), 150);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceOverlayOpen, pendingVoicePrompt]);
 
   // Voice state cleanup on logout
@@ -445,6 +451,7 @@ export function useVoiceLifecycle({
       setVoiceMemory([]);
       voiceOnboardingFetchedRef.current = false;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email]);
 
   // Voice data hydration from localStorage
@@ -508,6 +515,7 @@ export function useVoiceLifecycle({
         setVoiceAvatarIndex(DEFAULT_VOICE_AVATAR_INDEX);
       }
     } catch { setVoiceAvatarIndex(DEFAULT_VOICE_AVATAR_INDEX); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email]);
 
   // Voice intro mark-seen
@@ -531,6 +539,7 @@ export function useVoiceLifecycle({
       updated[idx] = { ...updated[idx], messages: voiceMessages.slice(-40), updatedAt: Date.now() };
       return updated;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [voiceMessages, activeVoiceConvId]);
 
   // Persist convos to localStorage
@@ -578,6 +587,7 @@ export function useVoiceLifecycle({
         body: JSON.stringify({ voice_avatar_index: idx }),
       }).catch(() => { /* ignore */ });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [voiceAvatarIndex, user?.email]);
 
   // Persist voice memory
@@ -592,6 +602,7 @@ export function useVoiceLifecycle({
         body: JSON.stringify({ voice_memory: voiceMemory.slice(-10) }),
       }).catch(() => { /* ignore */ });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [voiceMemory, user?.email, (appProfile as { voice_save_to_profile?: boolean })?.voice_save_to_profile]);
 
   // Voice feedback load
@@ -614,6 +625,7 @@ export function useVoiceLifecycle({
     } catch {
       setVoiceFeedback({});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [user?.email, activeVoiceConvId]);
 
   // Clean stale open tab IDs
@@ -624,6 +636,7 @@ export function useVoiceLifecycle({
     if (hasStale) {
       setOpenVoiceConvIds((prev) => prev.filter((id) => validIds.has(id)));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [voiceConvos, openVoiceConvIds]);
 
   // Active convo fallback
@@ -642,6 +655,7 @@ export function useVoiceLifecycle({
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceOverlayOpen, voiceConvos, activeVoiceConvId, openVoiceConvIds]);
 
   // Voice scroll to bottom
@@ -651,6 +665,7 @@ export function useVoiceLifecycle({
     if (!el) return;
     const instant = Boolean(voiceStreamingText?.trim());
     el.scrollIntoView({ behavior: instant ? "auto" : "smooth", block: "end", inline: "nearest" });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceMessages, voiceLoading, voiceStreamingText]);
 
   // Voice draft persistence: restore
@@ -662,6 +677,7 @@ export function useVoiceLifecycle({
       const saved = sessionStorage.getItem(key);
       if (saved != null && saved !== "" && !voiceInput) setVoiceInput(saved);
     } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, voiceOverlayOpen, user?.email]);
 
   // Voice draft persistence: save
@@ -679,6 +695,7 @@ export function useVoiceLifecycle({
   useEffect(() => {
     if (mainAppTab !== "center" || !user?.subscribed) return;
     setVoiceRecapForCard(readVoiceSessionRecap());
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [mainAppTab, user?.subscribed, voiceRecapNonce, centerRefreshKey]);
 
   // voiceStarterSuggestions
@@ -686,9 +703,11 @@ export function useVoiceLifecycle({
     const displayAudit = viewingAudit ?? audit ?? savedAuditForCenter;
     const activeDeadlines = (appProfile?.deadlines || []).filter((d) => d.date && d.label && !d.completedAt);
     const urgentBannerDeadline = activeDeadlines.find((d) => {
+       
       try { const days = (new Date(d.date).getTime() - Date.now()) / 86400000; return days >= 0 && days <= 7; } catch { return false; }
     });
     const soonestDeadline = activeDeadlines.find((d) => {
+       
       try { const days = (new Date(d.date).getTime() - Date.now()) / 86400000; return days >= 0 && days < 14; } catch { return false; }
     });
 

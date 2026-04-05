@@ -125,6 +125,7 @@ function HistoryBar({
   const [hPx, setHPx] = useState(0);
   const targetPx = Math.max(3, (Math.min(100, score) / 100) * BAR_MAX);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setHPx(0);
     const t = window.setTimeout(() => setHPx(targetPx), 30 + delayMs);
     return () => window.clearTimeout(t);

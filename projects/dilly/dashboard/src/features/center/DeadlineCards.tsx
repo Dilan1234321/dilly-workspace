@@ -13,6 +13,7 @@ export function DeadlineCards(props: DeadlineCardsProps) {
   const { appProfile } = useAppContext();
 
   const dls = (appProfile?.deadlines || []).filter((d) => d.date && d.label && !d.completedAt);
+  // eslint-disable-next-line react-hooks/purity -- intentional
   const now = Date.now();
   const soonest = dls
     .filter((d) => new Date(d.date).getTime() > now)

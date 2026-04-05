@@ -15,10 +15,8 @@ import { useVoice } from "@/contexts/VoiceContext";
 
 import { hapticLight } from "@/lib/haptics";
 import { getDillyNoticedCard, markNoticedSeen } from "@/lib/dillyNoticed";
-import { getEffectiveCohortLabel } from "@/lib/trackDefinitions";
-import { dillyPresenceManager, orderedFeedIds, type HomeInsightContext, type FeedOrderContext, type FeedCardType } from "@/lib/dillyPresence";
+import { orderedFeedIds, type HomeInsightContext, type FeedOrderContext, type FeedCardType } from "@/lib/dillyPresence";
 import {
-  topPercentileHeadline,
   getTopThreeActions,
   toNaturalSuggestion,
 } from "@/lib/dillyUtils";
@@ -65,7 +63,7 @@ export function ScoreCardSection(props: ScoreCardSectionProps) {
   const { user, appProfile } = useAppContext();
   const {
     auditHistory,
-    atsPeerPercentile,
+    atsPeerPercentile: _atsPeerPercentile,
   } = useAuditScore();
   const {
     voiceAvatarIndex,
@@ -122,6 +120,7 @@ export function ScoreCardSection(props: ScoreCardSectionProps) {
     last_insight: null,
     last_insight_at: null,
     days_since_last_audit:
+      // eslint-disable-next-line react-hooks/purity -- intentional
       auditHistory[0]?.ts != null ? Math.floor((Date.now() / 1000 - auditHistory[0].ts) / 86400) : null,
     cohort_pulse: currentCohortPulse,
   };
@@ -134,6 +133,7 @@ export function ScoreCardSection(props: ScoreCardSectionProps) {
   let nearestDeadlineLabel: string | null = null;
   for (const d of activeDeadlines) {
     try {
+      // eslint-disable-next-line react-hooks/purity -- intentional
       const days = Math.ceil((new Date(d.date).getTime() - Date.now()) / 86400000);
       if (days >= 0 && (nearestDeadlineDays === null || days < nearestDeadlineDays)) {
         nearestDeadlineDays = days;
@@ -258,7 +258,6 @@ export function ScoreCardSection(props: ScoreCardSectionProps) {
         return (
           <div className="mt-3 mb-1 rounded-[18px] p-3 flex items-center justify-between gap-3" style={{ background: "var(--s2)" }}>
             <div className="flex items-center gap-2.5 min-w-0">
-              {/* eslint-disable-next-line @next/next/no-img-element -- static public asset */}
               <img
                 src="/dilly-noticed-glyph.png"
                 alt=""
@@ -294,7 +293,7 @@ export function ScoreCardSection(props: ScoreCardSectionProps) {
           emphases={homeInsightEmphases}
         />
       ) : null}
-      <DillyFeed order={feedOrder} children={feedChildren} />
+      <DillyFeed order={feedOrder}>{feedChildren}</DillyFeed>
     </div>
   );
 }

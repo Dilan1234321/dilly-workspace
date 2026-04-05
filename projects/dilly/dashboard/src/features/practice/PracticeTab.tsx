@@ -59,6 +59,7 @@ export function PracticeTab({ openVoiceWithNewChat, openVoiceFromScreen, profile
       <section className="max-w-[390px] mx-auto pb-40 px-4 min-w-0 overflow-hidden animate-fade-up min-h-full" aria-label="Practice" style={{ background: "var(--bg)" }}>
         <AppProfileHeader
           name={appProfile?.name ?? undefined}
+          // eslint-disable-next-line react-hooks/refs -- intentional
           track={getEffectiveCohortLabel((latestAuditRef.current ?? audit ?? savedAuditForCenter)?.detected_track, appProfile?.track)}
           schoolName={school?.name ?? undefined}
           photoUrl={profilePhotoUrl ?? undefined}

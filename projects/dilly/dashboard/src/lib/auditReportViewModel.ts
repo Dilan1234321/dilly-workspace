@@ -155,10 +155,8 @@ function parseEvidence(audit: AuditV2): AuditReportEvidenceVM[] {
     }
   }
   if (entries.length === 0) {
-    let i = 0;
     for (const [k, v] of Object.entries(base)) {
       if (typeof v !== "string" || !v.trim()) continue;
-      i += 1;
       entries.push({ key: k, description: v.trim(), citation: v.trim() });
     }
   }
@@ -256,9 +254,8 @@ export function buildAuditReportViewModel(
 
   const recs = audit.recommendations ?? [];
   const rewritesDraft: AuditReportRewriteVM[] = [];
-  recs.forEach((r, i) => {
+  recs.forEach((r) => {
     if (recType(r) !== "line_edit" || !(r.current_line || r.suggested_line)) return;
-    const dim = inferDimensionFromRec(r);
     const reason = (r.diagnosis || r.action || "Tighten wording so recruiters see clear impact.").trim();
     const rt = inferReasonType(reason);
     rewritesDraft.push({

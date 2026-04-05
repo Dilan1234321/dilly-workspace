@@ -48,6 +48,7 @@ export function useSpeechRecognition() {
       (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike }).SpeechRecognition ||
       (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionLike }).webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setIsSupported(true);
     const rec = new SpeechRecognitionAPI();
     rec.continuous = true;

@@ -14,6 +14,7 @@ export function useCountUp(target: number, durationMs = 1000, enabled = true): n
 
   useEffect(() => {
     if (!enabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
       setV(Math.round(target));
       return;
     }

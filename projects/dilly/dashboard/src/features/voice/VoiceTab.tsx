@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect } from "react";
 import { useVoice } from "@/contexts/VoiceContext";
 import { useAuditScore } from "@/contexts/AuditScoreContext";
 import { useAppContext } from "@/context/AppContext";
@@ -24,7 +24,6 @@ import {
   markDillyVoiceIntroSeen,
   safeUuid,
   computeScoreTrajectory,
-  LOW_SCORE_THRESHOLD,
 } from "@/lib/dillyUtils";
 import { buildFollowUpSuggestions } from "@/lib/voiceUtils";
 import {
@@ -88,7 +87,7 @@ export function VoiceTab({
   profilePhotoUrl,
   openVoiceWithNewChat,
   endVoiceMockInterviewByUser,
-  voiceStarterSuggestions,
+  voiceStarterSuggestions: _voiceStarterSuggestions,
   voiceScoresForChat,
   buildVoiceContext,
   mergeVoiceAutoSavedDeadlines,
@@ -121,11 +120,11 @@ export function VoiceTab({
     memoryItems,
     voiceRememberOpen, setVoiceRememberOpen, voiceRememberNote, setVoiceRememberNote,
     voiceActionItems, setVoiceActionItems, actionItemsPanelOpen, setActionItemsPanelOpen,
-    voiceMemory, setVoiceMemory,
+    voiceMemory: _voiceMemory, setVoiceMemory,
     voiceFeedback, setVoiceFeedback,
     voiceOverlayOpen,
-    voiceScreenContext, setVoiceScreenContext,
-    pendingVoicePrompt, setPendingVoicePrompt,
+    voiceScreenContext: _voiceScreenContext, setVoiceScreenContext,
+    pendingVoicePrompt: _pendingVoicePrompt, setPendingVoicePrompt: _setPendingVoicePrompt,
   } = useVoice();
 
   // ── Extracted hooks ───────────────────────────────────────────────────────
@@ -155,8 +154,8 @@ export function VoiceTab({
     voiceMessages, setVoiceMessages,
     renamingVoiceConvId, setRenamingVoiceConvId,
     renameValue, setRenameValue,
-    saveCurrentConvo,
-    startNewChat, openChat, closeTab, backToList, deleteChat,
+    saveCurrentConvo: _saveCurrentConvo,
+    startNewChat, openChat, closeTab, backToList: _backToList, deleteChat,
     startRename, commitRename,
   } = useVoiceChatManagement();
 
@@ -245,7 +244,7 @@ export function VoiceTab({
 
   // ── Score trajectory ───────────────────────────────────────────────────────
 
-  const scoreTrajectory = (() => {
+  const _scoreTrajectory = (() => {
     try {
       if (!displayAudit?.scores || !Array.isArray(displayAudit?.recommendations)) return null;
       const recs = displayAudit.recommendations;
@@ -282,7 +281,7 @@ export function VoiceTab({
     appProfile?.track,
   );
 
-  const voiceSuggestions = buildFollowUpSuggestions({
+  const _voiceSuggestions = buildFollowUpSuggestions({
     isFreshAudit,
     displayAudit,
     prevAuditScores,
@@ -981,7 +980,7 @@ export function VoiceTab({
 
   // ── Layout data ────────────────────────────────────────────────────────────
 
-  const activeConvo = activeVoiceConvId
+  const _activeConvo = activeVoiceConvId
     ? voiceConvos.find((c) => c.id === activeVoiceConvId)
     : null;
   const openConvos = voiceConvos.filter((c) => openVoiceConvIds.includes(c.id));

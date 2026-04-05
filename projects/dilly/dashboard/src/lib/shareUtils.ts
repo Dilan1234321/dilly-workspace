@@ -2,9 +2,8 @@
  * Share/export utilities: badge SVG, share card SVG, snapshot SVG, download/convert helpers.
  */
 
-import type { AuditV2, DimensionKey } from "@/types/dilly";
+import type { AuditV2 } from "@/types/dilly";
 import { ACHIEVEMENT_DEFINITIONS } from "@/lib/achievements";
-import { DIMENSIONS } from "./constants";
 
 export type ShareCardOptions = {
   customTagline?: string | null;

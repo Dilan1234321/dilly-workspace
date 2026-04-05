@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Use for inputs that trigger expensive operations (e.g. API calls).
  */
 export function useDebounce<T>(initialValue: T, delayMs: number): [T, (v: T) => void] {
-  const [value, setValue] = useState<T>(initialValue);
+  const [_value, setValue] = useState<T>(initialValue);
   const [debouncedValue, setDebouncedValue] = useState<T>(initialValue);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,6 +41,7 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
 ): (...args: Parameters<T>) => void {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fnRef = useRef(fn);
+  // eslint-disable-next-line react-hooks/refs -- intentional
   fnRef.current = fn;
 
   const debounced = useCallback(
