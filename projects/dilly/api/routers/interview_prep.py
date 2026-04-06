@@ -180,7 +180,8 @@ def _generate_prep_blocks(
 
 @router.post("/calendar/generate-prep-schedule")
 async def generate_prep_schedule(req: PrepScheduleRequest, request: Request):
-    email = deps.require_auth(request)
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
 
     track = _resolve_track(req.track, email)
     blocks = _generate_prep_blocks(req.interview_date, req.company, req.role, track)
@@ -216,7 +217,6 @@ class PrepDeckRequest(BaseModel):
     company: str
     role: str
     track: Optional[str] = None
-    user_email: Optional[str] = None
 
 
 # Track-specific question banks (rule-based for speed)
@@ -363,7 +363,8 @@ def _generate_company_insights(company: str, track: str) -> str:
 
 @router.post("/interview/prep-deck")
 async def generate_prep_deck(req: PrepDeckRequest, request: Request):
-    email = req.user_email or deps.require_auth(request)
+    user = deps.require_auth(request)
+    email = user.get("email") or ""
 
     track = _resolve_track(req.track, email)
     audits = get_audits(email)
