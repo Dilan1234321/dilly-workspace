@@ -206,7 +206,7 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
     const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
     const cohort = p.track || p.cohort || 'General';
     let autoPrompt = `I'm looking at the ${listing.title} role at ${listing.company}.`;
-    if (hasScores && studentScores) {
+    if (hasRoleScores && studentScores) {
       const gaps: string[] = []; const good: string[] = [];
       for (const [dim, label] of [['smart', 'Smart'], ['grit', 'Grit'], ['build', 'Build']] as const) {
         const mine = studentScores[dim]; const need = (rs as any)[dim] ?? 0;
@@ -332,14 +332,14 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
           )}
           <Text style={js.description}>{cleanDescription(listing.description) || 'No description available.'}</Text>
 
-          {hasScores && studentScores && (
+          {hasRoleScores && studentScores && (
             <View style={js.insightWrap}>
               <Ionicons name="flash" size={12} color={GOLD} />
               <Text style={js.insightText}>{buildPersonalInsight(studentScores, rs)}</Text>
             </View>
           )}
 
-          {hasScores && studentScores && (
+          {hasRoleScores && studentScores && (
             <View style={js.scoringExplain}>
               <Text style={js.scoringTitle}>How this was calculated</Text>
               <Text style={js.scoringText}>
