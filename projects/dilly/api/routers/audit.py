@@ -900,6 +900,36 @@ async def audit_resume_v2(
                     _threading.Thread(target=_compute_matches_bg, daemon=True).start()
                 except Exception:
                     pass
+
+                # Background: compute accurate per-cohort S/G/B with Claude.
+                # Replaces the broken synthesis that showed 100 Smart on every cohort.
+                try:
+                    _email_for_cohort = email
+                    _audit_full_dict = full_audit_dict
+
+                    def _score_cohorts_bg():
+                        try:
+                            import sys as _sys, os as _os
+                            _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', '..', '..'))
+                            from projects.dilly.api.profile_store import get_profile as _gp
+                            from projects.dilly.api.resume_loader import load_parsed_resume_for_voice as _lpr
+                            from projects.dilly.api.cohort_scorer import score_and_store_cohorts as _ssc
+
+                            _prof = _gp(_email_for_cohort) or {}
+                            _majors = _prof.get("majors") or (
+                                [_prof["major"]] if _prof.get("major") else []
+                            )
+                            _minors = _prof.get("minors") or []
+                            _interests = _prof.get("interests") or []
+
+                            _rtext = _lpr(_email_for_cohort, max_chars=5500) or ""
+                            _ssc(_email_for_cohort, _rtext, _majors, _minors, _interests)
+                        except Exception:
+                            pass
+
+                    _threading.Thread(target=_score_cohorts_bg, daemon=True).start()
+                except Exception:
+                    pass
             except Exception:
                 pass
             response = response.model_copy(update={"id": audit_id}) if hasattr(response, "model_copy") else response

@@ -108,105 +108,144 @@ async def get_profile(request: Request):
         except Exception:
             pass
 
-        # Synthesize cohort_scores from majors/minors and merge with any DB-stored entries.
-        # Always runs so that cohorts from minors/secondary tracks are included even when
-        # the DB only stores the primary track entry (set during audit).
+        # Auto-trigger background Claude cohort rescoring when the DB only has a single
+        # primary-track entry (i.e. the scorer hasn't run yet for this user).
+        # The next profile load (a few seconds later) will return the real scores.
+        try:
+            _stored_cs = profile.get("cohort_scores") or {}
+            _has_claude = any(
+                isinstance(v, dict) and v.get("scored_by_claude")
+                for v in _stored_cs.values()
+            )
+            if not _has_claude and profile.get("overall_smart"):
+                import threading as _thr
+                _email_for_rescore = email
+
+                def _auto_rescore():
+                    try:
+                        import sys as _sys, os as _os
+                        _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', '..', '..'))
+                        from projects.dilly.api.profile_store import get_profile as _gp
+                        from projects.dilly.api.resume_loader import load_parsed_resume_for_voice as _lpr
+                        from projects.dilly.api.cohort_scorer import score_and_store_cohorts as _ssc
+                        _pr = _gp(_email_for_rescore) or {}
+                        _maj = _pr.get("majors") or ([_pr["major"]] if _pr.get("major") else [])
+                        _min = _pr.get("minors") or []
+                        _int = _pr.get("interests") or []
+                        _rt = _lpr(_email_for_rescore, max_chars=5500) or ""
+                        _ssc(_email_for_rescore, _rt, _maj, _min, _int)
+                    except Exception:
+                        pass
+
+                _thr.Thread(target=_auto_rescore, daemon=True).start()
+        except Exception:
+            pass
+
+        # Merge any cohorts not yet scored by Claude using conservative fallback estimates.
+        # Claude-scored entries (scored_by_claude=True) are NEVER overwritten by synthesis.
+        # This block only fills gaps for cohorts that exist in the student's profile
+        # but haven't been scored yet (e.g. immediately after first audit, before the
+        # background Claude scorer completes).
         if profile.get("overall_smart") or profile.get("overall_grit") or profile.get("overall_build"):
             try:
                 from projects.dilly.api.cohort_config import MAJOR_TO_COHORT, COHORT_SCORING_CONFIG
                 s = float(profile.get("overall_smart") or 0)
                 g = float(profile.get("overall_grit")  or 0)
                 b = float(profile.get("overall_build") or 0)
-                d = float(profile.get("overall_dilly_score") or 0)
 
                 if s or g or b:
-                    majors  = profile.get("majors") or ([profile["major"]] if profile.get("major") else [])
-                    minors  = profile.get("minors") or []
-                    seen: dict = {}
+                    existing_cs: dict = profile.get("cohort_scores") or {}
 
-                    def _dilly_for_cohort(cohort_name: str, smart: float, grit: float, build: float) -> float:
-                        cfg = COHORT_SCORING_CONFIG.get(cohort_name, {})
-                        w = cfg.get("weights", {"smart": 0.33, "grit": 0.33, "build": 0.34})
-                        return round(smart * w.get("smart", 0.33) +
-                                     grit  * w.get("grit",  0.33) +
-                                     build * w.get("build", 0.34), 2)
+                    # If all stored entries were scored by Claude, nothing to synthesize.
+                    all_claude = all(
+                        isinstance(v, dict) and v.get("scored_by_claude")
+                        for v in existing_cs.values()
+                    ) if existing_cs else False
+                    if all_claude:
+                        pass  # real scores already present — skip synthesis entirely
+                    else:
+                        majors = profile.get("majors") or (
+                            [profile["major"]] if profile.get("major") else []
+                        )
+                        minors  = profile.get("minors") or []
+                        seen: dict = {}
 
-                    def _cohort_dim_score(raw: float, expected: float) -> float:
-                        """Map raw student score to 0–100 relative to cohort's competitive bar.
-                        100 = at or above bar. Below 100 = percentage of bar met."""
-                        if expected <= 0:
-                            return raw
-                        return min(100.0, round((raw / expected) * 100, 1))
+                        def _fallback_score(raw: float, level: str, dim: str) -> float:
+                            """
+                            Conservative fallback when Claude hasn't scored yet.
+                            Primary major cohort gets primary-track score.
+                            Minor cohorts get 50 % of primary to avoid inflating cross-field scores.
+                            Interest cohorts get 30 %.
+                            This prevents the old bug where smart showed 100 on every cohort.
+                            """
+                            if level == "major":
+                                return round(min(100.0, raw), 1)
+                            elif level == "minor":
+                                return round(min(100.0, raw * 0.50), 1)
+                            else:  # interest
+                                return round(min(100.0, raw * 0.30), 1)
 
-                    def _expected_dim(w: float, recruiter_bar: float, spread: float = 0.55) -> float:
-                        """Competitive threshold for a single dimension given its weight (0–1) and bar."""
-                        mean_w = 1.0 / 3.0
-                        return max(1.0, recruiter_bar + (w - mean_w) * 100 * spread)
+                        def _add_fallback(major_or_minor: str, level: str):
+                            cohort = MAJOR_TO_COHORT.get(str(major_or_minor).strip())
+                            if not cohort:
+                                return
+                            # Never overwrite a Claude-scored entry
+                            if cohort in existing_cs and existing_cs[cohort].get("scored_by_claude"):
+                                return
+                            if cohort in seen:
+                                return
+                            fs = _fallback_score(s, level, "smart")
+                            fg = _fallback_score(g, level, "grit")
+                            fb = _fallback_score(b, level, "build")
+                            seen[cohort] = {
+                                "cohort": cohort,
+                                "level": level,
+                                "field": major_or_minor,
+                                "smart": fs,
+                                "grit":  fg,
+                                "build": fb,
+                                "dilly_score": round((fs + fg + fb) / 3, 1),
+                                "weight": 1.0 if level == "major" else 0.5,
+                                "scored_by_claude": False,
+                            }
 
-                    def _add(major_or_minor: str, level: str):
-                        cohort = MAJOR_TO_COHORT.get(str(major_or_minor).strip())
-                        if not cohort or cohort in seen:
-                            return
-                        cfg = COHORT_SCORING_CONFIG.get(cohort, {})
-                        bar = cfg.get("recruiter_bar", 70)
-                        w = cfg.get("weights", {"smart": 0.333, "grit": 0.333, "build": 0.334})
-                        # Compute each dimension's expected competitive score for this cohort
-                        exp_s = _expected_dim(w.get("smart", 0.333), bar)
-                        exp_g = _expected_dim(w.get("grit",  0.333), bar)
-                        exp_b = _expected_dim(w.get("build", 0.334), bar)
-                        # Student's cohort-specific scores: how close are they to the bar?
-                        cs = _cohort_dim_score(s, exp_s)
-                        cg = _cohort_dim_score(g, exp_g)
-                        cb = _cohort_dim_score(b, exp_b)
-                        seen[cohort] = {
-                            "cohort": cohort,
-                            "level": level,
-                            "field": major_or_minor,
-                            "smart": cs,
-                            "grit":  cg,
-                            "build": cb,
-                            "dilly_score": _dilly_for_cohort(cohort, s, g, b),
-                            "weight": 1.0 if level == "major" else 0.5,
-                        }
+                        for m in majors:
+                            _add_fallback(m, "major")
+                        for m in minors:
+                            _add_fallback(m, "minor")
 
-                    for m in majors:
-                        _add(m, "major")
-                    for m in minors:
-                        _add(m, "minor")
-                    # Interest cohorts: stored as cohort label strings, not majors.
-                    # They show up as an additional lens — no score impact.
-                    interests_list = profile.get("interests") or []
-                    for cohort_label in interests_list:
-                        if not cohort_label or cohort_label in seen:
-                            continue
-                        cfg = COHORT_SCORING_CONFIG.get(cohort_label, {})
-                        if not cfg:
-                            continue  # unknown cohort label — skip
-                        bar = cfg.get("recruiter_bar", 70)
-                        w = cfg.get("weights", {"smart": 0.333, "grit": 0.333, "build": 0.334})
-                        exp_s = _expected_dim(w.get("smart", 0.333), bar)
-                        exp_g = _expected_dim(w.get("grit",  0.333), bar)
-                        exp_b = _expected_dim(w.get("build", 0.334), bar)
-                        seen[cohort_label] = {
-                            "cohort": cohort_label,
-                            "level": "interest",
-                            "field": cohort_label,
-                            "smart": _cohort_dim_score(s, exp_s),
-                            "grit":  _cohort_dim_score(g, exp_g),
-                            "build": _cohort_dim_score(b, exp_b),
-                            "dilly_score": _dilly_for_cohort(cohort_label, s, g, b),
-                            "weight": 0.0,
-                        }
+                        # Interest cohorts (stored as cohort-label strings)
+                        for cohort_label in (profile.get("interests") or []):
+                            if not cohort_label:
+                                continue
+                            if cohort_label in existing_cs and existing_cs[cohort_label].get("scored_by_claude"):
+                                continue
+                            if cohort_label in seen:
+                                continue
+                            from projects.dilly.api.cohort_config import COHORT_SCORING_CONFIG as _csc
+                            if not _csc.get(cohort_label):
+                                continue
+                            fi = _fallback_score(s, "interest", "smart")
+                            fg = _fallback_score(g, "interest", "grit")
+                            fb = _fallback_score(b, "interest", "build")
+                            seen[cohort_label] = {
+                                "cohort": cohort_label,
+                                "level": "interest",
+                                "field": cohort_label,
+                                "smart": fi,
+                                "grit":  fg,
+                                "build": fb,
+                                "dilly_score": round((fi + fg + fb) / 3, 1),
+                                "weight": 0.0,
+                                "scored_by_claude": False,
+                            }
 
-                    if seen:
-                        # Merge synthesized cohorts into any existing DB-stored cohort_scores.
-                        # DB entries win for cohorts already present (they may have more precise
-                        # per-cohort data from a domain-specific audit in the future).
-                        existing = profile.get("cohort_scores") or {}
-                        merged = dict(seen)
-                        for k, v in existing.items():
-                            merged[k] = v  # DB entry overrides synthesized fallback
-                        profile["cohort_scores"] = merged
+                        if seen:
+                            # Claude entries always win; fallback only fills gaps.
+                            merged = dict(seen)
+                            for k, v in existing_cs.items():
+                                merged[k] = v
+                            profile["cohort_scores"] = merged
             except Exception:
                 pass
 
@@ -215,6 +254,37 @@ async def get_profile(request: Request):
         raise errors.validation_error(str(e))
     except Exception:
         raise errors.internal("Could not load profile.")
+
+
+@router.post("/profile/rescore-cohorts")
+async def rescore_cohorts(request: Request):
+    """
+    Trigger an immediate (background) re-score of per-cohort S/G/B scores with Claude.
+    Returns quickly; the actual scoring runs async and is available within ~10 seconds.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    import threading
+
+    def _run():
+        try:
+            from projects.dilly.api.profile_store import get_profile as _gp
+            from projects.dilly.api.resume_loader import load_parsed_resume_for_voice as _lpr
+            from projects.dilly.api.cohort_scorer import score_and_store_cohorts as _ssc
+            _pr = _gp(email) or {}
+            _maj = _pr.get("majors") or ([_pr["major"]] if _pr.get("major") else [])
+            _min = _pr.get("minors") or []
+            _int = _pr.get("interests") or []
+            _rt = _lpr(email, max_chars=5500) or ""
+            _ssc(email, _rt, _maj, _min, _int)
+        except Exception:
+            pass
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"ok": True, "message": "Cohort re-scoring started. Check /profile in ~15 seconds."}
 
 
 def _score_page_response(request: Request, audit_id: str | None):
