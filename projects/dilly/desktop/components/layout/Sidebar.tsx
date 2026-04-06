@@ -9,7 +9,6 @@ const NAV = [
   { href: '/tracker', label: 'Tracker', d: 'M3 3h5v18H3V3zm7 0h5v12h-5V3zm7 0h5v7h-5V3z' },
   { href: '/outcomes', label: 'Outcomes', d: 'M22 12h-4l-3 9L9 3l-3 9H2' },
   { href: '/scores', label: 'Scores', d: 'M18 20V10M12 20V4M6 20v-6' },
-  { href: '/leaderboard', label: 'Board', d: 'M6 9H4.5a2.5 2.5 0 010-5H6m12 5h1.5a2.5 2.5 0 000-5H18M18 2H6v7a6 6 0 1012 0V2zM4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22m7-7.34V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22' },
 ];
 
 const NAV_TOOLS = [
