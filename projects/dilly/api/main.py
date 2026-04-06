@@ -260,12 +260,54 @@ def _reports_cleanup() -> None:
             pass
 
 
+def _run_crawl_internships() -> None:
+    """Crawl ATS sources and classify new listings. Runs at 02:00 UTC."""
+    try:
+        print("[CRON] crawl-internships starting", flush=True)
+        from projects.dilly.crawl_internships_v2 import crawl_all, classify_unclassified, get_db
+        crawl_all()
+        conn = get_db()
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        classified = classify_unclassified(conn, api_key)
+        conn.close()
+        print(f"[CRON] crawl-internships done — classified={classified}", flush=True)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
+def _run_recompute_matches() -> None:
+    """Recompute match scores for all students. Runs at 03:00 UTC."""
+    try:
+        print("[CRON] recompute-matches starting", flush=True)
+        from projects.dilly.match_engine import run_matching
+        run_matching()
+        print("[CRON] recompute-matches done", flush=True)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+
+
 @app.on_event("startup")
 def _on_startup() -> None:
     _reports_cleanup()
     recruiter_key_set = bool(config.recruiter_api_key.strip())
     print(f"[API] .env loaded from: {_ENV_PATH}", flush=True)
     print(f"[API] RECRUITER_API_KEY: {'set' if recruiter_key_set else 'NOT SET (add to .env and restart)'}", flush=True)
+
+    # Start background scheduler for daily cron jobs (replaces Railway curl containers)
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        _scheduler = BackgroundScheduler(timezone="UTC")
+        _scheduler.add_job(_run_crawl_internships, CronTrigger(hour=2, minute=0), id="crawl_internships", replace_existing=True)
+        _scheduler.add_job(_run_recompute_matches, CronTrigger(hour=3, minute=0), id="recompute_matches", replace_existing=True)
+        _scheduler.start()
+        print("[CRON] Scheduler started — crawl@02:00 UTC, matches@03:00 UTC", flush=True)
+    except Exception:
+        import traceback
+        print("[CRON] WARNING: scheduler failed to start", flush=True)
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
