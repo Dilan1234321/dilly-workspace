@@ -70,8 +70,14 @@ def _build_rich_context(email: str) -> dict:
     first_name = name.split()[0] if name != "the student" else "there"
     cohort = profile.get("track") or profile.get("cohort") or "General"
     school = "University of Tampa" if profile.get("school_id") == "utampa" else (profile.get("school_id") or "Unknown")
-    major = (profile.get("majors") or [None])[0] or profile.get("major") or ""
-    minor = (profile.get("minors") or [None])[0] or ""
+    # All majors and minors (full list, not just first)
+    majors_list = profile.get("majors") or ([profile.get("major")] if profile.get("major") else [])
+    majors_list = [m for m in majors_list if m]
+    major = majors_list[0] if majors_list else ""
+    minors_list = profile.get("minors") or []
+    minors_list = [m for m in minors_list if m]
+    minor = minors_list[0] if minors_list else ""
+    interests_list = profile.get("interests") or []
     career_goal = profile.get("career_goal") or ""
     industry_target = profile.get("industry_target") or ""
     target_companies = profile.get("target_companies") or []
@@ -237,9 +243,36 @@ def _build_rich_context(email: str) -> dict:
     if sum(app_counts.values()) == 0 and current_score is not None:
         nudges.append({"priority": "low", "message": "You haven't added any applications yet. Want me to help you build your pipeline?"})
 
+    # Pull per-cohort scores from the students DB so AI knows exact field-by-field breakdown
+    cohort_scores_for_ai: dict = {}
+    try:
+        import psycopg2, psycopg2.extras as _pge, json as _json
+        _pw = os.environ.get("DILLY_DB_PASSWORD", "")
+        if not _pw:
+            try: _pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
+            except: pass
+        _sc = psycopg2.connect(
+            host=os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+            database="dilly", user="dilly_admin", password=_pw, sslmode="require"
+        )
+        _scur = _sc.cursor(cursor_factory=_pge.RealDictCursor)
+        _scur.execute("SELECT cohort_scores FROM students WHERE LOWER(email) = LOWER(%s)", (email,))
+        _srow = _scur.fetchone()
+        if _srow and _srow["cohort_scores"]:
+            cs = _srow["cohort_scores"]
+            if isinstance(cs, str):
+                cs = _json.loads(cs)
+            cohort_scores_for_ai = cs or {}
+        _sc.close()
+    except Exception:
+        pass
+
     return {
         "name": name, "first_name": first_name, "cohort": cohort, "school": school,
-        "major": major, "minor": minor, "pronouns": pronouns, "career_goal": career_goal,
+        "major": major, "minor": minor,
+        "majors_list": majors_list, "minors_list": minors_list, "interests_list": interests_list,
+        "cohort_scores": cohort_scores_for_ai,
+        "pronouns": pronouns, "career_goal": career_goal,
         "industry_target": industry_target, "target_companies": target_companies,
         "tagline": tagline, "bio": bio, "linkedin": linkedin,
         "current_score": current_score, "smart": smart, "grit": grit, "build": build,
@@ -469,17 +502,46 @@ def _build_rich_system_prompt(r: dict) -> str:
     except Exception:
         pass
 
+    # Build identity block with full majors / minors / interests / cohort scores
+    _majors_list = r.get("majors_list") or ([major] if major else [])
+    _minors_list = r.get("minors_list") or ([r.get("minor")] if r.get("minor") else [])
+    _interests_list = r.get("interests_list") or []
+    _cohort_scores = r.get("cohort_scores") or {}
+
+    _major_str = ", ".join(_majors_list) if _majors_list else "Not specified"
+    _minor_str = ", ".join(_minors_list) if _minors_list else "None"
+    _interest_str = ", ".join(_interests_list) if _interests_list else "None listed"
+
+    # Per-cohort scores block (only if we have Claude-scored entries)
+    _cohort_scores_block = ""
+    if _cohort_scores:
+        _cs_lines = []
+        for _cname, _cv in _cohort_scores.items():
+            if not isinstance(_cv, dict):
+                continue
+            _lvl = _cv.get("level", "")
+            _s = _cv.get("smart", "?")
+            _g = _cv.get("grit", "?")
+            _b = _cv.get("build", "?")
+            _d = _cv.get("dilly_score", "?")
+            _cs_lines.append(f"  - {_cname} ({_lvl}): Smart {_s}, Grit {_g}, Build {_b}, Overall {_d}")
+        if _cs_lines:
+            _cohort_scores_block = "PER-COHORT SCORES (how the student scores in each of their fields):\n" + "\n".join(_cs_lines) + "\nUse these when asked about scores by field. Never say 'major unknown'.\n"
+
     return f"""You are Dilly, an AI career coach embedded in a career acceleration app for college students. You are not just a chatbot. You are the student's personal career strategist who can see their entire dashboard.
 
 STUDENT: {name}
 {f"Pronouns: {r.get('pronouns')}" if r.get("pronouns") else ""}
 School: {school}
-Major: {major}{f", Minor: {r.get('minor')}" if r.get("minor") else ""}
-Cohort: {cohort}
+Major(s): {_major_str}
+Minor(s): {_minor_str}
+Interests/Additional fields: {_interest_str}
+Primary cohort: {cohort}
 {f"Graduation: {r.get('graduation_year')}" if r.get("graduation_year") else ""}
 {f"Tagline: {r.get('tagline')}" if r.get("tagline") else ""}
 
 {score_block}
+{_cohort_scores_block}
 {apps_block}
 {deadline_block}
 {target_block}
@@ -586,12 +648,32 @@ async def ai_chat(request: Request, body: ChatRequest):
     if not api_key:
         raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not set")
 
-    if body.rich_context:
-        system = _build_rich_system_prompt(body.rich_context)
+    # Always build rich context server-side from the authenticated user's profile.
+    # This ensures the AI always knows the student's full profile (majors, minors,
+    # resume, cohort scores, applications, deadlines) regardless of what the client sends.
+    # Client-provided rich_context or system string is used only as override / fallback.
+    if body.mode == "practice":
+        # Interview practice mode uses a lightweight prompt
+        system = _build_system_prompt(body.mode, body.student_context, body.rich_context)
     elif body.system:
+        # Caller passed an explicit system string (rare — usually from desktop)
         system = body.system
     else:
-        system = _build_system_prompt(body.mode, body.student_context)
+        # Standard coaching: always pull full profile from DB, ignore client-side context
+        try:
+            _server_rich = _build_rich_context(email)
+            # Merge any extra fields the client sent (e.g. reference_company from jobs screen)
+            if body.rich_context and isinstance(body.rich_context, dict):
+                for _k, _v in body.rich_context.items():
+                    if _v and not _server_rich.get(_k):
+                        _server_rich[_k] = _v
+            if body.student_context:
+                if body.student_context.reference_company and not _server_rich.get("reference_company"):
+                    _server_rich["reference_company"] = body.student_context.reference_company
+            system = _build_rich_system_prompt(_server_rich)
+        except Exception:
+            # Fallback to client context if server-side build fails
+            system = _build_system_prompt(body.mode, body.student_context, body.rich_context)
 
     messages = [{"role": m.role, "content": m.content} for m in body.messages if m.role in ("user", "assistant") and m.content.strip()]
     if not messages:
