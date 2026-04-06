@@ -4,6 +4,9 @@ GET  /applications              — list all tracked applications
 POST /applications              — add a new application (manual or auto from job apply)
 PATCH /applications/{id}        — update status or fields
 DELETE /applications/{id}       — remove an application
+
+Storage: applications are stored in profile_json["applications"] in PostgreSQL
+so they survive Railway deploys and are consistent across desktop + mobile.
 """
 import json
 import os
@@ -22,11 +25,8 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 
 from projects.dilly.api import deps, errors
-from projects.dilly.api.profile_store import get_profile_folder_path
 
 router = APIRouter(tags=["applications"])
-
-_TRACKER_FILENAME = "applications.json"
 
 ApplicationStatus = Literal["saved", "applied", "interviewing", "offer", "rejected"]
 
@@ -75,48 +75,37 @@ class PatchApplicationRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — PostgreSQL-backed (survives deploys, syncs desktop + mobile)
 # ---------------------------------------------------------------------------
 
-def _tracker_path(email: str) -> str:
-    folder = get_profile_folder_path(email)
-    if not folder:
-        return ""
-    return os.path.join(folder, _TRACKER_FILENAME)
-
-
 def _load_applications(email: str) -> list[dict]:
-    path = _tracker_path(email)
-    if not path or not os.path.isfile(path):
-        return []
+    """Load applications from profile_json in PostgreSQL."""
+    from projects.dilly.api.profile_store import get_profile
+    profile = get_profile(email) or {}
+    apps = profile.get("applications")
+    if isinstance(apps, list):
+        return apps
+    # One-time migration: pull from legacy filesystem JSON if DB is empty
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, list):
-            return data
-        return data.get("applications", [])
+        from projects.dilly.api.profile_store import get_profile_folder_path
+        folder = get_profile_folder_path(email)
+        path = os.path.join(folder, "applications.json") if folder else ""
+        if path and os.path.isfile(path):
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            migrated = data if isinstance(data, list) else data.get("applications", [])
+            if migrated:
+                _save_applications(email, migrated)
+                return migrated
     except Exception:
-        return []
+        pass
+    return []
 
 
 def _save_applications(email: str, apps: list[dict]) -> None:
-    path = _tracker_path(email)
-    if not path:
-        raise ValueError("Invalid email")
-    folder = os.path.dirname(path)
-    os.makedirs(folder, exist_ok=True)
-    import tempfile
-    fd, tmp = tempfile.mkstemp(dir=folder, suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump({"applications": apps, "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, f, indent=2)
-        os.replace(tmp, path)
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
+    """Persist applications to profile_json in PostgreSQL."""
+    from projects.dilly.api.profile_store import save_profile
+    save_profile(email, {"applications": apps})
 
 
 # ---------------------------------------------------------------------------
