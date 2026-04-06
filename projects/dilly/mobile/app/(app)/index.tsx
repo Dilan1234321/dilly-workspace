@@ -573,7 +573,6 @@ export default function HomeScreen() {
             {[
               { icon: 'arrow-up-circle' as const, color: colors.green, label: 'Audit', onPress: () => router.push('/(app)/new-audit') },
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
-              { icon: 'bar-chart' as const, color: colors.indigo, label: 'Rank', onPress: () => router.push('/(app)/rank') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar') },
               { icon: 'analytics' as const, color: colors.green, label: 'Scores', onPress: () => router.push('/(app)/score-detail') },
             ].map(tool => (
