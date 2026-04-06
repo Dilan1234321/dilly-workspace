@@ -362,11 +362,14 @@ export default function NewAuditScreen() {
         // Prepend to history
         setHistory(prev => [result, ...prev].slice(0, 20));
 
-        // Update base resume in the editor from the latest parsed resume
-        // This ensures the resume editor always reflects the most recent audit
-        try {
-          await dilly.post('/resume/sync-base').catch(() => null);
-        } catch {}
+        // Only sync the editor from the parsed file when a NEW file was uploaded.
+        // If the user audited from the editor, skip sync-base — it would overwrite
+        // their edits with the older parsed version on disk.
+        if (file) {
+          try {
+            await dilly.post('/resume/sync-base').catch(() => null);
+          } catch {}
+        }
       } else {
         Alert.alert('Audit Failed', result?.detail || result?.error || 'Resume audit failed. Please try uploading again.');
       }
