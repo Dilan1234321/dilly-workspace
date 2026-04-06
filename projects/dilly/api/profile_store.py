@@ -359,12 +359,42 @@ def get_profile_photo_path_by_slug(slug: str) -> str | None:
     if not slug or len(slug) != 16:
         return None
     folder = os.path.join(_PROFILES_DIR, slug)
-    if not os.path.isdir(folder):
-        return None
-    for ext in _ALLOWED_PHOTO_EXT:
-        path = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
-        if os.path.isfile(path):
-            return path
+    # 1. Check filesystem first (fast path)
+    if os.path.isdir(folder):
+        for ext in _ALLOWED_PHOTO_EXT:
+            path = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
+            if os.path.isfile(path):
+                return path
+    # 2. Restore from base64 stored in DB (survives Railway deploys that wipe the filesystem)
+    try:
+        import base64
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            # slug = sha256(lower(email))[:16] — PostgreSQL can compute this directly
+            cur.execute(
+                """
+                SELECT email,
+                       profile_json->>'profile_photo_b64' AS b64,
+                       COALESCE(profile_json->>'profile_photo_content_type', 'image/jpeg') AS ct
+                FROM users
+                WHERE left(encode(sha256(lower(email)::bytea), 'hex'), 16) = %s
+                  AND profile_json->>'profile_photo_b64' IS NOT NULL
+                LIMIT 1
+                """,
+                (slug,),
+            )
+            row = cur.fetchone()
+        if row and row["b64"]:
+            ct = row["ct"] or "image/jpeg"
+            ext = ".png" if "png" in ct else ".webp" if "webp" in ct else ".gif" if "gif" in ct else ".jpg"
+            os.makedirs(folder, exist_ok=True)
+            dest = os.path.join(folder, _PROFILE_PHOTO_FILENAME + ext)
+            with open(dest, "wb") as f:
+                f.write(base64.b64decode(row["b64"]))
+            return dest
+    except Exception:
+        pass
     return None
 
 
