@@ -128,15 +128,6 @@ async def require_internal_key(request: Request) -> None:
         raise HTTPException(status_code=403, detail="Internal endpoint")
 
 
-def is_dev_allowed(request: Request) -> bool:
-    """True when DILLY_DEV=1, localhost, or by default (pay-button bypass). Set DILLY_DEV_UNLOCK=0 in prod to require real payment."""
-    from projects.dilly.api.config import config
-
-    if not config.dev_unlock:
-        return False
-    if config.dev_mode:
-        return True
-    client = request.client
-    if client and client.host in ("127.0.0.1", "localhost", "::1"):
-        return True
-    return True  # default: allow so "Unlock full access" lets you in without payment
+def is_dev_allowed() -> bool:
+    """Only returns True when DILLY_DEV_UNLOCK=1 is explicitly set (e.g. in dev environments)."""
+    return os.getenv("DILLY_DEV_UNLOCK", "0") == "1"

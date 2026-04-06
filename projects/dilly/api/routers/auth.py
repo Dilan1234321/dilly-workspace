@@ -58,12 +58,7 @@ async def send_magic_link(request: Request, body: AuthSendCodeRequest):
         raise errors.validation_error(str(e))
     base = str(request.base_url).rstrip("/")
     api_magic_link = f"{base}/auth/verify?token={token}"
-    return {
-        "ok": True,
-        "message": "Check your email for the sign-in link.",
-        "magic_token": token,
-        "magic_link": api_magic_link,
-    }
+    return {"ok": True, "message": "Magic link sent to your email"}
 
 
 @router.post("/send-verification-code", responses=ERROR_RESPONSES)
@@ -86,8 +81,8 @@ async def send_verification_code(request: Request, body: AuthSendCodeRequest):
         sent, code_for_dev = send_verification_email(email, code, school)
     except ValueError as e:
         raise errors.validation_error(str(e))
-    out = {"ok": True, "message": "Check your inbox. No spam, we promise."}
-    if deps.is_dev_allowed(request):
+    out = {"ok": True, "message": "Verification code sent"}
+    if deps.is_dev_allowed():
         out["dev_code"] = code
     elif not sent:
         raise errors.service_unavailable("We couldn't send the verification email. Try again in a minute.")
@@ -198,7 +193,7 @@ async def auth_logout(request: Request):
 @router.post("/dev-unlock")
 async def auth_dev_unlock(request: Request):
     """Dev only: mark current user as subscribed. Allowed when DILLY_DEV=1 or localhost."""
-    if not deps.is_dev_allowed(request):
+    if not deps.is_dev_allowed():
         raise errors.forbidden("Dev unlock is disabled.")
     u = deps.bearer_user(request)
     if not u:
