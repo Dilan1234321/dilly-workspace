@@ -109,6 +109,122 @@ def setup_users_table(token: str = ""):
         # Add email column to audit_results if missing
         cur.execute("ALTER TABLE audit_results ADD COLUMN IF NOT EXISTS email TEXT")
 
+        # -- Students table (scored profiles used by match engine) --
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS students (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email TEXT UNIQUE NOT NULL,
+                name TEXT,
+                major TEXT,
+                majors JSONB DEFAULT '[]',
+                minors JSONB DEFAULT '[]',
+                interests JSONB DEFAULT '[]',
+                smart_score FLOAT,
+                grit_score FLOAT,
+                build_score FLOAT,
+                cohort_scores JSONB DEFAULT '{}',
+                preferred_cities JSONB DEFAULT '[]',
+                work_mode_pref TEXT,
+                track TEXT,
+                cohort TEXT,
+                created_at TIMESTAMPTZ DEFAULT now(),
+                updated_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
+        # -- Companies table (crawled from ATS sources) --
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS companies (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name TEXT UNIQUE NOT NULL,
+                ats_type TEXT,
+                industry TEXT,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
+        # -- Internships table (crawled listings) --
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS internships (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+                title TEXT NOT NULL,
+                description TEXT,
+                apply_url TEXT,
+                location_city TEXT,
+                location_state TEXT,
+                work_mode TEXT DEFAULT 'unknown',
+                status TEXT DEFAULT 'active',
+                source_ats TEXT,
+                external_id TEXT,
+                tags JSONB DEFAULT '[]',
+                team TEXT,
+                remote BOOLEAN DEFAULT FALSE,
+                is_internship BOOLEAN DEFAULT TRUE,
+                is_paid BOOLEAN,
+                job_type TEXT DEFAULT 'internship',
+                cohort_requirements JSONB,
+                deadline TEXT,
+                posted_date TEXT,
+                created_at TIMESTAMPTZ DEFAULT now(),
+                updated_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+        # Partial unique index for ON CONFLICT (company_id, title) WHERE status = 'active'
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS internships_company_title_active
+            ON internships (company_id, title) WHERE status = 'active'
+        """)
+
+        # -- Match scores table (student <-> internship rankings) --
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS match_scores (
+                id UUID PRIMARY KEY,
+                student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+                internship_id UUID REFERENCES internships(id) ON DELETE CASCADE,
+                rank_score FLOAT,
+                readiness TEXT,
+                cohort_readiness JSONB,
+                location_score FLOAT,
+                work_mode_score FLOAT,
+                compensation_score FLOAT,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
+        # -- Push tokens (mobile notifications) --
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS push_tokens (
+                id SERIAL PRIMARY KEY,
+                email TEXT NOT NULL,
+                token TEXT NOT NULL,
+                platform TEXT,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
+        # -- Internship applications --
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS internship_applications (
+                id SERIAL PRIMARY KEY,
+                email TEXT NOT NULL,
+                internship_id UUID,
+                status TEXT DEFAULT 'applied',
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
+        # -- Profile facts (AI-extracted profile signals) --
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS profile_facts (
+                id SERIAL PRIMARY KEY,
+                email TEXT NOT NULL,
+                fact_key TEXT,
+                fact_value TEXT,
+                created_at TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
     return {"ok": True, "message": "All tables ready"}
 
 
