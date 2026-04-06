@@ -46,6 +46,9 @@ interface Listing {
 
 interface StudentScores { smart: number; grit: number; build: number; score: number; }
 
+// Fallback when a listing hasn't been classified yet — competitive internship floor
+const BASELINE_SCORES: RequiredScores = { smart: 65, grit: 65, build: 65 };
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const SOURCE_COLORS: Record<string, string> = { Greenhouse: '#2ECC71', Lever: '#3498DB', Ashby: '#9B59B6', USAJOBS: '#E74C3C' };
@@ -167,15 +170,16 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
   const posted = daysAgo(listing.posted_date);
   const srcColor = SOURCE_COLORS[listing.source] || colors.t3;
   const rs = listing.required_scores;
-  const hasScores = rs && typeof rs.smart === 'number';
+  const hasRoleScores = rs && typeof rs.smart === 'number';
+  const effectiveRs: RequiredScores = hasRoleScores ? rs! : BASELINE_SCORES;
 
   let readiness: 'ready' | 'close' | 'gap' | 'unknown' = 'unknown';
   const serverReadiness = (listing as any).readiness;
   if (serverReadiness === 'ready' || serverReadiness === 'almost' || serverReadiness === 'gap') {
     readiness = serverReadiness === 'almost' ? 'close' : serverReadiness;
-  } else if (hasScores && studentScores) {
+  } else if (studentScores) {
     const dims = ['smart', 'grit', 'build'] as const;
-    const worstGap = Math.max(...dims.map(dim => ((rs as any)[dim] ?? 0) - studentScores[dim]));
+    const worstGap = Math.max(...dims.map(dim => (effectiveRs[dim] ?? 0) - studentScores[dim]));
     readiness = worstGap <= 0 ? 'ready' : worstGap <= 10 ? 'close' : 'gap';
   }
   const rc = { ready: { color: GREEN, label: 'Ready', icon: 'checkmark-circle' as const }, close: { color: AMBER, label: 'Almost', icon: 'alert-circle' as const }, gap: { color: CORAL, label: 'Gap', icon: 'arrow-up-circle' as const }, unknown: { color: colors.t3, label: '', icon: 'help-circle' as const } }[readiness];
@@ -258,26 +262,29 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
       </View>
       {expanded && (
         <View style={js.expandedSection}>
-          {hasScores && studentScores && (
+          {studentScores && (
             <View style={js.gapSection}>
-              <Text style={js.gapTitle}>YOUR FIT</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                <Text style={js.gapTitle}>YOUR FIT</Text>
+                {!hasRoleScores && <Text style={{ fontSize: 9, color: colors.t3, fontStyle: 'italic' }}>vs. competitive baseline</Text>}
+              </View>
               {(listing as any).cohort_readiness?.length > 0 ? (
                 (listing as any).cohort_readiness.map((cr: any, idx: number) => (
                   <View key={idx} style={{ marginBottom: idx < (listing as any).cohort_readiness.length - 1 ? 12 : 0 }}>
                     <Text style={[js.gapTitle, { fontSize: 9, color: '#2B3A8E', marginBottom: 6 }]}>{cr.cohort}</Text>
-                    <DimBar label="Smart" student={cr.student_smart ?? studentScores.smart} required={cr.required_smart ?? rs.smart ?? 0} />
-                    <DimBar label="Grit" student={cr.student_grit ?? studentScores.grit} required={cr.required_grit ?? rs.grit ?? 0} />
-                    <DimBar label="Build" student={cr.student_build ?? studentScores.build} required={cr.required_build ?? rs.build ?? 0} />
+                    <DimBar label="Smart" student={cr.student_smart ?? studentScores.smart} required={cr.required_smart ?? effectiveRs.smart ?? 0} />
+                    <DimBar label="Grit" student={cr.student_grit ?? studentScores.grit} required={cr.required_grit ?? effectiveRs.grit ?? 0} />
+                    <DimBar label="Build" student={cr.student_build ?? studentScores.build} required={cr.required_build ?? effectiveRs.build ?? 0} />
                   </View>
                 ))
               ) : (
                 <>
-                  <DimBar label="Smart" student={studentScores.smart} required={rs.smart ?? 0} />
-                  <DimBar label="Grit" student={studentScores.grit} required={rs.grit ?? 0} />
-                  <DimBar label="Build" student={studentScores.build} required={rs.build ?? 0} />
+                  <DimBar label="Smart" student={studentScores.smart} required={effectiveRs.smart ?? 0} />
+                  <DimBar label="Grit" student={studentScores.grit} required={effectiveRs.grit ?? 0} />
+                  <DimBar label="Build" student={studentScores.build} required={effectiveRs.build ?? 0} />
                 </>
               )}
-              {rs.overall_bar && <Text style={js.overallBar}>{rs.overall_bar}</Text>}
+              {effectiveRs.overall_bar && <Text style={js.overallBar}>{effectiveRs.overall_bar}</Text>}
               {atsInfo && (
             <View style={js.atsSection}>
               <View style={js.atsSectionHeader}>
