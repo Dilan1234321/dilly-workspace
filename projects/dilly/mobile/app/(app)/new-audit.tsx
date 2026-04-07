@@ -6,20 +6,13 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withRepeat,
-  withSequence,
-  Easing,
-  interpolateColor,
-} from 'react-native-reanimated';
 import { getToken } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
@@ -90,22 +83,22 @@ const SCAN_STAGES = [
 ];
 
 function ScanProgress({ stageIndex }: { stageIndex: number }) {
-  const pulse = useSharedValue(0.3);
+  const pulse = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 800 }),
-        withTiming(0.3, { duration: 800 }),
-      ), -1, true
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1,   duration: 800, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.3, duration: 800, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      ])
     );
+    loop.start();
+    return () => loop.stop();
   }, []);
-
-  const pulseStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
 
   return (
     <View style={ns.scanWrap}>
-      <Animated.View style={[ns.scanGlow, pulseStyle]} />
+      <Animated.View style={[ns.scanGlow, { opacity: pulse }]} />
       <View style={ns.scanContent}>
         {SCAN_STAGES.map((stage, i) => {
           const isActive = i === stageIndex;
@@ -172,16 +165,18 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
   const score = newAudit.final_score ?? 0;
   const color = scoreColor(score);
   const delta = previousScore != null ? score - previousScore : null;
-  const barAnim = useSharedValue(0);
+  const barAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    barAnim.value = withTiming(score / 100, { duration: 1000, easing: Easing.out(Easing.cubic) });
+    Animated.timing(barAnim, {
+      toValue: score / 100,
+      duration: 1000,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
   }, [score]);
 
-  const barStyle = useAnimatedStyle(() => ({
-    width: `${barAnim.value * 100}%`,
-    backgroundColor: interpolateColor(barAnim.value, [0, 0.3, 0.55, 0.8], [CORAL, AMBER, GOLD, GREEN]),
-  }));
+  const barWidth = barAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
     <View style={ns.resultsCard}>
@@ -213,7 +208,7 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
       )}
 
       <View style={ns.resultsBar}>
-        <Animated.View style={[ns.resultsBarFill, barStyle]} />
+        <Animated.View style={[ns.resultsBarFill, { width: barWidth, backgroundColor: color }]} />
       </View>
 
       {/* Dimension scores */}
