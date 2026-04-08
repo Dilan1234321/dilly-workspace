@@ -454,28 +454,6 @@ export default function SettingsScreen() {
                   <Text style={st.upgradeHint}>Unlimited audits, AI coaching, all jobs, score history</Text>
                 </>
               )}
-              <Divider />
-              <View style={st.giftRow}>
-                <TextInput
-                  style={st.giftInput}
-                  placeholder="Gift code"
-                  placeholderTextColor={colors.t3}
-                  value={giftCode}
-                  onChangeText={setGiftCode}
-                  autoCapitalize="characters"
-                />
-                <AnimatedPressable
-                  style={[st.giftBtn, !giftCode.trim() && { opacity: 0.4 }]}
-                  onPress={() => {
-                    if (!giftCode.trim()) return;
-                    Alert.alert('Coming soon', 'Gift code redemption is not yet available.');
-                  }}
-                  scaleDown={0.95}
-                  disabled={!giftCode.trim()}
-                >
-                  <Text style={st.giftBtnText}>Redeem</Text>
-                </AnimatedPressable>
-              </View>
             </View>
           </FadeInView>
         </View>
@@ -682,11 +660,7 @@ export default function SettingsScreen() {
                 Linking.openURL(`${API_BASE}/profile/export`);
               }} />
               <Divider />
-              <LinkRow label="Add deadlines to calendar" icon="calendar-outline" onPress={() => {
-                Alert.alert('Coming soon', 'Calendar export will be available soon.');
-              }} />
-              <Divider />
-              {/* LinkedIn sync and Email parsing hidden until ready */}
+              {/* Calendar export, LinkedIn sync, Email parsing hidden until ready */}
             </View>
           </FadeInView>
         </View>

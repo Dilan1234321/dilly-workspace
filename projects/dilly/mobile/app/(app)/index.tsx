@@ -544,7 +544,23 @@ export default function HomeScreen() {
             <Text style={s.insightText}>
               {audit.dilly_take || nextAction.body}
             </Text>
-            <AnimatedPressable style={s.insightBtn} onPress={nextAction.onPress} scaleDown={0.97}>
+            <AnimatedPressable
+              style={s.insightBtn}
+              onPress={() => {
+                // Auto-prompt the Dilly AI with whatever the button says, so the
+                // user can act on the suggestion immediately by chatting it through.
+                const promptText = nextAction.cta.replace(/[→\s]+$/, '').trim();
+                openDillyOverlay({
+                  name: firstName, cohort, score: finalScore,
+                  smart: smartScore, grit: gritScore, build: buildScore,
+                  gap, cohortBar: cohortCfg.bar,
+                  referenceCompany: cohortCfg.company,
+                  isPaid: true,
+                  initialMessage: promptText,
+                });
+              }}
+              scaleDown={0.97}
+            >
               <Text style={s.insightBtnText}>{nextAction.cta}</Text>
             </AnimatedPressable>
           </View>
@@ -558,7 +574,7 @@ export default function HomeScreen() {
               <AnimatedPressable
                 key={job.id}
                 style={s.jobCard}
-                onPress={() => router.push('/(app)/jobs')}
+                onPress={() => router.push(`/(app)/jobs?focus=${encodeURIComponent(job.id)}`)}
                 scaleDown={0.98}
               >
                 <View style={s.jobInfo}>
