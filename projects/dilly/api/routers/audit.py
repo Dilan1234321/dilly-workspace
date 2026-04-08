@@ -523,6 +523,117 @@ async def audit_resume_v2(
             )
         except asyncio.TimeoutError:
             raise errors.http_exception(504, ERR_TIMEOUT, "TIMEOUT")
+
+        # ─────────────────────────────────────────────────────────────────
+        # RUBRIC CUTOVER (Tier 2, 2026-04-08)
+        #
+        # After the legacy auditor runs, score the resume against the
+        # student's active cohort rubrics and REPLACE the legacy scores
+        # with the rubric output. The `result` dataclass is mutated in
+        # place so the rest of the audit response machinery (scores dict,
+        # audit_findings, dilly_take, AuditResponseV2 construction) picks
+        # up the new values without further changes.
+        #
+        # The rich rubric analysis (matched/unmatched signals, fastest
+        # path moves, per-cohort scores) is captured in
+        # `rubric_analysis_payload` and attached to the response below
+        # as the new `rubric_analysis` field.
+        #
+        # If rubric scoring fails for ANY reason, we fall back to the
+        # legacy `result` unchanged and log the failure to stderr. No
+        # student ever sees a broken audit because of rubric issues.
+        # ─────────────────────────────────────────────────────────────────
+        rubric_analysis_payload = None
+        try:
+            from dilly_core.rubric_scorer import (
+                select_cohorts_for_student,
+                score_for_cohorts,
+                build_rubric_analysis_payload,
+                rubric_to_legacy_shape,
+            )
+            from dilly_core.scoring import extract_scoring_signals as _rc_extract_signals
+
+            # Fetch student profile for minors / pre-prof / industry target
+            _rc_minors = []
+            _rc_pre_prof = None
+            _rc_industry = industry_target
+            if email:
+                try:
+                    from projects.dilly.api.profile_store import get_profile as _rc_get_profile
+                    _rc_profile = _rc_get_profile(email) or {}
+                    _rc_minors = _rc_profile.get("minors") or []
+                    _rc_pre_prof = _rc_profile.get("pre_professional_track")
+                    if not _rc_industry:
+                        _rc_industry = _rc_profile.get("industry_target")
+                except Exception:
+                    pass
+
+            # Select which cohorts to score this student against
+            _rc_cohorts = select_cohorts_for_student(
+                major=major or parsed.major or "",
+                minors=_rc_minors,
+                pre_professional_track=_rc_pre_prof,
+                industry_target=_rc_industry,
+            )
+
+            if _rc_cohorts:
+                _rc_text = text_for_audit or text or ""
+                _rc_signals = _rc_extract_signals(
+                    _rc_text,
+                    gpa=gpa,
+                    major=major or "",
+                )
+                _rc_scores = score_for_cohorts(_rc_signals, _rc_text, _rc_cohorts)
+
+                if _rc_scores:
+                    _rc_primary_cid = _rc_cohorts[0]
+                    _rc_primary = _rc_scores.get(_rc_primary_cid)
+
+                    if _rc_primary is not None:
+                        # Overwrite legacy scores with rubric scores on the
+                        # result dataclass (mutable). Downstream machinery
+                        # picks these up automatically.
+                        result.smart_score = _rc_primary.smart
+                        result.grit_score = _rc_primary.grit
+                        result.build_score = _rc_primary.build
+                        result.final_score = _rc_primary.composite
+                        result.track = _rc_primary_cid
+
+                        # Generate audit_findings + dilly_take from the
+                        # rubric translator so the narrative copy reflects
+                        # the new scoring.
+                        _rc_legacy = rubric_to_legacy_shape(
+                            _rc_primary,
+                            candidate_name=candidate_name or "Unknown",
+                            major=major or parsed.major or "",
+                        )
+                        result.audit_findings = _rc_legacy.get("audit_findings") or result.audit_findings
+                        result.dilly_take = _rc_legacy.get("dilly_take") or getattr(result, "dilly_take", None)
+
+                        # Build the rich rubric_analysis payload for the response
+                        rubric_analysis_payload = build_rubric_analysis_payload(
+                            _rc_primary_cid,
+                            _rc_scores,
+                        )
+
+                        sys.stderr.write(
+                            f"[rubric_cutover] email={email[:6]+'***' if email and '@' in email else 'none'} "
+                            f"primary={_rc_primary_cid} composite={_rc_primary.composite:.1f} "
+                            f"S={_rc_primary.smart:.0f}/G={_rc_primary.grit:.0f}/B={_rc_primary.build:.0f} "
+                            f"cohorts_scored={len(_rc_scores)}\n"
+                        )
+        except Exception as _rc_exc:
+            import traceback as _rc_tb
+            sys.stderr.write(
+                f"[rubric_cutover_failed] email={email[:6]+'***' if email and '@' in email else 'none'} "
+                f"exc={type(_rc_exc).__name__}: {str(_rc_exc)[:200]}\n"
+            )
+            try:
+                _rc_tb.print_exc(file=sys.stderr)
+            except Exception:
+                pass
+            # Fall through: leave result unchanged, rubric_analysis_payload stays None
+
         if _parsed_resume_path and result.track:
             try:
                 from dilly_core.structured_resume import update_parsed_resume_cohort
@@ -732,6 +843,7 @@ async def audit_resume_v2(
             resume_text=text_for_audit or text or None,
             structured_text=structured_text or None,
             page_count=getattr(auditor, "page_count", None),
+            rubric_analysis=rubric_analysis_payload,
         )
         try:
             _audit_cache_set(cache_key, response.model_dump())

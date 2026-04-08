@@ -541,12 +541,138 @@ async def audit_from_edited_resume(request: Request, body: ResumeAuditRequest = 
             timeout=AUDIT_TIMEOUT_SEC,
         )
 
+        # ────────────────────────────────────────────────────────────────────
+        # RUBRIC CUTOVER (Tier 2, 2026-04-08)
+        #
+        # Re-audit path — same rubric integration as /audit/v2. Score
+        # the resume against the student's active cohorts, replace the
+        # legacy scores with rubric output, and capture the rich
+        # rubric_analysis payload for the response.
+        #
+        # Falls back to legacy `result` unchanged on any failure.
+        # ────────────────────────────────────────────────────────────────────
+        _rc_rubric_analysis_payload = None
+        try:
+            from dilly_core.rubric_scorer import (
+                select_cohorts_for_student,
+                score_for_cohorts,
+                build_rubric_analysis_payload,
+                rubric_to_legacy_shape,
+            )
+            from dilly_core.scoring import extract_scoring_signals as _rc_extract_signals
+
+            _rc_minors = (profile or {}).get("minors") or [] if profile else []
+            _rc_pre_prof = (profile or {}).get("pre_professional_track") if profile else None
+            _rc_industry = (profile or {}).get("industry_target") if profile else None
+
+            _rc_cohorts = select_cohorts_for_student(
+                major=major or "",
+                minors=_rc_minors,
+                pre_professional_track=_rc_pre_prof,
+                industry_target=_rc_industry,
+            )
+
+            if _rc_cohorts and resume_text:
+                _rc_signals = _rc_extract_signals(resume_text, gpa=gpa, major=major or "")
+                _rc_scores = score_for_cohorts(_rc_signals, resume_text, _rc_cohorts)
+
+                if _rc_scores:
+                    _rc_primary_cid = _rc_cohorts[0]
+                    _rc_primary = _rc_scores.get(_rc_primary_cid)
+
+                    if _rc_primary is not None:
+                        # Overwrite scores on the dataclass or dict-shaped result
+                        if hasattr(result, "__dataclass_fields__"):
+                            result.smart_score = _rc_primary.smart
+                            result.grit_score = _rc_primary.grit
+                            result.build_score = _rc_primary.build
+                            result.final_score = _rc_primary.composite
+                            result.track = _rc_primary_cid
+                            _rc_legacy = rubric_to_legacy_shape(
+                                _rc_primary,
+                                candidate_name=candidate_name or "Unknown",
+                                major=major or "",
+                            )
+                            result.audit_findings = _rc_legacy.get("audit_findings") or result.audit_findings
+                            result.dilly_take = _rc_legacy.get("dilly_take") or getattr(result, "dilly_take", None)
+                        elif isinstance(result, dict):
+                            result["smart_score"] = _rc_primary.smart
+                            result["grit_score"] = _rc_primary.grit
+                            result["build_score"] = _rc_primary.build
+                            result["final_score"] = _rc_primary.composite
+                            result["track"] = _rc_primary_cid
+                            _rc_legacy = rubric_to_legacy_shape(
+                                _rc_primary,
+                                candidate_name=candidate_name or "Unknown",
+                                major=major or "",
+                            )
+                            result["audit_findings"] = _rc_legacy.get("audit_findings") or result.get("audit_findings")
+                            result["dilly_take"] = _rc_legacy.get("dilly_take") or result.get("dilly_take")
+
+                        _rc_rubric_analysis_payload = build_rubric_analysis_payload(
+                            _rc_primary_cid,
+                            _rc_scores,
+                        )
+                        sys.stderr.write(
+                            f"[rubric_cutover_reaudit] email={email[:6]+'***' if email and '@' in email else 'none'} "
+                            f"primary={_rc_primary_cid} composite={_rc_primary.composite:.1f}\n"
+                        )
+        except Exception as _rc_exc:
+            import traceback as _rc_tb
+            sys.stderr.write(
+                f"[rubric_cutover_reaudit_failed] exc={type(_rc_exc).__name__}: {str(_rc_exc)[:200]}\n"
+            )
+            try:
+                _rc_tb.print_exc(file=sys.stderr)
+            except Exception:
+                pass
+
+        # ────────────────────────────────────────────────────────────────────
+        # Normalize result to canonical AuditResponseV2-compatible shape.
+        #
+        # The rule-based path (run_audit) returns an AuditorResult dataclass
+        # with FLAT fields (smart_score, grit_score, build_score). The LLM
+        # path may return a dict. The mobile client expects nested
+        # `scores: {smart, grit, build}` per the AuditResponseV2 schema.
+        #
+        # Without this normalization, the mobile new-audit screen crashes
+        # at render time when it tries Math.round(undefined) on the missing
+        # nested scores field. Also: the previous `isinstance(result, dict)`
+        # check below silently skipped the entire persistence branch for the
+        # rule-based path, so re-audits via the editor were never being
+        # saved to audit history.
+        # ────────────────────────────────────────────────────────────────────
+        if hasattr(result, "__dataclass_fields__"):
+            from dataclasses import asdict as _dc_asdict
+            result = _dc_asdict(result)
+        elif not isinstance(result, dict):
+            # Fallback: try .__dict__ for non-dataclass objects
+            try:
+                result = dict(result.__dict__)
+            except Exception:
+                raise errors.internal("Audit returned an unexpected result type.")
+
+        # Build canonical nested scores dict if not already present
+        if not isinstance(result.get("scores"), dict):
+            result["scores"] = {
+                "smart": float(result.get("smart_score", 0) or 0),
+                "grit": float(result.get("grit_score", 0) or 0),
+                "build": float(result.get("build_score", 0) or 0),
+            }
+        # Mobile expects `detected_track` field; auditor calls it `track`
+        if "detected_track" not in result:
+            result["detected_track"] = result.get("track") or "Unknown"
+
         # Attach resume text for downstream tools
-        if isinstance(result, dict):
-            result["resume_text"] = resume_text
-            result["application_target"] = application_target
+        result["resume_text"] = resume_text
+        result["application_target"] = application_target
+
+        # Attach rubric_analysis payload from the cutover block above
+        if _rc_rubric_analysis_payload is not None:
+            result["rubric_analysis"] = _rc_rubric_analysis_payload
 
         # Persist to audit history so Career Center shows the new audit (same as /audit/v2)
+        # NOTE: result is now guaranteed to be a dict by the normalization above.
         if isinstance(result, dict):
             import uuid as _uuid
             from projects.dilly.api.audit_history import append_audit, get_audits

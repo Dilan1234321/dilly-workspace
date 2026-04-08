@@ -1,7 +1,7 @@
 import json
 import os
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Literal
+from typing import Any, List, Dict, Optional, Literal
 
 # ---------------------------------------------------------------------------
 # Error response (all errors return this envelope)
@@ -121,6 +121,31 @@ class AuditResponseV2(BaseModel):
     resume_text: Optional[str] = None  # raw resume text for ATS scan and other post-audit tools
     structured_text: Optional[str] = None  # structured (labeled sections) text for ATS scan
     page_count: Optional[int] = None  # PDF page count for ATS analysis
+    # ─────────────────────────────────────────────────────────────────────
+    # Rubric-based scoring (Tier 2 cutover 2026-04-08).
+    #
+    # When present, this field contains the rich rubric-scored analysis
+    # for the primary cohort: matched/unmatched signals with rationales,
+    # fastest path moves, per-cohort scores, and common rejection reasons.
+    # Populated by dilly_core/rubric_scorer.py via build_rubric_analysis_payload.
+    # None when rubric scoring failed or was skipped — legacy fields above
+    # still carry the authoritative score.
+    #
+    # Shape:
+    #   {
+    #     "primary_cohort_id": "tech_data_science",
+    #     "primary_cohort_display_name": "Tech — Data Science, Analytics & ML",
+    #     "primary_composite": 63.2,
+    #     "primary_smart": 70.0, "primary_grit": 38.9, "primary_build": 70.0,
+    #     "recruiter_bar": 72.0, "above_bar": false,
+    #     "matched_signals": [{signal, dimension, tier, weight, rationale}, ...],
+    #     "unmatched_signals": [{signal, dimension, tier, weight, rationale}, ...],
+    #     "fastest_path_moves": [...],
+    #     "common_rejection_reasons": [...],
+    #     "other_cohorts": [{cohort_id, display_name, composite, ...}, ...]
+    #   }
+    # ─────────────────────────────────────────────────────────────────────
+    rubric_analysis: Optional[Dict[str, Any]] = None
 
 class Benchmarks:
     def __init__(self, path: str = None):

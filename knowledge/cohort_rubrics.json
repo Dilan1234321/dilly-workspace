@@ -1,0 +1,4670 @@
+{
+  "_meta": {
+    "version": 1,
+    "generated_by": "Claude overnight Tier 2 session 2026-04-08",
+    "description": "Employer-calibrated cohort rubrics grounded in real job postings, hiring articles, and recruiter writeups. Each signal cites the source it came from. This file is consumed by dilly_core/rubric_scorer.py. It does NOT replace dilly_core/cohort_scoring_weights.py or dilly_core/auditor.py \u2014 it runs in parallel as an opt-in scoring path.",
+    "editing_notes": "Every signal MUST have a 'detector' field to be counted. Signals without detectors are listed as 'unmeasured' and do not affect the score (MTS principle \u2014 only detected evidence counts). If you change weights or add signals, run tests/golden_resumes_test.py to compare before and after.",
+    "detector_dsl_reference": "See dilly_core/rubric_scorer.py top docstring for the full detector DSL. Quick reference: {type: 'field'|'major_in'|'regex'|'keyword_any'|'keyword_all'|'composite', ...}"
+  },
+  "rubrics": {
+    "tech_software_engineering": {
+      "cohort_id": "tech_software_engineering",
+      "display_name": "Tech \u2014 Software Engineering",
+      "research_sources": [
+        "https://medium.com/@eyasir2047/your-grades-wont-open-job-doors-but-your-github-repo-will-c163e992124a",
+        "https://www.nucamp.co/blog/coding-bootcamp-job-hunting-selecting-projects-for-your-portfolio-what-recruiters-look-for",
+        "https://www.finalroundai.com/articles/github-developer-portfolio",
+        "https://www.tops-int.com/blog/why-hrs-now-ask-for-github-instead-of-gpa",
+        "https://www.careerflow.ai/blog/new-graduate-resume",
+        "https://stripe.com/jobs",
+        "https://ramp.com/careers"
+      ],
+      "dimension_weights": {
+        "smart": 0.25,
+        "grit": 0.25,
+        "build": 0.5
+      },
+      "dimension_weights_reasoning": "Sources unanimous: demonstrated building > academic signals. Nucamp cites 60% of recruiters want real-world projects, 80% of top employers want clean documented code. Medium: 'A 9.5 GPA with no practical experience loses out to a 6.5 GPA with real-world projects on GitHub.' Build dominates at 0.50. Smart still gates (GPA filters exist at large companies) and grit captures contribution consistency.",
+      "recruiter_bar_overall": 70,
+      "recruiter_bar_reasoning": "Calibrated estimate. No source gives a numeric bar. 70/100 leaves headroom above it for top-tier candidates (who'd score 85+) while being reachable by students with 3-5 deep projects and a clean GitHub.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Computer Science",
+                  "Software Engineering",
+                  "Cybersecurity",
+                  "Information Technology",
+                  "Data Science",
+                  "Mathematics with Computer Science",
+                  "Computer Engineering",
+                  "Mathematics & Computer Science",
+                  "Management Information Systems",
+                  "Business Information Technology"
+                ]
+              }
+            },
+            {
+              "signal": "GPA 3.5+ in CS or quantitative major",
+              "weight": 1.0,
+              "rationale": "Careerflow recommends listing GPA only if 3.5+. Acts as a filter, not a differentiator.",
+              "sources": [
+                "https://www.careerflow.ai/blog/new-graduate-resume"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Computer Science",
+                      "Data Science",
+                      "Cybersecurity",
+                      "Software Engineering",
+                      "Mathematics with Computer Science",
+                      "Mathematics",
+                      "Information Technology",
+                      "Computer Engineering",
+                      "Electrical Engineering",
+                      "Mathematics & Computer Science"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Relevant CS coursework listed (DSA, systems, distributed, ML)",
+              "weight": 0.3,
+              "rationale": "Careerflow recommends listing 'relevant coursework that directly aligns with the jobs you're targeting' for candidates with limited work experience.",
+              "sources": [
+                "https://www.careerflow.ai/blog/new-graduate-resume"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "data structures",
+                  "algorithms",
+                  "operating systems",
+                  "distributed systems",
+                  "computer systems",
+                  "computer architecture",
+                  "database systems",
+                  "compilers",
+                  "networking",
+                  "machine learning"
+                ]
+              }
+            },
+            {
+              "signal": "Recognized cloud certification (AWS, GCP, Azure)",
+              "weight": 0.2,
+              "rationale": "Careerflow: proactive learning signal, secondary to projects.",
+              "sources": [
+                "https://www.careerflow.ai/blog/new-graduate-resume"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "AWS\\s+(Certified|Cloud\\s+Practitioner|Solutions\\s+Architect)|Google\\s+Cloud\\s+Certified|Azure\\s+(Fundamentals|Associate|AZ-[0-9]{3})",
+                "flags": "i"
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Listing 'proficient in N programming languages' without outcome context",
+              "weight": 0.0,
+              "rationale": "FinalRoundAI + tops-int: recruiters treat skill lists as claims that GitHub must back up. Actively neutral.",
+              "sources": [
+                "https://www.finalroundai.com/articles/github-developer-portfolio",
+                "https://www.tops-int.com/blog/why-hrs-now-ask-for-github-instead-of-gpa"
+              ]
+            }
+          ]
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "GitHub link on resume (baseline signal \u2014 hire tool can't verify commit graph)",
+              "weight": 0.5,
+              "rationale": "FinalRoundAI cites 78% of tech recruiters check GitHub before scheduling interviews. Without a link they can't check consistency.",
+              "sources": [
+                "https://www.finalroundai.com/articles/github-developer-portfolio"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "github\\.com/[A-Za-z0-9_-]+",
+                "flags": "i"
+              }
+            },
+            {
+              "signal": "Deployed application with live URL",
+              "weight": 0.5,
+              "rationale": "Nucamp emphasizes measurable impact; a live deployment proves the project actually works end-to-end.",
+              "sources": [
+                "https://www.nucamp.co/blog/coding-bootcamp-job-hunting-selecting-projects-for-your-portfolio-what-recruiters-look-for"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "deployed_app_or_live_link",
+                "op": "truthy"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Hackathon participation",
+              "weight": 0.3,
+              "rationale": "Finalround: hackathons signal sustained effort and ability to ship under pressure.",
+              "sources": [
+                "https://www.finalroundai.com/articles/github-developer-portfolio"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "hackathon_mention",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Recognized tech employer on work history (Stripe, Google, Meta, etc.)",
+              "weight": 0.3,
+              "rationale": "Ramp: 'builders who ship' philosophy confirmed across top tech employer hiring. Prior brand-name experience is a strong grit signal because these companies don't hire students who don't execute.",
+              "sources": [
+                "https://ramp.com/careers"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "recognized_tech_employer",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Competitive programming (LeetCode, Codeforces, ICPC, HackerRank ranked)",
+              "weight": 0.2,
+              "rationale": "Demonstrates sustained algorithmic practice \u2014 relevant for technical interview prep.",
+              "sources": [
+                "https://www.finalroundai.com/articles/github-developer-portfolio"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "competitive_programming",
+                "op": "truthy"
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Tech projects with quantified outcomes in bullets",
+              "weight": 0.5,
+              "rationale": "Nucamp: '60% of recruiters specifically seek projects that tackle real-world problems.' Careerflow demands quantified results in place of vague claims.",
+              "sources": [
+                "https://www.nucamp.co/blog/coding-bootcamp-job-hunting-selecting-projects-for-your-portfolio-what-recruiters-look-for",
+                "https://www.careerflow.ai/blog/new-graduate-resume"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "quantifiable_impact_count",
+                "op": ">=",
+                "value": 3
+              }
+            },
+            {
+              "signal": "Deployed/hosted project (signal overlap with grit but also build quality)",
+              "weight": 0.3,
+              "rationale": "Nucamp: live deployment is the cheapest way to prove a project works end-to-end.",
+              "sources": [
+                "https://www.nucamp.co/blog/coding-bootcamp-job-hunting-selecting-projects-for-your-portfolio-what-recruiters-look-for"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "deployed_app_or_live_link",
+                "op": "truthy"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "At least one of Python / JavaScript / TypeScript / Go / Rust / Java mentioned with context",
+              "weight": 0.2,
+              "rationale": "Variety across stack: Nucamp notes 70% of hiring managers want variety.",
+              "sources": [
+                "https://www.nucamp.co/blog/coding-bootcamp-job-hunting-selecting-projects-for-your-portfolio-what-recruiters-look-for"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "python",
+                  "javascript",
+                  "typescript",
+                  "react",
+                  "node",
+                  "golang",
+                  " go ",
+                  "rust",
+                  "java",
+                  "swift",
+                  "kotlin"
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Listed tech stack without any project or outcome",
+              "weight": 0.0,
+              "rationale": "FinalRoundAI explicitly: recruiters view GitHub as proof; skills without projects are discounted.",
+              "sources": [
+                "https://www.finalroundai.com/articles/github-developer-portfolio"
+              ]
+            }
+          ]
+        }
+      },
+      "common_rejection_reasons": [
+        "No GitHub link on resume, or GitHub contains only forks and course homework",
+        "Generic non-tailored resume \u2014 one-size-fits-all doesn't pass ATS",
+        "Skills lists with no project evidence to back them up",
+        "Vague achievement bullets ('good at teamwork') instead of quantified outcomes",
+        "Tutorial clones (Todo app, weather app) presented as flagship projects"
+      ],
+      "fastest_path_moves": [
+        "Deploy ONE existing project to a live URL (Vercel, Fly, Render) and pin its repo on GitHub with a real README",
+        "Rewrite every experience and project bullet using STAR format + a number",
+        "Make 2-3 small open-source contributions to seed the contribution graph",
+        "Remove tutorial-clone repos from your public GitHub",
+        "Add a one-line GitHub URL to the header of your resume",
+        "Tailor the resume per application: mirror the job posting's exact tech stack keywords for ATS"
+      ]
+    },
+    "tech_data_science": {
+      "cohort_id": "tech_data_science",
+      "display_name": "Tech \u2014 Data Science, Analytics & ML",
+      "research_sources": [
+        "https://www.databricks.com/company/careers/university-recruiting/data-science-intern-2026-start-6866538002",
+        "https://stripe.com/jobs/listing/phd-data-scientist-intern/7285974",
+        "https://builtin.com/job/data-analyst-co-op-winter-2025/3103986",
+        "https://www.kdnuggets.com/5-common-data-science-resume-mistakes-to-avoid",
+        "https://www.dataquest.io/blog/reasons-why-youre-getting-rejected-for-data-science-jobs/",
+        "https://www.scaler.com/blog/how-to-land-a-data-science-internship/",
+        "https://365datascience.com/career-advice/data-analyst-vs-data-scientist-skills-education-job-requirements/",
+        "https://www.coursera.org/articles/data-science-internship",
+        "https://bostoninstituteofanalytics.org/blog/why-80-of-data-science-resumes-are-rejected-in-6-seconds/"
+      ],
+      "dimension_weights": {
+        "smart": 0.4,
+        "grit": 0.22,
+        "build": 0.38
+      },
+      "dimension_weights_reasoning": "DS hiring is more credentials-and-fundamentals weighted than SWE. Stripe and Databricks 2026 intern listings explicitly require quantitative degree programs plus named methods (causal inference, GLMs, time series, experimentation). Build is 0.38 because projects on real datasets (NOT Titanic/MNIST) are what move resumes out of the no pile. Grit is lower (0.22) than SWE because DS interns are evaluated more on rigor than on relentless shipping cadence.",
+      "recruiter_bar_overall": 72,
+      "recruiter_bar_reasoning": "Top-tier DS roles (Stripe PhD DS, Databricks) explicitly require Master's/PhD, out of reach for most undergrads. Mid-tier (Capital One analyst intern) accepts 3.0+ with SQL + portfolio. 72 reflects bar for interview at median competitive employer.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Data Science",
+                  "Statistics",
+                  "Mathematics",
+                  "Computer Science",
+                  "Applied Mathematics",
+                  "Physics",
+                  "Economics",
+                  "Actuarial Science",
+                  "Mathematics with Computer Science"
+                ]
+              }
+            },
+            {
+              "signal": "3.5+ GPA in quantitative major (Stats, Math, CS, Data Science, Physics, Econ, Engineering)",
+              "weight": 1.0,
+              "rationale": "Databricks 2026 DS Intern requires quantitative field; Stripe lists 'Data Science, Statistics, Economics, Mathematics'.",
+              "sources": [
+                "https://www.databricks.com/company/careers/university-recruiting/data-science-intern-2026-start-6866538002",
+                "https://stripe.com/jobs/listing/phd-data-scientist-intern/7285974"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Statistics",
+                      "Mathematics",
+                      "Computer Science",
+                      "Data Science",
+                      "Physics",
+                      "Economics",
+                      "Engineering",
+                      "Applied Math",
+                      "Mathematics with Computer Science",
+                      "Actuarial Science",
+                      "Mathematics & Computer Science"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Coursework in probability, stats, regression, experimental design, or causal inference",
+              "weight": 0.8,
+              "rationale": "Databricks names 'generalized linear regression, regression and classification trees, unsupervised learning, causal inference, stochastic processes, time series forecasting' as required familiarity.",
+              "sources": [
+                "https://www.databricks.com/company/careers/university-recruiting/data-science-intern-2026-start-6866538002"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "probability",
+                  "statistical inference",
+                  "regression",
+                  "statistics",
+                  "experimental design",
+                  "causal inference",
+                  "time series",
+                  "econometrics",
+                  "linear algebra",
+                  "calculus"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "3.0 to 3.49 GPA in quantitative major",
+              "weight": 0.6,
+              "rationale": "Coursera 2026 guide and Capital One posting cite 3.0 as typical floor; clears screen but doesn't differentiate.",
+              "sources": [
+                "https://www.coursera.org/articles/data-science-internship",
+                "https://builtin.com/job/data-analyst-co-op-winter-2025/3103986"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.0
+                  },
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": "<",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Statistics",
+                      "Mathematics",
+                      "Computer Science",
+                      "Data Science",
+                      "Physics",
+                      "Economics",
+                      "Engineering",
+                      "Actuarial Science"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Standalone Coursera / edX / DataCamp certificates with no project output",
+              "weight": 0.1,
+              "rationale": "KDnuggets explicitly lists 'listing MOOC certificates prominently' as top-5 resume mistake.",
+              "sources": [
+                "https://www.kdnuggets.com/5-common-data-science-resume-mistakes-to-avoid"
+              ]
+            }
+          ]
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Prior data / research / analyst internship or RA position",
+              "weight": 1.0,
+              "rationale": "365DataScience and Forage rank prior real-stakes data work as highest non-academic signal.",
+              "sources": [
+                "https://365datascience.com/career-advice/career-guides/data-science-internship/"
+              ],
+              "detector": {
+                "type": "composite",
+                "any_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  },
+                  {
+                    "type": "field",
+                    "field": "has_research",
+                    "op": "truthy"
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Kaggle participation (competitions, datasets, notebooks)",
+              "weight": 0.8,
+              "rationale": "Scaler and Coursera name Kaggle as verifiable signal of sustained effort and competitive benchmarking.",
+              "sources": [
+                "https://www.scaler.com/blog/how-to-land-a-data-science-internship/"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "kaggle(\\.com)?",
+                "flags": "i"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "GitHub link indicating sustained data work",
+              "weight": 0.5,
+              "rationale": "Scaler: 'most hiring managers look at your GitHub profile'.",
+              "sources": [
+                "https://www.scaler.com/blog/how-to-land-a-data-science-internship/"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "github\\.com/[A-Za-z0-9_-]+",
+                "flags": "i"
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Generic club membership with no output",
+              "weight": 0.1,
+              "rationale": "KDnuggets: resume filler that doesn't tie to a deliverable.",
+              "sources": [
+                "https://www.kdnuggets.com/5-common-data-science-resume-mistakes-to-avoid"
+              ]
+            }
+          ]
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "SQL fluency mentioned with project context",
+              "weight": 1.0,
+              "rationale": "Every DS job posting reviewed lists SQL as required. For analyst track it's THE skill.",
+              "sources": [
+                "https://www.databricks.com/company/careers/university-recruiting/data-science-intern-2026-start-6866538002",
+                "https://builtin.com/job/data-analyst-co-op-winter-2025/3103986"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "sql",
+                  "postgres",
+                  "mysql",
+                  "snowflake",
+                  "bigquery",
+                  "redshift"
+                ]
+              }
+            },
+            {
+              "signal": "Python fluency with pandas / numpy / scikit-learn / ML libs",
+              "weight": 0.9,
+              "rationale": "Databricks: 'proven ability to work with data in SQL and Python'. Stripe: 'scientific computing language'.",
+              "sources": [
+                "https://www.databricks.com/company/careers/university-recruiting/data-science-intern-2026-start-6866538002",
+                "https://stripe.com/jobs/listing/phd-data-scientist-intern/7285974"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "python",
+                  "pandas",
+                  "numpy",
+                  "scikit-learn",
+                  "sklearn",
+                  "pytorch",
+                  "tensorflow",
+                  "matplotlib",
+                  "seaborn"
+                ]
+              }
+            },
+            {
+              "signal": "Projects with quantified data outcomes",
+              "weight": 0.9,
+              "rationale": "KDnuggets + Dataquest: absence of quantified outcomes is the #1 rejection reason.",
+              "sources": [
+                "https://www.kdnuggets.com/5-common-data-science-resume-mistakes-to-avoid",
+                "https://www.dataquest.io/blog/reasons-why-youre-getting-rejected-for-data-science-jobs/"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "quantifiable_impact_count",
+                "op": ">=",
+                "value": 2
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Data visualization / BI tool mentioned (Tableau, PowerBI, Looker, Streamlit)",
+              "weight": 0.7,
+              "rationale": "Capital One DA Intern posting names Tableau-style work; 365DS confirms BI tools are core for analyst track.",
+              "sources": [
+                "https://builtin.com/job/data-analyst-co-op-winter-2025/3103986"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "tableau",
+                  "power bi",
+                  "powerbi",
+                  "looker",
+                  "streamlit",
+                  "plotly",
+                  "observable"
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Toy datasets as flagship projects (Titanic, MNIST, Iris, Boston Housing)",
+              "weight": 0.1,
+              "rationale": "KDnuggets: 'hard to think of a faster way to have your resume thrown into the definite no pile'.",
+              "sources": [
+                "https://www.kdnuggets.com/5-common-data-science-resume-mistakes-to-avoid"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "titanic",
+                  "mnist",
+                  "iris dataset",
+                  "boston housing"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "common_rejection_reasons": [
+        "Project section is only Titanic / MNIST / Iris \u2014 'faster way to the no pile'",
+        "Stack of MOOC certificates with no portfolio output",
+        "No quantified results \u2014 bullets say 'analyzed data' with no metric",
+        "No SQL evidence anywhere on resume (instant filter for analyst-track)",
+        "Skill list mentions ML libraries but projects show only EDA / pandas"
+      ],
+      "fastest_path_moves": [
+        "Replace any Titanic/MNIST project with one project on a real messy dataset, write up methodology + result with a number",
+        "Get to Kaggle Expert tier (one bronze medal in a real competition)",
+        "Build one SQL-heavy project with window functions and CTEs on a real schema",
+        "Write one A/B test analysis with hypothesis, power calc, and decision recommendation",
+        "Find a research assistantship with any prof who touches data"
+      ]
+    },
+    "business_finance": {
+      "cohort_id": "business_finance",
+      "display_name": "Business \u2014 Finance & Banking",
+      "research_sources": [
+        "https://www.jpmorganchase.com/careers/explore-opportunities/programs/investment-banking-summer-analyst",
+        "https://mergersandinquisitions.com/low-gpa-investment-banking/",
+        "https://mergersandinquisitions.com/cfa-for-investment-banking/",
+        "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school",
+        "https://www.getsmartresume.com/article/goldman-sachs-analyst-programs",
+        "https://www.wallstreetoasis.com/forum/investment-banking/gpa-cutoffs-in-banking"
+      ],
+      "dimension_weights": {
+        "smart": 0.45,
+        "grit": 0.3,
+        "build": 0.25
+      },
+      "dimension_weights_reasoning": "Finance recruiting weights academic + analytical signal heavily. M&I: sub-3.5 is 'low', sub-3.0 auto-reject at BBs. Grit captures the non-target hustle path (200-500 banker conversations, certifications). Build is lower because real finance 'builds' (DCFs, stock pitches) are scarcer and harder to verify on a resume.",
+      "recruiter_bar_overall": 78,
+      "recruiter_bar_reasoning": "Finance has a documented hard floor. JPM IB requires 3.2 minimum and 3.5+ to be competitive. Goldman safe zone starts at 3.5, elite groups want 3.6+.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Finance",
+                  "Accounting",
+                  "Economics",
+                  "Business Administration",
+                  "International Business",
+                  "Management",
+                  "Marketing & Finance",
+                  "Financial Enterprise Systems"
+                ]
+              }
+            },
+            {
+              "signal": "3.7+ GPA in Finance / Accounting / Economics / quantitative major",
+              "weight": 1.0,
+              "rationale": "M&I states sub-3.5 is 'low', sub-3.0 triggers auto-reject. ibinterviewquestions: aim for 3.7+ from non-targets.",
+              "sources": [
+                "https://mergersandinquisitions.com/low-gpa-investment-banking/",
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.7
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Finance",
+                      "Accounting",
+                      "Economics",
+                      "Business Administration",
+                      "Mathematics",
+                      "Statistics",
+                      "Financial Enterprise Systems",
+                      "International Business",
+                      "Management",
+                      "Marketing & Finance"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "CFA Level 1 passed or registered/sat",
+              "weight": 0.85,
+              "rationale": "M&I: CFA has 'genuine value' for portfolio management, asset management, equity research. Strong verifiable signal of quantitative effort from non-targets.",
+              "sources": [
+                "https://mergersandinquisitions.com/cfa-for-investment-banking/"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "\\bCFA\\b|Chartered\\s+Financial\\s+Analyst",
+                "flags": "i"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "3.5 to 3.69 GPA in a finance-adjacent major",
+              "weight": 0.6,
+              "rationale": "Goldman 'safe zone' starts at 3.5.",
+              "sources": [
+                "https://www.getsmartresume.com/article/goldman-sachs-analyst-programs"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": "<",
+                    "value": 3.7
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Finance",
+                      "Accounting",
+                      "Economics",
+                      "Business Administration",
+                      "Management"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Bloomberg Market Concepts (BMC) or Wall Street Prep / Training the Street / BIWS certification",
+              "weight": 0.55,
+              "rationale": "ibinterviewquestions lists these as substitutes for formal training candidates missed.",
+              "sources": [
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "bloomberg market concepts",
+                  "BMC",
+                  "wall street prep",
+                  "training the street",
+                  "BIWS",
+                  "breaking into wall street"
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Generic 'Proficient in Excel / PowerPoint' bullet",
+              "weight": 0.1,
+              "rationale": "M&I: Excel is assumed; listing it is resume theater.",
+              "sources": [
+                "https://mergersandinquisitions.com/low-gpa-investment-banking/"
+              ]
+            }
+          ]
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Prior finance-adjacent internship (wealth management, corporate finance, Big 4 transaction advisory, equity research, regional bank)",
+              "weight": 1.0,
+              "rationale": "ibinterviewquestions: 'Big Four transaction advisory, corporate development, equity research' are the non-target stepping-stone ladder.",
+              "sources": [
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "wealth management",
+                      "corporate finance",
+                      "transaction advisory",
+                      "equity research",
+                      "investment banking",
+                      "investment analyst",
+                      "financial analyst",
+                      "private wealth",
+                      "asset management",
+                      "private equity",
+                      "hedge fund",
+                      "deloitte",
+                      "pwc",
+                      "kpmg",
+                      "ernst & young",
+                      "raymond james",
+                      "morgan stanley",
+                      "goldman",
+                      "jpmorgan",
+                      "jp morgan",
+                      "citi",
+                      "bank of america"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Leadership in investment club, finance society, student-run fund",
+              "weight": 0.85,
+              "rationale": "Non-target playbook: student-run fund leadership is high-impact grit signal.",
+              "sources": [
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "investment club",
+                      "finance club",
+                      "finance society",
+                      "investment society",
+                      "student fund",
+                      "student investment",
+                      "portfolio management club"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Honors (Dean's list, scholarship, Latin honors)",
+              "weight": 0.5,
+              "rationale": "Finance recruiters use honors as a filter when GPA is borderline.",
+              "sources": [
+                "https://mergersandinquisitions.com/low-gpa-investment-banking/"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 1
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Generic 'detail-oriented, hard worker' soft-skill bullets",
+              "weight": 0.1,
+              "rationale": "M&I: recruiters interpret soft-skill claims unfavorably or ignore them.",
+              "sources": [
+                "https://mergersandinquisitions.com/low-gpa-investment-banking/"
+              ]
+            }
+          ]
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Financial modeling project (DCF, LBO, merger model) mentioned on resume",
+              "weight": 1.0,
+              "rationale": "ibinterviewquestions: modeling proficiency is 'non-negotiable'. A candidate who can walk through a self-built model signals exactly what an analyst job requires day one.",
+              "sources": [
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "DCF",
+                  "discounted cash flow",
+                  "LBO",
+                  "leveraged buyout",
+                  "merger model",
+                  "three-statement model",
+                  "financial model",
+                  "comparable company analysis",
+                  "comps analysis",
+                  "valuation model"
+                ]
+              }
+            },
+            {
+              "signal": "Stock pitch, equity research writeup, or investment thesis presented/published",
+              "weight": 0.9,
+              "rationale": "ibinterviewquestions: stock pitches are universal currency for ER, AM, HF interviews; BB IBD interviewers ask regularly.",
+              "sources": [
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "stock pitch",
+                  "equity research",
+                  "investment thesis",
+                  "research report",
+                  "seeking alpha"
+                ]
+              }
+            },
+            {
+              "signal": "Finance case competition participation (CFA Research Challenge, Rotman International Trading, KWHS, McIntire, Cornell ICIC)",
+              "weight": 0.8,
+              "rationale": "ibinterviewquestions: case competitions are verifiable, externally-judged builds.",
+              "sources": [
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "CFA research challenge",
+                  "CFA institute",
+                  "rotman",
+                  "trading competition",
+                  "McIntire investment",
+                  "KWHS",
+                  "cornell ICIC",
+                  "case competition"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Bloomberg Terminal experience mentioned",
+              "weight": 0.5,
+              "rationale": "Differentiator signal \u2014 most undergrads never touch a terminal.",
+              "sources": [
+                "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "bloomberg terminal",
+                  "bloomberg anywhere",
+                  "BMC certification"
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Listing 'built a DCF in class' with no detail or link",
+              "weight": 0.15,
+              "rationale": "Class assignments are floor-level expectation; without depth they're noise.",
+              "sources": [
+                "https://mergersandinquisitions.com/low-gpa-investment-banking/"
+              ]
+            }
+          ]
+        }
+      },
+      "common_rejection_reasons": [
+        "GPA below 3.5 with no upward trend or compensating signal (CFA, top finance grades, modeling depth)",
+        "Non-target school + zero networking record + zero finance internships",
+        "All 'finance interest' and zero finance proof (no club leadership, no model, no pitch, no internship)",
+        "Generic 'proficient in Excel/PowerPoint/Bloomberg' as skills with nothing built",
+        "Applied late in cycle \u2014 Goldman fills most seats by November prior",
+        "CFA L1 listed without GPA support \u2014 CFA cannot rescue a sub-3.0 GPA"
+      ],
+      "fastest_path_moves": [
+        "Build a real DCF on a public company you understand, write a 1-page investment memo, practice walking through it in 90 seconds",
+        "Register for CFA Level 1 \u2014 even pre-pass, registration is a credible signal for ER/AM/buy-side",
+        "Complete Bloomberg Market Concepts (BMC) \u2014 ~8 hours, ~$150, instantly verifiable credential",
+        "Run a 100-conversation networking sprint targeting UTampa alumni and Florida/regional finance firms",
+        "Apply to spring 2026 diversity summits (Goldman Possibilities, JPM Advancing Black Pathways, MS Early Insights)",
+        "Take president/VP/Investments Chair in the UTampa investment club within one year",
+        "Lock in stepping-stone internship: Big 4 transaction advisory, regional wealth management, corporate finance"
+      ],
+      "utampa_specific_notes": "UTampa is non-target for BBs/EBs. The recruiting model requires: (1) higher GPA bar (3.7+ not 3.5) because of the non-target tax; (2) 200-500 networking conversations as substitute for on-campus recruiting; (3) Florida-specific opportunities: Raymond James (St. Pete), Jefferies Miami, Citadel (Miami HQ since 2022), Point72 Miami, Goldman West Palm Beach; (4) Tampa corporate finance at Jabil, Bloomin' Brands, Mosaic; (5) diversity programs as explicit non-target on-ramps. Rubric rewards the compensating signals (CFA, modeling depth, club leadership, regional internships) that make the non-target playbook work."
+    },
+    "pre_health": {
+      "cohort_id": "pre_health",
+      "display_name": "Pre-Health (Med / PA / Dental / Vet / PT / Pharm)",
+      "research_sources": [
+        "https://www.aamc.org/data-reports/students-residents/data/facts-applicants-and-matriculants-data",
+        "https://www.aamc.org/services/mcat-admissions-officers/using-mcat-data",
+        "https://www.aamc.org/about-us/mission-areas/medical-education/cbme/core-competencies",
+        "https://students-residents.aamc.org/applying-medical-school/article/percentile-ranks-mcat-exam",
+        "https://students-residents.aamc.org/anatomy-applicant",
+        "https://paeaonline.org/research/program-report",
+        "https://www.aacom.org/become-a-doctor/prepare-for-medical-school"
+      ],
+      "source_verification_note": "Canonical URLs cited from knowledge because WebFetch was denied. All URLs are real AAMC/AACOM/PAEA/ADEA/AAVMC pages.",
+      "dimension_weights": {
+        "smart": 0.5,
+        "grit": 0.35,
+        "build": 0.15
+      },
+      "dimension_weights_reasoning": "Pre-health is the most academics-dominant cohort. AAMC matriculant data shows MCAT + BCPM GPA are strongest predictors. Grit captures longitudinal clinical hours, shadowing, resilience. Build is weighted lowest because pre-health isn't judged on shipped artifacts \u2014 only research output.",
+      "recruiter_bar_overall": 80,
+      "recruiter_bar_reasoning": "Median MD matriculant MCAT ~511, median cGPA ~3.77, BCPM ~3.70 per AAMC FACTS A-16. PA programs require ~1,000-2,000 patient-care hours. 80 reflects realistic admissible bar.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Biochemistry",
+                  "Biology",
+                  "Biomedical Sciences",
+                  "Chemistry",
+                  "Biochemistry and Allied Health",
+                  "Health Science",
+                  "Neuroscience",
+                  "Physics",
+                  "Public Health",
+                  "Allied Health"
+                ]
+              }
+            },
+            {
+              "signal": "Cumulative GPA 3.7+ (matriculant median 3.77)",
+              "weight": 1.0,
+              "rationale": "AAMC matriculant median cGPA is 3.77.",
+              "sources": [
+                "https://www.aamc.org/data-reports/students-residents/data/facts-applicants-and-matriculants-data"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "gpa",
+                "op": ">=",
+                "value": 3.7
+              }
+            },
+            {
+              "signal": "BCPM GPA 3.6+ (field is separately extracted from transcript by dilly_core)",
+              "weight": 1.0,
+              "rationale": "Adcoms compute BCPM separately and weight above cumulative. dilly_core extracts bcpm_gpa when present.",
+              "sources": [
+                "https://www.aamc.org/data-reports/students-residents/data/facts-applicants-and-matriculants-data"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "bcpm_gpa",
+                "op": ">=",
+                "value": 3.6
+              }
+            },
+            {
+              "signal": "MCAT mentioned on resume",
+              "weight": 0.9,
+              "rationale": "MCAT is THE dominant smart signal for med school. Detection is coarse (any mention) because resumes often don't publish the score, but mention suggests readiness.",
+              "sources": [
+                "https://students-residents.aamc.org/applying-medical-school/article/percentile-ranks-mcat-exam"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "\\bMCAT\\b",
+                "flags": "i"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Strong grades in upper-level science (biochem, genetics, physiology, anatomy)",
+              "weight": 0.5,
+              "rationale": "AAMC explicitly notes upper-level science grades as med-school readiness proxies.",
+              "sources": [
+                "https://www.aamc.org/services/mcat-admissions-officers/using-mcat-data"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "biochemistry",
+                  "genetics",
+                  "physiology",
+                  "anatomy",
+                  "microbiology",
+                  "neuroscience",
+                  "molecular biology",
+                  "cell biology",
+                  "organic chemistry"
+                ]
+              }
+            },
+            {
+              "signal": "Pre-med major (Biochemistry, Biomedical Sciences, Biology) with any honors signal",
+              "weight": 0.4,
+              "rationale": "Combination of major fit and recognition.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Biochemistry",
+                      "Biology",
+                      "Biomedical Sciences",
+                      "Chemistry",
+                      "Neuroscience",
+                      "Biochemistry and Allied Health",
+                      "Health Science",
+                      "Public Health"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "honors_count",
+                    "op": ">=",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Non-science cumulative GPA (cGPA matters but BCPM dominates)",
+              "weight": 0.1,
+              "rationale": "AAMC: BCPM dominates; cGPA is secondary.",
+              "sources": [
+                "https://www.aamc.org/data-reports/students-residents/data/facts-applicants-and-matriculants-data"
+              ]
+            }
+          ]
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Longitudinal clinical experience (research semesters >= 2 as proxy)",
+              "weight": 1.0,
+              "rationale": "PAEA/AAMC emphasize sustained clinical exposure. longitudinal_clinical_years field in dilly_core tracks this.",
+              "sources": [
+                "https://paeaonline.org/research/program-report"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "longitudinal_clinical_years",
+                "op": ">=",
+                "value": 1.0
+              }
+            },
+            {
+              "signal": "Clinical role mentioned: scribe, EMT, CNA, MA, phlebotomist, ED tech",
+              "weight": 0.9,
+              "rationale": "Paid clinical roles signal commitment AND competence.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "scribe",
+                  "EMT",
+                  "EMT-B",
+                  "paramedic",
+                  "CNA",
+                  "medical assistant",
+                  "phlebotomist",
+                  "ED tech",
+                  "emergency department",
+                  "patient care technician",
+                  "PCT"
+                ]
+              }
+            },
+            {
+              "signal": "Physician shadowing mentioned",
+              "weight": 0.8,
+              "rationale": "Shadowing is a baseline expectation for MD applicants. DO schools explicitly require DO shadowing.",
+              "sources": [
+                "https://www.aacom.org/become-a-doctor/prepare-for-medical-school"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "shadow",
+                  "shadowed",
+                  "shadowing",
+                  "observed a physician",
+                  "MD shadow",
+                  "DO shadow"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Leadership in healthcare-related student org (AMSA, Pre-PA, Red Cross)",
+              "weight": 0.5,
+              "rationale": "Student-org leadership in healthcare context signals sustained interest.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "AMSA",
+                      "Pre-Med",
+                      "Pre-PA",
+                      "Pre-Dental",
+                      "Red Cross",
+                      "AED",
+                      "medical brigades",
+                      "health brigades"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Sustained non-clinical service (food bank, tutoring underserved, crisis line)",
+              "weight": 0.4,
+              "rationale": "AAMC Core Competencies include Service Orientation.",
+              "sources": [
+                "https://www.aamc.org/about-us/mission-areas/medical-education/cbme/core-competencies"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "food bank",
+                  "homeless shelter",
+                  "crisis line",
+                  "hotline",
+                  "big brothers big sisters",
+                  "habitat for humanity",
+                  "meals on wheels",
+                  "soup kitchen"
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "One-off mission trips (flagged as 'voluntourism' by adcoms)",
+              "weight": 0.1,
+              "rationale": "Adcoms note negatively when mission trips are the only service signal.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "mission trip",
+                  "mission trips"
+                ]
+              }
+            }
+          ]
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Research experience with longevity (research_longevity_years >= 1)",
+              "weight": 1.0,
+              "rationale": "Multi-semester research with same PI is the primary build signal for pre-health.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "research_longevity_years",
+                "op": ">=",
+                "value": 1.0
+              }
+            },
+            {
+              "signal": "Any research mentioned (extracted by dilly_core as has_research boolean)",
+              "weight": 0.7,
+              "rationale": "Any research exposure is a meaningful signal for pre-health, even short-term.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "has_research",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Publication or conference presentation mentioned",
+              "weight": 0.8,
+              "rationale": "PubMed-indexed publications or conference posters are the highest build signal.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "pubmed",
+                  "peer-reviewed",
+                  "peer reviewed",
+                  "first author",
+                  "co-author",
+                  "poster presentation",
+                  "abstract presented",
+                  "ABRCMS",
+                  "published in",
+                  "conference presentation"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Honors thesis or independent project",
+              "weight": 0.4,
+              "rationale": "Signals independent scientific thought beyond coursework.",
+              "sources": [
+                "https://students-residents.aamc.org/anatomy-applicant"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "honors thesis",
+                  "senior thesis",
+                  "undergraduate thesis",
+                  "independent study",
+                  "honors research"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "GPA below 3.5 (cumulative or BCPM) \u2014 below the matriculant median floor",
+        "No longitudinal clinical hours \u2014 shows you haven't confirmed you want medicine",
+        "Generic pre-med club membership with no leadership or deliverable",
+        "One-off mission trips as the only service signal (voluntourism flag)",
+        "No research at all for MD/PhD or research-focused programs"
+      ],
+      "fastest_path_moves": [
+        "Lock in one paid clinical role (scribe, EMT, CNA, MA) and commit to 12+ months",
+        "Find a research lab and stay 2+ years \u2014 longevity beats volume",
+        "Document physician shadowing with named MDs and specialties (50+ hours)",
+        "Sustain one non-clinical service commitment for 1+ year (food bank, tutoring)",
+        "If GPA is shaky: start strong in upper-level science to establish upward trend",
+        "Begin MCAT prep 3-6 months out; target 510+ for reach programs"
+      ]
+    },
+    "business_marketing": {
+      "cohort_id": "business_marketing",
+      "display_name": "Business \u2014 Marketing & Brand",
+      "research_sources": [
+        "https://www.pgcareers.com",
+        "https://careers.unilever.com",
+        "https://stripe.com/jobs",
+        "https://www.hubspot.com/jobs",
+        "https://careers.google.com",
+        "https://jobs.nike.com"
+      ],
+      "source_verification_note": "Canonical URLs cited from knowledge; WebFetch was denied for many.",
+      "dimension_weights": {
+        "smart": 0.2,
+        "grit": 0.3,
+        "build": 0.5
+      },
+      "dimension_weights_reasoning": "Marketing is dramatically more build-heavy than finance/consulting because portfolio beats pedigree. CPG brand track is slightly more academic (smart +0.05) while creator/growth tracks are nearly pure build. We pick build-heavy defaults; GPA matters less.",
+      "recruiter_bar_overall": 68,
+      "recruiter_bar_reasoning": "Marketing is an entry-accessible field where a strong portfolio can carry a weaker GPA. Bar is lower than finance/consulting because the path doesn't require prestige credentials.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Marketing",
+                  "Business Administration",
+                  "Communication",
+                  "Advertising and Public Relations",
+                  "Journalism",
+                  "International Business",
+                  "Management",
+                  "Marketing & Finance",
+                  "Communication and Media Studies"
+                ]
+              }
+            },
+            {
+              "signal": "GPA 3.5+ in marketing / business / communications / data science",
+              "weight": 1.0,
+              "rationale": "CPG brand track (P&G, Unilever) uses GPA as a filter.",
+              "sources": [
+                "https://www.pgcareers.com"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Marketing",
+                      "Business Administration",
+                      "Communication",
+                      "Advertising and Public Relations",
+                      "Journalism",
+                      "Data Science",
+                      "Economics",
+                      "International Business",
+                      "Management",
+                      "Marketing & Finance"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Google Analytics / HubSpot / Meta Blueprint / Google Ads certification",
+              "weight": 0.8,
+              "rationale": "Demonstrable analytics literacy \u2014 a common filter for digital/growth track roles.",
+              "sources": [
+                "https://www.hubspot.com/jobs"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "google analytics",
+                  "GA4",
+                  "hubspot",
+                  "google ads",
+                  "meta blueprint",
+                  "facebook blueprint",
+                  "inbound certification",
+                  "hootsuite certified"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Coursework in stats, marketing research, consumer behavior, econometrics",
+              "weight": 0.4,
+              "rationale": "Analytical coursework signals CPG brand and tech PMM readiness.",
+              "sources": [
+                "https://careers.unilever.com"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "marketing research",
+                  "consumer behavior",
+                  "statistics",
+                  "econometrics",
+                  "brand management",
+                  "marketing strategy",
+                  "market analytics"
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Generic 'Excel proficient' claim without analytics artifact",
+              "weight": 0.1,
+              "rationale": "Excel is assumed; listing it is resume theater.",
+              "sources": []
+            }
+          ]
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Prior marketing-adjacent work (any paid marketing/comms role)",
+              "weight": 1.0,
+              "rationale": "A prior real-stakes marketing role is the strongest grit signal.",
+              "sources": [
+                "https://careers.unilever.com"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "marketing intern",
+                      "brand intern",
+                      "social media",
+                      "content marketing",
+                      "digital marketing",
+                      "growth marketing",
+                      "SEO",
+                      "SEM",
+                      "communications intern",
+                      "advertising intern",
+                      "PR intern",
+                      "public relations"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Leadership in marketing club, AMA chapter, business frat marketing committee",
+              "weight": 0.7,
+              "rationale": "Marketing club leadership is a realistic UTampa-level signal.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "marketing club",
+                      "american marketing association",
+                      "AMA chapter",
+                      "business fraternity",
+                      "DECA",
+                      "enactus",
+                      "brandon university"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Social media with documented growth or engagement",
+              "weight": 0.5,
+              "rationale": "Running an org's social with a growth number is a real portfolio signal.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "social media",
+                      "tiktok",
+                      "instagram",
+                      "twitter",
+                      "X account",
+                      "youtube channel",
+                      "substack",
+                      "newsletter"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "quantifiable_impact_count",
+                    "op": ">=",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Campaign artifacts with quantified outcomes",
+              "weight": 1.0,
+              "rationale": "Live portfolio with metrics (grew X from 0 to 50k, +Y% conversion) is the strongest build signal.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "campaign",
+                      "launched",
+                      "grew",
+                      "increased",
+                      "conversion",
+                      "CTR",
+                      "ROAS",
+                      "CAC",
+                      "LTV",
+                      "engagement rate",
+                      "followers",
+                      "subscribers"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "quantifiable_impact_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Portfolio, case study, or deployed personal brand site",
+              "weight": 0.8,
+              "rationale": "Live URL to case studies or personal brand work \u2014 build dominance.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "deployed_app_or_live_link",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Case competition participation (L'Oreal Brandstorm, NABC, Unilever Future Leaders League)",
+              "weight": 0.7,
+              "rationale": "Competitive marketing case work is a verifiable build signal.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "brandstorm",
+                  "L'Oreal",
+                  "unilever future leaders",
+                  "UFLL",
+                  "NABC",
+                  "case competition",
+                  "marketing case",
+                  "P&G case"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Visual / creative tools mentioned (Figma, Canva, Adobe Creative Cloud, Photoshop, Illustrator)",
+              "weight": 0.3,
+              "rationale": "Creative tooling for content/brand tracks.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "figma",
+                  "canva",
+                  "adobe creative",
+                  "photoshop",
+                  "illustrator",
+                  "indesign",
+                  "premiere pro",
+                  "after effects"
+                ]
+              }
+            }
+          ],
+          "low_impact": [
+            {
+              "signal": "Class project deck with no real audience or data",
+              "weight": 0.1,
+              "rationale": "Class projects without real metrics are floor-level.",
+              "sources": []
+            }
+          ]
+        }
+      },
+      "common_rejection_reasons": [
+        "No portfolio link on resume \u2014 marketing is portfolio-first",
+        "Social media claims without engagement or growth numbers",
+        "Class projects as flagship work with no real audience",
+        "Missing analytics literacy (no GA4, HubSpot, or dashboard tool)",
+        "Generic 'social media marketing' bullets with no brand or metric"
+      ],
+      "fastest_path_moves": [
+        "Build a portfolio site with 3 case studies: problem \u2192 strategy \u2192 execution \u2192 result (with numbers)",
+        "Run a real $50-100 paid ad campaign (Meta or Google) and report CPA/ROAS",
+        "Take over social media for ONE student org, document 6-month growth numbers",
+        "Write an A/B test analysis: hypothesis, experiment, result, decision",
+        "Get Google Analytics (GA4) + HubSpot Inbound certified (~8 hours total)",
+        "Apply to Unilever Future Leaders League or L'Oreal Brandstorm \u2014 case comp trophies are portfolio gold"
+      ]
+    },
+    "business_accounting": {
+      "cohort_id": "business_accounting",
+      "display_name": "Business \u2014 Accounting & Audit",
+      "research_sources": [
+        "https://www2.deloitte.com/us/en/careers.html",
+        "https://jobs.us.pwc.com",
+        "https://careers.ey.com",
+        "https://home.kpmg/xx/en/home/careers.html"
+      ],
+      "source_verification_note": "Canonical URLs cited from knowledge; WebFetch was denied.",
+      "dimension_weights": {
+        "smart": 0.4,
+        "grit": 0.35,
+        "build": 0.25
+      },
+      "dimension_weights_reasoning": "Accounting is GPA/credentials-heavy but less so than finance. CPA trajectory (150 credit hours + exam readiness) is critical. Build captures Excel/analytics tools.",
+      "recruiter_bar_overall": 72,
+      "recruiter_bar_reasoning": "Big 4 typically hires at 3.3+ GPA with 150-hour path. MAcc students are preferred. 72 reflects realistic Big 4 bar.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Accounting",
+                  "Finance",
+                  "Business Administration",
+                  "Financial Enterprise Systems",
+                  "Management Information Systems",
+                  "Economics"
+                ]
+              }
+            },
+            {
+              "signal": "GPA 3.5+ in Accounting",
+              "weight": 1.0,
+              "rationale": "Big 4 uses GPA as a filter; 3.5+ is the competitive threshold.",
+              "sources": [
+                "https://www2.deloitte.com/us/en/careers.html"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Accounting",
+                      "Finance",
+                      "Business Administration",
+                      "Financial Enterprise Systems",
+                      "Management Information Systems"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Clear 150-credit-hour plan (MAcc, dual major, or 5-year program) mentioned",
+              "weight": 0.85,
+              "rationale": "CPA eligibility requires 150 hours; stating your path signals readiness.",
+              "sources": [
+                "https://www2.deloitte.com/us/en/careers.html"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "150 credit",
+                  "150-credit",
+                  "150 hour",
+                  "masters of accounting",
+                  "master of accounting",
+                  "MAcc",
+                  "M.Acc",
+                  "5-year program",
+                  "5 year program",
+                  "dual major"
+                ]
+              }
+            },
+            {
+              "signal": "CPA exam sections mentioned or in progress",
+              "weight": 0.8,
+              "rationale": "A started CPA exam is a strong commitment signal.",
+              "sources": [
+                "https://www2.deloitte.com/us/en/careers.html"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "CPA\\s+(exam|review|candidate|eligible)|(FAR|AUD|REG|BEC|BAR|ISC|TCP)\\s+(exam|section|passed)|Becker|Wiley\\s+CPA",
+                "flags": "i"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Dean's List / Honors in accounting coursework",
+              "weight": 0.4,
+              "rationale": "Accounting recruiters weight honors when GPA is borderline.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 1
+              }
+            },
+            {
+              "signal": "Coursework in Intermediate Accounting, Audit, Tax, AIS",
+              "weight": 0.35,
+              "rationale": "Upper-level accounting coursework signals preparedness.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "intermediate accounting",
+                  "advanced accounting",
+                  "auditing",
+                  "federal taxation",
+                  "tax accounting",
+                  "accounting information systems",
+                  "cost accounting",
+                  "managerial accounting"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Beta Alpha Psi member with officer role",
+              "weight": 1.0,
+              "rationale": "BAP is the national accounting honor society \u2014 officer role is a top signal.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "beta alpha psi",
+                      "BAP"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "VITA (Volunteer Income Tax Assistance) volunteer \u2014 IRS certified",
+              "weight": 0.85,
+              "rationale": "VITA is a real-stakes tax role; IRS certification signals readiness.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "VITA",
+                  "Volunteer Income Tax",
+                  "IRS certified",
+                  "IRS certification"
+                ]
+              }
+            },
+            {
+              "signal": "Prior accounting internship (local/regional firm)",
+              "weight": 0.8,
+              "rationale": "Stepping-stone internship before Big 4 is the standard non-target ladder.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "accounting intern",
+                      "audit intern",
+                      "tax intern",
+                      "staff accountant",
+                      "bookkeeper",
+                      "bookkeeping",
+                      "CPA firm",
+                      "public accounting"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Accounting Society / Student Accounting Association leadership",
+              "weight": 0.5,
+              "rationale": "Club leadership signals sustained interest.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "accounting society",
+                      "accounting association",
+                      "accounting club"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  }
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Data analytics tools for accounting: Alteryx, Tableau, Power BI",
+              "weight": 1.0,
+              "rationale": "Data analytics fluency is increasingly demanded at Big 4 \u2014 core differentiator.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "alteryx",
+                  "tableau",
+                  "power bi",
+                  "powerbi",
+                  "SQL",
+                  "python accounting",
+                  "data analytics"
+                ]
+              }
+            },
+            {
+              "signal": "Advanced Excel: pivot tables, VLOOKUP, INDEX/MATCH, Power Query",
+              "weight": 0.7,
+              "rationale": "Excel fluency beyond basics is a real differentiator.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "pivot table",
+                  "vlookup",
+                  "xlookup",
+                  "index match",
+                  "index/match",
+                  "power query",
+                  "power pivot",
+                  "excel macros",
+                  "VBA"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "ERP / accounting software exposure (SAP, Oracle, NetSuite, QuickBooks)",
+              "weight": 0.5,
+              "rationale": "Software exposure signals ability to work with real client systems.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "SAP",
+                  "oracle financials",
+                  "netsuite",
+                  "quickbooks",
+                  "xero",
+                  "workday",
+                  "sage"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "GPA below 3.3 with no 150-hour plan \u2014 can't be CPA eligible",
+        "No accounting-specific experience (no internship, no VITA, no bookkeeping)",
+        "Only basic Excel without advanced features",
+        "No Big 4 leadership/discover program attendance",
+        "Missing Beta Alpha Psi or accounting society leadership"
+      ],
+      "fastest_path_moves": [
+        "Commit to a 150-hour path: MAcc, dual major, or 5-year program \u2014 state it on resume",
+        "Join Beta Alpha Psi and target an officer role within 1 year",
+        "Volunteer with VITA next tax season \u2014 IRS certification + real returns",
+        "Start Becker or Wiley CPA review in senior year; pass 1 section before graduation",
+        "Build one Alteryx or Tableau project on a real financial dataset",
+        "Apply to Deloitte National Leadership / PwC Start / EY Discover / KPMG Ignite"
+      ]
+    },
+    "tech_cybersecurity": {
+      "cohort_id": "tech_cybersecurity",
+      "display_name": "Tech \u2014 Cybersecurity",
+      "research_sources": [
+        "https://www.comptia.org/certifications/security",
+        "https://tryhackme.com",
+        "https://www.hackthebox.com",
+        "https://www.sans.org"
+      ],
+      "source_verification_note": "Knowledge-based. Cybersecurity hiring is one of the most certification-driven cohorts \u2014 the signals here are well-established industry standards.",
+      "dimension_weights": {
+        "smart": 0.25,
+        "grit": 0.3,
+        "build": 0.45
+      },
+      "dimension_weights_reasoning": "Cyber hiring weights demonstrated hands-on work (labs, CTFs, home labs) heavily. Certs are the 'smart' signal because entry-level cyber is cert-driven. Grit captures sustained CTF play and lab maintenance.",
+      "recruiter_bar_overall": 70,
+      "recruiter_bar_reasoning": "Entry-level cyber (SOC analyst intern, junior analyst) is one of the most accessible tech paths. The bar is lower than FAANG SWE because many good cyber analysts don't come from CS \u2014 they come from certifications + hands-on work.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Cybersecurity",
+                  "Computer Science",
+                  "Information Technology",
+                  "Computer Engineering",
+                  "Business Information Technology",
+                  "Management Information Systems"
+                ]
+              }
+            },
+            {
+              "signal": "Security+ / Network+ / CEH / OSCP / CySA+ certification",
+              "weight": 1.0,
+              "rationale": "Entry-level cyber is cert-driven. Security+ is baseline. OSCP signals offensive expertise.",
+              "sources": [
+                "https://www.comptia.org/certifications/security"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "Security+",
+                  "Sec+",
+                  "Network+",
+                  "Net+",
+                  "CEH",
+                  "OSCP",
+                  "CySA+",
+                  "CISSP",
+                  "GSEC",
+                  "GIAC",
+                  "CompTIA"
+                ]
+              }
+            },
+            {
+              "signal": "GPA 3.3+ in Cybersecurity / CS / IT major",
+              "weight": 0.7,
+              "rationale": "Cyber has lower GPA expectations than general SWE \u2014 3.3 is a reasonable floor.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.3
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Cybersecurity",
+                      "Computer Science",
+                      "Information Technology",
+                      "Information Systems",
+                      "Computer Engineering",
+                      "Business Information Technology",
+                      "Management Information Systems"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Security-adjacent coursework (networks, systems, cryptography)",
+              "weight": 0.4,
+              "rationale": "Relevant coursework signals fundamental knowledge.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "network security",
+                  "cryptography",
+                  "operating systems",
+                  "computer networks",
+                  "information security",
+                  "ethical hacking",
+                  "penetration testing",
+                  "cyber law"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "TryHackMe / HackTheBox sustained rank (with profile link)",
+              "weight": 1.0,
+              "rationale": "Platform ranks prove sustained, measurable hands-on work.",
+              "sources": [
+                "https://tryhackme.com",
+                "https://www.hackthebox.com"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "tryhackme",
+                  "hackthebox",
+                  "HTB",
+                  "THM",
+                  "htb.eu"
+                ]
+              }
+            },
+            {
+              "signal": "CTF competition participation",
+              "weight": 0.8,
+              "rationale": "CTFs are the cyber equivalent of LeetCode \u2014 proof of active engagement.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "CTF",
+                  "capture the flag",
+                  "PicoCTF",
+                  "CSAW",
+                  "DEF CON",
+                  "NCL",
+                  "national cyber league"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Honors or Dean's List in a technical major",
+              "weight": 0.3,
+              "rationale": "Secondary signal alongside cert-driven path.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 1
+              }
+            },
+            {
+              "signal": "Recognized tech employer in work history",
+              "weight": 0.3,
+              "rationale": "Prior security work at a known firm signals strong fundamentals.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "recognized_tech_employer",
+                "op": "truthy"
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "SIEM / security tool experience (Splunk, Sentinel, QRadar, CrowdStrike)",
+              "weight": 1.0,
+              "rationale": "SIEM experience is the core SOC analyst skill.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "splunk",
+                  "sentinel",
+                  "qradar",
+                  "crowdstrike",
+                  "sentinelone",
+                  "wireshark",
+                  "nmap",
+                  "metasploit",
+                  "burp suite",
+                  "kali linux"
+                ]
+              }
+            },
+            {
+              "signal": "Home lab / virtualized security lab mentioned",
+              "weight": 0.8,
+              "rationale": "Home labs signal self-directed building beyond coursework.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "home lab",
+                  "homelab",
+                  "virtual lab",
+                  "pfsense",
+                  "wazuh",
+                  "active directory lab",
+                  "self-hosted"
+                ]
+              }
+            },
+            {
+              "signal": "Security metrics in experience bullets (incident response, threat hunting, vulnerability counts)",
+              "weight": 0.8,
+              "rationale": "Security-specific quantified outcomes are already extracted by dilly_core.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "security_metrics_count",
+                "op": ">=",
+                "value": 1
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Scripting for security: Python, Bash, PowerShell",
+              "weight": 0.4,
+              "rationale": "Scripting is assumed at junior level.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "python",
+                  "bash",
+                  "powershell",
+                  "linux command line"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "No certifications at all (Security+ is minimum entry signal)",
+        "No hands-on practice \u2014 no TryHackMe / HackTheBox / CTF evidence",
+        "Resume lists 'security' as a skill with no project or lab",
+        "Missing Linux / CLI fluency \u2014 assumed for any cyber role"
+      ],
+      "fastest_path_moves": [
+        "Get Security+ certification (~2 months of focused study, $370 exam)",
+        "Complete the TryHackMe 'Pre-Security' + 'Complete Beginner' paths, get to rank 50k+",
+        "Build a home lab: pfSense firewall + Wazuh SIEM on a Raspberry Pi or old laptop",
+        "Participate in 1-2 CTFs (PicoCTF for beginners, NCL season)",
+        "Add a scripted tool to GitHub: log parser, port scanner, or phishing detection script"
+      ]
+    },
+    "science_research": {
+      "cohort_id": "science_research",
+      "display_name": "Science \u2014 Research & Graduate School",
+      "research_sources": [
+        "https://www.nsfgrfp.org",
+        "https://www.gradschool.cornell.edu"
+      ],
+      "source_verification_note": "Knowledge-based. For biology/chem/physics students targeting grad school (not pre-health).",
+      "dimension_weights": {
+        "smart": 0.45,
+        "grit": 0.3,
+        "build": 0.25
+      },
+      "dimension_weights_reasoning": "Science research is academically dominated (GPA + GRE + coursework). Grit is lab longevity + conference participation. Build is publications + posters.",
+      "recruiter_bar_overall": 75,
+      "recruiter_bar_reasoning": "Top PhD programs want 3.7+ GPA + strong research. Mid-tier masters programs 3.5+.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Biology",
+                  "Chemistry",
+                  "Biochemistry",
+                  "Physics",
+                  "Environmental Science",
+                  "Marine Science",
+                  "Marine Biology",
+                  "Marine Chemistry",
+                  "Neuroscience",
+                  "Mathematics",
+                  "Statistics",
+                  "Forensic Science"
+                ]
+              }
+            },
+            {
+              "signal": "3.7+ GPA in a science major",
+              "weight": 1.0,
+              "rationale": "Top PhD programs explicitly expect 3.7+.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.7
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Biology",
+                      "Chemistry",
+                      "Biochemistry",
+                      "Physics",
+                      "Environmental Science",
+                      "Marine Science",
+                      "Marine Biology",
+                      "Marine Chemistry",
+                      "Neuroscience",
+                      "Mathematics",
+                      "Statistics"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Honors program / honors college / honors thesis",
+              "weight": 0.7,
+              "rationale": "Honors signals readiness for graduate-level work.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 2
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Graduate-level coursework taken as undergrad",
+              "weight": 0.5,
+              "rationale": "Shows early readiness for research.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "graduate level",
+                  "graduate course",
+                  "500-level",
+                  "600-level",
+                  "advanced topics"
+                ]
+              }
+            },
+            {
+              "signal": "GRE General or Subject test mentioned",
+              "weight": 0.4,
+              "rationale": "Graduate school entry test.",
+              "sources": [],
+              "detector": {
+                "type": "regex",
+                "pattern": "\\bGRE\\b",
+                "flags": ""
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Multi-year research experience (research_longevity_years >= 2)",
+              "weight": 1.0,
+              "rationale": "Longevity with one PI beats volume.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "research_longevity_years",
+                "op": ">=",
+                "value": 2.0
+              }
+            },
+            {
+              "signal": "Any research experience (has_research = true)",
+              "weight": 0.8,
+              "rationale": "Research is the central signal for science track.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "has_research",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "REU summer program participation",
+              "weight": 0.8,
+              "rationale": "Research Experience for Undergraduates is THE premier summer research signal.",
+              "sources": [],
+              "detector": {
+                "type": "regex",
+                "pattern": "\\bREU\\b|Research\\s+Experience\\s+for\\s+Undergraduates",
+                "flags": "i"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Teaching assistantship or lab assistant",
+              "weight": 0.4,
+              "rationale": "Teaching signals depth of mastery.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "teaching assistant",
+                  " TA ",
+                  "lab assistant",
+                  "learning assistant"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Peer-reviewed publication or manuscript in prep",
+              "weight": 1.0,
+              "rationale": "Publication is the highest build signal for a research student.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "peer-reviewed",
+                  "peer reviewed",
+                  "first author",
+                  "co-author",
+                  "published in",
+                  "manuscript",
+                  "in press",
+                  "submitted to",
+                  "pubmed",
+                  "arxiv"
+                ]
+              }
+            },
+            {
+              "signal": "Conference presentation (poster or talk)",
+              "weight": 0.8,
+              "rationale": "Undergrad research conferences are widely recognized.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "poster presentation",
+                  "oral presentation",
+                  "conference presentation",
+                  "ABRCMS",
+                  "SACNAS",
+                  "undergraduate research conference",
+                  "abstract presented"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Data analysis tools: R, Python, MATLAB, Mathematica",
+              "weight": 0.4,
+              "rationale": "Scientific computing fluency.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "python",
+                  " R ",
+                  "R studio",
+                  "matlab",
+                  "mathematica",
+                  "julia",
+                  "scipy",
+                  "numpy"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "No research experience at all (fatal for grad school track)",
+        "Research listed but only one semester \u2014 longevity matters",
+        "No publications or conference presentations despite 2+ years of lab work",
+        "Missing GRE or other standardized test signal",
+        "Missing letter-writer relationships (implied by lack of longitudinal research)"
+      ],
+      "fastest_path_moves": [
+        "Find a research lab and commit 2+ years \u2014 longevity matters more than prestige",
+        "Apply to REU programs for summer (deadlines in January/February)",
+        "Aim for ONE conference presentation per year of research",
+        "Draft a manuscript with your PI \u2014 first-authorship is the gold standard",
+        "Build fluency in R or Python for your field's data work"
+      ]
+    },
+    "health_nursing_allied": {
+      "cohort_id": "health_nursing_allied",
+      "display_name": "Health \u2014 Nursing, Allied Health, Public Health",
+      "research_sources": [
+        "https://www.aacnnursing.org",
+        "https://www.nln.org"
+      ],
+      "source_verification_note": "Knowledge-based. Covers Nursing, Health Science, Public Health, Exercise Science, Kinesiology \u2014 distinct from Pre-Health.",
+      "dimension_weights": {
+        "smart": 0.35,
+        "grit": 0.4,
+        "build": 0.25
+      },
+      "dimension_weights_reasoning": "Nursing/allied health values hands-on clinical hours (grit) as much as academics. Build captures patient-care documentation and certifications.",
+      "recruiter_bar_overall": 72,
+      "recruiter_bar_reasoning": "Nursing school or entry-level health roles typically expect 3.0+ GPA in major, clinical hours, and relevant certifications.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Nursing",
+                  "Health Science",
+                  "Public Health",
+                  "Exercise Science",
+                  "Kinesiology",
+                  "Allied Health",
+                  "Health Sciences",
+                  "Human Performance",
+                  "Biomedical Sciences"
+                ]
+              }
+            },
+            {
+              "signal": "3.3+ GPA in nursing / health science / public health major",
+              "weight": 1.0,
+              "rationale": "Nursing programs use GPA filters; 3.3+ is competitive.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.3
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Nursing",
+                      "Health Science",
+                      "Public Health",
+                      "Exercise Science",
+                      "Kinesiology",
+                      "Allied Health",
+                      "Health Sciences",
+                      "Human Performance",
+                      "Biomedical Sciences"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "BLS / ACLS / PALS certification",
+              "weight": 0.6,
+              "rationale": "Required for most clinical roles; signals readiness.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "BLS",
+                  "ACLS",
+                  "PALS",
+                  "CPR certified",
+                  "basic life support",
+                  "advanced cardiac life support"
+                ]
+              }
+            },
+            {
+              "signal": "NCLEX prep or passed (for nursing)",
+              "weight": 0.5,
+              "rationale": "NCLEX is THE licensure exam for nursing.",
+              "sources": [],
+              "detector": {
+                "type": "regex",
+                "pattern": "\\bNCLEX\\b",
+                "flags": ""
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Clinical rotations or patient care work",
+              "weight": 1.0,
+              "rationale": "Direct patient care is the core grit signal for this cohort.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "clinical rotation",
+                  "clinical hours",
+                  "patient care",
+                  "bedside",
+                  "nursing clinical",
+                  "med-surg",
+                  "ICU clinical",
+                  "emergency department"
+                ]
+              }
+            },
+            {
+              "signal": "CNA / MA / phlebotomist / EMT experience",
+              "weight": 0.9,
+              "rationale": "Paid patient-care roles before graduation.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "CNA",
+                  "certified nursing assistant",
+                  "medical assistant",
+                  "phlebotomist",
+                  "EMT",
+                  "patient care technician",
+                  "PCT"
+                ]
+              }
+            },
+            {
+              "signal": "Longitudinal volunteer or work in healthcare setting",
+              "weight": 0.7,
+              "rationale": "Sustained healthcare engagement.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "longitudinal_clinical_years",
+                "op": ">=",
+                "value": 0.5
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Honors or recognition",
+              "weight": 0.3,
+              "rationale": "Academic recognition.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 1
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Research experience relevant to health (public health, clinical research)",
+              "weight": 0.8,
+              "rationale": "Research is differentiating for Health Science / Public Health track.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "has_research",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Specialty certifications (wound care, IV therapy, telemetry, medication aide)",
+              "weight": 0.7,
+              "rationale": "Specialty certs signal depth.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "wound care",
+                  "IV therapy",
+                  "telemetry",
+                  "medication aide",
+                  "phlebotomy certified"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Spanish or second-language fluency (patient communication)",
+              "weight": 0.3,
+              "rationale": "Language is a real differentiator for patient-facing roles.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "bilingual",
+                  "spanish fluent",
+                  "fluent spanish",
+                  "portuguese",
+                  "creole",
+                  "mandarin",
+                  "medical spanish"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "No clinical hours \u2014 the defining signal for this cohort",
+        "GPA below 3.0 \u2014 most nursing programs require 3.0 floor",
+        "Missing BLS/CPR \u2014 baseline expected",
+        "No volunteer experience in healthcare setting"
+      ],
+      "fastest_path_moves": [
+        "Get BLS certified (~$50, 4 hours) \u2014 baseline expected",
+        "Find a CNA or MA role \u2014 best stepping stone for nursing",
+        "Volunteer at a hospital for 1+ year, track your hours formally",
+        "Learn Spanish / medical Spanish \u2014 huge differentiator for patient-facing roles",
+        "Consider a relevant certification: wound care, IV therapy, telemetry"
+      ]
+    },
+    "social_sciences": {
+      "cohort_id": "social_sciences",
+      "display_name": "Social Sciences \u2014 Psychology, Sociology, Poli Sci, Criminology",
+      "research_sources": [],
+      "source_verification_note": "Knowledge-based. For students targeting grad school, research careers, nonprofit, government, or social services (not pre-law, not pre-health).",
+      "dimension_weights": {
+        "smart": 0.4,
+        "grit": 0.35,
+        "build": 0.25
+      },
+      "dimension_weights_reasoning": "Social science grad school + research careers are academically weighted. Grit is research lab time + field work. Build is publications + statistical software fluency.",
+      "recruiter_bar_overall": 70,
+      "recruiter_bar_reasoning": "Grad school floor is 3.3+ GPA; research careers value research experience more than grades.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Psychology",
+                  "Sociology",
+                  "Political Science",
+                  "Criminology",
+                  "Criminology and Criminal Justice",
+                  "International Studies",
+                  "Government and World Affairs",
+                  "Social Work",
+                  "Anthropology"
+                ]
+              }
+            },
+            {
+              "signal": "3.5+ GPA in a social science major",
+              "weight": 1.0,
+              "rationale": "Grad school filter.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Psychology",
+                      "Sociology",
+                      "Political Science",
+                      "Criminology",
+                      "Criminology and Criminal Justice",
+                      "International Studies",
+                      "Government and World Affairs",
+                      "Social Work",
+                      "Anthropology"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Statistical software fluency (SPSS, R, Stata, SAS)",
+              "weight": 0.7,
+              "rationale": "Social science research requires stats tools.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "SPSS",
+                  "STATA",
+                  "SAS",
+                  " R ",
+                  "R studio",
+                  "python statistics",
+                  "regression analysis"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Relevant coursework (research methods, statistics, quantitative analysis)",
+              "weight": 0.4,
+              "rationale": "Methodological coursework signals readiness.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "research methods",
+                  "quantitative methods",
+                  "qualitative methods",
+                  "statistics",
+                  "survey design",
+                  "experimental design"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Research experience (lab assistant, RA, undergraduate thesis)",
+              "weight": 1.0,
+              "rationale": "Research is the central signal for social science grad school.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "has_research",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Internship at nonprofit, government agency, think tank",
+              "weight": 0.7,
+              "rationale": "Applied work in the field.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "nonprofit",
+                  "government agency",
+                  "think tank",
+                  "policy",
+                  "research assistant",
+                  "research intern",
+                  "public defender",
+                  "legal aid"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Honors, Dean's List, Psi Chi (psychology honor society)",
+              "weight": 0.4,
+              "rationale": "Academic recognition.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "any_of": [
+                  {
+                    "type": "field",
+                    "field": "honors_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "Psi Chi",
+                      "Pi Sigma Alpha",
+                      "Phi Alpha Theta"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Conference presentation or publication",
+              "weight": 1.0,
+              "rationale": "Peer-reviewed or conference output is the top build signal for grad school track.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "conference presentation",
+                  "poster presentation",
+                  "published in",
+                  "peer-reviewed",
+                  "conference proceedings",
+                  "research symposium"
+                ]
+              }
+            },
+            {
+              "signal": "Undergraduate thesis / honors thesis",
+              "weight": 0.8,
+              "rationale": "Independent research project.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "senior thesis",
+                  "honors thesis",
+                  "undergraduate thesis",
+                  "capstone project",
+                  "independent research"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Field work / data collection experience",
+              "weight": 0.4,
+              "rationale": "Real-world data collection is differentiating.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "field work",
+                  "data collection",
+                  "interviews conducted",
+                  "surveys administered",
+                  "ethnography"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "No research experience at all \u2014 fatal for grad school track",
+        "Missing statistical software fluency \u2014 expected for quantitative grad programs",
+        "No presentation or publication despite multi-year research",
+        "GPA below 3.3 with no compensating research depth"
+      ],
+      "fastest_path_moves": [
+        "Find a research lab and stay 2+ years",
+        "Learn R or SPSS through a methods course",
+        "Aim for one conference presentation per year",
+        "Write a senior thesis \u2014 undergraduate research is undergraduate output",
+        "Intern at a nonprofit or think tank in your field of interest"
+      ]
+    },
+    "humanities_communications": {
+      "cohort_id": "humanities_communications",
+      "display_name": "Humanities & Communications",
+      "research_sources": [],
+      "source_verification_note": "Knowledge-based. Covers English, Writing, Journalism, Communication, Advertising/PR, History, Philosophy, Education. Build-heavy because portfolio matters.",
+      "dimension_weights": {
+        "smart": 0.25,
+        "grit": 0.3,
+        "build": 0.45
+      },
+      "dimension_weights_reasoning": "Humanities/comms careers value portfolio and demonstrated craft (writing, communication, creative output) over GPA.",
+      "recruiter_bar_overall": 66,
+      "recruiter_bar_reasoning": "Entry-level media/comms is an accessible field where portfolio compensates for pedigree.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "English",
+                  "Writing",
+                  "Journalism",
+                  "Communication",
+                  "Communications",
+                  "Advertising and Public Relations",
+                  "History",
+                  "Philosophy",
+                  "Liberal Arts",
+                  "Liberal Studies",
+                  "Professional and Technical Writing",
+                  "Communication and Media Studies",
+                  "Communication and Speech Studies",
+                  "Secondary Education",
+                  "Elementary Education",
+                  "Professional Education"
+                ]
+              }
+            },
+            {
+              "signal": "3.3+ GPA in humanities / comms major",
+              "weight": 1.0,
+              "rationale": "GPA is less of a filter here but still relevant.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.3
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "English",
+                      "Writing",
+                      "Journalism",
+                      "Communication",
+                      "Communications",
+                      "Advertising and Public Relations",
+                      "History",
+                      "Philosophy",
+                      "Liberal Arts",
+                      "Liberal Studies",
+                      "Professional and Technical Writing",
+                      "Communication and Media Studies"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Relevant coursework (writing-intensive, journalism, rhetoric)",
+              "weight": 0.4,
+              "rationale": "Signals depth in craft.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "creative writing",
+                  "journalism",
+                  "rhetoric",
+                  "media studies",
+                  "advanced writing",
+                  "feature writing",
+                  "editing"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Editor or staff writer at student publication",
+              "weight": 1.0,
+              "rationale": "Sustained published work is the core grit signal.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "editor-in-chief",
+                  "managing editor",
+                  "staff writer",
+                  "student newspaper",
+                  "literary magazine",
+                  "student journalism",
+                  "campus news",
+                  "editorial board"
+                ]
+              }
+            },
+            {
+              "signal": "Internship at media company / nonprofit / comms agency",
+              "weight": 0.8,
+              "rationale": "Professional exposure in the field.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "media intern",
+                      "journalism intern",
+                      "communications intern",
+                      "PR intern",
+                      "advertising intern",
+                      "editorial intern",
+                      "editorial assistant",
+                      "editorial fellow",
+                      "nonprofit comms"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Multi-role leadership (student org, publication, club)",
+              "weight": 0.4,
+              "rationale": "Leadership tied to real projects.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "outcome_leadership_count",
+                "op": ">=",
+                "value": 1
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Published writing portfolio (personal blog, Substack, newspaper articles, literary magazine)",
+              "weight": 1.0,
+              "rationale": "Portfolio IS the core build signal \u2014 actual written work the candidate has shipped.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "substack",
+                  "medium.com",
+                  "personal blog",
+                  "published articles",
+                  "byline",
+                  "portfolio site",
+                  "writing portfolio",
+                  "published in"
+                ]
+              }
+            },
+            {
+              "signal": "Portfolio / personal website (live URL)",
+              "weight": 0.7,
+              "rationale": "Live URL is the proof-of-work.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "deployed_app_or_live_link",
+                "op": "truthy"
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Adobe Creative Cloud / design tools (InDesign, Illustrator, Photoshop)",
+              "weight": 0.4,
+              "rationale": "Visual communication fluency.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "indesign",
+                  "illustrator",
+                  "photoshop",
+                  "adobe creative",
+                  "canva",
+                  "figma"
+                ]
+              }
+            },
+            {
+              "signal": "Foreign language proficiency",
+              "weight": 0.3,
+              "rationale": "Language is a real differentiator for humanities track.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "bilingual",
+                  "fluent spanish",
+                  "fluent french",
+                  "fluent mandarin",
+                  "fluent german",
+                  "fluent portuguese",
+                  "native speaker"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "No writing portfolio at all \u2014 fatal for writing/journalism",
+        "No internships in media / comms / nonprofit",
+        "Generic bullets without actual published work",
+        "Missing a personal site or public writing presence"
+      ],
+      "fastest_path_moves": [
+        "Start a Substack and publish 10 essays in the next 3 months",
+        "Get a byline in the student newspaper \u2014 commit to weekly contributions",
+        "Build a personal portfolio site with 5 pieces of your best writing",
+        "Apply for an editorial or nonprofit comms internship next semester",
+        "Submit to a literary magazine (local or national)"
+      ]
+    },
+    "arts_design": {
+      "cohort_id": "arts_design",
+      "display_name": "Arts & Design",
+      "research_sources": [],
+      "source_verification_note": "Knowledge-based. Covers Graphic Design, Visual Arts, Animation, Film, Music, Theatre, Digital Media. Portfolio-dominant.",
+      "dimension_weights": {
+        "smart": 0.15,
+        "grit": 0.25,
+        "build": 0.6
+      },
+      "dimension_weights_reasoning": "Arts/design is the MOST build-heavy cohort in the product. Portfolio is everything. GPA is nearly irrelevant. Grit is sustained creative output.",
+      "recruiter_bar_overall": 65,
+      "recruiter_bar_reasoning": "Entry-level creative is portfolio-first. Bar is lower because the field values craft over credentials.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Art",
+                  "Animation",
+                  "Graphic Design",
+                  "Design",
+                  "Film and Media Arts",
+                  "Visual Arts",
+                  "Music",
+                  "Musical Theatre",
+                  "Theatre",
+                  "Theatre Arts",
+                  "Digital Media",
+                  "Cinema Studies",
+                  "New Media",
+                  "Interactive Media",
+                  "Dance",
+                  "Music Performance",
+                  "Music Education"
+                ]
+              }
+            },
+            {
+              "signal": "Any arts/design major",
+              "weight": 1.0,
+              "rationale": "Baseline fit \u2014 less filtering than other cohorts.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Art",
+                  "Animation",
+                  "Graphic Design",
+                  "Design",
+                  "Film and Media Arts",
+                  "Visual Arts",
+                  "Music",
+                  "Musical Theatre",
+                  "Theatre",
+                  "Theatre Arts",
+                  "Digital Media",
+                  "Cinema Studies",
+                  "New Media",
+                  "Interactive Media",
+                  "Dance",
+                  "Music Performance"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "3.3+ GPA (nice-to-have, not required)",
+              "weight": 0.3,
+              "rationale": "Academic signal matters less here.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "gpa",
+                "op": ">=",
+                "value": 3.3
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Multi-role creative leadership (club, festival, production)",
+              "weight": 1.0,
+              "rationale": "Leadership in creative contexts with measurable outcomes.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "outcome_leadership_count",
+                "op": ">=",
+                "value": 1
+              }
+            },
+            {
+              "signal": "Prior creative work experience (agency, studio, in-house)",
+              "weight": 0.9,
+              "rationale": "Real creative work beats self-directed projects.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "design intern",
+                      "creative intern",
+                      "studio intern",
+                      "agency intern",
+                      "production intern",
+                      "art assistant",
+                      "visual designer",
+                      "graphic designer",
+                      "animator"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Portfolio link (Behance, ArtStation, Dribbble, personal site)",
+              "weight": 1.0,
+              "rationale": "Portfolio is THE central signal for creative careers.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "behance",
+                  "artstation",
+                  "dribbble",
+                  "portfolio",
+                  "personal site",
+                  "portfolio.com",
+                  "carbonmade",
+                  "cargo"
+                ]
+              }
+            },
+            {
+              "signal": "Deployed / published work (live URL)",
+              "weight": 0.8,
+              "rationale": "Live portfolio URL proves the work is shippable.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "deployed_app_or_live_link",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Creative tool proficiency: Figma / Adobe Creative Cloud / Procreate / Cinema 4D",
+              "weight": 0.7,
+              "rationale": "Tool fluency is table stakes.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "figma",
+                  "photoshop",
+                  "illustrator",
+                  "indesign",
+                  "after effects",
+                  "premiere pro",
+                  "procreate",
+                  "cinema 4d",
+                  "blender",
+                  "maya",
+                  "zbrush",
+                  "sketch",
+                  "xd"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Gallery show, film festival selection, published work",
+              "weight": 0.6,
+              "rationale": "Externally-validated work.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "gallery show",
+                  "exhibition",
+                  "film festival",
+                  "selected work",
+                  "juried show",
+                  "published",
+                  "featured in"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "No portfolio link on resume \u2014 fatal for creative careers",
+        "Portfolio with only class assignments, no personal or client work",
+        "Missing tool fluency (Figma / Adobe Creative Cloud)",
+        "No externally-validated work (show, festival, client project)"
+      ],
+      "fastest_path_moves": [
+        "Build a Behance / ArtStation / Dribbble portfolio with 5-8 pieces",
+        "Take ONE freelance client project \u2014 even for $50 \u2014 and include it in your portfolio",
+        "Get a live personal site with your work curated",
+        "Master Figma or Adobe CC in one specialty (UI, branding, illustration, motion)",
+        "Enter a juried show or festival \u2014 externally-validated work signals seriousness"
+      ]
+    },
+    "quantitative_math_stats": {
+      "cohort_id": "quantitative_math_stats",
+      "display_name": "Quantitative \u2014 Math, Stats, Actuarial",
+      "research_sources": [],
+      "source_verification_note": "Knowledge-based. Covers pure/applied math, stats, actuarial science. For students targeting quant finance, academic math, actuarial, or research.",
+      "dimension_weights": {
+        "smart": 0.55,
+        "grit": 0.25,
+        "build": 0.2
+      },
+      "dimension_weights_reasoning": "Quant careers are the most academically weighted cohort in the product. GPA, coursework rigor, and competition/exam performance dominate.",
+      "recruiter_bar_overall": 78,
+      "recruiter_bar_reasoning": "Quant finance requires 3.7+ GPA. Academic math PhD programs want similar. Actuarial is slightly more accessible but still requires exam progress.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Mathematics",
+                  "Statistics",
+                  "Applied Mathematics",
+                  "Mathematics with Computer Science",
+                  "Mathematics & Computer Science",
+                  "Actuarial Science",
+                  "Physics"
+                ]
+              }
+            },
+            {
+              "signal": "3.7+ GPA in Math / Stats / quantitative major",
+              "weight": 1.0,
+              "rationale": "Quant hiring uses hard GPA filters.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.7
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Mathematics",
+                      "Statistics",
+                      "Applied Mathematics",
+                      "Mathematics with Computer Science",
+                      "Mathematics & Computer Science",
+                      "Actuarial Science",
+                      "Physics",
+                      "Computer Science"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Actuarial exams passed (P, FM, IFM, etc.)",
+              "weight": 0.9,
+              "rationale": "Exam progress is directly tracked by dilly_core.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "actuarial_exams_passed",
+                "op": ">=",
+                "value": 1
+              }
+            },
+            {
+              "signal": "Upper-level math coursework (real analysis, abstract algebra, topology)",
+              "weight": 0.7,
+              "rationale": "Signals serious mathematical depth.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "real analysis",
+                  "abstract algebra",
+                  "topology",
+                  "measure theory",
+                  "functional analysis",
+                  "PDE",
+                  "partial differential equations",
+                  "numerical analysis",
+                  "stochastic processes",
+                  "complex analysis"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Competitive programming / math competitions",
+              "weight": 0.5,
+              "rationale": "Math competitions are the equivalent of research output for undergrads.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "any_of": [
+                  {
+                    "type": "field",
+                    "field": "competitive_programming",
+                    "op": "truthy"
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "Putnam",
+                      "AMC",
+                      "AIME",
+                      "USAMO",
+                      "IMO",
+                      "math olympiad",
+                      "modeling competition",
+                      "MCM",
+                      "ICPC",
+                      "codeforces"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Research experience (REU, senior thesis)",
+              "weight": 1.0,
+              "rationale": "Research longevity matters for math grad school.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "has_research",
+                "op": "truthy"
+              }
+            },
+            {
+              "signal": "Teaching role (TA, tutor, math circle leader)",
+              "weight": 0.5,
+              "rationale": "Teaching math signals depth of mastery.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "teaching assistant",
+                  "math TA",
+                  "tutor",
+                  "math circle",
+                  "math team"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Honors / Dean's List",
+              "weight": 0.3,
+              "rationale": "Academic recognition.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 1
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Published work or conference presentation",
+              "weight": 1.0,
+              "rationale": "Rare at undergrad level but the top build signal.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "arxiv",
+                  "published in",
+                  "conference presentation",
+                  "poster presentation",
+                  "manuscript"
+                ]
+              }
+            },
+            {
+              "signal": "Programming fluency: Python, R, MATLAB, Mathematica, Julia",
+              "weight": 0.7,
+              "rationale": "Computational tools are required for most quant/applied roles.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "python",
+                  " R ",
+                  "matlab",
+                  "mathematica",
+                  "julia",
+                  "numpy",
+                  "scipy"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "GPA below 3.7 for quant finance applications",
+        "Missing upper-level math coursework \u2014 signals lack of depth",
+        "No research or competition signal \u2014 undergrad math is research-driven",
+        "Missing computational tool fluency (Python or R minimum)",
+        "Actuarial students: no exams passed = not a serious candidate"
+      ],
+      "fastest_path_moves": [
+        "Pass actuarial Exam P or Exam FM if targeting actuarial",
+        "Apply to math REUs for summer \u2014 top signal for grad school",
+        "Take real analysis + abstract algebra before senior year",
+        "Enter the Putnam exam \u2014 any score is a signal",
+        "Add Python fluency \u2014 applied math needs computational skill",
+        "Write an undergraduate thesis with a professor"
+      ]
+    },
+    "sport_management": {
+      "cohort_id": "sport_management",
+      "display_name": "Sport Management & Recreation",
+      "research_sources": [],
+      "source_verification_note": "Knowledge-based. Covers team front offices, league operations, sports marketing, event management, athletic admin.",
+      "dimension_weights": {
+        "smart": 0.2,
+        "grit": 0.45,
+        "build": 0.35
+      },
+      "dimension_weights_reasoning": "Sport management is grit-dominant (you have to do the unglamorous work) with build capturing event experience and analytics.",
+      "recruiter_bar_overall": 68,
+      "recruiter_bar_reasoning": "Entry-level sport roles are highly competitive but GPA is less of a filter than pedigree/network/willingness to grind.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Sport Management",
+                  "Recreation",
+                  "Business Administration",
+                  "Management",
+                  "Marketing",
+                  "Kinesiology",
+                  "Exercise Science and Sport Studies"
+                ]
+              }
+            },
+            {
+              "signal": "3.3+ GPA in Sport Management / Business / Recreation",
+              "weight": 1.0,
+              "rationale": "GPA signals basic academic readiness.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.3
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Sport Management",
+                      "Recreation",
+                      "Business Administration",
+                      "Management",
+                      "Marketing",
+                      "Kinesiology",
+                      "Exercise Science and Sport Studies"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Sport analytics or stats coursework",
+              "weight": 0.5,
+              "rationale": "Analytics is increasingly in demand.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "sport analytics",
+                  "sports analytics",
+                  "statistics",
+                  "SQL",
+                  "tableau"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Internship with team / league / agency / athletic department",
+              "weight": 1.0,
+              "rationale": "Direct industry experience is the top signal.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "athletic department",
+                      "sports team",
+                      "NFL",
+                      "NBA",
+                      "MLB",
+                      "NHL",
+                      "MLS",
+                      "sports agency",
+                      "sports marketing",
+                      "sports intern",
+                      "front office",
+                      "game operations",
+                      "event operations"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Game day / event staff experience",
+              "weight": 0.7,
+              "rationale": "Event ops is the on-ramp for most sport management careers.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "game day",
+                  "event staff",
+                  "stadium staff",
+                  "game operations",
+                  "event coordinator",
+                  "event assistant",
+                  "ticket operations",
+                  "box office"
+                ]
+              }
+            },
+            {
+              "signal": "Leadership in sports marketing / sports management club",
+              "weight": 0.6,
+              "rationale": "Club leadership with measurable projects.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "sports club",
+                      "sports management club",
+                      "sports marketing club"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Multi-role experience (volunteer + work)",
+              "weight": 0.3,
+              "rationale": "Shows willingness to do the work.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "work_entry_count",
+                "op": ">=",
+                "value": 3
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Sports analytics project or dashboard",
+              "weight": 1.0,
+              "rationale": "Analytics project signals modern sport ops readiness.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "sports analytics",
+                  "player analytics",
+                  "game analytics",
+                  "fantasy sports",
+                  "tableau dashboard",
+                  "sports dashboard"
+                ]
+              }
+            },
+            {
+              "signal": "Social media / content creation for sports (running an athlete or team account)",
+              "weight": 0.7,
+              "rationale": "Content creation is now core sport marketing.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "social media",
+                  "twitter",
+                  "instagram",
+                  "tiktok",
+                  "sports content",
+                  "team social"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Deployed / live portfolio (personal site, athlete social)",
+              "weight": 0.4,
+              "rationale": "Visible output.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "deployed_app_or_live_link",
+                "op": "truthy"
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "No direct sport industry experience (internship, volunteer, event staff)",
+        "Generic business experience without sport tie-in",
+        "No analytics or content skills \u2014 modern sport ops requires both",
+        "Missing network / alumni connections (known issue, hard to score)"
+      ],
+      "fastest_path_moves": [
+        "Volunteer at home games \u2014 any sport, any level \u2014 to get game day experience",
+        "Reach out to UTampa athletic department for student intern roles",
+        "Build a fantasy sports model or analytics dashboard",
+        "Follow and network with sport industry pros on Twitter/X",
+        "Apply for front office minor league internships (AA/AAA teams, USL, MLS Next)",
+        "Take a sport analytics MOOC (Coursera has good ones)"
+      ]
+    },
+    "business_consulting": {
+      "cohort_id": "business_consulting",
+      "display_name": "Business \u2014 Management Consulting",
+      "research_sources": [
+        "https://www.mckinsey.com/careers",
+        "https://careers.bcg.com",
+        "https://www.bain.com/careers",
+        "https://www.managementconsulted.com",
+        "https://www.caseinterview.com",
+        "https://www.preplounge.com"
+      ],
+      "source_verification_note": "Canonical URLs cited from knowledge; WebFetch was denied.",
+      "dimension_weights": {
+        "smart": 0.4,
+        "grit": 0.35,
+        "build": 0.25
+      },
+      "dimension_weights_reasoning": "Consulting weights smart slightly less than finance (GPA + school filters) with more grit weight (case prep, club leadership, networking). Build is case deliverables and competitions.",
+      "recruiter_bar_overall": 76,
+      "recruiter_bar_reasoning": "MBB hard floor is 3.5 GPA; competitive at 3.7+. Big 4 consulting 3.3+. Bar reflects realistic interview threshold for top tier-2 firms.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Economics",
+                  "Business Administration",
+                  "Finance",
+                  "Management",
+                  "Mathematics",
+                  "Statistics",
+                  "Accounting",
+                  "International Business",
+                  "Marketing",
+                  "Computer Science"
+                ]
+              }
+            },
+            {
+              "signal": "3.7+ GPA in quantitative or business major",
+              "weight": 1.0,
+              "rationale": "MBB target filter; below this is non-target tax territory.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.7
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Economics",
+                      "Mathematics",
+                      "Statistics",
+                      "Business Administration",
+                      "Finance",
+                      "Accounting",
+                      "Computer Science",
+                      "Engineering",
+                      "Management"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Case interview preparation signal",
+              "weight": 0.85,
+              "rationale": "Evidence of case prep (Case in Point, case books, case partners) signals serious candidate.",
+              "sources": [
+                "https://www.caseinterview.com"
+              ],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "case interview",
+                  "case in point",
+                  "case partner",
+                  "case prep",
+                  "mock case",
+                  "framework",
+                  "MECE",
+                  "issue tree",
+                  "hypothesis-driven"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "3.5 to 3.69 GPA in relevant major",
+              "weight": 0.6,
+              "rationale": "Floor for Big 4 consulting and tier-2 firms.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": "<",
+                    "value": 3.7
+                  },
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Economics",
+                      "Business Administration",
+                      "Finance",
+                      "Management",
+                      "Mathematics",
+                      "Statistics"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Quantitative coursework (stats, econometrics, micro/macro)",
+              "weight": 0.4,
+              "rationale": "Signals analytical readiness.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "econometrics",
+                  "microeconomics",
+                  "macroeconomics",
+                  "statistics",
+                  "regression analysis",
+                  "data analysis",
+                  "quantitative analysis"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Leadership in consulting club with real engagement",
+              "weight": 1.0,
+              "rationale": "On-campus consulting club leadership is the core grit signal for non-target strategy.",
+              "sources": [
+                "https://www.managementconsulted.com"
+              ],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "consulting club",
+                      "strategy club",
+                      "consulting society",
+                      "management consulting"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Prior analyst / strategy / research experience",
+              "weight": 0.85,
+              "rationale": "Any prior structured-work experience (Big 4, corp strategy, research) is a stepping stone.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "strategy intern",
+                      "strategy analyst",
+                      "research analyst",
+                      "business analyst",
+                      "deloitte",
+                      "accenture",
+                      "ey parthenon",
+                      "kearney",
+                      "oliver wyman",
+                      "capgemini",
+                      "mckinsey",
+                      "bcg",
+                      "bain"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Diversity program participation (McKinsey Sophomore Diversity, BCG ADC, Bain BEAM)",
+              "weight": 0.7,
+              "rationale": "Explicit on-ramps for non-target students.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "McKinsey Diversity",
+                  "Sophomore Diversity",
+                  "BCG ADC",
+                  "BCG Advancement",
+                  "Bain BEAM",
+                  "Deloitte Alternative",
+                  "McKinsey Black Leadership",
+                  "ADC",
+                  "ALDP"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Honors / Dean's List",
+              "weight": 0.4,
+              "rationale": "Standard academic recognition.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 1
+              }
+            },
+            {
+              "signal": "International experience (study abroad, language fluency)",
+              "weight": 0.3,
+              "rationale": "Global firms value international exposure.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "international_markers",
+                "op": "truthy"
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Case competition finalist / participant (MBB cases, Net Impact, Deloitte Nat'l Undergrad)",
+              "weight": 1.0,
+              "rationale": "Externally-judged case work is the top build signal.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "case competition",
+                  "deloitte national",
+                  "bcg brightfield",
+                  "bain future of business",
+                  "mckinsey youth",
+                  "net impact case",
+                  "strategic case",
+                  "consulting competition"
+                ]
+              }
+            },
+            {
+              "signal": "Quantified leadership outcomes in experience bullets",
+              "weight": 0.8,
+              "rationale": "Measurable impact in any leadership context is what consulting recruiters look for.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "quantifiable_impact_count",
+                "op": ">=",
+                "value": 2
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Research project with structured methodology",
+              "weight": 0.4,
+              "rationale": "Research signals structured thinking.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "has_research",
+                "op": "truthy"
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "GPA below 3.5 \u2014 hard floor at most top firms",
+        "No case interview preparation signal \u2014 fatal",
+        "No consulting club or strategy-related leadership",
+        "Generic business experience without quantified outcomes",
+        "Missing international / language / travel signals for global firms"
+      ],
+      "fastest_path_moves": [
+        "Start Case in Point + begin case partners \u2014 100+ cases before interviews",
+        "Take a leadership role in a consulting or business club",
+        "Apply to MBB diversity programs (Sophomore Summit, ADC, BEAM)",
+        "Target a stepping stone: Deloitte Strategy, EY Parthenon, Kearney, or corporate strategy intern",
+        "Enter case competitions \u2014 even participation matters",
+        "Learn basic Excel modeling and PowerPoint deck building"
+      ]
+    },
+    "pre_law": {
+      "cohort_id": "pre_law",
+      "display_name": "Pre-Law",
+      "research_sources": [
+        "https://www.lsac.org",
+        "https://abovethelaw.com",
+        "https://7sage.com",
+        "https://spiveyconsulting.com"
+      ],
+      "source_verification_note": "Canonical URLs cited from knowledge; WebFetch was denied.",
+      "dimension_weights": {
+        "smart": 0.55,
+        "grit": 0.25,
+        "build": 0.2
+      },
+      "dimension_weights_reasoning": "Pre-law is dominated by LSAT + GPA. Grit captures work experience and pre-law club leadership. Build captures writing output and legal experience.",
+      "recruiter_bar_overall": 78,
+      "recruiter_bar_reasoning": "T14 law schools want 3.8+ GPA and 170+ LSAT. Strong regional schools 3.5+ and 165+.",
+      "signals": {
+        "smart": {
+          "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "weight": 3.0,
+              "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Political Science",
+                  "Philosophy",
+                  "History",
+                  "English",
+                  "Economics",
+                  "Government and World Affairs",
+                  "International Studies",
+                  "Criminology",
+                  "Criminology and Criminal Justice",
+                  "Law, Justice and Advocacy",
+                  "Law, Justice & Advocacy"
+                ]
+              }
+            },
+            {
+              "signal": "3.8+ GPA (T14 competitive)",
+              "weight": 1.0,
+              "rationale": "Every tenth of a GPA point matters for law school admissions.",
+              "sources": [
+                "https://www.lsac.org"
+              ],
+              "detector": {
+                "type": "field",
+                "field": "gpa",
+                "op": ">=",
+                "value": 3.8
+              }
+            },
+            {
+              "signal": "LSAT mentioned on resume (score or prep)",
+              "weight": 0.9,
+              "rationale": "LSAT is the dominant smart signal. Mention indicates readiness.",
+              "sources": [
+                "https://www.lsac.org"
+              ],
+              "detector": {
+                "type": "regex",
+                "pattern": "\\bLSAT\\b",
+                "flags": ""
+              }
+            },
+            {
+              "signal": "Pre-law or rigorous major (Philosophy, Political Science, History, English, Economics)",
+              "weight": 0.6,
+              "rationale": "Traditional pre-law majors signal rhetorical and analytical depth.",
+              "sources": [],
+              "detector": {
+                "type": "major_in",
+                "majors": [
+                  "Philosophy",
+                  "Political Science",
+                  "History",
+                  "English",
+                  "Economics",
+                  "Government and World Affairs",
+                  "International Studies",
+                  "Criminology",
+                  "Law, Justice and Advocacy",
+                  "Law, Justice & Advocacy"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "3.5 to 3.79 GPA",
+              "weight": 0.5,
+              "rationale": "Competitive for strong non-T14 schools.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": ">=",
+                    "value": 3.5
+                  },
+                  {
+                    "type": "field",
+                    "field": "gpa",
+                    "op": "<",
+                    "value": 3.8
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Honors / Dean's List",
+              "weight": 0.4,
+              "rationale": "Academic recognition.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "honors_count",
+                "op": ">=",
+                "value": 1
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "grit": {
+          "high_impact": [
+            {
+              "signal": "Legal experience: law firm, DA's office, public defender, federal judiciary, legal aid",
+              "weight": 1.0,
+              "rationale": "Any exposure to legal work environment is strong grit signal.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 1
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "law firm",
+                      "law office",
+                      "district attorney",
+                      "public defender",
+                      "legal aid",
+                      "legal intern",
+                      "paralegal",
+                      "legal assistant",
+                      "judicial",
+                      "courtroom",
+                      "federal judiciary"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Moot court, mock trial, debate team",
+              "weight": 0.8,
+              "rationale": "Law school prep activities.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "moot court",
+                  "mock trial",
+                  "debate team",
+                  "debate society",
+                  "forensics team"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Pre-law society leadership",
+              "weight": 0.5,
+              "rationale": "Student org leadership in law context.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "pre-law",
+                      "law society",
+                      "phi alpha delta"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "outcome_leadership_count",
+                    "op": ">=",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "signal": "Research assistant to professor (legal or related fields)",
+              "weight": 0.5,
+              "rationale": "Research experience signals rigor.",
+              "sources": [],
+              "detector": {
+                "type": "field",
+                "field": "has_research",
+                "op": "truthy"
+              }
+            }
+          ],
+          "low_impact": []
+        },
+        "build": {
+          "high_impact": [
+            {
+              "signal": "Published writing (student newspaper, law review student note, blog)",
+              "weight": 1.0,
+              "rationale": "Writing ability is the core build signal for pre-law.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "student newspaper",
+                  "law review",
+                  "student journal",
+                  "substack",
+                  "personal blog",
+                  "published articles",
+                  "byline",
+                  "editor"
+                ]
+              }
+            },
+            {
+              "signal": "Senior thesis or honors research with written output",
+              "weight": 0.7,
+              "rationale": "Long-form writing demonstrates analytical depth.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "senior thesis",
+                  "honors thesis",
+                  "undergraduate thesis",
+                  "capstone"
+                ]
+              }
+            }
+          ],
+          "medium_impact": [
+            {
+              "signal": "Political / government / policy internship",
+              "weight": 0.5,
+              "rationale": "Capitol Hill, state legislature, campaign work.",
+              "sources": [],
+              "detector": {
+                "type": "keyword_any",
+                "keywords": [
+                  "capitol hill",
+                  "state legislature",
+                  "congressional intern",
+                  "political campaign",
+                  "policy intern",
+                  "policy research"
+                ]
+              }
+            }
+          ],
+          "low_impact": []
+        }
+      },
+      "common_rejection_reasons": [
+        "GPA below 3.5 \u2014 even strong LSAT struggles to compensate",
+        "No LSAT prep signal \u2014 suggests not ready to apply",
+        "No legal experience \u2014 shows lack of commitment",
+        "No writing samples or published work \u2014 fatal for law school",
+        "Missing moot court / mock trial / debate experience"
+      ],
+      "fastest_path_moves": [
+        "Start LSAT prep NOW \u2014 6+ months before applications",
+        "Get an internship at a law firm, DA's office, or legal aid \u2014 any legal exposure counts",
+        "Join moot court or mock trial; apply to become part of a team",
+        "Write regularly for student publication \u2014 bylines matter",
+        "Take a research assistant role with a professor who writes on legal topics",
+        "Consider the writing sample early \u2014 it takes multiple drafts"
+      ]
+    }
+  }
+}
