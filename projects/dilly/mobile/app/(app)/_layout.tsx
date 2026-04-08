@@ -7,6 +7,8 @@ import DillyAIOverlay from '../../components/DillyAIOverlay';
 import { useDillyOverlayState } from '../../hooks/useDillyOverlay';
 import { SubscriptionProvider } from '../../hooks/useSubscription';
 import PaywallModal from '../../components/PaywallModal';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
+import ScoringMigrationModal from '../../components/ScoringMigrationModal';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -39,6 +41,7 @@ export default function AppLayout() {
 
   return (
     <SubscriptionProvider>
+    <ErrorBoundary surface="the career center">
     <>
     <Tabs
       screenOptions={{
@@ -175,7 +178,9 @@ export default function AppLayout() {
     </Tabs>
     <DillyAIOverlayWrapper />
     <PaywallModal />
+    <ScoringMigrationModal />
   </>
+  </ErrorBoundary>
   </SubscriptionProvider>
   );
 }

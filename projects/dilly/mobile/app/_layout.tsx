@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../lib/tokens';
 import SplashScreen from '../components/SplashScreen';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 const GOLD = '#2B3A8E';
 
@@ -210,11 +211,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="(app)" />
-      </Stack>
+      <ErrorBoundary surface="Dilly">
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="(app)" />
+        </Stack>
+      </ErrorBoundary>
     </SafeAreaProvider>
     </GestureHandlerRootView>
   );
