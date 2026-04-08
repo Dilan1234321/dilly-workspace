@@ -631,73 +631,128 @@ def select_cohorts_for_student(
 
 def _cohort_for_major(major: str, industry_target: Optional[str] = None) -> Optional[str]:
     """
-    Map a major string to a cohort_id. Case-insensitive, substring-tolerant.
-    Returns None if no mapping found.
+    Map a major string to a cohort_id. Two-phase lookup:
+
+      1. EXACT TAXONOMY LOOKUP — dilly_core.major_taxonomy maps ~270 common
+         US undergrad majors to cohort IDs. Case-insensitive, normalized.
+         This is the primary path and covers most students.
+
+      2. FUZZY KEYWORD FALLBACK — for non-standard major names that aren't
+         in the taxonomy (e.g. "Applied Data and Intelligence" or some
+         UTampa-specific variant), fall back to substring matching on
+         recognizable keywords.
+
+    Returns None only if BOTH phases fail. Callers should treat None as
+    "route to humanities_communications as a last-resort generalist fallback"
+    so a student never sees zero scores across all cohorts just because
+    their major name is unusual.
     """
     if not major:
         return None
+
+    # ── Phase 1: explicit taxonomy lookup ─────────────────────────────
+    try:
+        from dilly_core.major_taxonomy import lookup_major
+        result = lookup_major(major)
+        if result is not None:
+            _canonical_major, cohort_id = result
+            return cohort_id
+    except ImportError:
+        pass  # taxonomy not available — fall through to fuzzy matching
+
+    # ── Phase 2: fuzzy keyword fallback ───────────────────────────────
     m = major.strip().lower()
 
     # Tech / data / CS family
-    if any(k in m for k in ("data science", "data analytics")):
+    if any(k in m for k in ("data science", "data analytics", "data analysis", "informatics", "bioinformatics")):
         return "tech_data_science"
-    if "cybersecurity" in m or "cyber security" in m or "information security" in m:
+    if any(k in m for k in ("cybersecurity", "cyber security", "information security", "network security", "digital forensics", "infosec")):
         return "tech_cybersecurity"
-    if any(k in m for k in ("computer science", "software engineering", "computer engineering", "information technology", "mathematics with computer", "mathematics & computer", "management information systems", "business information technology")):
+    if any(k in m for k in ("computer science", "software engineering", "computer engineering", "electrical engineering", "information technology", "information systems", "mathematics with computer", "mathematics & computer", "management information systems", "business information technology", "web development", "game development", "game design")):
         return "tech_software_engineering"
 
     # Pure math / stats / actuarial — quantitative cohort
-    if any(k in m for k in ("actuarial", "mathematics", "math ", "statistics", "applied mathematics")):
+    if any(k in m for k in ("actuarial", "mathematics", "math ", "statistics", "applied mathematics", "operations research", "probability")):
         # Disambiguate: if pure math, quantitative; if math+cs, tech
         if "computer" in m:
             return "tech_software_engineering"
         return "quantitative_math_stats"
 
     # Business family
-    if "finance" in m or "financial enterprise" in m:
+    if any(k in m for k in ("finance", "financial enterprise", "banking", "investment", "wealth", "real estate", "insurance", "risk management")):
         return "business_finance"
-    if "accounting" in m:
+    if any(k in m for k in ("accounting", "accountancy", "audit", "taxation")):
         return "business_accounting"
-    if "marketing" in m or "advertising" in m:
+    if any(k in m for k in ("marketing", "advertising", "public relations", "brand", "fashion merchandising", "retail")):
         return "business_marketing"
-    if "consulting" in m or "strategy" in m:
+    if any(k in m for k in ("consulting", "strategy", "strategic management", "organizational")):
         return "business_consulting"
-    if any(k in m for k in ("economics", "international business", "business administration", "management", "entrepreneurship")):
-        return "business_finance"  # default business → finance (closest quantitative fit)
+    if any(k in m for k in ("economics", "econometrics")):
+        return "business_finance"  # economics usually finance-adjacent for undergrads
+    if any(k in m for k in ("international business", "business administration", "general business", "management ", "entrepreneurship", "supply chain", "logistics", "operations management", "human resource", "hospitality", "hotel", "tourism", "event management")):
+        return "business_consulting"
 
-    # Health / pre-health / science
-    if any(k in m for k in ("biochemistry", "biomedical", "public health", "health science", "biology", "chemistry", "neuroscience")):
-        # Biology/Chemistry without pre-health intent → science_research
-        # With pre-health intent → pre_health (handled upstream)
-        return "science_research"
-    if any(k in m for k in ("nursing", "allied health", "exercise science", "kinesiology", "human performance")):
-        return "health_nursing_allied"
-    if any(k in m for k in ("physics", "marine science", "marine biology", "environmental science", "forensic science")):
-        return "science_research"
+    # Pre-health signals (when the major itself says "pre-")
+    if any(k in m for k in ("pre-med", "pre-medic", "premedic", "pre-dent", "pre-pharm", "pre-vet", "pre-physician", "pre-physical therapy", "pre-occupational", "pre-optometry", "pre-pa", "pre-ot", "pre-pt")):
+        return "pre_health"
+    if any(k in m for k in ("biomedical", "biochemistry", "biomedical science", "medical science", "pharmaceutical")):
+        return "pre_health"
 
-    # Social sciences
-    if any(k in m for k in ("psychology", "sociology", "political science", "criminology", "international studies", "government", "social work", "anthropology", "history")):
-        return "social_sciences"
+    # Pre-law
+    if any(k in m for k in ("pre-law", "prelaw", "legal studies", "paralegal", "law and society", "law, justice", "jurisprudence")):
+        return "pre_law"
     if "philosophy" in m:
         return "pre_law"  # philosophy majors most commonly target law
 
+    # Nursing & allied health
+    if any(k in m for k in ("nursing", "bsn", "allied health", "health science", "public health", "exercise science", "kinesiology", "human performance", "athletic training", "dietetics", "nutrition", "physical therapy", "occupational therapy", "speech pathology", "audiology", "respiratory therapy", "radiologic", "medical laboratory", "dental hygiene", "sports medicine", "health administration", "healthcare")):
+        return "health_nursing_allied"
+
+    # Science research (bio, chem, physics, engineering, earth/env, agriculture)
+    if any(k in m for k in ("biology", "chemistry", "physics", "astronomy", "astrophysics", "geology", "geoscience", "earth science", "environmental", "sustainability", "marine science", "marine biology", "oceanography", "meteorology", "atmospheric", "forensic science", "neuroscience", "cognitive science", "microbiology", "molecular biology", "cell biology", "genetics", "ecology", "botany", "zoology", "food science", "agriculture", "agronomy", "horticulture", "animal science", "plant science", "wildlife", "forestry", "fisheries", "natural resources", "conservation")):
+        return "science_research"
+    if any(k in m for k in ("mechanical engineering", "civil engineering", "chemical engineering", "aerospace", "aeronautical", "industrial engineering", "materials", "nuclear engineering", "petroleum", "structural engineering", "architectural engineering", "agricultural engineering", "biomedical engineering", "systems engineering", "manufacturing engineering", "mining engineering")):
+        return "science_research"
+
+    # Social sciences
+    if any(k in m for k in ("psychology", "sociology", "anthropology", "archaeology", "political science", "government", "international relations", "international studies", "international affairs", "global studies", "public policy", "public administration", "public affairs", "urban studies", "urban planning", "criminology", "criminal justice", "criminal investigation", "law enforcement", "social work", "human services", "human development", "family studies", "child development", "geography", "women's studies", "gender studies", "ethnic studies", "african american studies", "black studies", "latin american", "asian studies", "american studies", "native american studies", "middle eastern studies", "peace studies", "conflict resolution", "leadership studies")):
+        return "social_sciences"
+    if "history" in m:
+        return "humanities_communications"  # history is humanities, not social sci (CIP convention)
+
     # Humanities / communications
-    if any(k in m for k in ("english", "writing", "journalism", "communication", "liberal arts", "liberal studies", "professional and technical writing")):
+    if any(k in m for k in ("english", "literature", "comparative literature", "writing", "rhetoric", "linguistics", "classics", "classical studies", "theology", "religious studies", "biblical studies", "divinity", "ministry", "liberal arts", "liberal studies", "general studies", "interdisciplinary", "humanities")):
+        return "humanities_communications"
+    if any(k in m for k in ("spanish", "french", "german", "italian", "portuguese", "russian", "chinese", "mandarin", "japanese", "korean", "arabic", "hebrew", "latin", "greek", "modern languages", "foreign languages", "romance languages", "east asian languages")):
+        return "humanities_communications"
+    if any(k in m for k in ("communication", "journalism", "broadcasting", "broadcast", "mass communication", "media studies", "film studies", "television studies", "cinema studies", "media production", "rhetoric")):
+        return "humanities_communications"
+    if "education" in m and not any(k in m for k in ("music education", "art education")):
         return "humanities_communications"
 
-    # Arts / design
-    if any(k in m for k in ("art", "animation", "design", "graphic", "film", "visual", "music", "theatre", "theater", "dance", "cinema", "digital media", "interactive media", "new media", "musical")):
+    # Arts & design
+    if any(k in m for k in ("graphic design", "visual communication design", "industrial design", "interior design", "fashion design", "apparel design", "product design", "ux design", "ui design", "user experience design", "interaction design", "photography", "animation", "digital animation", "digital media", "new media", "interactive media", "digital arts", "studio art", "fine arts", "visual arts", "drawing", "painting", "sculpture", "printmaking", "ceramics", "music performance", "music composition", "music theory", "musicology", "jazz studies", "music production", "audio engineering", "sound design", "vocal performance", "instrumental", "theater", "theatre", "drama", "acting", "musical theatre", "dance", "ballet", "choreography", "museum studies", "arts administration", "arts management", "architecture", "landscape architecture", "film production", "film and television", "cinematography")):
+        return "arts_design"
+    if any(k in m for k in ("music", "art ", "art education", "music education", "design", "digital media", "new media")):
+        return "arts_design"
+    if m.strip() == "art":
         return "arts_design"
 
-    # Sport
-    if any(k in m for k in ("sport", "recreation", "exercise science and sport")):
+    # Sport management & recreation
+    if any(k in m for k in ("sport management", "sports management", "sports administration", "sports marketing", "sport business", "recreation", "leisure studies", "parks and recreation", "outdoor recreation")):
         return "sport_management"
 
-    # Education
-    if "education" in m:
-        return "humanities_communications"
+    # Aviation / military / emergency
+    if any(k in m for k in ("aviation", "aeronautics", "pilot")):
+        return "science_research"
+    if any(k in m for k in ("military science", "rotc", "national security", "homeland security", "emergency management", "fire science")):
+        return "social_sciences"
 
-    # Unknown — return None (caller handles fallback)
+    # Culinary / hospitality (fallbacks)
+    if any(k in m for k in ("culinary", "baking and pastry")):
+        return "arts_design"
+
+    # Unknown — caller falls back to humanities_communications via select_cohorts
     return None
 
 
