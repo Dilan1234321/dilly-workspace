@@ -474,6 +474,7 @@ export default function JobsScreen() {
   const [filtered, setFiltered] = useState(false);
   const [interestsUsed, setInterestsUsed] = useState<string[]>([]);
   const [studentScores, setStudentScores] = useState<StudentScores | null>(null);
+  const [rubricAnalysis, setRubricAnalysis] = useState<any>(null);
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [needsSetup, setNeedsSetup] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -496,6 +497,9 @@ export default function JobsScreen() {
         const audit = auditRes?.audit;
         if (audit?.final_score) {
           setStudentScores({ score: audit.final_score, smart: audit.scores?.smart ?? 0, grit: audit.scores?.grit ?? 0, build: audit.scores?.build ?? 0 });
+        }
+        if (audit?.rubric_analysis) {
+          setRubricAnalysis(audit.rubric_analysis);
         }
       } catch {}
       finally { setProfileLoaded(true); }
@@ -615,6 +619,14 @@ export default function JobsScreen() {
     fetchListings();
   }
 
+  const primaryCohortId = rubricAnalysis?.primary_cohort_id || '';
+  const isPreHealth = primaryCohortId === 'pre_health';
+  const isPreLaw = primaryCohortId === 'pre_law';
+  const isAdmissionsCohort = isPreHealth || isPreLaw;
+  const pageTitle = isAdmissionsCohort ? 'Opportunities' : 'Internships';
+  const itemNoun = isAdmissionsCohort ? 'opportunit' : 'internship';
+  const itemPlural = (n: number) => isAdmissionsCohort ? (n === 1 ? 'opportunity' : 'opportunities') : (n === 1 ? 'internship' : 'internships');
+
   return (
     <View style={[js.container, { paddingTop: insets.top }]}>
 
@@ -622,10 +634,10 @@ export default function JobsScreen() {
       <View style={js.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
-              <Text style={js.headerTitle}>Internships</Text>
+              <Text style={js.headerTitle}>{pageTitle}</Text>
               {!needsSetup && (
                 <Text style={js.headerSub}>
-                  {total} {filtered ? 'relevant' : ''} internship{total !== 1 ? 's' : ''}
+                  {total} {filtered ? 'relevant ' : ''}{itemPlural(total)}
                   {filtered && interestsUsed.length > 0 ? ` for ${interestsUsed.slice(0, 2).join(', ')}${interestsUsed.length > 2 ? '...' : ''}` : ''}
                 </Text>
               )}
@@ -751,10 +763,27 @@ export default function JobsScreen() {
               <FadeInView delay={0}>
                 <View style={js.emptyWrap}>
                   <Ionicons name="briefcase-outline" size={40} color={colors.t3 + '30'} />
-                  <Text style={js.emptyTitle}>{filtered ? 'No relevant jobs' : 'No listings found'}</Text>
+                  <Text style={js.emptyTitle}>{filtered ? `No relevant ${itemPlural(2)}` : `No ${itemPlural(2)} found`}</Text>
                   <Text style={js.emptyText}>
                     {filtered ? 'Try adding more interests in your profile, or tap "All jobs" to see everything.' : search ? `No results for "${search}".` : 'Pull to refresh.'}
                   </Text>
+                  {Array.isArray(rubricAnalysis?.fastest_path_moves) && rubricAnalysis.fastest_path_moves.length > 0 && (
+                    <View style={{ marginTop: 18, width: '100%', paddingHorizontal: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD, letterSpacing: 0.5, marginBottom: 8 }}>
+                        {isAdmissionsCohort ? 'THIS WEEK\'S ACTIONS' : 'YOUR PATH THIS WEEK'}
+                      </Text>
+                      {rubricAnalysis.fastest_path_moves.slice(0, 3).map((m: any, idx: number) => (
+                        <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
+                          <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: GOLD + '15', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD }}>{idx + 1}</Text>
+                          </View>
+                          <Text style={{ flex: 1, fontSize: 12, color: colors.t1, lineHeight: 17 }}>
+                            {typeof m === 'string' ? m : (m.action || m.label || m.title || '')}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                   {filtered && (
                     <AnimatedPressable style={js.showAllInlineBtn} onPress={() => setShowAll(true)} scaleDown={0.97}>
                       <Text style={js.showAllInlineBtnText}>Show all jobs</Text>
@@ -764,7 +793,25 @@ export default function JobsScreen() {
               </FadeInView>
             ) : (
               (() => {
-                const userCohort = ((profile as any).track || (profile as any).cohort || '').toLowerCase();
+                const userCohort = (primaryCohortId || (profile as any).track || (profile as any).cohort || '').toLowerCase();
+                // Top 3 close-to-ready jobs for "Your Path This Week"
+                const pathJobs = [...listings]
+                  .filter((l: any) => l.readiness === 'ready' || l.readiness === 'almost')
+                  .sort((a: any, b: any) => {
+                    const order: Record<string, number> = { ready: 0, almost: 1 };
+                    return (order[a.readiness] ?? 9) - (order[b.readiness] ?? 9);
+                  })
+                  .slice(0, 3);
+                const pathHeader = (
+                  pathJobs.length > 0 ? (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD, letterSpacing: 0.5, marginBottom: 6, marginLeft: 4 }}>
+                        {isAdmissionsCohort ? 'READY TO APPLY' : 'YOUR PATH THIS WEEK'}
+                      </Text>
+                    </View>
+                  ) : null
+                );
+                void pathHeader; // reserved — cards below already highlight readiness
                 // When "For you" mode: filter to listings matching user's cohort (or uncategorized)
                 const visibleListings = showAll || !userCohort
                   ? listings
