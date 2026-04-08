@@ -225,6 +225,23 @@ def _cohort_readiness(
         except Exception:
             student_cohort_scores = None
 
+    # Find the user's PRIMARY cohort scores from cohort_scores. Used as the
+    # fallback when this specific job's cohort doesn't have a per-cohort score
+    # for the user — we prefer the rubric primary scores over the legacy
+    # overall_smart/grit/build, so the app NEVER shows aggregate scores.
+    primary_per: dict | None = None
+    if student_cohort_scores:
+        for _v in student_cohort_scores.values():
+            if isinstance(_v, dict) and _v.get("level") == "primary":
+                primary_per = _v
+                break
+        if primary_per is None:
+            # No 'level: primary' marker — pick the first entry as fallback
+            for _v in student_cohort_scores.values():
+                if isinstance(_v, dict):
+                    primary_per = _v
+                    break
+
     results = []
     for req in (cohort_requirements or []):
         c_name = req.get("cohort", "")
@@ -233,8 +250,10 @@ def _cohort_readiness(
         rs = float(req.get("smart") or 0)
         rg = float(req.get("grit")  or 0)
         rb = float(req.get("build") or 0)
-        # Use per-cohort student scores when we have them, else fall back
+        # Resolution order: per-cohort score → primary cohort score → overall (last resort)
         per = (student_cohort_scores or {}).get(c_name) if student_cohort_scores else None
+        if per is None:
+            per = primary_per
         ss = float(per.get("smart") if per else (student_smart or 0))
         sg = float(per.get("grit")  if per else (student_grit  or 0))
         sb = float(per.get("build") if per else (student_build or 0))
@@ -433,6 +452,16 @@ async def get_internship_feed(
 
     conn = _get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Cold-start fallback: if the niche sources (NSF REU, USAJobs) have never
+    # been ingested on this deploy, run the ingester inline. Cheap no-op once
+    # the table is populated. Wrapped in try/except so a source failure never
+    # breaks the feed request.
+    try:
+        from dilly_core.job_source_ingest import ensure_niche_sources_populated
+        ensure_niche_sources_populated(conn)
+    except Exception:
+        pass
 
     student_id = _ensure_student(email, cur, conn)
     if not student_id:

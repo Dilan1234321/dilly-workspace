@@ -15,6 +15,8 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import ATSDeepScan, { RewriteSuggestion, KeywordCell, ATSScoreV2 } from '../../components/ATSDeepScan';
+import ATSCompareView from '../../components/ATSCompareView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const GOLD   = '#2B3A8E';
@@ -146,7 +148,11 @@ export default function ATSScreen() {
 
   // Universal scan state
   const [scanResults, setScanResults] = useState<any>(null);
+  const [v2Results, setV2Results] = useState<ATSScoreV2 | null>(null);
+  const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
+  const [keywordCells, setKeywordCells] = useState<KeywordCell[]>([]);
   const [hasResume, setHasResume] = useState(false);
+  const [compareVisible, setCompareVisible] = useState(false);
 
   // Company lookup state
   const [companySearch, setCompanySearch] = useState('');
@@ -171,9 +177,84 @@ export default function ATSScreen() {
     })();
   }, []);
 
-  // Run universal scan — calls GET /ats/scan which auto-loads the user's resume
+  // Extract bullet lines from raw resume text for the rewrite engine.
+  // Keeps only lines that start with a bullet character and have real content.
+  function extractBullets(raw: string): string[] {
+    if (!raw) return [];
+    const lines = raw.split(/\r?\n/);
+    const out: string[] = [];
+    const bulletRe = /^[\s]*[•·\-–—▪►➤*∙][\s]+(.{12,})$/;
+    for (const line of lines) {
+      const m = line.match(bulletRe);
+      if (m && m[1]) {
+        const cleaned = m[1].trim();
+        // Skip obvious non-bullets (headers, dates alone, etc.)
+        if (cleaned.split(/\s+/).length >= 4) {
+          out.push(cleaned);
+        }
+      }
+    }
+    return out.slice(0, 12); // cap to avoid huge POSTs
+  }
+
+  // Map backend keyword-density response to the heatmap cells shape.
+  function mapKeywordCellsFromDensity(density: any): KeywordCell[] {
+    if (!density) return [];
+    const kws = density.keywords || [];
+    const cells: KeywordCell[] = [];
+    for (const k of kws) {
+      const ctx = k.contextual_count || 0;
+      const bare = k.bare_count || 0;
+      const total = ctx + bare;
+      if (total === 0) continue;
+      let placement: KeywordCell['placement'];
+      if (ctx >= 2) placement = 'strong';
+      else if (ctx === 1) placement = 'adequate';
+      else placement = 'weak';
+      cells.push({
+        keyword: k.keyword, count: total, placement,
+        sections: k.sections || [],
+      });
+    }
+    return cells.slice(0, 40);
+  }
+
+  // Map /ats-rewrite response to the RewriteDiff shape, turning string
+  // change descriptions into structured from/to entries when possible.
+  function mapRewritesFromResponse(data: any): RewriteSuggestion[] {
+    const rewrites = data?.rewrites || [];
+    const out: RewriteSuggestion[] = [];
+    for (const r of rewrites) {
+      if (!r?.original || !r?.rewritten) continue;
+      if (r.original.trim() === r.rewritten.trim()) continue;
+      const changesIn: string[] = Array.isArray(r.changes) ? r.changes : [];
+      const changes: RewriteSuggestion['changes'] = [];
+      for (const c of changesIn) {
+        // Try to parse "Replaced 'X' → 'Y'"
+        const m = String(c).match(/['"]([^'"]+)['"][^'"]*['"]([^'"]+)['"]/);
+        if (m) {
+          changes.push({ from: m[1], to: m[2], reason: String(c) });
+        } else {
+          changes.push({ from: '', to: '', reason: String(c) });
+        }
+      }
+      out.push({
+        original: r.original,
+        rewritten: r.rewritten,
+        changes,
+        confidence: r.confidence,
+      });
+    }
+    return out.slice(0, 6);
+  }
+
+  // Run universal scan — calls GET /ats/scan which auto-loads the user's resume.
+  // Then in parallel: fetch raw text → rewrite weak bullets, and run keyword density.
   async function runScan() {
     setLoading(true);
+    setRewriteSuggestions([]);
+    setKeywordCells([]);
+    setV2Results(null);
     try {
       const res = await dilly.fetch('/ats/scan');
       const data = await res.json();
@@ -191,6 +272,41 @@ export default function ATSScreen() {
 
       setHasResume(true);
       setScanResults(data);
+      if (data?.v2) setV2Results(data.v2 as ATSScoreV2);
+
+      // Kick off follow-on analyses in parallel — don't block the main score render.
+      (async () => {
+        try {
+          const textRes = await dilly.fetch('/resume-text');
+          const textJson = await textRes.json().catch(() => ({}));
+          const rawText = textJson?.resume_text || '';
+          if (!rawText || rawText.length < 100) return;
+
+          // Keyword density (no JD — scan tab uses inferred keywords)
+          dilly.fetch('/ats-keyword-density', {
+            method: 'POST',
+            body: JSON.stringify({ raw_text: rawText }),
+          })
+            .then(r => r.json())
+            .then(density => setKeywordCells(mapKeywordCellsFromDensity(density)))
+            .catch(() => {});
+
+          // Bullet rewrites (pull top bullets from raw text, feed to /ats-rewrite)
+          const bullets = extractBullets(rawText);
+          if (bullets.length > 0) {
+            const issues = (data.v2?.issues || []).map((i: any) => ({
+              title: i.title, fix: i.fix, category: i.category, severity: i.severity,
+            }));
+            dilly.fetch('/ats-rewrite', {
+              method: 'POST',
+              body: JSON.stringify({ bullets, issues, use_llm: false }),
+            })
+              .then(r => r.json())
+              .then(rw => setRewriteSuggestions(mapRewritesFromResponse(rw)))
+              .catch(() => {});
+          }
+        } catch {}
+      })();
     } catch (e: any) {
       Alert.alert('Scan failed', e.message || 'Could not run ATS scan.');
     }
@@ -225,7 +341,8 @@ export default function ATSScreen() {
     finally { setCompanyLoading(false); }
   }
 
-  // Keyword match
+  // Keyword match — posts both /ats-check (legacy shape for existing UI) and
+  // /ats-keyword-density with the JD so we can render the heatmap + per-JD placement.
   async function runKeywordMatch() {
     if (!jdText.trim() || jdText.length < 50) {
       Alert.alert('Paste a job description', 'The description needs to be at least 50 characters.');
@@ -233,12 +350,42 @@ export default function ATSScreen() {
     }
     setMatchLoading(true);
     try {
-      const res = await dilly.fetch('/ats-check', {
-        method: 'POST',
-        body: JSON.stringify({ job_description: jdText }),
-      });
-      const data = await res.json();
-      setKeywordResults(data);
+      const [checkRes, textRes] = await Promise.all([
+        dilly.fetch('/ats-check', {
+          method: 'POST',
+          body: JSON.stringify({ job_description: jdText }),
+        }),
+        dilly.fetch('/resume-text'),
+      ]);
+      const checkData = await checkRes.json();
+      setKeywordResults(checkData);
+
+      // Run density + JD match for the heatmap
+      const textJson = await textRes.json().catch(() => ({}));
+      const rawText = textJson?.resume_text || '';
+      if (rawText && rawText.length >= 100) {
+        const densityRes = await dilly.fetch('/ats-keyword-density', {
+          method: 'POST',
+          body: JSON.stringify({ raw_text: rawText, job_description: jdText }),
+        });
+        const density = await densityRes.json();
+
+        // For JD mode, derive cells from jd_match.requirements (placement is explicit)
+        const cells: KeywordCell[] = [];
+        const jdMatch = density?.jd_match;
+        if (jdMatch?.requirements) {
+          for (const req of jdMatch.requirements) {
+            const placement: KeywordCell['placement'] =
+              req.placement === 'strong' ? 'strong' :
+              req.placement === 'adequate' ? 'adequate' :
+              req.placement === 'missing' ? 'missing' : 'weak';
+            cells.push({
+              keyword: req.keyword, count: req.count || 0, placement,
+            });
+          }
+        }
+        setKeywordCells(cells);
+      }
     } catch {
       Alert.alert('Analysis failed', 'Could not analyze keywords.');
     }
@@ -383,34 +530,63 @@ export default function ATSScreen() {
                   )}
                 </AnimatedPressable>
               ) : (
-                <AnimatedPressable style={ss.rescanBtn} onPress={() => { setScanResults(null); runScan(); }} scaleDown={0.97}>
-                  <Ionicons name="refresh" size={14} color={GOLD} />
-                  <Text style={ss.rescanBtnText}>Re-scan</Text>
-                </AnimatedPressable>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  <AnimatedPressable
+                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0 }]}
+                    onPress={() => { setScanResults(null); setV2Results(null); runScan(); }}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="refresh" size={14} color={GOLD} />
+                    <Text style={ss.rescanBtnText}>Re-scan</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0 }]}
+                    onPress={() => setCompareVisible(true)}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="git-compare" size={14} color={GOLD} />
+                    <Text style={ss.rescanBtnText}>Compare versions</Text>
+                  </AnimatedPressable>
+                </View>
               )}
             </FadeInView>
 
             {scanResults && (
               <>
-                {/* Score cards */}
-                <FadeInView delay={100}>
-                  <View style={ss.gridWrap}>
-                    {buildScoreCards().map(({ system, score, issues }, i) => (
-                      <ATSScoreCard
-                        key={system.key}
-                        system={system}
-                        score={score}
-                        issues={issues}
-                        onFix={fixWithDilly}
-                      />
-                    ))}
-                  </View>
-                </FadeInView>
-
-                {/* Parse preview */}
-                <FadeInView delay={200}>
-                  <ParsePreview fields={buildParseFields()} />
-                </FadeInView>
+                {/* v2 deep scan — hero, red flags, global fixes, per-vendor breakdown,
+                    rewrites, and keyword heatmap. Falls back to legacy score cards
+                    when v2 isn't present (e.g. backend rolled back). */}
+                {v2Results ? (
+                  <FadeInView delay={100}>
+                    <ATSDeepScan
+                      v2={v2Results}
+                      rewrites={rewriteSuggestions}
+                      keywords={keywordCells}
+                      onFixPress={(vendorName, iss) => fixWithDilly(vendorName, iss.title, undefined)}
+                    />
+                  </FadeInView>
+                ) : (
+                  <>
+                    {/* Legacy fallback */}
+                    <FadeInView delay={100}>
+                      <View style={ss.gridWrap}>
+                        {buildScoreCards().map(({ system, score, issues }) => (
+                          <ATSScoreCard
+                            key={system.key}
+                            system={system}
+                            score={score}
+                            issues={issues}
+                            onFix={fixWithDilly}
+                            onFixInEditor={openEditorWithFix}
+                          />
+                        ))}
+                      </View>
+                    </FadeInView>
+                    <FadeInView delay={200}>
+                      <ParsePreview fields={buildParseFields()} />
+                    </FadeInView>
+                  </>
+                )}
 
                 {/* Overall advice */}
                 <FadeInView delay={300}>
@@ -490,6 +666,17 @@ export default function ATSScreen() {
                         );
                       })()}
                     </View>
+                    {companyResult.source === 'live' && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                        <Ionicons name="flash" size={10} color={GREEN} />
+                        <Text style={{ fontSize: 10, color: GREEN, fontWeight: '600' }}>
+                          Verified live
+                          {companyResult.live_meta?.job_count
+                            ? ` · ${companyResult.live_meta.job_count} open jobs`
+                            : ''}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </FadeInView>
 
@@ -503,127 +690,50 @@ export default function ATSScreen() {
                   </FadeInView>
                 )}
 
-                {/* Deep breakdown */}
-                {companyScanData && (() => {
+                {/* Deep breakdown — pinned to this company's ATS vendor */}
+                {companyScanData && companyScanData.v2 && (
+                  <FadeInView delay={140}>
+                    <ATSDeepScan
+                      v2={companyScanData.v2 as ATSScoreV2}
+                      pinnedVendorKey={companyResult.vendor_key}
+                      pinnedCompanyName={companyResult.company || companySearch}
+                      onFixPress={(vendorName, iss) => {
+                        const p = profile as any;
+                        const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
+                        openDillyOverlay({
+                          name: firstName,
+                          cohort: p.track || 'General',
+                          score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+                          referenceCompany: companyResult.company || companySearch,
+                          isPaid: true,
+                          initialMessage: `I'm applying to ${companyResult.company || companySearch}, which uses ${vendorName}. The specific issue: "${iss.title}". Fixing it will lift my ${vendorName} score by about +${Math.round(iss.lift)} points. What exactly should I change in my resume? Then ask me if I want to go to my Resume Editor to apply these fixes.`,
+                        });
+                      }}
+                    />
+                  </FadeInView>
+                )}
+
+                {/* Legacy fallback when v2 data isn't present */}
+                {companyScanData && !companyScanData.v2 && (() => {
                   const vendorKey = companyResult.vendor_key;
                   const vendorData = companyScanData.vendors?.[vendorKey];
                   if (!vendorData) return null;
                   const score = vendorData.score ?? 0;
-                  const issues = vendorData.issues || [];
-                  const passed = vendorData.passed || [];
-                  const parsed = companyScanData.parsed_fields || {};
                   const color = scoreColor(score);
-                  const sys = ATS_SYSTEMS.find(s => s.key === vendorKey);
-
                   return (
-                    <>
-                      {/* Score bar */}
-                      <FadeInView delay={140}>
-                        <View style={ss.companyBreakdownCard}>
-                          <Text style={ss.breakdownTitle}>{companyResult.vendor_name} COMPATIBILITY</Text>
-                          <View style={ss.scoreBar}>
-                            <View style={[ss.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
-                          </View>
-                          <Text style={[ss.breakdownScore, { color }]}>
-                            {score >= 85 ? 'Your resume parses well on ' + companyResult.vendor_name
-                              : score >= 70 ? 'Some issues detected — fixable'
-                              : 'Significant issues — fix before applying'}
-                          </Text>
+                    <FadeInView delay={140}>
+                      <View style={ss.companyBreakdownCard}>
+                        <Text style={ss.breakdownTitle}>{companyResult.vendor_name} COMPATIBILITY</Text>
+                        <View style={ss.scoreBar}>
+                          <View style={[ss.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
                         </View>
-                      </FadeInView>
-
-                      {/* What the ATS sees */}
-                      <FadeInView delay={180}>
-                        <View style={ss.parseCard}>
-                          <Text style={ss.parseTitleText}>WHAT {companyResult.vendor_name.toUpperCase()} SEES</Text>
-                          {[
-                            { label: 'Name', value: parsed.name || profile.name || '', ok: !!(parsed.name || profile.name) },
-                            { label: 'Email', value: parsed.email || '', ok: !!parsed.email },
-                            { label: 'Phone', value: parsed.phone || '', ok: !!parsed.phone },
-                            { label: 'Education', value: parsed.education || '', ok: !!parsed.education },
-                            { label: 'Experience', value: parsed.experience_count ? `${parsed.experience_count} entries` : '', ok: !!parsed.experience_count },
-                            { label: 'Skills', value: parsed.skills_count ? `${parsed.skills_count} skills` : '', ok: !!parsed.skills_count },
-                          ].map((f, i) => (
-                            <View key={i} style={ss.parseRow}>
-                              <Ionicons name={f.ok ? 'checkmark-circle' : 'close-circle'} size={14} color={f.ok ? GREEN : CORAL} />
-                              <Text style={ss.parseLabel}>{f.label}:</Text>
-                              <Text style={[ss.parseValue, !f.ok && { color: CORAL }]} numberOfLines={1}>{f.value || 'Not found'}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      </FadeInView>
-
-                      {/* Issues */}
-                      {issues.length > 0 && (
-                        <FadeInView delay={220}>
-                          <View style={ss.companyBreakdownCard}>
-                            <Text style={[ss.breakdownTitle, { color: CORAL }]}>ISSUES FOR {companyResult.vendor_name.toUpperCase()}</Text>
-                            {issues.map((issue: string, i: number) => (
-                              <View key={i} style={ss.issueRow}>
-                                <Ionicons name="alert-circle" size={13} color={CORAL} />
-                                <Text style={ss.issueText}>{issue}</Text>
-                                <AnimatedPressable style={ss.fixBtn} onPress={() => fixWithDilly(companyResult.vendor_name, issue)} scaleDown={0.95}>
-                                  <Text style={ss.fixBtnText}>Fix</Text>
-                                </AnimatedPressable>
-                              </View>
-                            ))}
-                          </View>
-                        </FadeInView>
-                      )}
-
-                      {/* What passed */}
-                      {passed.length > 0 && (
-                        <FadeInView delay={260}>
-                          <View style={ss.companyBreakdownCard}>
-                            <Text style={[ss.breakdownTitle, { color: GREEN }]}>PASSING</Text>
-                            {passed.map((p: string, i: number) => (
-                              <View key={i} style={ss.allGoodRow}>
-                                <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-                                <Text style={ss.allGoodText}>{p}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </FadeInView>
-                      )}
-
-                      {/* Fix all with Dilly */}
-                      <FadeInView delay={300}>
-                        <AnimatedPressable
-                          style={ss.fixAllBtn}
-                          onPress={() => {
-                            const p = profile as any;
-                            const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
-                            const issueList = issues.join('; ');
-                            openDillyOverlay({
-                              name: firstName,
-                              cohort: p.track || 'General',
-                              score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
-                              referenceCompany: companyResult.company || companySearch,
-                              isPaid: true,
-                              initialMessage: `I'm applying to ${companyResult.company || companySearch}, which uses ${companyResult.vendor_name} (${sys?.strictness || 'unknown'} parsing). My resume scored ${score}% on ${companyResult.vendor_name}. Here are the issues: ${issueList}. What specific formatting and content changes should I make to pass ${companyResult.vendor_name}'s ATS filter?`,
-                            });
-                          }}
-                          scaleDown={0.97}
-                        >
-                          <Ionicons name="chatbubble" size={14} color={GOLD} />
-                          <Text style={ss.fixAllBtnText}>Fix all issues with Dilly</Text>
-                        </AnimatedPressable>
-                      </FadeInView>
-
-                      {/* Advice card */}
-                      <FadeInView delay={340}>
-                        <View style={ss.adviceCard}>
-                          <Ionicons name="bulb" size={14} color={GOLD} />
-                          <Text style={ss.adviceText}>
-                            {companyResult.vendor_key === 'workday' || companyResult.vendor_key === 'taleo'
-                              ? `${companyResult.vendor_name} is strict. Use a single-column layout, standard section headers (Education, Experience, Skills), no tables or text boxes, and save as PDF with selectable text. Contact info must be in the body, not a header.`
-                              : companyResult.vendor_key === 'icims'
-                              ? `${companyResult.vendor_name} needs skills listed individually (not in paragraphs) and standard date formats (Month YYYY). Avoid creative section headers.`
-                              : `${companyResult.vendor_name} is lenient and handles most formats well. Focus on content quality and keyword density rather than formatting.`}
-                          </Text>
-                        </View>
-                      </FadeInView>
-                    </>
+                        <Text style={[ss.breakdownScore, { color }]}>
+                          {score >= 85 ? 'Your resume parses well on ' + companyResult.vendor_name
+                            : score >= 70 ? 'Some issues detected — fixable'
+                            : 'Significant issues — fix before applying'}
+                        </Text>
+                      </View>
+                    </FadeInView>
                   );
                 })()}
               </>
@@ -756,6 +866,12 @@ export default function ATSScreen() {
         )}
 
       </ScrollView>
+
+      {/* Compare Versions modal — fires POST /ats/compare on open */}
+      <ATSCompareView
+        visible={compareVisible}
+        onClose={() => setCompareVisible(false)}
+      />
     </View>
   );
 }
@@ -804,6 +920,8 @@ const ss = StyleSheet.create({
   issueText: { flex: 1, fontSize: 11, color: colors.t2, lineHeight: 16 },
   fixBtn: { backgroundColor: GOLD + '15', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
   fixBtnText: { fontSize: 9, fontWeight: '700', color: GOLD },
+  applyEditorBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: GOLD, borderRadius: 10, paddingVertical: 9, marginTop: 8 },
+  applyEditorBtnText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
   allGoodRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   allGoodText: { fontSize: 12, color: GREEN },
 

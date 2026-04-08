@@ -279,6 +279,28 @@ async def audit_resume_v2(
     industry_target: str | None = Form(None),
 ):
     """Dilly Auditor V2: unlimited audits for all authenticated users."""
+    try:
+        return await _audit_resume_v2_impl(request, file, user_email, application_target, cohort, track, industry_target)
+    except HTTPException:
+        raise
+    except Exception as _exc:
+        import traceback as _tb
+        sys.stderr.write(
+            f"[audit_v2_crash] {type(_exc).__name__}: {str(_exc)[:300]}\n"
+        )
+        _tb.print_exc(file=sys.stderr)
+        raise errors.internal(f"Audit failed: {type(_exc).__name__}: {str(_exc)[:200]}")
+
+
+async def _audit_resume_v2_impl(
+    request: Request,
+    file: UploadFile,
+    user_email: str | None,
+    application_target: str | None,
+    cohort: str | None,
+    track: str | None,
+    industry_target: str | None,
+):
     deps.rate_limit(request, "audit-v2", max_requests=20, window_sec=300)
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()

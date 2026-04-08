@@ -385,11 +385,14 @@ function JobCard({ listing, studentScores, studentProfile, userCohort, onApply, 
 
 // ── Interests Setup Card ──────────────────────────────────────────────────────
 
-function InterestsSetupCard({ profile, onComplete }: { profile: Record<string, any>; onComplete: () => void }) {
+function InterestsSetupCard({ profile, onComplete, primaryCohortName }: { profile: Record<string, any>; onComplete: () => void; primaryCohortName?: string }) {
   // Auto-populate from majors and minors
   const majors: string[] = profile.majors || (profile.major ? [profile.major] : []);
   const minors: string[] = profile.minors || [];
   const autoPopulated = [...majors, ...minors].filter(Boolean);
+  // The primary cohort is already assigned in onboarding — don't show it as
+  // a pickable interest.
+  const excluded = primaryCohortName ? [primaryCohortName] : [];
 
   const existingInterests: string[] = profile.interests || [];
   const [interests, setInterests] = useState<string[]>(
@@ -431,6 +434,7 @@ function InterestsSetupCard({ profile, onComplete }: { profile: Record<string, a
         selected={interests}
         onChange={setInterests}
         autoPopulated={autoPopulated}
+        excluded={excluded}
         maxVisible={15}
       />
 
@@ -492,9 +496,9 @@ export default function JobsScreen() {
         const p = profileRes || {};
         setProfile(p);
 
-        // Check if interests are set
-        const hasInterests = (p.interests && Array.isArray(p.interests) && p.interests.length > 0);
-        setNeedsSetup(!hasInterests);
+        // Show jobs immediately. Interests are auto-derived from majors + cohort
+        // by the backend feed; the explicit setup card was a friction point.
+        setNeedsSetup(false);
 
         const audit = auditRes?.audit;
         const ra = audit?.rubric_analysis;
@@ -672,7 +676,11 @@ export default function JobsScreen() {
       ) : needsSetup ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[js.scroll, { paddingBottom: insets.bottom + 40 }]}>
           <FadeInView delay={100}>
-            <InterestsSetupCard profile={profile} onComplete={handleSetupComplete} />
+            <InterestsSetupCard
+              profile={profile}
+              onComplete={handleSetupComplete}
+              primaryCohortName={rubricAnalysis?.primary_cohort_display_name}
+            />
           </FadeInView>
         </ScrollView>
       ) : (

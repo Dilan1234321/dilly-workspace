@@ -117,9 +117,50 @@ export default function MyDillyProfileScreen() {
   }
 
   const [addCategory, setAddCategory] = useState<string | null>(null);
+  const [editingFact, setEditingFact] = useState<FactItem | null>(null);
 
   function openAddModal(category: string) {
     setAddCategory(category);
+  }
+
+  function openEditModal(fact: FactItem) {
+    setEditingFact(fact);
+  }
+
+  async function saveEdit(label: string, value: string) {
+    if (!editingFact) return;
+    try {
+      const res = await dilly.fetch(`/memory/items/${editingFact.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ label: label.slice(0, 80), value }),
+      });
+      if (res.ok) {
+        const updated = await res.json().catch(() => null);
+        const newRow = updated?.item;
+        // Optimistic local update so the new version shows up immediately
+        // without waiting for a refetch.
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setData(prev => {
+          if (!prev) return prev;
+          const items = prev.items.map(it =>
+            it.id === editingFact.id
+              ? { ...it, label: label.slice(0, 80), value, ...(newRow || {}) }
+              : it
+          );
+          const grouped: Record<string, FactItem[]> = {};
+          for (const item of items) {
+            if (!grouped[item.category]) grouped[item.category] = [];
+            grouped[item.category].push(item);
+          }
+          return { ...prev, items, grouped };
+        });
+      } else {
+        Alert.alert('Save failed', 'Could not update this entry.');
+      }
+    } catch {
+      Alert.alert('Save failed', 'Could not update this entry.');
+    }
+    setEditingFact(null);
   }
 
   async function deleteFact(id: string) {
@@ -336,9 +377,11 @@ export default function MyDillyProfileScreen() {
                   {isOpen && (
                     <View style={s.factsContainer}>
                       {facts.map((fact, i) => (
-                        <View
+                        <TouchableOpacity
                           key={fact.id}
                           style={[s.factRow, s.factRowBorder]}
+                          onPress={() => openEditModal(fact)}
+                          activeOpacity={0.7}
                         >
                           <View style={s.factContent}>
                             <Text style={s.factLabel}>{fact.label}</Text>
@@ -349,13 +392,13 @@ export default function MyDillyProfileScreen() {
                             </Text>
                           </View>
                           <TouchableOpacity
-                            onPress={() => deleteFact(fact.id)}
+                            onPress={(e) => { e.stopPropagation(); deleteFact(fact.id); }}
                             hitSlop={12}
                             style={s.factDelete}
                           >
                             <Ionicons name="close" size={14} color={colors.t3} />
                           </TouchableOpacity>
-                        </View>
+                        </TouchableOpacity>
                       ))}
                       {/* Add fact button */}
                       <TouchableOpacity
@@ -399,6 +442,17 @@ export default function MyDillyProfileScreen() {
         )}
       </ScrollView>
 
+      {/* ── Edit Fact Modal ─────────────────────────────────────────── */}
+      <AddFactModal
+        visible={!!editingFact}
+        category={editingFact?.category || ''}
+        mode="edit"
+        initialLabel={editingFact?.label}
+        initialValue={editingFact?.value}
+        onClose={() => setEditingFact(null)}
+        onAdd={(label, value) => saveEdit(label, value)}
+      />
+
       {/* ── Add Fact Modal ──────────────────────────────────────────── */}
       <AddFactModal
         visible={!!addCategory}
@@ -428,17 +482,29 @@ export default function MyDillyProfileScreen() {
 
 // ── Add Fact Modal ──────────────────────────────────────────────────────────
 
-function AddFactModal({ visible, category, onClose, onAdd }: {
+function AddFactModal({ visible, category, onClose, onAdd, initialLabel, initialValue, mode }: {
   visible: boolean;
   category: string;
   onClose: () => void;
   onAdd: (label: string, value: string) => void;
+  initialLabel?: string;
+  initialValue?: string;
+  mode?: 'add' | 'edit';
 }) {
   const insets = useSafeAreaInsets();
-  const [label, setLabel] = useState('');
-  const [value, setValue] = useState('');
+  const [label, setLabel] = useState(initialLabel || '');
+  const [value, setValue] = useState(initialValue || '');
+
+  // Re-sync when the modal opens with new initial values (edit different fact)
+  useEffect(() => {
+    if (visible) {
+      setLabel(initialLabel || '');
+      setValue(initialValue || '');
+    }
+  }, [visible, initialLabel, initialValue]);
 
   const cfg = CATEGORY_CONFIG[category] || { icon: 'ellipse', label: category, color: colors.t2 };
+  const isEdit = mode === 'edit';
 
   function handleAdd() {
     if (!label.trim()) { Alert.alert('Title required'); return; }
@@ -463,7 +529,7 @@ function AddFactModal({ visible, category, onClose, onAdd }: {
                 <View style={[s.categoryIcon, { backgroundColor: cfg.color + '18' }]}>
                   <Ionicons name={cfg.icon as any} size={14} color={cfg.color} />
                 </View>
-                <Text style={s.modalTitle}>Add to {cfg.label}</Text>
+                <Text style={s.modalTitle}>{isEdit ? `Edit ${cfg.label}` : `Add to ${cfg.label}`}</Text>
               </View>
               <TouchableOpacity onPress={handleClose} hitSlop={12}>
                 <Ionicons name="close" size={20} color={colors.t2} />
@@ -492,8 +558,8 @@ function AddFactModal({ visible, category, onClose, onAdd }: {
               onPress={handleAdd}
               activeOpacity={0.85}
             >
-              <Ionicons name="add-circle" size={16} color="#FFFFFF" />
-              <Text style={s.modalBtnText}>Add to Profile</Text>
+              <Ionicons name={isEdit ? 'checkmark-circle' : 'add-circle'} size={16} color="#FFFFFF" />
+              <Text style={s.modalBtnText}>{isEdit ? 'Save changes' : 'Add to Profile'}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
