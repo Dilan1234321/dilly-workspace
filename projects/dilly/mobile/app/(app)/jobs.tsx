@@ -496,9 +496,9 @@ export default function JobsScreen() {
         const p = profileRes || {};
         setProfile(p);
 
-        // Check if interests are set
-        const hasInterests = (p.interests && Array.isArray(p.interests) && p.interests.length > 0);
-        setNeedsSetup(!hasInterests);
+        // Show jobs immediately. Interests are auto-derived from majors + cohort
+        // by the backend feed; the explicit setup card was a friction point.
+        setNeedsSetup(false);
 
         const audit = auditRes?.audit;
         const ra = audit?.rubric_analysis;

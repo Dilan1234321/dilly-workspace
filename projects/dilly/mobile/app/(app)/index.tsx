@@ -236,7 +236,9 @@ export default function HomeScreen() {
           setAuditHistory(audits);
         }).catch(() => {});
 
-        dilly.get('/v2/internships/feed?readiness=ready&limit=3').then(data => {
+        // Always show top 3 best-matching jobs, regardless of readiness — sort=rank
+        // gives the highest-overlap jobs first so the section is never empty.
+        dilly.get('/v2/internships/feed?sort=rank&limit=3').then(data => {
           setTopJobs((data?.listings || []).slice(0, 3));
         }).catch(() => {});
       } catch {
