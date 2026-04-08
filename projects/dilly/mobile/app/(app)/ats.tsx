@@ -15,6 +15,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import ATSDeepScan, { RewriteSuggestion, KeywordCell, ATSScoreV2 } from '../../components/ATSDeepScan';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const GOLD   = '#2B3A8E';
@@ -146,6 +147,9 @@ export default function ATSScreen() {
 
   // Universal scan state
   const [scanResults, setScanResults] = useState<any>(null);
+  const [v2Results, setV2Results] = useState<ATSScoreV2 | null>(null);
+  const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
+  const [keywordCells, setKeywordCells] = useState<KeywordCell[]>([]);
   const [hasResume, setHasResume] = useState(false);
 
   // Company lookup state
@@ -171,9 +175,84 @@ export default function ATSScreen() {
     })();
   }, []);
 
-  // Run universal scan — calls GET /ats/scan which auto-loads the user's resume
+  // Extract bullet lines from raw resume text for the rewrite engine.
+  // Keeps only lines that start with a bullet character and have real content.
+  function extractBullets(raw: string): string[] {
+    if (!raw) return [];
+    const lines = raw.split(/\r?\n/);
+    const out: string[] = [];
+    const bulletRe = /^[\s]*[•·\-–—▪►➤*∙][\s]+(.{12,})$/;
+    for (const line of lines) {
+      const m = line.match(bulletRe);
+      if (m && m[1]) {
+        const cleaned = m[1].trim();
+        // Skip obvious non-bullets (headers, dates alone, etc.)
+        if (cleaned.split(/\s+/).length >= 4) {
+          out.push(cleaned);
+        }
+      }
+    }
+    return out.slice(0, 12); // cap to avoid huge POSTs
+  }
+
+  // Map backend keyword-density response to the heatmap cells shape.
+  function mapKeywordCellsFromDensity(density: any): KeywordCell[] {
+    if (!density) return [];
+    const kws = density.keywords || [];
+    const cells: KeywordCell[] = [];
+    for (const k of kws) {
+      const ctx = k.contextual_count || 0;
+      const bare = k.bare_count || 0;
+      const total = ctx + bare;
+      if (total === 0) continue;
+      let placement: KeywordCell['placement'];
+      if (ctx >= 2) placement = 'strong';
+      else if (ctx === 1) placement = 'adequate';
+      else placement = 'weak';
+      cells.push({
+        keyword: k.keyword, count: total, placement,
+        sections: k.sections || [],
+      });
+    }
+    return cells.slice(0, 40);
+  }
+
+  // Map /ats-rewrite response to the RewriteDiff shape, turning string
+  // change descriptions into structured from/to entries when possible.
+  function mapRewritesFromResponse(data: any): RewriteSuggestion[] {
+    const rewrites = data?.rewrites || [];
+    const out: RewriteSuggestion[] = [];
+    for (const r of rewrites) {
+      if (!r?.original || !r?.rewritten) continue;
+      if (r.original.trim() === r.rewritten.trim()) continue;
+      const changesIn: string[] = Array.isArray(r.changes) ? r.changes : [];
+      const changes: RewriteSuggestion['changes'] = [];
+      for (const c of changesIn) {
+        // Try to parse "Replaced 'X' → 'Y'"
+        const m = String(c).match(/['"]([^'"]+)['"][^'"]*['"]([^'"]+)['"]/);
+        if (m) {
+          changes.push({ from: m[1], to: m[2], reason: String(c) });
+        } else {
+          changes.push({ from: '', to: '', reason: String(c) });
+        }
+      }
+      out.push({
+        original: r.original,
+        rewritten: r.rewritten,
+        changes,
+        confidence: r.confidence,
+      });
+    }
+    return out.slice(0, 6);
+  }
+
+  // Run universal scan — calls GET /ats/scan which auto-loads the user's resume.
+  // Then in parallel: fetch raw text → rewrite weak bullets, and run keyword density.
   async function runScan() {
     setLoading(true);
+    setRewriteSuggestions([]);
+    setKeywordCells([]);
+    setV2Results(null);
     try {
       const res = await dilly.fetch('/ats/scan');
       const data = await res.json();
@@ -191,6 +270,41 @@ export default function ATSScreen() {
 
       setHasResume(true);
       setScanResults(data);
+      if (data?.v2) setV2Results(data.v2 as ATSScoreV2);
+
+      // Kick off follow-on analyses in parallel — don't block the main score render.
+      (async () => {
+        try {
+          const textRes = await dilly.fetch('/resume-text');
+          const textJson = await textRes.json().catch(() => ({}));
+          const rawText = textJson?.resume_text || '';
+          if (!rawText || rawText.length < 100) return;
+
+          // Keyword density (no JD — scan tab uses inferred keywords)
+          dilly.fetch('/ats-keyword-density', {
+            method: 'POST',
+            body: JSON.stringify({ raw_text: rawText }),
+          })
+            .then(r => r.json())
+            .then(density => setKeywordCells(mapKeywordCellsFromDensity(density)))
+            .catch(() => {});
+
+          // Bullet rewrites (pull top bullets from raw text, feed to /ats-rewrite)
+          const bullets = extractBullets(rawText);
+          if (bullets.length > 0) {
+            const issues = (data.v2?.issues || []).map((i: any) => ({
+              title: i.title, fix: i.fix, category: i.category, severity: i.severity,
+            }));
+            dilly.fetch('/ats-rewrite', {
+              method: 'POST',
+              body: JSON.stringify({ bullets, issues, use_llm: false }),
+            })
+              .then(r => r.json())
+              .then(rw => setRewriteSuggestions(mapRewritesFromResponse(rw)))
+              .catch(() => {});
+          }
+        } catch {}
+      })();
     } catch (e: any) {
       Alert.alert('Scan failed', e.message || 'Could not run ATS scan.');
     }
@@ -225,7 +339,8 @@ export default function ATSScreen() {
     finally { setCompanyLoading(false); }
   }
 
-  // Keyword match
+  // Keyword match — posts both /ats-check (legacy shape for existing UI) and
+  // /ats-keyword-density with the JD so we can render the heatmap + per-JD placement.
   async function runKeywordMatch() {
     if (!jdText.trim() || jdText.length < 50) {
       Alert.alert('Paste a job description', 'The description needs to be at least 50 characters.');
@@ -233,12 +348,42 @@ export default function ATSScreen() {
     }
     setMatchLoading(true);
     try {
-      const res = await dilly.fetch('/ats-check', {
-        method: 'POST',
-        body: JSON.stringify({ job_description: jdText }),
-      });
-      const data = await res.json();
-      setKeywordResults(data);
+      const [checkRes, textRes] = await Promise.all([
+        dilly.fetch('/ats-check', {
+          method: 'POST',
+          body: JSON.stringify({ job_description: jdText }),
+        }),
+        dilly.fetch('/resume-text'),
+      ]);
+      const checkData = await checkRes.json();
+      setKeywordResults(checkData);
+
+      // Run density + JD match for the heatmap
+      const textJson = await textRes.json().catch(() => ({}));
+      const rawText = textJson?.resume_text || '';
+      if (rawText && rawText.length >= 100) {
+        const densityRes = await dilly.fetch('/ats-keyword-density', {
+          method: 'POST',
+          body: JSON.stringify({ raw_text: rawText, job_description: jdText }),
+        });
+        const density = await densityRes.json();
+
+        // For JD mode, derive cells from jd_match.requirements (placement is explicit)
+        const cells: KeywordCell[] = [];
+        const jdMatch = density?.jd_match;
+        if (jdMatch?.requirements) {
+          for (const req of jdMatch.requirements) {
+            const placement: KeywordCell['placement'] =
+              req.placement === 'strong' ? 'strong' :
+              req.placement === 'adequate' ? 'adequate' :
+              req.placement === 'missing' ? 'missing' : 'weak';
+            cells.push({
+              keyword: req.keyword, count: req.count || 0, placement,
+            });
+          }
+        }
+        setKeywordCells(cells);
+      }
     } catch {
       Alert.alert('Analysis failed', 'Could not analyze keywords.');
     }
@@ -392,25 +537,40 @@ export default function ATSScreen() {
 
             {scanResults && (
               <>
-                {/* Score cards */}
-                <FadeInView delay={100}>
-                  <View style={ss.gridWrap}>
-                    {buildScoreCards().map(({ system, score, issues }, i) => (
-                      <ATSScoreCard
-                        key={system.key}
-                        system={system}
-                        score={score}
-                        issues={issues}
-                        onFix={fixWithDilly}
-                      />
-                    ))}
-                  </View>
-                </FadeInView>
-
-                {/* Parse preview */}
-                <FadeInView delay={200}>
-                  <ParsePreview fields={buildParseFields()} />
-                </FadeInView>
+                {/* v2 deep scan — hero, red flags, global fixes, per-vendor breakdown,
+                    rewrites, and keyword heatmap. Falls back to legacy score cards
+                    when v2 isn't present (e.g. backend rolled back). */}
+                {v2Results ? (
+                  <FadeInView delay={100}>
+                    <ATSDeepScan
+                      v2={v2Results}
+                      rewrites={rewriteSuggestions}
+                      keywords={keywordCells}
+                      onFixPress={(vendorName, iss) => fixWithDilly(vendorName, iss.title, undefined)}
+                    />
+                  </FadeInView>
+                ) : (
+                  <>
+                    {/* Legacy fallback */}
+                    <FadeInView delay={100}>
+                      <View style={ss.gridWrap}>
+                        {buildScoreCards().map(({ system, score, issues }) => (
+                          <ATSScoreCard
+                            key={system.key}
+                            system={system}
+                            score={score}
+                            issues={issues}
+                            onFix={fixWithDilly}
+                            onFixInEditor={openEditorWithFix}
+                          />
+                        ))}
+                      </View>
+                    </FadeInView>
+                    <FadeInView delay={200}>
+                      <ParsePreview fields={buildParseFields()} />
+                    </FadeInView>
+                  </>
+                )}
 
                 {/* Overall advice */}
                 <FadeInView delay={300}>
@@ -804,6 +964,8 @@ const ss = StyleSheet.create({
   issueText: { flex: 1, fontSize: 11, color: colors.t2, lineHeight: 16 },
   fixBtn: { backgroundColor: GOLD + '15', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
   fixBtnText: { fontSize: 9, fontWeight: '700', color: GOLD },
+  applyEditorBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: GOLD, borderRadius: 10, paddingVertical: 9, marginTop: 8 },
+  applyEditorBtnText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
   allGoodRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   allGoodText: { fontSize: 12, color: GREEN },
 

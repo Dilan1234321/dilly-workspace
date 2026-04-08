@@ -316,9 +316,127 @@ async def gap_analysis(request: Request, body: dict = Body(...)):
 
 # ── New standalone ATS scan (no dilly_core dependency) ─────────────────────
 
+def _run_v2_scorer(raw_text: str, jd_text: str | None = None,
+                    file_extension: str | None = None,
+                    file_path: str | None = None) -> dict | None:
+    """
+    Build a signal dict from the available analyzers and run the v2 scorer.
+    Returns the v2 dict (or None if any piece fails) — callers merge it into
+    the legacy response under a 'v2' key.
+    """
+    try:
+        from dilly_core.resume_parser import parse_resume
+        from dilly_core.ats_analysis import run_ats_analysis
+        from dilly_core.ats_score_v2 import (
+            score_from_signals, signals_from_ats_analysis,
+        )
+    except Exception:
+        return None
+
+    try:
+        parsed = parse_resume(raw_text)
+        analysis = run_ats_analysis(
+            raw_text=raw_text, parsed=parsed, structured_text="",
+            page_count=None, track=None,
+        )
+
+        # Optional keyword-match layer if JD text was provided
+        kw_match = None
+        kw_conf = None
+        kw_missing: list = []
+        kw_weak: list = []
+        if jd_text and jd_text.strip():
+            try:
+                from dilly_core.resume_parser import get_sections
+                from dilly_core.ats_keywords import run_keyword_analysis
+                sections = get_sections(raw_text)
+                kr = run_keyword_analysis(sections, job_description=jd_text)
+                jd_match = getattr(kr, "jd_match", None)
+                if isinstance(jd_match, dict):
+                    kw_match = float(jd_match.get("match_percentage") or 0)
+                    kw_conf = 0.95  # explicit JD is high-confidence
+                    for req in (jd_match.get("requirements") or []):
+                        if not isinstance(req, dict):
+                            continue
+                        placement = req.get("placement")
+                        kw = req.get("keyword")
+                        if placement == "missing" and req.get("category") == "must_have":
+                            kw_missing.append(kw)
+                        elif placement == "adequate" or (req.get("found") and not req.get("contextual")):
+                            kw_weak.append(kw)
+            except Exception:
+                pass
+
+        sig = signals_from_ats_analysis(
+            analysis, raw_text=raw_text,
+            keyword_match=kw_match, keyword_confidence=kw_conf,
+            keywords_missing=kw_missing, keywords_weak=kw_weak,
+            file_extension=file_extension,
+        )
+
+        # Layer in file-level inspection signals when we have access to
+        # the source PDF. This catches things pure-text scanning cannot
+        # see: image-only PDFs, embedded fonts, XFA forms, etc.
+        file_inspection: dict | None = None
+        if file_path:
+            try:
+                from dilly_core.ats_file_inspect import inspect_file
+                file_inspection = inspect_file(file_path, file_extension=file_extension)
+                if file_inspection:
+                    if file_inspection.get("is_image_only_pdf"):
+                        sig["is_image_only_pdf"] = True
+                    if file_inspection.get("embedded_fonts_count") is not None:
+                        sig["embedded_fonts_count"] = file_inspection["embedded_fonts_count"]
+                    if file_inspection.get("has_heavy_graphics"):
+                        sig["has_graphics"] = True
+                    if file_inspection.get("file_extension"):
+                        sig["file_extension"] = file_inspection["file_extension"]
+            except Exception:
+                pass
+
+        scored = score_from_signals(sig).to_dict()
+        # Merge PDF inspector red flags into the v2 response so the mobile
+        # UI can render them under File Red Flags.
+        if file_inspection and file_inspection.get("issues"):
+            extra = scored.get("file_redflags") or []
+            seen = {r.get("title") for r in extra}
+            for rf in file_inspection["issues"]:
+                if rf.get("title") in seen:
+                    continue
+                extra.append({
+                    "level": rf.get("level", "high"),
+                    "title": rf.get("title"),
+                    "detail": rf.get("detail"),
+                })
+            scored["file_redflags"] = extra
+        if file_inspection:
+            scored.setdefault("meta", {})
+            scored["meta"]["file_inspection"] = {
+                k: v for k, v in file_inspection.items()
+                if k in ("page_count", "embedded_fonts_count", "image_count",
+                         "avg_chars_per_page", "page_size", "is_image_only_pdf",
+                         "file_extension")
+            }
+        return scored
+    except Exception as e:
+        import sys as _sys, traceback as _tb
+        _sys.stderr.write(f"[ats_v2_scorer_failed] {type(e).__name__}: {str(e)[:200]}\n")
+        try:
+            _tb.print_exc(file=_sys.stderr)
+        except Exception:
+            pass
+        return None
+
+
 @router.post("/ats/scan")
 async def ats_scan_standalone(request: Request, body: dict = Body(...)):
-    """Scan resume against all major ATS systems."""
+    """Scan resume against all major ATS systems.
+
+    Legacy response (vendors, all_issues, parsed_fields, overall_score) is
+    preserved for backwards compat. A new 'v2' key carries the calibrated
+    3-factor composite, per-vendor extraction view, per-issue score forecasts,
+    and file-level red flags.
+    """
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     raw_text = (body.get("raw_text") or body.get("parsed_text") or "").strip()
@@ -331,8 +449,13 @@ async def ats_scan_standalone(request: Request, body: dict = Body(...)):
     if not raw_text or len(raw_text) < 50:
         raise HTTPException(status_code=400, detail="No resume text found. Upload your resume first through New Audit.")
     from projects.dilly.api.ats_engine import scan_resume_ats
-    result = scan_resume_ats(raw_text)
-    return result.to_dict()
+    result = scan_resume_ats(raw_text).to_dict()
+    jd_text = (body.get("jd_text") or body.get("job_description") or "").strip() or None
+    file_ext = (body.get("file_extension") or "pdf").strip().lower().lstrip(".") or "pdf"
+    v2 = _run_v2_scorer(raw_text, jd_text=jd_text, file_extension=file_ext)
+    if v2:
+        result["v2"] = v2
+    return result
 
 
 @router.get("/ats/scan")
@@ -350,5 +473,8 @@ async def ats_scan_auto(request: Request):
     if not raw_text or len(raw_text) < 50:
         raise HTTPException(status_code=400, detail="No resume found. Upload your resume first.")
     from projects.dilly.api.ats_engine import scan_resume_ats
-    result = scan_resume_ats(raw_text)
-    return result.to_dict()
+    result = scan_resume_ats(raw_text).to_dict()
+    v2 = _run_v2_scorer(raw_text, jd_text=None, file_extension="pdf")
+    if v2:
+        result["v2"] = v2
+    return result
