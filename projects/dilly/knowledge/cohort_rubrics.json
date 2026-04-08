@@ -40,7 +40,6 @@
                 "majors": [
                   "Computer Science",
                   "Software Engineering",
-                  "Cybersecurity",
                   "Information Technology",
                   "Data Science",
                   "Mathematics with Computer Science",
@@ -139,6 +138,37 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Computer Science",
+                      "Software Engineering",
+                      "Information Technology",
+                      "Data Science",
+                      "Mathematics with Computer Science",
+                      "Computer Engineering",
+                      "Mathematics & Computer Science",
+                      "Management Information Systems",
+                      "Business Information Technology"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "GitHub link on resume (baseline signal \u2014 hire tool can't verify commit graph)",
               "weight": 0.5,
               "rationale": "FinalRoundAI cites 78% of tech recruiters check GitHub before scheduling interviews. Without a link they can't check consistency.",
@@ -210,6 +240,48 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Computer Science",
+                      "Software Engineering",
+                      "Information Technology",
+                      "Data Science",
+                      "Mathematics with Computer Science",
+                      "Computer Engineering",
+                      "Mathematics & Computer Science",
+                      "Management Information Systems",
+                      "Business Information Technology"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "python",
+                      "javascript",
+                      "java",
+                      "c++",
+                      "react",
+                      "node",
+                      "git",
+                      "api",
+                      "software",
+                      "programming",
+                      "algorithm",
+                      "database"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Tech projects with quantified outcomes in bullets",
               "weight": 0.5,
@@ -453,6 +525,37 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Data Science",
+                      "Statistics",
+                      "Mathematics",
+                      "Computer Science",
+                      "Applied Mathematics",
+                      "Physics",
+                      "Economics",
+                      "Actuarial Science",
+                      "Mathematics with Computer Science"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Prior data / research / analyst internship or RA position",
               "weight": 1.0,
               "rationale": "365DataScience and Forage rank prior real-stakes data work as highest non-academic signal.",
@@ -518,6 +621,46 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Data Science",
+                      "Statistics",
+                      "Mathematics",
+                      "Computer Science",
+                      "Applied Mathematics",
+                      "Physics",
+                      "Economics",
+                      "Actuarial Science",
+                      "Mathematics with Computer Science"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "python",
+                      "sql",
+                      "data",
+                      "analysis",
+                      "statistics",
+                      "machine learning",
+                      "ml",
+                      "pandas",
+                      "excel",
+                      "tableau"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "SQL fluency mentioned with project context",
               "weight": 1.0,
@@ -672,7 +815,9 @@
                   "International Business",
                   "Management",
                   "Marketing & Finance",
-                  "Financial Enterprise Systems"
+                  "Financial Enterprise Systems",
+                  "Entrepreneurship",
+                  "Sport Management"
                 ]
               }
             },
@@ -795,6 +940,38 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Finance",
+                      "Accounting",
+                      "Economics",
+                      "Business Administration",
+                      "International Business",
+                      "Management",
+                      "Marketing & Finance",
+                      "Financial Enterprise Systems",
+                      "Entrepreneurship",
+                      "Sport Management"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Prior finance-adjacent internship (wealth management, corporate finance, Big 4 transaction advisory, equity research, regional bank)",
               "weight": 1.0,
               "rationale": "ibinterviewquestions: 'Big Four transaction advisory, corporate development, equity research' are the non-target stepping-stone ladder.",
@@ -901,6 +1078,47 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Finance",
+                      "Accounting",
+                      "Economics",
+                      "Business Administration",
+                      "International Business",
+                      "Management",
+                      "Marketing & Finance",
+                      "Financial Enterprise Systems",
+                      "Entrepreneurship",
+                      "Sport Management"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "finance",
+                      "financial",
+                      "excel",
+                      "analysis",
+                      "valuation",
+                      "investment",
+                      "market",
+                      "accounting",
+                      "economic",
+                      "modeling"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Financial modeling project (DCF, LBO, merger model) mentioned on resume",
               "weight": 1.0,
@@ -1170,6 +1388,38 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Biochemistry",
+                      "Biology",
+                      "Biomedical Sciences",
+                      "Chemistry",
+                      "Biochemistry and Allied Health",
+                      "Health Science",
+                      "Neuroscience",
+                      "Physics",
+                      "Public Health",
+                      "Allied Health"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Longitudinal clinical experience (research semesters >= 2 as proxy)",
               "weight": 1.0,
               "rationale": "PAEA/AAMC emphasize sustained clinical exposure. longitudinal_clinical_years field in dilly_core tracks this.",
@@ -1303,6 +1553,48 @@
         "build": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Biochemistry",
+                      "Biology",
+                      "Biomedical Sciences",
+                      "Chemistry",
+                      "Biochemistry and Allied Health",
+                      "Health Science",
+                      "Neuroscience",
+                      "Physics",
+                      "Public Health",
+                      "Allied Health"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "clinical",
+                      "patient",
+                      "health",
+                      "medical",
+                      "biology",
+                      "chemistry",
+                      "hospital",
+                      "volunteer",
+                      "research",
+                      "lab",
+                      "shadow"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Research experience with longevity (research_longevity_years >= 1)",
               "weight": 1.0,
               "rationale": "Multi-semester research with same PI is the primary build signal for pre-health.",
@@ -1431,7 +1723,9 @@
                   "International Business",
                   "Management",
                   "Marketing & Finance",
-                  "Communication and Media Studies"
+                  "Communication and Media Studies",
+                  "Entrepreneurship",
+                  "Sport Management"
                 ]
               }
             },
@@ -1524,6 +1818,39 @@
         },
         "grit": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Marketing",
+                      "Business Administration",
+                      "Communication",
+                      "Advertising and Public Relations",
+                      "Journalism",
+                      "International Business",
+                      "Management",
+                      "Marketing & Finance",
+                      "Communication and Media Studies",
+                      "Entrepreneurship",
+                      "Sport Management"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
             {
               "signal": "Prior marketing-adjacent work (any paid marketing/comms role)",
               "weight": 1.0,
@@ -1626,6 +1953,49 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Marketing",
+                      "Business Administration",
+                      "Communication",
+                      "Advertising and Public Relations",
+                      "Journalism",
+                      "International Business",
+                      "Management",
+                      "Marketing & Finance",
+                      "Communication and Media Studies",
+                      "Entrepreneurship",
+                      "Sport Management"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "marketing",
+                      "campaign",
+                      "social media",
+                      "brand",
+                      "content",
+                      "analytics",
+                      "seo",
+                      "advertising",
+                      "email",
+                      "growth",
+                      "engagement"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Campaign artifacts with quantified outcomes",
               "weight": 1.0,
@@ -1772,7 +2142,8 @@
                   "Business Administration",
                   "Financial Enterprise Systems",
                   "Management Information Systems",
-                  "Economics"
+                  "Economics",
+                  "Entrepreneurship"
                 ]
               }
             },
@@ -1880,6 +2251,35 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Accounting",
+                      "Finance",
+                      "Business Administration",
+                      "Financial Enterprise Systems",
+                      "Management Information Systems",
+                      "Economics",
+                      "Entrepreneurship"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Beta Alpha Psi member with officer role",
               "weight": 1.0,
               "rationale": "BAP is the national accounting honor society \u2014 officer role is a top signal.",
@@ -1980,6 +2380,44 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Accounting",
+                      "Finance",
+                      "Business Administration",
+                      "Financial Enterprise Systems",
+                      "Management Information Systems",
+                      "Economics",
+                      "Entrepreneurship"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "accounting",
+                      "financial",
+                      "audit",
+                      "tax",
+                      "excel",
+                      "gaap",
+                      "journal",
+                      "reconciliation",
+                      "budget",
+                      "balance"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Data analytics tools for accounting: Alteryx, Tableau, Power BI",
               "weight": 1.0,
@@ -2176,6 +2614,34 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Cybersecurity",
+                      "Computer Science",
+                      "Information Technology",
+                      "Computer Engineering",
+                      "Business Information Technology",
+                      "Management Information Systems"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "TryHackMe / HackTheBox sustained rank (with profile link)",
               "weight": 1.0,
               "rationale": "Platform ranks prove sustained, measurable hands-on work.",
@@ -2242,6 +2708,43 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Cybersecurity",
+                      "Computer Science",
+                      "Information Technology",
+                      "Computer Engineering",
+                      "Business Information Technology",
+                      "Management Information Systems"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "security",
+                      "network",
+                      "cyber",
+                      "linux",
+                      "firewall",
+                      "penetration",
+                      "vulnerability",
+                      "encryption",
+                      "siem",
+                      "soc"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "SIEM / security tool experience (Splunk, Sentinel, QRadar, CrowdStrike)",
               "weight": 1.0,
@@ -2450,6 +2953,40 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Biology",
+                      "Chemistry",
+                      "Biochemistry",
+                      "Physics",
+                      "Environmental Science",
+                      "Marine Science",
+                      "Marine Biology",
+                      "Marine Chemistry",
+                      "Neuroscience",
+                      "Mathematics",
+                      "Statistics",
+                      "Forensic Science"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Multi-year research experience (research_longevity_years >= 2)",
               "weight": 1.0,
               "rationale": "Longevity with one PI beats volume.",
@@ -2505,6 +3042,49 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Biology",
+                      "Chemistry",
+                      "Biochemistry",
+                      "Physics",
+                      "Environmental Science",
+                      "Marine Science",
+                      "Marine Biology",
+                      "Marine Chemistry",
+                      "Neuroscience",
+                      "Mathematics",
+                      "Statistics",
+                      "Forensic Science"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "research",
+                      "lab",
+                      "laboratory",
+                      "experiment",
+                      "analysis",
+                      "data",
+                      "study",
+                      "scientific",
+                      "methodology",
+                      "published"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Peer-reviewed publication or manuscript in prep",
               "weight": 1.0,
@@ -2690,6 +3270,37 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Nursing",
+                      "Health Science",
+                      "Public Health",
+                      "Exercise Science",
+                      "Kinesiology",
+                      "Allied Health",
+                      "Health Sciences",
+                      "Human Performance",
+                      "Biomedical Sciences"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Clinical rotations or patient care work",
               "weight": 1.0,
               "rationale": "Direct patient care is the core grit signal for this cohort.",
@@ -2757,6 +3368,46 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Nursing",
+                      "Health Science",
+                      "Public Health",
+                      "Exercise Science",
+                      "Kinesiology",
+                      "Allied Health",
+                      "Health Sciences",
+                      "Human Performance",
+                      "Biomedical Sciences"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "clinical",
+                      "patient",
+                      "nursing",
+                      "health",
+                      "hospital",
+                      "care",
+                      "medical",
+                      "volunteer",
+                      "CPR",
+                      "rotation"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Research experience relevant to health (public health, clinical research)",
               "weight": 0.8,
@@ -2932,6 +3583,37 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Psychology",
+                      "Sociology",
+                      "Political Science",
+                      "Criminology",
+                      "Criminology and Criminal Justice",
+                      "International Studies",
+                      "Government and World Affairs",
+                      "Social Work",
+                      "Anthropology"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Research experience (lab assistant, RA, undergraduate thesis)",
               "weight": 1.0,
               "rationale": "Research is the central signal for social science grad school.",
@@ -2993,6 +3675,46 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Psychology",
+                      "Sociology",
+                      "Political Science",
+                      "Criminology",
+                      "Criminology and Criminal Justice",
+                      "International Studies",
+                      "Government and World Affairs",
+                      "Social Work",
+                      "Anthropology"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "research",
+                      "analysis",
+                      "data",
+                      "survey",
+                      "study",
+                      "policy",
+                      "social",
+                      "community",
+                      "interview",
+                      "statistics"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Conference presentation or publication",
               "weight": 1.0,
@@ -3165,6 +3887,44 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "English",
+                      "Writing",
+                      "Journalism",
+                      "Communication",
+                      "Communications",
+                      "Advertising and Public Relations",
+                      "History",
+                      "Philosophy",
+                      "Liberal Arts",
+                      "Liberal Studies",
+                      "Professional and Technical Writing",
+                      "Communication and Media Studies",
+                      "Communication and Speech Studies",
+                      "Secondary Education",
+                      "Elementary Education",
+                      "Professional Education"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Editor or staff writer at student publication",
               "weight": 1.0,
               "rationale": "Sustained published work is the core grit signal.",
@@ -3233,6 +3993,52 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "English",
+                      "Writing",
+                      "Journalism",
+                      "Communication",
+                      "Communications",
+                      "Advertising and Public Relations",
+                      "History",
+                      "Philosophy",
+                      "Liberal Arts",
+                      "Liberal Studies",
+                      "Professional and Technical Writing",
+                      "Communication and Media Studies",
+                      "Communication and Speech Studies",
+                      "Secondary Education",
+                      "Elementary Education",
+                      "Professional Education"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "writing",
+                      "editor",
+                      "article",
+                      "publication",
+                      "research",
+                      "content",
+                      "communication",
+                      "published",
+                      "media"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Published writing portfolio (personal blog, Substack, newspaper articles, literary magazine)",
               "weight": 1.0,
@@ -3409,6 +4215,45 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Art",
+                      "Animation",
+                      "Graphic Design",
+                      "Design",
+                      "Film and Media Arts",
+                      "Visual Arts",
+                      "Music",
+                      "Musical Theatre",
+                      "Theatre",
+                      "Theatre Arts",
+                      "Digital Media",
+                      "Cinema Studies",
+                      "New Media",
+                      "Interactive Media",
+                      "Dance",
+                      "Music Performance",
+                      "Music Education"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Multi-role creative leadership (club, festival, production)",
               "weight": 1.0,
               "rationale": "Leadership in creative contexts with measurable outcomes.",
@@ -3457,6 +4302,54 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Art",
+                      "Animation",
+                      "Graphic Design",
+                      "Design",
+                      "Film and Media Arts",
+                      "Visual Arts",
+                      "Music",
+                      "Musical Theatre",
+                      "Theatre",
+                      "Theatre Arts",
+                      "Digital Media",
+                      "Cinema Studies",
+                      "New Media",
+                      "Interactive Media",
+                      "Dance",
+                      "Music Performance",
+                      "Music Education"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "design",
+                      "art",
+                      "creative",
+                      "portfolio",
+                      "adobe",
+                      "figma",
+                      "visual",
+                      "illustration",
+                      "exhibition",
+                      "studio"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Portfolio link (Behance, ArtStation, Dribbble, personal site)",
               "weight": 1.0,
@@ -3685,6 +4578,35 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Mathematics",
+                      "Statistics",
+                      "Applied Mathematics",
+                      "Mathematics with Computer Science",
+                      "Mathematics & Computer Science",
+                      "Actuarial Science",
+                      "Physics"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Research experience (REU, senior thesis)",
               "weight": 1.0,
               "rationale": "Research longevity matters for math grad school.",
@@ -3730,6 +4652,44 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Mathematics",
+                      "Statistics",
+                      "Applied Mathematics",
+                      "Mathematics with Computer Science",
+                      "Mathematics & Computer Science",
+                      "Actuarial Science",
+                      "Physics"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "mathematics",
+                      "math",
+                      "statistics",
+                      "research",
+                      "analysis",
+                      "proof",
+                      "python",
+                      "r ",
+                      "matlab",
+                      "modeling"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Published work or conference presentation",
               "weight": 1.0,
@@ -3872,6 +4832,35 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Sport Management",
+                      "Recreation",
+                      "Business Administration",
+                      "Management",
+                      "Marketing",
+                      "Kinesiology",
+                      "Exercise Science and Sport Studies"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Internship with team / league / agency / athletic department",
               "weight": 1.0,
               "rationale": "Direct industry experience is the top signal.",
@@ -3958,10 +4947,40 @@
               "rationale": "Shows willingness to do the work.",
               "sources": [],
               "detector": {
-                "type": "field",
-                "field": "work_entry_count",
-                "op": ">=",
-                "value": 3
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 3
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "sport",
+                      "team",
+                      "athletic",
+                      "athletics",
+                      "coach",
+                      "coaching",
+                      "game day",
+                      "gameday",
+                      "fitness",
+                      "recreation",
+                      "tournament",
+                      "league",
+                      "referee",
+                      "umpire",
+                      "NCAA",
+                      "intramural",
+                      "stadium",
+                      "arena",
+                      "varsity",
+                      "club sport"
+                    ]
+                  }
+                ]
               }
             }
           ],
@@ -3969,6 +4988,44 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Sport Management",
+                      "Recreation",
+                      "Business Administration",
+                      "Management",
+                      "Marketing",
+                      "Kinesiology",
+                      "Exercise Science and Sport Studies"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "sport",
+                      "team",
+                      "athletic",
+                      "fitness",
+                      "coach",
+                      "recreation",
+                      "event",
+                      "tournament",
+                      "league",
+                      "stadium"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Sports analytics project or dashboard",
               "weight": 1.0,
@@ -4075,7 +5132,10 @@
                   "Accounting",
                   "International Business",
                   "Marketing",
-                  "Computer Science"
+                  "Computer Science",
+                  "Entrepreneurship",
+                  "Marketing & Finance",
+                  "Liberal Arts"
                 ]
               }
             },
@@ -4192,6 +5252,41 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Economics",
+                      "Business Administration",
+                      "Finance",
+                      "Management",
+                      "Mathematics",
+                      "Statistics",
+                      "Accounting",
+                      "International Business",
+                      "Marketing",
+                      "Computer Science",
+                      "Entrepreneurship",
+                      "Marketing & Finance",
+                      "Liberal Arts"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Leadership in consulting club with real engagement",
               "weight": 1.0,
               "rationale": "On-campus consulting club leadership is the core grit signal for non-target strategy.",
@@ -4304,6 +5399,50 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Economics",
+                      "Business Administration",
+                      "Finance",
+                      "Management",
+                      "Mathematics",
+                      "Statistics",
+                      "Accounting",
+                      "International Business",
+                      "Marketing",
+                      "Computer Science",
+                      "Entrepreneurship",
+                      "Marketing & Finance",
+                      "Liberal Arts"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "analysis",
+                      "strategy",
+                      "market",
+                      "research",
+                      "data",
+                      "project",
+                      "stakeholder",
+                      "recommendation",
+                      "presentation",
+                      "problem"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Case competition finalist / participant (MBB cases, Net Impact, Deloitte Nat'l Undergrad)",
               "weight": 1.0,
@@ -4502,6 +5641,39 @@
         "grit": {
           "high_impact": [
             {
+              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "weight": 2.5,
+              "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Political Science",
+                      "Philosophy",
+                      "History",
+                      "English",
+                      "Economics",
+                      "Government and World Affairs",
+                      "International Studies",
+                      "Criminology",
+                      "Criminology and Criminal Justice",
+                      "Law, Justice and Advocacy",
+                      "Law, Justice & Advocacy"
+                    ]
+                  },
+                  {
+                    "type": "field",
+                    "field": "work_entry_count",
+                    "op": ">=",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            {
               "signal": "Legal experience: law firm, DA's office, public defender, federal judiciary, legal aid",
               "weight": 1.0,
               "rationale": "Any exposure to legal work environment is strong grit signal.",
@@ -4593,6 +5765,48 @@
         },
         "build": {
           "high_impact": [
+            {
+              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "weight": 2.0,
+              "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
+              "sources": [],
+              "detector": {
+                "type": "composite",
+                "all_of": [
+                  {
+                    "type": "major_in",
+                    "majors": [
+                      "Political Science",
+                      "Philosophy",
+                      "History",
+                      "English",
+                      "Economics",
+                      "Government and World Affairs",
+                      "International Studies",
+                      "Criminology",
+                      "Criminology and Criminal Justice",
+                      "Law, Justice and Advocacy",
+                      "Law, Justice & Advocacy"
+                    ]
+                  },
+                  {
+                    "type": "keyword_any",
+                    "keywords": [
+                      "legal",
+                      "law",
+                      "research",
+                      "writing",
+                      "policy",
+                      "court",
+                      "argument",
+                      "brief",
+                      "advocacy",
+                      "government"
+                    ]
+                  }
+                ]
+              }
+            },
             {
               "signal": "Published writing (student newspaper, law review student note, blog)",
               "weight": 1.0,
