@@ -334,7 +334,7 @@ export default function ScoreDetailScreen() {
           {/* Hero */}
           <View style={s.heroSection}>
             <Text style={[s.heroScore, { color: scoreColor(legacyAudit.final_score) }]}>{displayScore}</Text>
-            <Text style={s.heroLabel}>Overall Score</Text>
+            <Text style={s.heroLabel}>Cohort Score</Text>
           </View>
           {/* Dim bars */}
           {renderDimBars(legacyAudit.scores, barAnims, peerAvgs)}
