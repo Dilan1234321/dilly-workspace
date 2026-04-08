@@ -16,6 +16,7 @@ import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ATSDeepScan, { RewriteSuggestion, KeywordCell, ATSScoreV2 } from '../../components/ATSDeepScan';
+import ATSCompareView from '../../components/ATSCompareView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const GOLD   = '#2B3A8E';
@@ -151,6 +152,7 @@ export default function ATSScreen() {
   const [rewriteSuggestions, setRewriteSuggestions] = useState<RewriteSuggestion[]>([]);
   const [keywordCells, setKeywordCells] = useState<KeywordCell[]>([]);
   const [hasResume, setHasResume] = useState(false);
+  const [compareVisible, setCompareVisible] = useState(false);
 
   // Company lookup state
   const [companySearch, setCompanySearch] = useState('');
@@ -528,10 +530,24 @@ export default function ATSScreen() {
                   )}
                 </AnimatedPressable>
               ) : (
-                <AnimatedPressable style={ss.rescanBtn} onPress={() => { setScanResults(null); runScan(); }} scaleDown={0.97}>
-                  <Ionicons name="refresh" size={14} color={GOLD} />
-                  <Text style={ss.rescanBtnText}>Re-scan</Text>
-                </AnimatedPressable>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  <AnimatedPressable
+                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0 }]}
+                    onPress={() => { setScanResults(null); setV2Results(null); runScan(); }}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="refresh" size={14} color={GOLD} />
+                    <Text style={ss.rescanBtnText}>Re-scan</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0 }]}
+                    onPress={() => setCompareVisible(true)}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="git-compare" size={14} color={GOLD} />
+                    <Text style={ss.rescanBtnText}>Compare versions</Text>
+                  </AnimatedPressable>
+                </View>
               )}
             </FadeInView>
 
@@ -650,6 +666,17 @@ export default function ATSScreen() {
                         );
                       })()}
                     </View>
+                    {companyResult.source === 'live' && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                        <Ionicons name="flash" size={10} color={GREEN} />
+                        <Text style={{ fontSize: 10, color: GREEN, fontWeight: '600' }}>
+                          Verified live
+                          {companyResult.live_meta?.job_count
+                            ? ` · ${companyResult.live_meta.job_count} open jobs`
+                            : ''}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </FadeInView>
 
@@ -916,6 +943,12 @@ export default function ATSScreen() {
         )}
 
       </ScrollView>
+
+      {/* Compare Versions modal — fires POST /ats/compare on open */}
+      <ATSCompareView
+        visible={compareVisible}
+        onClose={() => setCompareVisible(false)}
+      />
     </View>
   );
 }

@@ -220,16 +220,50 @@ async def ats_keyword_inject(request: Request, body: dict = Body(...)):
 
 @router.get("/ats-company-lookup")
 async def ats_company_lookup(request: Request, company: str = ""):
-    """Look up which ATS a company uses (Workday, Greenhouse, iCIMS, Lever)."""
+    """
+    Look up which ATS a company uses.
+
+    Resolution order:
+      1. Hardcoded 185-company lookup (instant, covers Fortune 500)
+      2. Live detection against Greenhouse / Ashby / Lever public APIs
+         (covers startups, mid-market, and anyone posting to a modern board)
+
+    The live path adds ~400ms but only fires on misses, and positive results
+    are cached process-wide for 7 days.
+    """
     deps.require_auth(request)
     company = (company or "").strip()
     if not company:
         return {"vendor_key": None, "vendor_name": None, "company": None}
+
     from dilly_core.ats_company_lookup import lookup_company_ats
     lookup = lookup_company_ats(company)
-    if not lookup:
-        return {"vendor_key": None, "vendor_name": None, "company": company}
-    return {"vendor_key": lookup[0], "vendor_name": lookup[1], "company": lookup[2]}
+    if lookup:
+        return {
+            "vendor_key": lookup[0],
+            "vendor_name": lookup[1],
+            "company": lookup[2],
+            "source": "curated",
+        }
+
+    # Fall back to live API detection
+    try:
+        from dilly_core.ats_live_detect import detect_live_ats
+        live = await asyncio.to_thread(detect_live_ats, company)
+    except Exception:
+        live = None
+
+    if live:
+        vendor_key, vendor_name, display, meta = live
+        return {
+            "vendor_key": vendor_key,
+            "vendor_name": vendor_name,
+            "company": display,
+            "source": "live",
+            "live_meta": meta,
+        }
+
+    return {"vendor_key": None, "vendor_name": None, "company": company, "source": "unknown"}
 
 
 @router.post("/ats-check")
@@ -456,6 +490,167 @@ async def ats_scan_standalone(request: Request, body: dict = Body(...)):
     if v2:
         result["v2"] = v2
     return result
+
+
+@router.post("/ats/compare")
+async def ats_compare(request: Request, body: dict = Body(...)):
+    """
+    Multi-version ATS comparison. Re-runs the v2 scorer across the user's
+    most-recent audits and returns a side-by-side view showing which
+    resume version scored best on each ATS vendor.
+
+    Body:
+      audit_ids     : optional list of audit ids to include. Defaults to
+                      the most recent 3 audits with resume text saved.
+      limit         : max audits to compare (default 3, max 5).
+
+    Response:
+      versions[]   : [{audit_id, ts, overall, vendor_scores: {vkey: comp}, ...}]
+      best_by_vendor: {vkey: audit_id}
+      deltas       : summary of biggest moves between versions
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+
+    requested_ids: list = body.get("audit_ids") or []
+    limit = int(body.get("limit") or 3)
+    limit = max(2, min(limit, 5))
+
+    from projects.dilly.api.audit_history import get_audits
+    all_audits = get_audits(email)
+    if not all_audits:
+        return {"versions": [], "best_by_vendor": {}, "deltas": []}
+
+    # Select audits to compare
+    selected: list = []
+    if requested_ids:
+        id_set = {str(x) for x in requested_ids}
+        for a in all_audits:
+            if str(a.get("id") or "") in id_set:
+                selected.append(a)
+    else:
+        for a in all_audits:
+            if len(selected) >= limit:
+                break
+            if a.get("resume_text"):
+                selected.append(a)
+
+    if len(selected) < 2:
+        return {
+            "versions": [],
+            "best_by_vendor": {},
+            "deltas": [],
+            "message": "Need at least 2 audits with saved resume text to compare.",
+        }
+
+    # Score each version
+    from dilly_core.resume_parser import parse_resume
+    from dilly_core.ats_analysis import run_ats_analysis
+    from dilly_core.ats_score_v2 import (
+        score_from_signals, signals_from_ats_analysis, VENDOR_ORDER,
+    )
+
+    versions: list = []
+    for a in selected[:limit]:
+        resume_text = a.get("resume_text") or ""
+        if not resume_text or len(resume_text) < 100:
+            continue
+        try:
+            parsed = parse_resume(resume_text)
+            analysis = run_ats_analysis(raw_text=resume_text, parsed=parsed)
+            sig = signals_from_ats_analysis(
+                analysis, raw_text=resume_text, file_extension="pdf",
+            )
+            scored = score_from_signals(sig)
+            versions.append({
+                "audit_id": a.get("id"),
+                "ts": a.get("ts"),
+                "label": _version_label(a),
+                "overall": round(scored.overall.value, 1),
+                "forecast": round(scored.overall_forecast_if_all_fixed, 1),
+                "vendor_scores": {
+                    v.vendor_key: round(v.composite.value, 1)
+                    for v in scored.vendors
+                },
+                "vendor_displays": {
+                    v.vendor_key: v.vendor_display for v in scored.vendors
+                },
+                "issue_count": len(scored.issues),
+                "top_issue": scored.issues[0].title if scored.issues else None,
+                "candidate_name": a.get("candidate_name"),
+            })
+        except Exception:
+            continue
+
+    if len(versions) < 2:
+        return {
+            "versions": versions, "best_by_vendor": {}, "deltas": [],
+            "message": "Could not re-score enough audits for comparison.",
+        }
+
+    # Sort newest → oldest for the UI
+    versions.sort(key=lambda v: v.get("ts") or 0, reverse=True)
+
+    # Best version per vendor
+    best_by_vendor: dict = {}
+    for vkey in VENDOR_ORDER:
+        ranked = sorted(
+            versions,
+            key=lambda v: v["vendor_scores"].get(vkey, 0),
+            reverse=True,
+        )
+        if ranked and ranked[0]["vendor_scores"].get(vkey, 0) > 0:
+            best_by_vendor[vkey] = {
+                "audit_id": ranked[0]["audit_id"],
+                "label": ranked[0]["label"],
+                "score": ranked[0]["vendor_scores"][vkey],
+                "runner_up_delta": round(
+                    ranked[0]["vendor_scores"].get(vkey, 0)
+                    - (ranked[1]["vendor_scores"].get(vkey, 0) if len(ranked) > 1 else 0),
+                    1,
+                ),
+            }
+
+    # Pairwise deltas between newest and each previous version
+    newest = versions[0]
+    deltas: list = []
+    for prev in versions[1:]:
+        moves = []
+        for vkey in VENDOR_ORDER:
+            d = newest["vendor_scores"].get(vkey, 0) - prev["vendor_scores"].get(vkey, 0)
+            if abs(d) >= 1:
+                moves.append({
+                    "vendor_key": vkey,
+                    "vendor_display": newest["vendor_displays"].get(vkey, vkey),
+                    "delta": round(d, 1),
+                })
+        moves.sort(key=lambda m: abs(m["delta"]), reverse=True)
+        deltas.append({
+            "from_label": prev["label"],
+            "to_label": newest["label"],
+            "overall_delta": round(newest["overall"] - prev["overall"], 1),
+            "top_moves": moves[:5],
+        })
+
+    return {
+        "versions": versions,
+        "best_by_vendor": best_by_vendor,
+        "deltas": deltas,
+    }
+
+
+def _version_label(audit: dict) -> str:
+    """Human label like 'Apr 8, 2026' for a stored audit."""
+    ts = audit.get("ts")
+    try:
+        if ts:
+            import time as _t
+            return _t.strftime("%b %-d", _t.localtime(float(ts)))
+    except Exception:
+        pass
+    return "Version"
 
 
 @router.get("/ats/scan")
