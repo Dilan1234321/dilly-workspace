@@ -196,9 +196,52 @@ export default function ResultsScreen() {
   const away    = Math.max(0, cfg.bar - finalScore);
   const above   = finalScore >= cfg.bar;
 
+  // ── Cohort-aware copy for pre-health and pre-law ─────────────────────
+  // These students are targeting grad school admissions, not jobs, so the
+  // "recruiter bar" / "career center" language reads as wrong. Swap all
+  // external-facing copy to admissions framing when the primary cohort
+  // is pre_health or pre_law. Triggered by the rubric's primary_cohort_id
+  // when available, or the legacy detected_track string as fallback.
+  const primaryCohortId =
+    result?.rubric_analysis?.primary_cohort_id ||
+    (result?.detected_track || '').toLowerCase().replace(/[^a-z_]/g, '_');
+  const isPreHealth = primaryCohortId === 'pre_health' ||
+    primaryCohortId.includes('pre_health') ||
+    resolvedTrack.toLowerCase().includes('pre-health') ||
+    resolvedTrack.toLowerCase().includes('pre_health');
+  const isPreLaw = primaryCohortId === 'pre_law' ||
+    primaryCohortId.includes('pre_law') ||
+    resolvedTrack.toLowerCase().includes('pre-law') ||
+    resolvedTrack.toLowerCase().includes('pre_law');
+  const isAdmissionsCohort = isPreHealth || isPreLaw;
+
+  // Copy variations: for admissions cohorts, swap every student-facing
+  // phrase from employer/recruiter language to adcom/admissions language.
+  const readinessLabel = isPreHealth
+    ? 'Medical school readiness'
+    : isPreLaw
+    ? 'Law school readiness'
+    : 'Career readiness';
+  const barLabel = isAdmissionsCohort ? 'admissions bar' : 'recruiter bar';
+  const percentileUnit = isPreHealth
+    ? 'of med school matriculants'
+    : isPreLaw
+    ? 'of T14 admits'
+    : `${resolvedTrack} · UTampa`;
+  const elitePhrase = isPreHealth
+    ? 'puts you in the matriculant range.'
+    : isPreLaw
+    ? 'puts you in T14 competitive territory.'
+    : 'puts you in elite territory.';
+  const topFilterLabel = isAdmissionsCohort
+    ? 'Top 25% of admits.'
+    : 'Top 25% is the recruiter filter.';
+
   const dillyTake = result?.dilly_take
     || (isError
       ? "Upload a PDF resume and I'll show you exactly what moves your score fastest."
+      : isAdmissionsCohort
+      ? `I know exactly what's moving your ${weakest.name} from ${weakest.score} — and adcoms will be looking for this.`
       : `I know exactly what moves your ${weakest.name} from ${weakest.score} — and it's a 10-minute fix on two bullets.`);
 
   const go       = !isError && result !== null;
@@ -244,9 +287,9 @@ export default function ResultsScreen() {
         {/* ── Score card ─────────────────────────────────────────────────── */}
         <View style={s.scoreCard}>
           <Text style={s.cardLabel}>
-            {'Career readiness · '}
+            {readinessLabel}{' · '}
             <Text style={{ color: colors.t2 }}>{resolvedTrack}</Text>
-            {' track'}
+            {isAdmissionsCohort ? '' : ' track'}
           </Text>
 
           <View style={s.scoreRow}>
@@ -257,7 +300,7 @@ export default function ResultsScreen() {
           </View>
 
           <Text style={[s.percentile, { color: isError ? colors.t3 : finalScore >= 70 ? colors.green : colors.gold }]}>
-            {isError ? 'Score unavailable' : `Top ${percentile}% ${resolvedTrack} · UTampa`}
+            {isError ? 'Score unavailable' : `Top ${percentile}% ${percentileUnit}`}
           </Text>
 
           <View style={s.barTrack}>
@@ -306,9 +349,9 @@ export default function ResultsScreen() {
                 <Ionicons name="checkmark" size={10} color={colors.green} />
               </View>
               <Text style={[s.calloutText, { color: colors.green }]}>
-                {'You\'re above the recruiter bar. '}
+                {`You're above the ${barLabel}. `}
                 <Text style={{ fontWeight: '700' }}>Top {percentile}%</Text>
-                {' puts you in elite territory.'}
+                {' '}{elitePhrase}
               </Text>
             </View>
           ) : (
@@ -318,7 +361,9 @@ export default function ResultsScreen() {
               </View>
               <Text style={[s.calloutText, { color: colors.gold }]}>
                 {fmtPts(away)}
-                {' to the Top 25%. Biggest lever: '}
+                {isAdmissionsCohort
+                  ? ' to the admissions bar. Biggest lever: '
+                  : ' to the Top 25%. Biggest lever: '}
                 <Text style={{ fontWeight: '700' }}>{gapDim}</Text>
                 {'.'}
               </Text>
@@ -456,8 +501,29 @@ export default function ResultsScreen() {
 
         <View style={{ minHeight: 24 }} />
 
-        {/* ── CTA ──────────────────────────────────────────────────────────── */}
-        <Animated.View style={{ opacity: btnAnim }}>
+        {/* ── CTA row: See detailed feedback + Start my plan ─────────── */}
+        <Animated.View style={{ opacity: btnAnim, gap: 8 }}>
+          {!isError && result?.rubric_analysis ? (
+            <TouchableOpacity
+              style={[s.btn, { backgroundColor: colors.gold, marginBottom: 8 }]}
+              onPress={async () => {
+                // Save latest audit to AsyncStorage so feedback page can read it
+                try {
+                  await AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(result));
+                } catch {}
+                // Also mark onboarding complete before we navigate away
+                try {
+                  await dilly.patch('/profile', { onboarding_complete: true, has_run_first_audit: true });
+                } catch {}
+                await AsyncStorage.setItem('dilly_has_onboarded', 'true');
+                await AsyncStorage.removeItem('dilly_audit_result');
+                router.replace('/(app)/feedback');
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={[s.btnText, { color: '#FFFFFF' }]}>See my detailed feedback →</Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={[s.btn, completing && { opacity: 0.7 }]}
             onPress={handleEnter}

@@ -342,8 +342,21 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
         </View>
       ) : null}
 
-      <AnimatedPressable style={ns.resultsBtn} onPress={() => router.push('/(app)/score-detail')} scaleDown={0.97}>
-        <Text style={ns.resultsBtnText}>View Full Breakdown</Text>
+      <AnimatedPressable
+        style={ns.resultsBtn}
+        onPress={async () => {
+          // Cache the audit result so the feedback page can read it
+          try {
+            const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+            await AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(newAudit));
+          } catch {}
+          router.push(newAudit.rubric_analysis ? '/(app)/feedback' : '/(app)/score-detail');
+        }}
+        scaleDown={0.97}
+      >
+        <Text style={ns.resultsBtnText}>
+          {newAudit.rubric_analysis ? 'See my detailed feedback' : 'View Full Breakdown'}
+        </Text>
         <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
       </AnimatedPressable>
     </View>
