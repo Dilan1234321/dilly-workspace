@@ -453,6 +453,16 @@ async def get_internship_feed(
     conn = _get_db()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+    # Cold-start fallback: if the niche sources (NSF REU, USAJobs) have never
+    # been ingested on this deploy, run the ingester inline. Cheap no-op once
+    # the table is populated. Wrapped in try/except so a source failure never
+    # breaks the feed request.
+    try:
+        from dilly_core.job_source_ingest import ensure_niche_sources_populated
+        ensure_niche_sources_populated(conn)
+    except Exception:
+        pass
+
     student_id = _ensure_student(email, cur, conn)
     if not student_id:
         conn.close()

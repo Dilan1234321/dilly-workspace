@@ -428,7 +428,17 @@ def _run_v2_scorer(raw_text: str, jd_text: str | None = None,
             except Exception:
                 pass
 
-        scored = score_from_signals(sig).to_dict()
+        # Run Workday-specific field validator — produces issues tagged
+        # affects=('workday',) only, so Greenhouse/Lever/Ashby/iCIMS are
+        # unaffected. Empty list on any error so the scan always succeeds.
+        workday_issues = []
+        try:
+            from dilly_core.ats_workday_validator import run_workday_checks
+            workday_issues = run_workday_checks(raw_text, parsed)
+        except Exception:
+            workday_issues = []
+
+        scored = score_from_signals(sig, extra_issues=workday_issues).to_dict()
         # Merge PDF inspector red flags into the v2 response so the mobile
         # UI can render them under File Red Flags.
         if file_inspection and file_inspection.get("issues"):

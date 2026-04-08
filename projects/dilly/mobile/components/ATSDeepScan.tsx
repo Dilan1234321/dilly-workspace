@@ -209,11 +209,12 @@ function FileRedFlags({ flags }: { flags: ATSScoreV2['file_redflags'] }) {
 
 // ── Per-vendor card with expandable extraction view ─────────────────────────
 
-function VendorCard({ vendor, onFixPress }: {
+function VendorCard({ vendor, onFixPress, pinned }: {
   vendor: VendorScoreV2;
   onFixPress?: (vendorName: string, issue: { title: string; fix: string; lift: number }) => void;
+  pinned?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!pinned);
   const color = scoreColor(vendor.composite.value);
   const ev = vendor.extraction_view;
   const expCapture = ev.experience_total > 0
@@ -225,7 +226,13 @@ function VendorCard({ vendor, onFixPress }: {
   const lift = vendor.forecast_if_all_fixed - vendor.composite.value;
 
   return (
-    <Pressable onPress={() => setExpanded(e => !e)} style={s.vendorCard}>
+    <Pressable onPress={() => setExpanded(e => !e)} style={[s.vendorCard, pinned && s.vendorCardPinned]}>
+      {pinned && (
+        <View style={s.pinnedBadge}>
+          <Ionicons name="pin" size={10} color="#FFFFFF" />
+          <Text style={s.pinnedBadgeText}>TARGET</Text>
+        </View>
+      )}
       {/* Header */}
       <View style={s.vendorHeader}>
         <View style={{ flex: 1 }}>
@@ -531,23 +538,47 @@ export function KeywordHeatmap({ cells }: { cells: KeywordCell[] }) {
 // ── Main deep-scan component ────────────────────────────────────────────────
 
 export default function ATSDeepScan({
-  v2, rewrites, keywords, onFixPress,
+  v2, rewrites, keywords, onFixPress, pinnedVendorKey, pinnedCompanyName,
 }: {
   v2: ATSScoreV2;
   rewrites?: RewriteSuggestion[];
   keywords?: KeywordCell[];
   onFixPress?: (vendorName: string, issue: { title: string; fix: string; lift: number }) => void;
+  pinnedVendorKey?: string;
+  pinnedCompanyName?: string;
 }) {
   if (!v2) return null;
+
+  // If a target vendor is pinned, reorder the vendors array so that vendor
+  // lands at the top of the list and gets auto-expanded.
+  const vendors = v2.vendors || [];
+  const orderedVendors = pinnedVendorKey
+    ? [
+        ...vendors.filter(v => v.vendor_key === pinnedVendorKey),
+        ...vendors.filter(v => v.vendor_key !== pinnedVendorKey),
+      ]
+    : vendors;
+
   return (
     <View>
       <HeroScore overall={v2.overall} forecast={v2.overall_forecast_if_all_fixed} />
       <FileRedFlags flags={v2.file_redflags || []} />
       <GlobalFixList issues={v2.issues || []} />
 
-      <Text style={[s.sectionLabel, { marginTop: 18 }]}>BY ATS VENDOR (TAP TO EXPAND)</Text>
-      {(v2.vendors || []).map(v => (
-        <VendorCard key={v.vendor_key} vendor={v} onFixPress={onFixPress} />
+      {pinnedVendorKey && pinnedCompanyName ? (
+        <Text style={[s.sectionLabel, { marginTop: 18 }]}>
+          {pinnedCompanyName.toUpperCase()} USES {(orderedVendors[0]?.vendor_display || '').toUpperCase()}
+        </Text>
+      ) : (
+        <Text style={[s.sectionLabel, { marginTop: 18 }]}>BY ATS VENDOR (TAP TO EXPAND)</Text>
+      )}
+      {orderedVendors.map(v => (
+        <VendorCard
+          key={v.vendor_key}
+          vendor={v}
+          onFixPress={onFixPress}
+          pinned={v.vendor_key === pinnedVendorKey}
+        />
       ))}
 
       {rewrites && rewrites.length > 0 && (
@@ -617,6 +648,16 @@ const s = StyleSheet.create({
     backgroundColor: colors.s2, borderRadius: 14, borderWidth: 1, borderColor: colors.b1,
     padding: 14, marginBottom: 10,
   },
+  vendorCardPinned: {
+    borderColor: GOLD + '80', borderWidth: 2,
+    shadowColor: GOLD, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.15, shadowRadius: 10,
+  },
+  pinnedBadge: {
+    position: 'absolute', top: -8, right: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: GOLD, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
+  },
+  pinnedBadgeText: { fontSize: 8, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.8 },
   vendorHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
   vendorName: { fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 2 },
   vendorNotes: { fontSize: 10, color: colors.t3, lineHeight: 14 },

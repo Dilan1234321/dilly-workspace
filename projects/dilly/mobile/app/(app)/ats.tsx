@@ -690,127 +690,50 @@ export default function ATSScreen() {
                   </FadeInView>
                 )}
 
-                {/* Deep breakdown */}
-                {companyScanData && (() => {
+                {/* Deep breakdown — pinned to this company's ATS vendor */}
+                {companyScanData && companyScanData.v2 && (
+                  <FadeInView delay={140}>
+                    <ATSDeepScan
+                      v2={companyScanData.v2 as ATSScoreV2}
+                      pinnedVendorKey={companyResult.vendor_key}
+                      pinnedCompanyName={companyResult.company || companySearch}
+                      onFixPress={(vendorName, iss) => {
+                        const p = profile as any;
+                        const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
+                        openDillyOverlay({
+                          name: firstName,
+                          cohort: p.track || 'General',
+                          score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+                          referenceCompany: companyResult.company || companySearch,
+                          isPaid: true,
+                          initialMessage: `I'm applying to ${companyResult.company || companySearch}, which uses ${vendorName}. The specific issue: "${iss.title}". Fixing it will lift my ${vendorName} score by about +${Math.round(iss.lift)} points. What exactly should I change in my resume? Then ask me if I want to go to my Resume Editor to apply these fixes.`,
+                        });
+                      }}
+                    />
+                  </FadeInView>
+                )}
+
+                {/* Legacy fallback when v2 data isn't present */}
+                {companyScanData && !companyScanData.v2 && (() => {
                   const vendorKey = companyResult.vendor_key;
                   const vendorData = companyScanData.vendors?.[vendorKey];
                   if (!vendorData) return null;
                   const score = vendorData.score ?? 0;
-                  const issues = vendorData.issues || [];
-                  const passed = vendorData.passed || [];
-                  const parsed = companyScanData.parsed_fields || {};
                   const color = scoreColor(score);
-                  const sys = ATS_SYSTEMS.find(s => s.key === vendorKey);
-
                   return (
-                    <>
-                      {/* Score bar */}
-                      <FadeInView delay={140}>
-                        <View style={ss.companyBreakdownCard}>
-                          <Text style={ss.breakdownTitle}>{companyResult.vendor_name} COMPATIBILITY</Text>
-                          <View style={ss.scoreBar}>
-                            <View style={[ss.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
-                          </View>
-                          <Text style={[ss.breakdownScore, { color }]}>
-                            {score >= 85 ? 'Your resume parses well on ' + companyResult.vendor_name
-                              : score >= 70 ? 'Some issues detected — fixable'
-                              : 'Significant issues — fix before applying'}
-                          </Text>
+                    <FadeInView delay={140}>
+                      <View style={ss.companyBreakdownCard}>
+                        <Text style={ss.breakdownTitle}>{companyResult.vendor_name} COMPATIBILITY</Text>
+                        <View style={ss.scoreBar}>
+                          <View style={[ss.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
                         </View>
-                      </FadeInView>
-
-                      {/* What the ATS sees */}
-                      <FadeInView delay={180}>
-                        <View style={ss.parseCard}>
-                          <Text style={ss.parseTitleText}>WHAT {companyResult.vendor_name.toUpperCase()} SEES</Text>
-                          {[
-                            { label: 'Name', value: parsed.name || profile.name || '', ok: !!(parsed.name || profile.name) },
-                            { label: 'Email', value: parsed.email || '', ok: !!parsed.email },
-                            { label: 'Phone', value: parsed.phone || '', ok: !!parsed.phone },
-                            { label: 'Education', value: parsed.education || '', ok: !!parsed.education },
-                            { label: 'Experience', value: parsed.experience_count ? `${parsed.experience_count} entries` : '', ok: !!parsed.experience_count },
-                            { label: 'Skills', value: parsed.skills_count ? `${parsed.skills_count} skills` : '', ok: !!parsed.skills_count },
-                          ].map((f, i) => (
-                            <View key={i} style={ss.parseRow}>
-                              <Ionicons name={f.ok ? 'checkmark-circle' : 'close-circle'} size={14} color={f.ok ? GREEN : CORAL} />
-                              <Text style={ss.parseLabel}>{f.label}:</Text>
-                              <Text style={[ss.parseValue, !f.ok && { color: CORAL }]} numberOfLines={1}>{f.value || 'Not found'}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      </FadeInView>
-
-                      {/* Issues */}
-                      {issues.length > 0 && (
-                        <FadeInView delay={220}>
-                          <View style={ss.companyBreakdownCard}>
-                            <Text style={[ss.breakdownTitle, { color: CORAL }]}>ISSUES FOR {companyResult.vendor_name.toUpperCase()}</Text>
-                            {issues.map((issue: string, i: number) => (
-                              <View key={i} style={ss.issueRow}>
-                                <Ionicons name="alert-circle" size={13} color={CORAL} />
-                                <Text style={ss.issueText}>{issue}</Text>
-                                <AnimatedPressable style={ss.fixBtn} onPress={() => fixWithDilly(companyResult.vendor_name, issue)} scaleDown={0.95}>
-                                  <Text style={ss.fixBtnText}>Fix</Text>
-                                </AnimatedPressable>
-                              </View>
-                            ))}
-                          </View>
-                        </FadeInView>
-                      )}
-
-                      {/* What passed */}
-                      {passed.length > 0 && (
-                        <FadeInView delay={260}>
-                          <View style={ss.companyBreakdownCard}>
-                            <Text style={[ss.breakdownTitle, { color: GREEN }]}>PASSING</Text>
-                            {passed.map((p: string, i: number) => (
-                              <View key={i} style={ss.allGoodRow}>
-                                <Ionicons name="checkmark-circle" size={13} color={GREEN} />
-                                <Text style={ss.allGoodText}>{p}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </FadeInView>
-                      )}
-
-                      {/* Fix all with Dilly */}
-                      <FadeInView delay={300}>
-                        <AnimatedPressable
-                          style={ss.fixAllBtn}
-                          onPress={() => {
-                            const p = profile as any;
-                            const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
-                            const issueList = issues.join('; ');
-                            openDillyOverlay({
-                              name: firstName,
-                              cohort: p.track || 'General',
-                              score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
-                              referenceCompany: companyResult.company || companySearch,
-                              isPaid: true,
-                              initialMessage: `I'm applying to ${companyResult.company || companySearch}, which uses ${companyResult.vendor_name} (${sys?.strictness || 'unknown'} parsing). My resume scored ${score}% on ${companyResult.vendor_name}. Here are the issues: ${issueList}. What specific formatting and content changes should I make to pass ${companyResult.vendor_name}'s ATS filter?`,
-                            });
-                          }}
-                          scaleDown={0.97}
-                        >
-                          <Ionicons name="chatbubble" size={14} color={GOLD} />
-                          <Text style={ss.fixAllBtnText}>Fix all issues with Dilly</Text>
-                        </AnimatedPressable>
-                      </FadeInView>
-
-                      {/* Advice card */}
-                      <FadeInView delay={340}>
-                        <View style={ss.adviceCard}>
-                          <Ionicons name="bulb" size={14} color={GOLD} />
-                          <Text style={ss.adviceText}>
-                            {companyResult.vendor_key === 'workday' || companyResult.vendor_key === 'taleo'
-                              ? `${companyResult.vendor_name} is strict. Use a single-column layout, standard section headers (Education, Experience, Skills), no tables or text boxes, and save as PDF with selectable text. Contact info must be in the body, not a header.`
-                              : companyResult.vendor_key === 'icims'
-                              ? `${companyResult.vendor_name} needs skills listed individually (not in paragraphs) and standard date formats (Month YYYY). Avoid creative section headers.`
-                              : `${companyResult.vendor_name} is lenient and handles most formats well. Focus on content quality and keyword density rather than formatting.`}
-                          </Text>
-                        </View>
-                      </FadeInView>
-                    </>
+                        <Text style={[ss.breakdownScore, { color }]}>
+                          {score >= 85 ? 'Your resume parses well on ' + companyResult.vendor_name
+                            : score >= 70 ? 'Some issues detected — fixable'
+                            : 'Significant issues — fix before applying'}
+                        </Text>
+                      </View>
+                    </FadeInView>
                   );
                 })()}
               </>

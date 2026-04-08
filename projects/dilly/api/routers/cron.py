@@ -315,3 +315,16 @@ def crawl_internships(token: str = ""):
     classified = classify_unclassified(conn, api_key)
     conn.close()
     return {"ok": True, "classified": classified}
+
+
+@router.get("/crawl-niche-sources", summary="Scrape NSF REU + USAJobs into internships table")
+def crawl_niche_sources(token: str = ""):
+    """Run the niche-source ingester (NSF REU for pre-health/science research,
+    USAJobs for pre-law + federal entry-level) and upsert into the internships
+    table. Intended to run once per day alongside /crawl-internships."""
+    _require_cron_secret(token)
+    from projects.dilly.api.database import get_db as _get_db_ctx
+    from dilly_core.job_source_ingest import ingest_niche_sources
+    with _get_db_ctx() as conn:
+        stats = ingest_niche_sources(conn)
+    return {"ok": True, "stats": stats}

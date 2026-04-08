@@ -397,7 +397,8 @@ def _confidence_band(value: float, signal_certainty: float) -> Tuple[float, floa
 # score_from_signals — the primary entry point
 # ---------------------------------------------------------------------------
 
-def score_from_signals(signals: SignalDict) -> ATSScoreV2Result:
+def score_from_signals(signals: SignalDict,
+                        extra_issues: Optional[List[ScoreIssue]] = None) -> ATSScoreV2Result:
     """
     Produce an ATSScoreV2Result from a normalized signal dictionary.
 
@@ -647,6 +648,10 @@ def score_from_signals(signals: SignalDict) -> ATSScoreV2Result:
             fix="For each keyword, rewrite one experience bullet to demonstrate it in context (e.g. 'Built a Python pipeline that…'). Contextual usage scores 2.5x higher than a bare skills list.",
             affects=("greenhouse", "lever", "ashby", "icims"),
         ))
+
+    # Merge extra issues (e.g. Workday-specific field validation) before dedup
+    if extra_issues:
+        issues.extend(extra_issues)
 
     # Dedup by id — first occurrence wins
     seen: set = set()
