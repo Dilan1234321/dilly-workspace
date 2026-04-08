@@ -21,7 +21,7 @@ import { getAutomationRisk } from '../../lib/automation-risk';
 import InterestsPicker from '../../components/InterestsPicker';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { lookupCompanyATS } from '../../lib/atsLookup';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -163,10 +163,10 @@ function DimBar({ label, student, required }: { label: string; student: number; 
 
 // ── Job Card ──────────────────────────────────────────────────────────────────
 
-function JobCard({ listing, studentScores, studentProfile, userCohort, onApply }: {
-  listing: Listing; studentScores: StudentScores | null; studentProfile: Record<string, any>; userCohort: string; onApply: (l: Listing) => void;
+function JobCard({ listing, studentScores, studentProfile, userCohort, onApply, defaultExpanded }: {
+  listing: Listing; studentScores: StudentScores | null; studentProfile: Record<string, any>; userCohort: string; onApply: (l: Listing) => void; defaultExpanded?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!defaultExpanded);
   const posted = daysAgo(listing.posted_date);
   const srcColor = SOURCE_COLORS[listing.source] || colors.t3;
   const rs = listing.required_scores;
@@ -459,6 +459,8 @@ function InterestsSetupCard({ profile, onComplete }: { profile: Record<string, a
 
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ focus?: string }>();
+  const focusJobId = (params?.focus || '').toString();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -495,11 +497,19 @@ export default function JobsScreen() {
         setNeedsSetup(!hasInterests);
 
         const audit = auditRes?.audit;
+        const ra = audit?.rubric_analysis;
         if (audit?.final_score) {
-          setStudentScores({ score: audit.final_score, smart: audit.scores?.smart ?? 0, grit: audit.scores?.grit ?? 0, build: audit.scores?.build ?? 0 });
+          // Prefer per-cohort scores from rubric_analysis (compares apples-to-apples
+          // with each job's per-cohort requirements). Fall back to overall scores.
+          setStudentScores({
+            score: audit.final_score,
+            smart: ra?.primary_smart ?? audit.scores?.smart ?? 0,
+            grit:  ra?.primary_grit  ?? audit.scores?.grit  ?? 0,
+            build: ra?.primary_build ?? audit.scores?.build ?? 0,
+          });
         }
-        if (audit?.rubric_analysis) {
-          setRubricAnalysis(audit.rubric_analysis);
+        if (ra) {
+          setRubricAnalysis(ra);
         }
       } catch {}
       finally { setProfileLoaded(true); }
@@ -547,9 +557,12 @@ export default function JobsScreen() {
           readiness: l.readiness,
           rank_score: l.rank_score,
           required_scores: {
-            smart: first.required_smart,
-            grit: first.required_grit,
-            build: first.required_build,
+            // Prefer cohort-specific requirements; fall back to the flat fields
+            // on the listing so every card shows SGB requirements even when no
+            // cohort match was computed.
+            smart: first.required_smart ?? l.required_smart,
+            grit:  first.required_grit  ?? l.required_grit,
+            build: first.required_build ?? l.required_build,
           },
           student_scores_override: {
             smart: first.student_smart,
@@ -793,7 +806,15 @@ export default function JobsScreen() {
               </FadeInView>
             ) : (
               (() => {
-                const userCohort = (primaryCohortId || (profile as any).track || (profile as any).cohort || '').toLowerCase();
+                // For card-internal cohort matching (DimBars per cohort), use the
+                // RICH cohort name (matches cohort_readiness[].cohort from the API).
+                // The rubric snake_case ID is only the lookup key.
+                const userCohort = (
+                  rubricAnalysis?.primary_cohort_display_name ||
+                  (profile as any).cohort ||
+                  (profile as any).track ||
+                  ''
+                ).toLowerCase();
                 // Top 3 close-to-ready jobs for "Your Path This Week"
                 const pathJobs = [...listings]
                   .filter((l: any) => l.readiness === 'ready' || l.readiness === 'almost')
@@ -820,7 +841,20 @@ export default function JobsScreen() {
                       if (cr.length === 0) return true; // uncategorized — show for all
                       return cr.some(entry => (entry.cohort || '').toLowerCase() === userCohort);
                     });
-                return visibleListings.map((listing, i) => (
+                // If a focus job id was passed (deep link from home screen
+                // top-matches), pin that listing to the top and auto-expand it.
+                let orderedListings = visibleListings;
+                if (focusJobId) {
+                  const focusIdx = visibleListings.findIndex((l: any) => l.id === focusJobId);
+                  if (focusIdx > 0) {
+                    orderedListings = [
+                      visibleListings[focusIdx],
+                      ...visibleListings.slice(0, focusIdx),
+                      ...visibleListings.slice(focusIdx + 1),
+                    ];
+                  }
+                }
+                return orderedListings.map((listing, i) => (
                   <FadeInView key={listing.id} delay={Math.min(i * 25, 250)}>
                     <JobCard
                       listing={listing}
@@ -828,6 +862,7 @@ export default function JobsScreen() {
                       studentProfile={profile}
                       userCohort={userCohort}
                       onApply={handleApply}
+                      defaultExpanded={listing.id === focusJobId}
                     />
                   </FadeInView>
                 ));

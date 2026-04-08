@@ -170,14 +170,18 @@ export default function HomeScreen() {
         const auditObj = latestAudit ?? auditRaw?.audit ?? auditRaw ?? {};
         const hasAuditFlag = auditObj?.final_score != null;
 
+        // Prefer per-cohort scores from rubric_analysis (primary cohort).
+        // No more "overall" scores anywhere in the app — every number shown
+        // is the user's score within their primary cohort.
+        const ra = auditObj?.rubric_analysis;
         const snapshot = profileRes?.first_audit_snapshot?.scores;
-        const smart = auditObj?.scores?.smart ?? profileRes?.overall_smart ?? snapshot?.smart ?? null;
-        const grit  = auditObj?.scores?.grit  ?? profileRes?.overall_grit  ?? snapshot?.grit  ?? null;
-        const build = auditObj?.scores?.build ?? profileRes?.overall_build ?? snapshot?.build ?? null;
+        const smart = ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
+        const grit  = ra?.primary_grit  ?? auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
+        const build = ra?.primary_build ?? auditObj?.scores?.build ?? snapshot?.build ?? null;
 
-        const calculated = auditObj?.final_score
-          || profileRes?.overall_dilly_score
-          || (smart != null && grit != null && build != null
+        const calculated = ra?.primary_composite
+          ?? auditObj?.final_score
+          ?? (smart != null && grit != null && build != null
             ? Math.round((smart + grit + build) / 3)
             : null);
 
@@ -393,7 +397,7 @@ export default function HomeScreen() {
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
               {cohort ? (
-                <Text style={s.headerCohort}>{cohort} cohort{school ? ` · ${school}` : ''}</Text>
+                <Text style={s.headerCohort}>{cohort} cohort</Text>
               ) : null}
             </View>
             <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
@@ -540,7 +544,23 @@ export default function HomeScreen() {
             <Text style={s.insightText}>
               {audit.dilly_take || nextAction.body}
             </Text>
-            <AnimatedPressable style={s.insightBtn} onPress={nextAction.onPress} scaleDown={0.97}>
+            <AnimatedPressable
+              style={s.insightBtn}
+              onPress={() => {
+                // Auto-prompt the Dilly AI with whatever the button says, so the
+                // user can act on the suggestion immediately by chatting it through.
+                const promptText = nextAction.cta.replace(/[→\s]+$/, '').trim();
+                openDillyOverlay({
+                  name: firstName, cohort, score: finalScore,
+                  smart: smartScore, grit: gritScore, build: buildScore,
+                  gap, cohortBar: cohortCfg.bar,
+                  referenceCompany: cohortCfg.company,
+                  isPaid: true,
+                  initialMessage: promptText,
+                });
+              }}
+              scaleDown={0.97}
+            >
               <Text style={s.insightBtnText}>{nextAction.cta}</Text>
             </AnimatedPressable>
           </View>
@@ -554,7 +574,7 @@ export default function HomeScreen() {
               <AnimatedPressable
                 key={job.id}
                 style={s.jobCard}
-                onPress={() => router.push('/(app)/jobs')}
+                onPress={() => router.push(`/(app)/jobs?focus=${encodeURIComponent(job.id)}`)}
                 scaleDown={0.98}
               >
                 <View style={s.jobInfo}>

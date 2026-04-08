@@ -201,11 +201,15 @@ def _rank_score(student_smart, student_grit, student_build,
 
 def _cohort_readiness(
     student_smart, student_grit, student_build,
-    student_cohorts: set, cohort_requirements
+    student_cohorts: set, cohort_requirements,
+    student_cohort_scores: dict | None = None,
 ) -> tuple[list, str | None]:
     """
     Build cohort_readiness list and best cohort-specific readiness label.
     cohort_requirements is a list of {cohort, smart, grit, build} dicts.
+    student_cohort_scores (optional) is the {cohort: {smart, grit, build}} JSONB
+    from students.cohort_scores. When present, per-cohort scores are used for
+    that cohort's comparison instead of the student's overall scores.
     Returns (cohort_readiness_list, best_readiness_or_None).
     """
     if not cohort_requirements:
@@ -215,6 +219,11 @@ def _cohort_readiness(
             cohort_requirements = json.loads(cohort_requirements)
         except Exception:
             return [], None
+    if isinstance(student_cohort_scores, str):
+        try:
+            student_cohort_scores = json.loads(student_cohort_scores)
+        except Exception:
+            student_cohort_scores = None
 
     results = []
     for req in (cohort_requirements or []):
@@ -224,16 +233,21 @@ def _cohort_readiness(
         rs = float(req.get("smart") or 0)
         rg = float(req.get("grit")  or 0)
         rb = float(req.get("build") or 0)
-        rd = _readiness(student_smart, student_grit, student_build, rs, rg, rb)
+        # Use per-cohort student scores when we have them, else fall back
+        per = (student_cohort_scores or {}).get(c_name) if student_cohort_scores else None
+        ss = float(per.get("smart") if per else (student_smart or 0))
+        sg = float(per.get("grit")  if per else (student_grit  or 0))
+        sb = float(per.get("build") if per else (student_build or 0))
+        rd = _readiness(ss, sg, sb, rs, rg, rb)
         results.append({
             "cohort": c_name,
             "readiness": rd,
             "required_smart": rs,
             "required_grit": rg,
             "required_build": rb,
-            "student_smart": float(student_smart or 0),
-            "student_grit":  float(student_grit  or 0),
-            "student_build": float(student_build or 0),
+            "student_smart": ss,
+            "student_grit":  sg,
+            "student_build": sb,
         })
 
     if not results:
@@ -252,6 +266,7 @@ def _fallback_feed(
     company_filter: Optional[str], search: Optional[str],
     cohort_filter: Optional[str],
     sort: str, limit: int, offset: int,
+    s_cohort_scores: dict | None = None,
 ):
     """Serve the feed using on-the-fly scoring (no match_scores rows needed)."""
     where = ["i.status = 'active'"]
@@ -302,7 +317,8 @@ def _fallback_feed(
         # Try cohort-specific readiness first; fall back to flat required scores
         cr_list, cohort_rd = _cohort_readiness(
             student_smart, student_grit, student_build,
-            student_cohorts, r["cohort_requirements"]
+            student_cohorts, r["cohort_requirements"],
+            student_cohort_scores=s_cohort_scores,
         )
         if cohort_rd:
             rd = cohort_rd
@@ -426,13 +442,17 @@ async def get_internship_feed(
 
     # Read student scores + cohort for fallback scoring
     cur.execute(
-        "SELECT overall_smart, overall_grit, overall_build, cohort, majors, minors, interests FROM students WHERE id = %s",
+        "SELECT overall_smart, overall_grit, overall_build, cohort, cohort_scores, majors, minors, interests FROM students WHERE id = %s",
         (student_id,),
     )
     stu = cur.fetchone()
     s_smart = float(stu["overall_smart"]) if stu and stu["overall_smart"] else 0
     s_grit  = float(stu["overall_grit"])  if stu and stu["overall_grit"]  else 0
     s_build = float(stu["overall_build"]) if stu and stu["overall_build"] else 0
+    s_cohort_scores = stu["cohort_scores"] if stu else None
+    if isinstance(s_cohort_scores, str):
+        try: s_cohort_scores = json.loads(s_cohort_scores)
+        except Exception: s_cohort_scores = None
     # Build set of student cohorts (primary + from majors + from minors + from interests)
     s_cohort = stu["cohort"] if stu else None
     def _parse_json_list(v):
@@ -471,6 +491,7 @@ async def get_internship_feed(
             cur, student_id, s_smart, s_grit, s_build, _student_cohorts,
             tab, readiness, company, search_term, cohort,
             sort, limit, offset,
+            s_cohort_scores=s_cohort_scores,
         )
         conn.close()
         return {**result, "tab": tab,

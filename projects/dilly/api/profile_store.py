@@ -368,9 +368,10 @@ def get_profile_photo_path_by_slug(slug: str) -> str | None:
     # 2. Restore from base64 stored in DB (survives Railway deploys that wipe the filesystem)
     try:
         import base64
+        import psycopg2.extras
         from projects.dilly.api.database import get_db
         with get_db() as conn:
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             # slug = sha256(lower(email))[:16] — PostgreSQL can compute this directly
             cur.execute(
                 """
