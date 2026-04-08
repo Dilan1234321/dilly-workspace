@@ -397,7 +397,7 @@ export default function HomeScreen() {
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
               {cohort ? (
-                <Text style={s.headerCohort}>{cohort} cohort{school ? ` · ${school}` : ''}</Text>
+                <Text style={s.headerCohort}>{cohort} cohort</Text>
               ) : null}
             </View>
             <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
