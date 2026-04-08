@@ -620,11 +620,13 @@ export default function ResumeEditorScreen() {
         ]);
         setMajor(profileRes?.majors?.[0] || profileRes?.major || '');
 
-        // Seed initial score from latest audit or profile
+        // Seed initial score from latest audit — prefer primary cohort
+        // composite from rubric_analysis over the legacy aggregate.
         const auditObj = auditRes?.audit ?? auditRes;
-        const fs = auditObj?.final_score
-          || profileRes?.overall_dilly_score
-          || 0;
+        const ra = auditObj?.rubric_analysis;
+        const fs = ra?.primary_composite
+          ?? auditObj?.final_score
+          ?? 0;
         if (fs > 0) {
           setInitialScore(Math.round(Number(fs)));
           setOverallScore(Math.round(Number(fs)));
