@@ -626,12 +626,37 @@ async def get_ai_context(request: Request):
 
 def _run_profile_extraction_background(email: str, conv_id: str, messages: list[dict]) -> None:
     """Fire-and-forget: extract profile facts from conversation and store them.
-    Runs in a background thread so it never blocks the chat response."""
+    Runs in a background thread so it never blocks the chat response.
+
+    Extraction failures must never surface to the user, but they MUST be logged
+    so we can actually debug when memory silently stops working. Previously
+    this was `except Exception: pass` which silently swallowed every failure —
+    meaning if the extraction LLM call crashed, the DB write failed, or the
+    prompt format drifted, we would never know until a real student noticed
+    the coach forgetting things. Now we log to stderr with enough context
+    (email prefix, conv_id, exception type) that the failure is findable in
+    server logs, and we still never raise to the caller.
+    """
+    import traceback
+    import sys
+    import time as _time
     try:
         from projects.dilly.api.memory_extraction import run_extraction
         run_extraction(email, conv_id, messages)
-    except Exception:
-        pass  # Extraction failure must never surface to the user
+    except Exception as exc:
+        # Redact email to a short prefix for privacy in logs
+        _email_hint = (email.split("@")[0][:6] + "***") if email and "@" in email else "unknown"
+        sys.stderr.write(
+            f"[memory_extraction_failed] ts={_time.time():.0f} "
+            f"email={_email_hint} conv_id={conv_id[:12] if conv_id else 'none'} "
+            f"exc_type={type(exc).__name__} msg={str(exc)[:200]}\n"
+        )
+        # Include traceback so we can find the exact line that broke
+        try:
+            traceback.print_exc(file=sys.stderr)
+        except Exception:
+            pass
+        # Deliberately do not re-raise — extraction must never surface to the user
 
 
 @router.post("/ai/chat", response_model=ChatResponse)

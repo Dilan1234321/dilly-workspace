@@ -163,8 +163,8 @@ function DimBar({ label, student, required }: { label: string; student: number; 
 
 // ── Job Card ──────────────────────────────────────────────────────────────────
 
-function JobCard({ listing, studentScores, studentProfile, onApply }: {
-  listing: Listing; studentScores: StudentScores | null; studentProfile: Record<string, any>; onApply: (l: Listing) => void;
+function JobCard({ listing, studentScores, studentProfile, userCohort, onApply }: {
+  listing: Listing; studentScores: StudentScores | null; studentProfile: Record<string, any>; userCohort: string; onApply: (l: Listing) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const posted = daysAgo(listing.posted_date);
@@ -246,18 +246,25 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
           <Text style={js.metaLine} numberOfLines={1}>
             {[listing.location, listing.remote ? 'Remote' : null, posted].filter(Boolean).join(' · ')}
           </Text>
-      {(listing as any).cohort_readiness?.length > 0 && (
-        <View style={js.cohortRow}>
-          {(listing as any).cohort_readiness.map((cr: any, idx: number) => {
-            const crColor = cr.readiness === 'ready' ? GREEN : cr.readiness === 'almost' ? AMBER : CORAL;
-            return (
-              <View key={idx} style={[js.cohortPill, { backgroundColor: crColor + '0D' }]}>
-                <Text style={[js.cohortPillText, { color: crColor }]}>{cr.cohort}</Text>
-              </View>
-            );
-          })}
-        </View>
-      )}
+      {(() => {
+        const allCr: any[] = (listing as any).cohort_readiness || [];
+        // Show only the user's matching cohort pill (or all if no cohort set)
+        const visibleCr = userCohort
+          ? allCr.filter(cr => (cr.cohort || '').toLowerCase() === userCohort.toLowerCase())
+          : allCr;
+        return visibleCr.length > 0 ? (
+          <View style={js.cohortRow}>
+            {visibleCr.map((cr: any, idx: number) => {
+              const crColor = cr.readiness === 'ready' ? GREEN : cr.readiness === 'almost' ? AMBER : CORAL;
+              return (
+                <View key={idx} style={[js.cohortPill, { backgroundColor: crColor + '0D' }]}>
+                  <Text style={[js.cohortPillText, { color: crColor }]}>{cr.cohort}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null;
+      })()}
         </View>
       </View>
       {expanded && (
@@ -268,22 +275,30 @@ function JobCard({ listing, studentScores, studentProfile, onApply }: {
                 <Text style={js.gapTitle}>YOUR FIT</Text>
                 {!hasRoleScores && <Text style={{ fontSize: 9, color: colors.t3, fontStyle: 'italic' }}>vs. competitive baseline</Text>}
               </View>
-              {(listing as any).cohort_readiness?.length > 0 ? (
-                (listing as any).cohort_readiness.map((cr: any, idx: number) => (
-                  <View key={idx} style={{ marginBottom: idx < (listing as any).cohort_readiness.length - 1 ? 12 : 0 }}>
-                    <Text style={[js.gapTitle, { fontSize: 9, color: '#2B3A8E', marginBottom: 6 }]}>{cr.cohort}</Text>
-                    <DimBar label="Smart" student={cr.student_smart ?? studentScores.smart} required={cr.required_smart ?? effectiveRs.smart ?? 0} />
-                    <DimBar label="Grit" student={cr.student_grit ?? studentScores.grit} required={cr.required_grit ?? effectiveRs.grit ?? 0} />
-                    <DimBar label="Build" student={cr.student_build ?? studentScores.build} required={cr.required_build ?? effectiveRs.build ?? 0} />
-                  </View>
-                ))
-              ) : (
-                <>
-                  <DimBar label="Smart" student={studentScores.smart} required={effectiveRs.smart ?? 0} />
-                  <DimBar label="Grit" student={studentScores.grit} required={effectiveRs.grit ?? 0} />
-                  <DimBar label="Build" student={studentScores.build} required={effectiveRs.build ?? 0} />
-                </>
-              )}
+              {(() => {
+                const allCr: any[] = (listing as any).cohort_readiness || [];
+                // Show only the user's cohort scores in expanded view
+                const matchedCr = userCohort
+                  ? allCr.filter(cr => (cr.cohort || '').toLowerCase() === userCohort.toLowerCase())
+                  : allCr;
+                if (matchedCr.length > 0) {
+                  return matchedCr.map((cr: any, idx: number) => (
+                    <View key={idx} style={{ marginBottom: idx < matchedCr.length - 1 ? 12 : 0 }}>
+                      <Text style={[js.gapTitle, { fontSize: 9, color: '#2B3A8E', marginBottom: 6 }]}>{cr.cohort}</Text>
+                      <DimBar label="Smart" student={cr.student_smart ?? studentScores.smart} required={cr.required_smart ?? effectiveRs.smart ?? 0} />
+                      <DimBar label="Grit" student={cr.student_grit ?? studentScores.grit} required={cr.required_grit ?? effectiveRs.grit ?? 0} />
+                      <DimBar label="Build" student={cr.student_build ?? studentScores.build} required={cr.required_build ?? effectiveRs.build ?? 0} />
+                    </View>
+                  ));
+                }
+                return (
+                  <>
+                    <DimBar label="Smart" student={studentScores.smart} required={effectiveRs.smart ?? 0} />
+                    <DimBar label="Grit" student={studentScores.grit} required={effectiveRs.grit ?? 0} />
+                    <DimBar label="Build" student={studentScores.build} required={effectiveRs.build ?? 0} />
+                  </>
+                );
+              })()}
               {effectiveRs.overall_bar && <Text style={js.overallBar}>{effectiveRs.overall_bar}</Text>}
               {atsInfo && (
             <View style={js.atsSection}>
@@ -459,6 +474,7 @@ export default function JobsScreen() {
   const [filtered, setFiltered] = useState(false);
   const [interestsUsed, setInterestsUsed] = useState<string[]>([]);
   const [studentScores, setStudentScores] = useState<StudentScores | null>(null);
+  const [rubricAnalysis, setRubricAnalysis] = useState<any>(null);
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [needsSetup, setNeedsSetup] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -481,6 +497,9 @@ export default function JobsScreen() {
         const audit = auditRes?.audit;
         if (audit?.final_score) {
           setStudentScores({ score: audit.final_score, smart: audit.scores?.smart ?? 0, grit: audit.scores?.grit ?? 0, build: audit.scores?.build ?? 0 });
+        }
+        if (audit?.rubric_analysis) {
+          setRubricAnalysis(audit.rubric_analysis);
         }
       } catch {}
       finally { setProfileLoaded(true); }
@@ -600,6 +619,14 @@ export default function JobsScreen() {
     fetchListings();
   }
 
+  const primaryCohortId = rubricAnalysis?.primary_cohort_id || '';
+  const isPreHealth = primaryCohortId === 'pre_health';
+  const isPreLaw = primaryCohortId === 'pre_law';
+  const isAdmissionsCohort = isPreHealth || isPreLaw;
+  const pageTitle = isAdmissionsCohort ? 'Opportunities' : 'Internships';
+  const itemNoun = isAdmissionsCohort ? 'opportunit' : 'internship';
+  const itemPlural = (n: number) => isAdmissionsCohort ? (n === 1 ? 'opportunity' : 'opportunities') : (n === 1 ? 'internship' : 'internships');
+
   return (
     <View style={[js.container, { paddingTop: insets.top }]}>
 
@@ -607,10 +634,10 @@ export default function JobsScreen() {
       <View style={js.header}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
-              <Text style={js.headerTitle}>Internships</Text>
+              <Text style={js.headerTitle}>{pageTitle}</Text>
               {!needsSetup && (
                 <Text style={js.headerSub}>
-                  {total} {filtered ? 'relevant' : ''} internship{total !== 1 ? 's' : ''}
+                  {total} {filtered ? 'relevant ' : ''}{itemPlural(total)}
                   {filtered && interestsUsed.length > 0 ? ` for ${interestsUsed.slice(0, 2).join(', ')}${interestsUsed.length > 2 ? '...' : ''}` : ''}
                 </Text>
               )}
@@ -736,10 +763,27 @@ export default function JobsScreen() {
               <FadeInView delay={0}>
                 <View style={js.emptyWrap}>
                   <Ionicons name="briefcase-outline" size={40} color={colors.t3 + '30'} />
-                  <Text style={js.emptyTitle}>{filtered ? 'No relevant jobs' : 'No listings found'}</Text>
+                  <Text style={js.emptyTitle}>{filtered ? `No relevant ${itemPlural(2)}` : `No ${itemPlural(2)} found`}</Text>
                   <Text style={js.emptyText}>
                     {filtered ? 'Try adding more interests in your profile, or tap "All jobs" to see everything.' : search ? `No results for "${search}".` : 'Pull to refresh.'}
                   </Text>
+                  {Array.isArray(rubricAnalysis?.fastest_path_moves) && rubricAnalysis.fastest_path_moves.length > 0 && (
+                    <View style={{ marginTop: 18, width: '100%', paddingHorizontal: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD, letterSpacing: 0.5, marginBottom: 8 }}>
+                        {isAdmissionsCohort ? 'THIS WEEK\'S ACTIONS' : 'YOUR PATH THIS WEEK'}
+                      </Text>
+                      {rubricAnalysis.fastest_path_moves.slice(0, 3).map((m: any, idx: number) => (
+                        <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
+                          <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: GOLD + '15', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD }}>{idx + 1}</Text>
+                          </View>
+                          <Text style={{ flex: 1, fontSize: 12, color: colors.t1, lineHeight: 17 }}>
+                            {typeof m === 'string' ? m : (m.action || m.label || m.title || '')}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                   {filtered && (
                     <AnimatedPressable style={js.showAllInlineBtn} onPress={() => setShowAll(true)} scaleDown={0.97}>
                       <Text style={js.showAllInlineBtnText}>Show all jobs</Text>
@@ -748,11 +792,46 @@ export default function JobsScreen() {
                 </View>
               </FadeInView>
             ) : (
-              listings.map((listing, i) => (
-                <FadeInView key={listing.id} delay={Math.min(i * 25, 250)}>
-                  <JobCard listing={listing} studentScores={studentScores} studentProfile={profile} onApply={handleApply} />
-                </FadeInView>
-              ))
+              (() => {
+                const userCohort = (primaryCohortId || (profile as any).track || (profile as any).cohort || '').toLowerCase();
+                // Top 3 close-to-ready jobs for "Your Path This Week"
+                const pathJobs = [...listings]
+                  .filter((l: any) => l.readiness === 'ready' || l.readiness === 'almost')
+                  .sort((a: any, b: any) => {
+                    const order: Record<string, number> = { ready: 0, almost: 1 };
+                    return (order[a.readiness] ?? 9) - (order[b.readiness] ?? 9);
+                  })
+                  .slice(0, 3);
+                const pathHeader = (
+                  pathJobs.length > 0 ? (
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD, letterSpacing: 0.5, marginBottom: 6, marginLeft: 4 }}>
+                        {isAdmissionsCohort ? 'READY TO APPLY' : 'YOUR PATH THIS WEEK'}
+                      </Text>
+                    </View>
+                  ) : null
+                );
+                void pathHeader; // reserved — cards below already highlight readiness
+                // When "For you" mode: filter to listings matching user's cohort (or uncategorized)
+                const visibleListings = showAll || !userCohort
+                  ? listings
+                  : listings.filter((l: any) => {
+                      const cr: any[] = l.cohort_readiness || [];
+                      if (cr.length === 0) return true; // uncategorized — show for all
+                      return cr.some(entry => (entry.cohort || '').toLowerCase() === userCohort);
+                    });
+                return visibleListings.map((listing, i) => (
+                  <FadeInView key={listing.id} delay={Math.min(i * 25, 250)}>
+                    <JobCard
+                      listing={listing}
+                      studentScores={studentScores}
+                      studentProfile={profile}
+                      userCohort={userCohort}
+                      onApply={handleApply}
+                    />
+                  </FadeInView>
+                ));
+              })()
             )}
             {listings.length > 0 && (
                   <View style={js.legendWrap}>

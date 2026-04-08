@@ -154,6 +154,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   const dotLoopsRef    = useRef<(Animated.CompositeAnimation | null)[]>([]);
   const scrollRef      = useRef<ScrollView>(null);
   const streamRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutsRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   function startTypingDots() {
     dotLoopsRef.current.forEach(l => l?.stop());
@@ -188,14 +189,15 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     // Paid user — no limits
     await incrementAIMessage();
     const userMsg: Message = { id: ++_msgId, role: 'user', content: text };
-    const apiHistory = [...currentMessages, userMsg].map(m => ({ role: m.role, content: m.content })).slice(-30);
-    const newHistory: Message[] = [...currentMessages, userMsg];
+    const apiHistory = [...currentMessages, userMsg].map(m => ({ role: m.role, content: m.content })).slice(-20);
+    // Cap displayed messages to 60 to prevent unbounded memory growth in long sessions
+    const newHistory: Message[] = [...currentMessages, userMsg].slice(-60);
     setMessages(newHistory);
     setInput('');
     setSuggestions([]);
     suggestionsOpacity.setValue(0);
     setIsTyping(true);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    timeoutsRef.current.push(setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50));
 
     try {
       const token = await getToken();
@@ -281,11 +283,11 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       pendingInitialMessage.current = studentContext?.initialMessage || null;
       setSuggestions([]);
       suggestionsOpacity.setValue(0);
-      setTimeout(() => {
+      timeoutsRef.current.push(setTimeout(() => {
         const chips = getInitialSuggestions(studentContext);
         setSuggestions(chips);
         Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-      }, 1600);
+      }, 1600));
 
       strokeOffset.setValue(HALF_PATH_LEN);
       glowOpacity.setValue(1);
@@ -305,15 +307,15 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
 
             // If no initialMessage, show proactive greeting
             if (!pendingInitialMessage.current && data.proactive_message) {
-              setTimeout(() => {
+              timeoutsRef.current.push(setTimeout(() => {
                 setMessages(prev => {
                   if (prev.length === 0) {
                     return [{ id: ++_msgId, role: 'assistant', content: data.proactive_message }];
                   }
                   return prev;
                 });
-                setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-              }, 1500);
+                timeoutsRef.current.push(setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100));
+              }, 1500));
             }
           }
         } catch {}
@@ -323,9 +325,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         if (pendingInitialMessage.current && !initialMessageSent.current) {
           const msg = pendingInitialMessage.current;
           initialMessageSent.current = true;
-          setTimeout(() => {
+          timeoutsRef.current.push(setTimeout(() => {
             sendFnRef.current?.(msg, []);
-          }, 1200);
+          }, 1200));
         }
       })();
 
@@ -364,6 +366,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         });
       });
     } else {
+      // Cancel all pending timeouts so stale state updates don't fire after close
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
       glowLoopRef.current?.stop();
       stopTypingDots();
       if (streamRef.current) { clearInterval(streamRef.current); streamRef.current = null; }
@@ -373,6 +378,16 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       suggestionsOpacity.setValue(0);
     }
   }, [visible]);
+
+  // Cleanup on unmount — cancel any lingering stream/timeouts
+  useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+      if (streamRef.current) { clearInterval(streamRef.current); streamRef.current = null; }
+      glowLoopRef.current?.stop();
+    };
+  }, []);
 
   // ── Manual send ──────────────────────────────────────────────────────────────
 

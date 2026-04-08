@@ -348,8 +348,27 @@ async def update_profile(request: Request, body: dict = Body(...)):
     """Update current user's profile. Merges with existing. Only allowed fields are updated."""
     user = deps.require_auth(request)
     email = user.get("email") or ""
-    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level"}
+    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year"}
     data = {k: v for k, v in (body or {}).items() if k in allowed}
+    # Normalize graduation_year: coerce to int, reject nonsense values.
+    # Coach (ai.py:187) and leaderboard (leaderboard_page.py) both read this field,
+    # so persisting a bad value here would corrupt downstream rendering.
+    if "graduation_year" in data:
+        v = data["graduation_year"]
+        if v is None or v == "":
+            data["graduation_year"] = None
+        else:
+            try:
+                year = int(v)
+                # Sanity bounds: current year minus 2 (already graduated) through current year + 8 (long programs)
+                from datetime import datetime as _dt
+                _now = _dt.now().year
+                if _now - 2 <= year <= _now + 8:
+                    data["graduation_year"] = year
+                else:
+                    data.pop("graduation_year", None)
+            except (TypeError, ValueError):
+                data.pop("graduation_year", None)
     if "majors" in data:
         raw = data["majors"]
         items = (raw if isinstance(raw, list) else [raw]) if raw else []

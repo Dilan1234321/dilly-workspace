@@ -34,6 +34,43 @@ const BLUE  = '#0A84FF';
 
 type Phase = 'idle' | 'scanning' | 'done';
 
+// Rubric scorer types (Tier 2 cutover)
+interface RubricSignal {
+  signal: string;
+  dimension: 'smart' | 'grit' | 'build';
+  tier: 'high' | 'medium' | 'low';
+  weight: number;
+  rationale: string;
+}
+
+type RubricPathMove = string | { move?: string; expected_lift?: string; source?: string; title?: string; action?: string };
+
+interface OtherCohort {
+  cohort_id: string;
+  display_name: string;
+  composite: number;
+  smart: number;
+  grit: number;
+  build: number;
+  recruiter_bar: number;
+  above_bar: boolean;
+}
+
+interface RubricAnalysis {
+  primary_cohort_id: string;
+  primary_cohort_display_name: string;
+  primary_composite: number;
+  primary_smart: number;
+  primary_grit: number;
+  primary_build: number;
+  recruiter_bar: number;
+  above_bar: boolean;
+  matched_signals: RubricSignal[];
+  unmatched_signals: RubricSignal[];
+  fastest_path_moves: RubricPathMove[];
+  other_cohorts?: OtherCohort[];
+}
+
 interface AuditSummary {
   id?: string;
   ts?: number;
@@ -41,6 +78,7 @@ interface AuditSummary {
   scores?: { smart?: number; grit?: number; build?: number };
   detected_track?: string;
   dilly_take?: string;
+  rubric_analysis?: RubricAnalysis;
 }
 
 interface PickedFile {
@@ -53,9 +91,11 @@ interface PickedFile {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function scoreColor(s: number): string {
+  // Two-tier encouraging palette: green if strong, brand blue otherwise.
+  // Never red, never orange — low scores should feel like a starting line,
+  // not a failure. GOLD here is the Dilly brand blue (#2B3A8E).
   if (s >= 80) return GREEN;
-  if (s >= 55) return AMBER;
-  return CORAL;
+  return GOLD;
 }
 
 function timeAgo(ts: number): string {
@@ -239,8 +279,84 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
         </View>
       ) : null}
 
-      <AnimatedPressable style={ns.resultsBtn} onPress={() => router.push('/(app)/score-detail')} scaleDown={0.97}>
-        <Text style={ns.resultsBtnText}>View Full Breakdown</Text>
+      {/* ── Rubric analysis sections (Tier 2 cutover) ────────────────────
+           Three sections: what's working, biggest levers, fastest path.
+           Only renders when the backend returned rubric_analysis (the
+           new scoring path). Falls back to the button-only card when
+           rubric_analysis is absent.
+       ─────────────────────────────────────────────────────────────────── */}
+      {newAudit.rubric_analysis ? (
+        <View style={{ marginTop: 6 }}>
+          {/* What's working */}
+          {newAudit.rubric_analysis.matched_signals && newAudit.rubric_analysis.matched_signals.length > 0 && (
+            <View style={ns.rubricSection}>
+              <Text style={ns.rubricHeading}>What's working</Text>
+              {newAudit.rubric_analysis.matched_signals.slice(0, 4).map((sig, i) => (
+                <View key={`m-${i}`} style={ns.matchedRow}>
+                  <View style={ns.matchedDot} />
+                  <Text style={ns.matchedText}>{sig.signal}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Biggest levers — unmatched high-impact with rationales */}
+          {newAudit.rubric_analysis.unmatched_signals && newAudit.rubric_analysis.unmatched_signals.filter(s => s.tier === 'high').length > 0 && (
+            <View style={ns.rubricSection}>
+              <Text style={ns.rubricHeading}>Biggest levers</Text>
+              {newAudit.rubric_analysis.unmatched_signals
+                .filter(s => s.tier === 'high')
+                .slice(0, 4)
+                .map((sig, i) => (
+                  <View key={`u-${i}`} style={ns.leverCard}>
+                    <View style={ns.leverNum}>
+                      <Text style={ns.leverNumText}>{i + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={ns.leverTitle}>{sig.signal}</Text>
+                      {sig.rationale ? (
+                        <Text style={ns.leverBody} numberOfLines={3}>{sig.rationale}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+            </View>
+          )}
+
+          {/* Specific next moves */}
+          {newAudit.rubric_analysis.fastest_path_moves && newAudit.rubric_analysis.fastest_path_moves.length > 0 && (
+            <View style={ns.rubricSection}>
+              <Text style={ns.rubricHeading}>Your fastest path forward</Text>
+              {newAudit.rubric_analysis.fastest_path_moves.slice(0, 5).map((move, i) => {
+                const text = typeof move === 'string' ? move : (move.move || move.action || move.title || '');
+                if (!text) return null;
+                return (
+                  <View key={`p-${i}`} style={ns.moveCard}>
+                    <Ionicons name="arrow-forward" size={11} color={GOLD} style={{ marginTop: 2, marginRight: 7 }} />
+                    <Text style={ns.moveText}>{text}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      ) : null}
+
+      <AnimatedPressable
+        style={ns.resultsBtn}
+        onPress={async () => {
+          // Cache the audit result so the feedback page can read it
+          try {
+            const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+            await AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(newAudit));
+          } catch {}
+          router.push(newAudit.rubric_analysis ? '/(app)/feedback' : '/(app)/score-detail');
+        }}
+        scaleDown={0.97}
+      >
+        <Text style={ns.resultsBtnText}>
+          {newAudit.rubric_analysis ? 'See my detailed feedback' : 'View Full Breakdown'}
+        </Text>
         <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
       </AnimatedPressable>
     </View>
@@ -356,20 +472,40 @@ export default function NewAuditScreen() {
       // Brief pause to show all stages done
       await new Promise(r => setTimeout(r, 800));
 
+      // ──────────────────────────────────────────────────────────────────
+      // Defensive normalization: any audit endpoint that returns flat
+      // {smart_score, grit_score, build_score} instead of nested
+      // {scores: {smart, grit, build}} would crash the renderer at line
+      // ~228 (Math.round(undefined) → NaN → React Native crash). We
+      // normalize here so this can never happen regardless of which
+      // backend endpoint produced the response.
+      // ──────────────────────────────────────────────────────────────────
+      if (result && typeof result === 'object') {
+        const hasNestedScores = result.scores && typeof result.scores === 'object'
+          && (result.scores.smart != null || result.scores.grit != null || result.scores.build != null);
+        if (!hasNestedScores) {
+          result.scores = {
+            smart: Number(result.smart_score ?? result?.scores?.smart ?? 0) || 0,
+            grit:  Number(result.grit_score  ?? result?.scores?.grit  ?? 0) || 0,
+            build: Number(result.build_score ?? result?.scores?.build ?? 0) || 0,
+          };
+        }
+        if (!result.detected_track) {
+          result.detected_track = result.track || 'Unknown';
+        }
+      }
+
       if (result?.final_score != null) {
         setNewResult(result);
         setLatestAudit(result);
         // Prepend to history
         setHistory(prev => [result, ...prev].slice(0, 20));
 
-        // Only sync the editor from the parsed file when a NEW file was uploaded.
-        // If the user audited from the editor, skip sync-base — it would overwrite
-        // their edits with the older parsed version on disk.
-        if (file) {
-          try {
-            await dilly.post('/resume/sync-base').catch(() => null);
-          } catch {}
-        }
+        // Update base resume in the editor from the latest parsed resume
+        // This ensures the resume editor always reflects the most recent audit
+        try {
+          await dilly.post('/resume/sync-base').catch(() => null);
+        } catch {}
       } else {
         Alert.alert('Audit Failed', result?.detail || result?.error || 'Resume audit failed. Please try uploading again.');
       }
@@ -757,4 +893,50 @@ const ns = StyleSheet.create({
   historyDims: { flexDirection: 'row', gap: 8 },
   historyDim: { fontSize: 10, color: colors.t3 },
   historyTake: { fontSize: 10, color: colors.t3, lineHeight: 15, marginTop: 4 },
+
+  // ── Rubric analysis sections (Tier 2 cutover 2026-04-08) ──────────────
+  rubricSection: { marginTop: 10, marginBottom: 4 },
+  rubricHeading: {
+    fontSize: 9, fontWeight: '700', textTransform: 'uppercase',
+    letterSpacing: 1.2, color: colors.t3, marginBottom: 6,
+  },
+
+  // What's working — matched signals (subtle green tint)
+  matchedRow: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+    paddingVertical: 6, paddingHorizontal: 10,
+    backgroundColor: 'rgba(52,199,89,0.08)',
+    borderWidth: 1, borderColor: 'rgba(52,199,89,0.18)',
+    borderRadius: 9, marginBottom: 4,
+  },
+  matchedDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: GREEN, marginTop: 5, flexShrink: 0,
+  },
+  matchedText: { fontSize: 11, fontWeight: '500', color: colors.t1, lineHeight: 15, flex: 1 },
+
+  // Biggest levers — unmatched high-impact with rationales
+  leverCard: {
+    flexDirection: 'row', gap: 9, alignItems: 'flex-start',
+    backgroundColor: 'rgba(43,58,142,0.06)',
+    borderWidth: 1, borderColor: 'rgba(43,58,142,0.18)',
+    borderRadius: 11, padding: 10, marginBottom: 5,
+  },
+  leverNum: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: colors.bg, borderWidth: 1, borderColor: GOLD,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1,
+  },
+  leverNumText: { fontSize: 9, fontWeight: '700', color: GOLD },
+  leverTitle: { fontSize: 11.5, fontWeight: '700', color: colors.t1, marginBottom: 3, lineHeight: 15 },
+  leverBody: { fontSize: 10, color: colors.t2, lineHeight: 14 },
+
+  // Fastest path forward — specific moves
+  moveCard: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    paddingVertical: 6, paddingHorizontal: 10,
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 9, marginBottom: 4,
+  },
+  moveText: { fontSize: 11, color: colors.t1, lineHeight: 15, flex: 1 },
 });

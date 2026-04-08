@@ -28,13 +28,25 @@ const PRE_PROF_OPTIONS = [
   'Pre-Law', 'None / Not applicable',
 ];
 
-// key is used for UI selection state; apiValue is sent to the API
+// key is used for UI selection state; apiValue is sent to the API.
+// Year labels are dynamic so they don't go stale — previously hardcoded
+// "Summer 2026" / "Fall 2026" would become incorrect on Jan 1, 2027.
+const _CURRENT_YEAR = new Date().getFullYear();
 const TARGET_OPTIONS = [
-  { key: 'internship_summer', label: 'Internship · Summer 2026', apiValue: 'internship' },
-  { key: 'internship_fall',   label: 'Internship · Fall 2026',   apiValue: 'internship' },
-  { key: 'full_time',         label: 'Full-time job',            apiValue: 'full_time'  },
-  { key: 'exploring',         label: 'Just exploring',           apiValue: 'exploring'  },
+  { key: 'internship_summer', label: `Internship · Summer ${_CURRENT_YEAR}`, apiValue: 'internship' },
+  { key: 'internship_fall',   label: `Internship · Fall ${_CURRENT_YEAR}`,   apiValue: 'internship' },
+  { key: 'full_time',         label: 'Full-time job',                         apiValue: 'full_time'  },
+  { key: 'exploring',         label: 'Just exploring',                        apiValue: 'exploring'  },
 ];
+
+// Dynamic graduation year range: current year through current year + 5.
+// Computed at module load so it rolls forward automatically each year —
+// never needs manual updating. Coach and leaderboard both read graduation_year,
+// so this must be set for every student before they finish onboarding.
+const GRADUATION_OPTIONS: number[] = (() => {
+  const current = new Date().getFullYear();
+  return [current, current + 1, current + 2, current + 3, current + 4, current + 5];
+})();
 
 const MAJOR_TO_COHORT: Record<string, string> = {
   'Computer Science': 'Tech', 'Computer Information Systems': 'Tech',
@@ -219,11 +231,12 @@ function TagPicker({
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
 
-  const [fullName,    setFullName]    = useState('');
-  const [majors,      setMajors]      = useState<string[]>([]);
-  const [minors,      setMinors]      = useState<string[]>([]);
-  const [preProf,     setPreProf]     = useState<string | null>(null);
-  const [targetKey,   setTargetKey]   = useState('internship_summer');
+  const [fullName,       setFullName]       = useState('');
+  const [majors,         setMajors]         = useState<string[]>([]);
+  const [minors,         setMinors]         = useState<string[]>([]);
+  const [preProf,        setPreProf]        = useState<string | null>(null);
+  const [targetKey,      setTargetKey]      = useState('internship_summer');
+  const [graduationYear, setGraduationYear] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState('');
   const [loading,     setLoading]     = useState(false);
   const [photoUri,    setPhotoUri]    = useState<string | null>(null);
@@ -258,7 +271,7 @@ export default function ProfileScreen() {
     ? detectCohort(majors, preProf)
     : '';
   const cohortCopy     = cohort ? COHORT_COPY[cohort] : null;
-  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1;
+  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null;
 
   async function handleContinue() {
     if (!canContinue || loading) return;
@@ -281,6 +294,7 @@ export default function ProfileScreen() {
           application_target: TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'internship',
           track: resolvedCohort,
           cohort: resolvedCohort,
+          graduation_year: graduationYear,
           onboarding_complete: false,
         }),
       });
@@ -299,6 +313,7 @@ export default function ProfileScreen() {
         ['dilly_onboarding_majors',  JSON.stringify(majors)],
         ['dilly_onboarding_pre_prof', preProfToSend ?? ''],
         ['dilly_onboarding_target',  TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'internship'],
+        ['dilly_onboarding_graduation_year', String(graduationYear ?? '')],
       ]);
 
       router.push({
@@ -444,6 +459,28 @@ export default function ProfileScreen() {
             onAdd={(v) => { if (!minors.includes(v) && minors.length < 2) setMinors((p) => [...p, v]); }}
             onRemove={(v) => setMinors((p) => p.filter((m) => m !== v))}
           />
+        </View>
+
+        {/* Graduation year */}
+        <View style={s.field}>
+          <FieldLabel>When do you graduate?</FieldLabel>
+          <View style={s.pillsWrap}>
+            {GRADUATION_OPTIONS.map((year) => {
+              const selected = graduationYear === year;
+              return (
+                <TouchableOpacity
+                  key={year}
+                  style={[s.pill, selected ? s.pillActive : s.pillDefault]}
+                  onPress={() => setGraduationYear(selected ? null : year)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.pillText, selected ? s.pillTextActive : s.pillTextDefault]}>
+                    {year}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* Application target */}
@@ -746,7 +783,7 @@ const s = StyleSheet.create({
     marginTop: spacing.md,
   },
   buttonActive: {
-    backgroundColor: '#C0392B',
+    backgroundColor: colors.gold, // Dilly brand blue (#2B3A8E)
   },
   buttonDisabled: {
     backgroundColor: colors.s3,

@@ -133,9 +133,11 @@ function AnimBar({
 // ── Score Breakdown ───────────────────────────────────────────────────────────
 
 function scoreColor(score: number, bar: number) {
+  // Two-tier encouraging palette: green if at/above bar, brand blue otherwise.
+  // Never red, never orange — low scores should feel like a starting line,
+  // not a failure. GOLD here is the Dilly brand blue (#2B3A8E).
   if (score >= bar) return GREEN;
-  if (score >= bar - 10) return AMBER;
-  return CORAL;
+  return GOLD;
 }
 
 export function ScoreBreakdownCard({ data }: { data: ScoreBreakdownPayload }) {

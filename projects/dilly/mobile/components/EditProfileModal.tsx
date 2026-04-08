@@ -202,6 +202,8 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
           const err = await res.json().catch(() => ({}));
           throw new Error(err.detail || 'Upload failed');
         }
+        // Refresh profile page so photoUri updates to the new photo
+        onSaved();
       } catch (e: any) {
         Alert.alert('Upload failed', e.message || 'Could not upload photo.');
         setLocalPhoto(null);

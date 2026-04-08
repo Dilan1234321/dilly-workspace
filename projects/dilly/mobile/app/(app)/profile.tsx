@@ -26,9 +26,11 @@ const CORAL = '#FF453A';
 // \u2500\u2500 Helpers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 function scoreColor(score: number): string {
+  // Two-tier encouraging palette: green if strong, brand blue otherwise.
+  // Never red, never orange — low scores should feel like a starting line,
+  // not a failure. GOLD in this file is the Dilly brand blue (#2B3A8E).
   if (score >= 80) return GREEN;
-  if (score >= 55) return AMBER;
-  return CORAL;
+  return GOLD;
 }
 
 function calcPercentile(score: number): number {
