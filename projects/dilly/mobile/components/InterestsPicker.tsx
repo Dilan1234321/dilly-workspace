@@ -21,9 +21,10 @@ interface Props {
   onChange: (interests: string[]) => void;
   autoPopulated?: string[];  // majors/minors that are pre-selected (shown with a badge)
   maxVisible?: number;  // how many to show before "Show more"
+  excluded?: string[];  // hide these from the list (e.g. user's primary cohort)
 }
 
-export default function InterestsPicker({ selected, onChange, autoPopulated = [], maxVisible = 20 }: Props) {
+export default function InterestsPicker({ selected, onChange, autoPopulated = [], maxVisible = 20, excluded = [] }: Props) {
   const [allInterests, setAllInterests] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -47,9 +48,14 @@ export default function InterestsPicker({ selected, onChange, autoPopulated = []
     })();
   }, []);
 
-  const filtered = search.trim()
-    ? allInterests.filter(i => i.toLowerCase().includes(search.toLowerCase()))
+  // Hide any excluded interests (e.g. the user's primary cohort assigned in onboarding)
+  const excludedLower = excluded.map(e => (e || '').toLowerCase().trim()).filter(Boolean);
+  const baseList = excludedLower.length > 0
+    ? allInterests.filter(i => !excludedLower.includes((i || '').toLowerCase().trim()))
     : allInterests;
+  const filtered = search.trim()
+    ? baseList.filter(i => i.toLowerCase().includes(search.toLowerCase()))
+    : baseList;
 
   const visible = showAll ? filtered : filtered.slice(0, maxVisible);
   const hasMore = !showAll && filtered.length > maxVisible;
