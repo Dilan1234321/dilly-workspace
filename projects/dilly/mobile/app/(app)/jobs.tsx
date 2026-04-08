@@ -495,11 +495,19 @@ export default function JobsScreen() {
         setNeedsSetup(!hasInterests);
 
         const audit = auditRes?.audit;
+        const ra = audit?.rubric_analysis;
         if (audit?.final_score) {
-          setStudentScores({ score: audit.final_score, smart: audit.scores?.smart ?? 0, grit: audit.scores?.grit ?? 0, build: audit.scores?.build ?? 0 });
+          // Prefer per-cohort scores from rubric_analysis (compares apples-to-apples
+          // with each job's per-cohort requirements). Fall back to overall scores.
+          setStudentScores({
+            score: audit.final_score,
+            smart: ra?.primary_smart ?? audit.scores?.smart ?? 0,
+            grit:  ra?.primary_grit  ?? audit.scores?.grit  ?? 0,
+            build: ra?.primary_build ?? audit.scores?.build ?? 0,
+          });
         }
-        if (audit?.rubric_analysis) {
-          setRubricAnalysis(audit.rubric_analysis);
+        if (ra) {
+          setRubricAnalysis(ra);
         }
       } catch {}
       finally { setProfileLoaded(true); }
@@ -547,9 +555,12 @@ export default function JobsScreen() {
           readiness: l.readiness,
           rank_score: l.rank_score,
           required_scores: {
-            smart: first.required_smart,
-            grit: first.required_grit,
-            build: first.required_build,
+            // Prefer cohort-specific requirements; fall back to the flat fields
+            // on the listing so every card shows SGB requirements even when no
+            // cohort match was computed.
+            smart: first.required_smart ?? l.required_smart,
+            grit:  first.required_grit  ?? l.required_grit,
+            build: first.required_build ?? l.required_build,
           },
           student_scores_override: {
             smart: first.student_smart,
@@ -793,7 +804,15 @@ export default function JobsScreen() {
               </FadeInView>
             ) : (
               (() => {
-                const userCohort = (primaryCohortId || (profile as any).track || (profile as any).cohort || '').toLowerCase();
+                // For card-internal cohort matching (DimBars per cohort), use the
+                // RICH cohort name (matches cohort_readiness[].cohort from the API).
+                // The rubric snake_case ID is only the lookup key.
+                const userCohort = (
+                  rubricAnalysis?.primary_cohort_display_name ||
+                  (profile as any).cohort ||
+                  (profile as any).track ||
+                  ''
+                ).toLowerCase();
                 // Top 3 close-to-ready jobs for "Your Path This Week"
                 const pathJobs = [...listings]
                   .filter((l: any) => l.readiness === 'ready' || l.readiness === 'almost')

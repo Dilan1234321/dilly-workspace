@@ -921,14 +921,48 @@ async def audit_resume_v2(
                 _grit = float(_scores.get("grit", 0))
                 _build = float(_scores.get("build", 0))
                 _dilly = float(full_audit_dict.get("final_score", 0))
-                _cohort_scores = {
-                    _track: {
-                        "smart": _smart,
-                        "grit": _grit,
-                        "build": _build,
+                # Build full per-cohort scores keyed by RICH cohort name so the
+                # legacy internships pipeline (cohort_requirements JSONB +
+                # match_scores) can compare per-cohort student strengths to
+                # per-cohort job requirements. Falls back to legacy single-track
+                # shape if rubric_analysis is unavailable.
+                _cohort_scores = {}
+                _ra = full_audit_dict.get("rubric_analysis") or {}
+                try:
+                    from dilly_core.rubric_scorer import RUBRIC_TO_RICH_COHORT
+                except Exception:
+                    RUBRIC_TO_RICH_COHORT = {}
+                _primary_id = _ra.get("primary_cohort_id")
+                _primary_rich = RUBRIC_TO_RICH_COHORT.get(_primary_id) if _primary_id else None
+                if _primary_rich:
+                    _cohort_scores[_primary_rich] = {
+                        "smart": float(_ra.get("primary_smart") or _smart),
+                        "grit":  float(_ra.get("primary_grit")  or _grit),
+                        "build": float(_ra.get("primary_build") or _build),
                         "level": "primary",
                     }
-                } if _track else {}
+                for _oc in (_ra.get("other_cohorts") or []):
+                    _rich = RUBRIC_TO_RICH_COHORT.get(_oc.get("cohort_id"))
+                    if not _rich or _rich in _cohort_scores:
+                        continue
+                    _cohort_scores[_rich] = {
+                        "smart": float(_oc.get("smart") or 0),
+                        "grit":  float(_oc.get("grit")  or 0),
+                        "build": float(_oc.get("build") or 0),
+                        "level": "secondary",
+                    }
+                if not _cohort_scores and _track:
+                    _cohort_scores = {
+                        _track: {
+                            "smart": _smart,
+                            "grit": _grit,
+                            "build": _build,
+                            "level": "primary",
+                        }
+                    }
+                # Use rich cohort name for students.cohort so internships query
+                # can match against cohort_requirements JSONB
+                _student_cohort = _primary_rich or _track
                 _pw = os.environ.get("DILLY_DB_PASSWORD", "")
                 if not _pw:
                     try: _pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
@@ -940,15 +974,16 @@ async def audit_resume_v2(
                 _cur = _conn.cursor()
                 _cur.execute("""
                     INSERT INTO students (
-                        email, name, track, cohort_scores,
+                        email, name, track, cohort, cohort_scores,
                         smart_score, grit_score, build_score, dilly_score,
                         overall_smart, overall_grit, overall_build, overall_dilly_score,
                         latest_audit_id, has_run_first_audit
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
                     ON CONFLICT (email) DO UPDATE SET
                         name = CASE WHEN EXCLUDED.name <> '' THEN EXCLUDED.name ELSE students.name END,
                         track = COALESCE(EXCLUDED.track, students.track),
+                        cohort = COALESCE(EXCLUDED.cohort, students.cohort),
                         cohort_scores = EXCLUDED.cohort_scores,
                         smart_score = EXCLUDED.smart_score,
                         grit_score = EXCLUDED.grit_score,
@@ -964,6 +999,7 @@ async def audit_resume_v2(
                     email,
                     full_audit_dict.get("candidate_name") or "",
                     _track or None,
+                    _student_cohort or None,
                     _json.dumps(_cohort_scores),
                     _smart, _grit, _build, _dilly,
                     _smart, _grit, _build, _dilly,

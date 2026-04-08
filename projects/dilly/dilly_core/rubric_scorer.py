@@ -901,6 +901,37 @@ def rubric_to_legacy_shape(
     return result
 
 
+# ── Rubric ID → existing rich cohort name (for jobs / internships matching) ──
+# The rubric scorer uses snake_case cohort IDs, but the existing internships
+# infrastructure (cohort_requirements JSONB, students.cohort field, match_scores
+# pipeline) uses the rich display names from academic_taxonomy.COHORTS.
+# This map bridges the two so jobs can be filtered/scored per the new rubric
+# cohort without rewriting the legacy pipeline.
+RUBRIC_TO_RICH_COHORT: Dict[str, str] = {
+    "tech_software_engineering": "Software Engineering & CS",
+    "tech_data_science":         "Data Science & Analytics",
+    "tech_cybersecurity":        "Cybersecurity & IT",
+    "business_finance":          "Finance & Accounting",
+    "business_consulting":       "Consulting & Strategy",
+    "business_marketing":        "Marketing & Advertising",
+    "business_accounting":       "Finance & Accounting",
+    "pre_health":                "Healthcare & Clinical",
+    "pre_law":                   "Law & Government",
+    "science_research":          "Life Sciences & Research",
+    "health_nursing_allied":     "Healthcare & Clinical",
+    "social_sciences":           "Social Sciences & Nonprofit",
+    "humanities_communications": "Media & Communications",
+    "arts_design":               "Design & Creative Arts",
+    "quantitative_math_stats":   "Physical Sciences & Math",
+    "sport_management":          "Management & Operations",
+}
+
+
+def rich_cohort_for_rubric_id(cohort_id: str) -> Optional[str]:
+    """Return the rich display name used by the legacy internships pipeline."""
+    return RUBRIC_TO_RICH_COHORT.get(cohort_id)
+
+
 def build_rubric_analysis_payload(
     primary_cohort_id: str,
     scores_by_cohort: Dict[str, RubricScore],
