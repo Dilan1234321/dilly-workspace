@@ -41,6 +41,18 @@ interface AuditResult {
   detected_track?: string;
 }
 
+// Build-75: /home/brief response shape
+interface HomeBrief {
+  has_audit: boolean;
+  streak: { current: number; longest: number; already_checked_in: boolean; daily_action: string; today: string };
+  score: { current: number | null; previous: number | null; delta: number | null; as_of: number | null; history: { score: number; ts: number }[] };
+  pipeline: { drafts: number; applied: number; interviewing: number; offers: number; silent_2_weeks: number; total: number };
+  deadlines: { label: string; date: string; ts: number; days_until: number; type: string; company: string; role: string }[];
+  brief: { id: string; kind: string; headline: string; body: string; action_label: string; action_route: string }[];
+  do_now: { kind: string; title: string; subtitle: string; action_label: string; action_route: string; action_payload: any };
+  cohort_bar: { cohort_id: string | null; label: string; bar: number; reference_company: string };
+}
+
 // \u2500\u2500 Helpers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 function scoreColor(score: number): string {
@@ -49,12 +61,20 @@ function scoreColor(score: number): string {
   return colors.coral;
 }
 
-function calcPercentile(score: number): number {
-  if (score >= 90) return 5;
-  if (score >= 80) return 15;
-  if (score >= 70) return 30;
-  if (score >= 60) return 50;
-  return 65;
+// Build-75: calcPercentile removed. It was a hardcoded 5-bucket lookup
+// that lied about peer standing without touching any real data. We show
+// the user's own score and delta instead. Peer stats will come back when
+// we have density — not before.
+
+function formatRelativeDate(ts: number | null | undefined): string {
+  if (!ts) return '';
+  const now = Date.now() / 1000;
+  const diffDays = Math.round((now - ts) / 86400);
+  if (diffDays <= 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.round(diffDays / 7)}w ago`;
+  return new Date(ts * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // \u2500\u2500 Profile Photo \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -104,6 +124,9 @@ export default function HomeScreen() {
   const [audit,   setAudit]       = useState<AuditResult>({});
   const [loading, setLoading]     = useState(true);
   const [displayScore, setDisplayScore] = useState(0);
+  // Build-75: home brief (streak, pipeline, deadlines, brief cards, do-now)
+  const [brief, setBrief] = useState<HomeBrief | null>(null);
+  const [briefError, setBriefError] = useState(false);
   const [photoUri, setPhotoUri]   = useState<string | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [auditHistory, setAuditHistory] = useState<{score: number; date: string; ts: number}[]>([]);
@@ -209,23 +232,12 @@ export default function HomeScreen() {
         });
 
         if (hasAuditFlag) {
-          const localScore = auditObj?.final_score ?? calculated ?? 0;
-          const localTrack = auditObj?.detected_track || (profileRes as any)?.track || 'General';
-          const BARS: Record<string, number> = { Tech: 75, Finance: 72, Health: 68, General: 65 };
-          const localBar = BARS[localTrack] ?? 65;
-          const localPercentile = calcPercentile(localScore);
-          const previousScore: number | null = null;
-          const previousPercentile: number | null = null;
-
-          if (localScore >= localBar && previousScore !== null && previousScore < localBar) {
-            celebrate('cleared-bar');
-          } else if (localPercentile <= 25 && previousPercentile !== null && previousPercentile > 25) {
-            celebrate('top-25');
-          } else if (previousScore !== null && localScore - previousScore >= 10) {
-            celebrate('score-jump');
-          } else {
-            celebrate('first-audit');
-          }
+          // Build-75: the celebration fires only on the very first audit now.
+          // Previous logic referenced localPercentile (a lie) and previousScore
+          // (always null), so every audit celebrated 'first-audit' anyway.
+          // Cleared-bar / score-jump celebrations will be surfaced through the
+          // score delta banner instead.
+          celebrate('first-audit');
         }
         dilly.get('/audit/history').then(data => {
           const audits = (data?.audits || []).map((a: any) => ({
@@ -241,6 +253,38 @@ export default function HomeScreen() {
         dilly.get('/v2/internships/feed?sort=rank&limit=3').then(data => {
           setTopJobs((data?.listings || []).slice(0, 3));
         }).catch(() => {});
+
+        // Build-75: fetch the composed home brief (streak, pipeline, deadlines,
+        // daily cards, do-now). Single round-trip, no LLM, no peer data.
+        dilly.get('/home/brief').then((data: HomeBrief) => {
+          setBrief(data);
+          setBriefError(false);
+        }).catch(() => {
+          setBriefError(true);
+        });
+
+        // Build-75: record today's streak check-in. The endpoint is idempotent
+        // — if already checked in today, it returns the current state without
+        // bumping. Fire-and-forget; we don't block UI on this.
+        dilly.fetch('/streak/checkin', { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            // Merge the fresh streak into the brief if we already have it
+            setBrief(prev => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                streak: {
+                  current: data?.streak ?? prev.streak.current,
+                  longest: data?.longest_streak ?? prev.streak.longest,
+                  already_checked_in: !!data?.already_checked_in,
+                  daily_action: data?.daily_action ?? prev.streak.daily_action,
+                  today: data?.today ?? prev.streak.today,
+                },
+              };
+            });
+          })
+          .catch(() => {});
       } catch {
         // If fetch failed entirely (network error, no auth), redirect to login
         const stillHasToken = await getToken();
@@ -295,49 +339,24 @@ export default function HomeScreen() {
   const gritScore   = audit.scores?.grit   ?? 0;
   const buildScore  = audit.scores?.build  ?? 0;
   const track       = audit.detected_track || cohort || 'General';
-  const percentile  = calcPercentile(finalScore);
   const sColor      = scoreColor(finalScore);
 
-  const COHORT_BARS: Record<string, { bar: number; company: string }> = {
-    Tech:    { bar: 75, company: 'Google' },
-    Finance: { bar: 72, company: 'Goldman' },
-    Health:  { bar: 68, company: 'Mayo Clinic' },
-    General: { bar: 65, company: 'your target company' },
-  };
-  const cohortCfg = COHORT_BARS[cohort] || COHORT_BARS.General;
+  // Build-75: cohort bar comes from the backend brief now (all 16+ rubric
+  // cohorts, not the old hardcoded 4). Fall back to General while the brief
+  // is still loading so the first render doesn't crash.
+  const cohortCfg = brief?.cohort_bar
+    ? { bar: brief.cohort_bar.bar, company: brief.cohort_bar.reference_company }
+    : { bar: 68, company: 'your target company' };
   const gap = cohortCfg.bar - finalScore;
   const scores = audit.scores || {};
   const weakestEntry = Object.entries(scores).sort((a, b) => (a[1] as number) - (b[1] as number))[0];
   const weakestDim = weakestEntry ? weakestEntry[0] : 'Smart';
   const weakestLabel = weakestDim.charAt(0).toUpperCase() + weakestDim.slice(1);
 
-  type NextAction = { type: 'upload' | 'close_gap' | 'apply'; body: string; cta: string; onPress: () => void };
-  const nextAction: NextAction = !hasAudit
-    ? {
-        type: 'upload',
-        body: 'Upload your resume. Dilly will tell you exactly where you stand.',
-        cta: 'Upload my resume →',
-        onPress: () => router.push('/onboarding/upload'),
-      }
-    : gap > 0
-    ? {
-        type: 'close_gap',
-        body: `Your ${weakestLabel} score is holding you back from ${cohortCfg.company}'s bar. Fix it and you close ${Math.round(gap)} points tonight.`,
-        cta: `Fix my ${weakestLabel} score →`,
-        onPress: () => openDillyOverlay({
-          name: firstName, cohort, score: finalScore,
-          smart: smartScore, grit: gritScore, build: buildScore,
-          gap, cohortBar: cohortCfg.bar,
-          referenceCompany: cohortCfg.company,
-          isPaid: false,
-        }),
-      }
-    : {
-        type: 'apply',
-        body: `You clear ${cohortCfg.company}'s bar. Apply this week — don't wait.`,
-        cta: 'Show me where to apply →',
-        onPress: () => router.push('/(app)/jobs'),
-      };
+  // Build-75: nextAction removed. The "next move" copy now comes from the
+  // backend's /home/brief do_now payload, which has richer logic (urgent
+  // deadlines, silent applications, drafts, etc) that the old ternary
+  // couldn't express.
 
   const barWidth = barAnim.interpolate({
     inputRange:  [0, 100],
@@ -398,15 +417,37 @@ export default function HomeScreen() {
             </AnimatedPressable>
             <View style={{ flex: 1, marginLeft: 10 }}>
               <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
-              {cohort ? (
+              {brief?.cohort_bar?.label ? (
+                <Text style={s.headerCohort}>{brief.cohort_bar.label}</Text>
+              ) : cohort ? (
                 <Text style={s.headerCohort}>{cohort} cohort</Text>
               ) : null}
             </View>
+            {/* Build-75: streak flame */}
+            {brief && brief.streak.current > 0 && (
+              <View style={s.streakPill}>
+                <Text style={s.streakFire}>🔥</Text>
+                <Text style={s.streakCount}>{brief.streak.current}</Text>
+              </View>
+            )}
             <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
               <Ionicons name="settings-outline" size={20} color={colors.t3} />
             </AnimatedPressable>
           </View>
         </FadeInView>
+
+        {/* Build-75: Daily action banner — today's one-line coaching action */}
+        {brief?.streak?.daily_action && (
+          <FadeInView delay={40}>
+            <View style={s.dailyActionBanner}>
+              <Ionicons name="today" size={12} color={colors.gold} />
+              <Text style={s.dailyActionText} numberOfLines={2}>
+                <Text style={s.dailyActionLabel}>TODAY · </Text>
+                {brief.streak.daily_action}
+              </Text>
+            </View>
+          </FadeInView>
+        )}
 
 
         {/* ── A. AI Coach Card (HERO) ──────────────────────────── */}
@@ -477,9 +518,18 @@ export default function HomeScreen() {
               <Text style={[s.compactScoreNum, { color: hasAudit ? sColor : colors.t3 }]}>
                 {hasAudit ? displayScore : '—'}
               </Text>
-              {hasAudit && (
+              {hasAudit && brief?.score?.delta != null && Math.abs(brief.score.delta) >= 1 && (
+                <View style={[s.compactPctBadge, { backgroundColor: (brief.score.delta >= 0 ? colors.green : colors.coral) + '15' }]}>
+                  <Text style={[s.compactPctText, { color: brief.score.delta >= 0 ? colors.green : colors.coral }]}>
+                    {brief.score.delta >= 0 ? '↑' : '↓'} {Math.abs(brief.score.delta)}
+                  </Text>
+                </View>
+              )}
+              {hasAudit && (brief?.score?.delta == null || Math.abs(brief.score.delta) < 1) && brief?.cohort_bar && (
                 <View style={[s.compactPctBadge, { backgroundColor: sColor + '15' }]}>
-                  <Text style={[s.compactPctText, { color: sColor }]}>Top {percentile}%</Text>
+                  <Text style={[s.compactPctText, { color: sColor }]} numberOfLines={1}>
+                    {brief.cohort_bar.label}
+                  </Text>
                 </View>
               )}
             </View>
@@ -502,6 +552,16 @@ export default function HomeScreen() {
         </FadeInView>
 
         {/* ── Score History Mini Chart ─────────────────────────── */}
+        {auditHistory.length < 2 && hasAudit && (
+          <FadeInView delay={180}>
+            <View style={s.historyEmpty}>
+              <Text style={s.historyEmptyLabel}>SCORE HISTORY</Text>
+              <Text style={s.historyEmptyBody}>
+                Your history lights up the second you run a second audit. Every edit, every rescan shows up here.
+              </Text>
+            </View>
+          </FadeInView>
+        )}
         {auditHistory.length >= 2 && (
           <FadeInView delay={180}>
             <AnimatedPressable style={s.historyCard} onPress={() => router.push('/(app)/score-detail')} scaleDown={0.985}>
@@ -532,41 +592,126 @@ export default function HomeScreen() {
           </FadeInView>
         )}
 
-        {/* ── C. Insight + Next Move (merged) ─────────────────── */}
-        <FadeInView delay={240}>
-          <View style={s.insightCard}>
-            <View style={s.insightHeader}>
-              <View style={s.insightDot}>
-                <DillyFace size={24} />
-              </View>
-              <Text style={s.insightLabel}>
-                {hasAudit ? 'DILLY SAYS' : 'GET STARTED'}
-              </Text>
-            </View>
-            <Text style={s.insightText}>
-              {audit.dilly_take || nextAction.body}
-            </Text>
+        {/* Build-75: Do This Now — the single highest-priority action */}
+        {brief?.do_now && (
+          <FadeInView delay={240}>
             <AnimatedPressable
-              style={s.insightBtn}
+              style={s.doNowCard}
               onPress={() => {
-                // Auto-prompt the Dilly AI with whatever the button says, so the
-                // user can act on the suggestion immediately by chatting it through.
-                const promptText = nextAction.cta.replace(/[→\s]+$/, '').trim();
-                openDillyOverlay({
-                  name: firstName, cohort, score: finalScore,
-                  smart: smartScore, grit: gritScore, build: buildScore,
-                  gap, cohortBar: cohortCfg.bar,
-                  referenceCompany: cohortCfg.company,
-                  isPaid: true,
-                  initialMessage: promptText,
-                });
+                try {
+                  router.push(brief.do_now.action_route as any);
+                } catch {
+                  // swallow bad route strings (from backend) gracefully
+                }
               }}
-              scaleDown={0.97}
+              scaleDown={0.985}
             >
-              <Text style={s.insightBtnText}>{nextAction.cta}</Text>
+              <View style={s.doNowHeader}>
+                <View style={s.doNowDot}>
+                  <DillyFace size={24} />
+                </View>
+                <Text style={s.doNowLabel}>DO THIS NOW</Text>
+              </View>
+              <Text style={s.doNowTitle}>{brief.do_now.title}</Text>
+              <Text style={s.doNowSubtitle}>{brief.do_now.subtitle}</Text>
+              <View style={s.doNowCta}>
+                <Text style={s.doNowCtaText}>{brief.do_now.action_label}</Text>
+                <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+              </View>
             </AnimatedPressable>
-          </View>
-        </FadeInView>
+          </FadeInView>
+        )}
+
+        {/* Build-75: Daily Brief — up to 3 deterministic facts */}
+        {brief?.brief && brief.brief.length > 0 && (
+          <FadeInView delay={280}>
+            <Text style={s.briefLabel}>DILLY BRIEF</Text>
+            {brief.brief.map((card) => (
+              <AnimatedPressable
+                key={card.id}
+                style={s.briefCard}
+                onPress={() => {
+                  try { router.push(card.action_route as any); } catch {}
+                }}
+                scaleDown={0.985}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.briefHeadline}>{card.headline}</Text>
+                  <Text style={s.briefBody} numberOfLines={2}>{card.body}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+              </AnimatedPressable>
+            ))}
+          </FadeInView>
+        )}
+
+        {/* Build-75: Pipeline widget — only if there's something to track */}
+        {brief?.pipeline && brief.pipeline.total > 0 && (
+          <FadeInView delay={320}>
+            <Text style={s.pipeLabel}>PIPELINE</Text>
+            <AnimatedPressable
+              style={s.pipeRow}
+              onPress={() => router.push('/(app)/internship-tracker')}
+              scaleDown={0.985}
+            >
+              {[
+                { label: 'Drafts',  value: brief.pipeline.drafts,        color: colors.t3 },
+                { label: 'Applied', value: brief.pipeline.applied,       color: colors.gold },
+                { label: 'Interview', value: brief.pipeline.interviewing, color: colors.blue },
+                { label: 'Offer',   value: brief.pipeline.offers,        color: colors.green },
+              ].map((tile) => (
+                <View key={tile.label} style={s.pipeTile}>
+                  <Text style={[s.pipeValue, { color: tile.value > 0 ? tile.color : colors.t3 }]}>
+                    {tile.value}
+                  </Text>
+                  <Text style={s.pipeTileLabel}>{tile.label}</Text>
+                </View>
+              ))}
+            </AnimatedPressable>
+            {brief.pipeline.silent_2_weeks > 0 && (
+              <View style={s.pipeSilentBanner}>
+                <Ionicons name="alert-circle" size={12} color={colors.amber} />
+                <Text style={s.pipeSilentText}>
+                  {brief.pipeline.silent_2_weeks} application{brief.pipeline.silent_2_weeks !== 1 ? 's' : ''} went quiet. Follow up this week.
+                </Text>
+              </View>
+            )}
+          </FadeInView>
+        )}
+
+        {/* Build-75: Upcoming deadlines — only if any in the next 14 days */}
+        {brief?.deadlines && brief.deadlines.length > 0 && (
+          <FadeInView delay={360}>
+            <Text style={s.deadlineLabel}>UPCOMING</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.deadlineRow}
+            >
+              {brief.deadlines.map((d, i) => {
+                const urgent = d.days_until <= 3;
+                return (
+                  <AnimatedPressable
+                    key={`${d.date}-${i}`}
+                    style={[s.deadlineCard, urgent && s.deadlineCardUrgent]}
+                    onPress={() => router.push('/(app)/internship-tracker')}
+                    scaleDown={0.96}
+                  >
+                    <Text style={[s.deadlineDays, { color: urgent ? colors.coral : colors.t2 }]}>
+                      {d.days_until === 0 ? 'Today' : d.days_until === 1 ? 'Tomorrow' : `${d.days_until}d`}
+                    </Text>
+                    <Text style={s.deadlineCompany} numberOfLines={1}>
+                      {d.company || 'Deadline'}
+                    </Text>
+                    <Text style={s.deadlineRole} numberOfLines={1}>
+                      {d.role || d.label}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </ScrollView>
+          </FadeInView>
+        )}
 
         {/* ── Top Matches ──────────────────────────────────────── */}
         {topJobs.length > 0 && (
@@ -839,4 +984,137 @@ const s = StyleSheet.create({
     marginTop: 10,
   },
   unlockBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+
+  // ── Build 75 ──────────────────────────────────────────────────────────
+
+  // Streak flame pill
+  streakPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#FFF5E6', borderRadius: 14,
+    paddingHorizontal: 9, paddingVertical: 4,
+    marginRight: 10,
+    borderWidth: 1, borderColor: '#FFC266',
+  },
+  streakFire: { fontSize: 13 },
+  streakCount: { fontSize: 12, fontWeight: '800', color: '#B45309' },
+
+  // Daily action banner
+  dailyActionBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.s2,
+    borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 12, paddingVertical: 10,
+    marginBottom: 12,
+  },
+  dailyActionText: { fontSize: 11, color: colors.t1, flex: 1, lineHeight: 16 },
+  dailyActionLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1,
+    color: colors.gold,
+  },
+
+  // Do This Now card
+  doNowCard: {
+    backgroundColor: '#2B3A8E',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#2B3A8E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  doNowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  doNowDot: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  doNowLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.3,
+    color: 'rgba(255,255,255,0.75)',
+  },
+  doNowTitle: { fontSize: 17, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
+  doNowSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.85)', lineHeight: 17, marginBottom: 14 },
+  doNowCta: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    paddingVertical: 10, borderRadius: 10,
+  },
+  doNowCtaText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+
+  // Daily Brief cards
+  briefLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.3,
+    color: colors.t3, marginBottom: 8, marginTop: 4,
+  },
+  briefCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.s2, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 12, marginBottom: 8,
+  },
+  briefHeadline: { fontSize: 13, fontWeight: '700', color: colors.t1, marginBottom: 2 },
+  briefBody:     { fontSize: 11, color: colors.t3, lineHeight: 15 },
+
+  // Pipeline widget
+  pipeLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.3,
+    color: colors.t3, marginBottom: 8, marginTop: 6,
+  },
+  pipeRow: {
+    flexDirection: 'row', gap: 8,
+    marginBottom: 6,
+  },
+  pipeTile: {
+    flex: 1, backgroundColor: colors.s2,
+    borderRadius: 10, borderWidth: 1, borderColor: colors.b1,
+    paddingVertical: 12, alignItems: 'center',
+  },
+  pipeValue: { fontSize: 22, fontWeight: '800', lineHeight: 26 },
+  pipeTileLabel: {
+    fontSize: 9, fontWeight: '600', color: colors.t3, marginTop: 3,
+    letterSpacing: 0.3, textTransform: 'uppercase',
+  },
+  pipeSilentBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FFF7E6', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    marginBottom: 12,
+  },
+  pipeSilentText: { fontSize: 11, color: '#92400E', flex: 1 },
+
+  // Deadlines strip
+  deadlineLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.3,
+    color: colors.t3, marginBottom: 8, marginTop: 6,
+  },
+  deadlineRow: { gap: 8, paddingRight: 4, paddingBottom: 4 },
+  deadlineCard: {
+    width: 130,
+    backgroundColor: colors.s2, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 10,
+    marginBottom: 12,
+  },
+  deadlineCardUrgent: {
+    borderColor: '#FF453A', backgroundColor: '#FFF0EF',
+  },
+  deadlineDays: { fontSize: 15, fontWeight: '800', marginBottom: 4 },
+  deadlineCompany: { fontSize: 11, fontWeight: '700', color: colors.t1, marginBottom: 2 },
+  deadlineRole:  { fontSize: 10, color: colors.t3 },
+
+  // History empty state
+  historyEmpty: {
+    backgroundColor: colors.s2, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.b1,
+    borderStyle: 'dashed',
+    padding: 14, marginBottom: 12,
+  },
+  historyEmptyLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2,
+    color: colors.t3, marginBottom: 6,
+  },
+  historyEmptyBody: { fontSize: 11, color: colors.t2, lineHeight: 15 },
 });
