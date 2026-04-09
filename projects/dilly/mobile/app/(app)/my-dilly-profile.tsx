@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
 
@@ -90,18 +91,53 @@ export default function MyDillyProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Record<string, any>>({});
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await dilly.fetch('/memory');
-      if (res.ok) {
-        const json = await res.json();
+      const [memRes, profileRes] = await Promise.all([
+        dilly.fetch('/memory'),
+        dilly.get('/profile').catch(() => null),
+      ]);
+      if (memRes.ok) {
+        const json = await memRes.json();
         setData(json);
       }
+      if (profileRes) setProfile(profileRes || {});
     } catch {} finally {
       setLoading(false);
     }
   }, []);
+
+  // Opens the Dilly AI overlay pre-prompted to collect information about a
+  // specific profile gap (e.g. "Tell Dilly about your career goals"). The
+  // overlay prompts the user for the info directly so they can answer in
+  // chat instead of navigating to the voice screen and starting cold.
+  function startTellDillyFlow(nudge: string, categoryKey: string) {
+    const p = profile as any;
+    const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
+    const cohort = p.track || p.cohort || 'General';
+    // Turn the nudge label into a clean opening question Dilly will ask.
+    // "Tell Dilly about your career goals" -> Dilly asks about career goals.
+    const topic = nudge
+      .replace(/^Tell Dilly (?:more )?about\s*/i, '')
+      .replace(/^Share\s*/i, '')
+      .replace(/^Mention\s*/i, '')
+      .replace(/^Describe\s*/i, '')
+      .replace(/^Talk about\s*/i, '')
+      .trim() || nudge;
+    openDillyOverlay({
+      name: firstName,
+      cohort,
+      score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+      isPaid: true,
+      initialMessage:
+        `${firstName} wants to tell you about ${topic}. ` +
+        `Ask them one friendly, specific question to get started — the kind of question that makes it easy to share. ` +
+        `After they answer, ask one gentle follow-up so you capture enough detail to remember it well. ` +
+        `Then save what you learn to their profile under the '${categoryKey}' category.`,
+    });
+  }
 
   useEffect(() => { fetchData(); }, []);
 
@@ -330,7 +366,7 @@ export default function MyDillyProfileScreen() {
                     <TouchableOpacity
                       key={m.key}
                       style={s.nudgeChip}
-                      onPress={() => router.push('/(app)/voice')}
+                      onPress={() => startTellDillyFlow(m.nudge, m.key)}
                       activeOpacity={0.7}
                     >
                       <Ionicons name={cfg?.icon as any || 'ellipse'} size={11} color={cfg?.color || colors.t3} />

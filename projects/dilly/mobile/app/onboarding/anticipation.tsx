@@ -20,7 +20,7 @@ const COHORT_DIMENSION: Record<string, string> = {
   Tech: 'Build score', Business: 'Grit score', Science: 'Smart score',
   Quantitative: 'Smart score', Health: 'Grit score', 'Social Science': 'Grit score',
   Humanities: 'Build score', Sport: 'Grit score',
-  'Pre-Health': 'Smart score', 'Pre-Law': 'Smart score', General: 'overall score',
+  'Pre-Health': 'Smart score', 'Pre-Law': 'Smart score', General: 'cohort score',
 };
 
 const COHORT_PEERS: Record<string, string> = {
@@ -120,7 +120,7 @@ export default function AnticipationScreen() {
   }>();
 
   const company    = getCompany(cohort, industryTarget);
-  const dimension  = COHORT_DIMENSION[cohort] ?? 'overall score';
+  const dimension  = COHORT_DIMENSION[cohort] ?? 'cohort score';
   const peers      = COHORT_PEERS[cohort]     ?? 'your major';
   const comparison = COHORT_COMPARISON[cohort] ?? COHORT_COMPARISON.General;
 

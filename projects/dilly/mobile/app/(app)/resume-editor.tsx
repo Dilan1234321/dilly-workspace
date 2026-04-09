@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   Modal,
   KeyboardAvoidingView,
+  Linking,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +33,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import ResumeScoreDashboard, { EditorScanData } from '../../components/ResumeScoreDashboard';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -366,14 +368,65 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
     debounceRef.current = setTimeout(() => scoreBullet(text), 600);
   }
 
-  function handleAskDilly() {
+  // Build 63: fast rule-based rewrite with accept/reject modal.
+  // On tap, call /ats-rewrite with just this bullet, then show an inline
+  // before/after card. Accept updates the bullet in place and re-scores.
+  const [rewriteModalOpen, setRewriteModalOpen] = useState(false);
+  const [rewriteLoading, setRewriteLoading] = useState(false);
+  const [rewriteSuggestion, setRewriteSuggestion] = useState<{
+    original: string; rewritten: string; changes: string[];
+  } | null>(null);
+
+  async function handleAskDilly() {
     if (bullet.text.trim().length < 10) return;
-    const score = localScore?.score ?? 0;
-    const scoreLabel = sLabel(score);
-    openDillyOverlay({
-      isPaid: true,
-      initialMessage: `Help me improve this resume bullet. It currently scores ${score}/100 (${scoreLabel}). Show me a rewritten version that would score higher, and explain what you changed and why. Do NOT use any emojis or special unicode characters.\n\nMy bullet: "${bullet.text}"`,
-    });
+    setRewriteModalOpen(true);
+    setRewriteLoading(true);
+    setRewriteSuggestion(null);
+    try {
+      const res = await dilly.fetch('/ats-rewrite', {
+        method: 'POST',
+        body: JSON.stringify({
+          bullets: [bullet.text],
+          use_llm: false, // fast deterministic rewriter
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      const r = data?.rewrites?.[0];
+      if (r && r.original && r.rewritten && r.original.trim() !== r.rewritten.trim()) {
+        setRewriteSuggestion({
+          original: r.original,
+          rewritten: r.rewritten,
+          changes: Array.isArray(r.changes) ? r.changes : [],
+        });
+      } else {
+        // No change needed — fall back to the Dilly overlay for a longer conversation
+        setRewriteModalOpen(false);
+        const score = localScore?.score ?? 0;
+        openDillyOverlay({
+          isPaid: true,
+          initialMessage: `Help me improve this resume bullet. It currently scores ${score}/100. Show me a rewritten version that would score higher, and explain what you changed and why. Do NOT use any emojis or special unicode characters.\n\nMy bullet: "${bullet.text}"`,
+        });
+      }
+    } catch {
+      setRewriteModalOpen(false);
+    } finally {
+      setRewriteLoading(false);
+    }
+  }
+
+  function acceptRewrite() {
+    if (!rewriteSuggestion) return;
+    const newText = rewriteSuggestion.rewritten;
+    onChange(newText);
+    setRewriteModalOpen(false);
+    setRewriteSuggestion(null);
+    // Re-score the new text so the user sees the lift
+    setTimeout(() => scoreBullet(newText), 150);
+  }
+
+  function rejectRewrite() {
+    setRewriteModalOpen(false);
+    setRewriteSuggestion(null);
   }
 
   useEffect(() => {
@@ -409,6 +462,63 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
           <Text style={rs.askDillyText}>Improve with Dilly</Text>
         </AnimatedPressable>
       )}
+
+      {/* Accept/Reject rewrite modal — compact before/after comparison */}
+      <Modal visible={rewriteModalOpen} transparent animationType="fade" onRequestClose={rejectRewrite}>
+        <View style={rs.rewriteModalOverlay}>
+          <View style={rs.rewriteModalCard}>
+            <View style={rs.rewriteModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="sparkles" size={14} color={GOLD} />
+                <Text style={rs.rewriteModalTitle}>Dilly suggests</Text>
+              </View>
+              <TouchableOpacity onPress={rejectRewrite} hitSlop={12}>
+                <Ionicons name="close" size={18} color={colors.t2} />
+              </TouchableOpacity>
+            </View>
+
+            {rewriteLoading ? (
+              <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+                <ActivityIndicator size="small" color={GOLD} />
+                <Text style={{ fontSize: 11, color: colors.t3, marginTop: 8 }}>Writing a stronger version…</Text>
+              </View>
+            ) : rewriteSuggestion ? (
+              <>
+                <Text style={rs.rewriteLabelText}>BEFORE</Text>
+                <Text style={rs.rewriteBefore}>{rewriteSuggestion.original}</Text>
+                <View style={{ alignItems: 'center', marginVertical: 4 }}>
+                  <Ionicons name="arrow-down" size={13} color={GOLD} />
+                </View>
+                <Text style={rs.rewriteLabelText}>AFTER</Text>
+                <Text style={rs.rewriteAfter}>{rewriteSuggestion.rewritten}</Text>
+
+                {rewriteSuggestion.changes.length > 0 && (
+                  <View style={rs.rewriteChangesBlock}>
+                    {rewriteSuggestion.changes.slice(0, 3).map((c, i) => (
+                      <Text key={i} style={rs.rewriteChangeText}>• {c}</Text>
+                    ))}
+                  </View>
+                )}
+
+                <View style={rs.rewriteActionRow}>
+                  <AnimatedPressable style={rs.rewriteRejectBtn} onPress={rejectRewrite} scaleDown={0.95}>
+                    <Ionicons name="close" size={12} color={colors.t3} />
+                    <Text style={rs.rewriteRejectText}>Skip</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable style={rs.rewriteAcceptBtn} onPress={acceptRewrite} scaleDown={0.95}>
+                    <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+                    <Text style={rs.rewriteAcceptText}>Accept</Text>
+                  </AnimatedPressable>
+                </View>
+              </>
+            ) : (
+              <Text style={{ fontSize: 11, color: colors.t3, textAlign: 'center', paddingVertical: 12 }}>
+                No improvement found. Try editing the bullet directly or use the full chat.
+              </Text>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -609,6 +719,14 @@ export default function ResumeEditorScreen() {
   const [tailorRole, setTailorRole] = useState('');
   const [tailoring, setTailoring] = useState(false);
 
+  // Build-63 dashboard: debounced /resume/editor-scan result
+  const [scanData, setScanData] = useState<EditorScanData | null>(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [showExportPicker, setShowExportPicker] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Load resume + profile for major
   useEffect(() => {
     (async () => {
@@ -620,11 +738,13 @@ export default function ResumeEditorScreen() {
         ]);
         setMajor(profileRes?.majors?.[0] || profileRes?.major || '');
 
-        // Seed initial score from latest audit or profile
+        // Seed initial score from latest audit — prefer primary cohort
+        // composite from rubric_analysis over the legacy aggregate.
         const auditObj = auditRes?.audit ?? auditRes;
-        const fs = auditObj?.final_score
-          || profileRes?.overall_dilly_score
-          || 0;
+        const ra = auditObj?.rubric_analysis;
+        const fs = ra?.primary_composite
+          ?? auditObj?.final_score
+          ?? 0;
         if (fs > 0) {
           setInitialScore(Math.round(Number(fs)));
           setOverallScore(Math.round(Number(fs)));
@@ -719,6 +839,95 @@ export default function ResumeEditorScreen() {
     });
   }
 
+  // ── Debounced /resume/editor-scan (build 63 dashboard) ──────────────────
+  // Fires 600ms after the last section edit. Non-blocking — the editor stays
+  // fully interactive while the scan runs in the background.
+  const runEditorScan = useCallback(async () => {
+    if (!sections || sections.length === 0) return;
+    setScanLoading(true);
+    try {
+      const res = await dilly.fetch('/resume/editor-scan', {
+        method: 'POST',
+        body: JSON.stringify({ sections }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setScanData(data);
+      }
+    } catch {} finally {
+      setScanLoading(false);
+    }
+  }, [sections]);
+
+  useEffect(() => {
+    if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+    scanTimerRef.current = setTimeout(() => { runEditorScan(); }, 650);
+    return () => {
+      if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+    };
+  }, [sections, runEditorScan]);
+
+  // Issue action: open the Dilly AI overlay pre-prompted to fix the tapped issue.
+  // Closes the loop between the "Fix this first" list and the AI chat.
+  function handleFixIssue(issue: any) {
+    const firstName = (major || 'there').split(' ')[0];
+    const vendors = (issue.affects_vendors || []).join(', ') || 'ATS parsers';
+    openDillyOverlay({
+      name: firstName,
+      cohort: major || 'General',
+      score: overallScore, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+      isPaid: true,
+      initialMessage: [
+        `I'm working on my resume and Dilly flagged an issue that's worth +${Math.round(issue.total_lift || issue.avg_lift || 0)} points.`,
+        `Issue: "${issue.title}".`,
+        `Affected vendors: ${vendors}.`,
+        `Suggested fix: ${issue.fix}`,
+        `Walk me through exactly what I should change on my resume. Give me specific before/after examples based on my sections, then ask me if I want to apply the fix now.`,
+      ].join(' '),
+    });
+  }
+
+  // ── Build-63 PDF export ─────────────────────────────────────────────────
+  // Backend returns base64 JSON. We open a data: URL in the system browser,
+  // which iOS renders natively with its standard share/save sheet attached.
+  // No expo-file-system or expo-sharing required.
+  async function handleExport(template: 'tech' | 'business' | 'academic') {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const res = await dilly.fetch('/resume/export', {
+        method: 'POST',
+        body: JSON.stringify({ sections, template }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        Alert.alert('Export failed', detail?.detail || 'Could not render the PDF.');
+        return;
+      }
+      const data = await res.json();
+      const b64 = data?.base64;
+      if (!b64) {
+        Alert.alert('Export failed', 'Empty response from server.');
+        return;
+      }
+      const dataUrl = `data:application/pdf;base64,${b64}`;
+      const can = await Linking.canOpenURL(dataUrl).catch(() => false);
+      if (can) {
+        await Linking.openURL(dataUrl);
+      } else {
+        Alert.alert(
+          'PDF ready',
+          `Template: ${template}\nSize: ${Math.round((data.size_bytes || 0) / 1024)} KB\n\nYour device blocked the preview. Try a different browser.`
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Export failed', e?.message || 'Unknown error.');
+    } finally {
+      setExporting(false);
+      setShowExportPicker(false);
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -804,6 +1013,47 @@ export default function ResumeEditorScreen() {
           <Ionicons name="flash" size={14} color="#2B3A8E" />
           <Text style={rs.tailorBtnText}>Generate resume with AI</Text>
         </AnimatedPressable>
+
+        {/* Build-63 dashboard: collapsible header + the dashboard card */}
+        <View style={{ marginBottom: 6 }}>
+          <AnimatedPressable
+            style={rs.dashToggle}
+            onPress={() => setShowDashboard(v => !v)}
+            scaleDown={0.97}
+          >
+            <Ionicons name="analytics" size={13} color={GOLD} />
+            <Text style={rs.dashToggleText}>
+              {showDashboard ? 'Hide coaching dashboard' : 'Show coaching dashboard'}
+            </Text>
+            <Ionicons name={showDashboard ? 'chevron-up' : 'chevron-down'} size={13} color={colors.t3} />
+          </AnimatedPressable>
+          {showDashboard && (
+            <ResumeScoreDashboard
+              scan={scanData}
+              loading={scanLoading}
+              onFixIssue={handleFixIssue}
+            />
+          )}
+        </View>
+
+        {/* Export button row */}
+        <View style={rs.exportRow}>
+          <AnimatedPressable
+            style={rs.exportBtn}
+            onPress={() => setShowExportPicker(true)}
+            scaleDown={0.97}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <ActivityIndicator size="small" color={GOLD} />
+            ) : (
+              <>
+                <Ionicons name="download" size={13} color={GOLD} />
+                <Text style={rs.exportBtnText}>Export PDF</Text>
+              </>
+            )}
+          </AnimatedPressable>
+        </View>
 
         {/* Resume document */}
         <FadeInView delay={120}>
@@ -1014,6 +1264,40 @@ export default function ResumeEditorScreen() {
         </View>
       </Modal>
 
+      {/* ── Export template picker (build 63) ───────────────────────────── */}
+      <Modal visible={showExportPicker} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowExportPicker(false)}>
+        <View style={rs.exportModalOverlay}>
+          <View style={rs.exportModalCard}>
+            <View style={rs.exportModalHeader}>
+              <Text style={rs.exportModalTitle}>Export as PDF</Text>
+              <TouchableOpacity onPress={() => setShowExportPicker(false)} hitSlop={12}>
+                <Ionicons name="close" size={20} color={colors.t2} />
+              </TouchableOpacity>
+            </View>
+            <Text style={rs.exportModalSub}>Pick a template. All templates are single-column and ATS-friendly.</Text>
+            {([
+              { key: 'tech' as const, label: 'Tech', hint: 'Left-aligned, Skills near top, GitHub prominent' },
+              { key: 'business' as const, label: 'Business', hint: 'Centered contact, formal spacing' },
+              { key: 'academic' as const, label: 'Academic', hint: 'Research-heavy, Education front-loaded' },
+            ]).map(tpl => (
+              <AnimatedPressable
+                key={tpl.key}
+                style={rs.exportTemplateRow}
+                onPress={() => handleExport(tpl.key)}
+                scaleDown={0.97}
+                disabled={exporting}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={rs.exportTemplateLabel}>{tpl.label}</Text>
+                  <Text style={rs.exportTemplateHint}>{tpl.hint}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={GOLD} />
+              </AnimatedPressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
       {/* Tailoring in-progress overlay */}
       {tailoring && (
         <View style={rs.tailoringOverlay}>
@@ -1198,6 +1482,85 @@ const rs = StyleSheet.create({
   scoreBadgeNum: { fontFamily: 'Cinzel_700Bold', fontSize: 13 },
 
   // Tailor button
+  // ── Build-63 dashboard toggle + export button + export modal ──────────
+  dashToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: colors.b1,
+    paddingVertical: 9, paddingHorizontal: 12, marginBottom: 8,
+  },
+  dashToggleText: { flex: 1, fontSize: 11, color: GOLD, fontWeight: '700' },
+  exportRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  exportBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: GOLD + '40',
+    paddingVertical: 10,
+  },
+  exportBtnText: { fontSize: 11, color: GOLD, fontWeight: '700' },
+  exportModalOverlay: {
+    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  exportModalCard: {
+    backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, paddingBottom: 36,
+  },
+  exportModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  exportModalTitle: { fontSize: 16, fontWeight: '700', color: colors.t1 },
+  exportModalSub: { fontSize: 11, color: colors.t3, marginBottom: 14 },
+  exportTemplateRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+    padding: 14, marginBottom: 8,
+  },
+  exportTemplateLabel: { fontSize: 14, fontWeight: '700', color: colors.t1 },
+  exportTemplateHint: { fontSize: 11, color: colors.t3, marginTop: 2 },
+
+  // Rewrite accept/reject modal
+  rewriteModalOverlay: {
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: 20,
+  },
+  rewriteModalCard: {
+    width: '100%', maxWidth: 360,
+    backgroundColor: colors.bg, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 16,
+  },
+  rewriteModalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  rewriteModalTitle: { fontSize: 13, fontWeight: '700', color: colors.t1 },
+  rewriteLabelText: {
+    fontSize: 9, color: colors.t3, fontWeight: '700',
+    letterSpacing: 1, marginBottom: 4,
+  },
+  rewriteBefore: {
+    fontSize: 12, color: colors.t2, lineHeight: 17,
+    backgroundColor: CORAL + '08', borderRadius: 8, padding: 10,
+    borderWidth: 1, borderColor: CORAL + '20',
+  },
+  rewriteAfter: {
+    fontSize: 12, color: colors.t1, fontWeight: '600', lineHeight: 17,
+    backgroundColor: GREEN + '10', borderRadius: 8, padding: 10,
+    borderWidth: 1, borderColor: GREEN + '25',
+  },
+  rewriteChangesBlock: {
+    marginTop: 10, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: colors.b1,
+  },
+  rewriteChangeText: { fontSize: 10, color: colors.t3, lineHeight: 14 },
+  rewriteActionRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  rewriteRejectBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    borderWidth: 1, borderColor: colors.b1, borderRadius: 10, paddingVertical: 10,
+  },
+  rewriteRejectText: { fontSize: 12, color: colors.t3, fontWeight: '600' },
+  rewriteAcceptBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    backgroundColor: GOLD, borderRadius: 10, paddingVertical: 10,
+  },
+  rewriteAcceptText: { fontSize: 12, color: '#FFFFFF', fontWeight: '700' },
+
   tailorBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: colors.golddim, borderRadius: 10,

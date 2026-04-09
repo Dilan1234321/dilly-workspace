@@ -183,13 +183,16 @@ export default function ScoreDetailScreen() {
         }
 
         // ── Legacy fallback: no cohort_scores ────────────────────────────
+        // Prefer primary-cohort scores from rubric_analysis over the legacy
+        // aggregate audit.scores.* so the user never sees an overall number.
         if (auditObj?.final_score) {
+          const ra = auditObj.rubric_analysis;
           const snap = p?.first_audit_snapshot?.scores;
-          const smart = auditObj.scores?.smart ?? snap?.smart ?? 0;
-          const grit  = auditObj.scores?.grit  ?? snap?.grit  ?? 0;
-          const build = auditObj.scores?.build ?? snap?.build ?? 0;
+          const smart = ra?.primary_smart ?? auditObj.scores?.smart ?? snap?.smart ?? 0;
+          const grit  = ra?.primary_grit  ?? auditObj.scores?.grit  ?? snap?.grit  ?? 0;
+          const build = ra?.primary_build ?? auditObj.scores?.build ?? snap?.build ?? 0;
           setLegacyAudit({
-            final_score: auditObj.final_score,
+            final_score: ra?.primary_composite ?? auditObj.final_score,
             scores: { smart, grit, build },
             evidence: auditObj.evidence || {},
           });

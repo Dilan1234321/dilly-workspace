@@ -176,13 +176,15 @@ export default function ProfileScreen() {
         setProfile(profileRes ?? {});
 
         const auditObj = auditRaw?.audit ?? auditRaw ?? {};
+        // Prefer primary cohort scores from rubric_analysis — no aggregates.
+        const ra = auditObj?.rubric_analysis;
         const snapshot = profileRes?.first_audit_snapshot?.scores;
-        const smart = auditObj?.scores?.smart ?? snapshot?.smart ?? null;
-        const grit  = auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
-        const build = auditObj?.scores?.build ?? snapshot?.build ?? null;
-        const calculated = auditObj?.final_score
-          || profileRes?.overall_dilly_score
-          || (smart != null && grit != null && build != null
+        const smart = ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
+        const grit  = ra?.primary_grit  ?? auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
+        const build = ra?.primary_build ?? auditObj?.scores?.build ?? snapshot?.build ?? null;
+        const calculated = ra?.primary_composite
+          ?? auditObj?.final_score
+          ?? (smart != null && grit != null && build != null
             ? Math.round((smart + grit + build) / 3)
             : null);
 
