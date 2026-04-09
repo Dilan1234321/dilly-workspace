@@ -731,6 +731,10 @@ export default function ResumeEditorScreen() {
   const [showExportPicker, setShowExportPicker] = useState(false);
   const [exporting, setExporting] = useState(false);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Build-65: re-audit button state
+  const [reauditing, setReauditing] = useState(false);
+  // Build-65: explicit cohort override (null = use user's primary major)
+  const [cohortOverride, setCohortOverride] = useState<string | null>(null);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -792,31 +796,22 @@ export default function ResumeEditorScreen() {
     })();
   }, []);
 
-  // Recalculate overall score when bullet scores change
-  // Only switch from the initial audit score once the user has actually made edits
+  // Build-65: single source of truth for the overall score.
+  // The floating badge in the upper-right of the resume doc and the hero
+  // score in ResumeScoreDashboard used to disagree because they were
+  // computed from different sources (bullet-blend vs editor-scan). Now
+  // they both come from the same place: the latest /resume/editor-scan
+  // response's v2.overall.value, with a graceful fallback to the initial
+  // audit score while the first scan is loading.
   useEffect(() => {
-    if (!hasChanges) {
-      // No edits yet — keep showing the real audit score
-      if (initialScore !== null) setOverallScore(initialScore);
+    const v2Overall = scanData?.v2?.overall?.value;
+    if (typeof v2Overall === 'number' && v2Overall > 0) {
+      setOverallScore(Math.round(v2Overall));
       return;
     }
-    const scores = Object.values(bulletScores);
-    if (scores.length === 0) { setOverallScore(initialScore ?? 0); return; }
-    const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    // Blend bullet avg with section completeness
-    let completionBonus = 0;
-    let totalSections = 0;
-    for (const sec of sections) {
-      const c = sectionCompleteness(sec);
-      if (c.total > 0) {
-        completionBonus += c.filled / c.total;
-        totalSections++;
-      }
-    }
-    const completionPct = totalSections > 0 ? completionBonus / totalSections : 0;
-    const blended = Math.round(avg * 0.7 + completionPct * 100 * 0.3);
-    setOverallScore(Math.min(100, blended));
-  }, [bulletScores, sections, hasChanges, initialScore]);
+    // No fresh scan yet — show the seeded audit score.
+    if (initialScore !== null) setOverallScore(initialScore);
+  }, [scanData, initialScore]);
 
   const ph = getPlaceholders(major);
 
@@ -853,7 +848,11 @@ export default function ResumeEditorScreen() {
     try {
       const res = await dilly.fetch('/resume/editor-scan', {
         method: 'POST',
-        body: JSON.stringify({ sections }),
+        body: JSON.stringify({
+          sections,
+          cohort_id: cohortOverride || undefined,
+          variant_id: activeVariant || undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -862,7 +861,7 @@ export default function ResumeEditorScreen() {
     } catch {} finally {
       setScanLoading(false);
     }
-  }, [sections]);
+  }, [sections, cohortOverride, activeVariant]);
 
   useEffect(() => {
     if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
@@ -870,7 +869,7 @@ export default function ResumeEditorScreen() {
     return () => {
       if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
     };
-  }, [sections, runEditorScan]);
+  }, [sections, cohortOverride, activeVariant, runEditorScan]);
 
   // Issue action: open the Dilly AI overlay pre-prompted to fix the tapped issue.
   // Closes the loop between the "Fix this first" list and the AI chat.
@@ -929,6 +928,56 @@ export default function ResumeEditorScreen() {
       Alert.alert('Export failed', e?.message || 'Unknown error.');
     } finally {
       setExporting(false);
+    }
+  }
+
+  // Build 65: re-audit button handler — saves first if dirty, then runs
+  // the full audit pipeline against the saved resume. On success, updates
+  // the seeded initial score so the dashboard and floating badge reflect
+  // the fresh numbers immediately. No paywall — the backend already
+  // bypasses the subscription check for all users.
+  async function handleReaudit() {
+    if (reauditing) return;
+    setReauditing(true);
+    try {
+      // Persist any unsaved edits first so the backend audits the latest text
+      if (hasChanges) {
+        const saveRes = await dilly.fetch('/resume/save', {
+          method: 'POST',
+          body: JSON.stringify({ sections }),
+        });
+        if (!saveRes.ok) {
+          Alert.alert('Re-audit failed', 'Could not save your edits before auditing.');
+          return;
+        }
+        setHasChanges(false);
+      }
+      const res = await dilly.fetch('/resume/audit', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        Alert.alert('Re-audit failed', detail?.detail || 'Could not re-audit the resume.');
+        return;
+      }
+      const audit = await res.json();
+      const ra = audit?.rubric_analysis;
+      // Prefer primary cohort composite; fall back to legacy final_score
+      const freshScore =
+        (ra?.primary_composite != null ? Number(ra.primary_composite) : null) ??
+        (audit?.final_score != null ? Number(audit.final_score) : null);
+      if (freshScore != null && freshScore > 0) {
+        setInitialScore(Math.round(freshScore));
+        setOverallScore(Math.round(freshScore));
+      }
+      // Force the coaching dashboard to refetch so vendor/rubric scores update
+      setTimeout(() => { runEditorScan(); }, 100);
+      Alert.alert('Re-audit complete', freshScore != null ? `Your score: ${Math.round(freshScore)}/100` : 'Your resume has been re-audited.');
+    } catch (e: any) {
+      Alert.alert('Re-audit failed', e?.message || 'Unknown error.');
+    } finally {
+      setReauditing(false);
     }
   }
 
@@ -1122,13 +1171,24 @@ export default function ResumeEditorScreen() {
           </View>
         </FadeInView>
 
-        {/* Re-audit */}
+        {/* Re-audit — runs the full audit pipeline on the currently saved sections */}
         <FadeInView delay={300}>
-          <AnimatedPressable style={rs.reauditBtn} onPress={() => Alert.alert('Re-audit', 'Re-auditing requires a Dilly Pro subscription. Upgrade in Settings.')} scaleDown={0.97}>
-            <Ionicons name="flash" size={16} color="#FFFFFF" />
-            <Text style={rs.reauditBtnText}>Re-audit my resume</Text>
+          <AnimatedPressable
+            style={[rs.reauditBtn, reauditing && { opacity: 0.6 }]}
+            onPress={handleReaudit}
+            scaleDown={0.97}
+            disabled={reauditing}
+          >
+            {reauditing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="flash" size={16} color="#FFFFFF" />
+                <Text style={rs.reauditBtnText}>Re-audit my resume</Text>
+              </>
+            )}
           </AnimatedPressable>
-          <Text style={rs.reauditHint}>Score your entire resume with one tap</Text>
+          <Text style={rs.reauditHint}>Run the full audit pipeline on your current resume</Text>
         </FadeInView>
 
       </ScrollView>

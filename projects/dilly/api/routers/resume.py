@@ -896,6 +896,13 @@ class EditorScanRequest(BaseModel):
     sections: List[ResumeSection]
     track: Optional[str] = None           # cohort id override (optional)
     job_description: Optional[str] = None  # for keyword match layer
+    cohort_id: Optional[str] = None        # explicit rubric cohort id — used by
+                                           # the cohort switcher in the dashboard
+                                           # and when scoring a variant against
+                                           # a different target cohort than the
+                                           # student's primary major
+    variant_id: Optional[str] = None       # which variant is being scored (used
+                                           # for telemetry, not scoring logic)
 
 
 @router.post("/resume/editor-scan")
@@ -992,7 +999,7 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
     try:
         from dilly_core.rubric_scorer import (
             select_cohorts_for_student, score_for_cohorts,
-            build_rubric_analysis_payload,
+            build_rubric_analysis_payload, list_cohort_ids,
         )
         from dilly_core.scoring import extract_scoring_signals as _rc_extract_signals
 
@@ -1008,12 +1015,23 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
             except Exception:
                 pass
 
-        cohorts = select_cohorts_for_student(
-            major=major,
-            minors=[],
-            pre_professional_track=None,
-            industry_target=None,
-        )
+        # Explicit cohort_id override from the cohort switcher / variant
+        # context takes priority over the major-derived cohort selection.
+        cohorts: List[str] = []
+        if body.cohort_id:
+            try:
+                valid = set(list_cohort_ids())
+            except Exception:
+                valid = set()
+            if not valid or body.cohort_id in valid:
+                cohorts = [body.cohort_id]
+        if not cohorts:
+            cohorts = select_cohorts_for_student(
+                major=major,
+                minors=[],
+                pre_professional_track=None,
+                industry_target=None,
+            )
         if cohorts:
             rc_signals = _rc_extract_signals(resume_text, gpa=None, major=major)
             rc_scores = score_for_cohorts(rc_signals, resume_text, cohorts)
