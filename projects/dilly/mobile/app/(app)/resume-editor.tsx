@@ -791,6 +791,12 @@ export default function ResumeEditorScreen() {
   const [cohortOptions, setCohortOptions] = useState<CohortOption[]>([]);
   // Build-67: "what's this bullet worth" sheet state (hoisted to screen level)
   const [worthBullet, setWorthBullet] = useState<string | null>(null);
+  // Build-68: cover letter generator state
+  const [showCoverLetter, setShowCoverLetter] = useState(false);
+  const [clCompany, setClCompany] = useState('');
+  const [clRole, setClRole] = useState('');
+  const [clJD, setClJD] = useState('');
+  const [clGenerating, setClGenerating] = useState(false);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -1007,6 +1013,50 @@ export default function ResumeEditorScreen() {
     }
   }
 
+  // ── Build 68: cover letter generator ──────────────────────────────
+  async function handleGenerateCoverLetter() {
+    if (clGenerating) return;
+    if (!clCompany.trim() || !clRole.trim()) {
+      Alert.alert('Missing details', 'Enter the company and role first.');
+      return;
+    }
+    setClGenerating(true);
+    try {
+      const res = await dilly.fetch('/resume/cover-letter', {
+        method: 'POST',
+        body: JSON.stringify({
+          job_company: clCompany.trim(),
+          job_title: clRole.trim(),
+          job_description: clJD.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        Alert.alert('Cover letter failed', detail?.detail || 'Could not generate cover letter.');
+        return;
+      }
+      const data = await res.json();
+      const url = data?.url;
+      if (!url) {
+        Alert.alert('Cover letter failed', 'Empty response from server.');
+        return;
+      }
+      setShowCoverLetter(false);
+      setClCompany('');
+      setClRole('');
+      setClJD('');
+      try {
+        await Linking.openURL(url);
+      } catch {
+        Alert.alert('Cover letter ready', `Copy to Safari: ${url}`);
+      }
+    } catch (e: any) {
+      Alert.alert('Cover letter failed', e?.message || 'Unknown error.');
+    } finally {
+      setClGenerating(false);
+    }
+  }
+
   // Build 65: re-audit button handler — saves first if dirty, then runs
   // the full audit pipeline against the saved resume. On success, updates
   // the seeded initial score so the dashboard and floating badge reflect
@@ -1178,7 +1228,7 @@ export default function ResumeEditorScreen() {
           )}
         </View>
 
-        {/* Export button row */}
+        {/* Export + cover letter button row */}
         <View style={rs.exportRow}>
           <AnimatedPressable
             style={rs.exportBtn}
@@ -1192,6 +1242,21 @@ export default function ResumeEditorScreen() {
               <>
                 <Ionicons name="download" size={13} color={GOLD} />
                 <Text style={rs.exportBtnText}>Export PDF</Text>
+              </>
+            )}
+          </AnimatedPressable>
+          <AnimatedPressable
+            style={rs.exportBtn}
+            onPress={() => setShowCoverLetter(true)}
+            scaleDown={0.97}
+            disabled={clGenerating}
+          >
+            {clGenerating ? (
+              <ActivityIndicator size="small" color={GOLD} />
+            ) : (
+              <>
+                <Ionicons name="mail" size={13} color={GOLD} />
+                <Text style={rs.exportBtnText}>Cover letter</Text>
               </>
             )}
           </AnimatedPressable>
@@ -1418,6 +1483,61 @@ export default function ResumeEditorScreen() {
               >
                 <Ionicons name="sparkles" size={14} color="#FFFFFF" />
                 <Text style={rs.tailorSubmitText}>Preview tailored version</Text>
+              </AnimatedPressable>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* ── Build 68: Cover letter generator modal ──────────────────── */}
+      <Modal visible={showCoverLetter} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowCoverLetter(false)}>
+        <View style={rs.tailorOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
+            <View style={[rs.tailorCard, { paddingBottom: insets.bottom + 20 }]}>
+              <View style={rs.tailorHeader}>
+                <Text style={rs.tailorTitle}>Generate Cover Letter</Text>
+                <TouchableOpacity onPress={() => setShowCoverLetter(false)} hitSlop={12}>
+                  <Ionicons name="close" size={20} color={colors.t2} />
+                </TouchableOpacity>
+              </View>
+              <Text style={rs.tailorSub}>Dilly will write a tailored cover letter using your resume and Dilly Profile.</Text>
+              <TextInput
+                style={rs.tailorInput}
+                value={clCompany}
+                onChangeText={setClCompany}
+                placeholder="Company (e.g. Stripe)"
+                placeholderTextColor={colors.t3}
+                autoFocus
+              />
+              <TextInput
+                style={rs.tailorInput}
+                value={clRole}
+                onChangeText={setClRole}
+                placeholder="Role (e.g. Data Analyst Intern)"
+                placeholderTextColor={colors.t3}
+              />
+              <TextInput
+                style={[rs.tailorInput, { minHeight: 80, textAlignVertical: 'top' }]}
+                value={clJD}
+                onChangeText={setClJD}
+                placeholder="Paste the job description (optional)"
+                placeholderTextColor={colors.t3}
+                multiline
+              />
+              <AnimatedPressable
+                style={[rs.tailorSubmitBtn, (!clCompany.trim() || !clRole.trim() || clGenerating) && { opacity: 0.5 }]}
+                onPress={handleGenerateCoverLetter}
+                scaleDown={0.97}
+                disabled={!clCompany.trim() || !clRole.trim() || clGenerating}
+              >
+                {clGenerating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="mail" size={14} color="#FFFFFF" />
+                    <Text style={rs.tailorSubmitText}>Generate cover letter</Text>
+                  </>
+                )}
               </AnimatedPressable>
             </View>
           </KeyboardAvoidingView>
