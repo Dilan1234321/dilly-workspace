@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
+import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
+import CohortSwitcher from '../../components/CohortSwitcher';
 import EditProfileModal from '../../components/EditProfileModal';
 
 const GOLD  = '#2B3A8E';
@@ -157,6 +159,8 @@ export default function ProfileScreen() {
 
   const [profile,  setProfile]  = useState<Record<string, any>>({});
   const [audit,    setAudit]    = useState<Record<string, any>>({});
+  const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
+  const [activeCohortIdx, setActiveCohortIdx] = useState(0);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading,  setLoading]  = useState(true);
   const [showEdit, setShowEdit] = useState(false);
@@ -175,14 +179,19 @@ export default function ProfileScreen() {
 
         setProfile(profileRes ?? {});
 
+        // Build-87: per-cohort Claude scores are the source of truth
+        const parsedCohorts = parseCohortScores(profileRes?.cohort_scores);
+        setCohortScores(parsedCohorts);
+        const primaryCohort = parsedCohorts[0] ?? null;
+
         const auditObj = auditRaw?.audit ?? auditRaw ?? {};
-        // Prefer primary cohort scores from rubric_analysis  -  no aggregates.
         const ra = auditObj?.rubric_analysis;
         const snapshot = profileRes?.first_audit_snapshot?.scores;
-        const smart = ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
-        const grit  = ra?.primary_grit  ?? auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
-        const build = ra?.primary_build ?? auditObj?.scores?.build ?? snapshot?.build ?? null;
-        const calculated = ra?.primary_composite
+        const smart = primaryCohort?.smart ?? ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
+        const grit  = primaryCohort?.grit  ?? ra?.primary_grit  ?? auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
+        const build = primaryCohort?.build ?? ra?.primary_build ?? auditObj?.scores?.build ?? snapshot?.build ?? null;
+        const calculated = primaryCohort?.dilly_score
+          ?? ra?.primary_composite
           ?? auditObj?.final_score
           ?? (smart != null && grit != null && build != null
             ? Math.round((smart + grit + build) / 3)
@@ -235,7 +244,9 @@ export default function ProfileScreen() {
   const p = profile;
   const fullName  = p.name || 'Student';
   const firstName = fullName.trim().split(/\s+/)[0];
-  const cohort    = p.track || p.cohort || 'General';
+  // Build-87: active cohort drives displayed scores
+  const activeCohort = cohortScores[activeCohortIdx] ?? null;
+  const cohort    = activeCohort?.display_name || p.track || p.cohort || 'General';
   const school    = p.school_id === 'utampa' ? 'University of Tampa' : (p.school_id || 'University');
   const major     = (p.majors?.[0] || p.major || '');
   const tagline   = p.profile_tagline || p.custom_tagline || '';
@@ -244,10 +255,10 @@ export default function ProfileScreen() {
   const initial   = fullName[0]?.toUpperCase() || '?';
 
   const hasAudit   = audit.has_audit === true;
-  const finalScore = audit.final_score ?? 0;
-  const smartScore = audit.scores?.smart ?? 0;
-  const gritScore  = audit.scores?.grit  ?? 0;
-  const buildScore = audit.scores?.build ?? 0;
+  const finalScore = activeCohort?.dilly_score ?? audit.final_score ?? 0;
+  const smartScore = activeCohort?.smart  ?? audit.scores?.smart ?? 0;
+  const gritScore  = activeCohort?.grit   ?? audit.scores?.grit  ?? 0;
+  const buildScore = activeCohort?.build  ?? audit.scores?.build ?? 0;
   const percentile = calcPercentile(finalScore);
 
   const achievements = buildAchievements(finalScore, percentile, hasAudit, celebrated);
@@ -321,6 +332,17 @@ export default function ProfileScreen() {
         </View>
 
         {/* \u2500\u2500 Score snapshot \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+        {/* Build-87: Cohort Switcher */}
+        {cohortScores.length > 1 && hasAudit && (
+          <View style={{ marginBottom: 8 }}>
+            <CohortSwitcher
+              cohorts={cohortScores}
+              activeIndex={activeCohortIdx}
+              onSwitch={setActiveCohortIdx}
+            />
+          </View>
+        )}
+
         {hasAudit && (
           <TouchableOpacity
             style={ps.scoreCard}
