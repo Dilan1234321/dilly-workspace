@@ -2832,9 +2832,9 @@ const rs = StyleSheet.create({
   rewriteAcceptText: { fontSize: 12, color: '#FFFFFF', fontWeight: '700' },
 
   tailorBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.golddim, borderRadius: 10,
-    paddingVertical: 10, marginBottom: 12,
+    paddingVertical: 12, paddingHorizontal: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.goldbdr,
   },
   tailorBtnText: { fontSize: 13, fontWeight: '600', color: colors.gold },

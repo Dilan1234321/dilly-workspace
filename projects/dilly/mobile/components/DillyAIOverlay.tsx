@@ -593,9 +593,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.b1, zIndex: 10 },
-  wordmark: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  wordmarkLogo: { height: 28, width: 80 },
-  wordmarkAI: { fontFamily: 'Cinzel_900Black', fontSize: 28, color: GOLD, letterSpacing: 2, lineHeight: 28 },
+  wordmark: { flexDirection: 'row', alignItems: 'baseline', gap: 1, flex: 1 },
+  wordmarkLogo: { height: 24, width: 68 },
+  wordmarkAI: { fontFamily: 'Cinzel_900Black', fontSize: 22, color: GOLD, letterSpacing: 1, lineHeight: 24, marginBottom: -1 },
   modePills: { flexDirection: 'row', gap: 4, marginRight: 10 },
   modePill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   modePillActive: { backgroundColor: GOLD },
