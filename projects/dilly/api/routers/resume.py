@@ -1570,6 +1570,7 @@ class ExportRequest(BaseModel):
     sections: List[ResumeSection]
     template: Optional[str] = "tech"  # 'tech' | 'business' | 'academic'
     filename: Optional[str] = None
+    format: Optional[str] = "pdf"     # 'pdf' | 'docx' (build 73)
 
 
 @router.post("/resume/export")
@@ -1599,51 +1600,61 @@ async def resume_export_pdf(request: Request, body: ExportRequest):
             candidate_name = s.contact.name
             break
 
+    fmt = (body.format or "pdf").lower().strip()
+    if fmt not in ("pdf", "docx"):
+        fmt = "pdf"
+
+    # Convert Pydantic models to dicts for the renderer
+    sections_dicts = [s.model_dump() if hasattr(s, "model_dump") else s.dict() for s in body.sections]
+
+    doc_bytes: bytes
+    mime: str
+    ext: str
     try:
-        from dilly_core.resume_pdf_export import render_resume_pdf
-        # Convert Pydantic models to dicts for the renderer
-        sections_dicts = [s.model_dump() if hasattr(s, "model_dump") else s.dict() for s in body.sections]
-        pdf_bytes = render_resume_pdf(
-            sections_dicts,
-            template_name=template_name,
-            candidate_name=candidate_name,
-        )
+        if fmt == "docx":
+            from dilly_core.resume_docx_export import render_resume_docx
+            doc_bytes = render_resume_docx(sections_dicts, template_name=template_name)
+            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ext = "docx"
+        else:
+            from dilly_core.resume_pdf_export import render_resume_pdf
+            doc_bytes = render_resume_pdf(
+                sections_dicts,
+                template_name=template_name,
+                candidate_name=candidate_name,
+            )
+            mime = "application/pdf"
+            ext = "pdf"
     except Exception as e:
         import sys, traceback
-        sys.stderr.write(f"[pdf_export_failed] {type(e).__name__}: {str(e)[:200]}\n")
+        sys.stderr.write(f"[{fmt}_export_failed] {type(e).__name__}: {str(e)[:200]}\n")
         try: traceback.print_exc(file=sys.stderr)
         except Exception: pass
-        raise HTTPException(status_code=500, detail=f"PDF render failed: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail=f"{fmt.upper()} render failed: {type(e).__name__}")
 
-    filename = (body.filename or f"{(candidate_name or 'resume').strip().replace(' ', '_')}_{template_name}.pdf")
+    filename = body.filename or f"{(candidate_name or 'resume').strip().replace(' ', '_')}_{template_name}.{ext}"
 
-    # iOS Safari silently blocks `data:application/pdf;base64,...` URLs — they
-    # appear to succeed with Linking.canOpenURL but nothing actually opens.
-    # Instead, stash the PDF in an in-memory cache with a random token and
-    # return a public URL to a GET endpoint that streams the bytes. Mobile
-    # opens the URL with Linking.openURL, iOS renders natively with the
-    # standard share/save sheet. Tokens expire after 10 minutes.
     if (request.query_params.get("raw") or "").lower() in ("1", "true", "yes"):
         return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
+            content=doc_bytes,
+            media_type=mime,
             headers={
                 "Content-Disposition": f'attachment; filename="{filename}"',
                 "Cache-Control": "no-store",
             },
         )
 
-    token = _stash_pdf(pdf_bytes, filename)
-    # Build the absolute URL the mobile client should open
+    token = _stash_pdf(doc_bytes, filename, mime=mime)
     base_url = str(request.base_url).rstrip("/")
     public_url = f"{base_url}/resume/export/{token}"
     return {
         "filename": filename,
-        "mime": "application/pdf",
-        "size_bytes": len(pdf_bytes),
+        "mime": mime,
+        "size_bytes": len(doc_bytes),
         "url": public_url,
         "token": token,
         "template": template_name,
+        "format": fmt,
         "expires_in_sec": _PDF_EXPORT_TTL,
     }
 
@@ -1661,11 +1672,12 @@ _PDF_EXPORT_TTL = 600  # 10 min
 _PDF_EXPORT_LOCK = _threading.Lock()
 
 
-def _stash_pdf(pdf_bytes: bytes, filename: str) -> str:
-    """Store PDF bytes in the in-memory cache and return a token."""
+def _stash_pdf(pdf_bytes: bytes, filename: str, mime: str = "application/pdf") -> str:
+    """Store document bytes in the in-memory cache and return a token.
+    Works for both PDFs and DOCX — the mime type is stored alongside the
+    bytes so the fetch endpoint can serve either."""
     token = _secrets.token_urlsafe(24)
     with _PDF_EXPORT_LOCK:
-        # Opportunistic cleanup of expired entries
         now = _time.time()
         expired = [k for k, v in _PDF_EXPORT_CACHE.items() if now - v.get("ts", 0) > _PDF_EXPORT_TTL]
         for k in expired:
@@ -1673,6 +1685,7 @@ def _stash_pdf(pdf_bytes: bytes, filename: str) -> str:
         _PDF_EXPORT_CACHE[token] = {
             "bytes": pdf_bytes,
             "filename": filename,
+            "mime": mime,
             "ts": now,
         }
     return token
@@ -1681,10 +1694,9 @@ def _stash_pdf(pdf_bytes: bytes, filename: str) -> str:
 @router.get("/resume/export/{token}")
 async def resume_export_fetch(token: str):
     """
-    Public endpoint that streams a PDF from the transient cache. Called by the
-    mobile client after it hits POST /resume/export and receives a token.
-    No auth — the token is a cryptographically random 24-byte value that
-    only the user who just generated it has seen.
+    Public endpoint that streams a stashed export (PDF or DOCX) from the
+    transient cache. No auth — the token is a cryptographically random
+    24-byte value that only the user who just generated it has seen.
     """
     with _PDF_EXPORT_LOCK:
         entry = _PDF_EXPORT_CACHE.get(token)
@@ -1694,11 +1706,15 @@ async def resume_export_fetch(token: str):
             _PDF_EXPORT_CACHE.pop(token, None)
             raise HTTPException(status_code=410, detail="Export expired — regenerate.")
 
+    mime = entry.get("mime") or "application/pdf"
+    filename = entry.get("filename") or ("resume.docx" if "word" in mime else "resume.pdf")
+    # DOCX should download; PDF can render inline in Safari
+    disposition = "attachment" if "word" in mime else "inline"
     return Response(
         content=entry["bytes"],
-        media_type="application/pdf",
+        media_type=mime,
         headers={
-            "Content-Disposition": f'inline; filename="{entry.get("filename", "resume.pdf")}"',
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
             "Cache-Control": "no-store",
         },
     )
@@ -2741,6 +2757,686 @@ No markdown, no explanations, no prose outside the JSON."""
         "cohort": cohort,
         "job_title": job_title,
         "job_company": job_company,
+    }
+
+
+# ── Build 73: JD Quick Tailor ─────────────────────────────────────────────
+#
+# One endpoint that accepts a pasted job description and does everything
+# the student needs in a single round-trip:
+#   1. Extract job_title + job_company from the JD (so they don't have to
+#      fill in three form fields).
+#   2. Extract structured requirements (must-haves + nice-to-haves) that
+#      the UI will render as a checklist.
+#   3. Run the full tailor-diff pipeline (reuses the existing system
+#      prompt via a direct call so no code duplication).
+#   4. Run the deterministic keyword_density analyzer twice — once on
+#      the base resume, once on the tailored — and return before/after
+#      keyword coverage so the user sees real deltas, not vibes.
+#   5. Compute a simple ATS v2 delta on parsed resume text so the headline
+#      number matches what the coaching dashboard shows.
+#   6. Return a synthesized "auto_skills_to_add" list — skills the JD
+#      lists that aren't in the current resume, so the mobile UI can
+#      offer a one-tap "add these to Skills" button.
+
+class JDQuickTailorRequest(BaseModel):
+    job_description: str
+    base_variant_id: Optional[str] = None
+
+
+# ── Weak → strong verb table for deterministic bullet strengthening ──────
+_WEAK_VERB_REPLACEMENTS: Dict[str, str] = {
+    "did":           "Executed",
+    "made":          "Built",
+    "worked on":     "Engineered",
+    "worked with":   "Collaborated with",
+    "helped":        "Drove",
+    "helped with":   "Contributed to",
+    "helped to":     "Partnered to",
+    "assisted":      "Supported",
+    "assisted with": "Advanced",
+    "was responsible for": "Owned",
+    "responsible for":     "Owned",
+    "handled":       "Managed",
+    "took care of":  "Operated",
+    "participated in": "Led",
+    "involved in":   "Drove",
+    "part of":       "Contributed to",
+    "tried to":      "Drove to",
+    "attempted to":  "Initiated",
+    "got":           "Secured",
+    "gave":          "Delivered",
+    "started":       "Launched",
+    "put together":  "Architected",
+    "set up":        "Deployed",
+    "used":          "Leveraged",
+    "utilized":      "Leveraged",
+    "improved":      "Improved",  # keep
+    "created":       "Built",
+    "developed":     "Developed",  # keep
+    "wrote":         "Authored",
+    "talked to":     "Partnered with",
+    "dealt with":    "Resolved",
+    "looked at":     "Analyzed",
+    "figured out":   "Diagnosed",
+}
+
+_STRONG_VERBS: set = {
+    "Architected","Authored","Automated","Built","Collaborated","Configured",
+    "Crafted","Delivered","Deployed","Designed","Developed","Directed","Drove",
+    "Engineered","Established","Executed","Founded","Implemented","Improved",
+    "Launched","Led","Managed","Operated","Optimized","Orchestrated","Owned",
+    "Partnered","Pioneered","Produced","Programmed","Researched","Scaled",
+    "Secured","Shipped","Spearheaded","Streamlined","Supported","Transformed",
+}
+
+
+def _strengthen_bullet(text: str) -> str:
+    """Deterministic bullet polish. Replaces weak verbs + filler phrases
+    without inventing new facts. Idempotent."""
+    if not text or not text.strip():
+        return text
+    s = text.strip()
+    # Strip a leading bullet glyph if the user pasted one in
+    if s and s[0] in "-•◦*–—":
+        s = s[1:].lstrip()
+
+    lower = s.lower()
+    # Replace multi-word weak leaders first (longest match wins)
+    keys = sorted(_WEAK_VERB_REPLACEMENTS.keys(), key=len, reverse=True)
+    for weak in keys:
+        if lower.startswith(weak + " "):
+            rest = s[len(weak):].lstrip()
+            # Capitalize first letter of rest if the new verb is followed
+            # by something that looks like a continuation
+            s = f"{_WEAK_VERB_REPLACEMENTS[weak]} {rest[:1].lower()}{rest[1:]}" if rest else _WEAK_VERB_REPLACEMENTS[weak]
+            lower = s.lower()
+            break
+
+    # Collapse doubled spaces and trailing period normalization
+    s = " ".join(s.split())
+    if s and not s.endswith(('.', '!', '?')):
+        s += "."
+    return s
+
+
+def _extract_jd_keywords_fast(jd_text: str) -> dict:
+    """
+    Deterministic JD extraction using the existing keyword analyzer.
+    No LLM. Returns a dict with:
+      job_title   (best-effort line scan)
+      job_company (best-effort line scan)
+      tools       (specific named technologies detected in the JD)
+      keywords    (all extracted keywords, ranked by JD frequency)
+      must_have   (keywords appearing in "required / must have" context)
+      nice_to_have (keywords appearing in "preferred / nice to have" context)
+    """
+    jd = (jd_text or "").strip()
+    if not jd:
+        return {
+            "job_title": "", "job_company": "", "seniority": "",
+            "tools": [], "keywords": [], "must_have": [], "nice_to_have": [],
+        }
+
+    import re as _re
+
+    # ── Title + company best-effort detection ─────────────────────────
+    first_lines = [ln.strip() for ln in jd.split("\n") if ln.strip()][:10]
+    job_title = ""
+    job_company = ""
+    title_keywords = (
+        "intern", "engineer", "scientist", "analyst", "developer",
+        "manager", "associate", "consultant", "designer", "coordinator",
+    )
+    for ln in first_lines:
+        low = ln.lower()
+        if not job_title and any(k in low for k in title_keywords) and len(ln) < 90:
+            job_title = ln
+        m = _re.search(r"at\s+([A-Z][A-Za-z0-9&.\- ]{2,40})", ln)
+        if not job_company and m:
+            cand = m.group(1).strip().rstrip(",.!?")
+            if len(cand) < 40:
+                job_company = cand
+
+    # Seniority
+    seniority = ""
+    low_all = jd.lower()
+    if "intern" in low_all: seniority = "intern"
+    elif "new grad" in low_all or "entry level" in low_all or "entry-level" in low_all:
+        seniority = "new_grad"
+    elif "senior" in low_all or "sr." in low_all or "lead" in low_all:
+        seniority = "senior"
+    elif "mid-level" in low_all or "mid level" in low_all:
+        seniority = "mid"
+    elif "junior" in low_all or "jr." in low_all:
+        seniority = "junior"
+
+    # ── Reuse the keyword analyzer — it already does tf/idf over a fake
+    #    resume so we can pass an empty text and just read the ranked
+    #    keyword list the analyzer extracts from the JD. ─────────────
+    keywords: list = []
+    tools: list = []
+    try:
+        from dilly_core.ats_keywords import run_keyword_analysis
+        # Pass an empty "resume" so the analyzer runs JD extraction and
+        # returns the ranked keyword list.
+        fake_sections = {"experience": "", "skills": "", "projects": ""}
+        kr = run_keyword_analysis(fake_sections, job_description=jd)
+        for k in (kr.keywords or [])[:30]:
+            kw = getattr(k, "keyword", "") or ""
+            if kw:
+                keywords.append(kw)
+    except Exception as _exc:
+        sys.stderr.write(f"[jd_fast_kw_failed] {type(_exc).__name__}: {str(_exc)[:200]}\n")
+
+    # Tools / specific tech names — a regex sweep for the most common
+    # programming languages, frameworks, and tools. Lower false-positive
+    # rate than generic keyword extraction.
+    _TOOL_RE = _re.compile(
+        r"\b("
+        r"Python|JavaScript|TypeScript|Java|Go(lang)?|Rust|C\+\+|C#|Kotlin|Swift|Ruby|PHP|Scala|"
+        r"React|Next\.js|Vue|Svelte|Angular|Node\.js|Express|Django|Flask|FastAPI|Spring|Rails|"
+        r"SQL|NoSQL|PostgreSQL|MySQL|MongoDB|Redis|SQLite|DynamoDB|Snowflake|BigQuery|"
+        r"AWS|GCP|Azure|Docker|Kubernetes|Terraform|Ansible|Jenkins|GitHub Actions|GitLab CI|"
+        r"Pandas|NumPy|Scikit-learn|TensorFlow|PyTorch|Keras|XGBoost|"
+        r"Tableau|Power ?BI|Looker|Excel|SPSS|Stata|SAS|R(?: programming)?|MATLAB|"
+        r"Figma|Sketch|Adobe XD|Illustrator|Photoshop|InDesign|"
+        r"Git|Linux|Bash|GraphQL|REST(?:ful)?|gRPC|Kafka|Airflow|Spark|Hadoop|dbt|"
+        r"Bloomberg Terminal|Capital IQ|Workday|Salesforce|HubSpot|"
+        r"A/B testing|machine learning|deep learning|NLP|computer vision|data visualization|ETL"
+        r")\b",
+        _re.IGNORECASE,
+    )
+    seen: set = set()
+    for m in _TOOL_RE.finditer(jd):
+        canonical = m.group(0)
+        key = canonical.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        tools.append(canonical)
+        if len(tools) >= 15:
+            break
+
+    # ── Required vs preferred section detection ──────────────────────
+    # Split the JD into paragraphs and tag each by which header it
+    # follows. Keywords/tools that appear in a "required" paragraph go
+    # to must_have, in a "preferred" paragraph go to nice_to_have.
+    must_have: list = []
+    nice_to_have: list = []
+    current_bucket: Optional[str] = None
+    for para in jd.split("\n"):
+        p_low = para.lower().strip()
+        if not p_low:
+            continue
+        # Bucket headers
+        if any(h in p_low for h in ("required", "must have", "must-have", "qualifications", "what you need")):
+            current_bucket = "must"
+            continue
+        if any(h in p_low for h in ("preferred", "nice to have", "nice-to-have", "bonus", "plus if")):
+            current_bucket = "nice"
+            continue
+        if current_bucket:
+            for tool in tools:
+                if tool.lower() in p_low:
+                    target = must_have if current_bucket == "must" else nice_to_have
+                    if tool not in target:
+                        target.append(tool)
+            for kw in keywords[:20]:
+                if kw.lower() in p_low:
+                    target = must_have if current_bucket == "must" else nice_to_have
+                    if kw not in target and len(target) < 8:
+                        target.append(kw)
+
+    return {
+        "job_title": job_title,
+        "job_company": job_company,
+        "seniority": seniority,
+        "tools": tools,
+        "keywords": keywords,
+        "must_have": must_have[:8],
+        "nice_to_have": nice_to_have[:6],
+    }
+
+
+def _sections_to_plain_text(sections: List[dict]) -> str:
+    """Serialize structured sections into resume-like plain text for the
+    deterministic scorers. Mirrors _sections_to_text but accepts dicts so
+    it can run on either the base or tailored payload."""
+    try:
+        typed = [ResumeSection(**s) for s in sections if isinstance(s, dict)]
+        return _sections_to_text(typed)
+    except Exception:
+        # Fallback: best-effort text extraction
+        chunks: list = []
+        for s in sections or []:
+            if not isinstance(s, dict):
+                continue
+            if s.get("experiences"):
+                for e in s["experiences"]:
+                    chunks.append(f"{e.get('company','')} {e.get('role','')} {e.get('date','')}")
+                    for b in e.get("bullets") or []:
+                        chunks.append(b.get("text", ""))
+            if s.get("projects"):
+                for p in s["projects"]:
+                    chunks.append(f"{p.get('name','')} {p.get('date','')}")
+                    for b in p.get("bullets") or []:
+                        chunks.append(b.get("text", ""))
+            if s.get("simple"):
+                chunks.extend(s["simple"].get("lines") or [])
+            if s.get("education"):
+                e = s["education"]
+                chunks.append(f"{e.get('university','')} {e.get('major','')} {e.get('graduation','')}")
+        return "\n".join(c for c in chunks if c)
+
+
+def _score_keyword_coverage(resume_text: str, job_description: str) -> dict:
+    """Deterministic keyword coverage score for a resume vs a JD.
+    Returns { match_pct, strong, adequate, weak, missing } where each
+    bucket is a list of keyword strings."""
+    try:
+        from dilly_core.resume_parser import get_sections
+        from dilly_core.ats_keywords import run_keyword_analysis
+        sections_map = get_sections(resume_text)
+        kr = run_keyword_analysis(sections_map, job_description=job_description)
+        jm = getattr(kr, "jd_match", None)
+        if not isinstance(jm, dict):
+            return {"match_pct": 0.0, "strong": [], "adequate": [], "weak": [], "missing": []}
+        strong: list = []
+        adequate: list = []
+        weak: list = []
+        missing: list = []
+        for req in (jm.get("requirements") or []):
+            if not isinstance(req, dict):
+                continue
+            kw = req.get("keyword")
+            if not kw:
+                continue
+            placement = req.get("placement")
+            if placement == "strong":
+                strong.append(kw)
+            elif placement == "adequate":
+                adequate.append(kw)
+            elif placement == "weak":
+                weak.append(kw)
+            elif placement == "missing":
+                missing.append(kw)
+        return {
+            "match_pct": round(float(jm.get("match_percentage") or 0), 1),
+            "strong": strong,
+            "adequate": adequate,
+            "weak": weak,
+            "missing": missing,
+        }
+    except Exception as _exc:
+        sys.stderr.write(f"[kw_cov_failed] {type(_exc).__name__}: {str(_exc)[:200]}\n")
+        return {"match_pct": 0.0, "strong": [], "adequate": [], "weak": [], "missing": []}
+
+
+def _score_ats_v2(resume_text: str) -> Optional[float]:
+    """Deterministic v2 ATS composite on raw text. Returns the overall
+    value or None on failure."""
+    try:
+        from dilly_core.resume_parser import parse_resume as _pr
+        from dilly_core.ats_analysis import run_ats_analysis as _raa
+        from dilly_core.ats_score_v2 import (
+            score_from_signals as _sfs,
+            signals_from_ats_analysis as _sfaa,
+        )
+        from dilly_core.ats_workday_validator import run_workday_checks as _rwc
+        parsed = _pr(resume_text)
+        analysis = _raa(raw_text=resume_text, parsed=parsed)
+        sig = _sfaa(analysis, raw_text=resume_text, file_extension="pdf")
+        wd = _rwc(resume_text, parsed)
+        scored = _sfs(sig, extra_issues=wd).to_dict()
+        ov = (scored.get("overall") or {}).get("value")
+        return float(ov) if ov is not None else None
+    except Exception:
+        return None
+
+
+def _score_bullet_against_jd(text: str, jd_keywords_lower: List[str], tools_lower: List[str]) -> float:
+    """Score one bullet against JD keywords. Higher = more relevant."""
+    if not text:
+        return 0.0
+    low = text.lower()
+    score = 0.0
+    # Tools are high-value exact matches
+    for t in tools_lower:
+        if t and t in low:
+            score += 3.0
+    # General keywords contribute less
+    for kw in jd_keywords_lower:
+        if kw and kw in low:
+            score += 1.0
+    # Metrics bonus
+    if any(ch.isdigit() for ch in text):
+        score += 0.5
+    # Length penalty for stubs
+    if len(text.split()) < 5:
+        score -= 1.0
+    return score
+
+
+def _score_experience_against_jd(exp: dict, jd_keywords_lower: List[str], tools_lower: List[str]) -> float:
+    """Aggregate score for an entire experience entry."""
+    s = 0.0
+    blob = " ".join([
+        str(exp.get("company") or ""),
+        str(exp.get("role") or ""),
+    ]).lower()
+    for t in tools_lower:
+        if t and t in blob:
+            s += 2.0
+    for kw in jd_keywords_lower[:15]:
+        if kw and kw in blob:
+            s += 0.5
+    for b in exp.get("bullets") or []:
+        s += _score_bullet_against_jd(
+            str((b or {}).get("text") or ""),
+            jd_keywords_lower, tools_lower,
+        )
+    return s
+
+
+def _deterministic_tailor(base_sections: List[dict], jd_facts: dict, jd_text: str,
+                           profile: dict) -> tuple[List[dict], List[dict]]:
+    """
+    Build the tailored sections and a list of per-bullet change rationales
+    without any LLM. Rules:
+
+      1. Score every experience/project/bullet against JD keywords + tools.
+      2. Keep only experiences/projects with score > 0.1. Hide the rest
+         (they stay in base resume, just not in the tailored variant).
+      3. Reorder experiences and bullets by descending score.
+      4. Run _strengthen_bullet on every surviving bullet.
+      5. Rebuild Skills: JD tools first, then existing skills matching
+         any JD keyword, then user's Dilly Profile tools_used that match
+         the JD. Drop skills that don't match the JD at all.
+      6. Pull in additional experiences/projects from profile
+         experience_expansion if they have JD-matching tools_used and
+         the student has a description the tailor can use.
+    """
+    tools = jd_facts.get("tools") or []
+    tools_lower = [t.lower() for t in tools if t]
+    keywords = jd_facts.get("keywords") or []
+    keywords_lower = [k.lower() for k in keywords if k]
+
+    rationales: List[dict] = []
+
+    def _bullet_changed(before: str, after: str, company: str, role: str) -> None:
+        if before != after and len(rationales) < 12:
+            # Find the most relevant JD hit for the rationale
+            hit: Optional[str] = None
+            lb = (before + " " + after).lower()
+            for t in tools_lower[:10]:
+                if t in lb:
+                    hit = t
+                    break
+            if not hit:
+                for kw in keywords_lower[:10]:
+                    if kw in lb:
+                        hit = kw
+                        break
+            rationales.append({
+                "company": company, "role": role,
+                "before": before, "after": after,
+                "reason": (
+                    f"Strengthened verb and kept the JD match '{hit}'"
+                    if hit else "Strengthened verb and tightened phrasing"
+                ),
+            })
+
+    def _process_section(s: dict) -> Optional[dict]:
+        if not isinstance(s, dict):
+            return s
+        key = (s.get("key") or "").lower()
+        out = dict(s)
+
+        if key in ("experience", "professional_experience") and s.get("experiences"):
+            scored_exps: list = []
+            for exp in s["experiences"]:
+                score = _score_experience_against_jd(exp, keywords_lower, tools_lower)
+                scored_exps.append((score, exp))
+            # Keep experiences with any positive score; sort desc
+            kept = [e for e in scored_exps if e[0] > 0]
+            if not kept:
+                kept = scored_exps  # keep everything if none scored (don't nuke the resume)
+            kept.sort(key=lambda t: t[0], reverse=True)
+
+            new_exps: list = []
+            for _, exp in kept:
+                new_exp = dict(exp)
+                # Score and reorder bullets inside the experience
+                b_scored: list = []
+                for b in exp.get("bullets") or []:
+                    bt = str((b or {}).get("text") or "")
+                    if not bt.strip():
+                        continue
+                    b_scored.append((_score_bullet_against_jd(bt, keywords_lower, tools_lower), b))
+                # Keep bullets with score > 0.3, or top 4 if all low
+                relevant = [b for b in b_scored if b[0] > 0.3]
+                if len(relevant) < 2 and b_scored:
+                    relevant = sorted(b_scored, key=lambda t: t[0], reverse=True)[:4]
+                else:
+                    relevant.sort(key=lambda t: t[0], reverse=True)
+                new_bullets: list = []
+                for _, b in relevant[:5]:
+                    before = str((b or {}).get("text") or "")
+                    after = _strengthen_bullet(before)
+                    new_bullets.append({**(b or {}), "text": after})
+                    _bullet_changed(before, after, new_exp.get("company", ""), new_exp.get("role", ""))
+                new_exp["bullets"] = new_bullets
+                new_exps.append(new_exp)
+            out["experiences"] = new_exps
+            return out
+
+        if key == "projects" and s.get("projects"):
+            scored_projs: list = []
+            for p in s["projects"]:
+                score = _score_experience_against_jd(
+                    {"company": p.get("name", ""), "role": "", "bullets": p.get("bullets") or []},
+                    keywords_lower, tools_lower,
+                )
+                scored_projs.append((score, p))
+            kept = [x for x in scored_projs if x[0] > 0]
+            if not kept:
+                kept = scored_projs
+            kept.sort(key=lambda t: t[0], reverse=True)
+            new_projects: list = []
+            for _, p in kept[:4]:
+                new_p = dict(p)
+                b_scored = []
+                for b in p.get("bullets") or []:
+                    bt = str((b or {}).get("text") or "")
+                    if not bt.strip():
+                        continue
+                    b_scored.append((_score_bullet_against_jd(bt, keywords_lower, tools_lower), b))
+                relevant = [b for b in b_scored if b[0] > 0.3]
+                if len(relevant) < 2 and b_scored:
+                    relevant = sorted(b_scored, key=lambda t: t[0], reverse=True)[:3]
+                else:
+                    relevant.sort(key=lambda t: t[0], reverse=True)
+                new_bullets = []
+                for _, b in relevant[:4]:
+                    before = str((b or {}).get("text") or "")
+                    after = _strengthen_bullet(before)
+                    new_bullets.append({**(b or {}), "text": after})
+                    _bullet_changed(before, after, p.get("name", ""), "project")
+                new_p["bullets"] = new_bullets
+                new_projects.append(new_p)
+            out["projects"] = new_projects
+            return out
+
+        if key == "skills" and s.get("simple"):
+            # Rebuild skills list
+            existing = [str(l).strip() for l in (s["simple"].get("lines") or []) if str(l).strip()]
+            # Split comma-separated lines into individual skills for scoring
+            atomic: list = []
+            for line in existing:
+                for chunk in _re.split(r"[,/•;|]", line):
+                    chunk = chunk.strip().rstrip(".")
+                    if chunk and chunk not in atomic:
+                        atomic.append(chunk)
+
+            # Pull extra skills the student already told Dilly about
+            profile_tools: list = []
+            try:
+                expansion = profile.get("experience_expansion") or []
+                for ent in expansion:
+                    if not isinstance(ent, dict):
+                        continue
+                    for t in (ent.get("tools_used") or []) + (ent.get("skills") or []):
+                        if isinstance(t, str) and t.strip() and t not in atomic and t not in profile_tools:
+                            profile_tools.append(t.strip())
+            except Exception:
+                pass
+
+            # Category 1: JD tools the student actually has (in atomic or profile_tools)
+            have_lower = set(a.lower() for a in atomic + profile_tools)
+            jd_matched: list = [t for t in tools if t and t.lower() in have_lower]
+            # Category 2: existing skills that match any JD keyword
+            context_matches: list = [
+                a for a in atomic
+                if a.lower() not in (t.lower() for t in jd_matched)
+                and any(kw in a.lower() for kw in keywords_lower[:20])
+            ]
+            # Category 3: profile tools that match the JD but weren't in the resume
+            profile_additions: list = [
+                t for t in profile_tools
+                if t.lower() not in (x.lower() for x in jd_matched + context_matches)
+                and (t.lower() in (k for k in keywords_lower) or t.lower() in (tl for tl in tools_lower))
+            ]
+
+            new_skills = jd_matched + context_matches + profile_additions
+            if not new_skills:
+                # Don't nuke — keep original if nothing matched
+                new_skills = atomic
+
+            # Render back as a single comma-separated line (ATS parsers
+            # prefer this over multi-line skills)
+            out["simple"] = {
+                **s["simple"],
+                "lines": [", ".join(new_skills[:20])] if new_skills else [""],
+            }
+            return out
+
+        return out
+
+    tailored: List[dict] = []
+    for s in base_sections:
+        processed = _process_section(s)
+        if processed is not None:
+            tailored.append(processed)
+
+    return tailored, rationales
+
+
+@router.post("/resume/jd-quick-tailor")
+async def resume_jd_quick_tailor(request: Request, body: JDQuickTailorRequest):
+    """
+    Build 73: deterministic one-shot tailor from a pasted JD. Zero LLM
+    cost. Rearranges, prunes, and strengthens the user's existing resume
+    against the JD requirements. Never invents experience.
+
+    Returns:
+      {
+        jd_facts:   {job_title, job_company, seniority, tools[], must_have[], nice_to_have[], keywords[]},
+        headline:   "auto-generated summary of changes",
+        base_sections, tailored_sections,
+        bullet_rationales: [{company, role, before, after, reason}],
+        keyword_before, keyword_after,          # {match_pct, strong, adequate, weak, missing}
+        ats_before, ats_after,                  # floats or null
+        auto_skills_to_add: [string, ...],
+        experience_diffs, skills_diff,
+      }
+    """
+    deps.rate_limit(request, "jd-quick-tailor", max_requests=60, window_sec=300)
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    jd = (body.job_description or "").strip()
+    if len(jd) < 30:
+        raise errors.validation_error("Paste the full job description (at least a paragraph).")
+
+    # Load base resume
+    base_sections: List[dict] = []
+    if body.base_variant_id:
+        content = await asyncio.to_thread(_load_variant_content, email, body.base_variant_id)
+        if content:
+            base_sections = content.get("sections") or []
+    if not base_sections:
+        existing = await asyncio.to_thread(_load_resume, email)
+        if existing:
+            base_sections = existing.get("sections") or []
+    if not base_sections:
+        raise errors.validation_error(
+            "No saved resume found. Save your resume in the editor first."
+        )
+
+    # 1. Deterministic JD extraction (no LLM)
+    jd_facts = _extract_jd_keywords_fast(jd)
+
+    # 2. Load Dilly Profile for extra skills / tools_used
+    profile: dict = {}
+    try:
+        from projects.dilly.api.profile_store import get_profile
+        profile = await asyncio.to_thread(get_profile, email) or {}
+    except Exception:
+        profile = {}
+
+    # 3. Deterministic tailor (no LLM)
+    tailored_sections, bullet_rationales = _deterministic_tailor(base_sections, jd_facts, jd, profile)
+
+    # 4. Before/after scores
+    base_text = _sections_to_plain_text(base_sections)
+    tailored_text = _sections_to_plain_text(tailored_sections)
+    keyword_before = _score_keyword_coverage(base_text, jd)
+    keyword_after = _score_keyword_coverage(tailored_text, jd)
+    ats_before = _score_ats_v2(base_text)
+    ats_after = _score_ats_v2(tailored_text)
+
+    # 5. Auto-skills the user could add
+    existing_skills_lines = _find_skills_lines(base_sections)
+    existing_text = " ".join(existing_skills_lines).lower()
+    auto_skills_to_add: list = []
+    for tool in (jd_facts.get("tools") or [])[:10]:
+        if not tool:
+            continue
+        if tool.lower() not in existing_text and len(tool) < 40:
+            auto_skills_to_add.append(tool)
+
+    # 6. Diffs (existing helpers)
+    experience_diffs = _diff_experiences(base_sections, tailored_sections)
+    skills_diff = _diff_skills(base_sections, tailored_sections)
+
+    # 7. Build headline summary from the deterministic changes
+    parts: list = []
+    if keyword_after["match_pct"] > keyword_before["match_pct"]:
+        parts.append(f"keyword coverage {keyword_before['match_pct']:.0f}% → {keyword_after['match_pct']:.0f}%")
+    if len(bullet_rationales) > 0:
+        parts.append(f"{len(bullet_rationales)} bullets strengthened")
+    if auto_skills_to_add:
+        parts.append(f"{len(auto_skills_to_add)} missing skills flagged")
+    headline = (", ".join(parts) or "Reordered for relevance").capitalize() + "."
+
+    return {
+        "jd_facts": jd_facts,
+        "headline": headline,
+        "bullet_rationales": bullet_rationales,
+        "base_sections": base_sections,
+        "tailored_sections": tailored_sections,
+        "experience_diffs": experience_diffs,
+        "skills_diff": skills_diff,
+        "keyword_before": keyword_before,
+        "keyword_after": keyword_after,
+        "ats_before": ats_before,
+        "ats_after": ats_after,
+        "auto_skills_to_add": auto_skills_to_add,
+        "job_title": jd_facts.get("job_title") or "",
+        "job_company": jd_facts.get("job_company") or "",
     }
 
 
