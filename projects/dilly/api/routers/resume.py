@@ -870,8 +870,8 @@ async def score_bullet(request: Request, body: BulletScoreRequest):
     else:
         label = "Weak"
 
-    # Limit hints to 2
-    return BulletScoreResponse(score=score, label=label, hints=hints[:2])
+    # Show up to 3 hints — build 66 renders them as categorized lint chips
+    return BulletScoreResponse(score=score, label=label, hints=hints[:3])
 
 
 # ---------------------------------------------------------------------------

@@ -295,12 +295,46 @@ function BulletScoreBar({ score, previousScore }: { score: BulletScore | null; p
         )}
       </View>
       {score.hints.length > 0 && (
-        <Text style={rs.bScoreHint} numberOfLines={2}>
-          <Ionicons name="bulb-outline" size={10} color={GOLD} /> {score.hints[0]}
-        </Text>
+        <View style={rs.bLintRow}>
+          {score.hints.slice(0, 3).map((hint, i) => {
+            const cat = categorizeHint(hint);
+            return (
+              <View
+                key={i}
+                style={[rs.bLintChip, { backgroundColor: cat.color + '15', borderColor: cat.color + '35' }]}
+              >
+                <Ionicons name={cat.icon as any} size={10} color={cat.color} />
+                <Text style={[rs.bLintChipText, { color: cat.color }]} numberOfLines={2}>{hint}</Text>
+              </View>
+            );
+          })}
+        </View>
       )}
     </View>
   );
+}
+
+// Build 66 — live bullet lint: categorize hints into intent buckets so the
+// user sees what KIND of problem each hint is about (weak verb vs missing
+// metric vs passive voice vs length), color-coded at a glance.
+function categorizeHint(hint: string): { icon: string; color: string } {
+  const h = (hint || '').toLowerCase();
+  if (/(verb|action|start with)/.test(h)) {
+    return { icon: 'flash', color: CORAL };
+  }
+  if (/(metric|number|quantif|measur|%|percent|impact)/.test(h)) {
+    return { icon: 'stats-chart', color: AMBER };
+  }
+  if (/(passive|active voice|were|was )/.test(h)) {
+    return { icon: 'swap-horizontal', color: BLUE };
+  }
+  if (/(long|wordy|trim|tighten|concise|word count)/.test(h)) {
+    return { icon: 'cut', color: '#5E5CE6' };
+  }
+  if (/(specif|vague|concrete|detail)/.test(h)) {
+    return { icon: 'search', color: AMBER };
+  }
+  return { icon: 'bulb-outline', color: GOLD };
 }
 
 // ── Inline editable field (resume-style) ──────────────────────────────────────
@@ -1570,6 +1604,14 @@ const rs = StyleSheet.create({
   },
   deltaText: { fontSize: 9, fontWeight: '700' },
   bScoreHint: { fontSize: 10, color: colors.t3, lineHeight: 14, marginTop: 3, paddingLeft: 2 },
+  // Build 66 lint chips
+  bLintRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 5, paddingLeft: 2 },
+  bLintChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 6, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3,
+    maxWidth: '100%',
+  },
+  bLintChipText: { fontSize: 9, fontWeight: '600', lineHeight: 12, flexShrink: 1 },
 
   // Add buttons
   addBtnSmall: {
