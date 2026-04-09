@@ -22,6 +22,8 @@ import useCelebration from '../../hooks/useCelebration';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
 import { remindMeLater } from '../../lib/reminders';
+import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
+import CohortSwitcher from '../../components/CohortSwitcher';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { Svg, Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -130,6 +132,9 @@ export default function HomeScreen() {
   // Build-75: home brief (streak, pipeline, deadlines, brief cards, do-now)
   const [brief, setBrief] = useState<HomeBrief | null>(null);
   const [briefError, setBriefError] = useState(false);
+  // Build-87: per-cohort Claude scores (replaces overall scores)
+  const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
+  const [activeCohortIdx, setActiveCohortIdx] = useState(0);
   // Build-84: calendar sync state (one-time banner)
   const [calendarSynced, setCalendarSynced] = useState(true); // default true to hide banner until we check
   const [photoUri, setPhotoUri]   = useState<string | null>(null);
@@ -198,16 +203,21 @@ export default function HomeScreen() {
         const auditObj = latestAudit ?? auditRaw?.audit ?? auditRaw ?? {};
         const hasAuditFlag = auditObj?.final_score != null;
 
-        // Prefer per-cohort scores from rubric_analysis (primary cohort).
-        // No more "overall" scores anywhere in the app  -  every number shown
-        // is the user's score within their primary cohort.
+        // Build-87: per-cohort Claude scores are the source of truth.
+        // Parse cohort_scores from the profile (scored by Claude per cohort).
+        // Fall back to rubric/audit scores for legacy users without cohort_scores.
+        const parsedCohorts = parseCohortScores(profileRes?.cohort_scores);
+        setCohortScores(parsedCohorts);
+        const primaryCohort = parsedCohorts[0] ?? null;
+
         const ra = auditObj?.rubric_analysis;
         const snapshot = profileRes?.first_audit_snapshot?.scores;
-        const smart = ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
-        const grit  = ra?.primary_grit  ?? auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
-        const build = ra?.primary_build ?? auditObj?.scores?.build ?? snapshot?.build ?? null;
+        const smart = primaryCohort?.smart ?? ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
+        const grit  = primaryCohort?.grit  ?? ra?.primary_grit  ?? auditObj?.scores?.grit  ?? snapshot?.grit  ?? null;
+        const build = primaryCohort?.build ?? ra?.primary_build ?? auditObj?.scores?.build ?? snapshot?.build ?? null;
 
-        const calculated = ra?.primary_composite
+        const calculated = primaryCohort?.dilly_score
+          ?? ra?.primary_composite
           ?? auditObj?.final_score
           ?? (smart != null && grit != null && build != null
             ? Math.round((smart + grit + build) / 3)
@@ -342,14 +352,16 @@ export default function HomeScreen() {
 
   const p = profile as any;
   const firstName = (p.name || p.first_name || '').trim().split(/\s+/)[0] || '';
-  const cohort    = p.track || p.cohort || 'General';
+  // Build-87: active cohort drives all displayed scores
+  const activeCohort = cohortScores[activeCohortIdx] ?? null;
+  const cohort    = activeCohort?.display_name || p.track || p.cohort || 'General';
   const school    = p.school_name || p.school_id || '';
 
   const hasAudit    = audit.has_audit === true && audit.final_score !== undefined;
-  const finalScore  = audit.final_score ?? 0;
-  const smartScore  = audit.scores?.smart  ?? 0;
-  const gritScore   = audit.scores?.grit   ?? 0;
-  const buildScore  = audit.scores?.build  ?? 0;
+  const finalScore  = activeCohort?.dilly_score ?? audit.final_score ?? 0;
+  const smartScore  = activeCohort?.smart  ?? audit.scores?.smart  ?? 0;
+  const gritScore   = activeCohort?.grit   ?? audit.scores?.grit   ?? 0;
+  const buildScore  = activeCohort?.build  ?? audit.scores?.build  ?? 0;
   const track       = audit.detected_track || cohort || 'General';
   const sColor      = scoreColor(finalScore);
 
@@ -435,10 +447,12 @@ export default function HomeScreen() {
                   return firstName ? `${greeting}, ${firstName}` : greeting;
                 })()}
               </Text>
-              {brief?.cohort_bar?.label ? (
+              {activeCohort ? (
+                <Text style={s.headerCohort}>{activeCohort.display_name}</Text>
+              ) : brief?.cohort_bar?.label ? (
                 <Text style={s.headerCohort}>{brief.cohort_bar.label}</Text>
               ) : cohort ? (
-                <Text style={s.headerCohort}>{cohort} cohort</Text>
+                <Text style={s.headerCohort}>{cohort}</Text>
               ) : null}
             </View>
             {/* Build-75: streak flame */}
@@ -523,6 +537,18 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
         </FadeInView>
+
+        {/* ── Build-87: Cohort Switcher ──────────────────────── */}
+        {cohortScores.length > 1 && hasAudit && (
+          <FadeInView delay={140}>
+            <CohortSwitcher
+              cohorts={cohortScores}
+              activeIndex={activeCohortIdx}
+              onSwitch={setActiveCohortIdx}
+              compact
+            />
+          </FadeInView>
+        )}
 
         {/* ── B. Compact Score Card ───────────────────────────── */}
         <FadeInView delay={160}>

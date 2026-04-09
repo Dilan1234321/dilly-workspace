@@ -14,6 +14,49 @@
  * packages/dilly-api/src/constants.ts (ALL_COHORTS must stay in sync).
  */
 
+// ── CohortScore type (used by CohortSwitcher, useCohortScores, all screens) ─
+
+export interface CohortScore {
+  cohort_id: string;        // e.g. "Data Science & Analytics"
+  display_name: string;     // same as cohort_id
+  smart: number;
+  grit: number;
+  build: number;
+  dilly_score: number;
+  level: 'major' | 'minor' | 'interest' | 'primary';
+  weight: number;
+  scored_by_claude?: boolean;
+}
+
+/**
+ * Parse the `cohort_scores` dict from the backend into a sorted array.
+ * Primary/major cohorts first, then minor, then interest. Within each
+ * level, sorted by dilly_score descending.
+ */
+export function parseCohortScores(raw: Record<string, any> | null | undefined): CohortScore[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const levelOrder: Record<string, number> = { primary: 0, major: 1, minor: 2, interest: 3 };
+  return Object.entries(raw)
+    .filter(([_, v]) => v && typeof v === 'object' && (v.smart != null || v.grit != null || v.build != null))
+    .map(([key, v]) => ({
+      cohort_id: key,
+      display_name: v.field || v.cohort || key,
+      smart: Number(v.smart) || 0,
+      grit: Number(v.grit) || 0,
+      build: Number(v.build) || 0,
+      dilly_score: Number(v.dilly_score) || 0,
+      level: (v.level || 'interest') as CohortScore['level'],
+      weight: Number(v.weight) ?? 0,
+      scored_by_claude: !!v.scored_by_claude,
+    }))
+    .sort((a, b) => {
+      const la = levelOrder[a.level] ?? 9;
+      const lb = levelOrder[b.level] ?? 9;
+      if (la !== lb) return la - lb;
+      return b.dilly_score - a.dilly_score;
+    });
+}
+
 // ── Major → Cohort mapping ──────────────────────────────────────────────────
 
 export const MAJOR_TO_COHORTS: Record<string, string[]> = {

@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { authHeaders } from '../../lib/auth';
 import { APPROVED_MAJORS } from '../../constants/majors';
+import { detectCohorts, COHORT_META } from '../../lib/cohorts';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -267,10 +268,11 @@ export default function ProfileScreen() {
 
   const firstName      = fullName.trim().split(/\s+/)[0] ?? '';
   const showMicroWin   = fullName.trim().length >= 2;
-  const cohort         = majors.length > 0 || (preProf && preProf !== 'None / Not applicable')
-    ? detectCohort(majors, preProf)
-    : '';
-  const cohortCopy     = cohort ? COHORT_COPY[cohort] : null;
+  // Build-87: detect ALL matching cohorts (one per major, deduplicated)
+  const detectedCohortNames = (majors.length > 0 || (preProf && preProf !== 'None / Not applicable'))
+    ? detectCohorts(majors, minors, preProf)
+    : [];
+  const cohort         = detectedCohortNames[0] || '';
   const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null;
 
   async function handleContinue() {
@@ -294,6 +296,7 @@ export default function ProfileScreen() {
           application_target: TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'internship',
           track: resolvedCohort,
           cohort: resolvedCohort,
+          cohorts: detectedCohortNames, // Build-87: all detected cohorts
           graduation_year: graduationYear,
           onboarding_complete: false,
         }),
@@ -410,16 +413,25 @@ export default function ProfileScreen() {
             onAdd={(v) => { if (!majors.includes(v) && majors.length < 3) setMajors((p) => [...p, v]); }}
             onRemove={(v) => setMajors((p) => p.filter((m) => m !== v))}
           />
-          {/* Cohort reveal card */}
-          {cohortCopy && (
+          {/* Cohort reveal card(s) — Build-87: show all detected cohorts */}
+          {detectedCohortNames.length > 0 && (
             <View style={s.cohortCard}>
               <View style={s.cohortDot} />
               <View style={{ flex: 1 }}>
-                <Text style={s.cohortTitle}>{cohortCopy.label} detected.</Text>
-                <Text style={s.cohortBody}>
-                  {cohortCopy.description}{' '}
-                  <Text style={{ fontWeight: '700' }}>{cohortCopy.emphasis}</Text>
+                <Text style={s.cohortTitle}>
+                  {detectedCohortNames.length === 1
+                    ? `${detectedCohortNames[0]} detected.`
+                    : `${detectedCohortNames.length} cohorts detected.`}
                 </Text>
+                {detectedCohortNames.map(name => {
+                  const meta = COHORT_META[name];
+                  return (
+                    <View key={name} style={{ marginTop: 6 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>{name}</Text>
+                      {meta && <Text style={s.cohortBody}>{meta.description}</Text>}
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
