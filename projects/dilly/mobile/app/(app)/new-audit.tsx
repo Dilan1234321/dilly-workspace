@@ -441,14 +441,22 @@ export default function NewAuditScreen() {
       let result: any;
 
       if (useEditor) {
-        // Audit from saved editor resume
+        // Audit from saved editor resume — can take 30-60s with Claude + rubric scoring
+        const editorCtrl = new AbortController();
+        const editorTimeout = setTimeout(() => editorCtrl.abort(), 120_000);
         const res = await dilly.fetch('/resume/audit', {
           method: 'POST',
           body: JSON.stringify({}),
+          signal: editorCtrl.signal,
         });
+        clearTimeout(editorTimeout);
+        if (!res.ok) {
+          const detail = await res.json().catch(() => null);
+          throw new Error(detail?.detail || `Audit failed (${res.status})`);
+        }
         result = await res.json();
       } else if (file) {
-        // Upload file audit
+        // Upload file audit — can take 30-60s with Claude + rubric scoring
         const token = await getToken();
         const formData = new FormData();
         formData.append('file', {
@@ -457,11 +465,19 @@ export default function NewAuditScreen() {
           type: file.mimeType || 'application/pdf',
         } as any);
 
+        const uploadCtrl = new AbortController();
+        const uploadTimeout = setTimeout(() => uploadCtrl.abort(), 120_000);
         const res = await fetch(`${API_BASE}/audit/first-run`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token ?? ''}` },
           body: formData,
+          signal: uploadCtrl.signal,
         });
+        clearTimeout(uploadTimeout);
+        if (!res.ok) {
+          const detail = await res.json().catch(() => null);
+          throw new Error(detail?.detail || `Audit failed (${res.status})`);
+        }
         result = await res.json();
       }
 

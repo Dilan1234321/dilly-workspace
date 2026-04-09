@@ -1017,7 +1017,8 @@ export default function ResumeEditorScreen() {
           setActiveVariant(incomingVariantId);
           setExpanded(new Set());
           const varData = await dilly.get(`/resume/variants/${incomingVariantId}`);
-          if (varData?.resume?.sections?.length) setSections(varData.resume.sections);
+          if (varData?.sections?.length) setSections(varData.sections);
+          else if (varData?.resume?.sections?.length) setSections(varData.resume.sections);
         }
       }).catch(() => {});
     })();
@@ -1357,6 +1358,8 @@ export default function ResumeEditorScreen() {
     if (!sections || sections.length === 0) return;
     setScanLoading(true);
     try {
+      const scanCtrl = new AbortController();
+      const scanTimeout = setTimeout(() => scanCtrl.abort(), 45_000);
       const res = await dilly.fetch('/resume/editor-scan', {
         method: 'POST',
         body: JSON.stringify({
@@ -1364,7 +1367,9 @@ export default function ResumeEditorScreen() {
           cohort_id: cohortOverride || undefined,
           variant_id: activeVariant || undefined,
         }),
+        signal: scanCtrl.signal,
       });
+      clearTimeout(scanTimeout);
       if (res.ok) {
         const data = await res.json();
         setScanData(data);
@@ -1537,10 +1542,19 @@ export default function ResumeEditorScreen() {
     }
     setExporting(true);
     try {
+      // Auto-save before export so the server has the latest sections
+      if (hasChanges) {
+        const sr = await dilly.fetch('/resume/save', { method: 'POST', body: JSON.stringify({ sections }) });
+        if (sr.ok) { setHasChanges(false); AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {}); }
+      }
+      const exportCtrl = new AbortController();
+      const exportTimeout = setTimeout(() => exportCtrl.abort(), 60_000);
       const res = await dilly.fetch('/resume/export', {
         method: 'POST',
         body: JSON.stringify({ sections, template, format }),
+        signal: exportCtrl.signal,
       });
+      clearTimeout(exportTimeout);
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
         Alert.alert('Export failed', detail?.detail || `Could not render the ${format.toUpperCase()}.`);
@@ -1581,6 +1595,13 @@ export default function ResumeEditorScreen() {
     }
     setClGenerating(true);
     try {
+      // Auto-save so the backend has the latest resume content for the cover letter
+      if (hasChanges) {
+        const sr = await dilly.fetch('/resume/save', { method: 'POST', body: JSON.stringify({ sections }) });
+        if (sr.ok) { setHasChanges(false); AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {}); }
+      }
+      const clCtrl = new AbortController();
+      const clTimeout = setTimeout(() => clCtrl.abort(), 90_000);
       const res = await dilly.fetch('/resume/cover-letter', {
         method: 'POST',
         body: JSON.stringify({
@@ -1588,7 +1609,9 @@ export default function ResumeEditorScreen() {
           job_title: clRole.trim(),
           job_description: clJD.trim() || undefined,
         }),
+        signal: clCtrl.signal,
       });
+      clearTimeout(clTimeout);
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
         Alert.alert('Cover letter failed', detail?.detail || 'Could not generate cover letter.');
@@ -1641,10 +1664,14 @@ export default function ResumeEditorScreen() {
         }
         setHasChanges(false);
       }
+      const auditCtrl = new AbortController();
+      const auditTimeout = setTimeout(() => auditCtrl.abort(), 120_000);
       const res = await dilly.fetch('/resume/audit', {
         method: 'POST',
         body: JSON.stringify({}),
+        signal: auditCtrl.signal,
       });
+      clearTimeout(auditTimeout);
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
         Alert.alert('Re-audit failed', detail?.detail || 'Could not re-audit the resume.');
@@ -2082,7 +2109,8 @@ export default function ResumeEditorScreen() {
                       setExpanded(new Set());
                       setHasChanges(false);
                       dilly.get(`/resume/variants/${v.id}`).then(data => {
-                        if (data?.resume?.sections?.length) setSections(data.resume.sections);
+                        const s = data?.sections ?? data?.resume?.sections;
+                        if (s?.length) setSections(s);
                       }).catch(() => {});
                     }}
                     scaleDown={0.96}
