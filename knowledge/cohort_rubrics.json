@@ -2,14 +2,14 @@
   "_meta": {
     "version": 1,
     "generated_by": "Claude overnight Tier 2 session 2026-04-08",
-    "description": "Employer-calibrated cohort rubrics grounded in real job postings, hiring articles, and recruiter writeups. Each signal cites the source it came from. This file is consumed by dilly_core/rubric_scorer.py. It does NOT replace dilly_core/cohort_scoring_weights.py or dilly_core/auditor.py \u2014 it runs in parallel as an opt-in scoring path.",
-    "editing_notes": "Every signal MUST have a 'detector' field to be counted. Signals without detectors are listed as 'unmeasured' and do not affect the score (MTS principle \u2014 only detected evidence counts). If you change weights or add signals, run tests/golden_resumes_test.py to compare before and after.",
+    "description": "Employer-calibrated cohort rubrics grounded in real job postings, hiring articles, and recruiter writeups. Each signal cites the source it came from. This file is consumed by dilly_core/rubric_scorer.py. It does NOT replace dilly_core/cohort_scoring_weights.py or dilly_core/auditor.py : it runs in parallel as an opt-in scoring path.",
+    "editing_notes": "Every signal MUST have a 'detector' field to be counted. Signals without detectors are listed as 'unmeasured' and do not affect the score (MTS principle : only detected evidence counts). If you change weights or add signals, run tests/golden_resumes_test.py to compare before and after.",
     "detector_dsl_reference": "See dilly_core/rubric_scorer.py top docstring for the full detector DSL. Quick reference: {type: 'field'|'major_in'|'regex'|'keyword_any'|'keyword_all'|'composite', ...}"
   },
   "rubrics": {
     "tech_software_engineering": {
       "cohort_id": "tech_software_engineering",
-      "display_name": "Tech \u2014 Software Engineering",
+      "display_name": "Tech : Software Engineering",
       "research_sources": [
         "https://medium.com/@eyasir2047/your-grades-wont-open-job-doors-but-your-github-repo-will-c163e992124a",
         "https://www.nucamp.co/blog/coding-bootcamp-job-hunting-selecting-projects-for-your-portfolio-what-recruiters-look-for",
@@ -31,7 +31,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -151,7 +151,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -195,7 +195,7 @@
               }
             },
             {
-              "signal": "GitHub link on resume (baseline signal \u2014 hire tool can't verify commit graph)",
+              "signal": "GitHub link on resume (baseline signal : hire tool can't verify commit graph)",
               "weight": 0.5,
               "rationale": "FinalRoundAI cites 78% of tech recruiters check GitHub before scheduling interviews. Without a link they can't check consistency.",
               "sources": [
@@ -251,7 +251,7 @@
             {
               "signal": "Competitive programming (LeetCode, Codeforces, ICPC, HackerRank ranked)",
               "weight": 0.2,
-              "rationale": "Demonstrates sustained algorithmic practice \u2014 relevant for technical interview prep.",
+              "rationale": "Demonstrates sustained algorithmic practice : relevant for technical interview prep.",
               "sources": [
                 "https://www.finalroundai.com/articles/github-developer-portfolio"
               ],
@@ -267,7 +267,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -390,7 +390,7 @@
       },
       "common_rejection_reasons": [
         "No GitHub link on resume, or GitHub contains only forks and course homework",
-        "Generic non-tailored resume \u2014 one-size-fits-all doesn't pass ATS",
+        "Generic non-tailored resume : one-size-fits-all doesn't pass ATS",
         "Skills lists with no project evidence to back them up",
         "Vague achievement bullets ('good at teamwork') instead of quantified outcomes",
         "Tutorial clones (Todo app, weather app) presented as flagship projects"
@@ -406,7 +406,7 @@
     },
     "tech_data_science": {
       "cohort_id": "tech_data_science",
-      "display_name": "Tech \u2014 Data Science, Analytics & ML",
+      "display_name": "Tech : Data Science, Analytics & ML",
       "research_sources": [
         "https://www.databricks.com/company/careers/university-recruiting/data-science-intern-2026-start-6866538002",
         "https://stripe.com/jobs/listing/phd-data-scientist-intern/7285974",
@@ -430,7 +430,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -566,7 +566,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -665,7 +665,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -809,9 +809,9 @@
         }
       },
       "common_rejection_reasons": [
-        "Project section is only Titanic / MNIST / Iris \u2014 'faster way to the no pile'",
+        "Project section is only Titanic / MNIST / Iris : 'faster way to the no pile'",
         "Stack of MOOC certificates with no portfolio output",
-        "No quantified results \u2014 bullets say 'analyzed data' with no metric",
+        "No quantified results : bullets say 'analyzed data' with no metric",
         "No SQL evidence anywhere on resume (instant filter for analyst-track)",
         "Skill list mentions ML libraries but projects show only EDA / pandas"
       ],
@@ -825,7 +825,7 @@
     },
     "business_finance": {
       "cohort_id": "business_finance",
-      "display_name": "Business \u2014 Finance & Banking",
+      "display_name": "Business : Finance & Banking",
       "research_sources": [
         "https://www.jpmorganchase.com/careers/explore-opportunities/programs/investment-banking-summer-analyst",
         "https://mergersandinquisitions.com/low-gpa-investment-banking/",
@@ -846,7 +846,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -997,7 +997,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -1148,7 +1148,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -1267,7 +1267,7 @@
             {
               "signal": "Bloomberg Terminal experience mentioned",
               "weight": 0.5,
-              "rationale": "Differentiator signal \u2014 most undergrads never touch a terminal.",
+              "rationale": "Differentiator signal : most undergrads never touch a terminal.",
               "sources": [
                 "https://ibinterviewquestions.com/blog/breaking-into-ib-non-target-school"
               ],
@@ -1298,13 +1298,13 @@
         "Non-target school + zero networking record + zero finance internships",
         "All 'finance interest' and zero finance proof (no club leadership, no model, no pitch, no internship)",
         "Generic 'proficient in Excel/PowerPoint/Bloomberg' as skills with nothing built",
-        "Applied late in cycle \u2014 Goldman fills most seats by November prior",
-        "CFA L1 listed without GPA support \u2014 CFA cannot rescue a sub-3.0 GPA"
+        "Applied late in cycle : Goldman fills most seats by November prior",
+        "CFA L1 listed without GPA support : CFA cannot rescue a sub-3.0 GPA"
       ],
       "fastest_path_moves": [
         "Build a real DCF on a public company you understand, write a 1-page investment memo, practice walking through it in 90 seconds",
-        "Register for CFA Level 1 \u2014 even pre-pass, registration is a credible signal for ER/AM/buy-side",
-        "Complete Bloomberg Market Concepts (BMC) \u2014 ~8 hours, ~$150, instantly verifiable credential",
+        "Register for CFA Level 1 : even pre-pass, registration is a credible signal for ER/AM/buy-side",
+        "Complete Bloomberg Market Concepts (BMC) : ~8 hours, ~$150, instantly verifiable credential",
         "Run a 100-conversation networking sprint targeting UTampa alumni and Florida/regional finance firms",
         "Apply to spring 2026 diversity summits (Goldman Possibilities, JPM Advancing Black Pathways, MS Early Insights)",
         "Take president/VP/Investments Chair in the UTampa investment club within one year",
@@ -1330,14 +1330,14 @@
         "grit": 0.35,
         "build": 0.15
       },
-      "dimension_weights_reasoning": "Pre-health is the most academics-dominant cohort. AAMC matriculant data shows MCAT + BCPM GPA are strongest predictors. Grit captures longitudinal clinical hours, shadowing, resilience. Build is weighted lowest because pre-health isn't judged on shipped artifacts \u2014 only research output.",
+      "dimension_weights_reasoning": "Pre-health is the most academics-dominant cohort. AAMC matriculant data shows MCAT + BCPM GPA are strongest predictors. Grit captures longitudinal clinical hours, shadowing, resilience. Build is weighted lowest because pre-health isn't judged on shipped artifacts : only research output.",
       "recruiter_bar_overall": 80,
       "recruiter_bar_reasoning": "Median MD matriculant MCAT ~511, median cGPA ~3.77, BCPM ~3.70 per AAMC FACTS A-16. PA programs require ~1,000-2,000 patient-care hours. 80 reflects realistic admissible bar.",
       "signals": {
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -1486,7 +1486,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -1668,7 +1668,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -1801,15 +1801,15 @@
         }
       },
       "common_rejection_reasons": [
-        "GPA below 3.5 (cumulative or BCPM) \u2014 below the matriculant median floor",
-        "No longitudinal clinical hours \u2014 shows you haven't confirmed you want medicine",
+        "GPA below 3.5 (cumulative or BCPM) : below the matriculant median floor",
+        "No longitudinal clinical hours : shows you haven't confirmed you want medicine",
         "Generic pre-med club membership with no leadership or deliverable",
         "One-off mission trips as the only service signal (voluntourism flag)",
         "No research at all for MD/PhD or research-focused programs"
       ],
       "fastest_path_moves": [
         "Lock in one paid clinical role (scribe, EMT, CNA, MA) and commit to 12+ months",
-        "Find a research lab and stay 2+ years \u2014 longevity beats volume",
+        "Find a research lab and stay 2+ years : longevity beats volume",
         "Document physician shadowing with named MDs and specialties (50+ hours)",
         "Sustain one non-clinical service commitment for 1+ year (food bank, tutoring)",
         "If GPA is shaky: start strong in upper-level science to establish upward trend",
@@ -1818,7 +1818,7 @@
     },
     "business_marketing": {
       "cohort_id": "business_marketing",
-      "display_name": "Business \u2014 Marketing & Brand",
+      "display_name": "Business : Marketing & Brand",
       "research_sources": [
         "https://www.pgcareers.com",
         "https://careers.unilever.com",
@@ -1840,7 +1840,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -1903,7 +1903,7 @@
             {
               "signal": "Google Analytics / HubSpot / Meta Blueprint / Google Ads certification",
               "weight": 0.8,
-              "rationale": "Demonstrable analytics literacy \u2014 a common filter for digital/growth track roles.",
+              "rationale": "Demonstrable analytics literacy : a common filter for digital/growth track roles.",
               "sources": [
                 "https://www.hubspot.com/jobs"
               ],
@@ -1956,7 +1956,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -2096,7 +2096,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -2180,7 +2180,7 @@
             {
               "signal": "Portfolio, case study, or deployed personal brand site",
               "weight": 0.8,
-              "rationale": "Live URL to case studies or personal brand work \u2014 build dominance.",
+              "rationale": "Live URL to case studies or personal brand work : build dominance.",
               "sources": [],
               "detector": {
                 "type": "field",
@@ -2240,7 +2240,7 @@
         }
       },
       "common_rejection_reasons": [
-        "No portfolio link on resume \u2014 marketing is portfolio-first",
+        "No portfolio link on resume : marketing is portfolio-first",
         "Social media claims without engagement or growth numbers",
         "Class projects as flagship work with no real audience",
         "Missing analytics literacy (no GA4, HubSpot, or dashboard tool)",
@@ -2252,12 +2252,12 @@
         "Take over social media for ONE student org, document 6-month growth numbers",
         "Write an A/B test analysis: hypothesis, experiment, result, decision",
         "Get Google Analytics (GA4) + HubSpot Inbound certified (~8 hours total)",
-        "Apply to Unilever Future Leaders League or L'Oreal Brandstorm \u2014 case comp trophies are portfolio gold"
+        "Apply to Unilever Future Leaders League or L'Oreal Brandstorm : case comp trophies are portfolio gold"
       ]
     },
     "business_accounting": {
       "cohort_id": "business_accounting",
-      "display_name": "Business \u2014 Accounting & Audit",
+      "display_name": "Business : Accounting & Audit",
       "research_sources": [
         "https://www2.deloitte.com/us/en/careers.html",
         "https://jobs.us.pwc.com",
@@ -2277,7 +2277,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -2399,7 +2399,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -2431,7 +2431,7 @@
             {
               "signal": "Beta Alpha Psi member with officer role",
               "weight": 1.0,
-              "rationale": "BAP is the national accounting honor society \u2014 officer role is a top signal.",
+              "rationale": "BAP is the national accounting honor society : officer role is a top signal.",
               "sources": [],
               "detector": {
                 "type": "composite",
@@ -2453,7 +2453,7 @@
               }
             },
             {
-              "signal": "VITA (Volunteer Income Tax Assistance) volunteer \u2014 IRS certified",
+              "signal": "VITA (Volunteer Income Tax Assistance) volunteer : IRS certified",
               "weight": 0.85,
               "rationale": "VITA is a real-stakes tax role; IRS certification signals readiness.",
               "sources": [],
@@ -2530,7 +2530,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -2571,7 +2571,7 @@
             {
               "signal": "Data analytics tools for accounting: Alteryx, Tableau, Power BI",
               "weight": 1.0,
-              "rationale": "Data analytics fluency is increasingly demanded at Big 4 \u2014 core differentiator.",
+              "rationale": "Data analytics fluency is increasingly demanded at Big 4 : core differentiator.",
               "sources": [],
               "detector": {
                 "type": "keyword_any",
@@ -2631,16 +2631,16 @@
         }
       },
       "common_rejection_reasons": [
-        "GPA below 3.3 with no 150-hour plan \u2014 can't be CPA eligible",
+        "GPA below 3.3 with no 150-hour plan : can't be CPA eligible",
         "No accounting-specific experience (no internship, no VITA, no bookkeeping)",
         "Only basic Excel without advanced features",
         "No Big 4 leadership/discover program attendance",
         "Missing Beta Alpha Psi or accounting society leadership"
       ],
       "fastest_path_moves": [
-        "Commit to a 150-hour path: MAcc, dual major, or 5-year program \u2014 state it on resume",
+        "Commit to a 150-hour path: MAcc, dual major, or 5-year program : state it on resume",
         "Join Beta Alpha Psi and target an officer role within 1 year",
-        "Volunteer with VITA next tax season \u2014 IRS certification + real returns",
+        "Volunteer with VITA next tax season : IRS certification + real returns",
         "Start Becker or Wiley CPA review in senior year; pass 1 section before graduation",
         "Build one Alteryx or Tableau project on a real financial dataset",
         "Apply to Deloitte National Leadership / PwC Start / EY Discover / KPMG Ignite"
@@ -2648,14 +2648,14 @@
     },
     "tech_cybersecurity": {
       "cohort_id": "tech_cybersecurity",
-      "display_name": "Tech \u2014 Cybersecurity",
+      "display_name": "Tech : Cybersecurity",
       "research_sources": [
         "https://www.comptia.org/certifications/security",
         "https://tryhackme.com",
         "https://www.hackthebox.com",
         "https://www.sans.org"
       ],
-      "source_verification_note": "Knowledge-based. Cybersecurity hiring is one of the most certification-driven cohorts \u2014 the signals here are well-established industry standards.",
+      "source_verification_note": "Knowledge-based. Cybersecurity hiring is one of the most certification-driven cohorts : the signals here are well-established industry standards.",
       "dimension_weights": {
         "smart": 0.25,
         "grit": 0.3,
@@ -2663,12 +2663,12 @@
       },
       "dimension_weights_reasoning": "Cyber hiring weights demonstrated hands-on work (labs, CTFs, home labs) heavily. Certs are the 'smart' signal because entry-level cyber is cert-driven. Grit captures sustained CTF play and lab maintenance.",
       "recruiter_bar_overall": 70,
-      "recruiter_bar_reasoning": "Entry-level cyber (SOC analyst intern, junior analyst) is one of the most accessible tech paths. The bar is lower than FAANG SWE because many good cyber analysts don't come from CS \u2014 they come from certifications + hands-on work.",
+      "recruiter_bar_reasoning": "Entry-level cyber (SOC analyst intern, junior analyst) is one of the most accessible tech paths. The bar is lower than FAANG SWE because many good cyber analysts don't come from CS : they come from certifications + hands-on work.",
       "signals": {
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -2713,7 +2713,7 @@
             {
               "signal": "GPA 3.3+ in Cybersecurity / CS / IT major",
               "weight": 0.7,
-              "rationale": "Cyber has lower GPA expectations than general SWE \u2014 3.3 is a reasonable floor.",
+              "rationale": "Cyber has lower GPA expectations than general SWE : 3.3 is a reasonable floor.",
               "sources": [],
               "detector": {
                 "type": "composite",
@@ -2766,7 +2766,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -2817,7 +2817,7 @@
             {
               "signal": "CTF competition participation",
               "weight": 0.8,
-              "rationale": "CTFs are the cyber equivalent of LeetCode \u2014 proof of active engagement.",
+              "rationale": "CTFs are the cyber equivalent of LeetCode : proof of active engagement.",
               "sources": [],
               "detector": {
                 "type": "keyword_any",
@@ -2863,7 +2863,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -2975,9 +2975,9 @@
       },
       "common_rejection_reasons": [
         "No certifications at all (Security+ is minimum entry signal)",
-        "No hands-on practice \u2014 no TryHackMe / HackTheBox / CTF evidence",
+        "No hands-on practice : no TryHackMe / HackTheBox / CTF evidence",
         "Resume lists 'security' as a skill with no project or lab",
-        "Missing Linux / CLI fluency \u2014 assumed for any cyber role"
+        "Missing Linux / CLI fluency : assumed for any cyber role"
       ],
       "fastest_path_moves": [
         "Get Security+ certification (~2 months of focused study, $370 exam)",
@@ -2989,7 +2989,7 @@
     },
     "science_research": {
       "cohort_id": "science_research",
-      "display_name": "Science \u2014 Research & Graduate School",
+      "display_name": "Science : Research & Graduate School",
       "research_sources": [
         "https://www.nsfgrfp.org",
         "https://www.gradschool.cornell.edu"
@@ -3007,7 +3007,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -3174,7 +3174,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -3329,7 +3329,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -3502,27 +3502,27 @@
       },
       "common_rejection_reasons": [
         "No research experience at all (fatal for grad school track)",
-        "Research listed but only one semester \u2014 longevity matters",
+        "Research listed but only one semester : longevity matters",
         "No publications or conference presentations despite 2+ years of lab work",
         "Missing GRE or other standardized test signal",
         "Missing letter-writer relationships (implied by lack of longitudinal research)"
       ],
       "fastest_path_moves": [
-        "Find a research lab and commit 2+ years \u2014 longevity matters more than prestige",
+        "Find a research lab and commit 2+ years : longevity matters more than prestige",
         "Apply to REU programs for summer (deadlines in January/February)",
         "Aim for ONE conference presentation per year of research",
-        "Draft a manuscript with your PI \u2014 first-authorship is the gold standard",
+        "Draft a manuscript with your PI : first-authorship is the gold standard",
         "Build fluency in R or Python for your field's data work"
       ]
     },
     "health_nursing_allied": {
       "cohort_id": "health_nursing_allied",
-      "display_name": "Health \u2014 Nursing, Allied Health, Public Health",
+      "display_name": "Health : Nursing, Allied Health, Public Health",
       "research_sources": [
         "https://www.aacnnursing.org",
         "https://www.nln.org"
       ],
-      "source_verification_note": "Knowledge-based. Covers Nursing, Health Science, Public Health, Exercise Science, Kinesiology \u2014 distinct from Pre-Health.",
+      "source_verification_note": "Knowledge-based. Covers Nursing, Health Science, Public Health, Exercise Science, Kinesiology : distinct from Pre-Health.",
       "dimension_weights": {
         "smart": 0.35,
         "grit": 0.4,
@@ -3535,7 +3535,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -3651,7 +3651,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -3780,7 +3780,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -3901,22 +3901,22 @@
         }
       },
       "common_rejection_reasons": [
-        "No clinical hours \u2014 the defining signal for this cohort",
-        "GPA below 3.0 \u2014 most nursing programs require 3.0 floor",
-        "Missing BLS/CPR \u2014 baseline expected",
+        "No clinical hours : the defining signal for this cohort",
+        "GPA below 3.0 : most nursing programs require 3.0 floor",
+        "Missing BLS/CPR : baseline expected",
         "No volunteer experience in healthcare setting"
       ],
       "fastest_path_moves": [
-        "Get BLS certified (~$50, 4 hours) \u2014 baseline expected",
-        "Find a CNA or MA role \u2014 best stepping stone for nursing",
+        "Get BLS certified (~$50, 4 hours) : baseline expected",
+        "Find a CNA or MA role : best stepping stone for nursing",
         "Volunteer at a hospital for 1+ year, track your hours formally",
-        "Learn Spanish / medical Spanish \u2014 huge differentiator for patient-facing roles",
+        "Learn Spanish / medical Spanish : huge differentiator for patient-facing roles",
         "Consider a relevant certification: wound care, IV therapy, telemetry"
       ]
     },
     "social_sciences": {
       "cohort_id": "social_sciences",
-      "display_name": "Social Sciences \u2014 Psychology, Sociology, Poli Sci, Criminology",
+      "display_name": "Social Sciences : Psychology, Sociology, Poli Sci, Criminology",
       "research_sources": [],
       "source_verification_note": "Knowledge-based. For students targeting grad school, research careers, nonprofit, government, or social services (not pre-law, not pre-health).",
       "dimension_weights": {
@@ -3931,7 +3931,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -4078,7 +4078,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -4225,7 +4225,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -4374,8 +4374,8 @@
         }
       },
       "common_rejection_reasons": [
-        "No research experience at all \u2014 fatal for grad school track",
-        "Missing statistical software fluency \u2014 expected for quantitative grad programs",
+        "No research experience at all : fatal for grad school track",
+        "Missing statistical software fluency : expected for quantitative grad programs",
         "No presentation or publication despite multi-year research",
         "GPA below 3.3 with no compensating research depth"
       ],
@@ -4383,7 +4383,7 @@
         "Find a research lab and stay 2+ years",
         "Learn R or SPSS through a methods course",
         "Aim for one conference presentation per year",
-        "Write a senior thesis \u2014 undergraduate research is undergraduate output",
+        "Write a senior thesis : undergraduate research is undergraduate output",
         "Intern at a nonprofit or think tank in your field of interest"
       ]
     },
@@ -4404,7 +4404,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -4563,7 +4563,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -4743,7 +4743,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -4864,7 +4864,7 @@
             {
               "signal": "Published writing portfolio (personal blog, Substack, newspaper articles, literary magazine)",
               "weight": 1.0,
-              "rationale": "Portfolio IS the core build signal \u2014 actual written work the candidate has shipped.",
+              "rationale": "Portfolio IS the core build signal : actual written work the candidate has shipped.",
               "sources": [],
               "detector": {
                 "type": "keyword_any",
@@ -4933,14 +4933,14 @@
         }
       },
       "common_rejection_reasons": [
-        "No writing portfolio at all \u2014 fatal for writing/journalism",
+        "No writing portfolio at all : fatal for writing/journalism",
         "No internships in media / comms / nonprofit",
         "Generic bullets without actual published work",
         "Missing a personal site or public writing presence"
       ],
       "fastest_path_moves": [
         "Start a Substack and publish 10 essays in the next 3 months",
-        "Get a byline in the student newspaper \u2014 commit to weekly contributions",
+        "Get a byline in the student newspaper : commit to weekly contributions",
         "Build a personal portfolio site with 5 pieces of your best writing",
         "Apply for an editorial or nonprofit comms internship next semester",
         "Submit to a literary magazine (local or national)"
@@ -4963,7 +4963,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -5051,7 +5051,7 @@
             {
               "signal": "Any arts/design major",
               "weight": 1.0,
-              "rationale": "Baseline fit \u2014 less filtering than other cohorts.",
+              "rationale": "Baseline fit : less filtering than other cohorts.",
               "sources": [],
               "detector": {
                 "type": "major_in",
@@ -5095,7 +5095,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -5241,7 +5241,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -5425,22 +5425,22 @@
         }
       },
       "common_rejection_reasons": [
-        "No portfolio link on resume \u2014 fatal for creative careers",
+        "No portfolio link on resume : fatal for creative careers",
         "Portfolio with only class assignments, no personal or client work",
         "Missing tool fluency (Figma / Adobe Creative Cloud)",
         "No externally-validated work (show, festival, client project)"
       ],
       "fastest_path_moves": [
         "Build a Behance / ArtStation / Dribbble portfolio with 5-8 pieces",
-        "Take ONE freelance client project \u2014 even for $50 \u2014 and include it in your portfolio",
+        "Take ONE freelance client project : even for $50 : and include it in your portfolio",
         "Get a live personal site with your work curated",
         "Master Figma or Adobe CC in one specialty (UI, branding, illustration, motion)",
-        "Enter a juried show or festival \u2014 externally-validated work signals seriousness"
+        "Enter a juried show or festival : externally-validated work signals seriousness"
       ]
     },
     "quantitative_math_stats": {
       "cohort_id": "quantitative_math_stats",
-      "display_name": "Quantitative \u2014 Math, Stats, Actuarial",
+      "display_name": "Quantitative : Math, Stats, Actuarial",
       "research_sources": [],
       "source_verification_note": "Knowledge-based. Covers pure/applied math, stats, actuarial science. For students targeting quant finance, academic math, actuarial, or research.",
       "dimension_weights": {
@@ -5455,7 +5455,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -5582,7 +5582,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -5665,7 +5665,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -5751,17 +5751,17 @@
       },
       "common_rejection_reasons": [
         "GPA below 3.7 for quant finance applications",
-        "Missing upper-level math coursework \u2014 signals lack of depth",
-        "No research or competition signal \u2014 undergrad math is research-driven",
+        "Missing upper-level math coursework : signals lack of depth",
+        "No research or competition signal : undergrad math is research-driven",
         "Missing computational tool fluency (Python or R minimum)",
         "Actuarial students: no exams passed = not a serious candidate"
       ],
       "fastest_path_moves": [
         "Pass actuarial Exam P or Exam FM if targeting actuarial",
-        "Apply to math REUs for summer \u2014 top signal for grad school",
+        "Apply to math REUs for summer : top signal for grad school",
         "Take real analysis + abstract algebra before senior year",
-        "Enter the Putnam exam \u2014 any score is a signal",
-        "Add Python fluency \u2014 applied math needs computational skill",
+        "Enter the Putnam exam : any score is a signal",
+        "Add Python fluency : applied math needs computational skill",
         "Write an undergraduate thesis with a professor"
       ]
     },
@@ -5782,7 +5782,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -5860,7 +5860,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -6025,7 +6025,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -6124,11 +6124,11 @@
       "common_rejection_reasons": [
         "No direct sport industry experience (internship, volunteer, event staff)",
         "Generic business experience without sport tie-in",
-        "No analytics or content skills \u2014 modern sport ops requires both",
+        "No analytics or content skills : modern sport ops requires both",
         "Missing network / alumni connections (known issue, hard to score)"
       ],
       "fastest_path_moves": [
-        "Volunteer at home games \u2014 any sport, any level \u2014 to get game day experience",
+        "Volunteer at home games : any sport, any level : to get game day experience",
         "Reach out to UTampa athletic department for student intern roles",
         "Build a fantasy sports model or analytics dashboard",
         "Follow and network with sport industry pros on Twitter/X",
@@ -6138,7 +6138,7 @@
     },
     "business_consulting": {
       "cohort_id": "business_consulting",
-      "display_name": "Business \u2014 Management Consulting",
+      "display_name": "Business : Management Consulting",
       "research_sources": [
         "https://www.mckinsey.com/careers",
         "https://careers.bcg.com",
@@ -6160,7 +6160,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -6306,7 +6306,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -6464,7 +6464,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -6566,18 +6566,18 @@
         }
       },
       "common_rejection_reasons": [
-        "GPA below 3.5 \u2014 hard floor at most top firms",
-        "No case interview preparation signal \u2014 fatal",
+        "GPA below 3.5 : hard floor at most top firms",
+        "No case interview preparation signal : fatal",
         "No consulting club or strategy-related leadership",
         "Generic business experience without quantified outcomes",
         "Missing international / language / travel signals for global firms"
       ],
       "fastest_path_moves": [
-        "Start Case in Point + begin case partners \u2014 100+ cases before interviews",
+        "Start Case in Point + begin case partners : 100+ cases before interviews",
         "Take a leadership role in a consulting or business club",
         "Apply to MBB diversity programs (Sophomore Summit, ADC, BEAM)",
         "Target a stepping stone: Deloitte Strategy, EY Parthenon, Kearney, or corporate strategy intern",
-        "Enter case competitions \u2014 even participation matters",
+        "Enter case competitions : even participation matters",
         "Learn basic Excel modeling and PowerPoint deck building"
       ]
     },
@@ -6603,7 +6603,7 @@
         "smart": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+              "signal": "Baseline cohort fit : student is in a major relevant to this cohort",
               "weight": 3.0,
               "rationale": "Every student who chose a major in this cohort's field gets baseline credit for being in the right place. This prevents the scoring formula from crushing students who match the rubric's MAIN signals but miss rare/exceptional ones (CFA, MCAT, OSCP, Kaggle Expert, etc.). It encodes the simple truth that being in the right field is itself a real signal.",
               "sources": [],
@@ -6712,7 +6712,7 @@
         "grit": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 work experience in a relevant major",
+              "signal": "Baseline cohort fit : work experience in a relevant major",
               "weight": 2.5,
               "rationale": "Students in the right major with real work experience get baseline grit credit. Having worked in the field (even without field-specific role keywords) is a real signal of commitment. This prevents students from scoring 0 on grit just because the rubric's specific role keywords don't match their resume language.",
               "sources": [],
@@ -6834,7 +6834,7 @@
         "build": {
           "high_impact": [
             {
-              "signal": "Baseline cohort fit \u2014 relevant coursework/project language detected",
+              "signal": "Baseline cohort fit : relevant coursework/project language detected",
               "weight": 2.0,
               "rationale": "Students in the right major whose resume uses field-specific language (tools, techniques, projects) get baseline build credit. This rewards 'having done something in the field' even if the specific high-impact build signals (publications, portfolios, certifications) aren't present.",
               "sources": [],
@@ -6930,19 +6930,19 @@
         }
       },
       "common_rejection_reasons": [
-        "GPA below 3.5 \u2014 even strong LSAT struggles to compensate",
-        "No LSAT prep signal \u2014 suggests not ready to apply",
-        "No legal experience \u2014 shows lack of commitment",
-        "No writing samples or published work \u2014 fatal for law school",
+        "GPA below 3.5 : even strong LSAT struggles to compensate",
+        "No LSAT prep signal : suggests not ready to apply",
+        "No legal experience : shows lack of commitment",
+        "No writing samples or published work : fatal for law school",
         "Missing moot court / mock trial / debate experience"
       ],
       "fastest_path_moves": [
-        "Start LSAT prep NOW \u2014 6+ months before applications",
-        "Get an internship at a law firm, DA's office, or legal aid \u2014 any legal exposure counts",
+        "Start LSAT prep NOW : 6+ months before applications",
+        "Get an internship at a law firm, DA's office, or legal aid : any legal exposure counts",
         "Join moot court or mock trial; apply to become part of a team",
-        "Write regularly for student publication \u2014 bylines matter",
+        "Write regularly for student publication : bylines matter",
         "Take a research assistant role with a professor who writes on legal topics",
-        "Consider the writing sample early \u2014 it takes multiple drafts"
+        "Consider the writing sample early : it takes multiple drafts"
       ]
     }
   }

@@ -848,7 +848,7 @@ export default function ResumeEditorScreen() {
   // Build-63 dashboard: debounced /resume/editor-scan result
   const [scanData, setScanData] = useState<EditorScanData | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [showExportPicker, setShowExportPicker] = useState(false);
   const [exporting, setExporting] = useState(false);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
