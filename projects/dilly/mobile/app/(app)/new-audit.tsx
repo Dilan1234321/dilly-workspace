@@ -591,10 +591,11 @@ export default function NewAuditScreen() {
               )}
             </FadeInView>
 
-            {/* Upload zone */}
+            {/* Build-78: Two equal-weight audit source cards */}
             <FadeInView delay={120}>
-              <AnimatedPressable style={[ns.uploadZone, file && ns.uploadZoneSelected]} onPress={pickFile} scaleDown={0.98}>
-                {file ? (
+              {file ? (
+                /* File already picked — show it with a clear button */
+                <AnimatedPressable style={[ns.uploadZone, ns.uploadZoneSelected]} onPress={pickFile} scaleDown={0.98}>
                   <View style={ns.uploadFileInfo}>
                     <View style={ns.uploadFileIcon}>
                       <Ionicons name="document-text" size={20} color={GREEN} />
@@ -607,48 +608,74 @@ export default function NewAuditScreen() {
                       <Ionicons name="close-circle" size={18} color={colors.t3} />
                     </AnimatedPressable>
                   </View>
-                ) : (
-                  <>
-                    <View style={ns.uploadIcon}>
-                      <Ionicons name="cloud-upload-outline" size={28} color={GOLD} />
+                </AnimatedPressable>
+              ) : (
+                /* Two side-by-side cards for choosing the source */
+                <View style={ns.sourceRow}>
+                  <AnimatedPressable
+                    style={[ns.sourceCard, !useEditor && ns.sourceCardActive]}
+                    onPress={() => { setUseEditor(false); pickFile(); }}
+                    scaleDown={0.97}
+                  >
+                    <View style={ns.sourceIcon}>
+                      <Ionicons name="cloud-upload-outline" size={22} color={!useEditor ? GOLD : colors.t3} />
                     </View>
-                    <Text style={ns.uploadTitle}>Upload your resume</Text>
-                    <Text style={ns.uploadSub}>PDF or DOCX · Max 10MB</Text>
-                  </>
-                )}
-              </AnimatedPressable>
-
-              {/* Use saved resume option */}
-              <AnimatedPressable
-                style={[ns.editorOption, useEditor && { borderColor: GOLD + '40', backgroundColor: 'rgba(201,168,76,0.06)' }]}
-                onPress={() => { setUseEditor(!useEditor); setFile(null); }}
-                scaleDown={0.98}
-              >
-                <Ionicons name={useEditor ? 'checkmark-circle' : 'create-outline'} size={16} color={useEditor ? GOLD : colors.t3} />
-                <Text style={[ns.editorOptionText, useEditor && { color: GOLD }]}>
-                  Use my saved resume from the editor
-                </Text>
-              </AnimatedPressable>
+                    <Text style={[ns.sourceTitle, !useEditor && { color: GOLD }]}>Upload PDF</Text>
+                    <Text style={ns.sourceSub}>PDF or DOCX · Max 10MB</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={[ns.sourceCard, useEditor && ns.sourceCardActive]}
+                    onPress={() => { setUseEditor(true); setFile(null); }}
+                    scaleDown={0.97}
+                  >
+                    <View style={ns.sourceIcon}>
+                      <Ionicons name="create-outline" size={22} color={useEditor ? GOLD : colors.t3} />
+                    </View>
+                    <Text style={[ns.sourceTitle, useEditor && { color: GOLD }]}>From editor</Text>
+                    <Text style={ns.sourceSub}>Re-audit saved resume</Text>
+                  </AnimatedPressable>
+                </View>
+              )}
             </FadeInView>
 
-            {/* Pre-audit tips */}
+            {/* Build-78: Personalized pre-audit tips from latest audit's
+                rubric analysis. Falls back to generic tips for first-timers. */}
             <FadeInView delay={180}>
               <View style={ns.tipsCard}>
                 <View style={ns.tipsHeader}>
                   <Ionicons name="bulb-outline" size={12} color={GOLD} />
-                  <Text style={ns.tipsTitle}>BEFORE YOU AUDIT</Text>
+                  <Text style={ns.tipsTitle}>
+                    {latestAudit?.rubric_analysis ? 'LAST TIME, DILLY FLAGGED' : 'BEFORE YOU AUDIT'}
+                  </Text>
                 </View>
-                {[
-                  { icon: 'document-outline', tip: 'Keep your resume to one page' },
-                  { icon: 'analytics-outline', tip: 'Include numbers in your bullet points' },
-                  { icon: 'flash-outline', tip: 'Start bullets with strong action verbs' },
-                  { icon: 'search-outline', tip: 'Check for typos and formatting issues' },
-                ].map((t, i) => (
-                  <View key={i} style={ns.tipRow}>
-                    <Ionicons name={t.icon as any} size={13} color={colors.t3} />
-                    <Text style={ns.tipText}>{t.tip}</Text>
-                  </View>
-                ))}
+                {(() => {
+                  // Personalized: show the top 3 unmatched signals from the last audit
+                  const ra = latestAudit?.rubric_analysis;
+                  const unmatched = (ra as any)?.unmatched_signals;
+                  if (Array.isArray(unmatched) && unmatched.length > 0) {
+                    return unmatched.slice(0, 4).map((sig: any, i: number) => (
+                      <View key={i} style={ns.tipRow}>
+                        <Ionicons name="alert-circle-outline" size={13} color={AMBER} />
+                        <Text style={ns.tipText} numberOfLines={2}>
+                          {sig.signal || sig.title || 'Missing signal'}
+                          {sig.rationale ? ` — ${sig.rationale}` : ''}
+                        </Text>
+                      </View>
+                    ));
+                  }
+                  // Generic fallback for first-timers
+                  return [
+                    { icon: 'document-outline', tip: 'Keep your resume to one page' },
+                    { icon: 'analytics-outline', tip: 'Include numbers in your bullet points' },
+                    { icon: 'flash-outline', tip: 'Start bullets with strong action verbs' },
+                    { icon: 'search-outline', tip: 'Check for typos and formatting issues' },
+                  ].map((t, i) => (
+                    <View key={i} style={ns.tipRow}>
+                      <Ionicons name={t.icon as any} size={13} color={colors.t3} />
+                      <Text style={ns.tipText}>{t.tip}</Text>
+                    </View>
+                  ));
+                })()}
               </View>
             </FadeInView>
 
@@ -701,7 +728,26 @@ export default function NewAuditScreen() {
               <ResultsCard newAudit={newResult} previousScore={previousScore} />
             </FadeInView>
 
+            {/* Build-78: quick action buttons so user has a clear next step */}
             <FadeInView delay={200}>
+              <View style={ns.quickActions}>
+                <AnimatedPressable
+                  style={[ns.quickActionBtn, { backgroundColor: GOLD }]}
+                  onPress={() => router.push('/(app)/resume-editor')}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="create-outline" size={14} color="#FFFFFF" />
+                  <Text style={[ns.quickActionText, { color: '#FFFFFF' }]}>Fix in editor</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={[ns.quickActionBtn, { backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1 }]}
+                  onPress={() => router.push('/(app)/ats')}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="shield-checkmark-outline" size={14} color={GOLD} />
+                  <Text style={[ns.quickActionText, { color: GOLD }]}>ATS scan</Text>
+                </AnimatedPressable>
+              </View>
               <AnimatedPressable style={ns.runAgainBtn} onPress={resetToIdle} scaleDown={0.97}>
                 <Ionicons name="refresh" size={14} color={GOLD} />
                 <Text style={ns.runAgainText}>Run another audit</Text>
@@ -873,6 +919,32 @@ const ns = StyleSheet.create({
     borderWidth: 1, borderColor: GOLD + '30', borderRadius: 12, paddingVertical: 12,
   },
   runAgainText: { fontSize: 12, color: GOLD, fontWeight: '600' },
+
+  // Build-78: two-column source cards
+  sourceRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  sourceCard: {
+    flex: 1, backgroundColor: colors.s2, borderRadius: 14,
+    borderWidth: 1.5, borderColor: colors.b1,
+    padding: 16, alignItems: 'center', gap: 8,
+  },
+  sourceCardActive: {
+    borderColor: GOLD + '50', backgroundColor: 'rgba(43,58,142,0.04)',
+  },
+  sourceIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: colors.s3,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sourceTitle: { fontSize: 13, fontWeight: '700', color: colors.t1 },
+  sourceSub: { fontSize: 10, color: colors.t3, textAlign: 'center' },
+
+  // Build-78: quick action buttons after results
+  quickActions: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  quickActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, borderRadius: 10,
+  },
+  quickActionText: { fontSize: 12, fontWeight: '700' },
 
   // History
   historySection: { marginBottom: 16 },
