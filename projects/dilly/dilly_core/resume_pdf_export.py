@@ -346,4 +346,89 @@ def render_resume_pdf(sections: List[Dict[str, Any]],
     return pdf_bytes
 
 
-__all__ = ["render_resume_pdf", "TEMPLATES"]
+# ── Cover letter renderer ─────────────────────────────────────────────────
+
+def render_cover_letter_pdf(letter_text: str,
+                             candidate_name: str = "",
+                             contact: Optional[Dict[str, Any]] = None,
+                             job_company: str = "") -> bytes:
+    """
+    Render a simple one-page cover letter PDF. Header: candidate name and
+    contact row; body: date, greeting, letter text, sign-off.
+    """
+    import datetime as _dt
+    contact = contact or {}
+    styles = getSampleStyleSheet()
+
+    name_style = ParagraphStyle(
+        name="CLName", parent=styles["Heading1"],
+        fontName="Helvetica-Bold", fontSize=16,
+        alignment=TA_LEFT, spaceAfter=2,
+    )
+    contact_style = ParagraphStyle(
+        name="CLContact", parent=styles["BodyText"],
+        fontName="Helvetica", fontSize=10, textColor="#444444",
+        alignment=TA_LEFT, spaceAfter=14,
+    )
+    date_style = ParagraphStyle(
+        name="CLDate", parent=styles["BodyText"],
+        fontName="Helvetica", fontSize=10, alignment=TA_LEFT, spaceAfter=14,
+    )
+    body_style = ParagraphStyle(
+        name="CLBody", parent=styles["BodyText"],
+        fontName="Helvetica", fontSize=11, leading=15,
+        alignment=TA_LEFT, spaceAfter=10,
+    )
+    greeting_style = ParagraphStyle(
+        name="CLGreet", parent=body_style, spaceAfter=10,
+    )
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=LETTER,
+        leftMargin=0.9 * inch, rightMargin=0.9 * inch,
+        topMargin=0.75 * inch, bottomMargin=0.75 * inch,
+        title=f"{candidate_name or 'Cover Letter'} — Dilly",
+        author=candidate_name or "Dilly",
+    )
+
+    def _esc(s: Any) -> str:
+        if s is None: return ""
+        return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    story: List[Any] = []
+
+    # Header: name + contact row
+    if candidate_name:
+        story.append(Paragraph(_esc(candidate_name), name_style))
+    contact_parts: List[str] = []
+    for key in ("email", "phone", "location", "linkedin"):
+        val = contact.get(key) if isinstance(contact, dict) else None
+        if val: contact_parts.append(_esc(val))
+    if contact_parts:
+        story.append(Paragraph("  ·  ".join(contact_parts), contact_style))
+
+    # Date
+    today = _dt.date.today().strftime("%B %-d, %Y")
+    story.append(Paragraph(today, date_style))
+
+    # Greeting
+    story.append(Paragraph("Dear Hiring Manager,", greeting_style))
+
+    # Body — split on blank lines into paragraphs
+    for para in (letter_text or "").split("\n\n"):
+        para = para.strip()
+        if not para:
+            continue
+        story.append(Paragraph(_esc(para).replace("\n", "<br/>"), body_style))
+
+    if not story:
+        story = [Paragraph("(empty letter)", body_style)]
+
+    doc.build(story)
+    out = buffer.getvalue()
+    buffer.close()
+    return out
+
+
+__all__ = ["render_resume_pdf", "render_cover_letter_pdf", "TEMPLATES"]

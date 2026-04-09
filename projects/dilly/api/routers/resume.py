@@ -905,6 +905,171 @@ class EditorScanRequest(BaseModel):
                                            # for telemetry, not scoring logic)
 
 
+class CoverLetterRequest(BaseModel):
+    job_title: str
+    job_company: str
+    job_description: Optional[str] = ""
+    tone: Optional[str] = "warm_professional"  # warm_professional | enthusiastic | formal
+
+
+@router.post("/resume/cover-letter")
+async def generate_cover_letter(request: Request, body: CoverLetterRequest):
+    """
+    Generate a tailored cover letter using the user's saved resume + Dilly
+    Profile + target job. Returns a base64 JSON payload with the letter
+    text AND a public URL to a rendered PDF (same transient-cache pattern
+    as /resume/export).
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    job_title = (body.job_title or "").strip()
+    job_company = (body.job_company or "").strip()
+    job_description = (body.job_description or "").strip()
+    if not job_title or not job_company:
+        raise errors.validation_error("job_title and job_company are required.")
+
+    # Load the student's base resume
+    saved = _load_resume(email)
+    if not saved:
+        raise errors.validation_error("No saved resume found. Save your resume first.")
+    base_sections = saved.get("sections") or []
+    base_resume_text = ""
+    try:
+        sections_typed = [ResumeSection(**s) for s in base_sections]
+        base_resume_text = _sections_to_text(sections_typed)
+    except Exception:
+        base_resume_text = ""
+
+    # Load Dilly Profile facts for personal voice
+    profile_facts_text = ""
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        surface = await asyncio.to_thread(get_memory_surface, email)
+        facts = surface.get("items") or []
+        narrative = (surface.get("narrative") or "").strip()
+        if facts:
+            lines = []
+            grouped: dict[str, list] = {}
+            for f in facts:
+                cat = f.get("category", "other")
+                grouped.setdefault(cat, []).append(f)
+            for cat, items in grouped.items():
+                label = cat.replace("_", " ").title()
+                entries = "; ".join(f"{i['label']}: {i['value']}" for i in items[:5])
+                lines.append(f"  {label}: {entries}")
+            profile_facts_text = "\n".join(lines)
+            if narrative:
+                profile_facts_text = f"NARRATIVE: {narrative}\n\nFACTS:\n{profile_facts_text}"
+    except Exception:
+        pass
+
+    # Build prompt
+    tone_instructions = {
+        "warm_professional": "Warm and professional. Sound like a real human, not a template. Use 'I' naturally and avoid corporate jargon.",
+        "enthusiastic": "Enthusiastic and energetic. Show genuine excitement about the company and role without being over-the-top.",
+        "formal": "Formal and polished. Classic business letter tone, suitable for conservative industries (finance, law, government).",
+    }.get(body.tone or "warm_professional", "Warm and professional.")
+
+    # Try to extract candidate name from the contact section
+    candidate_name = ""
+    for s in base_sections:
+        if isinstance(s, dict) and s.get("key") == "contact":
+            c = s.get("contact") or {}
+            candidate_name = (c.get("name") or "").strip()
+            break
+
+    system_prompt = f"""You are Dilly's cover-letter writer. Write a tailored cover letter in plain prose.
+
+TARGET JOB:
+  Title: {job_title}
+  Company: {job_company}
+
+JOB DESCRIPTION:
+{job_description[:3000] if job_description else "(Not provided — write based on the role title and company reputation.)"}
+
+STUDENT'S DILLY PROFILE:
+{profile_facts_text or "(No profile facts available — use resume only)"}
+
+STUDENT'S RESUME:
+{base_resume_text[:5000]}
+
+TONE: {tone_instructions}
+
+INSTRUCTIONS:
+1. Write a complete cover letter — opening paragraph, 2 body paragraphs, closing paragraph, sign-off.
+2. Reference SPECIFIC experiences from the resume. Use real metrics where available.
+3. Connect the student's experience to the job requirements. Show why this role at THIS company.
+4. Do NOT invent experience the student doesn't have.
+5. Do NOT use bullet points — cover letters are prose.
+6. Keep it under 400 words total. Tight, punchy, honest.
+7. End with "Sincerely," followed by the student's full name: {candidate_name or "[Name]"}
+8. Do NOT include a greeting line ("Dear Hiring Manager,") — the template will add it.
+9. Do NOT include the student's contact info at the top — the template handles that.
+
+Return ONLY the letter body text. No headers, no markdown, no JSON, no explanations."""
+
+    # Call Claude
+    full_text = ""
+    try:
+        import anthropic
+        client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+        async with client.messages.stream(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=system_prompt,
+            messages=[{
+                "role": "user",
+                "content": f"Write the cover letter body for {job_title} at {job_company}.",
+            }],
+        ) as stream:
+            async for text in stream.text_stream:
+                full_text += text
+    except Exception as e:
+        import sys, traceback
+        sys.stderr.write(f"[cover_letter_failed] {type(e).__name__}: {str(e)[:200]}\n")
+        try: traceback.print_exc(file=sys.stderr)
+        except Exception: pass
+        raise errors.internal(f"Cover letter generation failed: {type(e).__name__}")
+
+    letter_text = (full_text or "").strip()
+    if not letter_text:
+        raise errors.internal("AI returned empty letter.")
+
+    # Render the cover letter as a simple PDF — reuse the resume PDF renderer
+    # with a synthetic section tree that the template can print.
+    try:
+        from dilly_core.resume_pdf_export import render_cover_letter_pdf
+        pdf_bytes = render_cover_letter_pdf(
+            letter_text=letter_text,
+            candidate_name=candidate_name or "",
+            contact=dict((next((s.get("contact") for s in base_sections if isinstance(s, dict) and s.get("key") == "contact"), None) or {})),
+            job_company=job_company,
+        )
+    except Exception as e:
+        import sys, traceback
+        sys.stderr.write(f"[cover_letter_pdf_failed] {type(e).__name__}: {str(e)[:200]}\n")
+        try: traceback.print_exc(file=sys.stderr)
+        except Exception: pass
+        raise errors.internal(f"PDF render failed: {type(e).__name__}")
+
+    # Stash + return public URL (same pattern as /resume/export)
+    filename = f"cover_letter_{job_company.strip().replace(' ', '_')}_{_time.strftime('%Y%m%d')}.pdf"
+    token = _stash_pdf(pdf_bytes, filename)
+    base_url = str(request.base_url).rstrip("/")
+    public_url = f"{base_url}/resume/export/{token}"
+    return {
+        "filename": filename,
+        "mime": "application/pdf",
+        "size_bytes": len(pdf_bytes),
+        "url": public_url,
+        "token": token,
+        "letter_text": letter_text,  # also return text for preview
+    }
+
+
 class BulletWorthRequest(BaseModel):
     bullet: str
     cohort_id: Optional[str] = None  # defaults to student's primary cohort
