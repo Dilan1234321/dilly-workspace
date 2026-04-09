@@ -25,7 +25,7 @@ if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
 from fastapi import APIRouter, Body, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 
@@ -872,6 +872,283 @@ async def score_bullet(request: Request, body: BulletScoreRequest):
 
     # Limit hints to 2
     return BulletScoreResponse(score=score, label=label, hints=hints[:2])
+
+
+# ---------------------------------------------------------------------------
+# Resume Editor unified scan — ATS v2 + rubric + prioritized issue list
+# ---------------------------------------------------------------------------
+#
+# Powers three mobile resume-editor features in a single call:
+#
+#   1. Per-vendor ATS sidebar (Workday / Taleo / iCIMS / Greenhouse / Lever)
+#      with per-issue score lift forecasts.
+#   2. Rubric dimension breakdown — Smart / Grit / Build sub-scores against
+#      the student's primary cohort rubric, with per-dimension missing
+#      signals.
+#   3. Prioritized "Fix this first" issue list — ranks everything the user
+#      should do next by estimated score lift.
+#
+# The editor debounces-on-blur, so this is called ~once per 500ms of idle
+# time, not on every keystroke. Reuses existing dilly_core modules so there's
+# no new scoring logic — just a unified surface.
+
+class EditorScanRequest(BaseModel):
+    sections: List[ResumeSection]
+    track: Optional[str] = None           # cohort id override (optional)
+    job_description: Optional[str] = None  # for keyword match layer
+
+
+@router.post("/resume/editor-scan")
+async def resume_editor_scan(request: Request, body: EditorScanRequest):
+    """
+    Run ATS v2 + rubric scoring + issue prioritization on an in-progress
+    resume from the mobile editor. Returns everything the editor sidebar,
+    dimension rings, and "fix this first" list need in one payload.
+
+    No file upload, no Claude — fully deterministic. Safe to call on a
+    500ms debounce. Wrapped in try/except so any sub-scorer failure
+    degrades gracefully without breaking the editor.
+    """
+    deps.require_auth(request)
+
+    sections = body.sections or []
+    if not sections:
+        raise HTTPException(status_code=400, detail="No sections to scan.")
+
+    # Reconstruct resume text from editor sections
+    try:
+        resume_text = _sections_to_text(sections)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not serialize sections.")
+
+    if not resume_text or len(resume_text.strip()) < 30:
+        raise HTTPException(status_code=400, detail="Not enough content to scan yet.")
+
+    # ── 1. Parse + ats_analysis + v2 scorer ────────────────────────────
+    v2: dict = {}
+    rubric_summary: dict = {}
+    try:
+        from dilly_core.resume_parser import parse_resume
+        from dilly_core.ats_analysis import run_ats_analysis
+        from dilly_core.ats_score_v2 import (
+            score_from_signals, signals_from_ats_analysis,
+        )
+        from dilly_core.ats_workday_validator import run_workday_checks
+
+        parsed = parse_resume(resume_text)
+        analysis = run_ats_analysis(raw_text=resume_text, parsed=parsed)
+
+        # Keyword match layer (only if a JD was provided)
+        kw_match = None
+        kw_conf = None
+        kw_missing: list = []
+        kw_weak: list = []
+        if body.job_description and body.job_description.strip():
+            try:
+                from dilly_core.resume_parser import get_sections
+                from dilly_core.ats_keywords import run_keyword_analysis
+                sections_map = get_sections(resume_text)
+                kr = run_keyword_analysis(sections_map, job_description=body.job_description)
+                jm = getattr(kr, "jd_match", None)
+                if isinstance(jm, dict):
+                    kw_match = float(jm.get("match_percentage") or 0)
+                    kw_conf = 0.95
+                    for req in (jm.get("requirements") or []):
+                        if not isinstance(req, dict):
+                            continue
+                        if req.get("placement") == "missing" and req.get("category") == "must_have":
+                            kw_missing.append(req.get("keyword"))
+                        elif req.get("placement") == "adequate" or (req.get("found") and not req.get("contextual")):
+                            kw_weak.append(req.get("keyword"))
+            except Exception:
+                pass
+
+        sig = signals_from_ats_analysis(
+            analysis, raw_text=resume_text,
+            keyword_match=kw_match, keyword_confidence=kw_conf,
+            keywords_missing=kw_missing, keywords_weak=kw_weak,
+            file_extension="pdf",
+        )
+        workday_issues = run_workday_checks(resume_text, parsed)
+        v2 = score_from_signals(sig, extra_issues=workday_issues).to_dict()
+    except Exception as e:
+        import sys, traceback
+        sys.stderr.write(f"[editor_scan_v2_failed] {type(e).__name__}: {str(e)[:200]}\n")
+        try: traceback.print_exc(file=sys.stderr)
+        except Exception: pass
+
+    # ── 2. Rubric scoring (primary cohort) ────────────────────────────
+    try:
+        from dilly_core.rubric_scorer import (
+            select_cohorts_for_student, score_for_cohorts,
+            build_rubric_analysis_payload,
+        )
+        from dilly_core.scoring import extract_scoring_signals as _rc_extract_signals
+
+        # Figure out the student's major(s) for cohort selection
+        major = ""
+        try:
+            user = deps.require_auth(request)
+            email = (user.get("email") or "").strip().lower()
+            if email:
+                from projects.dilly.api.profile_store import get_profile
+                prof = get_profile(email) or {}
+                majors = prof.get("majors") or ([prof.get("major")] if prof.get("major") else [])
+                if majors:
+                    major = majors[0] or ""
+        except Exception:
+            pass
+
+        cohorts = select_cohorts_for_student(
+            major=major,
+            minors=[],
+            pre_professional_track=None,
+            industry_target=None,
+        )
+        if cohorts:
+            rc_signals = _rc_extract_signals(resume_text, gpa=None, major=major)
+            rc_scores = score_for_cohorts(rc_signals, resume_text, cohorts)
+            if rc_scores:
+                primary_cid = cohorts[0]
+                rubric_summary = build_rubric_analysis_payload(primary_cid, rc_scores)
+    except Exception as e:
+        import sys
+        sys.stderr.write(f"[editor_scan_rubric_failed] {type(e).__name__}: {str(e)[:200]}\n")
+
+    # ── 3. Prioritized issue list (merged + ranked by lift) ────────────
+    ranked_issues: list = []
+    try:
+        v2_issues = v2.get("issues") or []
+        for iss in v2_issues:
+            lifts = iss.get("lift_per_vendor") or {}
+            total_lift = sum(lifts.values()) if lifts else float(iss.get("base_lift") or 0)
+            avg_lift = total_lift / max(len(lifts), 1) if lifts else float(iss.get("base_lift") or 0)
+            ranked_issues.append({
+                "id": iss.get("id"),
+                "source": "ats",
+                "severity": iss.get("severity"),
+                "title": iss.get("title"),
+                "fix": iss.get("fix"),
+                "category": iss.get("category"),
+                "avg_lift": round(avg_lift, 1),
+                "total_lift": round(total_lift, 1),
+                "affects_vendors": iss.get("affects") or [],
+                "lift_per_vendor": lifts,
+                "effort_minutes": 10 if iss.get("severity") in ("medium", "low") else 20,
+            })
+
+        # Rubric missing-signal gaps become issues too
+        if rubric_summary:
+            unmatched = rubric_summary.get("unmatched_signals") or []
+            # Only show HIGH-impact missing signals (most actionable)
+            for sig in unmatched[:8]:
+                if (sig.get("tier") or "").lower() != "high":
+                    continue
+                ranked_issues.append({
+                    "id": f"rubric_{sig.get('signal', '').replace(' ', '_')[:40]}",
+                    "source": "rubric",
+                    "severity": "high",
+                    "title": f"Missing: {sig.get('signal')}",
+                    "fix": sig.get("rationale") or "Add this to strengthen your cohort fit.",
+                    "category": sig.get("dimension"),
+                    "avg_lift": 6.0,
+                    "total_lift": 6.0,
+                    "affects_vendors": [],
+                    "lift_per_vendor": {},
+                    "effort_minutes": 30,
+                })
+
+        # Sort by total_lift descending; cap at 10
+        ranked_issues.sort(key=lambda r: r["total_lift"], reverse=True)
+        ranked_issues = ranked_issues[:10]
+    except Exception:
+        pass
+
+    # ── 4. Build response ──────────────────────────────────────────────
+    return {
+        "v2": v2,
+        "rubric_analysis": rubric_summary,
+        "top_issues": ranked_issues,
+        "scoring_version": "editor-scan-v1",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Resume PDF export — single-column, ATS-friendly, template-based
+# ---------------------------------------------------------------------------
+
+class ExportRequest(BaseModel):
+    sections: List[ResumeSection]
+    template: Optional[str] = "tech"  # 'tech' | 'business' | 'academic'
+    filename: Optional[str] = None
+
+
+@router.post("/resume/export")
+async def resume_export_pdf(request: Request, body: ExportRequest):
+    """
+    Render the in-editor resume sections to a downloadable PDF using one of
+    three ATS-friendly templates. All templates are pure single-column,
+    no tables, no text boxes, no decorative graphics — so every ATS parser
+    treats them as plain text.
+
+    Returns the PDF bytes with Content-Disposition so mobile clients can
+    save/share it directly.
+    """
+    deps.require_auth(request)
+
+    if not body.sections:
+        raise HTTPException(status_code=400, detail="No sections to export.")
+
+    template_name = (body.template or "tech").lower()
+    if template_name not in ("tech", "business", "academic"):
+        template_name = "tech"
+
+    # Pull candidate name from contact section for the PDF metadata
+    candidate_name: Optional[str] = None
+    for s in body.sections:
+        if s.key == "contact" and s.contact and s.contact.name:
+            candidate_name = s.contact.name
+            break
+
+    try:
+        from dilly_core.resume_pdf_export import render_resume_pdf
+        # Convert Pydantic models to dicts for the renderer
+        sections_dicts = [s.model_dump() if hasattr(s, "model_dump") else s.dict() for s in body.sections]
+        pdf_bytes = render_resume_pdf(
+            sections_dicts,
+            template_name=template_name,
+            candidate_name=candidate_name,
+        )
+    except Exception as e:
+        import sys, traceback
+        sys.stderr.write(f"[pdf_export_failed] {type(e).__name__}: {str(e)[:200]}\n")
+        try: traceback.print_exc(file=sys.stderr)
+        except Exception: pass
+        raise HTTPException(status_code=500, detail=f"PDF render failed: {type(e).__name__}")
+
+    filename = (body.filename or f"{(candidate_name or 'resume').strip().replace(' ', '_')}_{template_name}.pdf")
+
+    # Mobile clients can't easily handle binary responses without expo-sharing,
+    # so return base64 JSON — they open it via Linking.openURL('data:application/pdf;base64,...')
+    # which iOS Safari renders natively and exposes the standard share sheet.
+    # Desktop callers set ?raw=1 to get the binary directly.
+    import base64 as _b64
+    if (request.query_params.get("raw") or "").lower() in ("1", "true", "yes"):
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Cache-Control": "no-store",
+            },
+        )
+    return {
+        "filename": filename,
+        "mime": "application/pdf",
+        "size_bytes": len(pdf_bytes),
+        "base64": _b64.b64encode(pdf_bytes).decode("ascii"),
+        "template": template_name,
+    }
 
 
 # ---------------------------------------------------------------------------
