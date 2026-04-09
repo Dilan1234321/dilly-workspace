@@ -439,7 +439,7 @@ function InterestsSetupCard({ profile, onComplete, primaryCohortName }: { profil
         <Text style={js.setupTitle}>What fields interest you?</Text>
       </View>
       <Text style={js.setupSub}>
-        Select the career fields you're interested in. Your major{majors.length > 0 ? `${majors.length > 1 ? 's are' : ' is'} pre-selected` : 's will be auto-added'}.
+        These control which jobs Dilly shows you. Pick fields you'd actually apply to — not just your major.{majors.length > 0 ? ` Your major${majors.length > 1 ? 's are' : ' is'} pre-selected.` : ''}
       </Text>
 
       <Text style={js.setupSectionLabel}>YOUR INTERESTS</Text>

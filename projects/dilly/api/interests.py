@@ -107,6 +107,108 @@ INTEREST_JOB_KEYWORDS: dict[str, list[str]] = {
 
 EDUCATION_LEVELS = ["Undergraduate", "Masters", "PhD", "MBA"]
 
+# ── Grouped interests with categories (build 78) ─────────────────────────
+# Groups let the mobile picker render section headers instead of a flat list.
+# Each group has a label + the subset of INTERESTS_LIST items it contains.
+
+INTEREST_GROUPS: list[dict] = [
+    {
+        "label": "Technology & Engineering",
+        "interests": [
+            "Software Engineering & CS",
+            "Data Science & Analytics",
+            "Cybersecurity & IT",
+            "Electrical & Computer Engineering",
+            "Mechanical & Aerospace Engineering",
+            "Civil & Environmental Engineering",
+            "Chemical & Biomedical Engineering",
+        ],
+    },
+    {
+        "label": "Business & Finance",
+        "interests": [
+            "Finance & Accounting",
+            "Consulting & Strategy",
+            "Marketing & Advertising",
+            "Management & Operations",
+            "Entrepreneurship & Innovation",
+            "Economics & Public Policy",
+        ],
+    },
+    {
+        "label": "Health & Sciences",
+        "interests": [
+            "Healthcare & Clinical",
+            "Biotech & Pharmaceutical",
+            "Life Sciences & Research",
+            "Physical Sciences & Math",
+        ],
+    },
+    {
+        "label": "Creative & Social",
+        "interests": [
+            "Media & Communications",
+            "Design & Creative Arts",
+            "Education & Human Development",
+            "Social Sciences & Nonprofit",
+            "Law & Government",
+        ],
+    },
+]
+
+
+def recommend_interests_for_student(
+    majors: list[str],
+    skills: list[str] | None = None,
+    tools: list[str] | None = None,
+) -> list[str]:
+    """
+    Return up to 5 recommended interests based on the student's profile.
+    Uses a simple keyword-match heuristic against INTEREST_JOB_KEYWORDS.
+    """
+    scores: dict[str, float] = {}
+    terms = [m.lower() for m in (majors or [])]
+    if skills:
+        terms += [s.lower() for s in skills[:20]]
+    if tools:
+        terms += [t.lower() for t in tools[:20]]
+
+    for interest, keywords in INTEREST_JOB_KEYWORDS.items():
+        score = 0.0
+        for term in terms:
+            for kw in keywords:
+                if kw in term or term in kw:
+                    score += 1.0
+                    break
+        if score > 0:
+            # Map from keyword-style name to INTERESTS_LIST name if possible
+            scores[interest] = score
+
+    # Also check against INTERESTS_LIST directly
+    for interest in INTERESTS_LIST:
+        il = interest.lower()
+        for term in terms:
+            if term in il or il in term:
+                scores[interest] = scores.get(interest, 0) + 2.0
+
+    # Sort by score, return top 5 unique
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    seen: set[str] = set()
+    result: list[str] = []
+    for name, _ in ranked:
+        # Map to the canonical INTERESTS_LIST name
+        canonical = name
+        for il in INTERESTS_LIST:
+            if name.lower() in il.lower() or il.lower() in name.lower():
+                canonical = il
+                break
+        if canonical not in seen:
+            seen.add(canonical)
+            result.append(canonical)
+        if len(result) >= 5:
+            break
+    return result
+
 # Keywords in job titles/descriptions that indicate education level requirements
 GRAD_LEVEL_KEYWORDS = {
     "phd": ["phd", "ph.d", "doctoral", "doctorate"],
