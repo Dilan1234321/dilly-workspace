@@ -2183,6 +2183,7 @@ export default function ResumeEditorScreen() {
               })}
             </View>
 
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
             {([
               { key: 'modern',      label: 'Modern',      hint: 'Teal accent, summary + skills first, tight spacing' },
               { key: 'tech',        label: 'Tech',        hint: 'Blue accent, skills near top, GitHub prominent' },
@@ -2214,6 +2215,7 @@ export default function ResumeEditorScreen() {
                 <Ionicons name="chevron-forward" size={16} color={GOLD} />
               </AnimatedPressable>
             ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2699,11 +2701,12 @@ const rs = StyleSheet.create({
   },
   exportBtnText: { fontSize: 11, color: GOLD, fontWeight: '700' },
   exportModalOverlay: {
-    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)',
+    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.15)',
   },
   exportModalCard: {
     backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
     padding: 20, paddingBottom: 36,
+    maxHeight: '80%',
   },
   exportModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   exportModalTitle: { fontSize: 16, fontWeight: '700', color: colors.t1 },
@@ -2835,7 +2838,7 @@ const rs = StyleSheet.create({
   bentoActiveDot: { position: 'absolute', top: 12, right: 12 },
 
   // Tailor modal
-  tailorOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  tailorOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.15)', justifyContent: 'flex-end' },
   tailorCard: { backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
   tailorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   tailorTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 16, letterSpacing: 1, color: colors.t1 },

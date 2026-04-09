@@ -318,7 +318,7 @@ export default function ProfileScreen() {
             <View style={ps.scoreCardRight}>
               <Text style={ps.scoreCardLabel}>DILLY SCORE</Text>
               <Text style={[ps.scoreCardValue, { color: scoreColor(finalScore) }]}>
-                Top {percentile}%
+                {finalScore}/100
               </Text>
               <View style={ps.dimRow}>
                 {[
@@ -462,7 +462,7 @@ export default function ProfileScreen() {
           <View style={ps.activityRow}>
             {[
               { label: 'Audits Run', value: auditCount, icon: 'document-text', color: colors.blue },
-              { label: 'AI Sessions', value: '-', icon: 'chatbubble', color: colors.indigo },
+              { label: 'Day Streak', value: (profile as any)?.streak?.current_streak || 0, icon: 'flame', color: '#F59E0B' },
               { label: 'Jobs Applied', value: jobsApplied, icon: 'briefcase', color: GREEN },
             ].map(item => (
               <View key={item.label} style={ps.activityCard}>
