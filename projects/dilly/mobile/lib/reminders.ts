@@ -6,15 +6,27 @@
  * interviews, follow-ups, and nudges.
  *
  * Permission is requested lazily on first use — no upfront prompt.
+ * expo-calendar is lazy-loaded to prevent crash if native module isn't ready.
  */
 
-import * as Calendar from 'expo-calendar';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DILLY_LIST_KEY = 'dilly_reminders_list_id';
 const DILLY_LIST_NAME = 'dilly';
 const DILLY_COBALT = '#1652F0';
+
+// Lazy-load expo-calendar to prevent crash on app startup
+let _Cal: any = null;
+async function Cal(): Promise<any> {
+  if (_Cal) return _Cal;
+  try {
+    _Cal = await import('expo-calendar');
+    return _Cal;
+  } catch {
+    return null;
+  }
+}
 
 // ── Permission ────────────────────────────────────────────────────────────
 
@@ -24,7 +36,9 @@ export async function hasReminderPermission(): Promise<boolean> {
   if (_permissionGranted === true) return true;
   if (Platform.OS !== 'ios') return false;
   try {
-    const { status } = await Calendar.getRemindersPermissionsAsync();
+    const C = await Cal();
+    if (!C) return false;
+    const { status } = await C.getRemindersPermissionsAsync();
     _permissionGranted = status === 'granted';
     return _permissionGranted;
   } catch {
@@ -35,7 +49,9 @@ export async function hasReminderPermission(): Promise<boolean> {
 export async function requestReminderPermission(): Promise<boolean> {
   if (Platform.OS !== 'ios') return false;
   try {
-    const { status } = await Calendar.requestRemindersPermissionsAsync();
+    const C = await Cal();
+    if (!C) return false;
+    const { status } = await C.requestRemindersPermissionsAsync();
     _permissionGranted = status === 'granted';
     return _permissionGranted;
   } catch {
@@ -46,48 +62,44 @@ export async function requestReminderPermission(): Promise<boolean> {
 // ── Dilly Reminder List ───────────────────────────────────────────────────
 
 async function ensureDillyList(): Promise<string | null> {
-  // Check cache first
+  const C = await Cal();
+  if (!C) return null;
+
   const cached = await AsyncStorage.getItem(DILLY_LIST_KEY).catch(() => null);
   if (cached) {
-    // Verify it still exists
     try {
-      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.REMINDER);
-      if (calendars.some(c => c.id === cached)) return cached;
+      const calendars = await C.getCalendarsAsync(C.EntityTypes.REMINDER);
+      if (calendars.some((c: any) => c.id === cached)) return cached;
     } catch {}
   }
 
-  // Find or create the "dilly" list
   try {
-    const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.REMINDER);
-
-    // Look for existing dilly list
+    const calendars = await C.getCalendarsAsync(C.EntityTypes.REMINDER);
     const existing = calendars.find(
-      c => c.title?.toLowerCase() === DILLY_LIST_NAME && c.allowsModifications
+      (c: any) => c.title?.toLowerCase() === DILLY_LIST_NAME && c.allowsModifications
     );
     if (existing) {
       await AsyncStorage.setItem(DILLY_LIST_KEY, existing.id);
       return existing.id;
     }
 
-    // Find the default reminder source
-    const defaultSource = calendars.find(c => c.source?.type === 'local' && c.allowsModifications)?.source
-      ?? calendars.find(c => c.allowsModifications)?.source
+    const defaultSource = calendars.find((c: any) => c.source?.type === 'local' && c.allowsModifications)?.source
+      ?? calendars.find((c: any) => c.allowsModifications)?.source
       ?? calendars[0]?.source;
 
     if (!defaultSource) return null;
 
-    // Create the "dilly" list
-    const newId = await Calendar.createCalendarAsync({
+    const newId = await C.createCalendarAsync({
       title: DILLY_LIST_NAME,
       color: DILLY_COBALT,
-      entityType: Calendar.EntityTypes.REMINDER,
+      entityType: C.EntityTypes.REMINDER,
       source: {
         name: defaultSource.name,
-        type: defaultSource.type as any,
+        type: defaultSource.type,
         isLocalAccount: defaultSource.isLocalAccount,
       },
       name: DILLY_LIST_NAME,
-      accessLevel: Calendar.CalendarAccessLevel.OWNER,
+      accessLevel: C.CalendarAccessLevel.OWNER,
     });
 
     await AsyncStorage.setItem(DILLY_LIST_KEY, newId);
@@ -103,18 +115,15 @@ async function ensureDillyList(): Promise<string | null> {
 export interface DillyReminder {
   title: string;
   notes?: string;
-  /** ISO date string for when the reminder should fire */
   dueDate: string;
-  /** Minutes before dueDate to alert (default: 0 = at the time) */
   alertMinutesBefore?: number;
 }
 
-/**
- * Create a reminder in the "dilly" list. Requests permission if needed.
- * Returns the reminder ID on success, null on failure.
- */
 export async function createReminder(reminder: DillyReminder): Promise<string | null> {
   if (Platform.OS !== 'ios') return null;
+
+  const C = await Cal();
+  if (!C) return null;
 
   const granted = await hasReminderPermission() || await requestReminderPermission();
   if (!granted) return null;
@@ -126,7 +135,7 @@ export async function createReminder(reminder: DillyReminder): Promise<string | 
     const due = new Date(reminder.dueDate);
     const alertOffset = reminder.alertMinutesBefore ?? 0;
 
-    const id = await Calendar.createReminderAsync(listId, {
+    const id = await C.createReminderAsync(listId, {
       title: reminder.title,
       notes: reminder.notes || undefined,
       startDate: due,
@@ -143,30 +152,21 @@ export async function createReminder(reminder: DillyReminder): Promise<string | 
 
 // ── Convenience creators ──────────────────────────────────────────────────
 
-/**
- * Create a deadline reminder — fires 2 days before the deadline.
- */
 export async function remindDeadline(
-  company: string,
-  role: string,
-  deadlineDate: string,
+  company: string, role: string, deadlineDate: string,
 ): Promise<string | null> {
   const due = new Date(deadlineDate);
-  // Set reminder for 2 days before at 9am
   const reminderDate = new Date(due);
   reminderDate.setDate(reminderDate.getDate() - 2);
   reminderDate.setHours(9, 0, 0, 0);
 
-  // Don't create if the reminder date is in the past
   if (reminderDate.getTime() < Date.now()) {
-    // If deadline is within 2 days, remind tomorrow at 9am
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);
     if (tomorrow.getTime() < due.getTime()) {
       reminderDate.setTime(tomorrow.getTime());
     } else {
-      // Deadline is today or past, skip
       return null;
     }
   }
@@ -178,22 +178,15 @@ export async function remindDeadline(
   });
 }
 
-/**
- * Create interview prep reminders — one 24h before, one 2h before.
- */
 export async function remindInterview(
-  company: string,
-  role: string,
-  interviewDate: string,
+  company: string, role: string, interviewDate: string,
 ): Promise<{ dayBefore: string | null; hoursBefore: string | null }> {
   const interview = new Date(interviewDate);
 
-  // 24h before at 9am
   const dayBefore = new Date(interview);
   dayBefore.setDate(dayBefore.getDate() - 1);
   dayBefore.setHours(9, 0, 0, 0);
 
-  // 2h before the interview
   const hoursBefore = new Date(interview);
   hoursBefore.setHours(hoursBefore.getHours() - 2);
 
@@ -216,15 +209,9 @@ export async function remindInterview(
   return { dayBefore: dayId, hoursBefore: hourId };
 }
 
-/**
- * Create a follow-up reminder for a silent application.
- */
 export async function remindFollowUp(
-  company: string,
-  role: string,
-  appliedDate: string,
+  company: string, role: string, appliedDate: string,
 ): Promise<string | null> {
-  // Remind tomorrow at 10am
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(10, 0, 0, 0);
@@ -236,27 +223,15 @@ export async function remindFollowUp(
   });
 }
 
-/**
- * Create a generic "remind me later" for any Dilly action.
- */
 export async function remindMeLater(
-  title: string,
-  notes?: string,
-  hoursFromNow: number = 3,
+  title: string, notes?: string, hoursFromNow: number = 3,
 ): Promise<string | null> {
   const due = new Date();
   due.setHours(due.getHours() + hoursFromNow);
 
-  return createReminder({
-    title,
-    notes,
-    dueDate: due.toISOString(),
-  });
+  return createReminder({ title, notes, dueDate: due.toISOString() });
 }
 
-/**
- * Create a re-audit nudge — fires 5 days from now.
- */
 export async function remindReaudit(): Promise<string | null> {
   const due = new Date();
   due.setDate(due.getDate() + 5);
