@@ -31,6 +31,7 @@ const W = Dimensions.get('window').width;
 const INDIGO = colors.indigo;
 const GREEN = colors.green;
 const AMBER = colors.amber;
+const CORAL = colors.coral;
 
 type Stage = 'idle' | 'generating' | 'done' | 'error';
 
@@ -132,6 +133,9 @@ export default function ResumeGenerateScreen() {
     }, 3500);
 
     try {
+      // AI generation streams tokens and can take 30-60s; override the default 22s timeout
+      const genController = new AbortController();
+      const genTimeout = setTimeout(() => genController.abort(), 90_000);
       const res = await dilly.fetch('/resume/generate', {
         method: 'POST',
         body: JSON.stringify({
@@ -139,7 +143,9 @@ export default function ResumeGenerateScreen() {
           job_company: company.trim(),
           job_description: jd.trim() || undefined,
         }),
+        signal: genController.signal,
       });
+      clearTimeout(genTimeout);
 
       if (stepTimer.current) {
         clearInterval(stepTimer.current);

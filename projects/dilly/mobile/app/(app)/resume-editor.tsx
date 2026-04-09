@@ -2375,10 +2375,10 @@ export default function ResumeEditorScreen() {
               {quickTailorData && (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
                   {/* Headline summary */}
-                  <Text style={rs.qtHeadline}>{quickTailorData.headline}</Text>
+                  <Text style={rs.qtHeadline}>{String(quickTailorData.headline || 'Resume tailored.')}</Text>
                   {quickTailorData.job_title ? (
                     <Text style={rs.qtJobLabel} numberOfLines={1}>
-                      {quickTailorData.job_title}{quickTailorData.job_company ? ` · ${quickTailorData.job_company}` : ''}
+                      {String(quickTailorData.job_title || '')}{quickTailorData.job_company ? ` · ${String(quickTailorData.job_company)}` : ''}
                     </Text>
                   ) : null}
 

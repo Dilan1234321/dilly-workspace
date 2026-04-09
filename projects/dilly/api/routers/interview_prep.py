@@ -217,6 +217,7 @@ class PrepDeckRequest(BaseModel):
     company: str
     role: str
     track: Optional[str] = None
+    job_description: Optional[str] = None  # When provided, generates JD-specific questions via Claude
 
 
 # Track-specific question banks (rule-based for speed)
@@ -361,6 +362,79 @@ def _generate_company_insights(company: str, track: str) -> str:
     )
 
 
+async def _generate_jd_specific_questions(
+    company: str, role: str, job_description: str, track: str,
+) -> list[dict]:
+    """
+    Use Claude to generate 6-8 interview questions specific to the
+    company + role + JD. Returns the same shape as the static banks.
+    Falls back to empty list on any error so the caller can use the
+    rule-based bank instead.
+    """
+    if not job_description or len(job_description.strip()) < 50:
+        return []
+
+    track_label = COHORT_SCORING_WEIGHTS.get(track, {}).get("label", track)
+    system = f"""You are a senior interviewer at {company} hiring for {role}.
+Generate exactly 8 interview questions a real interviewer would ask for this specific role.
+
+JOB DESCRIPTION:
+{job_description[:4000]}
+
+REQUIREMENTS:
+1. Mix of technical (3-4), behavioral (2-3), and company-fit (1-2) questions.
+2. Reference SPECIFIC skills, tools, or requirements from the JD.
+3. Questions should feel like they come from someone who works at {company}, not generic.
+4. For technical questions, reference technologies or methods mentioned in the JD.
+5. For behavioral questions, relate to scenarios that would occur in this specific role.
+6. Include one "Why {company}?" question that references something specific about the company.
+
+Return ONLY a JSON array of objects, each with:
+  "question": the interview question text,
+  "category": "technical" | "behavioral" | "fit",
+  "probability": "high" | "medium",
+  "why_flagged": one sentence explaining why this question is likely for this role,
+  "prep_tip": one sentence of specific advice on how to answer well
+
+No markdown, no prose, just the JSON array."""
+
+    try:
+        import anthropic, json as _json
+        client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+        msg = await client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=1500,
+            system=system,
+            messages=[{"role": "user", "content": f"Generate the 8 interview questions for {role} at {company}."}],
+        )
+        raw = "".join(getattr(b, "text", "") or "" for b in (msg.content or []))
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```", 2)[1] if "```" in cleaned[3:] else cleaned[3:]
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+            cleaned = cleaned.strip()
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3].strip()
+        questions = _json.loads(cleaned)
+        if isinstance(questions, list) and len(questions) > 0:
+            # Validate shape
+            return [
+                {
+                    "question": str(q.get("question", "")).strip(),
+                    "category": str(q.get("category", "general")).strip(),
+                    "probability": str(q.get("probability", "high")).strip(),
+                    "why_flagged": str(q.get("why_flagged", "")).strip(),
+                    "prep_tip": str(q.get("prep_tip", "")).strip(),
+                }
+                for q in questions[:8]
+                if q.get("question")
+            ]
+    except Exception as _exc:
+        sys.stderr.write(f"[jd_questions_failed] {type(_exc).__name__}: {str(_exc)[:200]}\n")
+    return []
+
+
 @router.post("/interview/prep-deck")
 async def generate_prep_deck(req: PrepDeckRequest, request: Request):
     user = deps.require_auth(request)
@@ -370,20 +444,29 @@ async def generate_prep_deck(req: PrepDeckRequest, request: Request):
     audits = get_audits(email)
     latest_audit = audits[0] if audits else None
 
-    # Get track-specific questions or fall back to defaults
-    questions = _TRACK_QUESTION_BANKS.get(track, _DEFAULT_QUESTION_BANK)
+    # If JD is provided, generate company+JD-specific questions via Claude.
+    # Falls back to the static question bank if generation fails.
+    jd_questions: list[dict] = []
+    if req.job_description and len(req.job_description.strip()) > 50:
+        jd_questions = await _generate_jd_specific_questions(
+            req.company, req.role, req.job_description, track,
+        )
 
-    # Compute dimension gaps
+    if jd_questions:
+        # Use JD-specific questions as the primary set
+        flagged_questions = jd_questions
+    else:
+        # Fall back to static question bank + gap-based flagging
+        questions = _TRACK_QUESTION_BANKS.get(track, _DEFAULT_QUESTION_BANK)
+        gaps = _get_dimension_gaps(latest_audit, track)
+        flagged_questions = _flag_questions_by_gaps(questions, gaps)
+
+    # Compute dimension gaps (always, for the review phase)
     gaps = _get_dimension_gaps(latest_audit, track)
-
-    # Flag questions based on user's weak dimensions
-    flagged_questions = _flag_questions_by_gaps(questions, gaps)
 
     # Sort: high probability first
     prob_order = {"high": 0, "medium": 1, "low": 2}
-    flagged_questions.sort(key=lambda q: prob_order.get(q["probability"], 1))
-
-    # Take top 5-8
+    flagged_questions.sort(key=lambda q: prob_order.get(q.get("probability", "medium"), 1))
     flagged_questions = flagged_questions[:8]
 
     track_label = COHORT_SCORING_WEIGHTS.get(track, {}).get("label", track)
@@ -397,5 +480,6 @@ async def generate_prep_deck(req: PrepDeckRequest, request: Request):
         "questions": flagged_questions,
         "dimension_gaps": gaps,
         "company_insights": company_insights,
+        "jd_powered": len(jd_questions) > 0,
         "generated_at": datetime.utcnow().isoformat() + "Z",
     }

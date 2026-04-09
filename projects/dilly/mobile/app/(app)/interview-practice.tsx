@@ -40,9 +40,11 @@ export default function InterviewPracticeScreen() {
   const [phase, setPhase] = useState<Phase>('setup');
   const [company, setCompany] = useState(paramCompany || '');
   const [role, setRole] = useState(paramRole || '');
+  const [jobDescription, setJobDescription] = useState('');
   const [questions, setQuestions] = useState<PrepQuestion[]>([]);
   const [gaps, setGaps] = useState<DimensionGap[]>([]);
   const [companyInsights, setCompanyInsights] = useState('');
+  const [jdPowered, setJdPowered] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [currentAnswer, setCurrentAnswer] = useState('');
@@ -51,20 +53,42 @@ export default function InterviewPracticeScreen() {
   // Auto-load if company+role were passed as params
   useEffect(() => {
     if (paramCompany && paramRole) {
-      loadDeck(paramCompany, paramRole);
+      loadDeck(paramCompany, paramRole, '');
     }
   }, []);
 
-  async function loadDeck(c: string, r: string) {
+  async function loadDeck(c: string, r: string, jd: string) {
     if (!c.trim() || !r.trim()) {
       Alert.alert('Missing info', 'Enter a company and role.');
       return;
     }
     setPhase('loading');
     try {
+      // Detect if JD is a URL and fetch it first
+      let finalJD = jd.trim();
+      const isUrl = /^https?:\/\//i.test(finalJD) || /^(www\.)?[\w-]+\.(com|co|io|org|net|jobs)\//i.test(finalJD);
+      if (isUrl && finalJD.split('\n').length <= 3) {
+        try {
+          const fetchRes = await dilly.fetch('/jobs/fetch-jd', {
+            method: 'POST',
+            body: JSON.stringify({ url: finalJD }),
+          });
+          if (fetchRes.ok) {
+            const fetchData = await fetchRes.json();
+            if (fetchData?.job_description?.length > 50) {
+              finalJD = fetchData.job_description;
+            }
+          }
+        } catch {}
+      }
+
       const res = await dilly.fetch('/interview/prep-deck', {
         method: 'POST',
-        body: JSON.stringify({ company: c.trim(), role: r.trim() }),
+        body: JSON.stringify({
+          company: c.trim(),
+          role: r.trim(),
+          job_description: finalJD || undefined,
+        }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => null);
@@ -74,6 +98,7 @@ export default function InterviewPracticeScreen() {
       setQuestions(data.questions || []);
       setGaps(data.dimension_gaps || []);
       setCompanyInsights(data.company_insights || '');
+      setJdPowered(!!data.jd_powered);
       setAnswers(new Array(data.questions?.length || 0).fill(''));
       setCurrentIdx(0);
       setCurrentAnswer('');
@@ -132,7 +157,7 @@ export default function InterviewPracticeScreen() {
                 </View>
                 <Text style={s.setupTitle}>Practice for your interview</Text>
                 <Text style={s.setupSub}>
-                  Dilly generates questions based on the company, role, and your profile. Answer each one, then see how you did.
+                  Paste the job description and Dilly will generate real interview questions specific to this exact role. The more detail, the better the questions.
                 </Text>
                 <TextInput
                   style={s.input}
@@ -149,14 +174,22 @@ export default function InterviewPracticeScreen() {
                   placeholder="Role (e.g. Data Science Intern)"
                   placeholderTextColor={colors.t3}
                 />
+                <TextInput
+                  style={[s.input, { minHeight: 100, textAlignVertical: 'top' }]}
+                  value={jobDescription}
+                  onChangeText={setJobDescription}
+                  placeholder="Paste the job description or job URL (recommended for better questions)"
+                  placeholderTextColor={colors.t3}
+                  multiline
+                />
                 <AnimatedPressable
                   style={[s.startBtn, (!company.trim() || !role.trim()) && { opacity: 0.4 }]}
-                  onPress={() => loadDeck(company, role)}
+                  onPress={() => loadDeck(company, role, jobDescription)}
                   disabled={!company.trim() || !role.trim()}
                   scaleDown={0.97}
                 >
                   <Ionicons name="flash" size={16} color="#FFFFFF" />
-                  <Text style={s.startBtnText}>Start practice</Text>
+                  <Text style={s.startBtnText}>{jobDescription.trim().length > 50 ? 'Start real interview practice' : 'Start practice'}</Text>
                 </AnimatedPressable>
               </View>
             </FadeInView>
