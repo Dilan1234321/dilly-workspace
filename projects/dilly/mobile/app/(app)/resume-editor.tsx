@@ -203,7 +203,42 @@ function sectionIcon(key: string): string {
   if (key.includes('experience') || key === 'research' || key.includes('involvement') || key.includes('volunteer')) return 'briefcase-outline';
   if (key === 'projects') return 'code-slash-outline';
   if (key === 'skills') return 'construct-outline';
+  if (key === 'summary' || key === 'objective') return 'reader-outline';
+  if (key === 'honors_awards' || key === 'awards') return 'trophy-outline';
+  if (key === 'certifications') return 'ribbon-outline';
+  if (key === 'coursework') return 'library-outline';
+  if (key === 'publications') return 'newspaper-outline';
+  if (key === 'leadership') return 'people-outline';
+  if (key === 'activities') return 'color-palette-outline';
+  if (key === 'languages') return 'globe-outline';
   return 'document-text-outline';
+}
+
+// Build 71: catalog of optional sections a user can add from the
+// "+ Add section" menu. Each entry maps to a key the backend's
+// ResumeSection schema already supports via SimpleSection (free-text lines).
+type AddableSection = {
+  key: string;
+  label: string;
+  placeholder: string;
+  description: string;
+};
+const ADDABLE_SECTIONS: AddableSection[] = [
+  { key: 'summary',        label: 'Summary',        placeholder: '2-3 sentence positioning statement', description: 'Opens the resume with a focused pitch' },
+  { key: 'honors_awards',  label: 'Honors & Awards', placeholder: "Dean's List (Fall 2024)",             description: 'Scholarships, dean\'s list, competitions' },
+  { key: 'certifications', label: 'Certifications', placeholder: 'AWS Certified Cloud Practitioner',    description: 'Professional certs and licenses' },
+  { key: 'coursework',     label: 'Relevant Coursework', placeholder: 'Data Structures, Algorithms, ML', description: 'Classes that match the target role' },
+  { key: 'publications',   label: 'Publications',   placeholder: 'Smith, J. (2025). Paper title. Journal.', description: 'Papers, articles, conference talks' },
+  { key: 'leadership',     label: 'Leadership',     placeholder: 'President — Data Science Club (2024)',   description: 'Clubs, boards, committees' },
+  { key: 'activities',     label: 'Activities',     placeholder: 'Varsity Track (2022-2024)',              description: 'Extracurriculars and volunteering' },
+  { key: 'languages',      label: 'Languages',      placeholder: 'Spanish — Professional, French — Conversational', description: 'Spoken/written languages and proficiency' },
+];
+
+// Build 71: nice display label for any section key, catalog or not
+function sectionDisplayLabel(key: string): string {
+  const hit = ADDABLE_SECTIONS.find(s => s.key === key);
+  if (hit) return hit.label;
+  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ── Overall Strength Meter ────────────────────────────────────────────────────
@@ -840,6 +875,10 @@ export default function ResumeEditorScreen() {
   const [undoCount, setUndoCount] = useState(0);
   const hydratedRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Build-71: add-section picker + save toast
+  const [showAddSection, setShowAddSection] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Build-70: autosave to AsyncStorage on every change (debounced 800ms).
   // Write a timestamped draft so we can prompt to restore after a crash.
@@ -1012,7 +1051,72 @@ export default function ResumeEditorScreen() {
       if (!keySet.has(s.key)) reordered.push(s);
     }
     commitSections(reordered);
-    Alert.alert('Reordered', 'Section order applied. Save to persist the change.');
+    showToast('Section order applied. Save to persist.');
+  }
+
+  // Build-71: transient toast (replaces modal alerts for non-destructive ops)
+  function showToast(msg: string) {
+    setToastMessage(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2400);
+  }
+
+  // Build-71: add a new section from the add-section picker. Skills and
+  // other SimpleSection-backed sections share the same shape.
+  function handleAddSection(def: AddableSection) {
+    if (sections.some(s => s.key === def.key)) {
+      setShowAddSection(false);
+      showToast(`${def.label} is already on your resume.`);
+      return;
+    }
+    const newSection: ResumeSection = {
+      key: def.key,
+      label: def.label,
+      simple: { id: uid(), lines: [''] },
+    };
+    // Summary should render near the top, right after contact.
+    commitSections(prev => {
+      if (def.key === 'summary') {
+        const idx = prev.findIndex(s => s.key === 'contact');
+        const insertAt = idx >= 0 ? idx + 1 : 0;
+        return [...prev.slice(0, insertAt), newSection, ...prev.slice(insertAt)];
+      }
+      return [...prev, newSection];
+    });
+    setExpanded(prev => {
+      const next = new Set(prev || []);
+      next.add(def.key);
+      return next;
+    });
+    setShowAddSection(false);
+    showToast(`${def.label} added.`);
+  }
+
+  // Build-71: delete an entire section. Contact is protected.
+  function confirmDeleteSection(key: string) {
+    if (key === 'contact') return;
+    const sec = sections.find(s => s.key === key);
+    const label = sec ? (sec.label || sectionDisplayLabel(key)) : sectionDisplayLabel(key);
+    Alert.alert(
+      `Delete ${label}?`,
+      'This removes the entire section from your resume. You can undo this from the top-right.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            commitSections(prev => prev.filter(s => s.key !== key));
+            setExpanded(prev => {
+              const next = new Set(prev || []);
+              next.delete(key);
+              return next;
+            });
+            showToast(`${label} deleted. Tap undo to restore.`);
+          },
+        },
+      ],
+    );
   }
 
   function handleBulletScoreUpdate(id: string, score: BulletScore | null) {
@@ -1255,7 +1359,7 @@ export default function ResumeEditorScreen() {
       setHasChanges(false);
       // Clear the crash-recovery draft — nothing left to restore.
       AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
-      Alert.alert('Saved', 'Your resume has been saved.');
+      showToast('Saved.');
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Could not save resume.');
     }
@@ -1420,17 +1524,33 @@ export default function ResumeEditorScreen() {
               const comp = sectionCompleteness(sec);
               const isOpen = expanded?.has(sec.key) ?? false;
 
+              const canDelete = sec.key !== 'contact';
               return (
                 <View key={sec.key}>
                   {/* Section header (like a resume section divider) */}
-                  <AnimatedPressable style={rs.sectionDivider} onPress={() => toggleSection(sec.key)} scaleDown={0.995}>
+                  <AnimatedPressable
+                    style={rs.sectionDivider}
+                    onPress={() => toggleSection(sec.key)}
+                    onLongPress={canDelete ? () => confirmDeleteSection(sec.key) : undefined}
+                    scaleDown={0.995}
+                  >
                     <View style={rs.sectionDividerLine} />
                     <View style={rs.sectionDividerLabel}>
                       <Ionicons name={sectionIcon(sec.key) as any} size={11} color={GOLD} />
-                      <Text style={rs.sectionDividerText}>{(sec.label || sec.key.replace(/_/g, ' ')).toUpperCase()}</Text>
+                      <Text style={rs.sectionDividerText}>{(sec.label || sectionDisplayLabel(sec.key)).toUpperCase()}</Text>
                       <CompletionDot filled={comp.filled} total={comp.total} />
                     </View>
-                    <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={12} color={colors.t3} />
+                    {isOpen && canDelete ? (
+                      <TouchableOpacity
+                        onPress={() => confirmDeleteSection(sec.key)}
+                        hitSlop={10}
+                        style={{ paddingHorizontal: 6 }}
+                      >
+                        <Ionicons name="trash-outline" size={13} color={CORAL} />
+                      </TouchableOpacity>
+                    ) : (
+                      <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={12} color={colors.t3} />
+                    )}
                   </AnimatedPressable>
 
                   {/* Content */}
@@ -1446,6 +1566,16 @@ export default function ResumeEditorScreen() {
                 </View>
               );
             })}
+
+            {/* Build-71: Add a new section */}
+            <AnimatedPressable
+              style={rs.addSectionBtn}
+              onPress={() => setShowAddSection(true)}
+              scaleDown={0.97}
+            >
+              <Ionicons name="add-circle-outline" size={14} color={GOLD} />
+              <Text style={rs.addSectionBtnText}>Add section</Text>
+            </AnimatedPressable>
 
           </View>
         </FadeInView>
@@ -1776,6 +1906,63 @@ export default function ResumeEditorScreen() {
           <Text style={rs.tailoringText}>Dilly is tailoring your resume for {tailorCompany}...</Text>
         </View>
       )}
+
+      {/* ── Build 71: Add section picker ───────────────────────────────── */}
+      <Modal
+        visible={showAddSection}
+        animationType="slide"
+        transparent
+        statusBarTranslucent
+        onRequestClose={() => setShowAddSection(false)}
+      >
+        <View style={rs.addSectionOverlay}>
+          <View style={[rs.addSectionSheet, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={rs.addSectionHandle} />
+            <View style={rs.addSectionHeader}>
+              <Text style={rs.addSectionTitle}>Add a section</Text>
+              <TouchableOpacity onPress={() => setShowAddSection(false)} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.t2} />
+              </TouchableOpacity>
+            </View>
+            <Text style={rs.addSectionSub}>Pick what to add to your resume.</Text>
+            <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
+              {ADDABLE_SECTIONS.map(def => {
+                const exists = sections.some(s => s.key === def.key);
+                return (
+                  <AnimatedPressable
+                    key={def.key}
+                    style={[rs.addSectionRow, exists && { opacity: 0.4 }]}
+                    onPress={() => !exists && handleAddSection(def)}
+                    disabled={exists}
+                    scaleDown={0.98}
+                  >
+                    <View style={rs.addSectionIconWrap}>
+                      <Ionicons name={sectionIcon(def.key) as any} size={15} color={GOLD} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={rs.addSectionRowTitle}>{def.label}</Text>
+                      <Text style={rs.addSectionRowSub} numberOfLines={1}>
+                        {exists ? 'Already on your resume' : def.description}
+                      </Text>
+                    </View>
+                    {!exists && <Ionicons name="add" size={16} color={colors.t3} />}
+                  </AnimatedPressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Build 71: Toast ───────────────────────────────────────────── */}
+      {toastMessage && (
+        <View style={[rs.toastWrap, { bottom: insets.bottom + 24 }]} pointerEvents="none">
+          <View style={rs.toast}>
+            <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+            <Text style={rs.toastText}>{toastMessage}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -2092,4 +2279,58 @@ const rs = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', zIndex: 50,
   },
   tailoringText: { fontSize: 14, color: colors.t2, marginTop: 16, textAlign: 'center', paddingHorizontal: 40 },
+
+  // Build 71: Add-section button + picker modal
+  addSectionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 18, paddingVertical: 11,
+    backgroundColor: colors.s2, borderRadius: 10,
+    borderWidth: 1, borderColor: GOLD + '40', borderStyle: 'dashed',
+  },
+  addSectionBtnText: { fontSize: 12, color: GOLD, fontWeight: '700' },
+  addSectionOverlay: {
+    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  addSectionSheet: {
+    backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 18, maxHeight: '80%',
+  },
+  addSectionHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: colors.b1,
+    alignSelf: 'center', marginBottom: 10,
+  },
+  addSectionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  addSectionTitle: { fontSize: 16, fontWeight: '700', color: colors.t1 },
+  addSectionSub: { fontSize: 11, color: colors.t3, marginBottom: 14 },
+  addSectionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12, paddingHorizontal: 12,
+    backgroundColor: colors.s2, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    marginBottom: 8,
+  },
+  addSectionIconWrap: {
+    width: 30, height: 30, borderRadius: 8,
+    backgroundColor: GOLD + '15',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  addSectionRowTitle: { fontSize: 13, fontWeight: '700', color: colors.t1 },
+  addSectionRowSub: { fontSize: 10, color: colors.t3, marginTop: 2 },
+
+  // Build 71: Toast
+  toastWrap: {
+    position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 100,
+  },
+  toast: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#111111',
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+  },
+  toastText: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
 });
