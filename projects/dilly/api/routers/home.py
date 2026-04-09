@@ -416,8 +416,8 @@ def _compute_do_now(
                 "kind": "deadline",
                 "title": f"Deadline in {d['days_until']} day{'s' if d['days_until'] != 1 else ''}",
                 "subtitle": d.get("label") or "Upcoming deadline",
-                "action_label": "Open tracker",
-                "action_route": "/(app)/internship-tracker",
+                "action_label": "Open calendar",
+                "action_route": "/(app)/calendar",
                 "action_payload": {"company": d.get("company"), "role": d.get("role")},
             }
 

@@ -73,7 +73,8 @@ def _build_ics(deadlines: list[dict]) -> str:
         "PRODID:-//Dilly//Career Deadlines//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        "X-WR-CALNAME:Dilly Deadlines",
+        "X-WR-CALNAME:dilly",
+        "X-APPLE-CALENDAR-COLOR:#1652F0",
         "X-WR-TIMEZONE:UTC",
     ]
 
@@ -266,9 +267,9 @@ async def calendar_single_event_ics(
         "PRODID:-//Dilly//Career Center//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        f"X-WR-CALNAME:{_ics_escape(f'Dilly — {title}')}",
+        "X-WR-CALNAME:dilly",
         "X-WR-TIMEZONE:America/New_York",
-        "X-APPLE-CALENDAR-COLOR:#2B3A8E",
+        "X-APPLE-CALENDAR-COLOR:#1652F0",
         "BEGIN:VEVENT",
         f"UID:{uid}",
         f"DTSTAMP:{now_utc}",

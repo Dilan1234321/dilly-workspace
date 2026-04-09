@@ -911,24 +911,19 @@ export default function CalendarScreen() {
 
   // Generate prep deck
   const handleViewPrepDeck = useCallback(async (event: CalendarEvent) => {
-    if (!event.company) return;
-    setLoadingPrepDeckId(event.id);
-    try {
-      const res = await dilly.fetch('/interview/prep-deck', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company: event.company,
-          role: event.role || event.title,
-        }),
-      });
-      const data = await res.json();
-      setPrepDeck(data);
-    } catch {
-      Alert.alert('Error', 'Could not generate prep deck');
-    } finally {
-      setLoadingPrepDeckId(null);
+    if (!event.company) {
+      // No company info — just navigate to interview practice
+      router.push('/(app)/interview-practice');
+      return;
     }
+    // Navigate to interview practice with the company + role pre-filled
+    router.push({
+      pathname: '/(app)/interview-practice',
+      params: {
+        company: event.company,
+        role: event.role || event.title || '',
+      },
+    });
   }, []);
 
   // Navigate months
