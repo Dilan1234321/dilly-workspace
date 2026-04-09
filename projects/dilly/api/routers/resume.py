@@ -1197,25 +1197,49 @@ async def bullet_worth(request: Request, body: BulletWorthRequest):
 @router.get("/resume/cohorts")
 async def list_resume_cohorts(request: Request):
     """
-    Return the list of rubric cohorts the editor can score against.
-    Used by the cohort switcher in ResumeScoreDashboard to let users
-    preview their resume against a different cohort's scoring rubric.
+    Return the cohorts the editor's switcher should show. Only cohorts
+    the student's latest audit actually scored are returned — primary
+    cohort first, then every entry from rubric_analysis.other_cohorts.
+    We don't expose the full 16-cohort rubric list because the editor
+    anchors scores to the audit's stored per-cohort numbers, and
+    picking a cohort that wasn't scored would fall back to primary.
     """
-    deps.require_auth(request)
-    try:
-        from dilly_core.rubric_scorer import list_cohort_ids, get_rubric
-        cohort_ids = list_cohort_ids()
-        out = []
-        for cid in cohort_ids:
-            try:
-                rubric = get_rubric(cid) or {}
-                display = rubric.get("display_name") or cid.replace("_", " ").title()
-            except Exception:
-                display = cid.replace("_", " ").title()
-            out.append({"cohort_id": cid, "display_name": display})
-        return {"cohorts": out}
-    except Exception:
-        return {"cohorts": []}
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    out: list = []
+    seen: set = set()
+    if email:
+        try:
+            from projects.dilly.api.audit_history import get_audits
+            audits = get_audits(email) or []
+            for a in audits:
+                ra = a.get("rubric_analysis")
+                if not isinstance(ra, dict):
+                    continue
+                pid = str(ra.get("primary_cohort_id") or "").strip()
+                if pid and pid not in seen:
+                    seen.add(pid)
+                    out.append({
+                        "cohort_id": pid,
+                        "display_name": ra.get("primary_cohort_display_name") or pid.replace("_", " ").title(),
+                    })
+                for oc in (ra.get("other_cohorts") or []):
+                    if not isinstance(oc, dict):
+                        continue
+                    cid = str(oc.get("cohort_id") or "").strip()
+                    if not cid or cid in seen:
+                        continue
+                    seen.add(cid)
+                    out.append({
+                        "cohort_id": cid,
+                        "display_name": oc.get("display_name") or cid.replace("_", " ").title(),
+                    })
+                # Only take cohorts from the single most-recent audit
+                if out:
+                    break
+        except Exception:
+            pass
+    return {"cohorts": out}
 
 
 @router.post("/resume/editor-scan")
