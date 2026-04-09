@@ -20,6 +20,7 @@ import { DillyFace } from '../../components/DillyFace';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import useCelebration from '../../hooks/useCelebration';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { Svg, Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -682,7 +683,18 @@ export default function HomeScreen() {
         {/* Build-75: Upcoming deadlines — only if any in the next 14 days */}
         {brief?.deadlines && brief.deadlines.length > 0 && (
           <FadeInView delay={360}>
-            <Text style={s.deadlineLabel}>UPCOMING</Text>
+            <View style={s.deadlineHeaderRow}>
+              <Text style={s.deadlineLabel}>UPCOMING</Text>
+              {/* Build-76: subscribe-all shortcut */}
+              <TouchableOpacity
+                onPress={openSubscribeToDillyCalendar}
+                hitSlop={8}
+                style={s.deadlineSubscribeBtn}
+              >
+                <Ionicons name="sync" size={10} color={colors.gold} />
+                <Text style={s.deadlineSubscribeText}>Sync all to calendar</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -691,22 +703,40 @@ export default function HomeScreen() {
               {brief.deadlines.map((d, i) => {
                 const urgent = d.days_until <= 3;
                 return (
-                  <AnimatedPressable
-                    key={`${d.date}-${i}`}
-                    style={[s.deadlineCard, urgent && s.deadlineCardUrgent]}
-                    onPress={() => router.push('/(app)/internship-tracker')}
-                    scaleDown={0.96}
-                  >
-                    <Text style={[s.deadlineDays, { color: urgent ? colors.coral : colors.t2 }]}>
-                      {d.days_until === 0 ? 'Today' : d.days_until === 1 ? 'Tomorrow' : `${d.days_until}d`}
-                    </Text>
-                    <Text style={s.deadlineCompany} numberOfLines={1}>
-                      {d.company || 'Deadline'}
-                    </Text>
-                    <Text style={s.deadlineRole} numberOfLines={1}>
-                      {d.role || d.label}
-                    </Text>
-                  </AnimatedPressable>
+                  <View key={`${d.date}-${i}`} style={[s.deadlineCard, urgent && s.deadlineCardUrgent]}>
+                    <AnimatedPressable
+                      style={{ flex: 1 }}
+                      onPress={() => router.push('/(app)/internship-tracker')}
+                      scaleDown={0.96}
+                    >
+                      <Text style={[s.deadlineDays, { color: urgent ? colors.coral : colors.t2 }]}>
+                        {d.days_until === 0 ? 'Today' : d.days_until === 1 ? 'Tomorrow' : `${d.days_until}d`}
+                      </Text>
+                      <Text style={s.deadlineCompany} numberOfLines={1}>
+                        {d.company || 'Deadline'}
+                      </Text>
+                      <Text style={s.deadlineRole} numberOfLines={1}>
+                        {d.role || d.label}
+                      </Text>
+                    </AnimatedPressable>
+                    {/* Build-76: single-event add to calendar */}
+                    <TouchableOpacity
+                      onPress={() => openAddToCalendar({
+                        title: d.company
+                          ? `${d.company} — ${d.role || 'deadline'}`
+                          : (d.label || 'Deadline'),
+                        date: d.date,
+                        description: d.label || 'Added from Dilly',
+                      })}
+                      hitSlop={10}
+                      style={s.deadlineAddBtn}
+                    >
+                      <Ionicons name="calendar-outline" size={12} color={urgent ? colors.coral : colors.gold} />
+                      <Text style={[s.deadlineAddText, { color: urgent ? colors.coral : colors.gold }]}>
+                        Add
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 );
               })}
             </ScrollView>
@@ -1086,13 +1116,24 @@ const s = StyleSheet.create({
   pipeSilentText: { fontSize: 11, color: '#92400E', flex: 1 },
 
   // Deadlines strip
+  deadlineHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 8, marginTop: 6,
+  },
   deadlineLabel: {
     fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.3,
-    color: colors.t3, marginBottom: 8, marginTop: 6,
+    color: colors.t3,
   },
+  deadlineSubscribeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4,
+    backgroundColor: colors.s2, borderRadius: 6,
+    borderWidth: 1, borderColor: colors.gold + '40',
+  },
+  deadlineSubscribeText: { fontSize: 10, color: colors.gold, fontWeight: '700' },
   deadlineRow: { gap: 8, paddingRight: 4, paddingBottom: 4 },
   deadlineCard: {
-    width: 130,
+    width: 140,
     backgroundColor: colors.s2, borderRadius: 10,
     borderWidth: 1, borderColor: colors.b1,
     padding: 10,
@@ -1104,6 +1145,13 @@ const s = StyleSheet.create({
   deadlineDays: { fontSize: 15, fontWeight: '800', marginBottom: 4 },
   deadlineCompany: { fontSize: 11, fontWeight: '700', color: colors.t1, marginBottom: 2 },
   deadlineRole:  { fontSize: 10, color: colors.t3 },
+  deadlineAddBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    marginTop: 8, paddingVertical: 5,
+    backgroundColor: colors.bg, borderRadius: 6,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  deadlineAddText: { fontSize: 10, fontWeight: '700' },
 
   // History empty state
   historyEmpty: {
