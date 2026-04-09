@@ -21,6 +21,7 @@ import { colors, spacing, API_BASE } from '../../lib/tokens';
 import useCelebration from '../../hooks/useCelebration';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
+import { remindMeLater } from '../../lib/reminders';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { Svg, Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -643,11 +644,25 @@ export default function HomeScreen() {
                       {!!doNow.subtitle && (
                         <Text style={s.doNowSubtitle}>{String(doNow.subtitle)}</Text>
                       )}
-                      <View style={s.doNowCta}>
-                        <Text style={s.doNowCtaText}>
-                          {String(doNow.action_label || 'Open')}
-                        </Text>
-                        <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                        <View style={s.doNowCta}>
+                          <Text style={s.doNowCtaText}>
+                            {String(doNow.action_label || 'Open')}
+                          </Text>
+                          <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+                        </View>
+                        <AnimatedPressable
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' }}
+                          onPress={async (e: any) => {
+                            e?.stopPropagation?.();
+                            const ok = await remindMeLater(String(doNow.title), String(doNow.subtitle || ''), 3);
+                            if (ok) Alert.alert('Reminder set', 'You\'ll be reminded in 3 hours.');
+                          }}
+                          scaleDown={0.95}
+                        >
+                          <Ionicons name="notifications-outline" size={13} color="rgba(255,255,255,0.8)" />
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.8)' }}>Later</Text>
+                        </AnimatedPressable>
                       </View>
                     </AnimatedPressable>
                   </FadeInView>

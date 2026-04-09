@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
+import { remindDeadline, remindInterview, remindMeLater } from '../../lib/reminders';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { TouchableOpacity } from 'react-native';
@@ -581,6 +582,28 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
         )}
       </View>
       <View style={cs.eventActions}>
+        {!event.completedAt && !isPast && (
+          <AnimatedPressable
+            onPress={async () => {
+              const company = event.company || event.title;
+              const role = event.role || '';
+              let created = false;
+              if (event.type === 'interview') {
+                const r = await remindInterview(company, role, event.date);
+                created = !!(r.dayBefore || r.hoursBefore);
+              } else {
+                const r = await remindDeadline(company, role, event.date);
+                created = !!r;
+              }
+              if (created) Alert.alert('Reminder set', `Added to your Reminders app.`);
+              else Alert.alert('Could not set reminder', 'Check Reminders permissions in Settings.');
+            }}
+            scaleDown={0.85}
+            hitSlop={8}
+          >
+            <Ionicons name="notifications-outline" size={16} color={GOLD} />
+          </AnimatedPressable>
+        )}
         {!event.completedAt && (
           <AnimatedPressable onPress={onComplete} scaleDown={0.85} hitSlop={8}>
             <Ionicons name="checkmark-circle-outline" size={20} color={GREEN} />

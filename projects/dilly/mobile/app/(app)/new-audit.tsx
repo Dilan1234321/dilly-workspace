@@ -25,6 +25,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { remindReaudit } from '../../lib/reminders';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -522,6 +523,9 @@ export default function NewAuditScreen() {
         try {
           await dilly.post('/resume/sync-base').catch(() => null);
         } catch {}
+
+        // Nudge to re-audit in 5 days (fire and forget, no UI block)
+        remindReaudit().catch(() => null);
       } else {
         Alert.alert('Audit Failed', result?.detail || result?.error || 'Resume audit failed. Please try uploading again.');
       }
