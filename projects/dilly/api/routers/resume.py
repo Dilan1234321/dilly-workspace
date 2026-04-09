@@ -1042,6 +1042,16 @@ Return ONLY the letter body text. No headers, no markdown, no JSON, no explanati
     if not letter_text:
         raise errors.internal("AI returned empty letter.")
 
+    # Build 74: humanize the LLM output so it doesn't scream "ChatGPT wrote this".
+    # Strips sycophantic openers, AI vocabulary, em dashes, filler, cliche
+    # conclusions, and ~15 other deterministic patterns. Pure Python, zero
+    # marginal cost, idempotent. Based on blader/humanizer (MIT).
+    try:
+        from dilly_core.humanize import humanize as _humanize
+        letter_text = _humanize(letter_text, aggressive=True)
+    except Exception as _exc:
+        sys.stderr.write(f"[humanize_cover_letter_failed] {type(_exc).__name__}: {str(_exc)[:200]}\n")
+
     # Render the cover letter as a simple PDF — reuse the resume PDF renderer
     # with a synthetic section tree that the template can print.
     try:

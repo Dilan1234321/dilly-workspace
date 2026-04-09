@@ -47,7 +47,6 @@ const UNDO_LIMIT = 25;
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ResumeScoreDashboard, { EditorScanData, CohortOption } from '../../components/ResumeScoreDashboard';
-import TailorDiffModal, { TailorDiffPayload } from '../../components/TailorDiffModal';
 import BulletWorthSheet from '../../components/BulletWorthSheet';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
@@ -842,14 +841,6 @@ export default function ResumeEditorScreen() {
   const [variants, setVariants]     = useState<any[]>([]);
   const [activeVariant, setActiveVariant] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(false);
-  const [showTailor, setShowTailor] = useState(false);
-  const [tailorCompany, setTailorCompany] = useState('');
-  const [tailorRole, setTailorRole] = useState('');
-  const [tailorJD, setTailorJD] = useState('');
-  const [tailoring, setTailoring] = useState(false);
-  // Build 64: tailor-diff modal
-  const [showTailorDiff, setShowTailorDiff] = useState(false);
-  const [tailorDiffData, setTailorDiffData] = useState<TailorDiffPayload | null>(null);
 
   // Build-63 dashboard: debounced /resume/editor-scan result
   const [scanData, setScanData] = useState<EditorScanData | null>(null);
@@ -1142,12 +1133,12 @@ export default function ResumeEditorScreen() {
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
-        throw new Error(detail?.detail || 'Quick tailor failed.');
+        throw new Error(detail?.detail || 'Dilly Tailor failed.');
       }
       const data = await res.json();
       setQuickTailorData(data);
     } catch (e: any) {
-      Alert.alert('Quick tailor failed', e?.message || 'Unknown error.');
+      Alert.alert('Dilly Tailor failed', e?.message || 'Unknown error.');
     } finally {
       setQuickTailoring(false);
     }
@@ -1713,24 +1704,14 @@ export default function ResumeEditorScreen() {
           </AnimatedPressable>
         </View>
 
-        {/* Tailor for a job */}
-        <AnimatedPressable
-          style={rs.tailorBtn}
-          onPress={() => setShowTailor(true)}
-          scaleDown={0.97}
-        >
-          <Ionicons name="sparkles" size={14} color="#2B3A8E" />
-          <Text style={rs.tailorBtnText}>Tailor for a job</Text>
-        </AnimatedPressable>
-
-        {/* Build-73: Paste-JD quick tailor — zero-cost, deterministic */}
+        {/* Build-74: Dilly Tailor — deterministic, free, paste-a-JD flow */}
         <AnimatedPressable
           style={[rs.tailorBtn, { backgroundColor: GOLD + '18', borderColor: GOLD + '55' }]}
           onPress={() => setShowQuickTailor(true)}
           scaleDown={0.97}
         >
           <Ionicons name="flash" size={14} color={GOLD} />
-          <Text style={[rs.tailorBtnText, { color: GOLD }]}>Quick tailor — paste a JD</Text>
+          <Text style={[rs.tailorBtnText, { color: GOLD }]}>Dilly Tailor — paste a job description</Text>
         </AnimatedPressable>
 
         {/* Generate new resume with AI */}
@@ -2001,8 +1982,8 @@ export default function ResumeEditorScreen() {
                 <View style={[rs.bentoCardIcon, { backgroundColor: colors.golddim }]}>
                   <Ionicons name="flash" size={22} color={colors.gold} />
                 </View>
-                <Text style={[rs.bentoCardTitle, { color: colors.gold }]}>Quick tailor</Text>
-                <Text style={rs.bentoCardSub}>Paste a JD, rearranged free</Text>
+                <Text style={[rs.bentoCardTitle, { color: colors.gold }]}>Dilly Tailor</Text>
+                <Text style={rs.bentoCardSub}>Paste a JD, tailored instantly</Text>
               </AnimatedPressable>
 
               {/* Build 73: Compare versions button — only if we have 2+ variants */}
@@ -2024,84 +2005,6 @@ export default function ResumeEditorScreen() {
         </View>
       </Modal>
 
-      {/* Tailor modal */}
-      <Modal visible={showTailor} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowTailor(false)}>
-        <View style={rs.tailorOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
-            <View style={[rs.tailorCard, { paddingBottom: insets.bottom + 20 }]}>
-              <View style={rs.tailorHeader}>
-                <Text style={rs.tailorTitle}>Tailor Resume</Text>
-                <TouchableOpacity onPress={() => setShowTailor(false)} hitSlop={12}>
-                  <Ionicons name="close" size={20} color={colors.t2} />
-                </TouchableOpacity>
-              </View>
-              <Text style={rs.tailorSub}>Dilly will rewrite your resume bullets to match this role.</Text>
-              <TextInput
-                style={rs.tailorInput}
-                value={tailorCompany}
-                onChangeText={setTailorCompany}
-                placeholder="Company (e.g. Google)"
-                placeholderTextColor={colors.t3}
-                autoFocus
-              />
-              <TextInput
-                style={rs.tailorInput}
-                value={tailorRole}
-                onChangeText={setTailorRole}
-                placeholder="Role (e.g. Data Science Intern)"
-                placeholderTextColor={colors.t3}
-              />
-              <TextInput
-                style={[rs.tailorInput, { minHeight: 90, textAlignVertical: 'top' }]}
-                value={tailorJD}
-                onChangeText={setTailorJD}
-                placeholder="Paste the job description (optional — better tailoring)"
-                placeholderTextColor={colors.t3}
-                multiline
-              />
-              <AnimatedPressable
-                style={[rs.tailorSubmitBtn, (!tailorCompany.trim() || !tailorRole.trim()) && { opacity: 0.4 }]}
-                onPress={async () => {
-                  if (!tailorCompany.trim() || !tailorRole.trim()) return;
-                  // Close setup modal, open diff modal in loading state
-                  setShowTailor(false);
-                  setTailorDiffData(null);
-                  setShowTailorDiff(true);
-                  setTailoring(true);
-                  try {
-                    const res = await dilly.fetch('/resume/tailor-diff', {
-                      method: 'POST',
-                      body: JSON.stringify({
-                        job_company: tailorCompany.trim(),
-                        job_title: tailorRole.trim(),
-                        job_description: tailorJD.trim() || undefined,
-                      }),
-                    });
-                    if (!res.ok) {
-                      const detail = await res.json().catch(() => null);
-                      Alert.alert('Tailoring failed', detail?.detail || 'Could not generate a tailored version.');
-                      setShowTailorDiff(false);
-                      return;
-                    }
-                    const data = await res.json();
-                    setTailorDiffData(data as TailorDiffPayload);
-                  } catch (e: any) {
-                    Alert.alert('Tailoring failed', e?.message || 'Unknown error.');
-                    setShowTailorDiff(false);
-                  } finally {
-                    setTailoring(false);
-                  }
-                }}
-                scaleDown={0.97}
-                disabled={!tailorCompany.trim() || !tailorRole.trim()}
-              >
-                <Ionicons name="sparkles" size={14} color="#FFFFFF" />
-                <Text style={rs.tailorSubmitText}>Preview tailored version</Text>
-              </AnimatedPressable>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
 
       {/* ── Build 68: Cover letter generator modal ──────────────────── */}
       <Modal visible={showCoverLetter} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowCoverLetter(false)}>
@@ -2166,54 +2069,6 @@ export default function ResumeEditorScreen() {
         onClose={() => setWorthBullet(null)}
       />
 
-      {/* ── Build 64: rich tailor-diff modal ─────────────────────────────── */}
-      <TailorDiffModal
-        visible={showTailorDiff}
-        loading={tailoring}
-        diff={tailorDiffData}
-        onClose={() => {
-          setShowTailorDiff(false);
-          setTailorDiffData(null);
-        }}
-        onAcceptAll={async () => {
-          if (!tailorDiffData) return;
-          try {
-            // Create a new tailored variant pre-populated with the Claude output
-            const createRes = await dilly.fetch('/resume/variants', {
-              method: 'POST',
-              body: JSON.stringify({
-                label: `Tailored — ${tailorDiffData.job_company}`,
-                job_company: tailorDiffData.job_company,
-                job_title: tailorDiffData.job_title,
-                cohort: tailorDiffData.cohort,
-                type: 'job',
-                sections: tailorDiffData.tailored_sections,
-              }),
-            });
-            if (!createRes.ok) {
-              Alert.alert('Could not save variant', 'The diff was generated but saving failed. Try again.');
-              return;
-            }
-            const created = await createRes.json();
-            // Refresh the variant list and switch to the new one
-            const varRes = await dilly.get('/resume/variants');
-            setVariants(varRes?.variants || []);
-            if (created?.id) {
-              setActiveVariant(created.id);
-              setSections(tailorDiffData.tailored_sections as any);
-              setHasChanges(false);
-            }
-            setShowTailorDiff(false);
-            setTailorDiffData(null);
-            setTailorCompany('');
-            setTailorRole('');
-            setTailorJD('');
-          } catch (e: any) {
-            Alert.alert('Save failed', e?.message || 'Unknown error.');
-          }
-        }}
-      />
-
       {/* ── Export template picker (build 63) ───────────────────────────── */}
       <Modal visible={showExportPicker} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowExportPicker(false)}>
         <View style={rs.exportModalOverlay}>
@@ -2271,14 +2126,6 @@ export default function ResumeEditorScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Tailoring in-progress overlay */}
-      {tailoring && (
-        <View style={rs.tailoringOverlay}>
-          <ActivityIndicator size="large" color="#2B3A8E" />
-          <Text style={rs.tailoringText}>Dilly is tailoring your resume for {tailorCompany}...</Text>
-        </View>
-      )}
 
       {/* ── Build 71: Add section picker ───────────────────────────────── */}
       <Modal
@@ -2341,7 +2188,7 @@ export default function ResumeEditorScreen() {
               <View style={rs.addSectionHandle} />
               <View style={rs.addSectionHeader}>
                 <Text style={rs.addSectionTitle}>
-                  {quickTailorData ? 'Tailor results' : 'Quick tailor'}
+                  {quickTailorData ? 'Dilly Tailor results' : 'Dilly Tailor'}
                 </Text>
                 <TouchableOpacity
                   onPress={() => { if (!quickTailoring) { setShowQuickTailor(false); setQuickTailorData(null); setQuickJD(''); } }}
