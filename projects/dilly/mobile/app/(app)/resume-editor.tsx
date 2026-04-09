@@ -1743,24 +1743,30 @@ export default function ResumeEditorScreen() {
           </AnimatedPressable>
         </View>
 
-        {/* Build-74: Dilly Tailor  -  deterministic, free, paste-a-JD flow */}
+        {/* Dilly Tailor: rearranges YOUR existing resume for a specific JD. Free, instant. */}
         <AnimatedPressable
-          style={[rs.tailorBtn, { backgroundColor: GOLD + '18', borderColor: GOLD + '55' }]}
+          style={[rs.tailorBtn, { backgroundColor: GOLD + '12', borderColor: GOLD + '45' }]}
           onPress={() => setShowQuickTailor(true)}
           scaleDown={0.97}
         >
-          <Ionicons name="flash" size={14} color={GOLD} />
-          <Text style={[rs.tailorBtnText, { color: GOLD }]}>Dilly Tailor  -  paste a job description</Text>
+          <Ionicons name="document-text" size={14} color={GOLD} />
+          <View style={{ flex: 1 }}>
+            <Text style={[rs.tailorBtnText, { color: GOLD }]}>Tailor for a job</Text>
+            <Text style={{ fontSize: 9, color: colors.t3, marginTop: 1 }}>Paste a JD or job URL. Rearranges your resume instantly.</Text>
+          </View>
         </AnimatedPressable>
 
-        {/* Generate new resume with AI */}
+        {/* Generate: builds a NEW resume from scratch using AI. Different flow entirely. */}
         <AnimatedPressable
-          style={rs.tailorBtn}
+          style={[rs.tailorBtn, { backgroundColor: '#AF52DE12', borderColor: '#AF52DE35' }]}
           onPress={() => router.push('/(app)/resume-generate')}
           scaleDown={0.97}
         >
-          <Ionicons name="flash" size={14} color="#2B3A8E" />
-          <Text style={rs.tailorBtnText}>Generate resume with AI</Text>
+          <Ionicons name="sparkles" size={14} color="#AF52DE" />
+          <View style={{ flex: 1 }}>
+            <Text style={[rs.tailorBtnText, { color: '#AF52DE' }]}>Generate new resume</Text>
+            <Text style={{ fontSize: 9, color: colors.t3, marginTop: 1 }}>AI writes a fresh resume from your profile + a job description.</Text>
+          </View>
         </AnimatedPressable>
 
         {/* Import from LinkedIn */}
@@ -2183,6 +2189,7 @@ export default function ResumeEditorScreen() {
               })}
             </View>
 
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
             {([
               { key: 'modern',      label: 'Modern',      hint: 'Teal accent, summary + skills first, tight spacing' },
               { key: 'tech',        label: 'Tech',        hint: 'Blue accent, skills near top, GitHub prominent' },
@@ -2214,6 +2221,7 @@ export default function ResumeEditorScreen() {
                 <Ionicons name="chevron-forward" size={16} color={GOLD} />
               </AnimatedPressable>
             ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2699,11 +2707,12 @@ const rs = StyleSheet.create({
   },
   exportBtnText: { fontSize: 11, color: GOLD, fontWeight: '700' },
   exportModalOverlay: {
-    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)',
+    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.15)',
   },
   exportModalCard: {
     backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
     padding: 20, paddingBottom: 36,
+    maxHeight: '80%',
   },
   exportModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   exportModalTitle: { fontSize: 16, fontWeight: '700', color: colors.t1 },
@@ -2835,7 +2844,7 @@ const rs = StyleSheet.create({
   bentoActiveDot: { position: 'absolute', top: 12, right: 12 },
 
   // Tailor modal
-  tailorOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  tailorOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.15)', justifyContent: 'flex-end' },
   tailorCard: { backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
   tailorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   tailorTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 16, letterSpacing: 1, color: colors.t1 },
