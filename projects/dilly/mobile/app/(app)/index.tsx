@@ -593,155 +593,198 @@ export default function HomeScreen() {
           </FadeInView>
         )}
 
-        {/* Build-75: Do This Now — the single highest-priority action */}
-        {brief?.do_now && (
-          <FadeInView delay={240}>
-            <AnimatedPressable
-              style={s.doNowCard}
-              onPress={() => {
-                try {
-                  router.push(brief.do_now.action_route as any);
-                } catch {
-                  // swallow bad route strings (from backend) gracefully
-                }
-              }}
-              scaleDown={0.985}
-            >
-              <View style={s.doNowHeader}>
-                <View style={s.doNowDot}>
-                  <DillyFace size={24} />
-                </View>
-                <Text style={s.doNowLabel}>DO THIS NOW</Text>
-              </View>
-              <Text style={s.doNowTitle}>{brief.do_now.title}</Text>
-              <Text style={s.doNowSubtitle}>{brief.do_now.subtitle}</Text>
-              <View style={s.doNowCta}>
-                <Text style={s.doNowCtaText}>{brief.do_now.action_label}</Text>
-                <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
-              </View>
-            </AnimatedPressable>
-          </FadeInView>
-        )}
+        {/* Build-75/76: every new home block is wrapped in a try-style
+            guard that returns null on any bad access. Even if the backend
+            returns an unexpected shape, the career center cannot crash. */}
+        {(() => {
+          try {
+            if (!brief || typeof brief !== 'object') return null;
 
-        {/* Build-75: Daily Brief — up to 3 deterministic facts */}
-        {brief?.brief && brief.brief.length > 0 && (
-          <FadeInView delay={280}>
-            <Text style={s.briefLabel}>DILLY BRIEF</Text>
-            {brief.brief.map((card) => (
-              <AnimatedPressable
-                key={card.id}
-                style={s.briefCard}
-                onPress={() => {
-                  try { router.push(card.action_route as any); } catch {}
-                }}
-                scaleDown={0.985}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={s.briefHeadline}>{card.headline}</Text>
-                  <Text style={s.briefBody} numberOfLines={2}>{card.body}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
-              </AnimatedPressable>
-            ))}
-          </FadeInView>
-        )}
+            const doNow = brief.do_now;
+            const briefCards = Array.isArray(brief.brief) ? brief.brief : [];
+            const pipeline = brief.pipeline;
+            const pipelineTotal = Number(pipeline?.total) || 0;
+            const deadlines = Array.isArray(brief.deadlines) ? brief.deadlines : [];
 
-        {/* Build-75: Pipeline widget — only if there's something to track */}
-        {brief?.pipeline && brief.pipeline.total > 0 && (
-          <FadeInView delay={320}>
-            <Text style={s.pipeLabel}>PIPELINE</Text>
-            <AnimatedPressable
-              style={s.pipeRow}
-              onPress={() => router.push('/(app)/internship-tracker')}
-              scaleDown={0.985}
-            >
-              {[
-                { label: 'Drafts',  value: brief.pipeline.drafts,        color: colors.t3 },
-                { label: 'Applied', value: brief.pipeline.applied,       color: colors.gold },
-                { label: 'Interview', value: brief.pipeline.interviewing, color: colors.blue },
-                { label: 'Offer',   value: brief.pipeline.offers,        color: colors.green },
-              ].map((tile) => (
-                <View key={tile.label} style={s.pipeTile}>
-                  <Text style={[s.pipeValue, { color: tile.value > 0 ? tile.color : colors.t3 }]}>
-                    {tile.value}
-                  </Text>
-                  <Text style={s.pipeTileLabel}>{tile.label}</Text>
-                </View>
-              ))}
-            </AnimatedPressable>
-            {brief.pipeline.silent_2_weeks > 0 && (
-              <View style={s.pipeSilentBanner}>
-                <Ionicons name="alert-circle" size={12} color={colors.amber} />
-                <Text style={s.pipeSilentText}>
-                  {brief.pipeline.silent_2_weeks} application{brief.pipeline.silent_2_weeks !== 1 ? 's' : ''} went quiet. Follow up this week.
-                </Text>
-              </View>
-            )}
-          </FadeInView>
-        )}
-
-        {/* Build-75: Upcoming deadlines — only if any in the next 14 days */}
-        {brief?.deadlines && brief.deadlines.length > 0 && (
-          <FadeInView delay={360}>
-            <View style={s.deadlineHeaderRow}>
-              <Text style={s.deadlineLabel}>UPCOMING</Text>
-              {/* Build-76: subscribe-all shortcut */}
-              <TouchableOpacity
-                onPress={openSubscribeToDillyCalendar}
-                hitSlop={8}
-                style={s.deadlineSubscribeBtn}
-              >
-                <Ionicons name="sync" size={10} color={colors.gold} />
-                <Text style={s.deadlineSubscribeText}>Sync all to calendar</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.deadlineRow}
-            >
-              {brief.deadlines.map((d, i) => {
-                const urgent = d.days_until <= 3;
-                return (
-                  <View key={`${d.date}-${i}`} style={[s.deadlineCard, urgent && s.deadlineCardUrgent]}>
+            return (
+              <>
+                {/* Do This Now */}
+                {doNow && doNow.title && (
+                  <FadeInView delay={240}>
                     <AnimatedPressable
-                      style={{ flex: 1 }}
-                      onPress={() => router.push('/(app)/internship-tracker')}
-                      scaleDown={0.96}
+                      style={s.doNowCard}
+                      onPress={() => {
+                        try { router.push((doNow.action_route || '/(app)/resume-editor') as any); } catch {}
+                      }}
+                      scaleDown={0.985}
                     >
-                      <Text style={[s.deadlineDays, { color: urgent ? colors.coral : colors.t2 }]}>
-                        {d.days_until === 0 ? 'Today' : d.days_until === 1 ? 'Tomorrow' : `${d.days_until}d`}
-                      </Text>
-                      <Text style={s.deadlineCompany} numberOfLines={1}>
-                        {d.company || 'Deadline'}
-                      </Text>
-                      <Text style={s.deadlineRole} numberOfLines={1}>
-                        {d.role || d.label}
-                      </Text>
+                      <View style={s.doNowHeader}>
+                        <View style={s.doNowDot}>
+                          <DillyFace size={24} />
+                        </View>
+                        <Text style={s.doNowLabel}>DO THIS NOW</Text>
+                      </View>
+                      <Text style={s.doNowTitle}>{String(doNow.title || '')}</Text>
+                      {!!doNow.subtitle && (
+                        <Text style={s.doNowSubtitle}>{String(doNow.subtitle)}</Text>
+                      )}
+                      <View style={s.doNowCta}>
+                        <Text style={s.doNowCtaText}>
+                          {String(doNow.action_label || 'Open')}
+                        </Text>
+                        <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+                      </View>
                     </AnimatedPressable>
-                    {/* Build-76: single-event add to calendar */}
-                    <TouchableOpacity
-                      onPress={() => openAddToCalendar({
-                        title: d.company
-                          ? `${d.company} — ${d.role || 'deadline'}`
-                          : (d.label || 'Deadline'),
-                        date: d.date,
-                        description: d.label || 'Added from Dilly',
-                      })}
-                      hitSlop={10}
-                      style={s.deadlineAddBtn}
+                  </FadeInView>
+                )}
+
+                {/* Daily Brief */}
+                {briefCards.length > 0 && (
+                  <FadeInView delay={280}>
+                    <Text style={s.briefLabel}>DILLY BRIEF</Text>
+                    {briefCards.map((card, i) => {
+                      if (!card || typeof card !== 'object') return null;
+                      const key = card.id || `brief-${i}`;
+                      const headline = String(card.headline || '');
+                      const body = String(card.body || '');
+                      if (!headline && !body) return null;
+                      return (
+                        <AnimatedPressable
+                          key={key}
+                          style={s.briefCard}
+                          onPress={() => {
+                            try { router.push((card.action_route || '/(app)/resume-editor') as any); } catch {}
+                          }}
+                          scaleDown={0.985}
+                        >
+                          <View style={{ flex: 1 }}>
+                            {!!headline && <Text style={s.briefHeadline}>{headline}</Text>}
+                            {!!body && <Text style={s.briefBody} numberOfLines={2}>{body}</Text>}
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                        </AnimatedPressable>
+                      );
+                    })}
+                  </FadeInView>
+                )}
+
+                {/* Pipeline widget */}
+                {pipeline && pipelineTotal > 0 && (
+                  <FadeInView delay={320}>
+                    <Text style={s.pipeLabel}>PIPELINE</Text>
+                    <AnimatedPressable
+                      style={s.pipeRow}
+                      onPress={() => router.push('/(app)/internship-tracker')}
+                      scaleDown={0.985}
                     >
-                      <Ionicons name="calendar-outline" size={12} color={urgent ? colors.coral : colors.gold} />
-                      <Text style={[s.deadlineAddText, { color: urgent ? colors.coral : colors.gold }]}>
-                        Add
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </FadeInView>
-        )}
+                      {[
+                        { label: 'Drafts',    value: Number(pipeline.drafts)       || 0, color: colors.t3 },
+                        { label: 'Applied',   value: Number(pipeline.applied)      || 0, color: colors.gold },
+                        { label: 'Interview', value: Number(pipeline.interviewing) || 0, color: colors.blue },
+                        { label: 'Offer',     value: Number(pipeline.offers)       || 0, color: colors.green },
+                      ].map((tile) => (
+                        <View key={tile.label} style={s.pipeTile}>
+                          <Text style={[s.pipeValue, { color: tile.value > 0 ? tile.color : colors.t3 }]}>
+                            {tile.value}
+                          </Text>
+                          <Text style={s.pipeTileLabel}>{tile.label}</Text>
+                        </View>
+                      ))}
+                    </AnimatedPressable>
+                    {Number(pipeline.silent_2_weeks) > 0 && (
+                      <View style={s.pipeSilentBanner}>
+                        <Ionicons name="alert-circle" size={12} color={colors.amber} />
+                        <Text style={s.pipeSilentText}>
+                          {pipeline.silent_2_weeks} application{pipeline.silent_2_weeks !== 1 ? 's' : ''} went quiet. Follow up this week.
+                        </Text>
+                      </View>
+                    )}
+                  </FadeInView>
+                )}
+
+                {/* Upcoming deadlines */}
+                {deadlines.length > 0 && (
+                  <FadeInView delay={360}>
+                    <View style={s.deadlineHeaderRow}>
+                      <Text style={s.deadlineLabel}>UPCOMING</Text>
+                      <TouchableOpacity
+                        onPress={openSubscribeToDillyCalendar}
+                        hitSlop={8}
+                        style={s.deadlineSubscribeBtn}
+                      >
+                        <Ionicons name="sync" size={10} color={colors.gold} />
+                        <Text style={s.deadlineSubscribeText}>Sync all to calendar</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={s.deadlineRow}
+                    >
+                      {deadlines.map((d, i) => {
+                        if (!d || typeof d !== 'object') return null;
+                        const daysUntil = Number(d.days_until);
+                        const safeDays = Number.isFinite(daysUntil) ? daysUntil : 99;
+                        const urgent = safeDays <= 3;
+                        const date = String(d.date || '');
+                        const label = String(d.label || '');
+                        const company = String(d.company || '');
+                        const role = String(d.role || '');
+                        return (
+                          <View key={`${date}-${i}`} style={[s.deadlineCard, urgent && s.deadlineCardUrgent]}>
+                            <AnimatedPressable
+                              style={{ flex: 1 }}
+                              onPress={() => router.push('/(app)/internship-tracker')}
+                              scaleDown={0.96}
+                            >
+                              <Text style={[s.deadlineDays, { color: urgent ? colors.coral : colors.t2 }]}>
+                                {safeDays === 0 ? 'Today' : safeDays === 1 ? 'Tomorrow' : `${safeDays}d`}
+                              </Text>
+                              <Text style={s.deadlineCompany} numberOfLines={1}>
+                                {company || label || 'Deadline'}
+                              </Text>
+                              <Text style={s.deadlineRole} numberOfLines={1}>
+                                {role || (company ? label : '')}
+                              </Text>
+                            </AnimatedPressable>
+                            {!!date && (
+                              <TouchableOpacity
+                                onPress={() => {
+                                  try {
+                                    openAddToCalendar({
+                                      title: company
+                                        ? `${company} — ${role || 'deadline'}`
+                                        : (label || 'Deadline'),
+                                      date,
+                                      description: label || 'Added from Dilly',
+                                    });
+                                  } catch {}
+                                }}
+                                hitSlop={10}
+                                style={s.deadlineAddBtn}
+                              >
+                                <Ionicons name="calendar-outline" size={12} color={urgent ? colors.coral : colors.gold} />
+                                <Text style={[s.deadlineAddText, { color: urgent ? colors.coral : colors.gold }]}>
+                                  Add
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+                  </FadeInView>
+                )}
+              </>
+            );
+          } catch (e) {
+            // Any render error in the new home blocks degrades silently
+            // instead of blowing up the entire career center ErrorBoundary.
+            // eslint-disable-next-line no-console
+            console.error('[home brief render]', e);
+            return null;
+          }
+        })()}
 
         {/* ── Top Matches ──────────────────────────────────────── */}
         {topJobs.length > 0 && (
