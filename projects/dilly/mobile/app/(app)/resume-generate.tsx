@@ -151,7 +151,7 @@ export default function ResumeGenerateScreen() {
       }
 
       const text = await res.text();
-      // The endpoint streams raw JSON — find the JSON array in the response
+      // The endpoint streams raw JSON  -  find the JSON array in the response
       const jsonStart = text.indexOf('[');
       const jsonEnd = text.lastIndexOf(']');
       if (jsonStart === -1 || jsonEnd === -1) {
@@ -179,7 +179,7 @@ export default function ResumeGenerateScreen() {
       const now = new Date();
       const month = now.toLocaleString('default', { month: 'short' });
       const year = now.getFullYear();
-      const label = `${company.trim()} — ${jobTitle.trim()}, ${month} ${year}`;
+      const label = `${company.trim()}  -  ${jobTitle.trim()}, ${month} ${year}`;
 
       const meta: any = await dilly.post('/resume/variants', { label });
       const id = meta?.variant?.id ?? meta?.id;
@@ -189,7 +189,7 @@ export default function ResumeGenerateScreen() {
       setVariantId(id);
       setSaved(true);
     } catch {
-      // Saving failed silently — not blocking
+      // Saving failed silently  -  not blocking
     }
   }
 
@@ -230,7 +230,7 @@ export default function ResumeGenerateScreen() {
               <Text style={styles.heroTitle}>AI Resume Builder</Text>
               <Text style={styles.heroSub}>
                 Dilly reads your profile, your experiences, and the job description to write a
-                tailored resume from scratch — not a template.
+                tailored resume from scratch  -  not a template.
               </Text>
             </View>
 
@@ -263,7 +263,7 @@ export default function ResumeGenerateScreen() {
               </Text>
               <TextInput
                 style={[styles.input, styles.jdInput]}
-                placeholder="Paste the full job description — required for accurate scoring and tailoring…"
+                placeholder="Paste the full job description  -  required for accurate scoring and tailoring…"
                 placeholderTextColor={colors.t3}
                 value={jd}
                 onChangeText={setJd}
@@ -329,7 +329,7 @@ export default function ResumeGenerateScreen() {
             </AnimatedPressable>
 
             <Text style={styles.disclaimer}>
-              Takes ~15–25 seconds. Your Dilly profile and current resume are used as source material.
+              Takes ~15-25 seconds. Your Dilly profile and current resume are used as source material.
             </Text>
           </FadeInView>
         )}

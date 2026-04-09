@@ -97,7 +97,7 @@ export default function InterestsScreen() {
     setLoading(true);
     try {
       const headers = await authHeaders();
-      // Save interests — fire-and-forget, non-fatal
+      // Save interests  -  fire-and-forget, non-fatal
       fetch(`${API_BASE}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...headers },
@@ -122,7 +122,7 @@ export default function InterestsScreen() {
         });
       }
     } catch {
-      // Non-fatal — navigate regardless
+      // Non-fatal  -  navigate regardless
       const needsIndustry =
         cohort === 'Quantitative' || parsedMajors.includes('Data Science');
       if (needsIndustry) {

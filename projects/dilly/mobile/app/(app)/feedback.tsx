@@ -1,5 +1,5 @@
 /**
- * FEEDBACK SCREEN — detailed rubric-driven resume feedback.
+ * FEEDBACK SCREEN  -  detailed rubric-driven resume feedback.
  *
  * Purpose
  * ───────
@@ -8,7 +8,7 @@
  * responses (post Tier 2 cutover 2026-04-08) and renders it as a complete,
  * actionable feedback experience.
  *
- * This page is the deep-dive companion to results.tsx / new-audit.tsx —
+ * This page is the deep-dive companion to results.tsx / new-audit.tsx  - 
  * those screens show the summary, this screen shows every detail: every
  * matched signal with the exact text from the rubric, every unmatched
  * high-impact signal with its cited rationale, every fastest-path move,
@@ -150,8 +150,8 @@ export default function FeedbackScreen() {
   const [audit, setAudit] = useState<AuditLike | null>(null);
 
   // Load the latest audit on mount. Strategy:
-  //  1. Try AsyncStorage (dilly_latest_audit) — fastest, populated by audit flow
-  //  2. Fall back to /audit/latest API — canonical server-side record
+  //  1. Try AsyncStorage (dilly_latest_audit)  -  fastest, populated by audit flow
+  //  2. Fall back to /audit/latest API  -  canonical server-side record
   //  3. If both fail, show empty state
   useEffect(() => {
     let cancelled = false;
@@ -181,7 +181,7 @@ export default function FeedbackScreen() {
             } catch {}
           }
         } catch (apiErr: any) {
-          // API failed — if we already have a cached version, that's fine
+          // API failed  -  if we already have a cached version, that's fine
           if (!cancelled && !audit) {
             setError('Could not load your latest audit. Tap to retry.');
           }
@@ -209,7 +209,7 @@ export default function FeedbackScreen() {
     );
   }
 
-  // ── Empty state — no audit yet ─────────────────────────────────────
+  // ── Empty state  -  no audit yet ─────────────────────────────────────
   if (!audit || !audit.rubric_analysis) {
     return (
       <View style={[s.container, { paddingTop: insets.top }]}>
@@ -224,7 +224,7 @@ export default function FeedbackScreen() {
           <Text style={s.emptyHeading}>No feedback yet.</Text>
           <Text style={s.emptyBody}>
             Run your first audit to see exactly which signals on your resume are working,
-            which ones are missing, and the specific actions that move your score fastest —
+            which ones are missing, and the specific actions that move your score fastest  - 
             each one cited from real employer research.
           </Text>
           <TouchableOpacity
@@ -240,7 +240,7 @@ export default function FeedbackScreen() {
     );
   }
 
-  // ── Loaded state — render full feedback ───────────────────────────
+  // ── Loaded state  -  render full feedback ───────────────────────────
   const ra = audit.rubric_analysis;
   const admissionType = isAdmissionsCohort(ra.primary_cohort_id);
   const isAdmissions = !!admissionType;

@@ -1,12 +1,12 @@
 /**
- * ATSCompareView — multi-version ATS score comparison.
+ * ATSCompareView  -  multi-version ATS score comparison.
  *
  * Pulls the last 2-3 audits via POST /ats/compare and renders:
  *   - A side-by-side grid of composite scores across vendors
  *   - Best-version badges per vendor ("Best on Workday: Apr 8")
  *   - A delta summary showing the biggest score moves between versions
  *
- * Used from ats.tsx. Controlled by a `visible` boolean — parent decides
+ * Used from ats.tsx. Controlled by a `visible` boolean  -  parent decides
  * when to mount it so the /ats/compare request only fires on open.
  */
 

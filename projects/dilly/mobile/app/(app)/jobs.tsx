@@ -46,7 +46,7 @@ interface Listing {
 
 interface StudentScores { smart: number; grit: number; build: number; score: number; }
 
-// Fallback when a listing hasn't been classified yet — competitive internship floor
+// Fallback when a listing hasn't been classified yet  -  competitive internship floor
 const BASELINE_SCORES: RequiredScores = { smart: 65, grit: 65, build: 65 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -403,7 +403,7 @@ function InterestsSetupCard({ profile, onComplete, primaryCohortName }: { profil
   const majors: string[] = profile.majors || (profile.major ? [profile.major] : []);
   const minors: string[] = profile.minors || [];
   const autoPopulated = [...majors, ...minors].filter(Boolean);
-  // The primary cohort is already assigned in onboarding — don't show it as
+  // The primary cohort is already assigned in onboarding  -  don't show it as
   // a pickable interest.
   const excluded = primaryCohortName ? [primaryCohortName] : [];
 
@@ -439,7 +439,7 @@ function InterestsSetupCard({ profile, onComplete, primaryCohortName }: { profil
         <Text style={js.setupTitle}>What fields interest you?</Text>
       </View>
       <Text style={js.setupSub}>
-        Select the career fields you're interested in. Your major{majors.length > 0 ? `${majors.length > 1 ? 's are' : ' is'} pre-selected` : 's will be auto-added'}.
+        These control which jobs Dilly shows you. Pick fields you'd actually apply to  -  not just your major.{majors.length > 0 ? ` Your major${majors.length > 1 ? 's are' : ' is'} pre-selected.` : ''}
       </Text>
 
       <Text style={js.setupSectionLabel}>YOUR INTERESTS</Text>
@@ -589,8 +589,11 @@ export default function JobsScreen() {
           cohort_readiness: cr,
         };
       });
-      setListings(parsed.filter((l: any) => !l._skip));
-      setTotal(data.total || 0);
+      const visible = parsed.filter((l: any) => !l._skip);
+      setListings(visible);
+      // Use the VISIBLE count, not the backend total which includes
+      // international jobs we filtered out on the client side.
+      setTotal(visible.length);
       setFiltered(!!search || !!filterCompany);
     } catch {}
     finally { setLoading(false); setRefreshing(false); }
@@ -680,7 +683,7 @@ export default function JobsScreen() {
         </View>
       </FadeInView>
 
-      {/* Loading state — show spinner until profile is loaded */}
+      {/* Loading state  -  show spinner until profile is loaded */}
       {!profileLoaded ? (
         <View style={js.loadingWrap}>
           <ActivityIndicator size="large" color={GOLD} />
@@ -853,13 +856,13 @@ export default function JobsScreen() {
                     </View>
                   ) : null
                 );
-                void pathHeader; // reserved — cards below already highlight readiness
+                void pathHeader; // reserved  -  cards below already highlight readiness
                 // When "For you" mode: filter to listings matching user's cohort (or uncategorized)
                 const visibleListings = showAll || !userCohort
                   ? listings
                   : listings.filter((l: any) => {
                       const cr: any[] = l.cohort_readiness || [];
-                      if (cr.length === 0) return true; // uncategorized — show for all
+                      if (cr.length === 0) return true; // uncategorized  -  show for all
                       return cr.some(entry => (entry.cohort || '').toLowerCase() === userCohort);
                     });
                 // If a focus job id was passed (deep link from home screen
@@ -951,7 +954,7 @@ const js = StyleSheet.create({
   // Scroll
   scroll: { paddingHorizontal: 20, paddingTop: 4 },
 
-  // Job Card — Robinhood inspired
+  // Job Card  -  Robinhood inspired
   jobCard: { backgroundColor: '#F7F8FC', borderRadius: 14, marginBottom: 6, overflow: 'hidden' },
   cardOuter: { flexDirection: 'row' },
   accentBar: { width: 3, borderRadius: 0 },
@@ -961,7 +964,7 @@ const js = StyleSheet.create({
   readinessLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
   metaLine: { fontSize: 13, color: 'rgba(26,26,46,0.3)', marginTop: 6 },
 
-  // Legacy — keep for compat
+  // Legacy  -  keep for compat
   readinessBadge: { display: 'none' },
   readinessText: { display: 'none' },
   metaRow: { display: 'none' },
@@ -978,7 +981,7 @@ const js = StyleSheet.create({
   cohortLevel: { display: 'none' },
   cohortName: { display: 'none' },
 
-  // Tags — hidden in new design
+  // Tags  -  hidden in new design
   tagRow: { display: 'none' },
   tag: { display: 'none' },
   tagText: { display: 'none' },
@@ -990,7 +993,7 @@ const js = StyleSheet.create({
   gapSection: { backgroundColor: '#EFF0F6', borderRadius: 14, padding: 16, marginBottom: 12 },
   gapTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#2B3A8E', marginBottom: 14, textTransform: 'uppercase' },
 
-  // Dimension bars — clean and precise
+  // Dimension bars  -  clean and precise
   dimBar: { marginBottom: 10 },
   dimBarHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   dimBarLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(26,26,46,0.45)', width: 44 },

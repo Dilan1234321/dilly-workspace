@@ -1,5 +1,5 @@
 /**
- * FadeInView — wraps children in a fade + slide-up entrance animation.
+ * FadeInView  -  wraps children in a fade + slide-up entrance animation.
  *
  * Usage:
  *   <FadeInView delay={100}>
@@ -7,10 +7,10 @@
  *   </FadeInView>
  *
  * Props:
- *   delay     — ms before animation starts (default 0)
- *   duration  — ms for the animation (default 450)
- *   distance  — pixels to slide up from (default 16)
- *   style     — additional styles
+ *   delay      -  ms before animation starts (default 0)
+ *   duration   -  ms for the animation (default 450)
+ *   distance   -  pixels to slide up from (default 16)
+ *   style      -  additional styles
  */
 
 import { ReactNode, useEffect, useRef } from 'react';

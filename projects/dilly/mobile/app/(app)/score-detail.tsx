@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -465,7 +467,7 @@ export default function ScoreDetailScreen() {
           </>
         )}
 
-        {/* ── Gap Callout ──────────────────────────────────────────────── */}
+        {/* ── Gap Callout (improved: actionable buttons) ─────────────── */}
         {activeScores && (
           <View style={[s.gapCard, { borderLeftColor: scoreColor(activeScores[weakestDim]) }]}>
             <Text style={s.gapHeadline}>
@@ -474,11 +476,54 @@ export default function ScoreDetailScreen() {
             <Text style={s.gapSub}>
               Your {weakestDim.charAt(0).toUpperCase() + weakestDim.slice(1)} is {Math.round(activeScores[weakestDim])} in {active?.name}. Peer average is around {peerAvgs[weakestDim]}. Close this gap to move up.
             </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <AnimatedPressable
+                style={s.gapActionBtn}
+                onPress={() => router.push(`/(app)/resume-editor?focusDimension=${weakestDim}`)}
+                scaleDown={0.97}
+              >
+                <Ionicons name="create-outline" size={12} color={colors.gold} />
+                <Text style={s.gapActionText}>Fix in editor</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={s.gapActionBtn}
+                onPress={() => openDillyOverlay({
+                  name: '', cohort: active?.name || '',
+                  score: displayScore,
+                  smart: Math.round(activeScores.smart),
+                  grit: Math.round(activeScores.grit),
+                  build: Math.round(activeScores.build),
+                  gap: peerAvgs[weakestDim] - activeScores[weakestDim],
+                  cohortBar: peerAvgs[weakestDim],
+                  isPaid: true,
+                  initialMessage: `My weakest dimension is ${weakestDim} at ${Math.round(activeScores[weakestDim])}. Help me improve it.`,
+                })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="chatbubble-outline" size={12} color={colors.gold} />
+                <Text style={s.gapActionText}>Ask Dilly</Text>
+              </AnimatedPressable>
+            </View>
           </View>
         )}
 
-        {/* ── Recommendations ──────────────────────────────────────────── */}
+        {/* ── Recommendations (tappable → opens Dilly coach) ────────── */}
         {renderRecs(visRecs, hasLocked, recs.length)}
+
+        {/* ── Re-audit button ────────────────────────────────────────── */}
+        <View style={{ marginTop: 16, marginBottom: 24 }}>
+          <AnimatedPressable
+            style={s.reauditBtn}
+            onPress={() => router.push('/(app)/new-audit')}
+            scaleDown={0.97}
+          >
+            <Ionicons name="flash" size={16} color="#FFFFFF" />
+            <Text style={s.reauditBtnText}>Re-audit my resume</Text>
+          </AnimatedPressable>
+          <Text style={s.reauditHint}>
+            Made changes? Run a fresh audit to see your updated scores.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -537,7 +582,16 @@ function renderRecs(visRecs: Rec[], hasLocked: boolean, totalCount: number) {
         const color = DIM_COLOR[dim];
         return (
           <View key={i}>
-            <View style={s.recRow}>
+            <TouchableOpacity
+              style={s.recRow}
+              activeOpacity={0.7}
+              onPress={() => openDillyOverlay({
+                name: '', cohort: '', score: 0,
+                smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+                isPaid: true,
+                initialMessage: `Help me with this recommendation: "${rec.title}". The suggested action is: "${rec.action}". Walk me through exactly what to change on my resume.`,
+              })}
+            >
               <View style={[s.recTag, { backgroundColor: color + '22', borderColor: color + '55' }]}>
                 <Text style={[s.recTagText, { color }]}>{dim.toUpperCase()}</Text>
               </View>
@@ -545,29 +599,14 @@ function renderRecs(visRecs: Rec[], hasLocked: boolean, totalCount: number) {
                 <Text style={s.recTitle} numberOfLines={1}>{rec.title}</Text>
                 <Text style={s.recAction} numberOfLines={2}>{rec.action}</Text>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={14} color={colors.t3} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
             {i < visRecs.length - 1 && <View style={s.divider} />}
           </View>
         );
       })}
-      {hasLocked && (
-        <>
-          <View style={s.divider} />
-          <View style={s.lockedRow}>
-            <View style={s.lockedBlur}>
-              <Text style={s.lockedBlurText}>████████████████ ██████████</Text>
-              <Text style={[s.lockedBlurText, { opacity: 0.4 }]}>████████████ ████████</Text>
-            </View>
-            <View style={s.lockedOverlay}>
-              <Ionicons name="lock-closed" size={12} color={colors.indigo} />
-              <Text style={s.lockedCount}>{totalCount - 2} more locked</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={s.unlockBtn} onPress={() => {}} activeOpacity={0.85}>
-            <Text style={s.unlockBtnText}>Unlock all recommendations →</Text>
-          </TouchableOpacity>
-        </>
-      )}
+      {/* Locked section removed - fake paywall placeholder with empty
+          onPress. Will re-add when real subscription is wired. */}
     </>
   );
 }
@@ -838,6 +877,21 @@ const s = StyleSheet.create({
   },
   gapHeadline: { fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 4 },
   gapSub:      { fontSize: 12, color: colors.t2, lineHeight: 18 },
+  gapActionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    flex: 1, paddingVertical: 9,
+    backgroundColor: colors.s2, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.gold + '40',
+  },
+  gapActionText: { fontSize: 11, color: colors.gold, fontWeight: '700' },
+
+  // Re-audit button
+  reauditBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.gold, borderRadius: 12, paddingVertical: 14,
+  },
+  reauditBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+  reauditHint: { fontSize: 10, color: colors.t3, textAlign: 'center', marginTop: 6 },
 
   // ── Recommendations ───────────────────────────────────────────────────────
   recRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 12 },

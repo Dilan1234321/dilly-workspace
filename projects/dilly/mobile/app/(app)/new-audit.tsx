@@ -92,7 +92,7 @@ interface PickedFile {
 
 function scoreColor(s: number): string {
   // Two-tier encouraging palette: green if strong, brand blue otherwise.
-  // Never red, never orange — low scores should feel like a starting line,
+  // Never red, never orange  -  low scores should feel like a starting line,
   // not a failure. GOLD here is the Dilly brand blue (#2B3A8E).
   if (s >= 80) return GREEN;
   return GOLD;
@@ -300,7 +300,7 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
             </View>
           )}
 
-          {/* Biggest levers — unmatched high-impact with rationales */}
+          {/* Biggest levers  -  unmatched high-impact with rationales */}
           {newAudit.rubric_analysis.unmatched_signals && newAudit.rubric_analysis.unmatched_signals.filter(s => s.tier === 'high').length > 0 && (
             <View style={ns.rubricSection}>
               <Text style={ns.rubricHeading}>Biggest levers</Text>
@@ -594,7 +594,7 @@ export default function NewAuditScreen() {
             {/* Build-78: Two equal-weight audit source cards */}
             <FadeInView delay={120}>
               {file ? (
-                /* File already picked — show it with a clear button */
+                /* File already picked  -  show it with a clear button */
                 <AnimatedPressable style={[ns.uploadZone, ns.uploadZoneSelected]} onPress={pickFile} scaleDown={0.98}>
                   <View style={ns.uploadFileInfo}>
                     <View style={ns.uploadFileIcon}>
@@ -658,7 +658,7 @@ export default function NewAuditScreen() {
                         <Ionicons name="alert-circle-outline" size={13} color={AMBER} />
                         <Text style={ns.tipText} numberOfLines={2}>
                           {sig.signal || sig.title || 'Missing signal'}
-                          {sig.rationale ? ` — ${sig.rationale}` : ''}
+                          {sig.rationale ? `  -  ${sig.rationale}` : ''}
                         </Text>
                       </View>
                     ));
@@ -973,7 +973,7 @@ const ns = StyleSheet.create({
     letterSpacing: 1.2, color: colors.t3, marginBottom: 6,
   },
 
-  // What's working — matched signals (subtle green tint)
+  // What's working  -  matched signals (subtle green tint)
   matchedRow: {
     flexDirection: 'row', gap: 8, alignItems: 'flex-start',
     paddingVertical: 6, paddingHorizontal: 10,
@@ -987,7 +987,7 @@ const ns = StyleSheet.create({
   },
   matchedText: { fontSize: 11, fontWeight: '500', color: colors.t1, lineHeight: 15, flex: 1 },
 
-  // Biggest levers — unmatched high-impact with rationales
+  // Biggest levers  -  unmatched high-impact with rationales
   leverCard: {
     flexDirection: 'row', gap: 9, alignItems: 'flex-start',
     backgroundColor: 'rgba(43,58,142,0.06)',
@@ -1003,7 +1003,7 @@ const ns = StyleSheet.create({
   leverTitle: { fontSize: 11.5, fontWeight: '700', color: colors.t1, marginBottom: 3, lineHeight: 15 },
   leverBody: { fontSize: 10, color: colors.t2, lineHeight: 14 },
 
-  // Fastest path forward — specific moves
+  // Fastest path forward  -  specific moves
   moveCard: {
     flexDirection: 'row', alignItems: 'flex-start',
     paddingVertical: 6, paddingHorizontal: 10,

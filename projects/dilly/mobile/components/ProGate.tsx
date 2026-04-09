@@ -46,11 +46,11 @@ export default function ProGate({ feature, children, fallback }: Props) {
 }
 
 /**
- * Inline lock badge — use on buttons/cards that are partially visible but not actionable.
+ * Inline lock badge  -  use on buttons/cards that are partially visible but not actionable.
  * Shows a small lock icon and triggers paywall on tap.
  * 
  * Usage:
- *   <ProBadge feature="ats" />  — renders a small "PRO" badge
+ *   <ProBadge feature="ats" />   -  renders a small "PRO" badge
  */
 export function ProBadge({ feature }: { feature: string }) {
   const { isPaid, showPaywall } = useSubscription();

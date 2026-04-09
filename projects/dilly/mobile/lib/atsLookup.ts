@@ -178,7 +178,7 @@ export function lookupCompanyATS(companyName: string, sourceField?: string): ATS
 
 /**
  * Estimate ATS compatibility score based on system strictness.
- * This is a rough estimate — real scores come from the backend /ats-vendor-sim endpoint.
+ * This is a rough estimate  -  real scores come from the backend /ats-vendor-sim endpoint.
  * Used for instant display before the full scan runs.
  */
 export function estimateATSScore(strictness: 'lenient' | 'moderate' | 'strict'): { min: number; max: number; label: string } {

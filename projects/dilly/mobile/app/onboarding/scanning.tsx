@@ -396,7 +396,7 @@ export default function ScanningScreen() {
 
       {/* Commitment line */}
       <Text style={s.commitment}>
-        Every audit, every improvement —{' '}
+        Every audit, every improvement  - {' '}
         <Text style={s.commitmentBold}>saved to your profile forever.</Text>
       </Text>
     </View>

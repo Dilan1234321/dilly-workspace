@@ -1,5 +1,5 @@
 /**
- * TailorDiffModal — rich before/after viewer for /resume/tailor-diff.
+ * TailorDiffModal  -  rich before/after viewer for /resume/tailor-diff.
  *
  * Workflow:
  *   1. Parent shows a small setup modal (company + role + optional JD paste)

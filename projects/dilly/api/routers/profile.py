@@ -1254,9 +1254,36 @@ async def get_streak(request: Request):
 
 @router.get("/interests/list")
 async def get_interests_list(request: Request):
-    """Return the curated list of interests/fields for the UI picker."""
-    from projects.dilly.api.interests import INTERESTS_LIST, EDUCATION_LEVELS
+    """Return the curated list of interests/fields for the UI picker.
+    Now also returns grouped layout + personalized recommendations
+    when the user is authenticated."""
+    from projects.dilly.api.interests import (
+        INTERESTS_LIST, EDUCATION_LEVELS, INTEREST_GROUPS,
+        recommend_interests_for_student,
+    )
+
+    recommended: list = []
+    try:
+        user = deps.require_auth(request)
+        email = (user.get("email") or "").strip().lower()
+        if email:
+            from projects.dilly.api.profile_store import get_profile
+            profile = get_profile(email) or {}
+            majors = profile.get("majors") or ([profile.get("major")] if profile.get("major") else [])
+            # Pull skills from Dilly Profile experience_expansion
+            skills: list = []
+            tools: list = []
+            for exp in (profile.get("experience_expansion") or []):
+                if isinstance(exp, dict):
+                    skills.extend(exp.get("skills") or [])
+                    tools.extend(exp.get("tools_used") or [])
+            recommended = recommend_interests_for_student(majors, skills[:20], tools[:20])
+    except Exception:
+        pass  # unauthenticated or no profile — no recommendations
+
     return {
         "interests": INTERESTS_LIST,
+        "groups": INTEREST_GROUPS,
+        "recommended": recommended,
         "education_levels": EDUCATION_LEVELS,
     }

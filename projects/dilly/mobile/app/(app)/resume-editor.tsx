@@ -229,9 +229,9 @@ const ADDABLE_SECTIONS: AddableSection[] = [
   { key: 'certifications', label: 'Certifications', placeholder: 'AWS Certified Cloud Practitioner',    description: 'Professional certs and licenses' },
   { key: 'coursework',     label: 'Relevant Coursework', placeholder: 'Data Structures, Algorithms, ML', description: 'Classes that match the target role' },
   { key: 'publications',   label: 'Publications',   placeholder: 'Smith, J. (2025). Paper title. Journal.', description: 'Papers, articles, conference talks' },
-  { key: 'leadership',     label: 'Leadership',     placeholder: 'President — Data Science Club (2024)',   description: 'Clubs, boards, committees' },
+  { key: 'leadership',     label: 'Leadership',     placeholder: 'President  -  Data Science Club (2024)',   description: 'Clubs, boards, committees' },
   { key: 'activities',     label: 'Activities',     placeholder: 'Varsity Track (2022-2024)',              description: 'Extracurriculars and volunteering' },
-  { key: 'languages',      label: 'Languages',      placeholder: 'Spanish — Professional, French — Conversational', description: 'Spoken/written languages and proficiency' },
+  { key: 'languages',      label: 'Languages',      placeholder: 'Spanish  -  Professional, French  -  Conversational', description: 'Spoken/written languages and proficiency' },
 ];
 
 // Build 71: nice display label for any section key, catalog or not
@@ -389,7 +389,7 @@ function BulletScoreBar({ score, previousScore }: { score: BulletScore | null; p
   );
 }
 
-// Build 66 — live bullet lint: categorize hints into intent buckets so the
+// Build 66  -  live bullet lint: categorize hints into intent buckets so the
 // user sees what KIND of problem each hint is about (weak verb vs missing
 // metric vs passive voice vs length), color-coded at a glance.
 function categorizeHint(hint: string): { icon: string; color: string } {
@@ -515,7 +515,7 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
           changes: Array.isArray(r.changes) ? r.changes : [],
         });
       } else {
-        // No change needed — fall back to the Dilly overlay for a longer conversation
+        // No change needed  -  fall back to the Dilly overlay for a longer conversation
         setRewriteModalOpen(false);
         const score = localScore?.score ?? 0;
         openDillyOverlay({
@@ -569,7 +569,7 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
           <Ionicons name="close-circle" size={14} color={colors.t3 + '60'} />
         </AnimatedPressable>
       </View>
-      {/* Action row below bullet — Improve with Dilly + What's this worth */}
+      {/* Action row below bullet  -  Improve with Dilly + What's this worth */}
       {canAskDilly && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <AnimatedPressable onPress={handleAskDilly} scaleDown={0.92} style={rs.askDillyRow}>
@@ -591,7 +591,7 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
         </View>
       )}
 
-      {/* Accept/Reject rewrite modal — compact before/after comparison */}
+      {/* Accept/Reject rewrite modal  -  compact before/after comparison */}
       <Modal visible={rewriteModalOpen} transparent animationType="fade" onRequestClose={rejectRewrite}>
         <View style={rs.rewriteModalOverlay}>
           <View style={rs.rewriteModalCard}>
@@ -736,7 +736,7 @@ function ExperiencePreview({ entries, onChange, ph, onScoreUpdate }: {
           </View>
           <View style={rs.blockHeaderRow}>
             <InlineField value={entry.role} onChangeText={v => updateEntry(i, { role: v })} placeholder={ph.role} style={{ flex: 1, fontStyle: 'italic' }} />
-            <InlineField value={entry.date} onChangeText={v => updateEntry(i, { date: v })} placeholder="Jun — Aug 2025" muted style={{ textAlign: 'right' }} />
+            <InlineField value={entry.date} onChangeText={v => updateEntry(i, { date: v })} placeholder="Jun  -  Aug 2025" muted style={{ textAlign: 'right' }} />
           </View>
           {entry.bullets.map((b, j) => (
             <BulletEditor key={b.id} bullet={b} placeholder={ph.bullet} onChange={text => updateBullet(i, j, text)} onDelete={() => deleteBullet(i, j)} onScoreUpdate={onScoreUpdate} />
@@ -826,7 +826,7 @@ function SimplePreview({ simple, onChange, ph }: { simple: SimpleSection; onChan
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function ResumeEditorScreen() {
-  const { variantId: incomingVariantId } = useLocalSearchParams<{ variantId?: string }>();
+  const { variantId: incomingVariantId, focusDimension } = useLocalSearchParams<{ variantId?: string; focusDimension?: string }>();
   const insets = useSafeAreaInsets();
 
   const [sections, setSections]     = useState<ResumeSection[]>([]);
@@ -883,6 +883,22 @@ export default function ResumeEditorScreen() {
   // Build-73: export format toggle (PDF default, DOCX optional)
   const [exportFormat, setExportFormat] = useState<'pdf' | 'docx'>('pdf');
 
+  // When arriving from the scores page "Fix in editor" button with a
+  // focusDimension param, ensure the coaching dashboard is visible and
+  // show a toast telling the user which dimension to focus on.
+  useEffect(() => {
+    if (!focusDimension) return;
+    const dim = String(focusDimension).toLowerCase();
+    if (!['smart', 'grit', 'build'].includes(dim)) return;
+    // Ensure the dashboard is open
+    setShowDashboard(true);
+    // Toast with the dimension name
+    const label = dim.charAt(0).toUpperCase() + dim.slice(1);
+    setTimeout(() => {
+      showToast(`Focus: improve your ${label} score. Check the coaching dashboard.`);
+    }, 600);
+  }, [focusDimension]);
+
   // Build-70: autosave to AsyncStorage on every change (debounced 800ms).
   // Write a timestamped draft so we can prompt to restore after a crash.
   useEffect(() => {
@@ -908,7 +924,7 @@ export default function ResumeEditorScreen() {
         ]);
         setMajor(profileRes?.majors?.[0] || profileRes?.major || '');
 
-        // Seed initial score from latest audit — prefer primary cohort
+        // Seed initial score from latest audit  -  prefer primary cohort
         // composite from rubric_analysis over the legacy aggregate.
         const auditObj = auditRes?.audit ?? auditRes;
         const ra = auditObj?.rubric_analysis;
@@ -978,7 +994,7 @@ export default function ResumeEditorScreen() {
         setSections(buildDefaultSections(null));
       } finally {
         setLoading(false);
-        // Autosave effect is gated on hydratedRef — flip it after the initial
+        // Autosave effect is gated on hydratedRef  -  flip it after the initial
         // load resolves so we don't overwrite the draft with an empty first
         // render before the server copy arrives.
         setTimeout(() => { hydratedRef.current = true; }, 50);
@@ -1026,7 +1042,7 @@ export default function ResumeEditorScreen() {
   }, [sections, bulletScores]);
 
   // Build-72: word count + page estimate. Counts every editable text
-  // field — bullets, entry headers, skills lines, summary/etc. ~450 words
+  // field  -  bullets, entry headers, skills lines, summary/etc. ~450 words
   // per page is the standard single-column resume density.
   const { wordCount, pageEstimate } = useMemo(() => {
     const chunks: string[] = [];
@@ -1116,7 +1132,7 @@ export default function ResumeEditorScreen() {
     showToast('Section order applied. Save to persist.');
   }
 
-  // Build-73: JD Quick Tailor — paste a JD, get a deterministically
+  // Build-73: JD Quick Tailor  -  paste a JD, get a deterministically
   // rearranged + strengthened version of the current resume. Zero LLM cost.
   async function runQuickTailor() {
     const jd = quickJD.trim();
@@ -1191,7 +1207,7 @@ export default function ResumeEditorScreen() {
     }
   }
 
-  // Build-73: variant compare — fetches /ats/compare and shows side-by-side
+  // Build-73: variant compare  -  fetches /ats/compare and shows side-by-side
   async function openCompare() {
     setShowCompare(true);
     setCompareLoading(true);
@@ -1306,7 +1322,7 @@ export default function ResumeEditorScreen() {
   }
 
   // ── Debounced /resume/editor-scan (build 63 dashboard) ──────────────────
-  // Fires 600ms after the last section edit. Non-blocking — the editor stays
+  // Fires 600ms after the last section edit. Non-blocking  -  the editor stays
   // fully interactive while the scan runs in the background.
   const runEditorScan = useCallback(async () => {
     if (!sections || sections.length === 0) return;
@@ -1361,7 +1377,7 @@ export default function ResumeEditorScreen() {
   // Closes the loop between the "Fix this first" list and the AI chat.
   function handleFixIssue(issue: any) {
     // Build-72: deterministic auto-fix path. For a small set of issues
-    // there's no judgment call — we just apply the fix directly instead
+    // there's no judgment call  -  we just apply the fix directly instead
     // of routing through the AI overlay.
     const id = String(issue?.id || '');
     if (id === 'missing_education' || id === 'missing_experience' || id === 'missing_skills') {
@@ -1478,7 +1494,7 @@ export default function ResumeEditorScreen() {
 
   // ── PDF export ──────────────────────────────────────────────────────────
   // Backend stores the PDF in a transient cache and returns a public URL.
-  // We open that URL with Linking — iOS Safari renders the PDF natively
+  // We open that URL with Linking  -  iOS Safari renders the PDF natively
   // with its standard share/save sheet. Works without expo-file-system
   // or expo-sharing.
   async function handleExport(
@@ -1563,10 +1579,10 @@ export default function ResumeEditorScreen() {
     }
   }
 
-  // Build 65: re-audit button handler — saves first if dirty, then runs
+  // Build 65: re-audit button handler  -  saves first if dirty, then runs
   // the full audit pipeline against the saved resume. On success, updates
   // the seeded initial score so the dashboard and floating badge reflect
-  // the fresh numbers immediately. No paywall — the backend already
+  // the fresh numbers immediately. No paywall  -  the backend already
   // bypasses the subscription check for all users.
   async function handleReaudit() {
     if (reauditing) return;
@@ -1616,7 +1632,7 @@ export default function ResumeEditorScreen() {
     setSaving(true);
     try {
       // dilly.fetch gives us a real Response; dilly.post returns the parsed body
-      // and has no .ok field — the old code always fell into the catch even on success.
+      // and has no .ok field  -  the old code always fell into the catch even on success.
       const res = await dilly.fetch('/resume/save', {
         method: 'POST',
         body: JSON.stringify({ sections }),
@@ -1626,7 +1642,7 @@ export default function ResumeEditorScreen() {
         throw new Error(detail?.detail || 'save failed');
       }
       setHasChanges(false);
-      // Clear the crash-recovery draft — nothing left to restore.
+      // Clear the crash-recovery draft  -  nothing left to restore.
       AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
       showToast('Saved.');
     } catch (e: any) {
@@ -1686,7 +1702,7 @@ export default function ResumeEditorScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[rs.scroll, { paddingBottom: insets.bottom + 60 }]} keyboardShouldPersistTaps="handled">
 
-        {/* Resume selector — grid button */}
+        {/* Resume selector  -  grid button */}
         <View style={rs.variantSection}>
           <AnimatedPressable style={rs.gridBtn} onPress={() => setShowGrid(true)} scaleDown={0.97}>
             <View style={rs.gridBtnLeft}>
@@ -1704,14 +1720,14 @@ export default function ResumeEditorScreen() {
           </AnimatedPressable>
         </View>
 
-        {/* Build-74: Dilly Tailor — deterministic, free, paste-a-JD flow */}
+        {/* Build-74: Dilly Tailor  -  deterministic, free, paste-a-JD flow */}
         <AnimatedPressable
           style={[rs.tailorBtn, { backgroundColor: GOLD + '18', borderColor: GOLD + '55' }]}
           onPress={() => setShowQuickTailor(true)}
           scaleDown={0.97}
         >
           <Ionicons name="flash" size={14} color={GOLD} />
-          <Text style={[rs.tailorBtnText, { color: GOLD }]}>Dilly Tailor — paste a job description</Text>
+          <Text style={[rs.tailorBtnText, { color: GOLD }]}>Dilly Tailor  -  paste a job description</Text>
         </AnimatedPressable>
 
         {/* Generate new resume with AI */}
@@ -1895,7 +1911,7 @@ export default function ResumeEditorScreen() {
           </View>
         </FadeInView>
 
-        {/* Re-audit — runs the full audit pipeline on the currently saved sections */}
+        {/* Re-audit  -  runs the full audit pipeline on the currently saved sections */}
         <FadeInView delay={300}>
           <AnimatedPressable
             style={[rs.reauditBtn, reauditing && { opacity: 0.6 }]}
@@ -1929,7 +1945,7 @@ export default function ResumeEditorScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={rs.bentoGrid}>
-              {/* Base resume card — always first, larger */}
+              {/* Base resume card  -  always first, larger */}
               <AnimatedPressable
                 style={[rs.bentoCardLarge, !activeVariant && rs.bentoCardSelected]}
                 onPress={() => { setActiveVariant(null); setSections(baseSections); setExpanded(new Set()); setShowGrid(false); }}
@@ -1973,7 +1989,7 @@ export default function ResumeEditorScreen() {
                 );
               })}
 
-              {/* Create new — tailor button */}
+              {/* Create new  -  tailor button */}
               <AnimatedPressable
                 style={rs.bentoCardNew}
                 onPress={() => { setShowGrid(false); setTimeout(() => setShowQuickTailor(true), 300); }}
@@ -1986,7 +2002,7 @@ export default function ResumeEditorScreen() {
                 <Text style={rs.bentoCardSub}>Paste a JD, tailored instantly</Text>
               </AnimatedPressable>
 
-              {/* Build 73: Compare versions button — only if we have 2+ variants */}
+              {/* Build 73: Compare versions button  -  only if we have 2+ variants */}
               {variants.length >= 1 && (
                 <AnimatedPressable
                   style={rs.bentoCardNew}
@@ -2201,7 +2217,7 @@ export default function ResumeEditorScreen() {
               {!quickTailorData && (
                 <>
                   <Text style={rs.addSectionSub}>
-                    Paste a job description. Dilly rearranges your resume to fit it — zero cost, no AI rewriting, no fabricating experience.
+                    Paste a job description. Dilly rearranges your resume to fit it  -  zero cost, no AI rewriting, no fabricating experience.
                   </Text>
                   <TextInput
                     style={rs.quickTailorInput}
@@ -2315,7 +2331,7 @@ export default function ResumeEditorScreen() {
                       {quickTailorData.bullet_rationales.slice(0, 8).map((r: any, i: number) => (
                         <View key={`br-${i}`} style={rs.qtRationale}>
                           <Text style={rs.qtRationaleHeader} numberOfLines={1}>
-                            {r.company || ''}{r.role ? ` — ${r.role}` : ''}
+                            {r.company || ''}{r.role ? `  -  ${r.role}` : ''}
                           </Text>
                           <Text style={rs.qtRationaleBefore} numberOfLines={2}>− {r.before}</Text>
                           <Text style={rs.qtRationaleAfter} numberOfLines={2}>+ {r.after}</Text>

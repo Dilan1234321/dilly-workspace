@@ -1,5 +1,5 @@
 /**
- * ErrorBoundary — catches render errors in any wrapped subtree and shows a
+ * ErrorBoundary  -  catches render errors in any wrapped subtree and shows a
  * friendly retry UI instead of a white screen or a red-box Expo crash.
  *
  * Usage:
@@ -15,7 +15,7 @@
  * of a broken screen. Tapping "Try again" resets the error state and
  * re-mounts the subtree.
  *
- * We deliberately do NOT integrate with Sentry/Crashlytics here — error
+ * We deliberately do NOT integrate with Sentry/Crashlytics here  -  error
  * monitoring is a separate concern to be added later (see WHATS_NEXT.md).
  * For now we log to console so crashes show up in Metro / TestFlight console
  * during development and beta testing.
@@ -74,7 +74,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </View>
           <Text style={styles.heading}>Something's off with {surface}.</Text>
           <Text style={styles.sub}>
-            Dilly hit an unexpected hiccup. Nothing you did caused this — tap
+            Dilly hit an unexpected hiccup. Nothing you did caused this  -  tap
             below to try again.
           </Text>
           <TouchableOpacity
@@ -84,7 +84,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           >
             <Text style={styles.buttonText}>Try again</Text>
           </TouchableOpacity>
-          {/* Always show the error message in small grey text — helps
+          {/* Always show the error message in small grey text  -  helps
               beta testers report meaningful bugs instead of "something
               crashed". Removed the __DEV__ gate that was hiding this
               in TestFlight builds. */}

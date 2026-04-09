@@ -46,7 +46,7 @@ const QUANT_OPTIONS: Option[] = [
   {
     id: 'Not sure yet',
     label: 'Not sure yet',
-    sub: 'Dilly uses balanced scoring — update anytime',
+    sub: 'Dilly uses balanced scoring  -  update anytime',
     icon: '?', iconColor: colors.t3, iconBg: colors.s4,
   },
 ];
@@ -73,7 +73,7 @@ const DATA_SCIENCE_OPTIONS: Option[] = [
   {
     id: 'Not sure yet',
     label: 'Not sure yet',
-    sub: 'Dilly defaults to Tech cohort — update anytime',
+    sub: 'Dilly defaults to Tech cohort  -  update anytime',
     icon: '?', iconColor: colors.t3, iconBg: colors.s4,
   },
 ];
@@ -192,7 +192,7 @@ export default function IndustryTargetScreen() {
           })}
         </View>
 
-        {/* CTA — always gold, defaults to "Not sure yet" */}
+        {/* CTA  -  always gold, defaults to "Not sure yet" */}
         <TouchableOpacity
           style={s.button}
           onPress={handleContinue}

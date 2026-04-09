@@ -183,7 +183,7 @@ export default function ATSScreen() {
     if (!raw) return [];
     const lines = raw.split(/\r?\n/);
     const out: string[] = [];
-    const bulletRe = /^[\s]*[•·\-–—▪►➤*∙][\s]+(.{12,})$/;
+    const bulletRe = /^[\s]*[•·\-- - ▪►➤*∙][\s]+(.{12,})$/;
     for (const line of lines) {
       const m = line.match(bulletRe);
       if (m && m[1]) {
@@ -248,7 +248,7 @@ export default function ATSScreen() {
     return out.slice(0, 6);
   }
 
-  // Run universal scan — calls GET /ats/scan which auto-loads the user's resume.
+  // Run universal scan  -  calls GET /ats/scan which auto-loads the user's resume.
   // Then in parallel: fetch raw text → rewrite weak bullets, and run keyword density.
   async function runScan() {
     setLoading(true);
@@ -274,7 +274,7 @@ export default function ATSScreen() {
       setScanResults(data);
       if (data?.v2) setV2Results(data.v2 as ATSScoreV2);
 
-      // Kick off follow-on analyses in parallel — don't block the main score render.
+      // Kick off follow-on analyses in parallel  -  don't block the main score render.
       (async () => {
         try {
           const textRes = await dilly.fetch('/resume-text');
@@ -282,7 +282,7 @@ export default function ATSScreen() {
           const rawText = textJson?.resume_text || '';
           if (!rawText || rawText.length < 100) return;
 
-          // Keyword density (no JD — scan tab uses inferred keywords)
+          // Keyword density (no JD  -  scan tab uses inferred keywords)
           dilly.fetch('/ats-keyword-density', {
             method: 'POST',
             body: JSON.stringify({ raw_text: rawText }),
@@ -313,7 +313,7 @@ export default function ATSScreen() {
     finally { setLoading(false); }
   }
 
-  // Company lookup — find ATS system then auto-scan resume against it
+  // Company lookup  -  find ATS system then auto-scan resume against it
   async function lookupCompany() {
     if (!companySearch.trim()) return;
     setCompanyLoading(true);
@@ -341,7 +341,7 @@ export default function ATSScreen() {
     finally { setCompanyLoading(false); }
   }
 
-  // Keyword match — posts both /ats-check (legacy shape for existing UI) and
+  // Keyword match  -  posts both /ats-check (legacy shape for existing UI) and
   // /ats-keyword-density with the JD so we can render the heatmap + per-JD placement.
   async function runKeywordMatch() {
     if (!jdText.trim() || jdText.length < 50) {
@@ -392,7 +392,7 @@ export default function ATSScreen() {
     finally { setMatchLoading(false); }
   }
 
-  // Fix with Dilly — opens AI overlay with full vendor context
+  // Fix with Dilly  -  opens AI overlay with full vendor context
   function fixWithDilly(systemName: string, issue: string, score?: number) {
     const p = profile as any;
     const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
@@ -425,7 +425,7 @@ export default function ATSScreen() {
   function openEditorWithFix(systemName: string, issues: string[]) {
     const vendorKey = systemName.toLowerCase().replace(/\s+/g, '');
     const sys = ATS_SYSTEMS.find(s => s.name === systemName);
-    // Store context — mobile uses a simple key since no sessionStorage
+    // Store context  -  mobile uses a simple key since no sessionStorage
     // We pass it via query params and global state
     const fixData = encodeURIComponent(JSON.stringify({
       vendor: systemName,
@@ -553,7 +553,7 @@ export default function ATSScreen() {
 
             {scanResults && (
               <>
-                {/* v2 deep scan — hero, red flags, global fixes, per-vendor breakdown,
+                {/* v2 deep scan  -  hero, red flags, global fixes, per-vendor breakdown,
                     rewrites, and keyword heatmap. Falls back to legacy score cards
                     when v2 isn't present (e.g. backend rolled back). */}
                 {v2Results ? (
@@ -690,7 +690,7 @@ export default function ATSScreen() {
                   </FadeInView>
                 )}
 
-                {/* Deep breakdown — pinned to this company's ATS vendor */}
+                {/* Deep breakdown  -  pinned to this company's ATS vendor */}
                 {companyScanData && companyScanData.v2 && (
                   <FadeInView delay={140}>
                     <ATSDeepScan
@@ -729,8 +729,8 @@ export default function ATSScreen() {
                         </View>
                         <Text style={[ss.breakdownScore, { color }]}>
                           {score >= 85 ? 'Your resume parses well on ' + companyResult.vendor_name
-                            : score >= 70 ? 'Some issues detected — fixable'
-                            : 'Significant issues — fix before applying'}
+                            : score >= 70 ? 'Some issues detected  -  fixable'
+                            : 'Significant issues  -  fix before applying'}
                         </Text>
                       </View>
                     </FadeInView>
@@ -867,7 +867,7 @@ export default function ATSScreen() {
 
       </ScrollView>
 
-      {/* Compare Versions modal — fires POST /ats/compare on open */}
+      {/* Compare Versions modal  -  fires POST /ats/compare on open */}
       <ATSCompareView
         visible={compareVisible}
         onClose={() => setCompareVisible(false)}

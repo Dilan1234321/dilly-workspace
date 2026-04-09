@@ -1,12 +1,12 @@
 /**
- * ScoringMigrationModal — one-time notice for existing users after the
+ * ScoringMigrationModal  -  one-time notice for existing users after the
  * Tier 2 scoring cutover (2026-04-08).
  *
  * WHY THIS EXISTS
  * ───────────────
  * When a student's old score was 72 under the legacy auditor and their new
  * score is (say) 58 under the rubric scorer, showing them the new number
- * without context would feel like a punishment — "why did my score drop?"
+ * without context would feel like a punishment  -  "why did my score drop?"
  *
  * This modal is the polite explanation: scoring got upgraded, the new number
  * is honest and actionable, here's why. Student taps a single button to
@@ -21,7 +21,7 @@
  * - White background, brand-blue accents (tokens.colors.gold === #2B3A8E).
  * - Never red, never orange.
  * - One primary action: "Run a new audit".
- * - One secondary action: "Later" — just dismisses the modal without
+ * - One secondary action: "Later"  -  just dismisses the modal without
  *   navigating. The student still gets a new score next time they audit.
  * - Non-blocking: student can close the modal without running the audit.
  *   We don't force them into the audit flow because that would feel like
@@ -53,7 +53,7 @@ async function shouldShowMigrationModal(): Promise<boolean> {
     const seen = await AsyncStorage.getItem(SEEN_KEY);
     return seen !== 'true';
   } catch {
-    // If AsyncStorage fails, don't show the modal — better to skip than to
+    // If AsyncStorage fails, don't show the modal  -  better to skip than to
     // spam the user on every open.
     return false;
   }
@@ -63,7 +63,7 @@ async function markMigrationSeen(): Promise<void> {
   try {
     await AsyncStorage.setItem(SEEN_KEY, 'true');
   } catch {
-    // Non-fatal — the modal will try to show again next session, not a
+    // Non-fatal  -  the modal will try to show again next session, not a
     // disaster, but also not ideal. Swallow because there's nothing the
     // user can do about it.
   }

@@ -147,7 +147,7 @@ export default function AnticipationScreen() {
           {' recruiter does.'}
         </Text>
 
-        {/* Numbered items — stagger in */}
+        {/* Numbered items  -  stagger in */}
         <View style={s.items}>
           <AnimatedItem num="01" delay={0}>
             <Text style={s.itemText}>
@@ -174,14 +174,14 @@ export default function AnticipationScreen() {
           </AnimatedItem>
         </View>
 
-        {/* Identity statement — gold left border */}
+        {/* Identity statement  -  gold left border */}
         <View style={s.quoteBlock}>
           <Text style={s.quoteText}>
-            Dilly doesn't guess. He reads the same signals recruiters use — and scores you on the things that actually move the needle.
+            Dilly doesn't guess. He reads the same signals recruiters use  -  and scores you on the things that actually move the needle.
           </Text>
         </View>
 
-        {/* Card D — recruiter funnel */}
+        {/* Card D  -  recruiter funnel */}
         <View style={s.funnelCard}>
           <View style={s.cardHeaderRow}>
             <View style={s.cardDot} />
@@ -208,7 +208,7 @@ export default function AnticipationScreen() {
           </View>
         </View>
 
-        {/* Card E — cost comparison */}
+        {/* Card E  -  cost comparison */}
         <View style={s.costCard}>
           <Text style={s.costTopText}>
             {'The difference between a '}
@@ -321,7 +321,7 @@ const s = StyleSheet.create({
     color: colors.t2,
     lineHeight: 19,
   },
-  // Card D — funnel
+  // Card D  -  funnel
   funnelCard: {
     backgroundColor: colors.s2,
     borderWidth: 1,
@@ -390,7 +390,7 @@ const s = StyleSheet.create({
   pctTextBad:  { color: colors.coral },
   pctTextGood: { color: colors.green },
 
-  // Card E — cost comparison
+  // Card E  -  cost comparison
   costCard: {
     backgroundColor: colors.s2,
     borderWidth: 1,

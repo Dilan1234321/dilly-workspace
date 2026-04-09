@@ -30,7 +30,7 @@ export default function VoiceScreen() {
         const p        = profileRes ?? {};
         const auditObj = auditRaw?.audit ?? auditRaw ?? {};
         const snapshot = p?.first_audit_snapshot?.scores;
-        // Prefer primary cohort scores from rubric_analysis — no aggregates.
+        // Prefer primary cohort scores from rubric_analysis  -  no aggregates.
         const ra = auditObj?.rubric_analysis;
 
         const smart = ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
@@ -59,7 +59,7 @@ export default function VoiceScreen() {
           referenceCompany: cohortCfg.company,
         });
       } catch {
-        // context stays undefined — overlay still works, just without scores
+        // context stays undefined  -  overlay still works, just without scores
       } finally {
         setContextLoaded(true);
       }

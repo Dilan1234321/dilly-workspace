@@ -52,7 +52,7 @@ interface Props {
   studentContext?: StudentContext;
 }
 
-// Message animation wrapper — defined as a const to prevent Metro cache issues
+// Message animation wrapper  -  defined as a const to prevent Metro cache issues
 // where standalone function components can lose their reference during hot reload.
 const MessageAnimIn = ({ children }: { children: React.ReactNode; index?: number | string }) => {
   const opacity = useRef(new Animated.Value(0)).current;
@@ -186,7 +186,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   // ── Send a message (used by both manual input and auto-prompt) ──────────────
 
   const sendMessageWithText = useCallback(async (text: string, currentMessages: Message[]) => {
-    // Paid user — no limits
+    // Paid user  -  no limits
     await incrementAIMessage();
     const userMsg: Message = { id: ++_msgId, role: 'user', content: text };
     const apiHistory = [...currentMessages, userMsg].map(m => ({ role: m.role, content: m.content })).slice(-20);
@@ -352,7 +352,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         ]).start(() => {
           // Start smooth cosine pulse via pulseBase (single linear 0→1 loop).
           // The interpolation through 5 keyframes approximates cos(2πt),
-          // so velocity is zero at both extremes — no sudden jumps.
+          // so velocity is zero at both extremes  -  no sudden jumps.
           pulseBase.setValue(0);
           glowLoopRef.current = Animated.loop(
             Animated.timing(pulseBase, {
@@ -379,7 +379,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     }
   }, [visible]);
 
-  // Cleanup on unmount — cancel any lingering stream/timeouts
+  // Cleanup on unmount  -  cancel any lingering stream/timeouts
   useEffect(() => {
     return () => {
       timeoutsRef.current.forEach(clearTimeout);
@@ -461,7 +461,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
                 <Text style={s.emptyText}>
                   {mode === 'practice'
                     ? "Ready to practice? I'll run you through a real interview."
-                    : 'Ask me anything — your score, what to fix, where to apply.'}
+                    : 'Ask me anything  -  your score, what to fix, where to apply.'}
                 </Text>
               </View>
             )}
