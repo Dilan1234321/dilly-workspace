@@ -33,7 +33,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
-import ResumeScoreDashboard, { EditorScanData } from '../../components/ResumeScoreDashboard';
+import ResumeScoreDashboard, { EditorScanData, CohortOption } from '../../components/ResumeScoreDashboard';
 import TailorDiffModal, { TailorDiffPayload } from '../../components/TailorDiffModal';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
@@ -735,6 +735,7 @@ export default function ResumeEditorScreen() {
   const [reauditing, setReauditing] = useState(false);
   // Build-65: explicit cohort override (null = use user's primary major)
   const [cohortOverride, setCohortOverride] = useState<string | null>(null);
+  const [cohortOptions, setCohortOptions] = useState<CohortOption[]>([]);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -870,6 +871,18 @@ export default function ResumeEditorScreen() {
       if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
     };
   }, [sections, cohortOverride, activeVariant, runEditorScan]);
+
+  // Build-65: load cohort list once for the switcher
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await dilly.get('/resume/cohorts');
+        if (Array.isArray(data?.cohorts)) {
+          setCohortOptions(data.cohorts as CohortOption[]);
+        }
+      } catch {}
+    })();
+  }, []);
 
   // Issue action: open the Dilly AI overlay pre-prompted to fix the tapped issue.
   // Closes the loop between the "Fix this first" list and the AI chat.
@@ -1095,6 +1108,9 @@ export default function ResumeEditorScreen() {
               scan={scanData}
               loading={scanLoading}
               onFixIssue={handleFixIssue}
+              cohortOptions={cohortOptions}
+              activeCohortId={cohortOverride}
+              onSelectCohort={(cid) => setCohortOverride(cid)}
             />
           )}
         </View>
