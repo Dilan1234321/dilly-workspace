@@ -1743,24 +1743,30 @@ export default function ResumeEditorScreen() {
           </AnimatedPressable>
         </View>
 
-        {/* Build-74: Dilly Tailor  -  deterministic, free, paste-a-JD flow */}
+        {/* Dilly Tailor: rearranges YOUR existing resume for a specific JD. Free, instant. */}
         <AnimatedPressable
-          style={[rs.tailorBtn, { backgroundColor: GOLD + '18', borderColor: GOLD + '55' }]}
+          style={[rs.tailorBtn, { backgroundColor: GOLD + '12', borderColor: GOLD + '45' }]}
           onPress={() => setShowQuickTailor(true)}
           scaleDown={0.97}
         >
-          <Ionicons name="flash" size={14} color={GOLD} />
-          <Text style={[rs.tailorBtnText, { color: GOLD }]}>Dilly Tailor  -  paste a job description</Text>
+          <Ionicons name="document-text" size={14} color={GOLD} />
+          <View style={{ flex: 1 }}>
+            <Text style={[rs.tailorBtnText, { color: GOLD }]}>Tailor for a job</Text>
+            <Text style={{ fontSize: 9, color: colors.t3, marginTop: 1 }}>Paste a JD or job URL. Rearranges your resume instantly.</Text>
+          </View>
         </AnimatedPressable>
 
-        {/* Generate new resume with AI */}
+        {/* Generate: builds a NEW resume from scratch using AI. Different flow entirely. */}
         <AnimatedPressable
-          style={rs.tailorBtn}
+          style={[rs.tailorBtn, { backgroundColor: '#AF52DE12', borderColor: '#AF52DE35' }]}
           onPress={() => router.push('/(app)/resume-generate')}
           scaleDown={0.97}
         >
-          <Ionicons name="flash" size={14} color="#2B3A8E" />
-          <Text style={rs.tailorBtnText}>Generate resume with AI</Text>
+          <Ionicons name="sparkles" size={14} color="#AF52DE" />
+          <View style={{ flex: 1 }}>
+            <Text style={[rs.tailorBtnText, { color: '#AF52DE' }]}>Generate new resume</Text>
+            <Text style={{ fontSize: 9, color: colors.t3, marginTop: 1 }}>AI writes a fresh resume from your profile + a job description.</Text>
+          </View>
         </AnimatedPressable>
 
         {/* Import from LinkedIn */}

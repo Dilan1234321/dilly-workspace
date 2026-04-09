@@ -259,9 +259,24 @@ export default function ProfileScreen() {
 
   async function handleShare() {
     try {
-      await Share.share({
-        message: `I'm ${firstName}, ${major} at ${school}. My Dilly career score is ${finalScore}/100 (Top ${percentile}%). Check out Dilly to see where you stand.`,
-      });
+      // Build a first-person share message with dimension scores
+      const dimLine = `Smart ${Math.round(smartScore)} | Grit ${Math.round(gritScore)} | Build ${Math.round(buildScore)}`;
+      const achievement = (() => {
+        const earned = achievements.filter(a => a.earned);
+        if (earned.length === 0) return '';
+        const best = earned[earned.length - 1];
+        return `\n${best.label}`;
+      })();
+      const msg = [
+        `I scored ${finalScore}/100 on Dilly.`,
+        dimLine,
+        achievement,
+        `${cohort} cohort at ${school}.`,
+        '',
+        'See where you stand: trydilly.com',
+      ].filter(Boolean).join('\n');
+
+      await Share.share({ message: msg });
     } catch {}
   }
 
