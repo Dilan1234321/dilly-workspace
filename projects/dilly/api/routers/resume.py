@@ -1972,3 +1972,440 @@ def _get_cohort_tip(cohort: str) -> str:
         "Quantitative": "quantify everything, highlight analytical tools and methods",
     }
     return tips.get(cohort, "professional, concise, metric-driven bullets")
+
+
+# ---------------------------------------------------------------------------
+# Resume tailor-diff — generate + structured before/after diff
+# ---------------------------------------------------------------------------
+#
+# Builds on /resume/generate but returns a structured diff instead of raw JSON.
+# The mobile editor renders the diff in a full-screen modal so the user can
+# accept/reject bullet rewrites one at a time or all at once.
+#
+# Response shape:
+#   {
+#     tailored_sections: [...],            # full generated resume JSON
+#     base_sections: [...],                # unchanged input for reference
+#     experience_diffs: [                  # one entry per experience, aligned
+#       {
+#         kind: 'added' | 'removed' | 'modified' | 'unchanged',
+#         base:   { company, role, date, bullets: [{text}] } | null,
+#         tailored: { company, role, date, bullets: [{text}] } | null,
+#         bullet_diffs: [
+#           { kind, base_text, tailored_text, changed_words: [] }
+#         ],
+#         reorder_rank: int | null,        # new position in tailored (for 'modified')
+#       }
+#     ],
+#     skills_diff: {
+#       added: ['string'],
+#       removed: ['string'],
+#       kept: ['string'],
+#     },
+#     headline_summary: 'string',          # 1-sentence Claude-written summary
+#     cohort: 'string',
+#   }
+
+class TailorDiffRequest(BaseModel):
+    job_title: str
+    job_company: str
+    job_description: Optional[str] = ""
+    cohort: Optional[str] = None
+    base_variant_id: Optional[str] = None
+
+
+@router.post("/resume/tailor-diff")
+async def resume_tailor_diff(request: Request, body: TailorDiffRequest):
+    """
+    AI-generate a tailored resume and return a structured diff against the base.
+    Blocking (not streaming) so the mobile client can render the full diff view
+    once the generation completes.
+
+    Reuses the existing /resume/generate system prompt and Dilly Profile
+    ingestion. On top of that, it:
+      1. Collects the full streamed response into a JSON object
+      2. Diffs each experience entry against the base
+      3. Diffs bullets within aligned experiences
+      4. Diffs skills as add/remove/kept sets
+      5. Asks Claude for a one-sentence summary of the biggest changes
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    job_title = (body.job_title or "").strip()
+    job_company = (body.job_company or "").strip()
+    job_description = (body.job_description or "").strip()
+    if not job_title or not job_company:
+        raise errors.validation_error("job_title and job_company are required.")
+
+    cohort = body.cohort or _detect_cohort_from_job(job_title, job_company)
+
+    # ── Load base resume (variant or primary) ──────────────────────────
+    base_sections: List[dict] = []
+    if body.base_variant_id:
+        content = await asyncio.to_thread(_load_variant_content, email, body.base_variant_id)
+        if content:
+            base_sections = content.get("sections") or []
+    if not base_sections:
+        existing = await asyncio.to_thread(_load_resume, email)
+        if existing:
+            base_sections = existing.get("sections") or []
+
+    if not base_sections:
+        raise errors.validation_error(
+            "No base resume found. Run an audit or save a resume in the editor first."
+        )
+
+    # ── Load Dilly Profile facts for context ──────────────────────────
+    profile_facts_text = ""
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        surface = await asyncio.to_thread(get_memory_surface, email)
+        facts = surface.get("items") or []
+        narrative = (surface.get("narrative") or "").strip()
+        if facts:
+            lines = []
+            grouped: dict[str, list] = {}
+            for f in facts:
+                cat = f.get("category", "other")
+                grouped.setdefault(cat, []).append(f)
+            for cat, items in grouped.items():
+                label = cat.replace("_", " ").title()
+                entries = "; ".join(f"{i['label']}: {i['value']}" for i in items[:5])
+                lines.append(f"  {label}: {entries}")
+            profile_facts_text = "\n".join(lines)
+            if narrative:
+                profile_facts_text = f"NARRATIVE: {narrative}\n\nFACTS:\n{profile_facts_text}"
+    except Exception:
+        pass
+
+    base_resume_json = json.dumps(base_sections, separators=(",", ":"))
+    if len(base_resume_json) > 12000:
+        base_resume_json = base_resume_json[:12000] + "..."
+
+    company_l = job_company.lower()
+    is_finance_company = any(kw in company_l for kw in _COMPANY_FINANCE_KEYWORDS)
+    finance_note = ""
+    if cohort == "Tech" and is_finance_company:
+        finance_note = f"\nNOTE: {job_company} is a finance/banking firm. Even though this is a tech role, include GPA if ≥3.5, formalize the tone, and highlight finance-domain signals."
+
+    system_prompt = f"""You are Dilly's resume tailoring AI. Rewrite the student's resume for a SPECIFIC job in structured JSON format.
+
+TARGET JOB:
+  Title: {job_title}
+  Company: {job_company}
+  Cohort/Template: {cohort}{finance_note}
+
+JOB DESCRIPTION:
+{job_description[:4000] if job_description else "(Not provided — tailor based on job title and company reputation.)"}
+
+STUDENT'S DILLY PROFILE:
+{profile_facts_text or "(No profile facts available — use base resume only)"}
+
+STUDENT'S CURRENT RESUME (structured JSON):
+{base_resume_json}
+
+INSTRUCTIONS:
+1. Tailor the resume specifically for this job at {job_company}.
+2. Match keywords from the job description into bullets WHERE TRUTHFUL — do not invent experience.
+3. Reorder experiences and bullets to put the most relevant ones first.
+4. You MAY incorporate unlisted skills and extra projects from the Dilly Profile if they fit the job.
+5. Every bullet must start with a strong action verb, ideally include a metric.
+6. Preserve the exact JSON structure of the input sections. Keep the same company names, dates, and degrees — do not fabricate.
+7. Use the {cohort} template conventions: {_get_cohort_tip(cohort)}
+8. Keep the resume to one page worth of content.
+
+Return ONLY a valid JSON object with EXACTLY this shape:
+{{
+  "headline": "one sentence summarizing the biggest changes you made",
+  "sections": [<array of tailored resume section objects matching the input schema>]
+}}
+No markdown, no explanations, no prose outside the JSON."""
+
+    # ── Call Claude (blocking collect) ─────────────────────────────────
+    full_text = ""
+    try:
+        import anthropic
+        client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+        async with client.messages.stream(
+            model="claude-sonnet-4-6",
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[{
+                "role": "user",
+                "content": f"Tailor the resume for {job_title} at {job_company}. Return only the JSON object.",
+            }],
+        ) as stream:
+            async for text in stream.text_stream:
+                full_text += text
+    except Exception as e:
+        import sys, traceback
+        sys.stderr.write(f"[tailor_diff_failed] {type(e).__name__}: {str(e)[:200]}\n")
+        try: traceback.print_exc(file=sys.stderr)
+        except Exception: pass
+        raise errors.internal(f"Tailoring failed: {type(e).__name__}")
+
+    # ── Parse the generated JSON ───────────────────────────────────────
+    tailored_sections: List[dict] = []
+    headline = ""
+    try:
+        # Claude sometimes wraps in ``` fences; strip them
+        cleaned = full_text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("```", 2)[1] if "```" in cleaned[3:] else cleaned[3:]
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:]
+            cleaned = cleaned.strip()
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3].strip()
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, dict):
+            headline = str(parsed.get("headline") or "").strip()
+            raw_sections = parsed.get("sections")
+            if isinstance(raw_sections, list):
+                tailored_sections = raw_sections
+        elif isinstance(parsed, list):
+            # Older prompt shape — just an array of sections
+            tailored_sections = parsed
+    except Exception:
+        raise errors.internal("Could not parse AI response — please try again.")
+
+    if not tailored_sections:
+        raise errors.internal("AI returned no sections.")
+
+    # ── Build diffs ────────────────────────────────────────────────────
+    experience_diffs = _diff_experiences(base_sections, tailored_sections)
+    skills_diff = _diff_skills(base_sections, tailored_sections)
+
+    return {
+        "headline_summary": headline,
+        "tailored_sections": tailored_sections,
+        "base_sections": base_sections,
+        "experience_diffs": experience_diffs,
+        "skills_diff": skills_diff,
+        "cohort": cohort,
+        "job_title": job_title,
+        "job_company": job_company,
+    }
+
+
+# ── Diff helpers ───────────────────────────────────────────────────────────
+
+def _find_experiences(sections: List[dict]) -> List[dict]:
+    """Extract the list of experience entries from whichever section holds them."""
+    for s in sections or []:
+        if not isinstance(s, dict):
+            continue
+        key = (s.get("key") or "").lower()
+        if "experience" in key:
+            exps = s.get("experiences") or []
+            if isinstance(exps, list):
+                return exps
+    return []
+
+
+def _find_skills_lines(sections: List[dict]) -> List[str]:
+    for s in sections or []:
+        if not isinstance(s, dict):
+            continue
+        key = (s.get("key") or "").lower()
+        if key == "skills":
+            simple = s.get("simple") or {}
+            lines = simple.get("lines") or []
+            return [str(l or "").strip() for l in lines if l]
+    return []
+
+
+def _exp_signature(exp: dict) -> str:
+    """Build a dedup signature for an experience entry."""
+    if not isinstance(exp, dict):
+        return ""
+    return "|".join([
+        (exp.get("company") or "").strip().lower(),
+        (exp.get("role") or "").strip().lower(),
+        (exp.get("date") or "").strip().lower(),
+    ])
+
+
+def _bullet_texts(exp: dict) -> List[str]:
+    bullets = exp.get("bullets") or []
+    return [str((b or {}).get("text") or "").strip() for b in bullets if b]
+
+
+def _word_diff(a: str, b: str) -> List[dict]:
+    """Cheap word-level diff — returns a list of ops for UI highlighting."""
+    a_words = (a or "").split()
+    b_words = (b or "").split()
+    a_set = set(w.lower().strip(".,;:") for w in a_words)
+    b_set = set(w.lower().strip(".,;:") for w in b_words)
+    added = [w for w in b_words if w.lower().strip(".,;:") not in a_set]
+    removed = [w for w in a_words if w.lower().strip(".,;:") not in b_set]
+    return [
+        {"op": "added", "words": added[:12]},
+        {"op": "removed", "words": removed[:12]},
+    ]
+
+
+def _diff_experiences(base_sections: List[dict], tailored_sections: List[dict]) -> List[dict]:
+    """
+    Align experiences by company+role+date signature, then diff bullets within
+    each aligned pair. Experiences present only in tailored are 'added',
+    only in base are 'removed'.
+    """
+    base_exps = _find_experiences(base_sections)
+    tailored_exps = _find_experiences(tailored_sections)
+
+    base_by_sig: dict = {}
+    for i, e in enumerate(base_exps):
+        sig = _exp_signature(e)
+        if sig:
+            base_by_sig[sig] = (i, e)
+
+    seen_base_sigs: set = set()
+    diffs: List[dict] = []
+
+    for new_idx, tailored_exp in enumerate(tailored_exps):
+        sig = _exp_signature(tailored_exp)
+        if sig and sig in base_by_sig:
+            _base_idx, base_exp = base_by_sig[sig]
+            seen_base_sigs.add(sig)
+            # Compare bullets
+            base_bullets = _bullet_texts(base_exp)
+            tailored_bullets = _bullet_texts(tailored_exp)
+            bullet_diffs: List[dict] = []
+            # Simple alignment: match by index; any extras become added/removed
+            max_len = max(len(base_bullets), len(tailored_bullets))
+            for i in range(max_len):
+                b_text = base_bullets[i] if i < len(base_bullets) else None
+                t_text = tailored_bullets[i] if i < len(tailored_bullets) else None
+                if b_text is None and t_text is not None:
+                    bullet_diffs.append({
+                        "kind": "added",
+                        "base_text": None,
+                        "tailored_text": t_text,
+                        "changed_words": [],
+                    })
+                elif t_text is None and b_text is not None:
+                    bullet_diffs.append({
+                        "kind": "removed",
+                        "base_text": b_text,
+                        "tailored_text": None,
+                        "changed_words": [],
+                    })
+                elif b_text == t_text:
+                    bullet_diffs.append({
+                        "kind": "unchanged",
+                        "base_text": b_text,
+                        "tailored_text": t_text,
+                        "changed_words": [],
+                    })
+                else:
+                    bullet_diffs.append({
+                        "kind": "modified",
+                        "base_text": b_text,
+                        "tailored_text": t_text,
+                        "changed_words": _word_diff(b_text or "", t_text or ""),
+                    })
+
+            overall_kind = (
+                "unchanged"
+                if all(bd["kind"] == "unchanged" for bd in bullet_diffs)
+                else "modified"
+            )
+            diffs.append({
+                "kind": overall_kind,
+                "base": {
+                    "company": base_exp.get("company") or "",
+                    "role": base_exp.get("role") or "",
+                    "date": base_exp.get("date") or "",
+                    "bullets": [{"text": t} for t in base_bullets],
+                },
+                "tailored": {
+                    "company": tailored_exp.get("company") or "",
+                    "role": tailored_exp.get("role") or "",
+                    "date": tailored_exp.get("date") or "",
+                    "bullets": [{"text": t} for t in tailored_bullets],
+                },
+                "bullet_diffs": bullet_diffs,
+                "reorder_rank": new_idx,
+            })
+        else:
+            # New experience — not in base
+            tailored_bullets = _bullet_texts(tailored_exp)
+            diffs.append({
+                "kind": "added",
+                "base": None,
+                "tailored": {
+                    "company": tailored_exp.get("company") or "",
+                    "role": tailored_exp.get("role") or "",
+                    "date": tailored_exp.get("date") or "",
+                    "bullets": [{"text": t} for t in tailored_bullets],
+                },
+                "bullet_diffs": [
+                    {
+                        "kind": "added",
+                        "base_text": None,
+                        "tailored_text": t,
+                        "changed_words": [],
+                    }
+                    for t in tailored_bullets
+                ],
+                "reorder_rank": new_idx,
+            })
+
+    # Experiences in base but not in tailored — 'removed'
+    for sig, (_i, base_exp) in base_by_sig.items():
+        if sig in seen_base_sigs:
+            continue
+        base_bullets = _bullet_texts(base_exp)
+        diffs.append({
+            "kind": "removed",
+            "base": {
+                "company": base_exp.get("company") or "",
+                "role": base_exp.get("role") or "",
+                "date": base_exp.get("date") or "",
+                "bullets": [{"text": t} for t in base_bullets],
+            },
+            "tailored": None,
+            "bullet_diffs": [
+                {
+                    "kind": "removed",
+                    "base_text": t,
+                    "tailored_text": None,
+                    "changed_words": [],
+                }
+                for t in base_bullets
+            ],
+            "reorder_rank": None,
+        })
+
+    return diffs
+
+
+def _diff_skills(base_sections: List[dict], tailored_sections: List[dict]) -> dict:
+    base_lines = _find_skills_lines(base_sections)
+    tailored_lines = _find_skills_lines(tailored_sections)
+
+    def _tokens(lines: List[str]) -> set:
+        out: set = set()
+        for line in lines:
+            for tok in re.split(r"[,|•·\n]", line):
+                t = tok.strip()
+                if t and len(t) >= 2 and len(t) <= 40:
+                    out.add(t)
+        return out
+
+    base_set = _tokens(base_lines)
+    tailored_set = _tokens(tailored_lines)
+
+    added = sorted(tailored_set - base_set, key=str.lower)
+    removed = sorted(base_set - tailored_set, key=str.lower)
+    kept = sorted(base_set & tailored_set, key=str.lower)
+
+    return {
+        "added": added[:20],
+        "removed": removed[:20],
+        "kept": kept[:40],
+    }

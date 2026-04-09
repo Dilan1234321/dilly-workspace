@@ -34,6 +34,7 @@ import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ResumeScoreDashboard, { EditorScanData } from '../../components/ResumeScoreDashboard';
+import TailorDiffModal, { TailorDiffPayload } from '../../components/TailorDiffModal';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -717,7 +718,11 @@ export default function ResumeEditorScreen() {
   const [showTailor, setShowTailor] = useState(false);
   const [tailorCompany, setTailorCompany] = useState('');
   const [tailorRole, setTailorRole] = useState('');
+  const [tailorJD, setTailorJD] = useState('');
   const [tailoring, setTailoring] = useState(false);
+  // Build 64: tailor-diff modal
+  const [showTailorDiff, setShowTailorDiff] = useState(false);
+  const [tailorDiffData, setTailorDiffData] = useState<TailorDiffPayload | null>(null);
 
   // Build-63 dashboard: debounced /resume/editor-scan result
   const [scanData, setScanData] = useState<EditorScanData | null>(null);
@@ -1219,50 +1224,105 @@ export default function ResumeEditorScreen() {
                 placeholder="Role (e.g. Data Science Intern)"
                 placeholderTextColor={colors.t3}
               />
+              <TextInput
+                style={[rs.tailorInput, { minHeight: 90, textAlignVertical: 'top' }]}
+                value={tailorJD}
+                onChangeText={setTailorJD}
+                placeholder="Paste the job description (optional — better tailoring)"
+                placeholderTextColor={colors.t3}
+                multiline
+              />
               <AnimatedPressable
                 style={[rs.tailorSubmitBtn, (!tailorCompany.trim() || !tailorRole.trim()) && { opacity: 0.4 }]}
                 onPress={async () => {
                   if (!tailorCompany.trim() || !tailorRole.trim()) return;
-                  setTailoring(true);
+                  // Close setup modal, open diff modal in loading state
                   setShowTailor(false);
+                  setTailorDiffData(null);
+                  setShowTailorDiff(true);
+                  setTailoring(true);
                   try {
-                    const res = await dilly.fetch('/resume/variants', {
+                    const res = await dilly.fetch('/resume/tailor-diff', {
                       method: 'POST',
                       body: JSON.stringify({
                         job_company: tailorCompany.trim(),
                         job_title: tailorRole.trim(),
-                        type: 'tailored',
+                        job_description: tailorJD.trim() || undefined,
                       }),
                     });
-                    if (res.ok) {
-                      const data = await res.json();
-                      // Refresh variants and switch to new one
-                      const varRes = await dilly.get('/resume/variants');
-                      setVariants(varRes?.variants || []);
-                      if (data?.id) {
-                        setActiveVariant(data.id);
-                        const varData = await dilly.get(`/resume/variants/${data.id}`);
-                        if (varData?.resume?.sections) setSections(varData.resume.sections);
-                      }
+                    if (!res.ok) {
+                      const detail = await res.json().catch(() => null);
+                      Alert.alert('Tailoring failed', detail?.detail || 'Could not generate a tailored version.');
+                      setShowTailorDiff(false);
+                      return;
                     }
-                  } catch {
-                    Alert.alert('Error', 'Could not tailor resume. Try again.');
+                    const data = await res.json();
+                    setTailorDiffData(data as TailorDiffPayload);
+                  } catch (e: any) {
+                    Alert.alert('Tailoring failed', e?.message || 'Unknown error.');
+                    setShowTailorDiff(false);
                   } finally {
                     setTailoring(false);
-                    setTailorCompany('');
-                    setTailorRole('');
                   }
                 }}
                 scaleDown={0.97}
                 disabled={!tailorCompany.trim() || !tailorRole.trim()}
               >
                 <Ionicons name="sparkles" size={14} color="#FFFFFF" />
-                <Text style={rs.tailorSubmitText}>Tailor my resume</Text>
+                <Text style={rs.tailorSubmitText}>Preview tailored version</Text>
               </AnimatedPressable>
             </View>
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* ── Build 64: rich tailor-diff modal ─────────────────────────────── */}
+      <TailorDiffModal
+        visible={showTailorDiff}
+        loading={tailoring}
+        diff={tailorDiffData}
+        onClose={() => {
+          setShowTailorDiff(false);
+          setTailorDiffData(null);
+        }}
+        onAcceptAll={async () => {
+          if (!tailorDiffData) return;
+          try {
+            // Create a new tailored variant pre-populated with the Claude output
+            const createRes = await dilly.fetch('/resume/variants', {
+              method: 'POST',
+              body: JSON.stringify({
+                label: `Tailored — ${tailorDiffData.job_company}`,
+                job_company: tailorDiffData.job_company,
+                job_title: tailorDiffData.job_title,
+                cohort: tailorDiffData.cohort,
+                type: 'job',
+                sections: tailorDiffData.tailored_sections,
+              }),
+            });
+            if (!createRes.ok) {
+              Alert.alert('Could not save variant', 'The diff was generated but saving failed. Try again.');
+              return;
+            }
+            const created = await createRes.json();
+            // Refresh the variant list and switch to the new one
+            const varRes = await dilly.get('/resume/variants');
+            setVariants(varRes?.variants || []);
+            if (created?.id) {
+              setActiveVariant(created.id);
+              setSections(tailorDiffData.tailored_sections as any);
+              setHasChanges(false);
+            }
+            setShowTailorDiff(false);
+            setTailorDiffData(null);
+            setTailorCompany('');
+            setTailorRole('');
+            setTailorJD('');
+          } catch (e: any) {
+            Alert.alert('Save failed', e?.message || 'Unknown error.');
+          }
+        }}
+      />
 
       {/* ── Export template picker (build 63) ───────────────────────────── */}
       <Modal visible={showExportPicker} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowExportPicker(false)}>
