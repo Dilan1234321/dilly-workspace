@@ -128,6 +128,8 @@ export default function HomeScreen() {
   // Build-75: home brief (streak, pipeline, deadlines, brief cards, do-now)
   const [brief, setBrief] = useState<HomeBrief | null>(null);
   const [briefError, setBriefError] = useState(false);
+  // Build-84: calendar sync state (one-time banner)
+  const [calendarSynced, setCalendarSynced] = useState(true); // default true to hide banner until we check
   const [photoUri, setPhotoUri]   = useState<string | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [auditHistory, setAuditHistory] = useState<{score: number; date: string; ts: number}[]>([]);
@@ -263,6 +265,13 @@ export default function HomeScreen() {
         }).catch(() => {
           setBriefError(true);
         });
+
+        // Build-84: check if calendar was already synced
+        try {
+          const AS = (await import('@react-native-async-storage/async-storage')).default;
+          const synced = await AS.getItem('dilly_calendar_synced');
+          setCalendarSynced(synced === '1');
+        } catch { setCalendarSynced(false); }
 
         // Build-75: record today's streak check-in. The endpoint is idempotent
         //  -  if already checked in today, it returns the current state without
@@ -713,15 +722,30 @@ export default function HomeScreen() {
                   <FadeInView delay={360}>
                     <View style={s.deadlineHeaderRow}>
                       <Text style={s.deadlineLabel}>UPCOMING</Text>
-                      <TouchableOpacity
-                        onPress={openSubscribeToDillyCalendar}
-                        hitSlop={8}
-                        style={s.deadlineSubscribeBtn}
-                      >
-                        <Ionicons name="sync" size={10} color={colors.gold} />
-                        <Text style={s.deadlineSubscribeText}>Sync all to calendar</Text>
-                      </TouchableOpacity>
                     </View>
+
+                    {/* One-time calendar sync banner - subscribe once, all deadlines sync forever */}
+                    {!calendarSynced && (
+                      <AnimatedPressable
+                        style={s.calSyncBanner}
+                        onPress={async () => {
+                          await openSubscribeToDillyCalendar();
+                          setCalendarSynced(true);
+                          try {
+                            const AS = (await import('@react-native-async-storage/async-storage')).default;
+                            await AS.setItem('dilly_calendar_synced', '1');
+                          } catch {}
+                        }}
+                        scaleDown={0.97}
+                      >
+                        <Ionicons name="calendar" size={16} color={colors.gold} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.calSyncTitle}>Sync Dilly to your calendar</Text>
+                          <Text style={s.calSyncSub}>One tap. All your deadlines appear on Apple or Google Calendar automatically.</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                      </AnimatedPressable>
+                    )}
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -753,28 +777,6 @@ export default function HomeScreen() {
                                 {role || (company ? label : '')}
                               </Text>
                             </AnimatedPressable>
-                            {!!date && (
-                              <TouchableOpacity
-                                onPress={() => {
-                                  try {
-                                    openAddToCalendar({
-                                      title: company
-                                        ? `${company}  -  ${role || 'deadline'}`
-                                        : (label || 'Deadline'),
-                                      date,
-                                      description: label || 'Added from Dilly',
-                                    });
-                                  } catch {}
-                                }}
-                                hitSlop={10}
-                                style={s.deadlineAddBtn}
-                              >
-                                <Ionicons name="calendar-outline" size={12} color={urgent ? colors.coral : colors.gold} />
-                                <Text style={[s.deadlineAddText, { color: urgent ? colors.coral : colors.gold }]}>
-                                  Add
-                                </Text>
-                              </TouchableOpacity>
-                            )}
                           </View>
                         );
                       })}
@@ -1281,13 +1283,15 @@ const s = StyleSheet.create({
   deadlineDays: { fontSize: 15, fontWeight: '800', marginBottom: 4 },
   deadlineCompany: { fontSize: 11, fontWeight: '700', color: colors.t1, marginBottom: 2 },
   deadlineRole:  { fontSize: 10, color: colors.t3 },
-  deadlineAddBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
-    marginTop: 8, paddingVertical: 5,
-    backgroundColor: colors.bg, borderRadius: 6,
-    borderWidth: 1, borderColor: colors.b1,
+  // Calendar sync banner (one-time)
+  calSyncBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.s2, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.gold + '30',
+    padding: 14, marginBottom: 10,
   },
-  deadlineAddText: { fontSize: 10, fontWeight: '700' },
+  calSyncTitle: { fontSize: 13, fontWeight: '700', color: colors.t1 },
+  calSyncSub: { fontSize: 10, color: colors.t3, marginTop: 2, lineHeight: 14 },
 
   // History empty state
   historyEmpty: {
