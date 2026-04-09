@@ -1272,20 +1272,6 @@ export default function ResumeEditorScreen() {
         <FadeInView delay={120}>
           <View style={rs.resumeDoc}>
 
-            {/* Floating score badge */}
-            <View style={rs.scoreBadgeWrap}>
-              <View style={rs.scoreBadgeRing}>
-                <View style={[rs.scoreBadgeProgress, {
-                  borderColor: sColor(overallScore),
-                  borderTopColor: 'transparent',
-                  transform: [{ rotate: `${(overallScore / 100) * 360}deg` }],
-                }]} />
-              </View>
-              <View style={[rs.scoreBadgeInner, { borderColor: sColor(overallScore) + '30' }]}>
-                <Text style={[rs.scoreBadgeNum, { color: sColor(overallScore) }]}>{overallScore}</Text>
-              </View>
-            </View>
-
             {/* Sections as accordion */}
             {sections.map((sec, i) => {
               const comp = sectionCompleteness(sec);

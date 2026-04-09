@@ -1244,7 +1244,65 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
     if not resume_text or len(resume_text.strip()) < 30:
         raise HTTPException(status_code=400, detail="Not enough content to scan yet.")
 
-    # ── 1. Parse + ats_analysis + v2 scorer ────────────────────────────
+    # Resolve student email once up front — we read stored audit + ats
+    # scores from here so the editor dashboard shows the same numbers the
+    # audit and /ats/scan pages show (users were seeing different numbers
+    # because live recompute used different input text / different scorer
+    # path than the audit).
+    student_email = ""
+    try:
+        _u = deps.require_auth(request)
+        student_email = (_u.get("email") or "").strip().lower()
+    except Exception:
+        pass
+
+    # ── 1. Load latest audit's stored v2 + rubric_analysis as the source
+    #      of truth so the dashboard agrees with the audit page. Live
+    #      recompute from edited sections runs below only as a backup.
+    audit_v2: dict = {}
+    audit_rubric: dict = {}
+    parsed_resume_text: str = ""
+    if student_email:
+        try:
+            from projects.dilly.api.audit_history import get_audits
+            audits = get_audits(student_email) or []
+            for a in audits:
+                ra = a.get("rubric_analysis")
+                if isinstance(ra, dict) and (
+                    ra.get("primary_smart") or ra.get("primary_grit") or ra.get("primary_build")
+                ):
+                    audit_rubric = ra
+                    break
+        except Exception:
+            pass
+        try:
+            from projects.dilly.api.resume_loader import load_parsed_resume_for_voice
+            parsed_resume_text = load_parsed_resume_for_voice(student_email, max_chars=50000) or ""
+        except Exception:
+            parsed_resume_text = ""
+        # Re-score ATS v2 against the SAME parsed text that /ats/scan uses
+        # so the two surfaces always show the same ATS number.
+        if parsed_resume_text and len(parsed_resume_text) > 50:
+            try:
+                from dilly_core.resume_parser import parse_resume as _pr
+                from dilly_core.ats_analysis import run_ats_analysis as _raa
+                from dilly_core.ats_score_v2 import (
+                    score_from_signals as _sfs,
+                    signals_from_ats_analysis as _sfaa,
+                )
+                from dilly_core.ats_workday_validator import run_workday_checks as _rwc
+                _parsed_a = _pr(parsed_resume_text)
+                _analysis_a = _raa(raw_text=parsed_resume_text, parsed=_parsed_a)
+                _sig_a = _sfaa(_analysis_a, raw_text=parsed_resume_text, file_extension="pdf")
+                _wd_a = _rwc(parsed_resume_text, _parsed_a)
+                audit_v2 = _sfs(_sig_a, extra_issues=_wd_a).to_dict()
+            except Exception as _exc:
+                import sys as _sys
+                _sys.stderr.write(f"[editor_scan_audit_v2_failed] {type(_exc).__name__}: {str(_exc)[:200]}\n")
+
+    # ── 1b. Parse + ats_analysis + v2 scorer on the LIVE edited sections.
+    # Used for top_issues, keyword_cells, and reorder hints. The headline
+    # ATS / dimension numbers below prefer the audit-anchored values above.
     v2: dict = {}
     rubric_summary: dict = {}
     try:
@@ -1297,98 +1355,16 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
         try: traceback.print_exc(file=sys.stderr)
         except Exception: pass
 
-    # ── 2. Rubric scoring (primary cohort) ────────────────────────────
-    # Strategy: try to re-score the in-editor resume against the student's
-    # cohort rubric. If that fails (missing major, missing signals, anything),
-    # fall back to the most recent saved audit's rubric_analysis so the UI
-    # never shows zeros for Smart/Grit/Build.
-    student_email = ""
-    try:
-        _u = deps.require_auth(request)
-        student_email = (_u.get("email") or "").strip().lower()
-    except Exception:
-        pass
-
-    try:
-        from dilly_core.rubric_scorer import (
-            select_cohorts_for_student, score_for_cohorts,
-            build_rubric_analysis_payload, list_cohort_ids,
-        )
-        from dilly_core.scoring import extract_scoring_signals as _rc_extract_signals
-
-        # Figure out the student's major(s) for cohort selection
-        major = ""
-        if student_email:
-            try:
-                from projects.dilly.api.profile_store import get_profile
-                prof = get_profile(student_email) or {}
-                majors = prof.get("majors") or ([prof.get("major")] if prof.get("major") else [])
-                if majors:
-                    major = majors[0] or ""
-            except Exception:
-                pass
-
-        # Explicit cohort_id override from the cohort switcher / variant
-        # context takes priority over the major-derived cohort selection.
-        cohorts: List[str] = []
-        if body.cohort_id:
-            try:
-                valid = set(list_cohort_ids())
-            except Exception:
-                valid = set()
-            if not valid or body.cohort_id in valid:
-                cohorts = [body.cohort_id]
-        if not cohorts:
-            cohorts = select_cohorts_for_student(
-                major=major,
-                minors=[],
-                pre_professional_track=None,
-                industry_target=None,
-            )
-        if cohorts:
-            rc_signals = _rc_extract_signals(resume_text, gpa=None, major=major)
-            rc_scores = score_for_cohorts(rc_signals, resume_text, cohorts)
-            if rc_scores:
-                primary_cid = cohorts[0]
-                rubric_summary = build_rubric_analysis_payload(primary_cid, rc_scores)
-    except Exception as e:
-        import sys
-        sys.stderr.write(f"[editor_scan_rubric_failed] {type(e).__name__}: {str(e)[:200]}\n")
-
-    # Fallback: if live rubric scoring didn't produce a useful payload,
-    # use the most recent audit's rubric_analysis so the rings have real numbers.
-    if (not rubric_summary) or not (
-        rubric_summary.get("primary_smart") or rubric_summary.get("primary_grit") or rubric_summary.get("primary_build")
-    ):
-        if student_email:
-            try:
-                from projects.dilly.api.audit_history import get_audits
-                audits = get_audits(student_email) or []
-                for a in audits:
-                    ra = a.get("rubric_analysis")
-                    if isinstance(ra, dict) and (ra.get("primary_smart") or ra.get("primary_grit") or ra.get("primary_build")):
-                        rubric_summary = ra
-                        break
-            except Exception:
-                pass
-
-    # Fallback: if live ATS v2 scoring didn't produce composite scores, use
-    # the most recent audit's v2 payload so the vendor sidebar shows real data.
-    if (not v2) or not (v2.get("vendors") and v2.get("overall")):
-        if student_email:
-            try:
-                from projects.dilly.api.audit_history import get_audits
-                audits = get_audits(student_email) or []
-                for a in audits:
-                    raw_v2 = (a.get("rubric_analysis") or {}).get("v2") if isinstance(a.get("rubric_analysis"), dict) else None
-                    # Also check a top-level v2 field for forward compat
-                    if not raw_v2:
-                        raw_v2 = a.get("v2") if isinstance(a.get("v2"), dict) else None
-                    if raw_v2 and raw_v2.get("overall"):
-                        v2 = raw_v2
-                        break
-            except Exception:
-                pass
+    # ── 2. Anchor the headline scores to the latest audit. ────────────
+    # Users see Smart/Grit/Build on the audit page and expect the same
+    # numbers on the editor dashboard. Recomputing from scratch with a
+    # different scorer path produced different numbers, which read as
+    # "wrong scores". The audit's stored rubric_analysis is the source
+    # of truth until the user re-audits.
+    if audit_rubric:
+        rubric_summary = audit_rubric
+    if audit_v2 and audit_v2.get("vendors") and audit_v2.get("overall"):
+        v2 = audit_v2
 
     # ── 3. Prioritized issue list (merged + ranked by lift) ────────────
     # We DON'T show effort_minutes in the UI anymore — single bullet edits
