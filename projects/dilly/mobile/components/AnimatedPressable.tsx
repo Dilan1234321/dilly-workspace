@@ -1,5 +1,5 @@
 /**
- * AnimatedPressable — drop-in replacement for TouchableOpacity with spring-scale feedback.
+ * AnimatedPressable  -  drop-in replacement for TouchableOpacity with spring-scale feedback.
  *
  * Usage:
  *   <AnimatedPressable onPress={fn} style={styles.card}>
@@ -7,12 +7,12 @@
  *   </AnimatedPressable>
  *
  * Props:
- *   scaleDown  — how much to shrink on press (default 0.97)
- *   stiffness  — spring stiffness (default 300)
- *   damping    — spring damping (default 20)
- *   disabled   — disables press and dims opacity
+ *   scaleDown   -  how much to shrink on press (default 0.97)
+ *   stiffness   -  spring stiffness (default 300)
+ *   damping     -  spring damping (default 20)
+ *   disabled    -  disables press and dims opacity
  *
- * Runs entirely on the UI thread via Reanimated — 60fps guaranteed.
+ * Runs entirely on the UI thread via Reanimated  -  60fps guaranteed.
  */
 
 import { ReactNode } from 'react';

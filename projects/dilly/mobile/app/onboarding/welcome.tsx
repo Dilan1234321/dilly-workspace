@@ -24,7 +24,7 @@ export default function WelcomeScreen() {
     setError('');
     const trimmed = email.trim().toLowerCase();
     if (!trimmed.endsWith('.edu')) {
-      setError('Use your .edu email — Dilly is for students.');
+      setError('Use your .edu email  -  Dilly is for students.');
       return;
     }
     setLoading(true);
@@ -82,7 +82,7 @@ export default function WelcomeScreen() {
 
           {/* Subheadline */}
           <Text style={styles.sub}>
-            Dilly scores your resume the way Goldman reads it — and tells you exactly where you rank against your peers.
+            Dilly scores your resume the way Goldman reads it  -  and tells you exactly where you rank against your peers.
           </Text>
         </View>
 

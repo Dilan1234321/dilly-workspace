@@ -11,13 +11,13 @@
  *   2. Linking.openURL hands the URL to iOS.
  *   3. iOS downloads the file and displays its native "Add to Calendar"
  *      panel, with a picker for every calendar the user has connected
- *      — Apple Calendar, Google Calendar (via account), iCloud, Outlook,
+ *       -  Apple Calendar, Google Calendar (via account), iCloud, Outlook,
  *      Exchange, whatever.
  *
  * Two modes:
  *
- *   - openAddToCalendar(event) — one-shot add for a single event
- *   - openSubscribeToDillyCalendar() — subscribe to the user's full
+ *   - openAddToCalendar(event)  -  one-shot add for a single event
+ *   - openSubscribeToDillyCalendar()  -  subscribe to the user's full
  *     deadline feed so every future Dilly deadline auto-syncs
  */
 
@@ -29,7 +29,7 @@ export interface CalendarEventInput {
   title: string;
   /** YYYY-MM-DD */
   date: string;
-  /** YYYY-MM-DD, optional — defaults to date+1 */
+  /** YYYY-MM-DD, optional  -  defaults to date+1 */
   end?: string;
   /** Free-text description shown on the event */
   description?: string;

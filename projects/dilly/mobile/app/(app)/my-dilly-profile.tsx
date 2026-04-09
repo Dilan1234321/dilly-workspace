@@ -133,7 +133,7 @@ export default function MyDillyProfileScreen() {
       isPaid: true,
       initialMessage:
         `${firstName} wants to tell you about ${topic}. ` +
-        `Ask them one friendly, specific question to get started — the kind of question that makes it easy to share. ` +
+        `Ask them one friendly, specific question to get started  -  the kind of question that makes it easy to share. ` +
         `After they answer, ask one gentle follow-up so you capture enough detail to remember it well. ` +
         `Then save what you learn to their profile under the '${categoryKey}' category.`,
     });
@@ -456,7 +456,7 @@ export default function MyDillyProfileScreen() {
             <Ionicons name="chatbubbles-outline" size={44} color={colors.t3} style={{ marginBottom: 14 }} />
             <Text style={s.emptyTitle}>Your profile is empty</Text>
             <Text style={s.emptyText}>
-              Every time you chat with Dilly, it learns about you — your goals, skills, interests, and more. The more you talk, the more personalized your experience becomes.
+              Every time you chat with Dilly, it learns about you  -  your goals, skills, interests, and more. The more you talk, the more personalized your experience becomes.
             </Text>
             <TouchableOpacity
               style={s.emptyCta}

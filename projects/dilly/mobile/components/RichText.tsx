@@ -1,5 +1,5 @@
 /**
- * RichText — inline markdown renderer for Dilly AI chat bubbles.
+ * RichText  -  inline markdown renderer for Dilly AI chat bubbles.
  *
  * Supported syntax:
  *   **text**        → bold
@@ -127,7 +127,7 @@ function parse(input: string): Token[] {
       }
     }
 
-    // Plain text — collect until next special char
+    // Plain text  -  collect until next special char
     let j = i + 1;
     while (j < input.length) {
       const c = input[j];

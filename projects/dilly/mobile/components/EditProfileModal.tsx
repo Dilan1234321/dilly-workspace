@@ -64,7 +64,7 @@ function Field({
       <View style={es.fieldGroup}>
         <Text style={es.fieldLabel}>{label}</Text>
         <View style={[es.fieldInput, es.fieldDisabled]}>
-          <Text style={es.fieldDisabledText}>{disabledText || '—'}</Text>
+          <Text style={es.fieldDisabledText}>{disabledText || ' - '}</Text>
         </View>
         {hint ? <Text style={es.fieldHint}>{hint}</Text> : null}
       </View>

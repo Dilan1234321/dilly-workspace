@@ -27,7 +27,7 @@ const CORAL = '#FF453A';
 
 function scoreColor(score: number): string {
   // Two-tier encouraging palette: green if strong, brand blue otherwise.
-  // Never red, never orange — low scores should feel like a starting line,
+  // Never red, never orange  -  low scores should feel like a starting line,
   // not a failure. GOLD in this file is the Dilly brand blue (#2B3A8E).
   if (score >= 80) return GREEN;
   return GOLD;
@@ -176,7 +176,7 @@ export default function ProfileScreen() {
         setProfile(profileRes ?? {});
 
         const auditObj = auditRaw?.audit ?? auditRaw ?? {};
-        // Prefer primary cohort scores from rubric_analysis — no aggregates.
+        // Prefer primary cohort scores from rubric_analysis  -  no aggregates.
         const ra = auditObj?.rubric_analysis;
         const snapshot = profileRes?.first_audit_snapshot?.scores;
         const smart = ra?.primary_smart ?? auditObj?.scores?.smart ?? snapshot?.smart ?? null;
@@ -207,7 +207,7 @@ export default function ProfileScreen() {
       } catch {} finally {
         setLoading(false);
 
-        // Build-78: photo fetch moved off the critical path — loads
+        // Build-78: photo fetch moved off the critical path  -  loads
         // after the profile screen renders with name/score/achievements.
         // Perceived load time drops ~30% because the user sees content
         // immediately; photo fills in as a bonus.
@@ -462,7 +462,7 @@ export default function ProfileScreen() {
           <View style={ps.activityRow}>
             {[
               { label: 'Audits Run', value: auditCount, icon: 'document-text', color: colors.blue },
-              { label: 'AI Sessions', value: '—', icon: 'chatbubble', color: colors.indigo },
+              { label: 'AI Sessions', value: '-', icon: 'chatbubble', color: colors.indigo },
               { label: 'Jobs Applied', value: jobsApplied, icon: 'briefcase', color: GREEN },
             ].map(item => (
               <View key={item.label} style={ps.activityCard}>

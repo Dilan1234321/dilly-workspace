@@ -29,7 +29,7 @@ const PRE_PROF_OPTIONS = [
 ];
 
 // key is used for UI selection state; apiValue is sent to the API.
-// Year labels are dynamic so they don't go stale — previously hardcoded
+// Year labels are dynamic so they don't go stale  -  previously hardcoded
 // "Summer 2026" / "Fall 2026" would become incorrect on Jan 1, 2027.
 const _CURRENT_YEAR = new Date().getFullYear();
 const TARGET_OPTIONS = [
@@ -40,7 +40,7 @@ const TARGET_OPTIONS = [
 ];
 
 // Dynamic graduation year range: current year through current year + 5.
-// Computed at module load so it rolls forward automatically each year —
+// Computed at module load so it rolls forward automatically each year  - 
 // never needs manual updating. Coach and leaderboard both read graduation_year,
 // so this must be set for every student before they finish onboarding.
 const GRADUATION_OPTIONS: number[] = (() => {
@@ -352,7 +352,7 @@ export default function ProfileScreen() {
           <Text style={s.eyebrow}>Step 1 of 2 · Your profile</Text>
           <Text style={s.heading}>Tell me about{'\n'}yourself.</Text>
           <Text style={s.sub}>
-            Dilly scores you against the right cohort and peers — he needs this to do it right.
+            Dilly scores you against the right cohort and peers  -  he needs this to do it right.
           </Text>
         </View>
 

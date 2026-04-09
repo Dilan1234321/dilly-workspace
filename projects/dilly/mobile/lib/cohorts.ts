@@ -1,5 +1,5 @@
 /**
- * Mobile cohort system — intentionally richer than @dilly/api cohort utilities.
+ * Mobile cohort system  -  intentionally richer than @dilly/api cohort utilities.
  *
  * Key divergences from @dilly/api (by design, not accident):
  *   - MAJOR_TO_COHORTS  (plural)  → maps one major to MULTIPLE cohorts
@@ -7,9 +7,9 @@
  *   - PRE_PROF_TO_COHORTS (plural) → same multi-cohort pattern
  *   - detectCohorts() (plural)    → returns ALL matching cohorts for a user
  *     vs @dilly/api detectCohort() (singular) → returns ONE best-fit cohort
- *   - COHORT_META — per-cohort descriptions, scoring emphasis, colors (mobile-only)
+ *   - COHORT_META  -  per-cohort descriptions, scoring emphasis, colors (mobile-only)
  *
- * Do NOT "fix" the plural naming — it carries semantic meaning.
+ * Do NOT "fix" the plural naming  -  it carries semantic meaning.
  * Add new cohort metadata entries here; add new cohort names to
  * packages/dilly-api/src/constants.ts (ALL_COHORTS must stay in sync).
  */
@@ -555,5 +555,5 @@ export const ALL_COHORTS = Object.keys(COHORT_META);
 // ── Legacy compatibility ────────────────────────────────────────────────────
 
 export function needsIndustryTarget(_cohort: string, _majors: string[]): boolean {
-  return false; // No longer needed — industry target is handled by cohort selection
+  return false; // No longer needed  -  industry target is handled by cohort selection
 }

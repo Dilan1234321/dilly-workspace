@@ -88,9 +88,9 @@ interface ParticleConfig {
   h: number;
   sourceX: number;  // cannon origin x (left=0, right=SCREEN_W)
   targetX: number;  // final resting x
-  targetY: number;  // final resting y (10%–70% of SCREEN_H)
-  duration: number; // 800–1400ms
-  delay: number;    // 0–400ms
+  targetY: number;  // final resting y (10%-70% of SCREEN_H)
+  duration: number; // 800-1400ms
+  delay: number;    // 0-400ms
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
   // Content fade
   const contentOpacity = useRef(new Animated.Value(0)).current;
 
-  // Confetti: x, y, opacity per particle slot (fixed refs — values reset per show)
+  // Confetti: x, y, opacity per particle slot (fixed refs  -  values reset per show)
   const xAnims       = useRef(Array.from({ length: PARTICLE_COUNT }, () => new Animated.Value(0))).current;
   const yAnims       = useRef(Array.from({ length: PARTICLE_COUNT }, () => new Animated.Value(0))).current;
   const opacityAnims = useRef(Array.from({ length: PARTICLE_COUNT }, () => new Animated.Value(1))).current;
@@ -141,11 +141,11 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
       const color    = isAccent
         ? accent
         : nonAccent[Math.floor(Math.random() * nonAccent.length)];
-      // Square 5–9px or thin rectangle 3×10px
+      // Square 5-9px or thin rectangle 3×10px
       const isThin = Math.random() < 0.3;
       const w      = isThin ? 3 : 5 + Math.random() * 4;
       const h      = isThin ? 10 : w;
-      // Left bursts rightward (0–70% width), right bursts leftward (30–100% width)
+      // Left bursts rightward (0-70% width), right bursts leftward (30-100% width)
       const targetX = isLeft
         ? Math.random() * SCREEN_W * 0.7
         : SCREEN_W * 0.3 + Math.random() * SCREEN_W * 0.7;
@@ -167,7 +167,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
     setCtaVisible(false);
     setParticles(newParticles);
 
-    // ── Confetti burst — start immediately ────────────────────────────────────
+    // ── Confetti burst  -  start immediately ────────────────────────────────────
     newParticles.forEach((p, i) => {
       Animated.sequence([
         // Phase 1: burst to final position
@@ -268,7 +268,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
 
           {/* Face with pulsing gold ring */}
           <Animated.View style={[s.faceContainer, { transform: [{ scale: faceScale }] }]}>
-            {/* Ring as absolute overlay — separate so its opacity doesn't dim the face */}
+            {/* Ring as absolute overlay  -  separate so its opacity doesn't dim the face */}
             <Animated.View style={[s.ring, { opacity: ringOpacity }]} />
             <DillyFace size={FACE_SIZE} />
           </Animated.View>
@@ -302,7 +302,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Confetti particles — base position (0,0), moved entirely via transform
+  // Confetti particles  -  base position (0,0), moved entirely via transform
   particle: {
     position: 'absolute',
     top: 0,
@@ -325,7 +325,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Ring border sits as absolute overlay — animated opacity for pulse
+  // Ring border sits as absolute overlay  -  animated opacity for pulse
   ring: {
     position: 'absolute',
     top: 0,
@@ -361,7 +361,7 @@ const s = StyleSheet.create({
     lineHeight: 24,
   },
 
-  // CTA placeholder — fixed size so no layout jump
+  // CTA placeholder  -  fixed size so no layout jump
   ctaPlaceholder: {
     marginTop: 40,
     width: SCREEN_W - 48,

@@ -1,4 +1,4 @@
-// Dilly Light Mode — Brand Blue (#2B3A8E) from logo
+// Dilly Light Mode  -  Brand Blue (#2B3A8E) from logo
 export const colors = {
   // Backgrounds: white → cool gray scale
   bg: '#FFFFFF',

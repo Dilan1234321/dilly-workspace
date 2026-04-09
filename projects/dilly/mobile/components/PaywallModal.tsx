@@ -47,7 +47,7 @@ export default function PaywallModal() {
     try {
       await Linking.openURL(PRICING_URL);
     } catch {
-      // URL failed to open — do nothing
+      // URL failed to open  -  do nothing
     }
   }
 

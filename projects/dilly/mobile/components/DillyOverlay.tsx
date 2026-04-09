@@ -24,15 +24,15 @@ import { useDillyOverlayState } from '../hooks/useDillyOverlay';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 
-// Legacy overlay — DillyAIOverlay.tsx is the active chat component
+// Legacy overlay  -  DillyAIOverlay.tsx is the active chat component
 const MOCK_COACHING_RESPONSE =
   'Your Grit score is holding you back the most right now. ' +
-  'A 61 tells me your resume shows effort — but not sustained, quantified impact. ' +
+  'A 61 tells me your resume shows effort  -  but not sustained, quantified impact. ' +
   "Goldman Sachs recruiters scan for three things: leadership, results with numbers, and proof you didn't quit when something got hard. " +
-  "Right now your resume signals \"I did the work\" — not \"I drove the outcome.\"\n\n" +
+  "Right now your resume signals \"I did the work\"  -  not \"I drove the outcome.\"\n\n" +
   'Three fixes you can make tonight:\n\n' +
   '1. Add a results line to every bullet. "Led project" becomes "Led 4-person team, shipped 2 weeks ahead of schedule." Even small numbers matter.\n\n' +
-  '2. Your Build score is 78 — that is your strength. Pull your strongest technical bullet to the top.\n\n' +
+  '2. Your Build score is 78  -  that is your strength. Pull your strongest technical bullet to the top.\n\n' +
   '3. Add one leadership sentence. "Took initiative on X" or "Proposed and implemented Y" reads 3x stronger than passive voice.\n\n' +
   'Want me to rewrite your top bullet right now? Paste it here and I will give you the Goldman-ready version.';
 
@@ -65,7 +65,7 @@ export default function DillyOverlay() {
   const slideAnim   = useRef(new Animated.Value(SCREEN_H)).current;
   const glowOpacity = useRef(new Animated.Value(0)).current;
   const faceScale   = useRef(new Animated.Value(1)).current;
-  // Ring pulse: 0.6 → 1.0 borderColor opacity (useNativeDriver: false — borderColor not native)
+  // Ring pulse: 0.6 → 1.0 borderColor opacity (useNativeDriver: false  -  borderColor not native)
   const ringAnim    = useRef(new Animated.Value(0.6)).current;
   const dotAnims    = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
 
@@ -261,7 +261,7 @@ export default function DillyOverlay() {
     setGlowState('thinking');
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
 
-    // Legacy mock response — DillyAIOverlay handles real chat
+    // Legacy mock response  -  DillyAIOverlay handles real chat
     await new Promise(r => setTimeout(r, 800));
 
     const withAssistant: Message[] = [...history, { role: 'assistant', content: '' }];
@@ -372,7 +372,7 @@ export default function DillyOverlay() {
                 {messages.length === 0 && (
                   <View style={s.welcomeWrap}>
                     <Text style={s.welcomeText}>
-                      Ask me anything about your career — your score, what to fix, where to apply.
+                      Ask me anything about your career  -  your score, what to fix, where to apply.
                     </Text>
                   </View>
                 )}
@@ -488,7 +488,7 @@ export default function DillyOverlay() {
                 onPress={() => {}}
                 activeOpacity={0.85}
               >
-                <Text style={s.unlockBtnText}>Unlock Dilly — $9.99/mo</Text>
+                <Text style={s.unlockBtnText}>Unlock Dilly  -  $9.99/mo</Text>
               </TouchableOpacity>
               <Text style={s.unlockSub}>Cancel anytime. One fix pays for 500 months.</Text>
             </View>

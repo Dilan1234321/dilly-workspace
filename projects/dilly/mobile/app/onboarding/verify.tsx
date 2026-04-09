@@ -209,7 +209,7 @@ export default function VerifyScreen() {
     }
   }
 
-  // Returning user — email entry step
+  // Returning user  -  email entry step
   if (isReturning && returningStep === 'email') {
     return (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

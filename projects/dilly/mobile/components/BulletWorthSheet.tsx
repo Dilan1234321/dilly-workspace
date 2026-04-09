@@ -1,5 +1,5 @@
 /**
- * BulletWorthSheet — "What's this bullet worth?"
+ * BulletWorthSheet  -  "What's this bullet worth?"
  *
  * Bottom-sheet modal that opens when a user taps any bullet in the resume
  * editor. Calls POST /resume/bullet-worth, shows which rubric signals the

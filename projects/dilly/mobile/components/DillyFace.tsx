@@ -57,7 +57,7 @@ export function DillyFace({ size }: DillyFaceProps) {
       // Smile lerp
       smileRef.current += (smileTargetRef.current - smileRef.current) * 0.04
 
-      // Push to Animated values (native driver not used — SVG not natively driven)
+      // Push to Animated values (native driver not used  -  SVG not natively driven)
       posX.setValue(posRef.current.x)
       posY.setValue(posRef.current.y)
       smileAnim.setValue(smileRef.current)
@@ -80,7 +80,7 @@ export function DillyFace({ size }: DillyFaceProps) {
     outputRange: [
       // flat smile (0)
       `M ${cx - mW} ${cy + 5 * s} Q ${cx} ${cy + 5 * s} ${cx + mW} ${cy + 5 * s}`,
-      // full smile (1) — curve depth is 4.5*s*2 = 9s
+      // full smile (1)  -  curve depth is 4.5*s*2 = 9s
       `M ${cx - mW} ${cy + 5 * s} Q ${cx} ${cy + 5 * s + 9 * s} ${cx + mW} ${cy + 5 * s}`,
     ],
   })
@@ -108,7 +108,7 @@ export function DillyFace({ size }: DillyFaceProps) {
           r={2.8 * s}
           fill="#2B3A8E"
         />
-        {/* Smile — bezier arc */}
+        {/* Smile  -  bezier arc */}
         <AnimatedPath
           d={smilePath}
           stroke="#2B3A8E"

@@ -151,7 +151,7 @@ export default function InterestsPicker({ selected, onChange, autoPopulated = []
         <Text style={s.selectedCount}>{selected.length} selected</Text>
       )}
 
-      {/* Recommended for you — only if there are unselected recs and no search */}
+      {/* Recommended for you  -  only if there are unselected recs and no search */}
       {unselectedRecs.length > 0 && !hasSearch && (
         <View style={s.recSection}>
           <View style={s.recHeader}>

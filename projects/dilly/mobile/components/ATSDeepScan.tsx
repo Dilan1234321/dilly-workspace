@@ -1,5 +1,5 @@
 /**
- * ATSDeepScan — v2 scoring UI for the ATS scanner screen.
+ * ATSDeepScan  -  v2 scoring UI for the ATS scanner screen.
  *
  * Renders the rich output of the new /ats/scan?v2 pipeline:
  *   1. Hero composite score with confidence band and forecast
@@ -145,7 +145,7 @@ function HeroScore({ overall, forecast }: { overall: FactorScore; forecast: numb
             <Text style={s.heroSuffix}>/100</Text>
           </View>
           <Text style={s.heroBand}>
-            Confidence: {Math.round(overall.low)}–{Math.round(overall.high)}
+            Confidence: {Math.round(overall.low)}-{Math.round(overall.high)}
           </Text>
         </View>
         {delta >= 1 && (
@@ -219,10 +219,10 @@ function VendorCard({ vendor, onFixPress, pinned }: {
   const ev = vendor.extraction_view;
   const expCapture = ev.experience_total > 0
     ? `${ev.experience_captured}/${ev.experience_total}`
-    : '—';
+    : '-';
   const bulletCapture = ev.bullets_total > 0
     ? `${ev.bullets_captured}/${ev.bullets_total}`
-    : '—';
+    : '-';
   const lift = vendor.forecast_if_all_fixed - vendor.composite.value;
 
   return (

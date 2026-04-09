@@ -231,7 +231,7 @@ function InterviewCountdownHero({
         <TouchableOpacity
           style={cs.countdownCalBtn}
           onPress={() => openAddToCalendar({
-            title: `Interview — ${interview.company || interview.title}`,
+            title: `Interview  -  ${interview.company || interview.title}`,
             date: interview.date,
             description: interview.role ? `Role: ${interview.role}` : 'Interview',
           })}
@@ -762,7 +762,7 @@ export default function CalendarScreen() {
           existingKeys.add(key);
           mapped.push({
             id: a.id || uid(),
-            title: company ? `${company} — ${role || 'Application'}` : (role || 'Application deadline'),
+            title: company ? `${company}  -  ${role || 'Application'}` : (role || 'Application deadline'),
             date: deadline,
             type: 'application',
             notes: a.notes || undefined,
@@ -794,7 +794,7 @@ export default function CalendarScreen() {
           existingKeys.add(dedupKey);
           mapped.push({
             id: `followup-${a.id || uid()}`,
-            title: `Follow up — ${company || role || 'application'}`,
+            title: `Follow up  -  ${company || role || 'application'}`,
             date: followUpKey,
             type: 'custom',
             notes: daysSince >= FOLLOW_UP_DAYS
@@ -1039,7 +1039,7 @@ export default function CalendarScreen() {
             <AnimatedPressable onPress={nextMonth} scaleDown={0.9} hitSlop={12}>
               <Ionicons name="chevron-forward" size={18} color={colors.t2} />
             </AnimatedPressable>
-            {/* Build-78: Today pill — one tap jumps back to current month */}
+            {/* Build-78: Today pill  -  one tap jumps back to current month */}
             {(viewMonth !== now.getMonth() || viewYear !== now.getFullYear()) && (
               <TouchableOpacity
                 style={cs.todayPill}
@@ -1065,7 +1065,7 @@ export default function CalendarScreen() {
           />
         </FadeInView>
 
-        {/* Build-78: Agenda view — the event list is now the primary view.
+        {/* Build-78: Agenda view  -  the event list is now the primary view.
             Shows events for the selected day, or the next 14 days of
             upcoming events grouped by day if no day is selected. */}
         <FadeInView delay={200}>
@@ -1089,7 +1089,7 @@ export default function CalendarScreen() {
               </Text>
               {!selectedDay && events.length === 0 && (
                 <Text style={cs.emptyHint}>
-                  Track an application with a deadline, or add an interview date — Dilly will build your prep plan automatically.
+                  Track an application with a deadline, or add an interview date  -  Dilly will build your prep plan automatically.
                 </Text>
               )}
               <AnimatedPressable style={cs.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>

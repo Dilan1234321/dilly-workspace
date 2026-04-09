@@ -1,5 +1,5 @@
 /**
- * Mobile Dilly client — configured with SecureStore tokens.
+ * Mobile Dilly client  -  configured with SecureStore tokens.
  *
  * Import this everywhere instead of using raw fetch:
  *   import { dilly } from '@/lib/dilly';
@@ -14,7 +14,7 @@ import { API_BASE } from "./tokens";
 /**
  * SecureStore-backed token provider with AsyncStorage fallback.
  * SecureStore uses the device keychain (encrypted), but may be unavailable
- * on some simulators — AsyncStorage is the fallback.
+ * on some simulators  -  AsyncStorage is the fallback.
  */
 function secureStoreTokenProvider(): TokenProvider {
   return {

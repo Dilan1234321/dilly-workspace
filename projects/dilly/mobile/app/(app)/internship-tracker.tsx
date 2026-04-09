@@ -256,7 +256,7 @@ function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }
           <AnimatedPressable
             style={ts.quickAction}
             onPress={() => openAddToCalendar({
-              title: `${app.company} — ${app.role || 'deadline'}`,
+              title: `${app.company}  -  ${app.role || 'deadline'}`,
               date: (app.deadline || '').slice(0, 10),
               description: app.notes || 'Application deadline',
             })}
@@ -458,7 +458,7 @@ export default function InternshipTrackerScreen() {
       referenceCompany: app.company,
       applicationTarget: `${app.role} at ${app.company}`,
       isPaid: true,
-      initialMessage: `Help me write a follow-up email to ${app.company} about the ${app.role} position I applied to ${appliedDays} days ago. Keep it short, professional, and genuine — not pushy.`,
+      initialMessage: `Help me write a follow-up email to ${app.company} about the ${app.role} position I applied to ${appliedDays} days ago. Keep it short, professional, and genuine  -  not pushy.`,
     });
   }
 
@@ -548,7 +548,7 @@ export default function InternshipTrackerScreen() {
               <Ionicons name="briefcase-outline" size={40} color={colors.t3 + '30'} />
               <Text style={ts.emptyTitle}>No applications yet</Text>
               <Text style={ts.emptyText}>
-                Find a job on the Internships page and tap "Apply + Track" — or add one manually below.
+                Find a job on the Internships page and tap "Apply + Track"  -  or add one manually below.
               </Text>
               <AnimatedPressable style={ts.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
                 <Ionicons name="add-circle" size={16} color="#FFFFFF" />

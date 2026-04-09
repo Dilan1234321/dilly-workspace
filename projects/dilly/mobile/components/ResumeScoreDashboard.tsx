@@ -1,14 +1,14 @@
 /**
- * ResumeScoreDashboard — powers the build-63 resume editor coaching surface.
+ * ResumeScoreDashboard  -  powers the build-63 resume editor coaching surface.
  *
  * Single component that renders three coaching sections using data from the
  * new /resume/editor-scan endpoint:
  *
- *   1. Per-vendor ATS sidebar — Workday / Taleo / iCIMS / Greenhouse / Lever
+ *   1. Per-vendor ATS sidebar  -  Workday / Taleo / iCIMS / Greenhouse / Lever
  *      composite scores with a colored bar per vendor
- *   2. Rubric dimension rings — Smart / Grit / Build mini progress rings
+ *   2. Rubric dimension rings  -  Smart / Grit / Build mini progress rings
  *      showing how the student's resume matches their primary cohort rubric
- *   3. Prioritized "Fix this first" issue list — top 5 actions ranked by
+ *   3. Prioritized "Fix this first" issue list  -  top 5 actions ranked by
  *      estimated score lift, with a "Fix with Dilly" action button on each
  *
  * Designed to render in a collapsible panel inside the resume editor. Parent
@@ -150,7 +150,7 @@ function DimensionRing({ label, value, missing }: {
             strokeWidth={strokeWidth}
             fill="transparent"
           />
-          {/* Progress arc — start at 12 o'clock by rotating -90deg around center */}
+          {/* Progress arc  -  start at 12 o'clock by rotating -90deg around center */}
           <Circle
             cx={size / 2}
             cy={size / 2}
@@ -253,8 +253,8 @@ function ScrollableChips({ options, activeId, onSelect }: {
       </Pressable>
       {options.map(opt => {
         const isActive = opt.cohort_id === activeId;
-        // Trim the "Tech —" / "Business —" prefix for tighter chip labels
-        const short = opt.display_name.replace(/^(Tech|Business|Science|Health|Social Sciences|Quantitative|Arts & Design)\s*[—-]\s*/i, '');
+        // Trim the "Tech  - " / "Business  - " prefix for tighter chip labels
+        const short = opt.display_name.replace(/^(Tech|Business|Science|Health|Social Sciences|Quantitative|Arts & Design)\s*[ - -]\s*/i, '');
         return (
           <Pressable
             key={opt.cohort_id}
@@ -322,7 +322,7 @@ export default function ResumeScoreDashboard({
 
   // Per-vendor ATS bars now read from legacy_ats_vendors so the numbers
   // match the dedicated /ats page. The hero "overall score" was removed
-  // per product decision — Smart/Grit/Build rings are the only scores
+  // per product decision  -  Smart/Grit/Build rings are the only scores
   // the coaching dashboard surfaces.
   const legacyVendors = scan.legacy_ats_vendors || {};
   const vendorOrder = ['workday', 'taleo', 'icims', 'greenhouse', 'lever', 'ashby', 'successfactors'];
@@ -606,7 +606,7 @@ const s = StyleSheet.create({
   },
   allClearText: { flex: 1, fontSize: 11, color: colors.t1, fontWeight: '600' },
 
-  // Build 69 — section reorder suggestion
+  // Build 69  -  section reorder suggestion
   reorderCard: {
     backgroundColor: GOLD + '08', borderRadius: 10, borderWidth: 1, borderColor: GOLD + '30',
     padding: 12, marginTop: 14,
@@ -626,7 +626,7 @@ const s = StyleSheet.create({
   },
   reorderApplyText: { fontSize: 11, color: GOLD, fontWeight: '700' },
 
-  // Build 69 — inline keyword heatmap
+  // Build 69  -  inline keyword heatmap
   keywordBlock: { marginTop: 14 },
   keywordGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   keywordChip: {

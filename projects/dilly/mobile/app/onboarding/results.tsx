@@ -30,7 +30,7 @@ interface RubricSignal {
   rationale: string;
 }
 
-// Fastest-path move from the rubric — can be a string or {move, expected_lift, source}
+// Fastest-path move from the rubric  -  can be a string or {move, expected_lift, source}
 type RubricPathMove = string | { move?: string; expected_lift?: string; source?: string; title?: string; action?: string };
 
 // Per-cohort summary for "other cohorts" display
@@ -94,10 +94,10 @@ function calcPercentile(score: number): number {
 
 function scoreColor(score: number): string {
   // Two-tier encouraging palette: green if strong, brand blue otherwise.
-  // Never red, never orange — low scores should feel like a starting line,
+  // Never red, never orange  -  low scores should feel like a starting line,
   // not a failure. Red is reserved for genuine error states only.
   if (score >= 80) return colors.green;
-  return colors.gold; // Dilly brand blue (#2B3A8E) — "building, here's your path"
+  return colors.gold; // Dilly brand blue (#2B3A8E)  -  "building, here's your path"
 }
 
 function fmtPts(n: number): string {
@@ -241,8 +241,8 @@ export default function ResultsScreen() {
     || (isError
       ? "Upload a PDF resume and I'll show you exactly what moves your score fastest."
       : isAdmissionsCohort
-      ? `I know exactly what's moving your ${weakest.name} from ${weakest.score} — and adcoms will be looking for this.`
-      : `I know exactly what moves your ${weakest.name} from ${weakest.score} — and it's a 10-minute fix on two bullets.`);
+      ? `I know exactly what's moving your ${weakest.name} from ${weakest.score}  -  and adcoms will be looking for this.`
+      : `I know exactly what moves your ${weakest.name} from ${weakest.score}  -  and it's a 10-minute fix on two bullets.`);
 
   const go       = !isError && result !== null;
   const scoreVal = useCountUp(finalScore, 1200, 400, go);
@@ -279,7 +279,7 @@ export default function ResultsScreen() {
           {firstName ? `${firstName}'s Dilly score` : 'Your Dilly score'}
         </Text>
 
-        {/* Title — framed as a starting line, not a verdict */}
+        {/* Title  -  framed as a starting line, not a verdict */}
         <Text style={s.title}>
           {firstName ? `${firstName}, here's your starting line.` : "Here's your starting line."}
         </Text>
@@ -294,7 +294,7 @@ export default function ResultsScreen() {
 
           <View style={s.scoreRow}>
             <Text style={[s.scoreBig, { color: isError ? colors.t3 : scoreColor(finalScore) }]}>
-              {isError ? '—' : scoreVal}
+              {isError ? ' - ' : scoreVal}
             </Text>
             <Text style={s.scoreOf}>/100</Text>
           </View>
@@ -311,7 +311,7 @@ export default function ResultsScreen() {
             {['Smart', 'Grit', 'Build'].map((name, i) => (
               <View key={name} style={s.dimTile}>
                 <Text style={[s.dimScore, { color: isError ? colors.t3 : dimColors[i] }]}>
-                  {isError ? '—' : dimVals[i]}
+                  {isError ? ' - ' : dimVals[i]}
                 </Text>
                 <Text style={s.dimLabel}>{name}</Text>
               </View>
@@ -335,7 +335,7 @@ export default function ResultsScreen() {
           </Animated.View>
         )}
 
-        {/* ── Path-forward callout — framed as a lever, not a verdict ────── */}
+        {/* ── Path-forward callout  -  framed as a lever, not a verdict ────── */}
         <Animated.View style={[{ marginBottom: 8 }, { opacity: calloutAnim }]}>
           {isError ? (
             <View style={[s.calloutBox, { backgroundColor: colors.s2, borderColor: colors.b1 }]}>
@@ -372,13 +372,13 @@ export default function ResultsScreen() {
         </Animated.View>
 
         {/* ──────────────────────────────────────────────────────────────────
-             RUBRIC ANALYSIS — Tier 2 cutover (2026-04-08)
+             RUBRIC ANALYSIS  -  Tier 2 cutover (2026-04-08)
 
              The rich "checklist" UX. When the backend returns rubric_analysis
              we render three sections:
                1. What's working (matched signals, leading with a win)
                2. Your fastest path forward (unmatched high-impact signals,
-                  each with a cited rationale — the actual to-do list)
+                  each with a cited rationale  -  the actual to-do list)
                3. Specific next moves (fastest_path_moves from the rubric)
 
              When rubric_analysis is NOT present, we fall back to the legacy
@@ -386,7 +386,7 @@ export default function ResultsScreen() {
          ─────────────────────────────────────────────────────────────────── */}
         {!isError && result?.rubric_analysis && (
           <Animated.View style={{ opacity: calloutAnim, marginBottom: 8 }}>
-            {/* What's working — matched signals, lead with a win */}
+            {/* What's working  -  matched signals, lead with a win */}
             {result.rubric_analysis.matched_signals && result.rubric_analysis.matched_signals.length > 0 && (
               <View style={s.rubricSection}>
                 <Text style={s.recoHeading}>What's working</Text>
@@ -402,7 +402,7 @@ export default function ResultsScreen() {
               </View>
             )}
 
-            {/* Your fastest path forward — unmatched high-impact signals
+            {/* Your fastest path forward  -  unmatched high-impact signals
                  (the biggest levers, each with a cited rationale) */}
             {result.rubric_analysis.unmatched_signals && result.rubric_analysis.unmatched_signals.filter(s => s.tier === 'high').length > 0 && (
               <View style={s.rubricSection}>
@@ -638,7 +638,7 @@ const s = StyleSheet.create({
   // ── Rubric analysis sections (Tier 2 cutover) ─────────────────────────
   rubricSection: { marginBottom: 12 },
 
-  // "What's working" — matched signals
+  // "What's working"  -  matched signals
   matchedRow: {
     flexDirection: 'row', gap: 8, alignItems: 'flex-start',
     paddingVertical: 6, paddingHorizontal: 10,
@@ -655,7 +655,7 @@ const s = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 2,
   },
 
-  // "Biggest levers" — unmatched high-impact signals with rationales
+  // "Biggest levers"  -  unmatched high-impact signals with rationales
   leverCard: {
     flexDirection: 'row', gap: 9, alignItems: 'flex-start',
     backgroundColor: colors.golddim, borderWidth: 1, borderColor: colors.goldbdr,
@@ -674,7 +674,7 @@ const s = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 4,
   },
 
-  // "Fastest path forward" — specific next moves
+  // "Fastest path forward"  -  specific next moves
   moveCard: {
     flexDirection: 'row', alignItems: 'flex-start',
     paddingVertical: 6, paddingHorizontal: 10,
@@ -683,7 +683,7 @@ const s = StyleSheet.create({
   },
   moveText: { fontSize: 10.5, color: colors.t1, lineHeight: 15, flex: 1 },
 
-  // "Other tracks you fit" — secondary cohorts
+  // "Other tracks you fit"  -  secondary cohorts
   otherCohortRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 8, paddingHorizontal: 11,

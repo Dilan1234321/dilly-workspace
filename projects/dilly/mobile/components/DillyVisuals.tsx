@@ -1,12 +1,12 @@
 /**
- * DillyVisuals — full-width visual cards rendered between chat messages.
+ * DillyVisuals  -  full-width visual cards rendered between chat messages.
  *
  * Visual types:
- *   score_breakdown      — Smart / Grit / Build animated bars
- *   cohort_comparison    — rank, percentile, peer count
- *   interview_checklist  — prep items with priority
- *   bullet_comparison    — before/after resume bullet
- *   timeline             — horizontal scrolling deadline timeline
+ *   score_breakdown       -  Smart / Grit / Build animated bars
+ *   cohort_comparison     -  rank, percentile, peer count
+ *   interview_checklist   -  prep items with priority
+ *   bullet_comparison     -  before/after resume bullet
+ *   timeline              -  horizontal scrolling deadline timeline
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -134,7 +134,7 @@ function AnimBar({
 
 function scoreColor(score: number, bar: number) {
   // Two-tier encouraging palette: green if at/above bar, brand blue otherwise.
-  // Never red, never orange — low scores should feel like a starting line,
+  // Never red, never orange  -  low scores should feel like a starting line,
   // not a failure. GOLD here is the Dilly brand blue (#2B3A8E).
   if (score >= bar) return GREEN;
   return GOLD;
@@ -233,7 +233,7 @@ export function InterviewChecklistCard({ data }: { data: InterviewChecklistPaylo
         <Text style={[vStyles.checkProgress, { color: done === data.items.length ? GREEN : GOLD }]}>{done}/{data.items.length}</Text>
       </View>
       <Text style={vStyles.checkTitle}>
-        {data.company}{data.role ? ` — ${data.role}` : ''}{data.round ? ` (${data.round})` : ''}
+        {data.company}{data.role ? `  -  ${data.role}` : ''}{data.round ? ` (${data.round})` : ''}
       </Text>
       {data.items.map((item, i) => (
         <TouchableOpacity key={i} style={vStyles.checkRow} onPress={() => toggle(i)} activeOpacity={0.7}>

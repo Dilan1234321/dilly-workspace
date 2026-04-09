@@ -65,7 +65,7 @@ function scoreColor(score: number): string {
 // Build-75: calcPercentile removed. It was a hardcoded 5-bucket lookup
 // that lied about peer standing without touching any real data. We show
 // the user's own score and delta instead. Peer stats will come back when
-// we have density — not before.
+// we have density  -  not before.
 
 function formatRelativeDate(ts: number | null | undefined): string {
   if (!ts) return '';
@@ -168,7 +168,7 @@ export default function HomeScreen() {
           dilly.fetch('/profile'),
           dilly.fetch('/audit/latest'),
         ]);
-        // If API returns 401, token is invalid — redirect to login
+        // If API returns 401, token is invalid  -  redirect to login
         if (profileRaw.status === 401 || profileRaw.status === 403) {
           await (await import('../../lib/auth')).clearAuth();
           router.replace('/');
@@ -195,7 +195,7 @@ export default function HomeScreen() {
         const hasAuditFlag = auditObj?.final_score != null;
 
         // Prefer per-cohort scores from rubric_analysis (primary cohort).
-        // No more "overall" scores anywhere in the app — every number shown
+        // No more "overall" scores anywhere in the app  -  every number shown
         // is the user's score within their primary cohort.
         const ra = auditObj?.rubric_analysis;
         const snapshot = profileRes?.first_audit_snapshot?.scores;
@@ -249,7 +249,7 @@ export default function HomeScreen() {
           setAuditHistory(audits);
         }).catch(() => {});
 
-        // Always show top 3 best-matching jobs, regardless of readiness — sort=rank
+        // Always show top 3 best-matching jobs, regardless of readiness  -  sort=rank
         // gives the highest-overlap jobs first so the section is never empty.
         dilly.get('/v2/internships/feed?sort=rank&limit=3').then(data => {
           setTopJobs((data?.listings || []).slice(0, 3));
@@ -265,7 +265,7 @@ export default function HomeScreen() {
         });
 
         // Build-75: record today's streak check-in. The endpoint is idempotent
-        // — if already checked in today, it returns the current state without
+        //  -  if already checked in today, it returns the current state without
         // bumping. Fire-and-forget; we don't block UI on this.
         dilly.fetch('/streak/checkin', { method: 'POST' })
           .then(r => r.json())
@@ -443,7 +443,7 @@ export default function HomeScreen() {
           </View>
         </FadeInView>
 
-        {/* Build-75: Daily action banner — today's one-line coaching action */}
+        {/* Build-75: Daily action banner  -  today's one-line coaching action */}
         {brief?.streak?.daily_action && (
           <FadeInView delay={40}>
             <View style={s.dailyActionBanner}>
@@ -489,7 +489,7 @@ export default function HomeScreen() {
                 { label: `How close am I to ${cohortCfg.company}?`, msg: `How close am I to ${cohortCfg.company}'s hiring bar? What do I need to do to get there?` },
                 { label: 'Help with my resume', msg: 'Help me improve my resume. What are the biggest things I should fix?' },
               ] : [
-                { label: "I'm above the bar — now what?", msg: `I'm above ${cohortCfg.company}'s hiring bar. What should I do this week to maximize my chances?` },
+                { label: "I'm above the bar  -  now what?", msg: `I'm above ${cohortCfg.company}'s hiring bar. What should I do this week to maximize my chances?` },
                 { label: 'Prep me for interviews', msg: 'Help me prepare for interviews. What should I expect and how should I practice?' },
                 { label: 'Where should I apply?', msg: 'Based on my profile, where should I apply this week?' },
               ]).map(chip => (
@@ -523,7 +523,7 @@ export default function HomeScreen() {
           >
             <View style={s.compactScoreLeft}>
               <Text style={[s.compactScoreNum, { color: hasAudit ? sColor : colors.t3 }]}>
-                {hasAudit ? displayScore : '—'}
+                {hasAudit ? displayScore : '-'}
               </Text>
               {hasAudit && brief?.score?.delta != null && Math.abs(brief.score.delta) >= 1 && (
                 <View style={[s.compactPctBadge, { backgroundColor: (brief.score.delta >= 0 ? colors.green : colors.coral) + '15' }]}>
@@ -548,7 +548,7 @@ export default function HomeScreen() {
               ].map(d => (
                 <View key={d.label} style={s.compactDim}>
                   <Text style={[s.compactDimScore, { color: hasAudit ? d.color : colors.t3 }]}>
-                    {hasAudit ? Math.round(d.score) : '—'}
+                    {hasAudit ? Math.round(d.score) : '-'}
                   </Text>
                   <Text style={s.compactDimLabel}>{d.label}</Text>
                 </View>
@@ -759,7 +759,7 @@ export default function HomeScreen() {
                                   try {
                                     openAddToCalendar({
                                       title: company
-                                        ? `${company} — ${role || 'deadline'}`
+                                        ? `${company}  -  ${role || 'deadline'}`
                                         : (label || 'Deadline'),
                                       date,
                                       description: label || 'Added from Dilly',
@@ -833,7 +833,7 @@ export default function HomeScreen() {
         </FadeInView>
 
         {/* \u2500\u2500 Unlock Dilly card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
-        {/* Unlock card hidden — paid experience */}
+        {/* Unlock card hidden  -  paid experience */}
 
         {/* Build-78: profile completeness nudge */}
         {(() => {
