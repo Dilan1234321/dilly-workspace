@@ -226,7 +226,13 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
 
   return (
     <View style={ns.resultsCard}>
-      <Text style={ns.resultsEyebrow}>YOUR NEW SCORE</Text>
+      <Text style={ns.resultsEyebrow}>
+        {newAudit.rubric_analysis?.primary_cohort_display_name
+          ? `YOUR ${newAudit.rubric_analysis.primary_cohort_display_name.toUpperCase()} SCORE`
+          : newAudit.detected_track
+          ? `YOUR ${String(newAudit.detected_track).toUpperCase()} SCORE`
+          : 'YOUR NEW SCORE'}
+      </Text>
 
       <View style={ns.resultsScoreRow}>
         <Text style={[ns.resultsScore, { color }]}>{score}</Text>
