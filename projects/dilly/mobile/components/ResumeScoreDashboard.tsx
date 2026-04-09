@@ -82,10 +82,25 @@ type TopIssue = {
   lift_per_vendor?: Record<string, number>;
 };
 
+export type KeywordCell = {
+  keyword: string;
+  count: number;
+  placement: 'strong' | 'adequate' | 'weak' | 'missing';
+};
+
+export type ReorderSuggestion = {
+  vendor: string;
+  message: string;
+  current_order: string[];
+  suggested_order: string[];
+};
+
 export type EditorScanData = {
   v2: V2Payload;
   rubric_analysis: RubricPayload;
   top_issues: TopIssue[];
+  keyword_cells?: KeywordCell[];
+  reorder_suggestion?: ReorderSuggestion | null;
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -390,6 +405,53 @@ export default function ResumeScoreDashboard({
           <Text style={s.allClearText}>No blocking issues. Your resume is in great shape.</Text>
         </View>
       )}
+
+      {/* Build 69: cohort-aware section reorder suggestion */}
+      {scan.reorder_suggestion && (
+        <View style={s.reorderCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <Ionicons name="reorder-three" size={14} color={GOLD} />
+            <Text style={s.reorderLabel}>SECTION ORDER</Text>
+          </View>
+          <Text style={s.reorderMessage}>{scan.reorder_suggestion.message}</Text>
+          <View style={s.reorderOrderRow}>
+            {scan.reorder_suggestion.suggested_order.slice(0, 6).map((sec, i) => (
+              <View key={`${sec}-${i}`} style={s.reorderChip}>
+                <Text style={s.reorderChipText}>{sec.replace(/_/g, ' ')}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Build 69: inline keyword heatmap */}
+      {scan.keyword_cells && scan.keyword_cells.length > 0 && (
+        <View style={s.keywordBlock}>
+          <Text style={s.sectionLabel}>KEYWORD PLACEMENT</Text>
+          <View style={s.keywordGrid}>
+            {scan.keyword_cells.slice(0, 20).map((cell, i) => {
+              const colorMap: Record<string, string> = {
+                strong:   GREEN,
+                adequate: BLUE,
+                weak:     AMBER,
+                missing:  CORAL,
+              };
+              const c = colorMap[cell.placement] || colors.t3;
+              return (
+                <View
+                  key={`${cell.keyword}-${i}`}
+                  style={[s.keywordChip, { backgroundColor: c + '15', borderColor: c + '35' }]}
+                >
+                  <Text style={[s.keywordChipText, { color: c }]}>{cell.keyword}</Text>
+                  {cell.count > 0 && (
+                    <Text style={[s.keywordChipCount, { color: c }]}>·{cell.count}</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -515,4 +577,28 @@ const s = StyleSheet.create({
     padding: 10,
   },
   allClearText: { flex: 1, fontSize: 11, color: colors.t1, fontWeight: '600' },
+
+  // Build 69 — section reorder suggestion
+  reorderCard: {
+    backgroundColor: GOLD + '08', borderRadius: 10, borderWidth: 1, borderColor: GOLD + '30',
+    padding: 12, marginTop: 14,
+  },
+  reorderLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: GOLD },
+  reorderMessage: { fontSize: 11, color: colors.t1, lineHeight: 15, marginBottom: 8 },
+  reorderOrderRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  reorderChip: {
+    backgroundColor: colors.s3, borderRadius: 6, borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 6, paddingVertical: 3,
+  },
+  reorderChipText: { fontSize: 9, color: colors.t2, fontWeight: '600', textTransform: 'capitalize' },
+
+  // Build 69 — inline keyword heatmap
+  keywordBlock: { marginTop: 14 },
+  keywordGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  keywordChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    borderRadius: 6, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3,
+  },
+  keywordChipText: { fontSize: 10, fontWeight: '600' },
+  keywordChipCount: { fontSize: 9, fontWeight: '700' },
 });
