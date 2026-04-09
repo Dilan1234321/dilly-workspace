@@ -963,9 +963,11 @@ export default function ResumeEditorScreen() {
           }
         } catch {}
 
-        if (draftSections) {
-          // Defer the prompt until after loading UI settles
+        if (draftSections && draftSections.length > 0) {
+          // Show server sections first so the editor isn't blank
           setSections(serverSections || buildDefaultSections(profileRes));
+          // Store draft in a ref so the Alert closure can access it reliably
+          const capturedDraft = [...draftSections];
           setTimeout(() => {
             Alert.alert(
               'Restore unsaved changes?',
@@ -976,18 +978,22 @@ export default function ResumeEditorScreen() {
                 {
                   text: 'Discard',
                   style: 'destructive',
-                  onPress: () => { AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {}); },
+                  onPress: () => {
+                    AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
+                  },
                 },
                 {
                   text: 'Restore',
                   onPress: () => {
-                    setSections(draftSections!);
-                    setHasChanges(true);
+                    if (capturedDraft.length > 0) {
+                      setSections(capturedDraft);
+                      setHasChanges(true);
+                    }
                   },
                 },
               ],
             );
-          }, 400);
+          }, 600);
         } else if (serverSections) {
           setSections(serverSections);
         } else {
@@ -1521,10 +1527,14 @@ export default function ResumeEditorScreen() {
   // with its standard share/save sheet. Works without expo-file-system
   // or expo-sharing.
   async function handleExport(
-    template: 'tech' | 'business' | 'academic',
+    template: string,
     format: 'pdf' | 'docx' = 'pdf',
   ) {
     if (exporting) return;
+    if (!sections || sections.length === 0) {
+      Alert.alert('Nothing to export', 'Add some content to your resume first.');
+      return;
+    }
     setExporting(true);
     try {
       const res = await dilly.fetch('/resume/export', {
@@ -1563,6 +1573,10 @@ export default function ResumeEditorScreen() {
     if (clGenerating) return;
     if (!clCompany.trim() || !clRole.trim()) {
       Alert.alert('Missing details', 'Enter the company and role first.');
+      return;
+    }
+    if (!sections || sections.length === 0) {
+      Alert.alert('No resume', 'Add content to your resume before generating a cover letter.');
       return;
     }
     setClGenerating(true);
@@ -1609,6 +1623,10 @@ export default function ResumeEditorScreen() {
   // bypasses the subscription check for all users.
   async function handleReaudit() {
     if (reauditing) return;
+    if (!sections || sections.length === 0) {
+      Alert.alert('No resume', 'Add content to your resume before re-auditing.');
+      return;
+    }
     setReauditing(true);
     try {
       // Persist any unsaved edits first so the backend audits the latest text
@@ -1806,7 +1824,10 @@ export default function ResumeEditorScreen() {
           scaleDown={0.97}
         >
           <Ionicons name="logo-linkedin" size={14} color="#0A66C2" />
-          <Text style={rs.tailorBtnText}>Import from LinkedIn</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={rs.tailorBtnText}>Import LinkedIn PDF</Text>
+            <Text style={{ fontSize: 9, color: colors.t3, marginTop: 1 }}>Upload the PDF from LinkedIn's "Save to PDF" feature.</Text>
+          </View>
         </AnimatedPressable>
 
         {/* Build-63 dashboard: collapsible header + the dashboard card */}
@@ -2017,7 +2038,22 @@ export default function ResumeEditorScreen() {
               {/* Base resume card  -  always first, larger */}
               <AnimatedPressable
                 style={[rs.bentoCardLarge, !activeVariant && rs.bentoCardSelected]}
-                onPress={() => { setActiveVariant(null); setSections(baseSections); setExpanded(new Set()); setShowGrid(false); }}
+                onPress={() => {
+                  // Clear autosave draft + undo stack when switching away from a variant
+                  AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
+                  undoStackRef.current = [];
+                  setUndoCount(0);
+                  setActiveVariant(null);
+                  // Reload base from server to avoid stale baseSections
+                  dilly.get('/resume/edited').then(data => {
+                    const s = data?.resume?.sections;
+                    if (s?.length) { setSections(s); setBaseSections(s); }
+                    else setSections(baseSections);
+                  }).catch(() => setSections(baseSections));
+                  setExpanded(new Set());
+                  setShowGrid(false);
+                  setHasChanges(false);
+                }}
                 scaleDown={0.96}
               >
                 <View style={rs.bentoCardIcon}>
@@ -2037,9 +2073,14 @@ export default function ResumeEditorScreen() {
                     key={v.id}
                     style={[rs.bentoCard, isActive && rs.bentoCardSelected]}
                     onPress={() => {
+                      // Clear draft + undo when switching variants
+                      AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
+                      undoStackRef.current = [];
+                      setUndoCount(0);
                       setActiveVariant(v.id);
                       setShowGrid(false);
                       setExpanded(new Set());
+                      setHasChanges(false);
                       dilly.get(`/resume/variants/${v.id}`).then(data => {
                         if (data?.resume?.sections?.length) setSections(data.resume.sections);
                       }).catch(() => {});
@@ -2791,9 +2832,9 @@ const rs = StyleSheet.create({
   rewriteAcceptText: { fontSize: 12, color: '#FFFFFF', fontWeight: '700' },
 
   tailorBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.golddim, borderRadius: 10,
-    paddingVertical: 10, marginBottom: 12,
+    paddingVertical: 12, paddingHorizontal: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.goldbdr,
   },
   tailorBtnText: { fontSize: 13, fontWeight: '600', color: colors.gold },

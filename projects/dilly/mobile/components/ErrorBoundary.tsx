@@ -1,42 +1,55 @@
 /**
- * ErrorBoundary  -  catches render errors in any wrapped subtree and shows a
- * friendly retry UI instead of a white screen or a red-box Expo crash.
- *
- * Usage:
- *   <ErrorBoundary>
- *     <Stack ... />
- *   </ErrorBoundary>
- *
- * Wrapped at the root layout, the onboarding layout, and the (app) layout so
- * every screen in the app gets a graceful fallback if it throws during render.
- *
- * The fallback UI uses brand colors (white + Dilly blue), never red. The
- * student sees a calm, friendly "something's off, tap to try again" instead
- * of a broken screen. Tapping "Try again" resets the error state and
- * re-mounts the subtree.
- *
- * We deliberately do NOT integrate with Sentry/Crashlytics here  -  error
- * monitoring is a separate concern to be added later (see WHATS_NEXT.md).
- * For now we log to console so crashes show up in Metro / TestFlight console
- * during development and beta testing.
+ * ErrorBoundary - catches render errors and shows a branded error screen
+ * with a red expressionless Dilly face (like the mock interviewer face
+ * on hellodilly.com). Styled to match the app launch splash but with
+ * error context instead of the welcome message.
  */
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { colors, spacing, radius } from '../lib/tokens';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { colors, spacing } from '../lib/tokens';
+
+const GOLD = '#2B3A8E';
+const CORAL = '#FF453A';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
-  /**
-   * Optional label shown under the heading so different surfaces can give
-   * slightly different context (e.g. "coach", "onboarding", "this screen").
-   * Defaults to "this screen".
-   */
   surface?: string;
 }
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+}
+
+// Expressionless Dilly face - red tint, flat mouth, no animation
+function SadDillyFace({ size }: { size: number }) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const faceRadius = (size * 0.44) / 2;
+  const s = faceRadius / 19;
+
+  // Eye positions
+  const eyeL = { x: cx - 6 * s, y: cy - 3 * s };
+  const eyeR = { x: cx + 6 * s, y: cy - 3 * s };
+  const eyeR_rad = 2.2 * s;
+
+  // Flat mouth (expressionless - no curve)
+  const mW = 8 * s;
+  const mouthY = cy + 5 * s;
+  const mouthPath = `M ${cx - mW} ${mouthY} L ${cx + mW} ${mouthY}`;
+
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* Red-tinted background circle */}
+      <Circle cx={cx} cy={cy} r={faceRadius} fill="#FFF0EF" stroke="#FFCCC7" strokeWidth={2} />
+      {/* Eyes */}
+      <Circle cx={eyeL.x} cy={eyeL.y} r={eyeR_rad} fill={CORAL} />
+      <Circle cx={eyeR.x} cy={eyeR.y} r={eyeR_rad} fill={CORAL} />
+      {/* Flat mouth */}
+      <Path d={mouthPath} stroke={CORAL} strokeWidth={2 * s} strokeLinecap="round" fill="none" />
+    </Svg>
+  );
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -47,9 +60,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Log to console for Metro / TestFlight visibility. If/when Sentry is
-    // wired in, forward here.
-    // eslint-disable-next-line no-console
     console.error('[ErrorBoundary]', error, info.componentStack);
   }
 
@@ -69,13 +79,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>·</Text>
-          </View>
+          {/* Big sad Dilly face - matches the app launch splash layout */}
+          <SadDillyFace size={120} />
+
           <Text style={styles.heading}>Something's off with {surface}.</Text>
           <Text style={styles.sub}>
-            Dilly hit an unexpected hiccup. Nothing you did caused this  -  tap
-            below to try again.
+            Dilly hit an unexpected hiccup. Nothing you did caused this. Tap below to try again.
           </Text>
           <TouchableOpacity
             style={styles.button}
@@ -84,10 +93,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           >
             <Text style={styles.buttonText}>Try again</Text>
           </TouchableOpacity>
-          {/* Always show the error message in small grey text  -  helps
-              beta testers report meaningful bugs instead of "something
-              crashed". Removed the __DEV__ gate that was hiding this
-              in TestFlight builds. */}
+          {/* Always show error message for beta testers */}
           <Text style={styles.devDetails} numberOfLines={6}>
             {message}
           </Text>
@@ -107,62 +113,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.golddim,
-    borderWidth: 1,
-    borderColor: colors.goldbdr,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  iconText: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.gold,
-    lineHeight: 32,
+    paddingVertical: 60,
   },
   heading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 20,
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 18,
     color: colors.t1,
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: spacing.sm,
+    marginTop: 24,
+    marginBottom: 12,
   },
   sub: {
     fontSize: 13,
     color: colors.t2,
     textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: spacing.xl,
-    maxWidth: 280,
+    lineHeight: 20,
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
   button: {
-    backgroundColor: colors.gold,
-    borderRadius: radius.md,
-    paddingVertical: 13,
-    paddingHorizontal: spacing.xxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 180,
+    backgroundColor: GOLD,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    marginBottom: 20,
   },
   buttonText: {
+    fontFamily: 'Cinzel_700Bold',
     fontSize: 13,
-    fontWeight: '700',
+    letterSpacing: 0.8,
     color: '#FFFFFF',
-    letterSpacing: 0.1,
   },
   devDetails: {
     fontSize: 10,
     color: colors.t3,
-    marginTop: spacing.xl,
     textAlign: 'center',
-    fontFamily: 'Menlo',
-    maxWidth: 300,
+    marginTop: 12,
+    paddingHorizontal: 16,
+    lineHeight: 14,
   },
 });
