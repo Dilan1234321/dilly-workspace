@@ -25,6 +25,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import CohortPicker from '../../components/CohortPicker';
 import { remindReaudit } from '../../lib/reminders';
 
 const GOLD  = '#2B3A8E';
@@ -384,19 +385,31 @@ export default function NewAuditScreen() {
   const [scanStage, setScanStage]         = useState(0);
   const [loading, setLoading]             = useState(true);
   const [useEditor, setUseEditor]         = useState(false);
+  const [userCohorts, setUserCohorts]     = useState<string[]>([]);
+  const [selectedCohort, setSelectedCohort] = useState<string | null>(null);
+  const [showCohortPicker, setShowCohortPicker] = useState(false);
   const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load current state
   useEffect(() => {
     (async () => {
       try {
-        const [latestRes, historyRes] = await Promise.all([
+        const [latestRes, historyRes, profileRes] = await Promise.all([
           dilly.get('/audit/latest'),
           dilly.get('/audit/history'),
+          dilly.get('/profile').catch(() => null),
         ]);
         const latest = latestRes?.audit;
         if (latest) setLatestAudit(latest);
         setHistory(historyRes?.audits || []);
+        // Load user's cohorts for the cohort picker
+        const cohorts: string[] = profileRes?.cohorts
+          ?? Object.keys(profileRes?.cohort_scores || {}).filter((k: string) => {
+            const v = (profileRes?.cohort_scores || {})[k];
+            return v?.level === 'major' || v?.level === 'primary';
+          });
+        setUserCohorts(cohorts);
+        if (cohorts.length > 0 && !selectedCohort) setSelectedCohort(cohorts[0]);
       } catch {}
       finally { setLoading(false); }
     })();
@@ -453,7 +466,7 @@ export default function NewAuditScreen() {
         const editorTimeout = setTimeout(() => editorCtrl.abort(), 120_000);
         const res = await dilly.fetch('/resume/audit', {
           method: 'POST',
-          body: JSON.stringify({}),
+          body: JSON.stringify({ cohort: selectedCohort || undefined }),
           signal: editorCtrl.signal,
         });
         clearTimeout(editorTimeout);
@@ -475,6 +488,7 @@ export default function NewAuditScreen() {
           name: file.name || 'resume.pdf',
           type: file.mimeType || 'application/pdf',
         } as any);
+        if (selectedCohort) formData.append('cohort', selectedCohort);
 
         const uploadCtrl = new AbortController();
         const uploadTimeout = setTimeout(() => uploadCtrl.abort(), 120_000);
@@ -677,9 +691,50 @@ export default function NewAuditScreen() {
               )}
             </FadeInView>
 
+            {/* Build-88: Cohort selector — choose which cohort to audit against */}
+            <FadeInView delay={160}>
+              <View style={ns.tipsCard}>
+                <View style={ns.tipsHeader}>
+                  <Ionicons name="layers-outline" size={12} color={GOLD} />
+                  <Text style={ns.tipsTitle}>SCORE AGAINST</Text>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                  {userCohorts.map(name => (
+                    <AnimatedPressable
+                      key={name}
+                      style={{
+                        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999,
+                        backgroundColor: selectedCohort === name ? '#1652F0' : colors.s2,
+                        borderWidth: 1, borderColor: selectedCohort === name ? '#1652F0' : colors.b1,
+                      }}
+                      onPress={() => setSelectedCohort(name)}
+                      scaleDown={0.95}
+                    >
+                      <Text style={{
+                        fontSize: 12, fontWeight: '600',
+                        color: selectedCohort === name ? '#fff' : colors.t2,
+                      }} numberOfLines={1}>{name.replace(/ & .*$/, '')}</Text>
+                    </AnimatedPressable>
+                  ))}
+                  <AnimatedPressable
+                    style={{
+                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+                      backgroundColor: '#1652F0' + '10', borderWidth: 1, borderColor: '#1652F0' + '25',
+                      flexDirection: 'row', alignItems: 'center', gap: 4,
+                    }}
+                    onPress={() => setShowCohortPicker(true)}
+                    scaleDown={0.95}
+                  >
+                    <Ionicons name="add" size={14} color="#1652F0" />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#1652F0' }}>Add cohort</Text>
+                  </AnimatedPressable>
+                </ScrollView>
+              </View>
+            </FadeInView>
+
             {/* Build-78: Personalized pre-audit tips from latest audit's
                 rubric analysis. Falls back to generic tips for first-timers. */}
-            <FadeInView delay={180}>
+            <FadeInView delay={200}>
               <View style={ns.tipsCard}>
                 <View style={ns.tipsHeader}>
                   <Ionicons name="bulb-outline" size={12} color={GOLD} />
@@ -796,6 +851,23 @@ export default function NewAuditScreen() {
         )}
 
       </ScrollView>
+
+      {/* Cohort picker modal */}
+      <CohortPicker
+        visible={showCohortPicker}
+        onClose={() => setShowCohortPicker(false)}
+        activeCohorts={userCohorts}
+        onToggle={(cohortId, added) => {
+          const updated = added
+            ? [...userCohorts.filter(c => c !== cohortId), cohortId]
+            : userCohorts.filter(c => c !== cohortId);
+          setUserCohorts(updated);
+          // Auto-select newly added cohort
+          if (added) setSelectedCohort(cohortId);
+          // Persist to profile
+          dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ cohorts: updated }) }).catch(() => {});
+        }}
+      />
     </View>
   );
 }

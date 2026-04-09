@@ -319,9 +319,13 @@ export default function ProfileScreen() {
         ['dilly_onboarding_graduation_year', String(graduationYear ?? '')],
       ]);
 
+      // Build-88: skip interests page (replaced by cohort system).
+      // Go to industry-target for Quantitative/Data Science majors, otherwise straight to you-are-in.
+      const needsIndustry = resolvedCohort === 'Quantitative'
+        || (majors.includes('Data Science') && resolvedCohort.includes('Data'));
       router.push({
-        pathname: '/onboarding/interests',
-        params: { cohort: resolvedCohort, majors: JSON.stringify(majors), name: firstName },
+        pathname: needsIndustry ? '/onboarding/industry-target' : '/onboarding/you-are-in',
+        params: { cohort: resolvedCohort, name: firstName, context: needsIndustry ? 'data-science' : undefined },
       });
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Try again.');

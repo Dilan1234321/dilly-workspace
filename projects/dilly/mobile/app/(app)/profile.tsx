@@ -10,14 +10,17 @@ import {
   Easing,
   Share,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
-import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
+import { parseCohortScores, COHORT_META, type CohortScore } from '../../lib/cohorts';
 import CohortSwitcher from '../../components/CohortSwitcher';
+import CohortPicker from '../../components/CohortPicker';
+import AnimatedPressable from '../../components/AnimatedPressable';
 import EditProfileModal from '../../components/EditProfileModal';
 
 const GOLD  = '#2B3A8E';
@@ -161,6 +164,8 @@ export default function ProfileScreen() {
   const [audit,    setAudit]    = useState<Record<string, any>>({});
   const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
   const [activeCohortIdx, setActiveCohortIdx] = useState(0);
+  const [showCohortPicker, setShowCohortPicker] = useState(false);
+  const [userCohorts, setUserCohorts] = useState<string[]>([]);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading,  setLoading]  = useState(true);
   const [showEdit, setShowEdit] = useState(false);
@@ -182,6 +187,9 @@ export default function ProfileScreen() {
         // Build-87: per-cohort Claude scores are the source of truth
         const parsedCohorts = parseCohortScores(profileRes?.cohort_scores);
         setCohortScores(parsedCohorts);
+        // User's explicit cohort list (or derive from cohort_scores keys)
+        const explicitCohorts: string[] = profileRes?.cohorts ?? parsedCohorts.map((c: CohortScore) => c.cohort_id);
+        setUserCohorts(explicitCohorts);
         const primaryCohort = parsedCohorts[0] ?? null;
 
         const auditObj = auditRaw?.audit ?? auditRaw ?? {};
@@ -253,6 +261,20 @@ export default function ProfileScreen() {
   const target    = p.industry_target || p.application_target_label || p.career_goal || '';
   const targetCompanies = p.target_companies || [];
   const initial   = fullName[0]?.toUpperCase() || '?';
+
+  // Cohort add/remove handler — patches server + updates local state
+  async function handleCohortToggle(cohortId: string, added: boolean) {
+    const updated = added
+      ? [...userCohorts.filter(c => c !== cohortId), cohortId]
+      : userCohorts.filter(c => c !== cohortId);
+    setUserCohorts(updated);
+    try {
+      await dilly.fetch('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ cohorts: updated }),
+      });
+    } catch {}
+  }
 
   const hasAudit   = audit.has_audit === true;
   const finalScore = activeCohort?.dilly_score ?? audit.final_score ?? 0;
@@ -374,6 +396,52 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
         )}
+
+        {/* Build-88: My Cohorts section */}
+        <View style={ps.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Text style={ps.sectionEyebrow}>MY COHORTS</Text>
+            <AnimatedPressable
+              onPress={() => setShowCohortPicker(true)}
+              scaleDown={0.9}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: '#1652F0' + '12', borderWidth: 1, borderColor: '#1652F0' + '25' }}
+            >
+              <Ionicons name="add" size={14} color="#1652F0" />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#1652F0' }}>Add</Text>
+            </AnimatedPressable>
+          </View>
+          {userCohorts.length === 0 && (
+            <AnimatedPressable onPress={() => setShowCohortPicker(true)} scaleDown={0.98} style={{ padding: 20, borderRadius: 12, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1, alignItems: 'center' }}>
+              <Ionicons name="layers-outline" size={24} color={colors.t3} />
+              <Text style={{ fontSize: 13, color: colors.t2, marginTop: 8, textAlign: 'center' }}>Add cohorts to see how your resume scores against different fields.</Text>
+            </AnimatedPressable>
+          )}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {userCohorts.map(name => {
+              const cs = (profile as any)?.cohort_scores?.[name];
+              const score = cs?.dilly_score ? Math.round(cs.dilly_score) : null;
+              return (
+                <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: colors.t1 }} numberOfLines={1}>{name}</Text>
+                  {score != null && <Text style={{ fontSize: 11, fontWeight: '700', color: '#1652F0' }}>{score}</Text>}
+                  <AnimatedPressable
+                    onPress={() => {
+                      if (userCohorts.length <= 1) {
+                        Alert.alert('Cannot remove', 'You need at least one cohort.');
+                        return;
+                      }
+                      handleCohortToggle(name, false);
+                    }}
+                    scaleDown={0.85}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="close-circle" size={16} color={colors.t3} />
+                  </AnimatedPressable>
+                </View>
+              );
+            })}
+          </View>
+        </View>
 
         {/* \u2500\u2500 About \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
         <View style={ps.section}>
@@ -528,6 +596,12 @@ export default function ProfileScreen() {
         profile={profile}
         photoUri={photoUri}
         onSaved={() => setRefreshKey(k => k + 1)}
+      />
+      <CohortPicker
+        visible={showCohortPicker}
+        onClose={() => setShowCohortPicker(false)}
+        activeCohorts={userCohorts}
+        onToggle={handleCohortToggle}
       />
     </View>
   );
