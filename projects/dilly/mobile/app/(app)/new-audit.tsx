@@ -452,8 +452,12 @@ export default function NewAuditScreen() {
         });
         clearTimeout(editorTimeout);
         if (!res.ok) {
-          const detail = await res.json().catch(() => null);
-          throw new Error(detail?.detail || `Audit failed (${res.status})`);
+          const errBody = await res.json().catch(() => null);
+          const errText = typeof errBody?.detail === 'string' ? errBody.detail
+            : typeof errBody?.error === 'string' ? errBody.error
+            : typeof errBody?.detail === 'object' ? JSON.stringify(errBody.detail).slice(0, 200)
+            : `Audit failed (${res.status})`;
+          throw new Error(errText);
         }
         result = await res.json();
       } else if (file) {
@@ -476,8 +480,12 @@ export default function NewAuditScreen() {
         });
         clearTimeout(uploadTimeout);
         if (!res.ok) {
-          const detail = await res.json().catch(() => null);
-          throw new Error(detail?.detail || `Audit failed (${res.status})`);
+          const errBody = await res.json().catch(() => null);
+          const errText = typeof errBody?.detail === 'string' ? errBody.detail
+            : typeof errBody?.error === 'string' ? errBody.error
+            : typeof errBody?.detail === 'object' ? JSON.stringify(errBody.detail).slice(0, 200)
+            : `Audit failed (${res.status})`;
+          throw new Error(errText);
         }
         result = await res.json();
       }
@@ -527,14 +535,19 @@ export default function NewAuditScreen() {
         // Nudge to re-audit in 5 days (fire and forget, no UI block)
         remindReaudit().catch(() => null);
       } else {
-        Alert.alert('Audit Failed', result?.detail || result?.error || 'Resume audit failed. Please try uploading again.');
+        const errMsg = typeof result?.detail === 'string' ? result.detail
+          : typeof result?.error === 'string' ? result.error
+          : typeof result?.detail === 'object' ? JSON.stringify(result.detail)
+          : 'Resume audit failed. Please try uploading again.';
+        Alert.alert('Audit Failed', errMsg);
       }
 
       setPhase('done');
     } catch (e: any) {
       if (scanTimer.current) clearTimeout(scanTimer.current);
       setPhase('idle');
-      Alert.alert('Error', e.message || 'Resume audit failed. Please try uploading again.');
+      const msg = typeof e?.message === 'string' ? e.message : typeof e === 'string' ? e : 'Resume audit failed. Please try uploading again.';
+      Alert.alert('Error', msg);
     }
   }
 

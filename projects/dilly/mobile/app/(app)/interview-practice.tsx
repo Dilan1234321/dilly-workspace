@@ -59,7 +59,11 @@ export default function InterviewPracticeScreen() {
 
   async function loadDeck(c: string, r: string, jd: string) {
     if (!c.trim() || !r.trim()) {
-      Alert.alert('Missing info', 'Enter a company and role.');
+      Alert.alert('Missing info', 'Enter a company name and role.');
+      return;
+    }
+    if (!jd.trim() || jd.trim().length < 20) {
+      Alert.alert('Job description required', 'Paste the job description so Dilly can generate questions specific to this role.');
       return;
     }
     setPhase('loading');
@@ -82,6 +86,9 @@ export default function InterviewPracticeScreen() {
         } catch {}
       }
 
+      // JD-powered question generation via Claude can take 30-60s
+      const deckCtrl = new AbortController();
+      const deckTimeout = setTimeout(() => deckCtrl.abort(), 90_000);
       const res = await dilly.fetch('/interview/prep-deck', {
         method: 'POST',
         body: JSON.stringify({
@@ -89,7 +96,9 @@ export default function InterviewPracticeScreen() {
           role: r.trim(),
           job_description: finalJD || undefined,
         }),
+        signal: deckCtrl.signal,
       });
+      clearTimeout(deckTimeout);
       if (!res.ok) {
         const d = await res.json().catch(() => null);
         throw new Error(d?.detail || 'Could not generate prep deck.');
@@ -159,37 +168,40 @@ export default function InterviewPracticeScreen() {
                 <Text style={s.setupSub}>
                   Paste the job description and Dilly will generate real interview questions specific to this exact role. The more detail, the better the questions.
                 </Text>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.t2, marginBottom: 4, marginTop: 8 }}>Company <Text style={{ color: '#FF453A' }}>*</Text></Text>
                 <TextInput
                   style={s.input}
                   value={company}
                   onChangeText={setCompany}
-                  placeholder="Company (e.g. Google)"
+                  placeholder="e.g. Google"
                   placeholderTextColor={colors.t3}
                   autoFocus
                 />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.t2, marginBottom: 4, marginTop: 12 }}>Role <Text style={{ color: '#FF453A' }}>*</Text></Text>
                 <TextInput
                   style={s.input}
                   value={role}
                   onChangeText={setRole}
-                  placeholder="Role (e.g. Data Science Intern)"
+                  placeholder="e.g. Data Science Intern"
                   placeholderTextColor={colors.t3}
                 />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.t2, marginBottom: 4, marginTop: 12 }}>Job Description <Text style={{ color: '#FF453A' }}>*</Text></Text>
                 <TextInput
-                  style={[s.input, { minHeight: 100, textAlignVertical: 'top' }]}
+                  style={[s.input, { minHeight: 120, textAlignVertical: 'top' }]}
                   value={jobDescription}
                   onChangeText={setJobDescription}
-                  placeholder="Paste the job description or job URL (recommended for better questions)"
+                  placeholder="Paste the full job description or a job URL"
                   placeholderTextColor={colors.t3}
                   multiline
                 />
                 <AnimatedPressable
-                  style={[s.startBtn, (!company.trim() || !role.trim()) && { opacity: 0.4 }]}
+                  style={[s.startBtn, (!company.trim() || !role.trim() || jobDescription.trim().length < 20) && { opacity: 0.4 }]}
                   onPress={() => loadDeck(company, role, jobDescription)}
-                  disabled={!company.trim() || !role.trim()}
+                  disabled={!company.trim() || !role.trim() || jobDescription.trim().length < 20}
                   scaleDown={0.97}
                 >
                   <Ionicons name="flash" size={16} color="#FFFFFF" />
-                  <Text style={s.startBtnText}>{jobDescription.trim().length > 50 ? 'Start real interview practice' : 'Start practice'}</Text>
+                  <Text style={s.startBtnText}>Generate interview questions</Text>
                 </AnimatedPressable>
               </View>
             </FadeInView>

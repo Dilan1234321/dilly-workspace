@@ -61,6 +61,8 @@ type RubricPayload = {
   primary_smart?: number;
   primary_grit?: number;
   primary_build?: number;
+  recruiter_bar?: number;
+  above_bar?: boolean;
   unmatched_signals?: Array<{
     signal: string;
     dimension?: string;

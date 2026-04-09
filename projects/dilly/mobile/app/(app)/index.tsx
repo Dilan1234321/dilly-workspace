@@ -53,6 +53,7 @@ interface HomeBrief {
   brief: { id: string; kind: string; headline: string; body: string; action_label: string; action_route: string }[];
   do_now: { kind: string; title: string; subtitle: string; action_label: string; action_route: string; action_payload: any };
   cohort_bar: { cohort_id: string | null; label: string; bar: number; reference_company: string };
+  weekly_recap?: { headline: string; audits_this_week: number; apps_this_week: number; score_delta: number | null; streak_days: number; summary: string };
 }
 
 // \u2500\u2500 Helpers \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -653,10 +654,9 @@ export default function HomeScreen() {
                         </View>
                         <AnimatedPressable
                           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' }}
-                          onPress={async (e: any) => {
-                            e?.stopPropagation?.();
+                          onPress={async () => {
                             const ok = await remindMeLater(String(doNow.title), String(doNow.subtitle || ''), 3);
-                            if (ok) Alert.alert('Reminder set', 'You\'ll be reminded in 3 hours.');
+                            if (ok) Alert.alert('Reminder set', "You'll be reminded in 3 hours.");
                           }}
                           scaleDown={0.95}
                         >

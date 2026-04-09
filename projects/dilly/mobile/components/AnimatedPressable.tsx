@@ -28,6 +28,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 interface Props {
   children: ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
   style?: StyleProp<ViewStyle>;
   scaleDown?: number;
   stiffness?: number;
@@ -39,6 +40,7 @@ interface Props {
 export default function AnimatedPressable({
   children,
   onPress,
+  onLongPress,
   style,
   scaleDown = 0.97,
   stiffness = 300,
@@ -49,7 +51,7 @@ export default function AnimatedPressable({
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
-  const gesture = Gesture.Tap()
+  const tap = Gesture.Tap()
     .enabled(!disabled)
     .onBegin(() => {
       'worklet';
@@ -67,6 +69,18 @@ export default function AnimatedPressable({
         runOnJS(onPress)();
       }
     });
+
+  const longPress = Gesture.LongPress()
+    .enabled(!disabled && !!onLongPress)
+    .minDuration(500)
+    .onStart(() => {
+      'worklet';
+      scale.value = withSpring(1, { stiffness, damping });
+      opacity.value = withSpring(1, { stiffness, damping });
+      if (onLongPress) runOnJS(onLongPress)();
+    });
+
+  const gesture = Gesture.Exclusive(longPress, tap);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
