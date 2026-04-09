@@ -316,10 +316,18 @@ export default function ResumeScoreDashboard({
     );
   }
 
-  const overall = scan.v2.overall?.value ?? 0;
-  const forecast = scan.v2.overall_forecast_if_all_fixed ?? overall;
+  // Hero number = Dilly composite (rubric), same as the audit score and the
+  // floating badge. Falls back to the ATS readiness number only if rubric
+  // scoring produced nothing. Showing two different "overall" numbers on the
+  // same screen is what made users think the scores were wrong.
+  const rubricComposite = scan.rubric_analysis?.primary_composite;
+  const atsOverall = scan.v2.overall?.value ?? 0;
+  const overall = (typeof rubricComposite === 'number' && rubricComposite > 0)
+    ? rubricComposite
+    : atsOverall;
+  const forecast = scan.v2.overall_forecast_if_all_fixed ?? atsOverall;
   const overallColor = scoreColor(overall);
-  const overallLift = forecast - overall;
+  const overallLift = forecast - atsOverall;
 
   // Only render the 5 "real" strict/modern ATS vendors to keep the sidebar compact
   const vendors = (scan.v2.vendors || []).filter(v =>
@@ -346,11 +354,12 @@ export default function ResumeScoreDashboard({
       {/* ── Headline composite ──────────────────────────────────────── */}
       <View style={s.heroRow}>
         <View style={s.heroLeft}>
-          <Text style={s.heroLabel}>ATS READINESS</Text>
+          <Text style={s.heroLabel}>DILLY SCORE</Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
             <Text style={[s.heroNum, { color: overallColor }]}>{Math.round(overall)}</Text>
             <Text style={s.heroOf}>/100</Text>
           </View>
+          <Text style={s.heroSub}>ATS readiness: {Math.round(atsOverall)}</Text>
         </View>
         {overallLift >= 1 && (
           <View style={s.forecastChip}>
@@ -505,6 +514,7 @@ const s = StyleSheet.create({
   heroLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.3, color: GOLD, marginBottom: 2 },
   heroNum: { fontSize: 32, fontWeight: '800', lineHeight: 34 },
   heroOf: { fontSize: 12, color: colors.t3 },
+  heroSub: { fontSize: 10, color: colors.t3, marginTop: 2 },
   forecastChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: GREEN + '15', borderRadius: 16, paddingHorizontal: 8, paddingVertical: 4,

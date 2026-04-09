@@ -858,21 +858,27 @@ export default function ResumeEditorScreen() {
     })();
   }, []);
 
-  // Build-65: single source of truth for the overall score.
-  // The floating badge in the upper-right of the resume doc and the hero
-  // score in ResumeScoreDashboard used to disagree because they were
-  // computed from different sources (bullet-blend vs editor-scan). Now
-  // they both come from the same place: the latest /resume/editor-scan
-  // response's v2.overall.value, with a graceful fallback to the initial
-  // audit score while the first scan is loading.
+  // Single source of truth for the floating overall score badge.
+  // CRITICAL: this must match the Dilly composite from the audit, NOT the
+  // ATS readiness number. Users see their audit dilly_score (e.g. 67) when
+  // they open the editor; if we then swap the badge to v2.overall.value
+  // (ATS composite, e.g. 89) it looks like the score randomly changed.
+  // Priority: rubric_analysis.primary_composite (same as audit) → initial
+  // audit score → v2 overall as a last resort.
   useEffect(() => {
+    const rubricComposite = scanData?.rubric_analysis?.primary_composite;
+    if (typeof rubricComposite === 'number' && rubricComposite > 0) {
+      setOverallScore(Math.round(rubricComposite));
+      return;
+    }
+    if (initialScore !== null && initialScore > 0) {
+      setOverallScore(initialScore);
+      return;
+    }
     const v2Overall = scanData?.v2?.overall?.value;
     if (typeof v2Overall === 'number' && v2Overall > 0) {
       setOverallScore(Math.round(v2Overall));
-      return;
     }
-    // No fresh scan yet — show the seeded audit score.
-    if (initialScore !== null) setOverallScore(initialScore);
   }, [scanData, initialScore]);
 
   const ph = getPlaceholders(major);
