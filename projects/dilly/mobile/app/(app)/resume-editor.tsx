@@ -35,6 +35,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ResumeScoreDashboard, { EditorScanData, CohortOption } from '../../components/ResumeScoreDashboard';
 import TailorDiffModal, { TailorDiffPayload } from '../../components/TailorDiffModal';
+import BulletWorthSheet from '../../components/BulletWorthSheet';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -365,6 +366,12 @@ function InlineField({ value, onChangeText, placeholder, style, bold, large, mut
   );
 }
 
+// Build 67: module-level registrar so the BulletEditor component (deeply
+// nested inside experience/project rows) can open the screen-level
+// "What's this bullet worth" sheet without threading a callback through
+// every layer of props.
+let _openBulletWorth: ((bullet: string) => void) | null = null;
+
 // ── Bullet editor ─────────────────────────────────────────────────────────────
 
 function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, initialScore }: {
@@ -488,14 +495,26 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
           <Ionicons name="close-circle" size={14} color={colors.t3 + '60'} />
         </AnimatedPressable>
       </View>
-      {/* Ask Dilly — small button below bullet, left-aligned */}
+      {/* Action row below bullet — Improve with Dilly + What's this worth */}
       {canAskDilly && (
-        <AnimatedPressable onPress={handleAskDilly} scaleDown={0.92} style={rs.askDillyRow}>
-          <View style={rs.askDillyBtn}>
-            <Ionicons name="sparkles" size={9} color={colors.indigo} />
-          </View>
-          <Text style={rs.askDillyText}>Improve with Dilly</Text>
-        </AnimatedPressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <AnimatedPressable onPress={handleAskDilly} scaleDown={0.92} style={rs.askDillyRow}>
+            <View style={rs.askDillyBtn}>
+              <Ionicons name="sparkles" size={9} color={colors.indigo} />
+            </View>
+            <Text style={rs.askDillyText}>Improve with Dilly</Text>
+          </AnimatedPressable>
+          <AnimatedPressable
+            onPress={() => { if (_openBulletWorth) _openBulletWorth(bullet.text); }}
+            scaleDown={0.92}
+            style={rs.askDillyRow}
+          >
+            <View style={rs.askDillyBtn}>
+              <Ionicons name="pulse" size={9} color={GOLD} />
+            </View>
+            <Text style={rs.askDillyText}>What's this worth?</Text>
+          </AnimatedPressable>
+        </View>
       )}
 
       {/* Accept/Reject rewrite modal — compact before/after comparison */}
@@ -770,6 +789,8 @@ export default function ResumeEditorScreen() {
   // Build-65: explicit cohort override (null = use user's primary major)
   const [cohortOverride, setCohortOverride] = useState<string | null>(null);
   const [cohortOptions, setCohortOptions] = useState<CohortOption[]>([]);
+  // Build-67: "what's this bullet worth" sheet state (hoisted to screen level)
+  const [worthBullet, setWorthBullet] = useState<string | null>(null);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -916,6 +937,14 @@ export default function ResumeEditorScreen() {
         }
       } catch {}
     })();
+  }, []);
+
+  // Build-67: register the module-level opener so nested BulletEditors can
+  // open the "What's this worth" sheet without prop drilling. Cleanup on
+  // unmount so it doesn't leak into other screens.
+  useEffect(() => {
+    _openBulletWorth = (text: string) => setWorthBullet(text);
+    return () => { _openBulletWorth = null; };
   }, []);
 
   // Issue action: open the Dilly AI overlay pre-prompted to fix the tapped issue.
@@ -1394,6 +1423,14 @@ export default function ResumeEditorScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* ── Build 67: What's this bullet worth bottom sheet ──────────── */}
+      <BulletWorthSheet
+        visible={!!worthBullet}
+        bullet={worthBullet || ''}
+        cohortId={cohortOverride}
+        onClose={() => setWorthBullet(null)}
+      />
 
       {/* ── Build 64: rich tailor-diff modal ─────────────────────────────── */}
       <TailorDiffModal

@@ -905,6 +905,126 @@ class EditorScanRequest(BaseModel):
                                            # for telemetry, not scoring logic)
 
 
+class BulletWorthRequest(BaseModel):
+    bullet: str
+    cohort_id: Optional[str] = None  # defaults to student's primary cohort
+
+
+@router.post("/resume/bullet-worth")
+async def bullet_worth(request: Request, body: BulletWorthRequest):
+    """
+    'What's this bullet worth?' — score a single resume bullet against the
+    cohort's rubric signals. Returns which rubric signals the bullet hits,
+    its dimension-weighted contribution, and specific suggestions for how
+    to lift it.
+
+    Powers the bottom sheet that opens when a user taps a bullet in the
+    resume editor.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    bullet_text = (body.bullet or "").strip()
+    if not bullet_text or len(bullet_text) < 6:
+        raise HTTPException(status_code=400, detail="Bullet too short to score.")
+
+    # 1. Determine cohort
+    cohort_id = body.cohort_id or ""
+    if not cohort_id and email:
+        try:
+            from projects.dilly.api.profile_store import get_profile
+            from dilly_core.rubric_scorer import select_cohorts_for_student
+            prof = get_profile(email) or {}
+            majors = prof.get("majors") or ([prof.get("major")] if prof.get("major") else [])
+            major = majors[0] if majors else ""
+            picked = select_cohorts_for_student(major=major, minors=[], pre_professional_track=None, industry_target=None)
+            if picked:
+                cohort_id = picked[0]
+        except Exception:
+            pass
+    if not cohort_id:
+        cohort_id = "business_finance"  # generic fallback
+
+    # 2. Score the bullet via rule-based heuristics (reuses /resume/bullet-score logic)
+    import re as _re
+    bullet_lower = bullet_text.lower()
+    words = bullet_text.split()
+    first_word = (words[0] if words else "").rstrip(".,;:")
+
+    # Heuristic signal detectors
+    has_strong_verb = first_word.lower() in _STRONG_ACTION_VERBS
+    has_weak_verb = first_word.lower() in _WEAK_VERBS
+    qty_matches = _QUANTITY_PATTERN.findall(bullet_text)
+    has_quantification = len(qty_matches) > 0
+    has_percent = "%" in bullet_text or "percent" in bullet_lower
+    has_dollar = "$" in bullet_text
+    has_outcome = any(k in bullet_lower for k in ("result", "impact", "delivered", "achieved", "improved", "increased", "reduced", "saved", "generated"))
+    has_tech_keywords = bool(_re.search(r"\b(Python|JavaScript|TypeScript|Java|SQL|React|Node|AWS|Docker|Kubernetes|Tableau|PowerBI|Excel|R |Pandas|Numpy|TensorFlow|PyTorch)\b", bullet_text))
+    word_count = len(words)
+    is_concise = 8 <= word_count <= 28
+    is_too_long = word_count > 32
+    is_too_short = word_count < 6
+
+    # 3. Build the signals hit / missing lists
+    signals_hit: list = []
+    signals_missing: list = []
+
+    def add(lst, title, dimension, weight, rationale):
+        lst.append({"title": title, "dimension": dimension, "weight": weight, "rationale": rationale})
+
+    if has_strong_verb:
+        add(signals_hit, "Strong action verb", "build", 3, f"Starts with '{first_word}' — a strong action verb that signals ownership.")
+    elif has_weak_verb:
+        add(signals_missing, "Strong action verb", "build", 3, f"Starts with '{first_word}' — replace with 'Built', 'Led', 'Shipped', 'Architected', 'Drove'.")
+    else:
+        add(signals_missing, "Strong action verb", "build", 3, "Start with a strong action verb like 'Built', 'Led', 'Shipped', 'Architected'.")
+
+    if has_quantification:
+        metric_str = ", ".join(qty_matches[:2])
+        add(signals_hit, "Quantified impact", "build", 4, f"Contains metrics ({metric_str}) — quantified bullets score ~2x higher than vague ones.")
+    else:
+        add(signals_missing, "Quantified impact", "build", 4, "Add a number: team size, users affected, % improvement, time saved, dollars, or data volume.")
+
+    if has_outcome:
+        add(signals_hit, "Outcome language", "build", 2, "Mentions the result or impact, not just the activity.")
+    else:
+        add(signals_missing, "Outcome language", "build", 2, "Describe the OUTCOME, not just the task. What changed because of you?")
+
+    if is_concise:
+        add(signals_hit, "Concise length", "smart", 1, f"{word_count} words — the sweet spot is 10-25 for a single bullet.")
+    elif is_too_long:
+        add(signals_missing, "Concise length", "smart", 1, f"{word_count} words is too long — trim filler and split into two bullets if needed.")
+    elif is_too_short:
+        add(signals_missing, "Concise length", "smart", 1, f"{word_count} words is too short — add specifics about what, how, and the result.")
+
+    if has_tech_keywords:
+        add(signals_hit, "Technical specificity", "smart", 3, "Names specific technologies — ATS and recruiters scan for these.")
+    else:
+        add(signals_missing, "Technical specificity", "smart", 2, "Add a specific tool or technology you used (Python, SQL, React, etc.).")
+
+    # 4. Total lift estimate = sum of missing signal weights
+    total_lift = sum(s.get("weight", 0) for s in signals_missing) * 1.5
+    current_contribution = sum(s.get("weight", 0) for s in signals_hit) * 1.5
+
+    # 5. Cohort display name
+    try:
+        from dilly_core.rubric_scorer import get_rubric
+        rubric = get_rubric(cohort_id) or {}
+        cohort_display = rubric.get("display_name") or cohort_id
+    except Exception:
+        cohort_display = cohort_id
+
+    return {
+        "bullet": bullet_text,
+        "cohort_id": cohort_id,
+        "cohort_display": cohort_display,
+        "signals_hit": signals_hit,
+        "signals_missing": signals_missing,
+        "current_contribution": round(current_contribution, 1),
+        "potential_lift": round(total_lift, 1),
+        "word_count": word_count,
+    }
+
+
 @router.get("/resume/cohorts")
 async def list_resume_cohorts(request: Request):
     """
