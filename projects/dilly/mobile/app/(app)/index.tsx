@@ -330,7 +330,7 @@ export default function HomeScreen() {
   // \u2500\u2500 Derived \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   const p = profile as any;
-  const firstName = p.name?.trim().split(/\s+/)[0] || p.first_name || '';
+  const firstName = (p.name || p.first_name || '').trim().split(/\s+/)[0] || '';
   const cohort    = p.track || p.cohort || 'General';
   const school    = p.school_name || p.school_id || '';
 
