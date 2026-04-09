@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -998,6 +998,41 @@ export default function ResumeEditorScreen() {
   // Overall score UI was removed from the editor (no floating badge, no
   // dashboard hero). Smart/Grit/Build rings are the only scores shown.
 
+  // Build-72: word count + page estimate. Counts every editable text
+  // field — bullets, entry headers, skills lines, summary/etc. ~450 words
+  // per page is the standard single-column resume density.
+  const { wordCount, pageEstimate } = useMemo(() => {
+    const chunks: string[] = [];
+    for (const s of sections) {
+      if (s.contact) chunks.push(s.contact.name, s.contact.location);
+      if (s.education) chunks.push(
+        s.education.university, s.education.major, s.education.minor,
+        s.education.graduation, s.education.honors,
+      );
+      if (s.experiences) {
+        for (const e of s.experiences) {
+          chunks.push(e.company, e.role, e.date, e.location);
+          for (const b of e.bullets) chunks.push(b.text);
+        }
+      }
+      if (s.projects) {
+        for (const p of s.projects) {
+          chunks.push(p.name, p.date, p.location);
+          for (const b of p.bullets) chunks.push(b.text);
+        }
+      }
+      if (s.simple) for (const line of s.simple.lines) chunks.push(line);
+    }
+    const words = chunks
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length;
+    const pages = words / 450;
+    return { wordCount: words, pageEstimate: pages };
+  }, [sections]);
+
   const ph = getPlaceholders(major);
 
   function toggleSection(key: string) {
@@ -1092,6 +1127,25 @@ export default function ResumeEditorScreen() {
     showToast(`${def.label} added.`);
   }
 
+  // Build-72: move a section up or down in the order. Contact is always
+  // pinned to position 0. Goes through commitSections so undo catches it.
+  function moveSection(key: string, direction: -1 | 1) {
+    if (key === 'contact') return;
+    const idx = sections.findIndex(s => s.key === key);
+    if (idx < 0) return;
+    const target = idx + direction;
+    if (target < 0 || target >= sections.length) return;
+    // Never let contact get swapped off the top
+    if (sections[target]?.key === 'contact') return;
+    commitSections(prev => {
+      const next = [...prev];
+      const tmp = next[idx];
+      next[idx] = next[target];
+      next[target] = tmp;
+      return next;
+    });
+  }
+
   // Build-71: delete an entire section. Contact is protected.
   function confirmDeleteSection(key: string) {
     if (key === 'contact') return;
@@ -1183,6 +1237,95 @@ export default function ResumeEditorScreen() {
   // Issue action: open the Dilly AI overlay pre-prompted to fix the tapped issue.
   // Closes the loop between the "Fix this first" list and the AI chat.
   function handleFixIssue(issue: any) {
+    // Build-72: deterministic auto-fix path. For a small set of issues
+    // there's no judgment call — we just apply the fix directly instead
+    // of routing through the AI overlay.
+    const id = String(issue?.id || '');
+    if (id === 'missing_education' || id === 'missing_experience' || id === 'missing_skills') {
+      const def: AddableSection | null =
+        id === 'missing_education' ? { key: 'education',               label: 'Education',               placeholder: '', description: '' } :
+        id === 'missing_experience' ? { key: 'professional_experience', label: 'Professional Experience', placeholder: '', description: '' } :
+                                      { key: 'skills',                  label: 'Skills',                  placeholder: '', description: '' };
+      if (sections.some(s => s.key === def.key)) {
+        showToast(`${def.label} is already on your resume.`);
+        return;
+      }
+      // Use the default-sections builder to get a properly shaped empty
+      // section of the right kind, then splice it in.
+      const defaults = buildDefaultSections(null);
+      const template = defaults.find(d => d.key === def.key);
+      if (!template) return;
+      commitSections(prev => {
+        // Drop in after the most recent education/experience anchor so
+        // the order feels natural regardless of which is missing.
+        return [...prev, template];
+      });
+      setExpanded(prev => {
+        const next = new Set(prev || []);
+        next.add(def.key);
+        return next;
+      });
+      showToast(`${def.label} added. Fill it in to collect the points.`);
+      return;
+    }
+    if (id === 'fancy_unicode') {
+      // Strip smart quotes, em/en dashes, non-breaking spaces, and common
+      // word-processor bullets from every editable text field. Users
+      // paste resumes from Word/Google Docs and these characters break
+      // strict ATS parsers.
+      const clean = (s: string): string =>
+        (s || '')
+          .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+          .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+          .replace(/[\u2013\u2014]/g, '-')
+          .replace(/[\u00A0\u202F]/g, ' ')
+          .replace(/[\u2022\u25E6\u2219]/g, '-')
+          .replace(/\u2026/g, '...');
+      commitSections(prev => prev.map(s => {
+        const next: any = { ...s };
+        if (s.contact) next.contact = {
+          ...s.contact,
+          name: clean(s.contact.name),
+          email: clean(s.contact.email),
+          phone: clean(s.contact.phone),
+          location: clean(s.contact.location),
+          linkedin: clean(s.contact.linkedin),
+        };
+        if (s.education) next.education = {
+          ...s.education,
+          university: clean(s.education.university),
+          major: clean(s.education.major),
+          minor: clean(s.education.minor),
+          graduation: clean(s.education.graduation),
+          location: clean(s.education.location),
+          honors: clean(s.education.honors),
+          gpa: clean(s.education.gpa),
+        };
+        if (s.experiences) next.experiences = s.experiences.map(e => ({
+          ...e,
+          company: clean(e.company),
+          role: clean(e.role),
+          date: clean(e.date),
+          location: clean(e.location),
+          bullets: e.bullets.map(b => ({ ...b, text: clean(b.text) })),
+        }));
+        if (s.projects) next.projects = s.projects.map(p => ({
+          ...p,
+          name: clean(p.name),
+          date: clean(p.date),
+          location: clean(p.location),
+          bullets: p.bullets.map(b => ({ ...b, text: clean(b.text) })),
+        }));
+        if (s.simple) next.simple = {
+          ...s.simple,
+          lines: s.simple.lines.map(clean),
+        };
+        return next;
+      }));
+      showToast('Cleaned fancy characters. Save to persist.');
+      return;
+    }
+
     const firstName = (major || 'there').split(' ')[0];
     const vendors = (issue.affects_vendors || []).join(', ') || 'ATS parsers';
     // Pass the user's real scores from the latest editor-scan so the AI
@@ -1519,12 +1662,28 @@ export default function ResumeEditorScreen() {
         <FadeInView delay={120}>
           <View style={rs.resumeDoc}>
 
+            {/* Build-72: word count + page estimate strip */}
+            <View style={rs.lengthStrip}>
+              <Ionicons name="document-text-outline" size={11} color={colors.t3} />
+              <Text style={rs.lengthStripText}>
+                {wordCount} words · ~{pageEstimate.toFixed(1)} page{pageEstimate >= 1.05 ? 's' : ''}
+              </Text>
+              {pageEstimate > 1.1 && (
+                <View style={rs.lengthStripWarn}>
+                  <Ionicons name="warning" size={10} color={AMBER} />
+                  <Text style={rs.lengthStripWarnText}>Over 1 page</Text>
+                </View>
+              )}
+            </View>
+
             {/* Sections as accordion */}
             {sections.map((sec, i) => {
               const comp = sectionCompleteness(sec);
               const isOpen = expanded?.has(sec.key) ?? false;
 
               const canDelete = sec.key !== 'contact';
+              const canMoveUp = i > 0 && sec.key !== 'contact' && sections[i - 1]?.key !== 'contact';
+              const canMoveDown = i < sections.length - 1 && sec.key !== 'contact';
               return (
                 <View key={sec.key}>
                   {/* Section header (like a resume section divider) */}
@@ -1556,6 +1715,29 @@ export default function ResumeEditorScreen() {
                   {/* Content */}
                   {isOpen && (
                     <View style={rs.sectionContent}>
+                      {/* Build-72: inline move up / down buttons */}
+                      {(canMoveUp || canMoveDown) && (
+                        <View style={rs.moveRow}>
+                          <TouchableOpacity
+                            onPress={() => moveSection(sec.key, -1)}
+                            disabled={!canMoveUp}
+                            hitSlop={8}
+                            style={[rs.moveBtn, !canMoveUp && { opacity: 0.3 }]}
+                          >
+                            <Ionicons name="arrow-up" size={12} color={colors.t2} />
+                            <Text style={rs.moveBtnText}>Up</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => moveSection(sec.key, 1)}
+                            disabled={!canMoveDown}
+                            hitSlop={8}
+                            style={[rs.moveBtn, !canMoveDown && { opacity: 0.3 }]}
+                          >
+                            <Ionicons name="arrow-down" size={12} color={colors.t2} />
+                            <Text style={rs.moveBtnText}>Down</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                       {sec.contact && <ContactPreview contact={sec.contact} onChange={c => updateSection(sec.key, { contact: c })} />}
                       {sec.education && <EducationPreview edu={sec.education} onChange={e => updateSection(sec.key, { education: e })} />}
                       {sec.experiences && <ExperiencePreview entries={sec.experiences} onChange={e => updateSection(sec.key, { experiences: e })} ph={ph} onScoreUpdate={handleBulletScoreUpdate} />}
@@ -2333,4 +2515,33 @@ const rs = StyleSheet.create({
     shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   toastText: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
+
+  // Build 72: length strip (word count + page estimate)
+  lengthStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 6,
+    marginBottom: 10,
+    backgroundColor: colors.s2, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  lengthStripText: { fontSize: 10, color: colors.t3, flex: 1 },
+  lengthStripWarn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: AMBER + '15', borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  lengthStripWarnText: { fontSize: 9, color: AMBER, fontWeight: '700' },
+
+  // Build 72: move up / down toolbar
+  moveRow: {
+    flexDirection: 'row', gap: 6,
+    marginBottom: 10,
+  },
+  moveBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: colors.s2, borderRadius: 7,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  moveBtnText: { fontSize: 10, color: colors.t2, fontWeight: '600' },
 });
