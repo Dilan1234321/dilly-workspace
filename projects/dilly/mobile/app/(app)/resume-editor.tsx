@@ -892,10 +892,11 @@ export default function ResumeEditorScreen() {
     });
   }
 
-  // ── Build-63 PDF export ─────────────────────────────────────────────────
-  // Backend returns base64 JSON. We open a data: URL in the system browser,
-  // which iOS renders natively with its standard share/save sheet attached.
-  // No expo-file-system or expo-sharing required.
+  // ── PDF export ──────────────────────────────────────────────────────────
+  // Backend stores the PDF in a transient cache and returns a public URL.
+  // We open that URL with Linking — iOS Safari renders the PDF natively
+  // with its standard share/save sheet. Works without expo-file-system
+  // or expo-sharing.
   async function handleExport(template: 'tech' | 'business' | 'academic') {
     if (exporting) return;
     setExporting(true);
@@ -910,37 +911,45 @@ export default function ResumeEditorScreen() {
         return;
       }
       const data = await res.json();
-      const b64 = data?.base64;
-      if (!b64) {
+      const url = data?.url;
+      if (!url) {
         Alert.alert('Export failed', 'Empty response from server.');
         return;
       }
-      const dataUrl = `data:application/pdf;base64,${b64}`;
-      const can = await Linking.canOpenURL(dataUrl).catch(() => false);
-      if (can) {
-        await Linking.openURL(dataUrl);
-      } else {
+      setShowExportPicker(false);
+      try {
+        await Linking.openURL(url);
+      } catch {
         Alert.alert(
           'PDF ready',
-          `Template: ${template}\nSize: ${Math.round((data.size_bytes || 0) / 1024)} KB\n\nYour device blocked the preview. Try a different browser.`
+          `Template: ${template}\nSize: ${Math.round((data.size_bytes || 0) / 1024)} KB\n\nCould not auto-open the PDF. Copy and paste this URL into Safari:\n${url}`
         );
       }
     } catch (e: any) {
       Alert.alert('Export failed', e?.message || 'Unknown error.');
     } finally {
       setExporting(false);
-      setShowExportPicker(false);
     }
   }
 
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await dilly.post('/resume/save', { sections });
-      if (!res.ok) throw new Error();
+      // dilly.fetch gives us a real Response; dilly.post returns the parsed body
+      // and has no .ok field — the old code always fell into the catch even on success.
+      const res = await dilly.fetch('/resume/save', {
+        method: 'POST',
+        body: JSON.stringify({ sections }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        throw new Error(detail?.detail || 'save failed');
+      }
       setHasChanges(false);
       Alert.alert('Saved', 'Your resume has been saved.');
-    } catch { Alert.alert('Error', 'Could not save resume.'); }
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Could not save resume.');
+    }
     finally { setSaving(false); }
   }
 

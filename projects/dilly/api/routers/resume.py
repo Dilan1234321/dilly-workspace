@@ -978,6 +978,17 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
         except Exception: pass
 
     # ── 2. Rubric scoring (primary cohort) ────────────────────────────
+    # Strategy: try to re-score the in-editor resume against the student's
+    # cohort rubric. If that fails (missing major, missing signals, anything),
+    # fall back to the most recent saved audit's rubric_analysis so the UI
+    # never shows zeros for Smart/Grit/Build.
+    student_email = ""
+    try:
+        _u = deps.require_auth(request)
+        student_email = (_u.get("email") or "").strip().lower()
+    except Exception:
+        pass
+
     try:
         from dilly_core.rubric_scorer import (
             select_cohorts_for_student, score_for_cohorts,
@@ -987,17 +998,15 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
 
         # Figure out the student's major(s) for cohort selection
         major = ""
-        try:
-            user = deps.require_auth(request)
-            email = (user.get("email") or "").strip().lower()
-            if email:
+        if student_email:
+            try:
                 from projects.dilly.api.profile_store import get_profile
-                prof = get_profile(email) or {}
+                prof = get_profile(student_email) or {}
                 majors = prof.get("majors") or ([prof.get("major")] if prof.get("major") else [])
                 if majors:
                     major = majors[0] or ""
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         cohorts = select_cohorts_for_student(
             major=major,
@@ -1015,7 +1024,46 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
         import sys
         sys.stderr.write(f"[editor_scan_rubric_failed] {type(e).__name__}: {str(e)[:200]}\n")
 
+    # Fallback: if live rubric scoring didn't produce a useful payload,
+    # use the most recent audit's rubric_analysis so the rings have real numbers.
+    if (not rubric_summary) or not (
+        rubric_summary.get("primary_smart") or rubric_summary.get("primary_grit") or rubric_summary.get("primary_build")
+    ):
+        if student_email:
+            try:
+                from projects.dilly.api.audit_history import get_audits
+                audits = get_audits(student_email) or []
+                for a in audits:
+                    ra = a.get("rubric_analysis")
+                    if isinstance(ra, dict) and (ra.get("primary_smart") or ra.get("primary_grit") or ra.get("primary_build")):
+                        rubric_summary = ra
+                        break
+            except Exception:
+                pass
+
+    # Fallback: if live ATS v2 scoring didn't produce composite scores, use
+    # the most recent audit's v2 payload so the vendor sidebar shows real data.
+    if (not v2) or not (v2.get("vendors") and v2.get("overall")):
+        if student_email:
+            try:
+                from projects.dilly.api.audit_history import get_audits
+                audits = get_audits(student_email) or []
+                for a in audits:
+                    raw_v2 = (a.get("rubric_analysis") or {}).get("v2") if isinstance(a.get("rubric_analysis"), dict) else None
+                    # Also check a top-level v2 field for forward compat
+                    if not raw_v2:
+                        raw_v2 = a.get("v2") if isinstance(a.get("v2"), dict) else None
+                    if raw_v2 and raw_v2.get("overall"):
+                        v2 = raw_v2
+                        break
+            except Exception:
+                pass
+
     # ── 3. Prioritized issue list (merged + ranked by lift) ────────────
+    # We DON'T show effort_minutes in the UI anymore — single bullet edits
+    # can take 30 seconds and restructuring a section takes 10 minutes, and
+    # there's no reliable way to predict which one applies. Showing a wrong
+    # number erodes trust more than showing nothing.
     ranked_issues: list = []
     try:
         v2_issues = v2.get("issues") or []
@@ -1034,7 +1082,6 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
                 "total_lift": round(total_lift, 1),
                 "affects_vendors": iss.get("affects") or [],
                 "lift_per_vendor": lifts,
-                "effort_minutes": 10 if iss.get("severity") in ("medium", "low") else 20,
             })
 
         # Rubric missing-signal gaps become issues too
@@ -1055,7 +1102,6 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
                     "total_lift": 6.0,
                     "affects_vendors": [],
                     "lift_per_vendor": {},
-                    "effort_minutes": 30,
                 })
 
         # Sort by total_lift descending; cap at 10
@@ -1128,11 +1174,12 @@ async def resume_export_pdf(request: Request, body: ExportRequest):
 
     filename = (body.filename or f"{(candidate_name or 'resume').strip().replace(' ', '_')}_{template_name}.pdf")
 
-    # Mobile clients can't easily handle binary responses without expo-sharing,
-    # so return base64 JSON — they open it via Linking.openURL('data:application/pdf;base64,...')
-    # which iOS Safari renders natively and exposes the standard share sheet.
-    # Desktop callers set ?raw=1 to get the binary directly.
-    import base64 as _b64
+    # iOS Safari silently blocks `data:application/pdf;base64,...` URLs — they
+    # appear to succeed with Linking.canOpenURL but nothing actually opens.
+    # Instead, stash the PDF in an in-memory cache with a random token and
+    # return a public URL to a GET endpoint that streams the bytes. Mobile
+    # opens the URL with Linking.openURL, iOS renders natively with the
+    # standard share/save sheet. Tokens expire after 10 minutes.
     if (request.query_params.get("raw") or "").lower() in ("1", "true", "yes"):
         return Response(
             content=pdf_bytes,
@@ -1142,13 +1189,76 @@ async def resume_export_pdf(request: Request, body: ExportRequest):
                 "Cache-Control": "no-store",
             },
         )
+
+    token = _stash_pdf(pdf_bytes, filename)
+    # Build the absolute URL the mobile client should open
+    base_url = str(request.base_url).rstrip("/")
+    public_url = f"{base_url}/resume/export/{token}"
     return {
         "filename": filename,
         "mime": "application/pdf",
         "size_bytes": len(pdf_bytes),
-        "base64": _b64.b64encode(pdf_bytes).decode("ascii"),
+        "url": public_url,
+        "token": token,
         "template": template_name,
+        "expires_in_sec": _PDF_EXPORT_TTL,
     }
+
+
+# ── Transient PDF export cache ─────────────────────────────────────────────
+# Process-local dict. Good enough for single-instance Railway deployments;
+# on multi-instance deployments the client would need to retry if the request
+# lands on a different instance. For Dilly's current scale that's acceptable.
+
+import secrets as _secrets
+import time as _time
+import threading as _threading
+_PDF_EXPORT_CACHE: dict = {}
+_PDF_EXPORT_TTL = 600  # 10 min
+_PDF_EXPORT_LOCK = _threading.Lock()
+
+
+def _stash_pdf(pdf_bytes: bytes, filename: str) -> str:
+    """Store PDF bytes in the in-memory cache and return a token."""
+    token = _secrets.token_urlsafe(24)
+    with _PDF_EXPORT_LOCK:
+        # Opportunistic cleanup of expired entries
+        now = _time.time()
+        expired = [k for k, v in _PDF_EXPORT_CACHE.items() if now - v.get("ts", 0) > _PDF_EXPORT_TTL]
+        for k in expired:
+            _PDF_EXPORT_CACHE.pop(k, None)
+        _PDF_EXPORT_CACHE[token] = {
+            "bytes": pdf_bytes,
+            "filename": filename,
+            "ts": now,
+        }
+    return token
+
+
+@router.get("/resume/export/{token}")
+async def resume_export_fetch(token: str):
+    """
+    Public endpoint that streams a PDF from the transient cache. Called by the
+    mobile client after it hits POST /resume/export and receives a token.
+    No auth — the token is a cryptographically random 24-byte value that
+    only the user who just generated it has seen.
+    """
+    with _PDF_EXPORT_LOCK:
+        entry = _PDF_EXPORT_CACHE.get(token)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Export expired or invalid.")
+        if _time.time() - entry.get("ts", 0) > _PDF_EXPORT_TTL:
+            _PDF_EXPORT_CACHE.pop(token, None)
+            raise HTTPException(status_code=410, detail="Export expired — regenerate.")
+
+    return Response(
+        content=entry["bytes"],
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{entry.get("filename", "resume.pdf")}"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
