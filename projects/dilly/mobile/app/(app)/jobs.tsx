@@ -1,1058 +1,671 @@
-import { useEffect, useState, useCallback } from 'react';
+/**
+ * Jobs Page — cohort-filtered job matching with S/G/B score comparison.
+ *
+ * Build 88: Complete rewrite. Shows jobs filtered by user's cohorts.
+ * Each job has per-cohort S/G/B requirements. The user sees how their
+ * scores stack up against each matching cohort requirement.
+ *
+ * Key UX decisions:
+ * - Only shows jobs for cohorts the user has on their profile
+ * - Multi-cohort jobs (e.g. quant finance = Data Science + Finance) only
+ *   appear if the user has ALL required cohorts
+ * - Readiness: Ready (all dims met), Almost (1 gap <=15), Gap (2+ gaps)
+ * - "Apply" adds to tracker + opens URL
+ * - "Ask Dilly" opens the AI coach with gap context
+ */
+
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TextInput,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Linking,
-  RefreshControl,
-  Pressable,
+  View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
+  Alert, Linking, RefreshControl, LayoutAnimation,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { dilly } from '../../lib/dilly';
-import { colors, spacing } from '../../lib/tokens';
+import { colors, spacing, radius } from '../../lib/tokens';
+import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
+import CohortSwitcher from '../../components/CohortSwitcher';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
-import { getAutomationRisk } from '../../lib/automation-risk';
-import InterestsPicker from '../../components/InterestsPicker';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
-import { lookupCompanyATS } from '../../lib/atsLookup';
-import { router, useLocalSearchParams } from 'expo-router';
 
-const GOLD  = '#2B3A8E';
-const GREEN = '#34C759';
-const AMBER = '#FF9F0A';
-const CORAL = '#FF453A';
-const BLUE  = '#0A84FF';
-const INDIGO = '#5E5CE6';
+const COBALT = '#1652F0';
+const GREEN  = '#34C759';
+const AMBER  = '#FF9F0A';
+const CORAL  = '#FF453A';
+const BLUE   = '#0A84FF';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
-interface RequiredScores {
-  smart?: number; grit?: number; build?: number;
-  smart_why?: string; grit_why?: string; build_why?: string;
-  overall_bar?: string;
+interface CohortReq {
+  cohort: string;
+  smart: number;
+  grit: number;
+  build: number;
 }
 
 interface Listing {
-  id: string; title: string; company: string; location: string;
-  description: string; url: string; posted_date: string; source: string;
-  tags: string[]; team: string; remote: boolean; required_scores?: RequiredScores;
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  url: string;
+  posted_date: string;
+  source: string;
+  job_type: string;
+  remote: boolean;
+  cohort_requirements: CohortReq[];
+  primary_cohort: string;
+  quality_score?: number;
+  // Computed client-side
+  readiness?: 'ready' | 'almost' | 'gap';
+  cohort_matches?: { cohort: string; smart_gap: number; grit_gap: number; build_gap: number; met: boolean }[];
 }
 
-interface StudentScores { smart: number; grit: number; build: number; score: number; }
+type Tab = 'all' | 'internship' | 'entry_level';
+type ReadinessFilter = 'all' | 'ready' | 'almost' | 'gap';
 
-// Fallback when a listing hasn't been classified yet  -  competitive internship floor
-const BASELINE_SCORES: RequiredScores = { smart: 65, grit: 65, build: 65 };
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-const SOURCE_COLORS: Record<string, string> = { Greenhouse: '#2ECC71', Lever: '#3498DB', Ashby: '#9B59B6', USAJOBS: '#E74C3C' };
-
-function buildPersonalInsight(studentScores: StudentScores, rs: RequiredScores): string {
-  const dims = [
-    { key: 'smart' as const, label: 'Smart', mine: studentScores.smart, need: rs.smart ?? 0, why: rs.smart_why },
-    { key: 'grit' as const, label: 'Grit', mine: studentScores.grit, need: rs.grit ?? 0, why: rs.grit_why },
-    { key: 'build' as const, label: 'Build', mine: studentScores.build, need: rs.build ?? 0, why: rs.build_why },
-  ];
-
-  const gaps = dims.filter(d => d.need - d.mine > 0).sort((a, b) => (b.need - b.mine) - (a.need - a.mine));
-  const clears = dims.filter(d => d.mine >= d.need);
-
-  if (gaps.length === 0) {
-    const strongest = dims.sort((a, b) => (b.mine - b.need) - (a.mine - a.need))[0];
-    return `Your profile aligns well with this role. Lead your application with your ${strongest.label} experience to stand out from other candidates.`;
-  }
-
-  const biggest = gaps[0];
-  const gap = biggest.need - biggest.mine;
-  let insight = `Your ${biggest.label} is ${Math.round(biggest.mine)}, but this role looks for ${Math.round(biggest.need)} (${gap} point gap). `;
-
-  if (biggest.why) {
-    // Take the first sentence of the why explanation
-    const firstSentence = biggest.why.split(/[.!]/)[0]?.trim();
-    if (firstSentence) insight += firstSentence + '. ';
-  }
-
-  if (clears.length > 0) {
-    insight += `Your ${clears.map(c => c.label).join(' and ')} ${clears.length > 1 ? 'are' : 'is'} already strong enough. Close the ${biggest.label} gap and you're competitive.`;
-  } else {
-    insight += `Focus on ${biggest.label} first since it's your biggest gap, then work on the others.`;
-  }
-
-  return insight;
+function readinessColor(r: string): string {
+  return r === 'ready' ? GREEN : r === 'almost' ? AMBER : CORAL;
 }
 
-function cleanDescription(d: string): string {
-  if (!d) return '';
-  // Strip all HTML tags (including malformed double-bracket ones)
-  let text = d.replace(/<[^>]*>/g, ' ').replace(/[<>]+/g, ' ')
-    .replace(/<\/?[a-z][^>]*>/gi, '')
-    .replace(/<\/?\s*/g, '')
-    .replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&[a-z]+;/gi, ' ')
-    .replace(/&#\d+;/g, ' ').replace(/\{[^}]*\}/g, ' ').replace(/\s+/g, ' ').trim();
-  // Remove everything that looks like HTML/CSS artifacts
-  text = text.replace(/div class[^.!?]*/gi, '').replace(/span style[^.!?]*/gi, '').replace(/font-family[^.!?]*/gi, '').replace(/font-size[^.!?]*/gi, '').replace(/content-intro[^.!?]*/gi, '').replace(/p>\s*/gi, '').replace(/12pt[^.!?]*/gi, '').trim();
-  const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.length > 20 && !s.includes('{') && !s.includes('class='));
-  return sentences.slice(0, 3).join(' ').slice(0, 350) + (text.length > 350 ? '...' : '');
+function readinessLabel(r: string): string {
+  return r === 'ready' ? 'Ready' : r === 'almost' ? 'Almost' : 'Gap';
 }
 
-function daysAgo(d: string): string {
-  if (!d) return '';
-  try {
-    const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
-    if (diff === 0) return 'Today'; if (diff === 1) return '1d ago';
-    if (diff < 7) return `${diff}d ago`; if (diff < 30) return `${Math.floor(diff / 7)}w ago`;
-    return `${Math.floor(diff / 30)}mo ago`;
-  } catch { return ''; }
+function daysAgo(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - d.getTime()) / 86400000);
+  if (diff <= 0) return 'Today';
+  if (diff === 1) return '1d ago';
+  if (diff <= 30) return `${diff}d ago`;
+  return `${Math.floor(diff / 30)}mo ago`;
 }
 
-function dimColor(s: number, r: number): string { const g = Math.round((r - s) * 10) / 10; return g <= 0 ? GREEN : g <= 10 ? AMBER : CORAL; }
-function gapLabel(s: number, r: number): string { const g = Math.round((r - s) * 10) / 10; return g <= 0 ? 'Ready' : g <= 10 ? `${g} pts away` : `${g} pts gap`; }
+function computeReadiness(
+  listing: Listing,
+  userScores: Record<string, CohortScore>,
+): { readiness: 'ready' | 'almost' | 'gap'; matches: Listing['cohort_matches'] } {
+  const matches: NonNullable<Listing['cohort_matches']> = [];
+  let totalGaps = 0;
+  let maxSingleGap = 0;
 
-// ── Education Level Picker ────────────────────────────────────────────────────
+  for (const req of listing.cohort_requirements) {
+    const userCohort = userScores[req.cohort];
+    if (!userCohort) continue;
 
-const EDU_LEVELS = ['Undergraduate', 'Masters', 'PhD', 'MBA'];
+    const sg = Math.max(0, req.smart - userCohort.smart);
+    const gg = Math.max(0, req.grit - userCohort.grit);
+    const bg = Math.max(0, req.build - userCohort.build);
+    const gaps = (sg > 0 ? 1 : 0) + (gg > 0 ? 1 : 0) + (bg > 0 ? 1 : 0);
+    totalGaps += gaps;
+    maxSingleGap = Math.max(maxSingleGap, sg, gg, bg);
 
-function EducationPicker({ selected, onChange }: { selected: string; onChange: (v: string) => void }) {
-  return (
-    <View style={js.eduRow}>
-      {EDU_LEVELS.map(level => (
-        <AnimatedPressable
-          key={level}
-          style={[js.eduChip, selected === level && js.eduChipSelected]}
-          onPress={() => onChange(level)}
-          scaleDown={0.95}
-        >
-          <Text style={[js.eduChipText, selected === level && js.eduChipTextSelected]}>{level}</Text>
-        </AnimatedPressable>
-      ))}
-    </View>
-  );
-}
-
-// ── Dimension Bar ─────────────────────────────────────────────────────────────
-
-function DimBar({ label, student, required }: { label: string; student: number; required: number }) {
-  const color = dimColor(student, required);
-  const gap = required - student;
-  const pct = student / 100;
-  return (
-    <View style={js.dimBar}>
-      <View style={js.dimBarHeader}>
-        <Text style={js.dimBarLabel}>{label}</Text>
-        <View style={js.dimBarScores}>
-          <Text style={[js.dimBarYou, { color }]}>{Math.round(student)}</Text>
-          <Text style={js.dimBarSlash}>/</Text>
-          <Text style={js.dimBarReq}>{Math.round(required)}</Text>
-        </View>
-        {gap <= 0 ? <Ionicons name="checkmark-circle" size={12} color={GREEN} /> : <Text style={[js.dimBarGap, { color }]}>{gapLabel(student, required)}</Text>}
-      </View>
-      <View style={js.dimBarTrack}>
-        <View style={[js.dimBarFill, { width: `${pct * 100}%`, backgroundColor: color }]} />
-        <View style={[js.dimBarTarget, { left: `${Math.min((required / 100) * 100, 100)}%` }]} />
-      </View>
-    </View>
-  );
-}
-
-// ── Job Card ──────────────────────────────────────────────────────────────────
-
-function JobCard({ listing, studentScores, studentProfile, userCohort, onApply, defaultExpanded }: {
-  listing: Listing; studentScores: StudentScores | null; studentProfile: Record<string, any>; userCohort: string; onApply: (l: Listing) => void; defaultExpanded?: boolean;
-}) {
-  const [expanded, setExpanded] = useState(!!defaultExpanded);
-  const posted = daysAgo(listing.posted_date);
-  const isNew = (() => {
-    try {
-      return listing.posted_date && (Date.now() - new Date(listing.posted_date).getTime()) < 2 * 86400000;
-    } catch { return false; }
-  })();
-  const matchPct = Math.round(Number((listing as any).rank_score) || 0);
-  const srcColor = SOURCE_COLORS[listing.source] || colors.t3;
-  const rs = listing.required_scores;
-  const hasRoleScores = rs && typeof rs.smart === 'number';
-  const effectiveRs: RequiredScores = hasRoleScores ? rs! : BASELINE_SCORES;
-
-  let readiness: 'ready' | 'close' | 'gap' | 'unknown' = 'unknown';
-  const serverReadiness = (listing as any).readiness;
-  if (serverReadiness === 'ready' || serverReadiness === 'almost' || serverReadiness === 'gap') {
-    readiness = serverReadiness === 'almost' ? 'close' : serverReadiness;
-  } else if (studentScores) {
-    const dims = ['smart', 'grit', 'build'] as const;
-    const worstGap = Math.max(...dims.map(dim => (effectiveRs[dim] ?? 0) - studentScores[dim]));
-    readiness = worstGap <= 0 ? 'ready' : worstGap <= 10 ? 'close' : 'gap';
-  }
-  const rc = { ready: { color: GREEN, label: 'Ready', icon: 'checkmark-circle' as const }, close: { color: AMBER, label: 'Almost', icon: 'alert-circle' as const }, gap: { color: CORAL, label: 'Gap', icon: 'arrow-up-circle' as const }, unknown: { color: colors.t3, label: '', icon: 'help-circle' as const } }[readiness];
-  const atsInfo = lookupCompanyATS(listing.company, listing.source);
-
-  function tailorResume() {
-    const p = studentProfile as any;
-    const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
-    const cohort = p.track || p.cohort || 'General';
-    openDillyOverlay({
-      name: firstName, cohort,
-      score: studentScores?.score || 0, smart: studentScores?.smart || 0,
-      grit: studentScores?.grit || 0, build: studentScores?.build || 0,
-      gap: 0, cohortBar: 75,
-      referenceCompany: listing.company,
-      applicationTarget: `${listing.title} at ${listing.company}`,
-      isPaid: true,
-      initialMessage: `Help me tailor my resume for the ${listing.title} role at ${listing.company}. What specific changes should I make to my bullet points and skills section to match this job and stand out to recruiters?`,
+    matches.push({
+      cohort: req.cohort,
+      smart_gap: sg,
+      grit_gap: gg,
+      build_gap: bg,
+      met: gaps === 0,
     });
   }
 
-  function askDilly() {
-    const p = studentProfile as any;
-    const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
-    const cohort = p.track || p.cohort || 'General';
-    let autoPrompt = `I'm looking at the ${listing.title} role at ${listing.company}.`;
-    if (hasRoleScores && studentScores) {
-      const gaps: string[] = []; const good: string[] = [];
-      for (const [dim, label] of [['smart', 'Smart'], ['grit', 'Grit'], ['build', 'Build']] as const) {
-        const mine = studentScores[dim]; const need = (rs as any)[dim] ?? 0;
-        if (need - mine > 0) gaps.push(`my ${label} is ${Math.round(mine)} but they need ${Math.round(need)} (${need - mine} point gap)`);
-        else good.push(label);
-      }
-      if (gaps.length > 0) {
-        autoPrompt += ` My gaps: ${gaps.join(', ')}.`;
-        if (good.length > 0) autoPrompt += ` I clear the bar on ${good.join(' and ')}.`;
-        autoPrompt += ` What specific things should I do to close ${gaps.length === 1 ? 'this gap' : 'these gaps'} for this role?`;
-      } else {
-        autoPrompt += ` I clear the bar on all three dimensions. What should I focus on to stand out?`;
-      }
-    } else {
-      autoPrompt += ` What do I need to be competitive for this role?`;
+  let readiness: 'ready' | 'almost' | 'gap' = 'gap';
+  if (totalGaps === 0) readiness = 'ready';
+  else if (totalGaps <= 1 && maxSingleGap <= 15) readiness = 'almost';
+
+  return { readiness, matches };
+}
+
+// ── Score Bar Component ─────────────────────────────────────────────────────
+
+function ScoreBar({ label, required, yours, color }: {
+  label: string; required: number; yours: number; color: string;
+}) {
+  const gap = required - yours;
+  const met = gap <= 0;
+  return (
+    <View style={s.scoreBarRow}>
+      <Text style={s.scoreBarLabel}>{label}</Text>
+      <View style={s.scoreBarTrack}>
+        <View style={[s.scoreBarFill, {
+          width: `${Math.min(100, yours)}%`,
+          backgroundColor: met ? GREEN : gap <= 15 ? AMBER : CORAL,
+        }]} />
+        <View style={[s.scoreBarReq, { left: `${Math.min(100, required)}%` }]} />
+      </View>
+      <Text style={[s.scoreBarNum, { color: met ? GREEN : CORAL }]}>{Math.round(yours)}</Text>
+      <Text style={s.scoreBarSlash}>/</Text>
+      <Text style={s.scoreBarReqNum}>{Math.round(required)}</Text>
+    </View>
+  );
+}
+
+// ── Job Card Component ──────────────────────────────────────────────────────
+
+function JobCard({ listing, userScores, expanded, onToggle }: {
+  listing: Listing;
+  userScores: Record<string, CohortScore>;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const { readiness, matches } = computeReadiness(listing, userScores);
+  const rColor = readinessColor(readiness);
+
+  async function handleApply() {
+    try {
+      await dilly.post('/v2/internships/save', { internship_id: listing.id });
+    } catch {}
+    if (listing.url) {
+      Linking.openURL(listing.url).catch(() => {
+        Alert.alert('Could not open link', listing.url);
+      });
     }
-    openDillyOverlay({ name: firstName, cohort, score: studentScores?.score || 0, smart: studentScores?.smart || 0, grit: studentScores?.grit || 0, build: studentScores?.build || 0, gap: 0, cohortBar: 75, referenceCompany: listing.company, applicationTarget: `${listing.title} at ${listing.company}`, isPaid: true, initialMessage: autoPrompt });
+  }
+
+  function handleAskDilly() {
+    const gapSummary = (matches || [])
+      .filter(m => !m.met)
+      .map(m => {
+        const gaps = [];
+        if (m.smart_gap > 0) gaps.push(`Smart -${Math.round(m.smart_gap)}`);
+        if (m.grit_gap > 0) gaps.push(`Grit -${Math.round(m.grit_gap)}`);
+        if (m.build_gap > 0) gaps.push(`Build -${Math.round(m.build_gap)}`);
+        return `${m.cohort}: ${gaps.join(', ')}`;
+      })
+      .join('. ');
+    openDillyOverlay({
+      isPaid: true,
+      initialMessage: `I'm looking at the ${listing.title} role at ${listing.company}. My gaps: ${gapSummary || 'none'}. What should I work on to close these gaps and be competitive for this role?`,
+    });
   }
 
   return (
-    <AnimatedPressable style={js.jobCard} onPress={() => setExpanded(!expanded)} scaleDown={0.99}>
-      <View style={js.cardOuter}>
-        {readiness !== 'unknown' && <View style={[js.accentBar, { backgroundColor: rc.color }]} />}
-        <View style={js.cardInner}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 }}>
-            <Text style={[js.cardTitle, { flex: 1 }]} numberOfLines={expanded ? 4 : 2}>{listing.title}</Text>
-            {/* Build-78: "New" badge for jobs posted in last 48h */}
-            {isNew && (
-              <View style={{ backgroundColor: GREEN + '18', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, borderWidth: 1, borderColor: GREEN + '35' }}>
-                <Text style={{ fontSize: 8, fontWeight: '800', color: GREEN }}>NEW</Text>
-              </View>
-            )}
-            {/* Build-78: match % badge when rank_score exists */}
-            {matchPct > 0 && (
-              <View style={{ backgroundColor: GOLD + '12', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, borderWidth: 1, borderColor: GOLD + '30' }}>
-                <Text style={{ fontSize: 8, fontWeight: '800', color: GOLD }}>{matchPct}%</Text>
-              </View>
-            )}
+    <AnimatedPressable style={s.jobCard} onPress={onToggle} scaleDown={0.985}>
+      {/* Accent bar */}
+      <View style={[s.jobAccent, { backgroundColor: rColor }]} />
+
+      <View style={s.jobContent}>
+        {/* Header */}
+        <View style={s.jobHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.jobTitle} numberOfLines={2}>{listing.title}</Text>
+            <Text style={s.jobCompany}>{listing.company}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
-            <Text style={js.cardCompany}>{listing.company}</Text>
-            {readiness !== 'unknown' && <Text style={[js.readinessLabel, { color: rc.color }]}> · {rc.label}</Text>}
+          <View style={[s.readinessBadge, { backgroundColor: rColor + '15', borderColor: rColor + '30' }]}>
+            <View style={[s.readinessDot, { backgroundColor: rColor }]} />
+            <Text style={[s.readinessText, { color: rColor }]}>{readinessLabel(readiness)}</Text>
           </View>
-          <Text style={js.metaLine} numberOfLines={1}>
-            {[listing.location, listing.remote ? 'Remote' : null, posted].filter(Boolean).join(' · ')}
-          </Text>
-      {(() => {
-        const allCr: any[] = (listing as any).cohort_readiness || [];
-        // Show only the user's matching cohort pill (or all if no cohort set)
-        const visibleCr = userCohort
-          ? allCr.filter(cr => (cr.cohort || '').toLowerCase() === userCohort.toLowerCase())
-          : allCr;
-        return visibleCr.length > 0 ? (
-          <View style={js.cohortRow}>
-            {visibleCr.map((cr: any, idx: number) => {
-              const crColor = cr.readiness === 'ready' ? GREEN : cr.readiness === 'almost' ? AMBER : CORAL;
+        </View>
+
+        {/* Meta */}
+        <View style={s.jobMeta}>
+          {listing.location ? (
+            <View style={s.metaPill}>
+              <Ionicons name="location-outline" size={10} color={colors.t3} />
+              <Text style={s.metaText}>{listing.location}</Text>
+            </View>
+          ) : null}
+          {listing.job_type === 'internship' && (
+            <View style={[s.metaPill, { backgroundColor: COBALT + '10', borderColor: COBALT + '20' }]}>
+              <Text style={[s.metaText, { color: COBALT }]}>Internship</Text>
+            </View>
+          )}
+          {listing.posted_date ? (
+            <Text style={s.metaDate}>{daysAgo(listing.posted_date)}</Text>
+          ) : null}
+        </View>
+
+        {/* Cohort match pills */}
+        {matches && matches.length > 0 && (
+          <View style={s.cohortMatchRow}>
+            {matches.map(m => (
+              <View key={m.cohort} style={[s.cohortMatchPill, {
+                backgroundColor: m.met ? GREEN + '12' : CORAL + '12',
+                borderColor: m.met ? GREEN + '25' : CORAL + '25',
+              }]}>
+                <Ionicons name={m.met ? 'checkmark' : 'arrow-up'} size={10} color={m.met ? GREEN : CORAL} />
+                <Text style={[s.cohortMatchText, { color: m.met ? GREEN : CORAL }]} numberOfLines={1}>
+                  {m.cohort.replace(/ & .*$/, '')}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Expanded: Score comparison + actions */}
+        {expanded && (
+          <View style={s.expandedSection}>
+            {/* Per-cohort score bars */}
+            {(matches || []).map(m => {
+              const req = listing.cohort_requirements.find(r => r.cohort === m.cohort);
+              const userC = userScores[m.cohort];
+              if (!req || !userC) return null;
               return (
-                <View key={idx} style={[js.cohortPill, { backgroundColor: crColor + '0D' }]}>
-                  <Text style={[js.cohortPillText, { color: crColor }]}>{cr.cohort}</Text>
+                <View key={m.cohort} style={s.cohortScoreBlock}>
+                  <Text style={s.cohortScoreLabel}>{m.cohort}</Text>
+                  <ScoreBar label="S" required={req.smart} yours={userC.smart} color={BLUE} />
+                  <ScoreBar label="G" required={req.grit} yours={userC.grit} color={AMBER} />
+                  <ScoreBar label="B" required={req.build} yours={userC.build} color={GREEN} />
                 </View>
               );
             })}
-          </View>
-        ) : null;
-      })()}
-        </View>
-      </View>
-      {expanded && (
-        <View style={js.expandedSection}>
-          {studentScores && (
-            <View style={js.gapSection}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                <Text style={js.gapTitle}>YOUR FIT</Text>
-                {!hasRoleScores && <Text style={{ fontSize: 9, color: colors.t3, fontStyle: 'italic' }}>vs. competitive baseline</Text>}
-              </View>
-              {(() => {
-                const allCr: any[] = (listing as any).cohort_readiness || [];
-                // Show only the user's cohort scores in expanded view
-                const matchedCr = userCohort
-                  ? allCr.filter(cr => (cr.cohort || '').toLowerCase() === userCohort.toLowerCase())
-                  : allCr;
-                if (matchedCr.length > 0) {
-                  return matchedCr.map((cr: any, idx: number) => (
-                    <View key={idx} style={{ marginBottom: idx < matchedCr.length - 1 ? 12 : 0 }}>
-                      <Text style={[js.gapTitle, { fontSize: 9, color: '#2B3A8E', marginBottom: 6 }]}>{cr.cohort}</Text>
-                      <DimBar label="Smart" student={cr.student_smart ?? studentScores.smart} required={cr.required_smart ?? effectiveRs.smart ?? 0} />
-                      <DimBar label="Grit" student={cr.student_grit ?? studentScores.grit} required={cr.required_grit ?? effectiveRs.grit ?? 0} />
-                      <DimBar label="Build" student={cr.student_build ?? studentScores.build} required={cr.required_build ?? effectiveRs.build ?? 0} />
-                    </View>
-                  ));
-                }
-                return (
-                  <>
-                    <DimBar label="Smart" student={studentScores.smart} required={effectiveRs.smart ?? 0} />
-                    <DimBar label="Grit" student={studentScores.grit} required={effectiveRs.grit ?? 0} />
-                    <DimBar label="Build" student={studentScores.build} required={effectiveRs.build ?? 0} />
-                  </>
-                );
-              })()}
-              {effectiveRs.overall_bar && <Text style={js.overallBar}>{effectiveRs.overall_bar}</Text>}
-              {atsInfo && (
-            <View style={js.atsSection}>
-              <View style={js.atsSectionHeader}>
-                <Ionicons name="shield-checkmark" size={12} color={atsInfo.color} />
-                <Text style={js.atsSectionTitle}>ATS COMPATIBILITY</Text>
-              </View>
-              <View style={js.atsRow}>
-                <Text style={js.atsLabel}>System:</Text>
-                <View style={[js.atsBadge, { backgroundColor: atsInfo.color + '15', borderColor: atsInfo.color + '30' }]}>
-                  <Text style={[js.atsBadgeText, { color: atsInfo.color }]}>{atsInfo.system}</Text>
-                </View>
-                <View style={[js.atsBadge, {
-                  backgroundColor: atsInfo.strictness === 'lenient' ? GREEN + '15' : atsInfo.strictness === 'moderate' ? AMBER + '15' : CORAL + '15',
-                  borderColor: atsInfo.strictness === 'lenient' ? GREEN + '30' : atsInfo.strictness === 'moderate' ? AMBER + '30' : CORAL + '30',
-                }]}>
-                  <Text style={[js.atsBadgeText, {
-                    color: atsInfo.strictness === 'lenient' ? GREEN : atsInfo.strictness === 'moderate' ? AMBER : CORAL,
-                  }]}>{atsInfo.strictness}</Text>
-                </View>
-              </View>
-              <Text style={js.atsTip}>{atsInfo.tips}</Text>
-              {atsInfo.strictness === 'strict' && (
-                <AnimatedPressable
-                  style={js.atsFixBtn}
-                  onPress={() => {
-                    const p = studentProfile as any;
-                    openDillyOverlay({
-                      name: p.name?.trim().split(/\s+/)[0] || 'there',
-                      cohort: p.track || 'General',
-                      score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
-                      referenceCompany: listing.company,
-                      isPaid: true,
-                      initialMessage: `${listing.company} uses ${atsInfo.system}, which is a strict ATS system. ${atsInfo.tips} Can you review my resume formatting and tell me exactly what to change to make it compatible with ${atsInfo.system}?`,
-                    });
-                  }}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="construct" size={11} color={CORAL} />
-                  <Text style={js.atsFixBtnText}>Check formatting with Dilly</Text>
-                </AnimatedPressable>
-              )}
-            </View>
-          )}
-            </View>
-          )}
-          <Text style={js.description}>{cleanDescription(listing.description) || 'No description available.'}</Text>
 
-          {hasRoleScores && studentScores && (
-            <View style={js.insightWrap}>
-              <Ionicons name="flash" size={12} color={GOLD} />
-              <Text style={js.insightText}>{buildPersonalInsight(studentScores, rs)}</Text>
-            </View>
-          )}
-
-          {hasRoleScores && studentScores && (
-            <View style={js.scoringExplain}>
-              <Text style={js.scoringTitle}>How this was calculated</Text>
-              <Text style={js.scoringText}>
-                Your scores were compared against requirements estimated by AI analysis of the job description. Readiness is based on your average fit across Smart, Grit, and Build.
+            {/* Description preview */}
+            {listing.description ? (
+              <Text style={s.descPreview} numberOfLines={4}>
+                {listing.description.replace(/\s+/g, ' ').slice(0, 300)}
               </Text>
-            </View>
-          )}
+            ) : null}
 
-<View style={js.actionRow}>
-            <Pressable style={js.applyBtn} onPress={(e) => { e.stopPropagation(); onApply(listing); }}>
-              <Ionicons name="open-outline" size={13} color="#FFFFFF" />
-              <Text style={js.applyBtnText}>Apply + Track</Text>
-            </Pressable>
-            <Pressable style={js.dillyBtn} onPress={(e) => { e.stopPropagation(); askDilly(); }}>
-              <Ionicons name="chatbubble" size={12} color={GOLD} />
-              <Text style={js.dillyBtnText}>Ask Dilly</Text>
-            </Pressable>
-            <Pressable style={js.tailorBtn} onPress={(e) => { e.stopPropagation(); tailorResume(); }}>
-              <Ionicons name="document-text" size={12} color={INDIGO} />
-              <Text style={js.tailorBtnText}>Tailor Resume</Text>
-            </Pressable>
+            {/* Action buttons */}
+            <View style={s.actionRow}>
+              <AnimatedPressable style={s.applyBtn} onPress={handleApply} scaleDown={0.97}>
+                <Ionicons name="send" size={14} color="#fff" />
+                <Text style={s.applyBtnText}>Apply</Text>
+              </AnimatedPressable>
+              <AnimatedPressable style={s.dillyBtn} onPress={handleAskDilly} scaleDown={0.97}>
+                <Ionicons name="sparkles" size={14} color={COBALT} />
+                <Text style={s.dillyBtnText}>Ask Dilly</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={s.tailorBtn}
+                onPress={() => router.push({
+                  pathname: '/(app)/resume-editor',
+                  params: { focusDimension: 'tailor' },
+                })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="document-text-outline" size={14} color={colors.t2} />
+                <Text style={s.tailorBtnText}>Tailor</Text>
+              </AnimatedPressable>
+            </View>
           </View>
-        </View>
-      )}
+        )}
+      </View>
     </AnimatedPressable>
   );
 }
 
-// ── Interests Setup Card ──────────────────────────────────────────────────────
-
-function InterestsSetupCard({ profile, onComplete, primaryCohortName }: { profile: Record<string, any>; onComplete: () => void; primaryCohortName?: string }) {
-  // Auto-populate from majors and minors
-  const majors: string[] = profile.majors || (profile.major ? [profile.major] : []);
-  const minors: string[] = profile.minors || [];
-  const autoPopulated = [...majors, ...minors].filter(Boolean);
-  // The primary cohort is already assigned in onboarding  -  don't show it as
-  // a pickable interest.
-  const excluded = primaryCohortName ? [primaryCohortName] : [];
-
-  const existingInterests: string[] = profile.interests || [];
-  const [interests, setInterests] = useState<string[]>(
-    existingInterests.length > 0 ? existingInterests : [...autoPopulated]
-  );
-  const [eduLevel, setEduLevel] = useState(profile.education_level || 'Undergraduate');
-  const [saving, setSaving] = useState(false);
-
-  async function handleSubmit() {
-    if (interests.length === 0) {
-      Alert.alert('Pick at least one', 'Select at least one field of interest so we can find relevant jobs for you.');
-      return;
-    }
-    setSaving(true);
-    try {
-      await dilly.fetch('/profile', {
-        method: 'PATCH',
-        body: JSON.stringify({ interests, education_level: 'Undergraduate' }),
-      });
-      onComplete();
-    } catch {
-      Alert.alert('Error', 'Could not save interests.');
-    }
-    finally { setSaving(false); }
-  }
-
-  return (
-    <View style={js.setupCard}>
-      <View style={js.setupHeader}>
-        <Ionicons name="compass" size={20} color={GOLD} />
-        <Text style={js.setupTitle}>What fields interest you?</Text>
-      </View>
-      <Text style={js.setupSub}>
-        These control which jobs Dilly shows you. Pick fields you'd actually apply to  -  not just your major.{majors.length > 0 ? ` Your major${majors.length > 1 ? 's are' : ' is'} pre-selected.` : ''}
-      </Text>
-
-      <Text style={js.setupSectionLabel}>YOUR INTERESTS</Text>
-      <InterestsPicker
-        selected={interests}
-        onChange={setInterests}
-        autoPopulated={autoPopulated}
-        excluded={excluded}
-        maxVisible={15}
-      />
-
-
-
-      <AnimatedPressable
-        style={[js.setupBtn, saving && { opacity: 0.6 }]}
-        onPress={handleSubmit}
-        disabled={saving}
-        scaleDown={0.97}
-      >
-        {saving ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <>
-            <Ionicons name="flash" size={16} color="#FFFFFF" />
-            <Text style={js.setupBtnText}>Show my jobs</Text>
-          </>
-        )}
-      </AnimatedPressable>
-    </View>
-  );
-}
-
-// ── Main Screen ───────────────────────────────────────────────────────────────
+// ── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ focus?: string }>();
-  const focusJobId = (params?.focus || '').toString();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [filterRemote, setFilterRemote] = useState(false);
-  const [filterCompany, setFilterCompany] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
-  const [filterReadiness, setFilterReadiness] = useState<'all' | 'ready' | 'close' | 'gap'>('all');
-  const [activeTab, setActiveTab] = useState<'internship' | 'entry_level' | 'all'>('all');
-  const [companies, setCompanies] = useState<{ name: string; count: number }[]>([]);
-  const [total, setTotal] = useState(0);
-  const [filtered, setFiltered] = useState(false);
-  const [interestsUsed, setInterestsUsed] = useState<string[]>([]);
-  const [studentScores, setStudentScores] = useState<StudentScores | null>(null);
-  const [rubricAnalysis, setRubricAnalysis] = useState<any>(null);
-  const [profile, setProfile] = useState<Record<string, any>>({});
-  const [needsSetup, setNeedsSetup] = useState(false);
-  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [tab, setTab] = useState<Tab>('all');
+  const [readinessFilter, setReadinessFilter] = useState<ReadinessFilter>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
+  const [activeCohortFilter, setActiveCohortFilter] = useState<string | null>(null);
 
-  // Load profile + scores
-  useEffect(() => {
-    (async () => {
-      try {
-        const [auditRes, profileRes] = await Promise.all([
-          dilly.get('/audit/latest'),
-          dilly.get('/profile'),
-        ]);
-        const p = profileRes || {};
-        setProfile(p);
+  // Build a lookup map of user's cohort scores
+  const userScoresMap = useMemo(() => {
+    const map: Record<string, CohortScore> = {};
+    for (const c of cohortScores) map[c.cohort_id] = c;
+    return map;
+  }, [cohortScores]);
 
-        // Show jobs immediately. Interests are auto-derived from majors + cohort
-        // by the backend feed; the explicit setup card was a friction point.
-        setNeedsSetup(false);
-
-        const audit = auditRes?.audit;
-        const ra = audit?.rubric_analysis;
-        if (audit?.final_score) {
-          // Prefer per-cohort scores from rubric_analysis (compares apples-to-apples
-          // with each job's per-cohort requirements). Fall back to overall scores.
-          setStudentScores({
-            score: audit.final_score,
-            smart: ra?.primary_smart ?? audit.scores?.smart ?? 0,
-            grit:  ra?.primary_grit  ?? audit.scores?.grit  ?? 0,
-            build: ra?.primary_build ?? audit.scores?.build ?? 0,
-          });
-        }
-        if (ra) {
-          setRubricAnalysis(ra);
-        }
-      } catch {}
-      finally { setProfileLoaded(true); }
-    })();
-  }, []);
-
-  // Fetch listings
-  const fetchListings = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+  const fetchData = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      params.set('tab', activeTab);
-      params.set('limit', '100');
-      if (search.trim()) params.set('q', search.trim());
-      if (filterCompany) params.set('company', filterCompany);
-      if (filterReadiness !== 'all') params.set('readiness', filterReadiness === 'close' ? 'almost' : filterReadiness);
-      const res = await dilly.fetch(`/v2/internships/feed?${params.toString()}`);
-      const data = await res.json();
-      const parsed = (data.listings || []).map((l: any) => {
-        // Map v2 response to existing Listing shape
-        const cr = l.cohort_readiness || [];
-        const first = cr[0] || {};
-        // Only show US + Canada listings
-        const city = (l.location_city || '').toLowerCase();
-        const state = (l.location_state || '').toLowerCase();
-        const loc = city + ' ' + state;
-        const isRemote = (l.work_mode === 'remote') || city.includes('remote');
-        const isUS = !!state.match(/^(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)$/i) || loc.includes('united states') || loc.includes('usa');
-        const isCanada = loc.includes('canada') || loc.includes('toronto') || loc.includes('vancouver') || loc.includes('montreal') || loc.includes('calgary') || loc.includes('ottawa') || !!state.match(/^(on|bc|ab|qc|mb|sk|ns|nb|nl|pe|nt|yt|nu)$/i);
-        const isIntl = !isRemote && !isUS && !isCanada && city.length > 0;
-        return {
-          id: l.id,
-          title: l.title,
-          company: l.company,
-          _skip: !!isIntl,
-          location: [l.location_city, l.location_state].filter(Boolean).join(', ') || l.work_mode || 'Unknown',
-          description: l.description_preview || '',
-          url: l.apply_url || '',
-          posted_date: l.posted_date || '',
-          source: 'Greenhouse',
-          tags: [],
-          team: '',
-          remote: l.work_mode === 'remote',
-          job_type: l.job_type,
-          readiness: l.readiness,
-          rank_score: l.rank_score,
-          required_scores: {
-            // Prefer cohort-specific requirements; fall back to the flat fields
-            // on the listing so every card shows SGB requirements even when no
-            // cohort match was computed.
-            smart: first.required_smart ?? l.required_smart,
-            grit:  first.required_grit  ?? l.required_grit,
-            build: first.required_build ?? l.required_build,
-          },
-          student_scores_override: {
-            smart: first.student_smart,
-            grit: first.student_grit,
-            build: first.student_build,
-          },
-          cohort_readiness: cr,
-        };
-      });
-      const visible = parsed.filter((l: any) => !l._skip);
-      setListings(visible);
-      // Use the VISIBLE count, not the backend total which includes
-      // international jobs we filtered out on the client side.
-      setTotal(visible.length);
-      setFiltered(!!search || !!filterCompany);
-    } catch {}
-    finally { setLoading(false); setRefreshing(false); }
-  }, [search, filterCompany, activeTab, filterReadiness]);
+      const [profileRes, feedRes] = await Promise.all([
+        dilly.get('/profile').catch(() => null),
+        dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank`).catch(() => null),
+      ]);
 
-  // Fetch companies
-  useEffect(() => {
-    // Companies are extracted from listings
-    if (listings.length > 0) {
-      const counts: Record<string, number> = {};
-      listings.forEach(l => { counts[l.company] = (counts[l.company] || 0) + 1; });
-      setCompanies(Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count })));
+      // Parse cohort scores from profile
+      const allCohorts = parseCohortScores(profileRes?.cohort_scores);
+      // Include interest-level cohorts for jobs (broader matching)
+      const allCohortsRaw = profileRes?.cohort_scores;
+      const fullCohorts: CohortScore[] = allCohortsRaw ? Object.entries(allCohortsRaw)
+        .filter(([_, v]: [string, any]) => v && typeof v === 'object')
+        .map(([key, v]: [string, any]) => ({
+          cohort_id: key,
+          display_name: v.field || v.cohort || key,
+          smart: Number(v.smart) || 0,
+          grit: Number(v.grit) || 0,
+          build: Number(v.build) || 0,
+          dilly_score: Number(v.dilly_score) || 0,
+          level: (v.level || 'interest') as CohortScore['level'],
+          weight: Number(v.weight) ?? 0,
+          scored_by_claude: !!v.scored_by_claude,
+        })) : allCohorts;
+      setCohortScores(fullCohorts.length > 0 ? fullCohorts : allCohorts);
+
+      setListings(feedRes?.listings || []);
+    } catch {}
+    finally { setLoading(false); }
+  }, [tab]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  }, [fetchData]);
+
+  // Filter listings by search, cohort, and readiness
+  const filtered = useMemo(() => {
+    let result = listings;
+
+    // Search filter
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(l =>
+        l.title.toLowerCase().includes(q) || l.company.toLowerCase().includes(q)
+      );
     }
-  }, []);
 
-  // Fetch listings once profile is loaded
-  useEffect(() => {
-    if (profileLoaded && !needsSetup) fetchListings();
-  }, [profileLoaded, needsSetup, fetchListings, activeTab]);
+    // Cohort filter — only show jobs matching the selected cohort
+    if (activeCohortFilter) {
+      result = result.filter(l =>
+        (l.cohort_requirements || []).some(r => r.cohort === activeCohortFilter)
+        || l.primary_cohort === activeCohortFilter
+      );
+    }
 
-  // Debounced search
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput), 400);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
-  // Apply + Track
-  async function handleApply(listing: Listing) {
-    if (listing.url) Linking.openURL(listing.url);
-    try { await dilly.post(`/v2/internships/save?internship_id=${listing.id}`); } catch {}
-    try {
-      await dilly.fetch('/applications', {
-        method: 'POST',
-        body: JSON.stringify({
-          company: listing.company, role: listing.title, status: 'applied',
-          job_id: listing.id, job_url: listing.url,
-          applied_at: new Date().toISOString().slice(0, 10),
-          notes: `Applied via ${listing.source}. ${listing.location}`,
-        }),
+    // Readiness filter
+    if (readinessFilter !== 'all') {
+      result = result.filter(l => {
+        const { readiness } = computeReadiness(l, userScoresMap);
+        return readiness === readinessFilter;
       });
-      Alert.alert('Tracked', `${listing.company} added to your Internship Tracker.`);
-    } catch {}
-  }
+    }
 
-  // After setup completes
-  function handleSetupComplete() {
-    setNeedsSetup(false);
-    // Reload profile to get updated interests
-    (async () => {
-      try {
-        const res = await dilly.fetch('/profile');
-        const p = await res.json();
-        setProfile(p || {});
-      } catch {}
-    })();
-    fetchListings();
-  }
+    return result;
+  }, [listings, search, activeCohortFilter, readinessFilter, userScoresMap]);
 
-  const primaryCohortId = rubricAnalysis?.primary_cohort_id || '';
-  const isPreHealth = primaryCohortId === 'pre_health';
-  const isPreLaw = primaryCohortId === 'pre_law';
-  const isAdmissionsCohort = isPreHealth || isPreLaw;
-  const pageTitle = isAdmissionsCohort ? 'Opportunities' : 'Internships';
-  const itemNoun = isAdmissionsCohort ? 'opportunit' : 'internship';
-  const itemPlural = (n: number) => isAdmissionsCohort ? (n === 1 ? 'opportunity' : 'opportunities') : (n === 1 ? 'internship' : 'internships');
+  // Stats
+  const stats = useMemo(() => {
+    let ready = 0, almost = 0, gap = 0;
+    for (const l of listings) {
+      const { readiness } = computeReadiness(l, userScoresMap);
+      if (readiness === 'ready') ready++;
+      else if (readiness === 'almost') almost++;
+      else gap++;
+    }
+    return { ready, almost, gap, total: listings.length };
+  }, [listings, userScoresMap]);
+
+  if (loading) {
+    return (
+      <View style={[s.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COBALT} />
+        <Text style={s.loadingText}>Finding jobs for you...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={[js.container, { paddingTop: insets.top }]}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Jobs for You</Text>
+        <Text style={s.headerSub}>{stats.total} opportunities</Text>
+      </View>
 
-      <FadeInView delay={0}>
-      <View style={js.header}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View>
-              <Text style={js.headerTitle}>{pageTitle}</Text>
-              {!needsSetup && (
-                <Text style={js.headerSub}>
-                  {total} {filtered ? 'relevant ' : ''}{itemPlural(total)}
-                  {filtered && interestsUsed.length > 0 ? ` for ${interestsUsed.slice(0, 2).join(', ')}${interestsUsed.length > 2 ? '...' : ''}` : ''}
-                </Text>
-              )}
-            </View>
-            <AnimatedPressable style={js.atsHeaderBtn} onPress={() => router.push('/(app)/ats')} scaleDown={0.95}>
-              <Ionicons name="shield-checkmark" size={14} color={GOLD} />
-              <Text style={js.atsHeaderBtnText}>ATS Scan</Text>
+      {/* Search */}
+      <View style={s.searchRow}>
+        <View style={s.searchBox}>
+          <Ionicons name="search" size={16} color={colors.t3} />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search by title or company"
+            placeholderTextColor={colors.t3}
+            value={search}
+            onChangeText={setSearch}
+            autoCapitalize="none"
+          />
+          {search.length > 0 && (
+            <AnimatedPressable onPress={() => setSearch('')} scaleDown={0.9} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={colors.t3} />
             </AnimatedPressable>
-          </View>
+          )}
         </View>
-      </FadeInView>
+      </View>
 
-      {/* Loading state  -  show spinner until profile is loaded */}
-      {!profileLoaded ? (
-        <View style={js.loadingWrap}>
-          <ActivityIndicator size="large" color={GOLD} />
-          <Text style={js.loadingText}>Loading...</Text>
-        </View>
-      ) : needsSetup ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[js.scroll, { paddingBottom: insets.bottom + 40 }]}>
-          <FadeInView delay={100}>
-            <InterestsSetupCard
-              profile={profile}
-              onComplete={handleSetupComplete}
-              primaryCohortName={rubricAnalysis?.primary_cohort_display_name}
+      {/* Cohort filter pills */}
+      {cohortScores.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow}>
+          <AnimatedPressable
+            style={[s.filterPill, !activeCohortFilter && s.filterPillActive]}
+            onPress={() => setActiveCohortFilter(null)}
+            scaleDown={0.95}
+          >
+            <Text style={[s.filterPillText, !activeCohortFilter && s.filterPillTextActive]}>All</Text>
+          </AnimatedPressable>
+          {cohortScores.map(c => (
+            <AnimatedPressable
+              key={c.cohort_id}
+              style={[s.filterPill, activeCohortFilter === c.cohort_id && s.filterPillActive]}
+              onPress={() => setActiveCohortFilter(activeCohortFilter === c.cohort_id ? null : c.cohort_id)}
+              scaleDown={0.95}
+            >
+              <Text style={[s.filterPillText, activeCohortFilter === c.cohort_id && s.filterPillTextActive]} numberOfLines={1}>
+                {c.display_name.replace(/ & .*$/, '')}
+              </Text>
+            </AnimatedPressable>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Readiness + Type filter row */}
+      <View style={s.tabRow}>
+        {/* Type tabs */}
+        {(['all', 'internship', 'entry_level'] as Tab[]).map(t => (
+          <AnimatedPressable
+            key={t}
+            style={[s.tabPill, tab === t && s.tabPillActive]}
+            onPress={() => { setTab(t); setLoading(true); }}
+            scaleDown={0.95}
+          >
+            <Text style={[s.tabPillText, tab === t && s.tabPillTextActive]}>
+              {t === 'all' ? 'All' : t === 'internship' ? 'Internships' : 'Entry Level'}
+            </Text>
+          </AnimatedPressable>
+        ))}
+        <View style={{ flex: 1 }} />
+        {/* Readiness chips */}
+        {stats.ready > 0 && (
+          <AnimatedPressable
+            style={[s.readyChip, readinessFilter === 'ready' && { backgroundColor: GREEN + '20' }]}
+            onPress={() => setReadinessFilter(readinessFilter === 'ready' ? 'all' : 'ready')}
+            scaleDown={0.95}
+          >
+            <View style={[s.readyDot, { backgroundColor: GREEN }]} />
+            <Text style={[s.readyChipText, { color: GREEN }]}>{stats.ready}</Text>
+          </AnimatedPressable>
+        )}
+      </View>
+
+      {/* Job listings */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 80 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COBALT} />}
+      >
+        {filtered.length === 0 && !loading && (
+          <FadeInView>
+            <View style={s.emptyCard}>
+              <Ionicons name="briefcase-outline" size={40} color={colors.t3} />
+              <Text style={s.emptyTitle}>
+                {cohortScores.length === 0
+                  ? 'Add cohorts to see matching jobs'
+                  : search.trim()
+                  ? `No jobs matching "${search}"`
+                  : 'No jobs found for this filter'}
+              </Text>
+              <Text style={s.emptySub}>
+                {cohortScores.length === 0
+                  ? 'Go to your Profile and add the fields you want to work in.'
+                  : "We're adding more jobs daily. Try a different filter or check back soon."}
+              </Text>
+            </View>
+          </FadeInView>
+        )}
+
+        {filtered.map((listing, i) => (
+          <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
+            <JobCard
+              listing={listing}
+              userScores={userScoresMap}
+              expanded={expandedId === listing.id}
+              onToggle={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setExpandedId(expandedId === listing.id ? null : listing.id);
+              }}
             />
           </FadeInView>
-        </ScrollView>
-      ) : (
-        <>
-          {/* Search */}
-          <FadeInView delay={40}>
-            <View style={js.searchWrap}>
-              <Ionicons name="search" size={16} color={colors.t3} />
-              <TextInput style={js.searchInput} value={searchInput} onChangeText={setSearchInput} placeholder="Search roles, companies, skills..." placeholderTextColor={colors.t3} returnKeyType="search" />
-              {searchInput.length > 0 && (
-                <AnimatedPressable onPress={() => { setSearchInput(''); setSearch(''); }} scaleDown={0.9} hitSlop={8}>
-                  <Ionicons name="close-circle" size={16} color={colors.t3} />
-                </AnimatedPressable>
-              )}
-            </View>
-          </FadeInView>
-
-          {/* Job Type Tabs */}
-          <FadeInView delay={50}>
-            <View style={js.tabRow}>
-              {([['all', 'All'], ['internship', 'Internships'], ['entry_level', 'Entry-Level']] as const).map(([key, label]) => (
-                <AnimatedPressable
-                  key={key}
-                  style={[js.tab, activeTab === key && js.tabActive]}
-                  onPress={() => { setActiveTab(key); }}
-                  scaleDown={0.95}
-                >
-                  <Text style={[js.tabText, activeTab === key && js.tabTextActive]}>{label}</Text>
-                </AnimatedPressable>
-              ))}
-            </View>
-          </FadeInView>
-
-          {/* Filters */}
-          <FadeInView delay={60}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={js.filterRow}>
-              <AnimatedPressable
-                style={js.settingsIcon}
-                onPress={() => setNeedsSetup(true)}
-                scaleDown={0.9}
-              >
-                <Ionicons name="options-outline" size={15} color={colors.t3} />
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={[js.filterChip, showAll && { backgroundColor: BLUE + '20', borderColor: BLUE + '40' }]}
-                onPress={() => setShowAll(!showAll)}
-                scaleDown={0.95}
-              >
-                <Text style={[js.filterText, showAll && { color: BLUE }]}>{showAll ? 'All jobs' : 'For you'}</Text>
-              </AnimatedPressable>
-
-              <AnimatedPressable
-                style={[js.filterChip, filterRemote && { backgroundColor: GREEN + '20', borderColor: GREEN + '40' }]}
-                onPress={() => setFilterRemote(!filterRemote)}
-                scaleDown={0.95}
-              >
-                <Ionicons name="globe-outline" size={11} color={filterRemote ? GREEN : colors.t3} />
-                <Text style={[js.filterText, filterRemote && { color: GREEN }]}>Remote</Text>
-              </AnimatedPressable>
-              {(['ready', 'close', 'gap'] as const).map(r => {
-                const cfg = { ready: { color: GREEN, label: 'Ready', icon: 'checkmark-circle' }, close: { color: AMBER, label: 'Almost', icon: 'alert-circle' }, gap: { color: CORAL, label: 'Gap', icon: 'arrow-up-circle' } }[r];
-                const active = filterReadiness === r;
-                return (
-                  <AnimatedPressable
-                    key={r}
-                    style={[js.filterChip, active && { backgroundColor: cfg.color + '20', borderColor: cfg.color + '40' }]}
-                    onPress={() => setFilterReadiness(active ? 'all' : r)}
-                    scaleDown={0.95}
-                  >
-                    <Text style={[js.filterText, active && { color: cfg.color }]}>{cfg.label}</Text>
-                  </AnimatedPressable>
-                );
-              })}
-              {filterCompany && (
-                <AnimatedPressable style={[js.filterChip, { backgroundColor: GOLD + '20', borderColor: GOLD + '40' }]} onPress={() => setFilterCompany(null)} scaleDown={0.95}>
-                  <Text style={[js.filterText, { color: GOLD }]}>{filterCompany}</Text>
-                  <Ionicons name="close" size={10} color={GOLD} />
-                </AnimatedPressable>
-              )}
-
-              {!filterCompany && companies.slice(0, 7).map(c => (
-                <AnimatedPressable key={c.name} style={js.filterChip} onPress={() => setFilterCompany(c.name)} scaleDown={0.95}>
-                  <Text style={js.filterText}>{c.name} ({c.count})</Text>
-                </AnimatedPressable>
-              ))}
-            </ScrollView>
-          </FadeInView>
-
-          {/* Listings */}
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[js.scroll, { paddingBottom: insets.bottom + 80 }]}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchListings(true)} tintColor={GOLD} />}
-          >
-            {loading ? (
-              <View style={js.loadingWrap}>
-                <ActivityIndicator size="large" color={GOLD} />
-                <Text style={js.loadingText}>Loading internships...</Text>
-              </View>
-            ) : listings.length === 0 ? (
-              <FadeInView delay={0}>
-                <View style={js.emptyWrap}>
-                  <Ionicons name="briefcase-outline" size={40} color={colors.t3 + '30'} />
-                  <Text style={js.emptyTitle}>{filtered ? `No relevant ${itemPlural(2)}` : `No ${itemPlural(2)} found`}</Text>
-                  <Text style={js.emptyText}>
-                    {filtered ? 'Try adding more interests in your profile, or tap "All jobs" to see everything.' : search ? `No results for "${search}".` : 'Pull to refresh.'}
-                  </Text>
-                  {Array.isArray(rubricAnalysis?.fastest_path_moves) && rubricAnalysis.fastest_path_moves.length > 0 && (
-                    <View style={{ marginTop: 18, width: '100%', paddingHorizontal: 4 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD, letterSpacing: 0.5, marginBottom: 8 }}>
-                        {isAdmissionsCohort ? 'THIS WEEK\'S ACTIONS' : 'YOUR PATH THIS WEEK'}
-                      </Text>
-                      {rubricAnalysis.fastest_path_moves.slice(0, 3).map((m: any, idx: number) => (
-                        <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
-                          <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: GOLD + '15', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
-                            <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD }}>{idx + 1}</Text>
-                          </View>
-                          <Text style={{ flex: 1, fontSize: 12, color: colors.t1, lineHeight: 17 }}>
-                            {typeof m === 'string' ? m : (m.action || m.label || m.title || '')}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  {filtered && (
-                    <AnimatedPressable style={js.showAllInlineBtn} onPress={() => setShowAll(true)} scaleDown={0.97}>
-                      <Text style={js.showAllInlineBtnText}>Show all jobs</Text>
-                    </AnimatedPressable>
-                  )}
-                </View>
-              </FadeInView>
-            ) : (
-              (() => {
-                // For card-internal cohort matching (DimBars per cohort), use the
-                // RICH cohort name (matches cohort_readiness[].cohort from the API).
-                // The rubric snake_case ID is only the lookup key.
-                const userCohort = (
-                  rubricAnalysis?.primary_cohort_display_name ||
-                  (profile as any).cohort ||
-                  (profile as any).track ||
-                  ''
-                ).toLowerCase();
-                // Top 3 close-to-ready jobs for "Your Path This Week"
-                const pathJobs = [...listings]
-                  .filter((l: any) => l.readiness === 'ready' || l.readiness === 'almost')
-                  .sort((a: any, b: any) => {
-                    const order: Record<string, number> = { ready: 0, almost: 1 };
-                    return (order[a.readiness] ?? 9) - (order[b.readiness] ?? 9);
-                  })
-                  .slice(0, 3);
-                const pathHeader = (
-                  pathJobs.length > 0 ? (
-                    <View style={{ marginBottom: 10 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: GOLD, letterSpacing: 0.5, marginBottom: 6, marginLeft: 4 }}>
-                        {isAdmissionsCohort ? 'READY TO APPLY' : 'YOUR PATH THIS WEEK'}
-                      </Text>
-                    </View>
-                  ) : null
-                );
-                void pathHeader; // reserved  -  cards below already highlight readiness
-                // When "For you" mode: filter to listings matching user's cohort (or uncategorized)
-                const visibleListings = showAll || !userCohort
-                  ? listings
-                  : listings.filter((l: any) => {
-                      const cr: any[] = l.cohort_readiness || [];
-                      if (cr.length === 0) return true; // uncategorized  -  show for all
-                      return cr.some(entry => (entry.cohort || '').toLowerCase() === userCohort);
-                    });
-                // If a focus job id was passed (deep link from home screen
-                // top-matches), pin that listing to the top and auto-expand it.
-                let orderedListings = visibleListings;
-                if (focusJobId) {
-                  const focusIdx = visibleListings.findIndex((l: any) => l.id === focusJobId);
-                  if (focusIdx > 0) {
-                    orderedListings = [
-                      visibleListings[focusIdx],
-                      ...visibleListings.slice(0, focusIdx),
-                      ...visibleListings.slice(focusIdx + 1),
-                    ];
-                  }
-                }
-                return orderedListings.map((listing, i) => (
-                  <FadeInView key={listing.id} delay={Math.min(i * 25, 250)}>
-                    <JobCard
-                      listing={listing}
-                      studentScores={studentScores}
-                      studentProfile={profile}
-                      userCohort={userCohort}
-                      onApply={handleApply}
-                      defaultExpanded={listing.id === focusJobId}
-                    />
-                  </FadeInView>
-                ));
-              })()
-            )}
-            {listings.length > 0 && (
-                  <View style={js.legendWrap}>
-                    <View style={js.legendRow}><View style={[js.legendDot, { backgroundColor: GREEN }]} /><Text style={js.legendText}>Ready: 90%+ match across all dimensions</Text></View>
-                    <View style={js.legendRow}><View style={[js.legendDot, { backgroundColor: AMBER }]} /><Text style={js.legendText}>Almost: 75-89% match, small gaps to close</Text></View>
-                    <View style={js.legendRow}><View style={[js.legendDot, { backgroundColor: CORAL }]} /><Text style={js.legendText}>Gap: Below 75%, real work needed</Text></View>
-                  </View>
-                )}
-          </ScrollView>
-        </>
-      )}
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
-const js = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  loadingText: { fontSize: 14, color: colors.t2, marginTop: 12 },
+
   // Header
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
-  headerTitle: { fontFamily: 'Cinzel_900Black', fontSize: 28, letterSpacing: 2, color: '#1A1A2E' },
-  headerSub: { fontSize: 13, color: 'rgba(26,26,46,0.5)', marginTop: 4, fontWeight: '400' },
-  atsHeaderBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(43,58,142,0.06)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  atsHeaderBtnText: { fontSize: 11, fontWeight: '600', color: '#2B3A8E' },
-
-  // Setup
-  setupCard: { backgroundColor: '#F7F8FC', borderRadius: 20, padding: 24, marginBottom: 20, marginHorizontal: 20 },
-  setupHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  setupTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 18, color: '#1A1A2E' },
-  setupSub: { fontSize: 14, color: 'rgba(26,26,46,0.5)', lineHeight: 22, marginBottom: 20 },
-  setupSectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: '#2B3A8E', marginBottom: 10, textTransform: 'uppercase' },
-  setupBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2B3A8E', borderRadius: 16, paddingVertical: 16, marginTop: 24 },
-  setupBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 15, letterSpacing: 1, color: '#FFFFFF' },
-
-  // Education picker
-  eduRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  eduChip: { backgroundColor: '#EFF0F6', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10 },
-  eduChipSelected: { backgroundColor: 'rgba(94,92,230,0.15)' },
-  eduChipText: { fontSize: 13, color: 'rgba(26,26,46,0.5)', fontWeight: '500' },
-  eduChipTextSelected: { color: '#5E5CE6' },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xs },
+  headerTitle: { fontSize: 24, fontWeight: '800', color: colors.t1, letterSpacing: -0.5 },
+  headerSub: { fontSize: 13, color: colors.t3, marginTop: 2 },
 
   // Search
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7F8FC', borderRadius: 14, marginHorizontal: 20, marginBottom: 12, paddingHorizontal: 16, paddingVertical: 13 },
-  searchInput: { flex: 1, fontSize: 15, color: '#1A1A2E', paddingVertical: 0 },
+  searchRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  searchBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.s2, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 12, paddingVertical: 10,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: colors.t1, padding: 0 },
 
-  // Tabs
-  tabRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 6, marginBottom: 14 },
-  tab: { flex: 1, paddingVertical: 11, borderRadius: 14, backgroundColor: '#F7F8FC', alignItems: 'center' },
-  tabActive: { backgroundColor: '#2B3A8E' },
-  tabText: { fontSize: 13, fontWeight: '700', color: 'rgba(26,26,46,0.5)' },
-  tabTextActive: { color: '#FFFFFF' },
+  // Filter pills
+  filterRow: { paddingHorizontal: spacing.lg, gap: 8, paddingBottom: spacing.sm },
+  filterPill: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999,
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
+  },
+  filterPillActive: { backgroundColor: COBALT, borderColor: COBALT },
+  filterPillText: { fontSize: 12, fontWeight: '600', color: colors.t2 },
+  filterPillTextActive: { color: '#fff' },
 
-  // Filters
-  filterRow: { gap: 8, paddingHorizontal: 20, paddingBottom: 14 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#EFF0F6', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  filterText: { fontSize: 12, color: 'rgba(26,26,46,0.5)', fontWeight: '500' },
-  settingsIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#F7F8FC', alignItems: 'center', justifyContent: 'center' },
+  // Tab row
+  tabRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
+  },
+  tabPill: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+    backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
+  },
+  tabPillActive: { backgroundColor: colors.t1, borderColor: colors.t1 },
+  tabPillText: { fontSize: 11, fontWeight: '600', color: colors.t3 },
+  tabPillTextActive: { color: colors.bg },
+  readyChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
+  },
+  readyDot: { width: 6, height: 6, borderRadius: 3 },
+  readyChipText: { fontSize: 11, fontWeight: '700' },
 
-  // Scroll
-  scroll: { paddingHorizontal: 20, paddingTop: 4 },
+  // List
+  listContent: { paddingHorizontal: spacing.lg, gap: 10, paddingTop: 4 },
 
-  // Job Card  -  Robinhood inspired
-  jobCard: { backgroundColor: '#F7F8FC', borderRadius: 14, marginBottom: 6, overflow: 'hidden' },
-  cardOuter: { flexDirection: 'row' },
-  accentBar: { width: 3, borderRadius: 0 },
-  cardInner: { flex: 1, padding: 16, paddingLeft: 14 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A2E', letterSpacing: -0.3, lineHeight: 23 },
-  cardCompany: { fontSize: 14, color: 'rgba(26,26,46,0.45)', marginTop: 3, fontWeight: '500' },
-  readinessLabel: { fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
-  metaLine: { fontSize: 13, color: 'rgba(26,26,46,0.3)', marginTop: 6 },
+  // Job Card
+  jobCard: {
+    flexDirection: 'row', borderRadius: radius.lg,
+    backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
+    overflow: 'hidden',
+  },
+  jobAccent: { width: 4, borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg },
+  jobContent: { flex: 1, padding: spacing.md, gap: 8 },
+  jobHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  jobTitle: { fontSize: 15, fontWeight: '700', color: colors.t1, lineHeight: 20 },
+  jobCompany: { fontSize: 13, color: colors.t2, marginTop: 2 },
+  readinessBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1,
+  },
+  readinessDot: { width: 6, height: 6, borderRadius: 3 },
+  readinessText: { fontSize: 11, fontWeight: '700' },
 
-  // Legacy  -  keep for compat
-  readinessBadge: { display: 'none' },
-  readinessText: { display: 'none' },
-  metaRow: { display: 'none' },
-  metaChip: { display: 'none' },
-  metaText: { fontSize: 12, color: 'rgba(26,26,46,0.3)' },
-  sourceBadge: { display: 'none' },
-  sourceBadgeText: { display: 'none' },
+  // Meta
+  jobMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  metaPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
+    backgroundColor: colors.s3, borderWidth: 1, borderColor: colors.b1,
+  },
+  metaText: { fontSize: 10, color: colors.t3, fontWeight: '500' },
+  metaDate: { fontSize: 10, color: colors.t3 },
 
-  // Cohort pills
-  cohortRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  cohortPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  cohortPillText: { fontSize: 11, fontWeight: '600' },
-  cohortBadge: { display: 'none' },
-  cohortLevel: { display: 'none' },
-  cohortName: { display: 'none' },
-
-  // Tags  -  hidden in new design
-  tagRow: { display: 'none' },
-  tag: { display: 'none' },
-  tagText: { display: 'none' },
+  // Cohort match pills
+  cohortMatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  cohortMatchPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1,
+  },
+  cohortMatchText: { fontSize: 10, fontWeight: '600' },
 
   // Expanded section
-  expandedSection: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#EFF0F6' },
-  
-  // Fit section
-  gapSection: { backgroundColor: '#EFF0F6', borderRadius: 14, padding: 16, marginBottom: 12 },
-  gapTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: '#2B3A8E', marginBottom: 14, textTransform: 'uppercase' },
+  expandedSection: { gap: 12, marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.b1 },
+  cohortScoreBlock: { gap: 6, marginBottom: 8 },
+  cohortScoreLabel: { fontSize: 11, fontWeight: '700', color: colors.t2, textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  // Dimension bars  -  clean and precise
-  dimBar: { marginBottom: 10 },
-  dimBarHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  dimBarLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(26,26,46,0.45)', width: 44 },
-  dimBarScores: { flexDirection: 'row', alignItems: 'baseline' },
-  dimBarYou: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  dimBarSlash: { fontSize: 12, color: 'rgba(26,26,46,0.3)', marginHorizontal: 2 },
-  dimBarReq: { fontSize: 12, color: 'rgba(26,26,46,0.3)', fontVariant: ['tabular-nums'] },
-  dimBarGap: { fontSize: 11, fontWeight: '600', marginLeft: 'auto' },
-  dimBarTrack: { height: 3, backgroundColor: '#EFF0F6', borderRadius: 999, overflow: 'visible', position: 'relative' },
-  dimBarFill: { height: '100%', borderRadius: 999 },
-  dimBarTarget: { position: 'absolute', top: -3, width: 2, height: 9, backgroundColor: 'rgba(26,26,46,0.3)', borderRadius: 1 },
-  overallBar: { fontSize: 12, color: '#2B3A8E', marginTop: 10, lineHeight: 18, fontWeight: '500' },
+  // Score bars
+  scoreBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 20 },
+  scoreBarLabel: { width: 14, fontSize: 11, fontWeight: '700', color: colors.t3, textAlign: 'center' },
+  scoreBarTrack: {
+    flex: 1, height: 6, backgroundColor: colors.s3, borderRadius: 3,
+    overflow: 'hidden', position: 'relative',
+  },
+  scoreBarFill: { height: '100%', borderRadius: 3 },
+  scoreBarReq: { position: 'absolute', top: -2, width: 2, height: 10, backgroundColor: colors.t1, borderRadius: 1 },
+  scoreBarNum: { width: 24, fontSize: 12, fontWeight: '700', textAlign: 'right' },
+  scoreBarSlash: { fontSize: 10, color: colors.t3 },
+  scoreBarReqNum: { width: 24, fontSize: 11, color: colors.t3 },
 
   // Description
-  description: { fontSize: 13, color: 'rgba(26,26,46,0.5)', lineHeight: 20, marginBottom: 14 },
+  descPreview: { fontSize: 12, color: colors.t2, lineHeight: 17 },
 
   // Action buttons
-  actionRow: { flexDirection: 'row', gap: 10 },
-  applyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#2B3A8E', borderRadius: 14, paddingVertical: 14 },
-  applyBtnText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5, color: '#FFFFFF' },
-  dillyBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(43,58,142,0.08)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  dillyBtnText: { fontSize: 13, fontWeight: '700', color: '#2B3A8E' },
-  tailorBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(94,92,230,0.08)', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 16 },
-  tailorBtnText: { fontSize: 13, fontWeight: '700', color: '#5E5CE6' },
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  applyBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10, borderRadius: radius.xl, backgroundColor: COBALT,
+  },
+  applyBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  dillyBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 10, borderRadius: radius.xl,
+    backgroundColor: COBALT + '10', borderWidth: 1, borderColor: COBALT + '25',
+  },
+  dillyBtnText: { fontSize: 13, fontWeight: '600', color: COBALT },
+  tailorBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.xl,
+    backgroundColor: colors.s3, borderWidth: 1, borderColor: colors.b1,
+  },
+  tailorBtnText: { fontSize: 12, fontWeight: '600', color: colors.t2 },
 
-  // Loading / Empty
-  loadingWrap: { alignItems: 'center', paddingTop: 80, gap: 16 },
-  loadingText: { fontSize: 13, color: 'rgba(26,26,46,0.3)' },
-  emptyWrap: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E' },
-  emptyText: { fontSize: 14, color: 'rgba(26,26,46,0.3)', textAlign: 'center', lineHeight: 22, paddingHorizontal: 24 },
-  showAllInlineBtn: { backgroundColor: 'rgba(10,132,255,0.1)', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 10 },
-  showAllInlineBtnText: { fontSize: 13, color: '#0A84FF', fontWeight: '600' },
-
-  // Insight
-  insightWrap: { flexDirection: 'row', gap: 10, backgroundColor: 'rgba(43,58,142,0.05)', borderRadius: 14, padding: 14, marginBottom: 12, alignItems: 'flex-start' },
-  insightText: { flex: 1, fontSize: 13, color: '#2B3A8E', lineHeight: 20, fontWeight: '500' },
-
-  // ATS
-  atsSection: { backgroundColor: '#EFF0F6', borderRadius: 14, padding: 16, marginBottom: 12 },
-  atsSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  atsSectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, color: 'rgba(26,26,46,0.3)', textTransform: 'uppercase' },
-  atsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  atsLabel: { fontSize: 12, color: 'rgba(26,26,46,0.3)' },
-  atsBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  atsBadgeText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
-  atsTip: { fontSize: 12, color: 'rgba(26,26,46,0.5)', lineHeight: 18, marginBottom: 8 },
-  atsFixBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: 'rgba(255,69,58,0.08)', borderRadius: 10, paddingVertical: 10, marginTop: 4 },
-  atsFixBtnText: { fontSize: 11, fontWeight: '600', color: '#FF453A' },
-
-  // Scoring explain
-  scoringExplain: { backgroundColor: '#F7F8FC', borderRadius: 12, padding: 12, marginBottom: 12 },
-  scoringTitle: { fontSize: 10, fontWeight: '700', color: 'rgba(26,26,46,0.3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  scoringText: { fontSize: 11, color: 'rgba(26,26,46,0.3)', lineHeight: 16, marginBottom: 6 },
-  scoringDetail: { fontSize: 11, color: 'rgba(26,26,46,0.3)', lineHeight: 16, fontStyle: 'italic' },
-
-  // Legend
-  legendWrap: { paddingVertical: 20, paddingHorizontal: 4, gap: 8, borderTopWidth: 1, borderTopColor: '#EFF0F6', marginTop: 12 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  legendDot: { width: 6, height: 6, borderRadius: 3 },
-  legendText: { fontSize: 11, color: 'rgba(26,26,46,0.3)' },
+  // Empty state
+  emptyCard: {
+    alignItems: 'center', padding: 40, gap: 12, marginTop: 40,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.t1, textAlign: 'center' },
+  emptySub: { fontSize: 13, color: colors.t2, textAlign: 'center', lineHeight: 19 },
 });
