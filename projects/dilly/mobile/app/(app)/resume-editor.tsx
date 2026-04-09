@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Linking,
+  Pressable,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,12 +30,23 @@ import Animated, {
   Easing,
   interpolateColor,
 } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+
+// Build 70: crash-recovery + autosave
+const DRAFT_STORAGE_KEY = 'dilly_resume_editor_draft_v1';
+const DRAFT_VERSION = 1;
+type ResumeDraft = {
+  v: number;
+  savedAt: number;
+  sections: any[];
+  email?: string;
+};
+const UNDO_LIMIT = 25;
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ResumeScoreDashboard, { EditorScanData, CohortOption } from '../../components/ResumeScoreDashboard';
-import TailorDiffModal, { TailorDiffPayload } from '../../components/TailorDiffModal';
 import BulletWorthSheet from '../../components/BulletWorthSheet';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
@@ -116,6 +128,33 @@ const PLACEHOLDERS: Record<string, Record<string, string>> = {
   },
 };
 
+function buildDefaultSections(profile: any | null): ResumeSection[] {
+  const p = profile || {};
+  return [
+    { key: 'contact', label: 'Contact', contact: {
+      name: p.name || '', email: p.email || '', phone: '', location: '',
+      linkedin: p.linkedin_url || '',
+    } },
+    { key: 'education', label: 'Education', education: {
+      id: uid(),
+      university: p.school_id === 'utampa' ? 'University of Tampa' : '',
+      major: p.majors?.[0] || '',
+      minor: p.minors?.[0] || '',
+      graduation: '', location: p.school_id === 'utampa' ? 'Tampa, FL' : '',
+      honors: '', gpa: '',
+    } },
+    { key: 'professional_experience', label: 'Professional Experience', experiences: [{
+      id: uid(), company: '', role: '', date: '', location: '',
+      bullets: [{ id: uid(), text: '' }],
+    }] },
+    { key: 'projects', label: 'Projects', projects: [{
+      id: uid(), name: '', date: '', location: '',
+      bullets: [{ id: uid(), text: '' }],
+    }] },
+    { key: 'skills', label: 'Skills', simple: { id: uid(), lines: [''] } },
+  ];
+}
+
 function getPlaceholders(major: string): Record<string, string> {
   return PLACEHOLDERS[major] || PLACEHOLDERS.default;
 }
@@ -164,7 +203,42 @@ function sectionIcon(key: string): string {
   if (key.includes('experience') || key === 'research' || key.includes('involvement') || key.includes('volunteer')) return 'briefcase-outline';
   if (key === 'projects') return 'code-slash-outline';
   if (key === 'skills') return 'construct-outline';
+  if (key === 'summary' || key === 'objective') return 'reader-outline';
+  if (key === 'honors_awards' || key === 'awards') return 'trophy-outline';
+  if (key === 'certifications') return 'ribbon-outline';
+  if (key === 'coursework') return 'library-outline';
+  if (key === 'publications') return 'newspaper-outline';
+  if (key === 'leadership') return 'people-outline';
+  if (key === 'activities') return 'color-palette-outline';
+  if (key === 'languages') return 'globe-outline';
   return 'document-text-outline';
+}
+
+// Build 71: catalog of optional sections a user can add from the
+// "+ Add section" menu. Each entry maps to a key the backend's
+// ResumeSection schema already supports via SimpleSection (free-text lines).
+type AddableSection = {
+  key: string;
+  label: string;
+  placeholder: string;
+  description: string;
+};
+const ADDABLE_SECTIONS: AddableSection[] = [
+  { key: 'summary',        label: 'Summary',        placeholder: '2-3 sentence positioning statement', description: 'Opens the resume with a focused pitch' },
+  { key: 'honors_awards',  label: 'Honors & Awards', placeholder: "Dean's List (Fall 2024)",             description: 'Scholarships, dean\'s list, competitions' },
+  { key: 'certifications', label: 'Certifications', placeholder: 'AWS Certified Cloud Practitioner',    description: 'Professional certs and licenses' },
+  { key: 'coursework',     label: 'Relevant Coursework', placeholder: 'Data Structures, Algorithms, ML', description: 'Classes that match the target role' },
+  { key: 'publications',   label: 'Publications',   placeholder: 'Smith, J. (2025). Paper title. Journal.', description: 'Papers, articles, conference talks' },
+  { key: 'leadership',     label: 'Leadership',     placeholder: 'President — Data Science Club (2024)',   description: 'Clubs, boards, committees' },
+  { key: 'activities',     label: 'Activities',     placeholder: 'Varsity Track (2022-2024)',              description: 'Extracurriculars and volunteering' },
+  { key: 'languages',      label: 'Languages',      placeholder: 'Spanish — Professional, French — Conversational', description: 'Spoken/written languages and proficiency' },
+];
+
+// Build 71: nice display label for any section key, catalog or not
+function sectionDisplayLabel(key: string): string {
+  const hit = ADDABLE_SECTIONS.find(s => s.key === key);
+  if (hit) return hit.label;
+  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 // ── Overall Strength Meter ────────────────────────────────────────────────────
@@ -763,19 +837,10 @@ export default function ResumeEditorScreen() {
   const [hasChanges, setHasChanges] = useState(false);
   const [major, setMajor]           = useState('');
   const [bulletScores, setBulletScores] = useState<Record<string, number>>({});
-  const [overallScore, setOverallScore] = useState(0);
   const [initialScore, setInitialScore] = useState<number | null>(null);
   const [variants, setVariants]     = useState<any[]>([]);
   const [activeVariant, setActiveVariant] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(false);
-  const [showTailor, setShowTailor] = useState(false);
-  const [tailorCompany, setTailorCompany] = useState('');
-  const [tailorRole, setTailorRole] = useState('');
-  const [tailorJD, setTailorJD] = useState('');
-  const [tailoring, setTailoring] = useState(false);
-  // Build 64: tailor-diff modal
-  const [showTailorDiff, setShowTailorDiff] = useState(false);
-  const [tailorDiffData, setTailorDiffData] = useState<TailorDiffPayload | null>(null);
 
   // Build-63 dashboard: debounced /resume/editor-scan result
   const [scanData, setScanData] = useState<EditorScanData | null>(null);
@@ -797,6 +862,40 @@ export default function ResumeEditorScreen() {
   const [clRole, setClRole] = useState('');
   const [clJD, setClJD] = useState('');
   const [clGenerating, setClGenerating] = useState(false);
+  // Build-70: undo stack + autosave
+  const undoStackRef = useRef<ResumeSection[][]>([]);
+  const [undoCount, setUndoCount] = useState(0);
+  const hydratedRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Build-71: add-section picker + save toast
+  const [showAddSection, setShowAddSection] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Build-73: JD Quick Tailor (zero-cost, deterministic)
+  const [showQuickTailor, setShowQuickTailor] = useState(false);
+  const [quickJD, setQuickJD] = useState('');
+  const [quickTailoring, setQuickTailoring] = useState(false);
+  const [quickTailorData, setQuickTailorData] = useState<any | null>(null);
+  // Build-73: variant compare modal
+  const [showCompare, setShowCompare] = useState(false);
+  const [compareData, setCompareData] = useState<any | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  // Build-73: export format toggle (PDF default, DOCX optional)
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'docx'>('pdf');
+
+  // Build-70: autosave to AsyncStorage on every change (debounced 800ms).
+  // Write a timestamped draft so we can prompt to restore after a crash.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      const draft: ResumeDraft = { v: DRAFT_VERSION, savedAt: Date.now(), sections };
+      AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)).catch(() => {});
+    }, 800);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [sections]);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -818,30 +917,71 @@ export default function ResumeEditorScreen() {
           ?? 0;
         if (fs > 0) {
           setInitialScore(Math.round(Number(fs)));
-          setOverallScore(Math.round(Number(fs)));
         }
+        let serverSections: ResumeSection[] | null = null;
         if (resumeRes?.resume?.sections?.length) {
-          setSections(resumeRes.resume.sections);
+          serverSections = resumeRes.resume.sections;
           setBaseSections(resumeRes.resume.sections);
+        }
+
+        // Build-70: check for a newer AsyncStorage draft. If the draft is
+        // newer than the server copy, offer to restore (crash recovery).
+        let draftSections: ResumeSection[] | null = null;
+        let draftAge = 0;
+        try {
+          const raw = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+          if (raw) {
+            const d = JSON.parse(raw) as ResumeDraft;
+            if (d && d.v === DRAFT_VERSION && Array.isArray(d.sections) && d.sections.length) {
+              const serverSavedAt = resumeRes?.resume?.saved_at
+                ? new Date(resumeRes.resume.saved_at).getTime()
+                : 0;
+              if (d.savedAt > serverSavedAt + 2000) {
+                draftSections = d.sections as ResumeSection[];
+                draftAge = Math.round((Date.now() - d.savedAt) / 60000);
+              }
+            }
+          }
+        } catch {}
+
+        if (draftSections) {
+          // Defer the prompt until after loading UI settles
+          setSections(serverSections || buildDefaultSections(profileRes));
+          setTimeout(() => {
+            Alert.alert(
+              'Restore unsaved changes?',
+              draftAge <= 1
+                ? 'You have unsaved edits from a moment ago.'
+                : `You have unsaved edits from ${draftAge} minute${draftAge === 1 ? '' : 's'} ago.`,
+              [
+                {
+                  text: 'Discard',
+                  style: 'destructive',
+                  onPress: () => { AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {}); },
+                },
+                {
+                  text: 'Restore',
+                  onPress: () => {
+                    setSections(draftSections!);
+                    setHasChanges(true);
+                  },
+                },
+              ],
+            );
+          }, 400);
+        } else if (serverSections) {
+          setSections(serverSections);
         } else {
-          setSections([
-            { key: 'contact', label: 'Contact', contact: { name: profileRes?.name || '', email: profileRes?.email || '', phone: '', location: '', linkedin: profileRes?.linkedin_url || '' } },
-            { key: 'education', label: 'Education', education: { id: uid(), university: profileRes?.school_id === 'utampa' ? 'University of Tampa' : '', major: profileRes?.majors?.[0] || '', minor: profileRes?.minors?.[0] || '', graduation: '', location: 'Tampa, FL', honors: '', gpa: '' } },
-            { key: 'professional_experience', label: 'Professional Experience', experiences: [{ id: uid(), company: '', role: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-            { key: 'projects', label: 'Projects', projects: [{ id: uid(), name: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-            { key: 'skills', label: 'Skills', simple: { id: uid(), lines: [''] } },
-          ]);
+          setSections(buildDefaultSections(profileRes));
         }
       } catch {
-        setSections([
-          { key: 'contact', label: 'Contact', contact: { name: '', email: '', phone: '', location: '', linkedin: '' } },
-          { key: 'education', label: 'Education', education: { id: uid(), university: '', major: '', minor: '', graduation: '', location: '', honors: '', gpa: '' } },
-          { key: 'professional_experience', label: 'Professional Experience', experiences: [{ id: uid(), company: '', role: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-          { key: 'projects', label: 'Projects', projects: [{ id: uid(), name: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-          { key: 'skills', label: 'Skills', simple: { id: uid(), lines: [''] } },
-        ]);
+        setSections(buildDefaultSections(null));
       } finally {
         setLoading(false);
+        // Autosave effect is gated on hydratedRef — flip it after the initial
+        // load resolves so we don't overwrite the draft with an empty first
+        // render before the server copy arrives.
+        setTimeout(() => { hydratedRef.current = true; }, 50);
       }
 
       // Fetch resume variants; if we arrived from generate, auto-load that variant
@@ -858,22 +998,67 @@ export default function ResumeEditorScreen() {
     })();
   }, []);
 
-  // Build-65: single source of truth for the overall score.
-  // The floating badge in the upper-right of the resume doc and the hero
-  // score in ResumeScoreDashboard used to disagree because they were
-  // computed from different sources (bullet-blend vs editor-scan). Now
-  // they both come from the same place: the latest /resume/editor-scan
-  // response's v2.overall.value, with a graceful fallback to the initial
-  // audit score while the first scan is loading.
-  useEffect(() => {
-    const v2Overall = scanData?.v2?.overall?.value;
-    if (typeof v2Overall === 'number' && v2Overall > 0) {
-      setOverallScore(Math.round(v2Overall));
-      return;
+  // Overall score UI was removed from the editor (no floating badge, no
+  // dashboard hero). Smart/Grit/Build rings are the only scores shown.
+
+  // Build-73: per-section rollup scores. Average of live bullet scores
+  // for each experience/project section. Returns null for sections with
+  // no bullet scores yet. Lets users see at a glance which sections are
+  // weighing them down before they open them.
+  const sectionRollups = useMemo<Record<string, number | null>>(() => {
+    const out: Record<string, number | null> = {};
+    for (const s of sections) {
+      if (s.experiences) {
+        const ids: string[] = [];
+        for (const e of s.experiences) for (const b of e.bullets) if (b.id) ids.push(b.id);
+        const scored = ids.map(id => bulletScores[id]).filter((v): v is number => typeof v === 'number');
+        out[s.key] = scored.length ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : null;
+      } else if (s.projects) {
+        const ids: string[] = [];
+        for (const p of s.projects) for (const b of p.bullets) if (b.id) ids.push(b.id);
+        const scored = ids.map(id => bulletScores[id]).filter((v): v is number => typeof v === 'number');
+        out[s.key] = scored.length ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : null;
+      } else {
+        out[s.key] = null;
+      }
     }
-    // No fresh scan yet — show the seeded audit score.
-    if (initialScore !== null) setOverallScore(initialScore);
-  }, [scanData, initialScore]);
+    return out;
+  }, [sections, bulletScores]);
+
+  // Build-72: word count + page estimate. Counts every editable text
+  // field — bullets, entry headers, skills lines, summary/etc. ~450 words
+  // per page is the standard single-column resume density.
+  const { wordCount, pageEstimate } = useMemo(() => {
+    const chunks: string[] = [];
+    for (const s of sections) {
+      if (s.contact) chunks.push(s.contact.name, s.contact.location);
+      if (s.education) chunks.push(
+        s.education.university, s.education.major, s.education.minor,
+        s.education.graduation, s.education.honors,
+      );
+      if (s.experiences) {
+        for (const e of s.experiences) {
+          chunks.push(e.company, e.role, e.date, e.location);
+          for (const b of e.bullets) chunks.push(b.text);
+        }
+      }
+      if (s.projects) {
+        for (const p of s.projects) {
+          chunks.push(p.name, p.date, p.location);
+          for (const b of p.bullets) chunks.push(b.text);
+        }
+      }
+      if (s.simple) for (const line of s.simple.lines) chunks.push(line);
+    }
+    const words = chunks
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length;
+    const pages = words / 450;
+    return { wordCount: words, pageEstimate: pages };
+  }, [sections]);
 
   const ph = getPlaceholders(major);
 
@@ -887,9 +1072,228 @@ export default function ResumeEditorScreen() {
     });
   }
 
-  function updateSection(key: string, updates: Partial<ResumeSection>) {
-    setSections(prev => prev.map(s => s.key === key ? { ...s, ...updates } : s));
+  // Build-70: push current sections onto the undo stack, then apply next.
+  // Called by every mutation path (field edits, reorder, tailor accept, etc).
+  function commitSections(next: ResumeSection[] | ((prev: ResumeSection[]) => ResumeSection[])) {
+    setSections(prev => {
+      const snapshot = JSON.parse(JSON.stringify(prev)) as ResumeSection[];
+      const stack = undoStackRef.current;
+      stack.push(snapshot);
+      if (stack.length > UNDO_LIMIT) stack.shift();
+      setUndoCount(stack.length);
+      return typeof next === 'function' ? (next as any)(prev) : next;
+    });
     setHasChanges(true);
+  }
+
+  function handleUndo() {
+    const stack = undoStackRef.current;
+    const prev = stack.pop();
+    if (!prev) return;
+    setUndoCount(stack.length);
+    setSections(prev);
+    setHasChanges(true);
+  }
+
+  function updateSection(key: string, updates: Partial<ResumeSection>) {
+    commitSections(prev => prev.map(s => s.key === key ? { ...s, ...updates } : s));
+  }
+
+  // Build-70: apply the reorder suggestion from the coaching dashboard.
+  // suggested_order is a list of section keys. Any key not present is kept
+  // in its current position after the reordered ones.
+  function handleApplyReorder(suggestedOrder: string[]) {
+    const keySet = new Set(suggestedOrder);
+    const reordered: ResumeSection[] = [];
+    for (const k of suggestedOrder) {
+      const found = sections.find(s => s.key === k);
+      if (found) reordered.push(found);
+    }
+    for (const s of sections) {
+      if (!keySet.has(s.key)) reordered.push(s);
+    }
+    commitSections(reordered);
+    showToast('Section order applied. Save to persist.');
+  }
+
+  // Build-73: JD Quick Tailor — paste a JD, get a deterministically
+  // rearranged + strengthened version of the current resume. Zero LLM cost.
+  async function runQuickTailor() {
+    const jd = quickJD.trim();
+    if (jd.length < 30) {
+      showToast('Paste the full job description first.');
+      return;
+    }
+    setQuickTailoring(true);
+    setQuickTailorData(null);
+    try {
+      const res = await dilly.fetch('/resume/jd-quick-tailor', {
+        method: 'POST',
+        body: JSON.stringify({ job_description: jd }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => null);
+        throw new Error(detail?.detail || 'Dilly Tailor failed.');
+      }
+      const data = await res.json();
+      setQuickTailorData(data);
+    } catch (e: any) {
+      Alert.alert('Dilly Tailor failed', e?.message || 'Unknown error.');
+    } finally {
+      setQuickTailoring(false);
+    }
+  }
+
+  function applyQuickTailor() {
+    if (!quickTailorData?.tailored_sections) return;
+    commitSections(quickTailorData.tailored_sections);
+    setShowQuickTailor(false);
+    setQuickJD('');
+    setQuickTailorData(null);
+    showToast('Tailored resume applied. Save to persist.');
+  }
+
+  async function saveQuickTailorAsVariant() {
+    if (!quickTailorData?.tailored_sections) return;
+    const label = (quickTailorData.job_title || 'Tailored').slice(0, 40);
+    const cohort = major || 'General';
+    try {
+      // 1. Create the variant metadata
+      const createRes = await dilly.fetch('/resume/variants', {
+        method: 'POST',
+        body: JSON.stringify({
+          label,
+          cohort,
+          type: 'job',
+          job_title: quickTailorData.job_title || '',
+          job_company: quickTailorData.job_company || '',
+        }),
+      });
+      if (!createRes.ok) throw new Error('Could not create variant.');
+      const created = await createRes.json();
+      const vid = created?.variant?.id;
+      if (!vid) throw new Error('Variant creation returned no id.');
+      // 2. Save content
+      const saveRes = await dilly.fetch(`/resume/variants/${vid}`, {
+        method: 'POST',
+        body: JSON.stringify({ sections: quickTailorData.tailored_sections }),
+      });
+      if (!saveRes.ok) throw new Error('Could not save variant content.');
+      // 3. Refresh variant list
+      const varRes = await dilly.get('/resume/variants');
+      if (varRes?.variants) setVariants(varRes.variants);
+      setShowQuickTailor(false);
+      setQuickJD('');
+      setQuickTailorData(null);
+      showToast(`Saved variant "${label}".`);
+    } catch (e: any) {
+      Alert.alert('Save variant failed', e?.message || 'Unknown error.');
+    }
+  }
+
+  // Build-73: variant compare — fetches /ats/compare and shows side-by-side
+  async function openCompare() {
+    setShowCompare(true);
+    setCompareLoading(true);
+    setCompareData(null);
+    try {
+      const res = await dilly.fetch('/ats/compare', {
+        method: 'POST',
+        body: JSON.stringify({ limit: 3 }),
+      });
+      if (!res.ok) throw new Error('Compare failed.');
+      const data = await res.json();
+      setCompareData(data);
+    } catch (e: any) {
+      Alert.alert('Compare failed', e?.message || 'Could not load comparison.');
+      setShowCompare(false);
+    } finally {
+      setCompareLoading(false);
+    }
+  }
+
+  // Build-71: transient toast (replaces modal alerts for non-destructive ops)
+  function showToast(msg: string) {
+    setToastMessage(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2400);
+  }
+
+  // Build-71: add a new section from the add-section picker. Skills and
+  // other SimpleSection-backed sections share the same shape.
+  function handleAddSection(def: AddableSection) {
+    if (sections.some(s => s.key === def.key)) {
+      setShowAddSection(false);
+      showToast(`${def.label} is already on your resume.`);
+      return;
+    }
+    const newSection: ResumeSection = {
+      key: def.key,
+      label: def.label,
+      simple: { id: uid(), lines: [''] },
+    };
+    // Summary should render near the top, right after contact.
+    commitSections(prev => {
+      if (def.key === 'summary') {
+        const idx = prev.findIndex(s => s.key === 'contact');
+        const insertAt = idx >= 0 ? idx + 1 : 0;
+        return [...prev.slice(0, insertAt), newSection, ...prev.slice(insertAt)];
+      }
+      return [...prev, newSection];
+    });
+    setExpanded(prev => {
+      const next = new Set(prev || []);
+      next.add(def.key);
+      return next;
+    });
+    setShowAddSection(false);
+    showToast(`${def.label} added.`);
+  }
+
+  // Build-72: move a section up or down in the order. Contact is always
+  // pinned to position 0. Goes through commitSections so undo catches it.
+  function moveSection(key: string, direction: -1 | 1) {
+    if (key === 'contact') return;
+    const idx = sections.findIndex(s => s.key === key);
+    if (idx < 0) return;
+    const target = idx + direction;
+    if (target < 0 || target >= sections.length) return;
+    // Never let contact get swapped off the top
+    if (sections[target]?.key === 'contact') return;
+    commitSections(prev => {
+      const next = [...prev];
+      const tmp = next[idx];
+      next[idx] = next[target];
+      next[target] = tmp;
+      return next;
+    });
+  }
+
+  // Build-71: delete an entire section. Contact is protected.
+  function confirmDeleteSection(key: string) {
+    if (key === 'contact') return;
+    const sec = sections.find(s => s.key === key);
+    const label = sec ? (sec.label || sectionDisplayLabel(key)) : sectionDisplayLabel(key);
+    Alert.alert(
+      `Delete ${label}?`,
+      'This removes the entire section from your resume. You can undo this from the top-right.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            commitSections(prev => prev.filter(s => s.key !== key));
+            setExpanded(prev => {
+              const next = new Set(prev || []);
+              next.delete(key);
+              return next;
+            });
+            showToast(`${label} deleted. Tap undo to restore.`);
+          },
+        },
+      ],
+    );
   }
 
   function handleBulletScoreUpdate(id: string, score: BulletScore | null) {
@@ -956,12 +1360,111 @@ export default function ResumeEditorScreen() {
   // Issue action: open the Dilly AI overlay pre-prompted to fix the tapped issue.
   // Closes the loop between the "Fix this first" list and the AI chat.
   function handleFixIssue(issue: any) {
+    // Build-72: deterministic auto-fix path. For a small set of issues
+    // there's no judgment call — we just apply the fix directly instead
+    // of routing through the AI overlay.
+    const id = String(issue?.id || '');
+    if (id === 'missing_education' || id === 'missing_experience' || id === 'missing_skills') {
+      const def: AddableSection | null =
+        id === 'missing_education' ? { key: 'education',               label: 'Education',               placeholder: '', description: '' } :
+        id === 'missing_experience' ? { key: 'professional_experience', label: 'Professional Experience', placeholder: '', description: '' } :
+                                      { key: 'skills',                  label: 'Skills',                  placeholder: '', description: '' };
+      if (sections.some(s => s.key === def.key)) {
+        showToast(`${def.label} is already on your resume.`);
+        return;
+      }
+      // Use the default-sections builder to get a properly shaped empty
+      // section of the right kind, then splice it in.
+      const defaults = buildDefaultSections(null);
+      const template = defaults.find(d => d.key === def.key);
+      if (!template) return;
+      commitSections(prev => {
+        // Drop in after the most recent education/experience anchor so
+        // the order feels natural regardless of which is missing.
+        return [...prev, template];
+      });
+      setExpanded(prev => {
+        const next = new Set(prev || []);
+        next.add(def.key);
+        return next;
+      });
+      showToast(`${def.label} added. Fill it in to collect the points.`);
+      return;
+    }
+    if (id === 'fancy_unicode') {
+      // Strip smart quotes, em/en dashes, non-breaking spaces, and common
+      // word-processor bullets from every editable text field. Users
+      // paste resumes from Word/Google Docs and these characters break
+      // strict ATS parsers.
+      const clean = (s: string): string =>
+        (s || '')
+          .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+          .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+          .replace(/[\u2013\u2014]/g, '-')
+          .replace(/[\u00A0\u202F]/g, ' ')
+          .replace(/[\u2022\u25E6\u2219]/g, '-')
+          .replace(/\u2026/g, '...');
+      commitSections(prev => prev.map(s => {
+        const next: any = { ...s };
+        if (s.contact) next.contact = {
+          ...s.contact,
+          name: clean(s.contact.name),
+          email: clean(s.contact.email),
+          phone: clean(s.contact.phone),
+          location: clean(s.contact.location),
+          linkedin: clean(s.contact.linkedin),
+        };
+        if (s.education) next.education = {
+          ...s.education,
+          university: clean(s.education.university),
+          major: clean(s.education.major),
+          minor: clean(s.education.minor),
+          graduation: clean(s.education.graduation),
+          location: clean(s.education.location),
+          honors: clean(s.education.honors),
+          gpa: clean(s.education.gpa),
+        };
+        if (s.experiences) next.experiences = s.experiences.map(e => ({
+          ...e,
+          company: clean(e.company),
+          role: clean(e.role),
+          date: clean(e.date),
+          location: clean(e.location),
+          bullets: e.bullets.map(b => ({ ...b, text: clean(b.text) })),
+        }));
+        if (s.projects) next.projects = s.projects.map(p => ({
+          ...p,
+          name: clean(p.name),
+          date: clean(p.date),
+          location: clean(p.location),
+          bullets: p.bullets.map(b => ({ ...b, text: clean(b.text) })),
+        }));
+        if (s.simple) next.simple = {
+          ...s.simple,
+          lines: s.simple.lines.map(clean),
+        };
+        return next;
+      }));
+      showToast('Cleaned fancy characters. Save to persist.');
+      return;
+    }
+
     const firstName = (major || 'there').split(' ')[0];
     const vendors = (issue.affects_vendors || []).join(', ') || 'ATS parsers';
+    // Pass the user's real scores from the latest editor-scan so the AI
+    // coach can ground its advice in actual numbers instead of zeros.
+    const ra = scanData?.rubric_analysis;
+    const smart = Math.round(Number(ra?.primary_smart ?? 0));
+    const grit  = Math.round(Number(ra?.primary_grit  ?? 0));
+    const build = Math.round(Number(ra?.primary_build ?? 0));
+    const composite = Math.round(Number(ra?.primary_composite ?? initialScore ?? 0));
+    const bar = Number(ra?.recruiter_bar ?? 75);
     openDillyOverlay({
       name: firstName,
-      cohort: major || 'General',
-      score: overallScore, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+      cohort: ra?.primary_cohort_display_name || major || 'General',
+      score: composite, smart, grit, build,
+      gap: Math.max(0, bar - composite),
+      cohortBar: bar,
       isPaid: true,
       initialMessage: [
         `I'm working on my resume and Dilly flagged an issue that's worth +${Math.round(issue.total_lift || issue.avg_lift || 0)} points.`,
@@ -978,17 +1481,20 @@ export default function ResumeEditorScreen() {
   // We open that URL with Linking — iOS Safari renders the PDF natively
   // with its standard share/save sheet. Works without expo-file-system
   // or expo-sharing.
-  async function handleExport(template: 'tech' | 'business' | 'academic') {
+  async function handleExport(
+    template: 'tech' | 'business' | 'academic',
+    format: 'pdf' | 'docx' = 'pdf',
+  ) {
     if (exporting) return;
     setExporting(true);
     try {
       const res = await dilly.fetch('/resume/export', {
         method: 'POST',
-        body: JSON.stringify({ sections, template }),
+        body: JSON.stringify({ sections, template, format }),
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
-        Alert.alert('Export failed', detail?.detail || 'Could not render the PDF.');
+        Alert.alert('Export failed', detail?.detail || `Could not render the ${format.toUpperCase()}.`);
         return;
       }
       const data = await res.json();
@@ -1002,8 +1508,8 @@ export default function ResumeEditorScreen() {
         await Linking.openURL(url);
       } catch {
         Alert.alert(
-          'PDF ready',
-          `Template: ${template}\nSize: ${Math.round((data.size_bytes || 0) / 1024)} KB\n\nCould not auto-open the PDF. Copy and paste this URL into Safari:\n${url}`
+          `${format.toUpperCase()} ready`,
+          `Template: ${template}\nSize: ${Math.round((data.size_bytes || 0) / 1024)} KB\n\nCould not auto-open the file. Copy and paste this URL into Safari:\n${url}`
         );
       }
     } catch (e: any) {
@@ -1095,7 +1601,6 @@ export default function ResumeEditorScreen() {
         (audit?.final_score != null ? Number(audit.final_score) : null);
       if (freshScore != null && freshScore > 0) {
         setInitialScore(Math.round(freshScore));
-        setOverallScore(Math.round(freshScore));
       }
       // Force the coaching dashboard to refetch so vendor/rubric scores update
       setTimeout(() => { runEditorScan(); }, 100);
@@ -1121,7 +1626,9 @@ export default function ResumeEditorScreen() {
         throw new Error(detail?.detail || 'save failed');
       }
       setHasChanges(false);
-      Alert.alert('Saved', 'Your resume has been saved.');
+      // Clear the crash-recovery draft — nothing left to restore.
+      AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
+      showToast('Saved.');
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Could not save resume.');
     }
@@ -1155,11 +1662,25 @@ export default function ResumeEditorScreen() {
             <Ionicons name="chevron-back" size={22} color={colors.t1} />
           </AnimatedPressable>
           <Text style={rs.navTitle}>Resume Editor</Text>
-          <AnimatedPressable onPress={handleSave} scaleDown={0.9} disabled={saving || !hasChanges}>
-            {saving ? <ActivityIndicator size="small" color={GOLD} /> : (
-              <Text style={[rs.saveBtn, !hasChanges && { opacity: 0.3 }]}>Save</Text>
-            )}
-          </AnimatedPressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <AnimatedPressable
+              onPress={handleUndo}
+              scaleDown={0.9}
+              hitSlop={12}
+              disabled={undoCount === 0}
+            >
+              <Ionicons
+                name="arrow-undo"
+                size={18}
+                color={undoCount === 0 ? colors.t3 : colors.t1}
+              />
+            </AnimatedPressable>
+            <AnimatedPressable onPress={handleSave} scaleDown={0.9} disabled={saving || !hasChanges}>
+              {saving ? <ActivityIndicator size="small" color={GOLD} /> : (
+                <Text style={[rs.saveBtn, !hasChanges && { opacity: 0.3 }]}>Save</Text>
+              )}
+            </AnimatedPressable>
+          </View>
         </View>
       </FadeInView>
 
@@ -1183,14 +1704,14 @@ export default function ResumeEditorScreen() {
           </AnimatedPressable>
         </View>
 
-        {/* Tailor for a job */}
+        {/* Build-74: Dilly Tailor — deterministic, free, paste-a-JD flow */}
         <AnimatedPressable
-          style={rs.tailorBtn}
-          onPress={() => setShowTailor(true)}
+          style={[rs.tailorBtn, { backgroundColor: GOLD + '18', borderColor: GOLD + '55' }]}
+          onPress={() => setShowQuickTailor(true)}
           scaleDown={0.97}
         >
-          <Ionicons name="sparkles" size={14} color="#2B3A8E" />
-          <Text style={rs.tailorBtnText}>Tailor for a job</Text>
+          <Ionicons name="flash" size={14} color={GOLD} />
+          <Text style={[rs.tailorBtnText, { color: GOLD }]}>Dilly Tailor — paste a job description</Text>
         </AnimatedPressable>
 
         {/* Generate new resume with AI */}
@@ -1224,6 +1745,7 @@ export default function ResumeEditorScreen() {
               cohortOptions={cohortOptions}
               activeCohortId={cohortOverride}
               onSelectCohort={(cid) => setCohortOverride(cid)}
+              onApplyReorder={handleApplyReorder}
             />
           )}
         </View>
@@ -1266,18 +1788,18 @@ export default function ResumeEditorScreen() {
         <FadeInView delay={120}>
           <View style={rs.resumeDoc}>
 
-            {/* Floating score badge */}
-            <View style={rs.scoreBadgeWrap}>
-              <View style={rs.scoreBadgeRing}>
-                <View style={[rs.scoreBadgeProgress, {
-                  borderColor: sColor(overallScore),
-                  borderTopColor: 'transparent',
-                  transform: [{ rotate: `${(overallScore / 100) * 360}deg` }],
-                }]} />
-              </View>
-              <View style={[rs.scoreBadgeInner, { borderColor: sColor(overallScore) + '30' }]}>
-                <Text style={[rs.scoreBadgeNum, { color: sColor(overallScore) }]}>{overallScore}</Text>
-              </View>
+            {/* Build-72: word count + page estimate strip */}
+            <View style={rs.lengthStrip}>
+              <Ionicons name="document-text-outline" size={11} color={colors.t3} />
+              <Text style={rs.lengthStripText}>
+                {wordCount} words · ~{pageEstimate.toFixed(1)} page{pageEstimate >= 1.05 ? 's' : ''}
+              </Text>
+              {pageEstimate > 1.1 && (
+                <View style={rs.lengthStripWarn}>
+                  <Ionicons name="warning" size={10} color={AMBER} />
+                  <Text style={rs.lengthStripWarnText}>Over 1 page</Text>
+                </View>
+              )}
             </View>
 
             {/* Sections as accordion */}
@@ -1285,22 +1807,70 @@ export default function ResumeEditorScreen() {
               const comp = sectionCompleteness(sec);
               const isOpen = expanded?.has(sec.key) ?? false;
 
+              const canDelete = sec.key !== 'contact';
+              const canMoveUp = i > 0 && sec.key !== 'contact' && sections[i - 1]?.key !== 'contact';
+              const canMoveDown = i < sections.length - 1 && sec.key !== 'contact';
               return (
                 <View key={sec.key}>
                   {/* Section header (like a resume section divider) */}
-                  <AnimatedPressable style={rs.sectionDivider} onPress={() => toggleSection(sec.key)} scaleDown={0.995}>
+                  <AnimatedPressable
+                    style={rs.sectionDivider}
+                    onPress={() => toggleSection(sec.key)}
+                    onLongPress={canDelete ? () => confirmDeleteSection(sec.key) : undefined}
+                    scaleDown={0.995}
+                  >
                     <View style={rs.sectionDividerLine} />
                     <View style={rs.sectionDividerLabel}>
                       <Ionicons name={sectionIcon(sec.key) as any} size={11} color={GOLD} />
-                      <Text style={rs.sectionDividerText}>{(sec.label || sec.key.replace(/_/g, ' ')).toUpperCase()}</Text>
+                      <Text style={rs.sectionDividerText}>{(sec.label || sectionDisplayLabel(sec.key)).toUpperCase()}</Text>
                       <CompletionDot filled={comp.filled} total={comp.total} />
+                      {typeof sectionRollups[sec.key] === 'number' && (
+                        <View style={[rs.sectionScorePill, { backgroundColor: sColor(sectionRollups[sec.key]!) + '20' }]}>
+                          <Text style={[rs.sectionScorePillText, { color: sColor(sectionRollups[sec.key]!) }]}>
+                            {sectionRollups[sec.key]}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                    <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={12} color={colors.t3} />
+                    {isOpen && canDelete ? (
+                      <TouchableOpacity
+                        onPress={() => confirmDeleteSection(sec.key)}
+                        hitSlop={10}
+                        style={{ paddingHorizontal: 6 }}
+                      >
+                        <Ionicons name="trash-outline" size={13} color={CORAL} />
+                      </TouchableOpacity>
+                    ) : (
+                      <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={12} color={colors.t3} />
+                    )}
                   </AnimatedPressable>
 
                   {/* Content */}
                   {isOpen && (
                     <View style={rs.sectionContent}>
+                      {/* Build-72: inline move up / down buttons */}
+                      {(canMoveUp || canMoveDown) && (
+                        <View style={rs.moveRow}>
+                          <TouchableOpacity
+                            onPress={() => moveSection(sec.key, -1)}
+                            disabled={!canMoveUp}
+                            hitSlop={8}
+                            style={[rs.moveBtn, !canMoveUp && { opacity: 0.3 }]}
+                          >
+                            <Ionicons name="arrow-up" size={12} color={colors.t2} />
+                            <Text style={rs.moveBtnText}>Up</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => moveSection(sec.key, 1)}
+                            disabled={!canMoveDown}
+                            hitSlop={8}
+                            style={[rs.moveBtn, !canMoveDown && { opacity: 0.3 }]}
+                          >
+                            <Ionicons name="arrow-down" size={12} color={colors.t2} />
+                            <Text style={rs.moveBtnText}>Down</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                       {sec.contact && <ContactPreview contact={sec.contact} onChange={c => updateSection(sec.key, { contact: c })} />}
                       {sec.education && <EducationPreview edu={sec.education} onChange={e => updateSection(sec.key, { education: e })} />}
                       {sec.experiences && <ExperiencePreview entries={sec.experiences} onChange={e => updateSection(sec.key, { experiences: e })} ph={ph} onScoreUpdate={handleBulletScoreUpdate} />}
@@ -1311,6 +1881,16 @@ export default function ResumeEditorScreen() {
                 </View>
               );
             })}
+
+            {/* Build-71: Add a new section */}
+            <AnimatedPressable
+              style={rs.addSectionBtn}
+              onPress={() => setShowAddSection(true)}
+              scaleDown={0.97}
+            >
+              <Ionicons name="add-circle-outline" size={14} color={GOLD} />
+              <Text style={rs.addSectionBtnText}>Add section</Text>
+            </AnimatedPressable>
 
           </View>
         </FadeInView>
@@ -1396,98 +1976,35 @@ export default function ResumeEditorScreen() {
               {/* Create new — tailor button */}
               <AnimatedPressable
                 style={rs.bentoCardNew}
-                onPress={() => { setShowGrid(false); setTimeout(() => setShowTailor(true), 300); }}
+                onPress={() => { setShowGrid(false); setTimeout(() => setShowQuickTailor(true), 300); }}
                 scaleDown={0.96}
               >
                 <View style={[rs.bentoCardIcon, { backgroundColor: colors.golddim }]}>
-                  <Ionicons name="add" size={24} color={colors.gold} />
+                  <Ionicons name="flash" size={22} color={colors.gold} />
                 </View>
-                <Text style={[rs.bentoCardTitle, { color: colors.gold }]}>Tailor for a job</Text>
-                <Text style={rs.bentoCardSub}>AI rewrites for a company</Text>
+                <Text style={[rs.bentoCardTitle, { color: colors.gold }]}>Dilly Tailor</Text>
+                <Text style={rs.bentoCardSub}>Paste a JD, tailored instantly</Text>
               </AnimatedPressable>
+
+              {/* Build 73: Compare versions button — only if we have 2+ variants */}
+              {variants.length >= 1 && (
+                <AnimatedPressable
+                  style={rs.bentoCardNew}
+                  onPress={() => { setShowGrid(false); setTimeout(() => openCompare(), 300); }}
+                  scaleDown={0.96}
+                >
+                  <View style={[rs.bentoCardIcon, { backgroundColor: colors.golddim }]}>
+                    <Ionicons name="git-compare-outline" size={22} color={colors.gold} />
+                  </View>
+                  <Text style={[rs.bentoCardTitle, { color: colors.gold }]}>Compare versions</Text>
+                  <Text style={rs.bentoCardSub}>See which scores highest</Text>
+                </AnimatedPressable>
+              )}
             </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* Tailor modal */}
-      <Modal visible={showTailor} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowTailor(false)}>
-        <View style={rs.tailorOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
-            <View style={[rs.tailorCard, { paddingBottom: insets.bottom + 20 }]}>
-              <View style={rs.tailorHeader}>
-                <Text style={rs.tailorTitle}>Tailor Resume</Text>
-                <TouchableOpacity onPress={() => setShowTailor(false)} hitSlop={12}>
-                  <Ionicons name="close" size={20} color={colors.t2} />
-                </TouchableOpacity>
-              </View>
-              <Text style={rs.tailorSub}>Dilly will rewrite your resume bullets to match this role.</Text>
-              <TextInput
-                style={rs.tailorInput}
-                value={tailorCompany}
-                onChangeText={setTailorCompany}
-                placeholder="Company (e.g. Google)"
-                placeholderTextColor={colors.t3}
-                autoFocus
-              />
-              <TextInput
-                style={rs.tailorInput}
-                value={tailorRole}
-                onChangeText={setTailorRole}
-                placeholder="Role (e.g. Data Science Intern)"
-                placeholderTextColor={colors.t3}
-              />
-              <TextInput
-                style={[rs.tailorInput, { minHeight: 90, textAlignVertical: 'top' }]}
-                value={tailorJD}
-                onChangeText={setTailorJD}
-                placeholder="Paste the job description (optional — better tailoring)"
-                placeholderTextColor={colors.t3}
-                multiline
-              />
-              <AnimatedPressable
-                style={[rs.tailorSubmitBtn, (!tailorCompany.trim() || !tailorRole.trim()) && { opacity: 0.4 }]}
-                onPress={async () => {
-                  if (!tailorCompany.trim() || !tailorRole.trim()) return;
-                  // Close setup modal, open diff modal in loading state
-                  setShowTailor(false);
-                  setTailorDiffData(null);
-                  setShowTailorDiff(true);
-                  setTailoring(true);
-                  try {
-                    const res = await dilly.fetch('/resume/tailor-diff', {
-                      method: 'POST',
-                      body: JSON.stringify({
-                        job_company: tailorCompany.trim(),
-                        job_title: tailorRole.trim(),
-                        job_description: tailorJD.trim() || undefined,
-                      }),
-                    });
-                    if (!res.ok) {
-                      const detail = await res.json().catch(() => null);
-                      Alert.alert('Tailoring failed', detail?.detail || 'Could not generate a tailored version.');
-                      setShowTailorDiff(false);
-                      return;
-                    }
-                    const data = await res.json();
-                    setTailorDiffData(data as TailorDiffPayload);
-                  } catch (e: any) {
-                    Alert.alert('Tailoring failed', e?.message || 'Unknown error.');
-                    setShowTailorDiff(false);
-                  } finally {
-                    setTailoring(false);
-                  }
-                }}
-                scaleDown={0.97}
-                disabled={!tailorCompany.trim() || !tailorRole.trim()}
-              >
-                <Ionicons name="sparkles" size={14} color="#FFFFFF" />
-                <Text style={rs.tailorSubmitText}>Preview tailored version</Text>
-              </AnimatedPressable>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
 
       {/* ── Build 68: Cover letter generator modal ──────────────────── */}
       <Modal visible={showCoverLetter} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowCoverLetter(false)}>
@@ -1552,65 +2069,41 @@ export default function ResumeEditorScreen() {
         onClose={() => setWorthBullet(null)}
       />
 
-      {/* ── Build 64: rich tailor-diff modal ─────────────────────────────── */}
-      <TailorDiffModal
-        visible={showTailorDiff}
-        loading={tailoring}
-        diff={tailorDiffData}
-        onClose={() => {
-          setShowTailorDiff(false);
-          setTailorDiffData(null);
-        }}
-        onAcceptAll={async () => {
-          if (!tailorDiffData) return;
-          try {
-            // Create a new tailored variant pre-populated with the Claude output
-            const createRes = await dilly.fetch('/resume/variants', {
-              method: 'POST',
-              body: JSON.stringify({
-                label: `Tailored — ${tailorDiffData.job_company}`,
-                job_company: tailorDiffData.job_company,
-                job_title: tailorDiffData.job_title,
-                cohort: tailorDiffData.cohort,
-                type: 'job',
-                sections: tailorDiffData.tailored_sections,
-              }),
-            });
-            if (!createRes.ok) {
-              Alert.alert('Could not save variant', 'The diff was generated but saving failed. Try again.');
-              return;
-            }
-            const created = await createRes.json();
-            // Refresh the variant list and switch to the new one
-            const varRes = await dilly.get('/resume/variants');
-            setVariants(varRes?.variants || []);
-            if (created?.id) {
-              setActiveVariant(created.id);
-              setSections(tailorDiffData.tailored_sections as any);
-              setHasChanges(false);
-            }
-            setShowTailorDiff(false);
-            setTailorDiffData(null);
-            setTailorCompany('');
-            setTailorRole('');
-            setTailorJD('');
-          } catch (e: any) {
-            Alert.alert('Save failed', e?.message || 'Unknown error.');
-          }
-        }}
-      />
-
       {/* ── Export template picker (build 63) ───────────────────────────── */}
       <Modal visible={showExportPicker} animationType="slide" transparent statusBarTranslucent onRequestClose={() => setShowExportPicker(false)}>
         <View style={rs.exportModalOverlay}>
           <View style={rs.exportModalCard}>
             <View style={rs.exportModalHeader}>
-              <Text style={rs.exportModalTitle}>Export as PDF</Text>
+              <Text style={rs.exportModalTitle}>Export resume</Text>
               <TouchableOpacity onPress={() => setShowExportPicker(false)} hitSlop={12}>
                 <Ionicons name="close" size={20} color={colors.t2} />
               </TouchableOpacity>
             </View>
-            <Text style={rs.exportModalSub}>Pick a template. All templates are single-column and ATS-friendly.</Text>
+            <Text style={rs.exportModalSub}>Pick a format and template. Both are single-column and ATS-friendly.</Text>
+
+            {/* Build 73: format toggle */}
+            <View style={rs.formatToggleRow}>
+              {(['pdf', 'docx'] as const).map(fmt => {
+                const active = exportFormat === fmt;
+                return (
+                  <Pressable
+                    key={fmt}
+                    style={[rs.formatToggleBtn, active && rs.formatToggleBtnActive]}
+                    onPress={() => setExportFormat(fmt)}
+                  >
+                    <Ionicons
+                      name={fmt === 'pdf' ? 'document' : 'document-text'}
+                      size={13}
+                      color={active ? '#FFFFFF' : colors.t2}
+                    />
+                    <Text style={[rs.formatToggleText, active && { color: '#FFFFFF' }]}>
+                      {fmt.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             {([
               { key: 'tech' as const, label: 'Tech', hint: 'Left-aligned, Skills near top, GitHub prominent' },
               { key: 'business' as const, label: 'Business', hint: 'Centered contact, formal spacing' },
@@ -1619,7 +2112,7 @@ export default function ResumeEditorScreen() {
               <AnimatedPressable
                 key={tpl.key}
                 style={rs.exportTemplateRow}
-                onPress={() => handleExport(tpl.key)}
+                onPress={() => handleExport(tpl.key, exportFormat)}
                 scaleDown={0.97}
                 disabled={exporting}
               >
@@ -1634,11 +2127,308 @@ export default function ResumeEditorScreen() {
         </View>
       </Modal>
 
-      {/* Tailoring in-progress overlay */}
-      {tailoring && (
-        <View style={rs.tailoringOverlay}>
-          <ActivityIndicator size="large" color="#2B3A8E" />
-          <Text style={rs.tailoringText}>Dilly is tailoring your resume for {tailorCompany}...</Text>
+      {/* ── Build 71: Add section picker ───────────────────────────────── */}
+      <Modal
+        visible={showAddSection}
+        animationType="slide"
+        transparent
+        statusBarTranslucent
+        onRequestClose={() => setShowAddSection(false)}
+      >
+        <View style={rs.addSectionOverlay}>
+          <View style={[rs.addSectionSheet, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={rs.addSectionHandle} />
+            <View style={rs.addSectionHeader}>
+              <Text style={rs.addSectionTitle}>Add a section</Text>
+              <TouchableOpacity onPress={() => setShowAddSection(false)} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.t2} />
+              </TouchableOpacity>
+            </View>
+            <Text style={rs.addSectionSub}>Pick what to add to your resume.</Text>
+            <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
+              {ADDABLE_SECTIONS.map(def => {
+                const exists = sections.some(s => s.key === def.key);
+                return (
+                  <AnimatedPressable
+                    key={def.key}
+                    style={[rs.addSectionRow, exists && { opacity: 0.4 }]}
+                    onPress={() => !exists && handleAddSection(def)}
+                    disabled={exists}
+                    scaleDown={0.98}
+                  >
+                    <View style={rs.addSectionIconWrap}>
+                      <Ionicons name={sectionIcon(def.key) as any} size={15} color={GOLD} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={rs.addSectionRowTitle}>{def.label}</Text>
+                      <Text style={rs.addSectionRowSub} numberOfLines={1}>
+                        {exists ? 'Already on your resume' : def.description}
+                      </Text>
+                    </View>
+                    {!exists && <Ionicons name="add" size={16} color={colors.t3} />}
+                  </AnimatedPressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Build 73: Quick Tailor modal ───────────────────────────────── */}
+      <Modal
+        visible={showQuickTailor}
+        animationType="slide"
+        transparent
+        statusBarTranslucent
+        onRequestClose={() => { if (!quickTailoring) { setShowQuickTailor(false); setQuickTailorData(null); setQuickJD(''); } }}
+      >
+        <View style={rs.quickTailorOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <View style={[rs.quickTailorSheet, { paddingBottom: insets.bottom + 16, maxHeight: '92%' }]}>
+              <View style={rs.addSectionHandle} />
+              <View style={rs.addSectionHeader}>
+                <Text style={rs.addSectionTitle}>
+                  {quickTailorData ? 'Dilly Tailor results' : 'Dilly Tailor'}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => { if (!quickTailoring) { setShowQuickTailor(false); setQuickTailorData(null); setQuickJD(''); } }}
+                  hitSlop={12}
+                >
+                  <Ionicons name="close" size={22} color={colors.t2} />
+                </TouchableOpacity>
+              </View>
+
+              {!quickTailorData && (
+                <>
+                  <Text style={rs.addSectionSub}>
+                    Paste a job description. Dilly rearranges your resume to fit it — zero cost, no AI rewriting, no fabricating experience.
+                  </Text>
+                  <TextInput
+                    style={rs.quickTailorInput}
+                    value={quickJD}
+                    onChangeText={setQuickJD}
+                    placeholder="Paste the full job description here…"
+                    placeholderTextColor={colors.t3}
+                    multiline
+                    textAlignVertical="top"
+                    autoFocus
+                    editable={!quickTailoring}
+                  />
+                  <AnimatedPressable
+                    style={[rs.quickTailorRunBtn, (quickJD.trim().length < 30 || quickTailoring) && { opacity: 0.4 }]}
+                    onPress={runQuickTailor}
+                    disabled={quickJD.trim().length < 30 || quickTailoring}
+                    scaleDown={0.97}
+                  >
+                    {quickTailoring ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="flash" size={14} color="#FFFFFF" />
+                        <Text style={rs.quickTailorRunBtnText}>Tailor my resume</Text>
+                      </>
+                    )}
+                  </AnimatedPressable>
+                </>
+              )}
+
+              {quickTailorData && (
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+                  {/* Headline summary */}
+                  <Text style={rs.qtHeadline}>{quickTailorData.headline}</Text>
+                  {quickTailorData.job_title ? (
+                    <Text style={rs.qtJobLabel} numberOfLines={1}>
+                      {quickTailorData.job_title}{quickTailorData.job_company ? ` · ${quickTailorData.job_company}` : ''}
+                    </Text>
+                  ) : null}
+
+                  {/* Keyword coverage delta */}
+                  {quickTailorData.keyword_before && quickTailorData.keyword_after && (
+                    <View style={rs.qtStatRow}>
+                      <View style={rs.qtStatCol}>
+                        <Text style={rs.qtStatLabel}>KEYWORD MATCH</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                          <Text style={rs.qtStatOld}>{Math.round(quickTailorData.keyword_before.match_pct)}%</Text>
+                          <Ionicons name="arrow-forward" size={11} color={colors.t3} />
+                          <Text style={[rs.qtStatNew, { color: quickTailorData.keyword_after.match_pct > quickTailorData.keyword_before.match_pct ? GREEN : colors.t2 }]}>
+                            {Math.round(quickTailorData.keyword_after.match_pct)}%
+                          </Text>
+                        </View>
+                      </View>
+                      {quickTailorData.ats_before != null && quickTailorData.ats_after != null && (
+                        <View style={rs.qtStatCol}>
+                          <Text style={rs.qtStatLabel}>ATS SCORE</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                            <Text style={rs.qtStatOld}>{Math.round(quickTailorData.ats_before)}</Text>
+                            <Ionicons name="arrow-forward" size={11} color={colors.t3} />
+                            <Text style={[rs.qtStatNew, { color: quickTailorData.ats_after > quickTailorData.ats_before ? GREEN : colors.t2 }]}>
+                              {Math.round(quickTailorData.ats_after)}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  )}
+
+                  {/* JD requirement checklist */}
+                  {quickTailorData.jd_facts?.must_have?.length > 0 && (
+                    <View style={rs.qtBlock}>
+                      <Text style={rs.qtSectionLabel}>MUST-HAVES</Text>
+                      {quickTailorData.jd_facts.must_have.map((req: string, i: number) => {
+                        const strong = (quickTailorData.keyword_after?.strong || []).some((k: string) => k.toLowerCase().includes(req.toLowerCase()) || req.toLowerCase().includes(k.toLowerCase()));
+                        const weak = (quickTailorData.keyword_after?.weak || []).some((k: string) => k.toLowerCase().includes(req.toLowerCase()));
+                        const ok = strong;
+                        const partial = !strong && weak;
+                        return (
+                          <View key={`mh-${i}`} style={rs.qtCheckRow}>
+                            <Ionicons
+                              name={ok ? 'checkmark-circle' : (partial ? 'remove-circle' : 'ellipse-outline')}
+                              size={14}
+                              color={ok ? GREEN : (partial ? AMBER : colors.t3)}
+                            />
+                            <Text style={[rs.qtCheckText, !ok && { color: colors.t2 }]}>{req}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {/* Missing skills to add */}
+                  {quickTailorData.auto_skills_to_add?.length > 0 && (
+                    <View style={rs.qtBlock}>
+                      <Text style={rs.qtSectionLabel}>JD TOOLS YOU COULD ADD</Text>
+                      <View style={rs.qtChipRow}>
+                        {quickTailorData.auto_skills_to_add.map((t: string, i: number) => (
+                          <View key={`add-${i}`} style={rs.qtAddChip}>
+                            <Ionicons name="add" size={10} color={GOLD} />
+                            <Text style={rs.qtAddChipText}>{t}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Bullet-level rationales */}
+                  {quickTailorData.bullet_rationales?.length > 0 && (
+                    <View style={rs.qtBlock}>
+                      <Text style={rs.qtSectionLabel}>BULLETS CHANGED</Text>
+                      {quickTailorData.bullet_rationales.slice(0, 8).map((r: any, i: number) => (
+                        <View key={`br-${i}`} style={rs.qtRationale}>
+                          <Text style={rs.qtRationaleHeader} numberOfLines={1}>
+                            {r.company || ''}{r.role ? ` — ${r.role}` : ''}
+                          </Text>
+                          <Text style={rs.qtRationaleBefore} numberOfLines={2}>− {r.before}</Text>
+                          <Text style={rs.qtRationaleAfter} numberOfLines={2}>+ {r.after}</Text>
+                          {r.reason ? <Text style={rs.qtRationaleReason}>{r.reason}</Text> : null}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Actions */}
+                  <View style={rs.qtActionRow}>
+                    <AnimatedPressable
+                      style={[rs.qtActionBtn, { backgroundColor: colors.s2, borderColor: colors.b1, borderWidth: 1 }]}
+                      onPress={() => { setQuickTailorData(null); }}
+                      scaleDown={0.97}
+                    >
+                      <Text style={[rs.qtActionBtnText, { color: colors.t2 }]}>Start over</Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      style={[rs.qtActionBtn, { backgroundColor: colors.s2, borderColor: GOLD + '55', borderWidth: 1 }]}
+                      onPress={saveQuickTailorAsVariant}
+                      scaleDown={0.97}
+                    >
+                      <Ionicons name="bookmark-outline" size={12} color={GOLD} />
+                      <Text style={[rs.qtActionBtnText, { color: GOLD }]}>Save as variant</Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      style={[rs.qtActionBtn, { backgroundColor: GOLD }]}
+                      onPress={applyQuickTailor}
+                      scaleDown={0.97}
+                    >
+                      <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                      <Text style={[rs.qtActionBtnText, { color: '#FFFFFF' }]}>Apply</Text>
+                    </AnimatedPressable>
+                  </View>
+                </ScrollView>
+              )}
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* ── Build 73: Variant compare modal ──────────────────────────── */}
+      <Modal
+        visible={showCompare}
+        animationType="slide"
+        transparent
+        statusBarTranslucent
+        onRequestClose={() => setShowCompare(false)}
+      >
+        <View style={rs.quickTailorOverlay}>
+          <View style={[rs.quickTailorSheet, { paddingBottom: insets.bottom + 16, maxHeight: '85%' }]}>
+            <View style={rs.addSectionHandle} />
+            <View style={rs.addSectionHeader}>
+              <Text style={rs.addSectionTitle}>Compare variants</Text>
+              <TouchableOpacity onPress={() => setShowCompare(false)} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.t2} />
+              </TouchableOpacity>
+            </View>
+            {compareLoading && (
+              <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                <ActivityIndicator size="small" color={GOLD} />
+                <Text style={{ fontSize: 11, color: colors.t3, marginTop: 10 }}>Scoring every version…</Text>
+              </View>
+            )}
+            {!compareLoading && compareData?.message && (
+              <View style={{ paddingVertical: 30, alignItems: 'center' }}>
+                <Ionicons name="information-circle-outline" size={22} color={colors.t3} />
+                <Text style={{ fontSize: 12, color: colors.t3, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 }}>
+                  {compareData.message}
+                </Text>
+              </View>
+            )}
+            {!compareLoading && compareData?.versions?.length > 0 && (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
+                {compareData.versions.map((v: any, i: number) => {
+                  const isBest = Object.values(compareData.best_by_vendor || {}).includes(v.audit_id);
+                  return (
+                    <View key={`cmp-${i}`} style={rs.compareCard}>
+                      <View style={rs.compareCardHeader}>
+                        <Text style={rs.compareCardLabel} numberOfLines={1}>{v.label || `Version ${i + 1}`}</Text>
+                        {isBest && (
+                          <View style={rs.compareBestPill}>
+                            <Ionicons name="trophy" size={9} color={GREEN} />
+                            <Text style={rs.compareBestText}>BEST</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={rs.compareOverall}>Overall: {Math.round(v.overall || 0)}</Text>
+                      <View style={rs.compareVendorRow}>
+                        {Object.entries(v.vendor_scores || {}).slice(0, 5).map(([key, score]: any) => (
+                          <View key={key} style={rs.compareVendorPill}>
+                            <Text style={rs.compareVendorKey}>{(v.vendor_displays?.[key] || key).slice(0, 4).toUpperCase()}</Text>
+                            <Text style={rs.compareVendorScore}>{Math.round(score as number)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Build 71: Toast ───────────────────────────────────────────── */}
+      {toastMessage && (
+        <View style={[rs.toastWrap, { bottom: insets.bottom + 24 }]} pointerEvents="none">
+          <View style={rs.toast}>
+            <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+            <Text style={rs.toastText}>{toastMessage}</Text>
+          </View>
         </View>
       )}
     </View>
@@ -1803,29 +2593,6 @@ const rs = StyleSheet.create({
   variantChipText: { fontSize: 12, fontWeight: '600', color: colors.t2, maxWidth: 140 },
   variantChipTextActive: { color: colors.gold },
 
-  // Floating score badge
-  scoreBadgeWrap: {
-    position: 'absolute', top: -10, right: -10, zIndex: 10,
-    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-  },
-  scoreBadgeRing: {
-    position: 'absolute', width: 44, height: 44,
-    borderRadius: 22, overflow: 'hidden',
-  },
-  scoreBadgeProgress: {
-    width: 44, height: 44, borderRadius: 22,
-    borderWidth: 3, borderColor: 'transparent',
-  },
-  scoreBadgeInner: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#FFFFFF', borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
-  },
-  scoreBadgeNum: { fontFamily: 'Cinzel_700Bold', fontSize: 13 },
-
-  // Tailor button
   // ── Build-63 dashboard toggle + export button + export modal ──────────
   dashToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -1857,6 +2624,24 @@ const rs = StyleSheet.create({
   },
   exportTemplateLabel: { fontSize: 14, fontWeight: '700', color: colors.t1 },
   exportTemplateHint: { fontSize: 11, color: colors.t3, marginTop: 2 },
+  formatToggleRow: {
+    flexDirection: 'row', gap: 8, marginBottom: 14,
+  },
+  formatToggleBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: 10,
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
+  },
+  formatToggleBtnActive: {
+    backgroundColor: GOLD, borderColor: GOLD,
+  },
+  formatToggleText: { fontSize: 12, fontWeight: '700', color: colors.t2 },
+  // Build 73: per-section rollup score pill
+  sectionScorePill: {
+    paddingHorizontal: 5, paddingVertical: 1,
+    borderRadius: 5, marginLeft: 4,
+  },
+  sectionScorePillText: { fontSize: 9, fontWeight: '800' },
 
   // Rewrite accept/reject modal
   rewriteModalOverlay: {
@@ -1980,4 +2765,170 @@ const rs = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center', zIndex: 50,
   },
   tailoringText: { fontSize: 14, color: colors.t2, marginTop: 16, textAlign: 'center', paddingHorizontal: 40 },
+
+  // Build 71: Add-section button + picker modal
+  addSectionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 18, paddingVertical: 11,
+    backgroundColor: colors.s2, borderRadius: 10,
+    borderWidth: 1, borderColor: GOLD + '40', borderStyle: 'dashed',
+  },
+  addSectionBtnText: { fontSize: 12, color: GOLD, fontWeight: '700' },
+  addSectionOverlay: {
+    flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  addSectionSheet: {
+    backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 18, maxHeight: '80%',
+  },
+  addSectionHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: colors.b1,
+    alignSelf: 'center', marginBottom: 10,
+  },
+  addSectionHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  addSectionTitle: { fontSize: 16, fontWeight: '700', color: colors.t1 },
+  addSectionSub: { fontSize: 11, color: colors.t3, marginBottom: 14 },
+  addSectionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12, paddingHorizontal: 12,
+    backgroundColor: colors.s2, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    marginBottom: 8,
+  },
+  addSectionIconWrap: {
+    width: 30, height: 30, borderRadius: 8,
+    backgroundColor: GOLD + '15',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  addSectionRowTitle: { fontSize: 13, fontWeight: '700', color: colors.t1 },
+  addSectionRowSub: { fontSize: 10, color: colors.t3, marginTop: 2 },
+
+  // Build 71: Toast
+  toastWrap: {
+    position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 100,
+  },
+  toast: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#111111',
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+  },
+  toastText: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
+
+  // Build 72: length strip (word count + page estimate)
+  lengthStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 6,
+    marginBottom: 10,
+    backgroundColor: colors.s2, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  lengthStripText: { fontSize: 10, color: colors.t3, flex: 1 },
+  lengthStripWarn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: AMBER + '15', borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  lengthStripWarnText: { fontSize: 9, color: AMBER, fontWeight: '700' },
+
+  // Build 72: move up / down toolbar
+  moveRow: {
+    flexDirection: 'row', gap: 6,
+    marginBottom: 10,
+  },
+  moveBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: colors.s2, borderRadius: 7,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  moveBtnText: { fontSize: 10, color: colors.t2, fontWeight: '600' },
+
+  // Build 73: JD Quick Tailor modal
+  quickTailorOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  quickTailorSheet: {
+    backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 18, paddingTop: 10,
+  },
+  quickTailorInput: {
+    minHeight: 180, maxHeight: 280,
+    backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: colors.b1,
+    padding: 12, fontSize: 12, color: colors.t1, lineHeight: 17,
+    marginTop: 6, marginBottom: 12,
+  },
+  quickTailorRunBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: GOLD, borderRadius: 12, paddingVertical: 13,
+  },
+  quickTailorRunBtnText: { fontSize: 13, color: '#FFFFFF', fontWeight: '700' },
+
+  qtHeadline: { fontSize: 13, fontWeight: '700', color: colors.t1, marginTop: 4, marginBottom: 4 },
+  qtJobLabel: { fontSize: 10, color: colors.t3, marginBottom: 12 },
+  qtStatRow: {
+    flexDirection: 'row', justifyContent: 'space-around',
+    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+    padding: 12, marginBottom: 14,
+  },
+  qtStatCol: { alignItems: 'center' },
+  qtStatLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1.1, color: colors.t3, marginBottom: 4 },
+  qtStatOld: { fontSize: 17, fontWeight: '700', color: colors.t3 },
+  qtStatNew: { fontSize: 20, fontWeight: '800' },
+  qtBlock: { marginBottom: 14 },
+  qtSectionLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: GOLD,
+    marginBottom: 8,
+  },
+  qtCheckRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  qtCheckText: { fontSize: 12, color: colors.t1, flex: 1 },
+  qtChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  qtAddChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: GOLD + '12', borderWidth: 1, borderColor: GOLD + '35',
+    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  qtAddChipText: { fontSize: 10, color: GOLD, fontWeight: '600' },
+  qtRationale: {
+    backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: colors.b1,
+    padding: 10, marginBottom: 6,
+  },
+  qtRationaleHeader: { fontSize: 10, color: colors.t3, fontWeight: '700', marginBottom: 4 },
+  qtRationaleBefore: { fontSize: 11, color: CORAL, lineHeight: 15 },
+  qtRationaleAfter: { fontSize: 11, color: GREEN, lineHeight: 15, marginTop: 2 },
+  qtRationaleReason: { fontSize: 9, color: colors.t3, marginTop: 4, fontStyle: 'italic' },
+  qtActionRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  qtActionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingVertical: 12, borderRadius: 10,
+  },
+  qtActionBtnText: { fontSize: 11, fontWeight: '700' },
+
+  // Build 73: variant compare
+  compareCard: {
+    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+    padding: 12, marginBottom: 8,
+  },
+  compareCardHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  compareCardLabel: { fontSize: 12, fontWeight: '700', color: colors.t1, flex: 1 },
+  compareBestPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: GREEN + '18', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  compareBestText: { fontSize: 8, fontWeight: '800', color: GREEN, letterSpacing: 0.6 },
+  compareOverall: { fontSize: 11, color: colors.t2, marginBottom: 6 },
+  compareVendorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  compareVendorPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.bg, borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  compareVendorKey: { fontSize: 8, color: colors.t3, fontWeight: '700' },
+  compareVendorScore: { fontSize: 11, color: colors.t1, fontWeight: '700' },
 });

@@ -166,7 +166,7 @@ async def ai_chat(request: Request, body: ChatRequest):
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4-5-20250929",
             max_tokens=1024,
             system=system,
             messages=messages,

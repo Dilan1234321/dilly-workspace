@@ -101,6 +101,8 @@ export type EditorScanData = {
   top_issues: TopIssue[];
   keyword_cells?: KeywordCell[];
   reorder_suggestion?: ReorderSuggestion | null;
+  legacy_ats_vendors?: Record<string, { system: string; score: number }>;
+  legacy_ats_overall?: number | null;
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -279,6 +281,7 @@ export type CohortOption = { cohort_id: string; display_name: string };
 export default function ResumeScoreDashboard({
   scan, loading, onFixIssue,
   cohortOptions, activeCohortId, onSelectCohort,
+  onApplyReorder,
 }: {
   scan: EditorScanData | null;
   loading: boolean;
@@ -286,6 +289,7 @@ export default function ResumeScoreDashboard({
   cohortOptions?: CohortOption[];
   activeCohortId?: string | null;
   onSelectCohort?: (cohortId: string | null) => void;
+  onApplyReorder?: (suggestedOrder: string[]) => void;
 }) {
   const ringMissingByDim = useMemo(() => {
     const out: Record<string, string[]> = { smart: [], grit: [], build: [] };
@@ -316,18 +320,26 @@ export default function ResumeScoreDashboard({
     );
   }
 
-  const overall = scan.v2.overall?.value ?? 0;
-  const forecast = scan.v2.overall_forecast_if_all_fixed ?? overall;
-  const overallColor = scoreColor(overall);
-  const overallLift = forecast - overall;
-
-  // Only render the 5 "real" strict/modern ATS vendors to keep the sidebar compact
-  const vendors = (scan.v2.vendors || []).filter(v =>
-    ['workday', 'taleo', 'icims', 'greenhouse', 'lever', 'ashby', 'successfactors'].includes(v.vendor_key)
-  );
+  // Per-vendor ATS bars now read from legacy_ats_vendors so the numbers
+  // match the dedicated /ats page. The hero "overall score" was removed
+  // per product decision — Smart/Grit/Build rings are the only scores
+  // the coaching dashboard surfaces.
+  const legacyVendors = scan.legacy_ats_vendors || {};
+  const vendorOrder = ['workday', 'taleo', 'icims', 'greenhouse', 'lever', 'ashby', 'successfactors'];
+  const vendorBars = vendorOrder
+    .filter(k => legacyVendors[k] != null)
+    .map(k => ({
+      vendor_key: k,
+      vendor_display: legacyVendors[k].system || k,
+      score: Math.round(legacyVendors[k].score || 0),
+    }));
 
   const ra = scan.rubric_analysis;
-  const hasRubric = ra && ra.primary_composite != null;
+  const hasRubric = !!ra && (
+    (typeof ra.primary_smart === 'number' && ra.primary_smart > 0) ||
+    (typeof ra.primary_grit  === 'number' && ra.primary_grit  > 0) ||
+    (typeof ra.primary_build === 'number' && ra.primary_build > 0)
+  );
 
   return (
     <View style={s.container}>
@@ -342,23 +354,6 @@ export default function ResumeScoreDashboard({
           />
         </View>
       )}
-
-      {/* ── Headline composite ──────────────────────────────────────── */}
-      <View style={s.heroRow}>
-        <View style={s.heroLeft}>
-          <Text style={s.heroLabel}>ATS READINESS</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-            <Text style={[s.heroNum, { color: overallColor }]}>{Math.round(overall)}</Text>
-            <Text style={s.heroOf}>/100</Text>
-          </View>
-        </View>
-        {overallLift >= 1 && (
-          <View style={s.forecastChip}>
-            <Ionicons name="trending-up" size={11} color={GREEN} />
-            <Text style={s.forecastChipText}>+{Math.round(overallLift)} if fixed</Text>
-          </View>
-        )}
-      </View>
 
       {/* ── Rubric dimension rings ──────────────────────────────────── */}
       {hasRubric && (
@@ -376,11 +371,24 @@ export default function ResumeScoreDashboard({
         </View>
       )}
 
-      {/* ── Per-vendor ATS sidebar ──────────────────────────────────── */}
-      {vendors.length > 0 && (
+      {/* ── Per-vendor ATS bars (from legacy engine, matches /ats page) ── */}
+      {vendorBars.length > 0 && (
         <View style={s.vendorBlock}>
           <Text style={s.sectionLabel}>BY ATS VENDOR</Text>
-          {vendors.map(v => <VendorBar key={v.vendor_key} vendor={v} />)}
+          {vendorBars.map(v => (
+            <View key={v.vendor_key} style={s.legacyVendorRow}>
+              <Text style={s.legacyVendorName}>{v.vendor_display}</Text>
+              <View style={s.legacyVendorBarTrack}>
+                <View style={[s.legacyVendorBarFill, {
+                  width: `${Math.max(0, Math.min(100, v.score))}%`,
+                  backgroundColor: scoreColor(v.score),
+                }]} />
+              </View>
+              <Text style={[s.legacyVendorScore, { color: scoreColor(v.score) }]}>
+                {v.score}
+              </Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -421,6 +429,15 @@ export default function ResumeScoreDashboard({
               </View>
             ))}
           </View>
+          {onApplyReorder && (
+            <Pressable
+              style={s.reorderApplyBtn}
+              onPress={() => onApplyReorder(scan.reorder_suggestion!.suggested_order)}
+            >
+              <Ionicons name="checkmark-circle" size={12} color={GOLD} />
+              <Text style={s.reorderApplyText}>Apply this order</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -505,6 +522,7 @@ const s = StyleSheet.create({
   heroLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.3, color: GOLD, marginBottom: 2 },
   heroNum: { fontSize: 32, fontWeight: '800', lineHeight: 34 },
   heroOf: { fontSize: 12, color: colors.t3 },
+  heroSub: { fontSize: 10, color: colors.t3, marginTop: 2 },
   forecastChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: GREEN + '15', borderRadius: 16, paddingHorizontal: 8, paddingVertical: 4,
@@ -539,6 +557,16 @@ const s = StyleSheet.create({
 
   // Vendor bars
   vendorBlock: { marginBottom: 12 },
+  legacyVendorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 6,
+  },
+  legacyVendorName: { flex: 0, width: 90, fontSize: 11, color: colors.t2 },
+  legacyVendorBarTrack: {
+    flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.b1, overflow: 'hidden',
+  },
+  legacyVendorBarFill: { height: '100%', borderRadius: 3 },
+  legacyVendorScore: { fontSize: 12, fontWeight: '800', width: 28, textAlign: 'right' },
   vendorBarRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6,
   },
@@ -591,6 +619,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 3,
   },
   reorderChipText: { fontSize: 9, color: colors.t2, fontWeight: '600', textTransform: 'capitalize' },
+  reorderApplyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    marginTop: 10, paddingVertical: 8,
+    backgroundColor: GOLD + '12', borderRadius: 8, borderWidth: 1, borderColor: GOLD + '30',
+  },
+  reorderApplyText: { fontSize: 11, color: GOLD, fontWeight: '700' },
 
   // Build 69 — inline keyword heatmap
   keywordBlock: { marginTop: 14 },

@@ -453,8 +453,8 @@ export default function NewAuditScreen() {
         const formData = new FormData();
         formData.append('file', {
           uri: file.uri,
-          name: file.name,
-          type: file.mimeType,
+          name: file.name || 'resume.pdf',
+          type: file.mimeType || 'application/pdf',
         } as any);
 
         const res = await fetch(`${API_BASE}/audit/first-run`, {
