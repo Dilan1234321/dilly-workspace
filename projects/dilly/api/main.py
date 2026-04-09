@@ -132,6 +132,7 @@ from projects.dilly.api.routers import templates as templates_router
 from projects.dilly.api.routers import career_brain as career_brain_router
 from projects.dilly.api.routers import habits as habits_router
 from projects.dilly.api.routers import home as home_router
+from projects.dilly.api.routers import job_url as job_url_router
 from projects.dilly.api.routers import internships_v2 as internships_v2_router
 from projects.dilly.api.routers import push as push_router
 from projects.dilly.api.routers import notifications as notifications_router
@@ -171,6 +172,7 @@ app.include_router(templates_router.router)
 app.include_router(career_brain_router.router)
 app.include_router(habits_router.router)
 app.include_router(home_router.router)
+app.include_router(job_url_router.router)
 app.include_router(internships_v2_router.router)
 app.include_router(push_router.router)
 app.include_router(notifications_router.router)

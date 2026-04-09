@@ -1146,9 +1146,29 @@ export default function ResumeEditorScreen() {
     setQuickTailoring(true);
     setQuickTailorData(null);
     try {
+      // Detect if the user pasted a URL instead of a JD.
+      // If so, fetch the JD from the URL first, then tailor.
+      let finalJD = jd;
+      const isUrl = /^https?:\/\//i.test(jd) || /^(www\.)?[\w-]+\.(com|co|io|org|net|jobs)\//i.test(jd);
+      if (isUrl && jd.split('\n').length <= 3) {
+        showToast('Fetching job description from URL...');
+        const fetchRes = await dilly.fetch('/jobs/fetch-jd', {
+          method: 'POST',
+          body: JSON.stringify({ url: jd }),
+        });
+        if (fetchRes.ok) {
+          const fetchData = await fetchRes.json();
+          if (fetchData?.job_description && fetchData.job_description.length > 50) {
+            finalJD = fetchData.job_description;
+            showToast(`Loaded JD from ${fetchData.company || 'job page'}.`);
+          }
+        }
+        // If fetch failed, fall through and use the URL as-is (will likely fail gracefully)
+      }
+
       const res = await dilly.fetch('/resume/jd-quick-tailor', {
         method: 'POST',
-        body: JSON.stringify({ job_description: jd }),
+        body: JSON.stringify({ job_description: finalJD }),
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
@@ -2278,7 +2298,7 @@ export default function ResumeEditorScreen() {
                     style={rs.quickTailorInput}
                     value={quickJD}
                     onChangeText={setQuickJD}
-                    placeholder="Paste the full job description here…"
+                    placeholder="Paste the job description or the job URL here…"
                     placeholderTextColor={colors.t3}
                     multiline
                     textAlignVertical="top"
