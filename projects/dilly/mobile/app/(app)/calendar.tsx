@@ -93,8 +93,25 @@ function toDateKey(d: Date): string {
 
 function parseDate(iso: string): Date | null {
   if (!iso) return null;
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? null : d;
+  // CRITICAL: Do NOT use new Date(iso) for date-only strings like "2026-04-09".
+  // JS interprets that as UTC midnight, which shifts to the previous day in
+  // negative-offset timezones (EDT, CST, PST). Split and construct locally.
+  const parts = iso.trim().slice(0, 10).split('-');
+  if (parts.length >= 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(day)) {
+      const d = new Date(y, m, day);
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+  // Fallback for full ISO timestamps (has T)
+  if (iso.includes('T')) {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
 }
 
 function daysUntil(dateStr: string): number {
@@ -579,14 +596,22 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
 
 // ── Add Event Modal ───────────────────────────────────────────────────────────
 
-function AddEventModal({ visible, onClose, onAdd }: {
+function AddEventModal({ visible, onClose, onAdd, initialDate }: {
   visible: boolean; onClose: () => void; onAdd: (event: CalendarEvent) => void;
+  initialDate?: string | null;
 }) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [notes, setNotes] = useState('');
   const [type, setType] = useState<EventType>('deadline');
+
+  // Pre-fill date from the selected day when modal opens
+  useEffect(() => {
+    if (visible && initialDate) {
+      setDateStr(initialDate);
+    }
+  }, [visible, initialDate]);
 
   function handleAdd() {
     if (!title.trim()) { Alert.alert('Title required'); return; }
@@ -1139,7 +1164,7 @@ export default function CalendarScreen() {
       </AnimatedPressable>
 
       {/* Add modal */}
-      <AddEventModal visible={showAdd} onClose={() => setShowAdd(false)} onAdd={handleAddEvent} />
+      <AddEventModal visible={showAdd} onClose={() => setShowAdd(false)} onAdd={handleAddEvent} initialDate={selectedDay} />
     </View>
   );
 }
