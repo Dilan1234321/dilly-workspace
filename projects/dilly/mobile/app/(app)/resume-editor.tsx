@@ -29,8 +29,20 @@ import Animated, {
   Easing,
   interpolateColor,
 } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+
+// Build 70: crash-recovery + autosave
+const DRAFT_STORAGE_KEY = 'dilly_resume_editor_draft_v1';
+const DRAFT_VERSION = 1;
+type ResumeDraft = {
+  v: number;
+  savedAt: number;
+  sections: any[];
+  email?: string;
+};
+const UNDO_LIMIT = 25;
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ResumeScoreDashboard, { EditorScanData, CohortOption } from '../../components/ResumeScoreDashboard';
@@ -115,6 +127,33 @@ const PLACEHOLDERS: Record<string, Record<string, string>> = {
     skill: 'Leadership, Excel, Communication, Project Management',
   },
 };
+
+function buildDefaultSections(profile: any | null): ResumeSection[] {
+  const p = profile || {};
+  return [
+    { key: 'contact', label: 'Contact', contact: {
+      name: p.name || '', email: p.email || '', phone: '', location: '',
+      linkedin: p.linkedin_url || '',
+    } },
+    { key: 'education', label: 'Education', education: {
+      id: uid(),
+      university: p.school_id === 'utampa' ? 'University of Tampa' : '',
+      major: p.majors?.[0] || '',
+      minor: p.minors?.[0] || '',
+      graduation: '', location: p.school_id === 'utampa' ? 'Tampa, FL' : '',
+      honors: '', gpa: '',
+    } },
+    { key: 'professional_experience', label: 'Professional Experience', experiences: [{
+      id: uid(), company: '', role: '', date: '', location: '',
+      bullets: [{ id: uid(), text: '' }],
+    }] },
+    { key: 'projects', label: 'Projects', projects: [{
+      id: uid(), name: '', date: '', location: '',
+      bullets: [{ id: uid(), text: '' }],
+    }] },
+    { key: 'skills', label: 'Skills', simple: { id: uid(), lines: [''] } },
+  ];
+}
 
 function getPlaceholders(major: string): Record<string, string> {
   return PLACEHOLDERS[major] || PLACEHOLDERS.default;
@@ -796,6 +835,25 @@ export default function ResumeEditorScreen() {
   const [clRole, setClRole] = useState('');
   const [clJD, setClJD] = useState('');
   const [clGenerating, setClGenerating] = useState(false);
+  // Build-70: undo stack + autosave
+  const undoStackRef = useRef<ResumeSection[][]>([]);
+  const [undoCount, setUndoCount] = useState(0);
+  const hydratedRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Build-70: autosave to AsyncStorage on every change (debounced 800ms).
+  // Write a timestamped draft so we can prompt to restore after a crash.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      const draft: ResumeDraft = { v: DRAFT_VERSION, savedAt: Date.now(), sections };
+      AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)).catch(() => {});
+    }, 800);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [sections]);
 
   // Load resume + profile for major
   useEffect(() => {
@@ -818,28 +876,70 @@ export default function ResumeEditorScreen() {
         if (fs > 0) {
           setInitialScore(Math.round(Number(fs)));
         }
+        let serverSections: ResumeSection[] | null = null;
         if (resumeRes?.resume?.sections?.length) {
-          setSections(resumeRes.resume.sections);
+          serverSections = resumeRes.resume.sections;
           setBaseSections(resumeRes.resume.sections);
+        }
+
+        // Build-70: check for a newer AsyncStorage draft. If the draft is
+        // newer than the server copy, offer to restore (crash recovery).
+        let draftSections: ResumeSection[] | null = null;
+        let draftAge = 0;
+        try {
+          const raw = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+          if (raw) {
+            const d = JSON.parse(raw) as ResumeDraft;
+            if (d && d.v === DRAFT_VERSION && Array.isArray(d.sections) && d.sections.length) {
+              const serverSavedAt = resumeRes?.resume?.saved_at
+                ? new Date(resumeRes.resume.saved_at).getTime()
+                : 0;
+              if (d.savedAt > serverSavedAt + 2000) {
+                draftSections = d.sections as ResumeSection[];
+                draftAge = Math.round((Date.now() - d.savedAt) / 60000);
+              }
+            }
+          }
+        } catch {}
+
+        if (draftSections) {
+          // Defer the prompt until after loading UI settles
+          setSections(serverSections || buildDefaultSections(profileRes));
+          setTimeout(() => {
+            Alert.alert(
+              'Restore unsaved changes?',
+              draftAge <= 1
+                ? 'You have unsaved edits from a moment ago.'
+                : `You have unsaved edits from ${draftAge} minute${draftAge === 1 ? '' : 's'} ago.`,
+              [
+                {
+                  text: 'Discard',
+                  style: 'destructive',
+                  onPress: () => { AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {}); },
+                },
+                {
+                  text: 'Restore',
+                  onPress: () => {
+                    setSections(draftSections!);
+                    setHasChanges(true);
+                  },
+                },
+              ],
+            );
+          }, 400);
+        } else if (serverSections) {
+          setSections(serverSections);
         } else {
-          setSections([
-            { key: 'contact', label: 'Contact', contact: { name: profileRes?.name || '', email: profileRes?.email || '', phone: '', location: '', linkedin: profileRes?.linkedin_url || '' } },
-            { key: 'education', label: 'Education', education: { id: uid(), university: profileRes?.school_id === 'utampa' ? 'University of Tampa' : '', major: profileRes?.majors?.[0] || '', minor: profileRes?.minors?.[0] || '', graduation: '', location: 'Tampa, FL', honors: '', gpa: '' } },
-            { key: 'professional_experience', label: 'Professional Experience', experiences: [{ id: uid(), company: '', role: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-            { key: 'projects', label: 'Projects', projects: [{ id: uid(), name: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-            { key: 'skills', label: 'Skills', simple: { id: uid(), lines: [''] } },
-          ]);
+          setSections(buildDefaultSections(profileRes));
         }
       } catch {
-        setSections([
-          { key: 'contact', label: 'Contact', contact: { name: '', email: '', phone: '', location: '', linkedin: '' } },
-          { key: 'education', label: 'Education', education: { id: uid(), university: '', major: '', minor: '', graduation: '', location: '', honors: '', gpa: '' } },
-          { key: 'professional_experience', label: 'Professional Experience', experiences: [{ id: uid(), company: '', role: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-          { key: 'projects', label: 'Projects', projects: [{ id: uid(), name: '', date: '', location: '', bullets: [{ id: uid(), text: '' }] }] },
-          { key: 'skills', label: 'Skills', simple: { id: uid(), lines: [''] } },
-        ]);
+        setSections(buildDefaultSections(null));
       } finally {
         setLoading(false);
+        // Autosave effect is gated on hydratedRef — flip it after the initial
+        // load resolves so we don't overwrite the draft with an empty first
+        // render before the server copy arrives.
+        setTimeout(() => { hydratedRef.current = true; }, 50);
       }
 
       // Fetch resume variants; if we arrived from generate, auto-load that variant
@@ -871,9 +971,48 @@ export default function ResumeEditorScreen() {
     });
   }
 
-  function updateSection(key: string, updates: Partial<ResumeSection>) {
-    setSections(prev => prev.map(s => s.key === key ? { ...s, ...updates } : s));
+  // Build-70: push current sections onto the undo stack, then apply next.
+  // Called by every mutation path (field edits, reorder, tailor accept, etc).
+  function commitSections(next: ResumeSection[] | ((prev: ResumeSection[]) => ResumeSection[])) {
+    setSections(prev => {
+      const snapshot = JSON.parse(JSON.stringify(prev)) as ResumeSection[];
+      const stack = undoStackRef.current;
+      stack.push(snapshot);
+      if (stack.length > UNDO_LIMIT) stack.shift();
+      setUndoCount(stack.length);
+      return typeof next === 'function' ? (next as any)(prev) : next;
+    });
     setHasChanges(true);
+  }
+
+  function handleUndo() {
+    const stack = undoStackRef.current;
+    const prev = stack.pop();
+    if (!prev) return;
+    setUndoCount(stack.length);
+    setSections(prev);
+    setHasChanges(true);
+  }
+
+  function updateSection(key: string, updates: Partial<ResumeSection>) {
+    commitSections(prev => prev.map(s => s.key === key ? { ...s, ...updates } : s));
+  }
+
+  // Build-70: apply the reorder suggestion from the coaching dashboard.
+  // suggested_order is a list of section keys. Any key not present is kept
+  // in its current position after the reordered ones.
+  function handleApplyReorder(suggestedOrder: string[]) {
+    const keySet = new Set(suggestedOrder);
+    const reordered: ResumeSection[] = [];
+    for (const k of suggestedOrder) {
+      const found = sections.find(s => s.key === k);
+      if (found) reordered.push(found);
+    }
+    for (const s of sections) {
+      if (!keySet.has(s.key)) reordered.push(s);
+    }
+    commitSections(reordered);
+    Alert.alert('Reordered', 'Section order applied. Save to persist the change.');
   }
 
   function handleBulletScoreUpdate(id: string, score: BulletScore | null) {
@@ -942,10 +1081,20 @@ export default function ResumeEditorScreen() {
   function handleFixIssue(issue: any) {
     const firstName = (major || 'there').split(' ')[0];
     const vendors = (issue.affects_vendors || []).join(', ') || 'ATS parsers';
+    // Pass the user's real scores from the latest editor-scan so the AI
+    // coach can ground its advice in actual numbers instead of zeros.
+    const ra = scanData?.rubric_analysis;
+    const smart = Math.round(Number(ra?.primary_smart ?? 0));
+    const grit  = Math.round(Number(ra?.primary_grit  ?? 0));
+    const build = Math.round(Number(ra?.primary_build ?? 0));
+    const composite = Math.round(Number(ra?.primary_composite ?? initialScore ?? 0));
+    const bar = Number(ra?.recruiter_bar ?? 75);
     openDillyOverlay({
       name: firstName,
-      cohort: major || 'General',
-      score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+      cohort: ra?.primary_cohort_display_name || major || 'General',
+      score: composite, smart, grit, build,
+      gap: Math.max(0, bar - composite),
+      cohortBar: bar,
       isPaid: true,
       initialMessage: [
         `I'm working on my resume and Dilly flagged an issue that's worth +${Math.round(issue.total_lift || issue.avg_lift || 0)} points.`,
@@ -1104,6 +1253,8 @@ export default function ResumeEditorScreen() {
         throw new Error(detail?.detail || 'save failed');
       }
       setHasChanges(false);
+      // Clear the crash-recovery draft — nothing left to restore.
+      AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
       Alert.alert('Saved', 'Your resume has been saved.');
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Could not save resume.');
@@ -1138,11 +1289,25 @@ export default function ResumeEditorScreen() {
             <Ionicons name="chevron-back" size={22} color={colors.t1} />
           </AnimatedPressable>
           <Text style={rs.navTitle}>Resume Editor</Text>
-          <AnimatedPressable onPress={handleSave} scaleDown={0.9} disabled={saving || !hasChanges}>
-            {saving ? <ActivityIndicator size="small" color={GOLD} /> : (
-              <Text style={[rs.saveBtn, !hasChanges && { opacity: 0.3 }]}>Save</Text>
-            )}
-          </AnimatedPressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <AnimatedPressable
+              onPress={handleUndo}
+              scaleDown={0.9}
+              hitSlop={12}
+              disabled={undoCount === 0}
+            >
+              <Ionicons
+                name="arrow-undo"
+                size={18}
+                color={undoCount === 0 ? colors.t3 : colors.t1}
+              />
+            </AnimatedPressable>
+            <AnimatedPressable onPress={handleSave} scaleDown={0.9} disabled={saving || !hasChanges}>
+              {saving ? <ActivityIndicator size="small" color={GOLD} /> : (
+                <Text style={[rs.saveBtn, !hasChanges && { opacity: 0.3 }]}>Save</Text>
+              )}
+            </AnimatedPressable>
+          </View>
         </View>
       </FadeInView>
 
@@ -1207,6 +1372,7 @@ export default function ResumeEditorScreen() {
               cohortOptions={cohortOptions}
               activeCohortId={cohortOverride}
               onSelectCohort={(cid) => setCohortOverride(cid)}
+              onApplyReorder={handleApplyReorder}
             />
           )}
         </View>
@@ -1772,29 +1938,6 @@ const rs = StyleSheet.create({
   variantChipText: { fontSize: 12, fontWeight: '600', color: colors.t2, maxWidth: 140 },
   variantChipTextActive: { color: colors.gold },
 
-  // Floating score badge
-  scoreBadgeWrap: {
-    position: 'absolute', top: -10, right: -10, zIndex: 10,
-    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
-  },
-  scoreBadgeRing: {
-    position: 'absolute', width: 44, height: 44,
-    borderRadius: 22, overflow: 'hidden',
-  },
-  scoreBadgeProgress: {
-    width: 44, height: 44, borderRadius: 22,
-    borderWidth: 3, borderColor: 'transparent',
-  },
-  scoreBadgeInner: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#FFFFFF', borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
-  },
-  scoreBadgeNum: { fontFamily: 'Cinzel_700Bold', fontSize: 13 },
-
-  // Tailor button
   // ── Build-63 dashboard toggle + export button + export modal ──────────
   dashToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,

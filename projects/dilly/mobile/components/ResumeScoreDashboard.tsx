@@ -281,6 +281,7 @@ export type CohortOption = { cohort_id: string; display_name: string };
 export default function ResumeScoreDashboard({
   scan, loading, onFixIssue,
   cohortOptions, activeCohortId, onSelectCohort,
+  onApplyReorder,
 }: {
   scan: EditorScanData | null;
   loading: boolean;
@@ -288,6 +289,7 @@ export default function ResumeScoreDashboard({
   cohortOptions?: CohortOption[];
   activeCohortId?: string | null;
   onSelectCohort?: (cohortId: string | null) => void;
+  onApplyReorder?: (suggestedOrder: string[]) => void;
 }) {
   const ringMissingByDim = useMemo(() => {
     const out: Record<string, string[]> = { smart: [], grit: [], build: [] };
@@ -427,6 +429,15 @@ export default function ResumeScoreDashboard({
               </View>
             ))}
           </View>
+          {onApplyReorder && (
+            <Pressable
+              style={s.reorderApplyBtn}
+              onPress={() => onApplyReorder(scan.reorder_suggestion!.suggested_order)}
+            >
+              <Ionicons name="checkmark-circle" size={12} color={GOLD} />
+              <Text style={s.reorderApplyText}>Apply this order</Text>
+            </Pressable>
+          )}
         </View>
       )}
 
@@ -608,6 +619,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 3,
   },
   reorderChipText: { fontSize: 9, color: colors.t2, fontWeight: '600', textTransform: 'capitalize' },
+  reorderApplyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    marginTop: 10, paddingVertical: 8,
+    backgroundColor: GOLD + '12', borderRadius: 8, borderWidth: 1, borderColor: GOLD + '30',
+  },
+  reorderApplyText: { fontSize: 11, color: GOLD, fontWeight: '700' },
 
   // Build 69 — inline keyword heatmap
   keywordBlock: { marginTop: 14 },
