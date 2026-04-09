@@ -183,7 +183,7 @@ export default function ATSScreen() {
     if (!raw) return [];
     const lines = raw.split(/\r?\n/);
     const out: string[] = [];
-    const bulletRe = /^[\s]*[•·\-- - ▪►➤*∙][\s]+(.{12,})$/;
+    const bulletRe = /^[\s]*[•·\-▪►➤*∙][\s]+(.{12,})$/;
     for (const line of lines) {
       const m = line.match(bulletRe);
       if (m && m[1]) {

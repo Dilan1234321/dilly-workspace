@@ -254,7 +254,7 @@ function ScrollableChips({ options, activeId, onSelect }: {
       {options.map(opt => {
         const isActive = opt.cohort_id === activeId;
         // Trim the "Tech  - " / "Business  - " prefix for tighter chip labels
-        const short = opt.display_name.replace(/^(Tech|Business|Science|Health|Social Sciences|Quantitative|Arts & Design)\s*[ - -]\s*/i, '');
+        const short = opt.display_name.replace(/^(Tech|Business|Science|Health|Social Sciences|Quantitative|Arts & Design)\s*[-]\s*/i, '');
         return (
           <Pressable
             key={opt.cohort_id}
