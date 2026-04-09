@@ -417,7 +417,13 @@ export default function HomeScreen() {
               <ProfilePhoto name={firstName} photoUri={photoUri} size={36} />
             </AnimatedPressable>
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
+              <Text style={s.headerName}>
+                {(() => {
+                  const hr = new Date().getHours();
+                  const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+                  return firstName ? `${greeting}, ${firstName}` : greeting;
+                })()}
+              </Text>
               {brief?.cohort_bar?.label ? (
                 <Text style={s.headerCohort}>{brief.cohort_bar.label}</Text>
               ) : cohort ? (
@@ -829,6 +835,50 @@ export default function HomeScreen() {
         {/* \u2500\u2500 Unlock Dilly card \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
         {/* Unlock card hidden — paid experience */}
 
+        {/* Build-78: profile completeness nudge */}
+        {(() => {
+          try {
+            const p = profile as any;
+            const fields = [
+              p.name, p.email,
+              (p.majors || [])[0], p.school_id,
+              p.linkedin_url,
+              (p.interests || []).length > 0 ? 'y' : '',
+              hasAudit ? 'y' : '',
+            ];
+            const filled = fields.filter(Boolean).length;
+            const pct = Math.round((filled / fields.length) * 100);
+            if (pct >= 100) return null;
+            return (
+              <FadeInView delay={400}>
+                <AnimatedPressable
+                  style={s.completenessCard}
+                  onPress={() => router.push('/(app)/profile')}
+                  scaleDown={0.985}
+                >
+                  <View style={s.completenessBar}>
+                    <View style={[s.completenessFill, { width: `${pct}%` }]} />
+                  </View>
+                  <Text style={s.completenessText}>
+                    Your Dilly Profile is {pct}% complete.{' '}
+                    <Text style={{ color: colors.gold, fontWeight: '700' }}>Finish it</Text>
+                  </Text>
+                </AnimatedPressable>
+              </FadeInView>
+            );
+          } catch { return null; }
+        })()}
+
+        {/* Build-78: "Come back tomorrow" teaser */}
+        <FadeInView delay={440}>
+          <View style={s.comeBackCard}>
+            <Ionicons name="sparkles" size={12} color={colors.gold} />
+            <Text style={s.comeBackText}>
+              Tomorrow: Dilly will check new jobs matching your profile and update your prep plan.
+            </Text>
+          </View>
+        </FadeInView>
+
       </ScrollView>
 
       <CelebrationPortal />
@@ -1101,7 +1151,7 @@ const s = StyleSheet.create({
   doNowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   doNowDot: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center',
   },
   doNowLabel: {
@@ -1208,4 +1258,27 @@ const s = StyleSheet.create({
     color: colors.t3, marginBottom: 6,
   },
   historyEmptyBody: { fontSize: 11, color: colors.t2, lineHeight: 15 },
+
+  // Build-78: retention patterns
+  completenessCard: {
+    backgroundColor: colors.s2, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 12, marginBottom: 10,
+  },
+  completenessBar: {
+    height: 4, borderRadius: 2, backgroundColor: colors.b1,
+    overflow: 'hidden', marginBottom: 8,
+  },
+  completenessFill: {
+    height: '100%', borderRadius: 2, backgroundColor: colors.gold,
+  },
+  completenessText: { fontSize: 11, color: colors.t2, lineHeight: 15 },
+
+  comeBackCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.s2, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 12, marginBottom: 10,
+  },
+  comeBackText: { fontSize: 11, color: colors.t3, flex: 1, lineHeight: 15 },
 });

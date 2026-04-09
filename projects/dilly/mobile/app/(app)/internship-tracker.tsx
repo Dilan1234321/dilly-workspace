@@ -20,6 +20,7 @@ import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import { openAddToCalendar } from '../../lib/calendar';
 
 const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
@@ -109,6 +110,25 @@ function PipelineSummary({ apps }: { apps: Application[] }) {
           />
         ))}
       </View>
+      {/* Build-78: silent apps warning */}
+      {(() => {
+        const now = Date.now();
+        const silent = apps.filter(a => {
+          if (a.status !== 'applied' || !a.applied_at) return false;
+          try {
+            return (now - new Date(a.applied_at).getTime()) > 14 * 86400000;
+          } catch { return false; }
+        });
+        if (silent.length === 0) return null;
+        return (
+          <View style={ts.silentBanner}>
+            <Ionicons name="alert-circle" size={12} color={AMBER} />
+            <Text style={ts.silentText}>
+              {silent.length} application{silent.length !== 1 ? 's' : ''} went quiet (2+ weeks). Follow up this week.
+            </Text>
+          </View>
+        );
+      })()}
     </View>
   );
 }
@@ -521,6 +541,13 @@ const ts = StyleSheet.create({
   pipelineDot: { width: 6, height: 3, borderRadius: 1.5 },
   pipelineBar: { flexDirection: 'row', height: 4, borderRadius: 999, overflow: 'hidden', backgroundColor: colors.s3 },
   pipelineBarSeg: { height: '100%' },
+  silentBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FFF7E6', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    marginTop: 10,
+  },
+  silentText: { fontSize: 11, color: '#92400E', flex: 1, lineHeight: 15 },
 
   // Filter
   filterRow: { gap: 6, paddingBottom: 14 },

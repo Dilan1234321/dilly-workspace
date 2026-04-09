@@ -246,15 +246,28 @@ export default function SettingsScreen() {
   const cohort = profile.track || 'General';
   const profileSlug = profile.profile_slug || '';
 
-  async function saveProfile(patch: Record<string, any>) {
-    setSaving(true);
-    try {
-      await dilly.patch('/profile', patch);
-    } catch {
-      Alert.alert('Error', 'Could not save your preference. Check your connection and try again.');
-    } finally {
-      setSaving(false);
-    }
+  // Build-78: debounced profile save. Rapid-fire toggle changes (user
+  // flipping 3 settings in 2 seconds) are batched into a single PATCH
+  // instead of 3 separate API calls. Reduces network overhead and
+  // prevents the 'Could not save' alert from firing on every toggle.
+  const pendingPatch = useRef<Record<string, any>>({});
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function saveProfile(patch: Record<string, any>) {
+    Object.assign(pendingPatch.current, patch);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const merged = { ...pendingPatch.current };
+      pendingPatch.current = {};
+      setSaving(true);
+      try {
+        await dilly.patch('/profile', merged);
+      } catch {
+        Alert.alert('Error', 'Could not save your preference. Check your connection and try again.');
+      } finally {
+        setSaving(false);
+      }
+    }, 600);
   }
 
   function handleSignOut() {

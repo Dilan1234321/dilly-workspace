@@ -168,6 +168,12 @@ function JobCard({ listing, studentScores, studentProfile, userCohort, onApply, 
 }) {
   const [expanded, setExpanded] = useState(!!defaultExpanded);
   const posted = daysAgo(listing.posted_date);
+  const isNew = (() => {
+    try {
+      return listing.posted_date && (Date.now() - new Date(listing.posted_date).getTime()) < 2 * 86400000;
+    } catch { return false; }
+  })();
+  const matchPct = Math.round(Number((listing as any).rank_score) || 0);
   const srcColor = SOURCE_COLORS[listing.source] || colors.t3;
   const rs = listing.required_scores;
   const hasRoleScores = rs && typeof rs.smart === 'number';
@@ -233,11 +239,18 @@ function JobCard({ listing, studentScores, studentProfile, userCohort, onApply, 
         <View style={js.cardInner}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 1 }}>
             <Text style={[js.cardTitle, { flex: 1 }]} numberOfLines={expanded ? 4 : 2}>{listing.title}</Text>
-            {(() => { const risk = getAutomationRisk(listing.title); return (
-              <View style={{ backgroundColor: risk.bg, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: risk.border }}>
-                <Text style={{ fontSize: 8, fontWeight: '700', color: risk.color }}>{risk.shortLabel}</Text>
+            {/* Build-78: "New" badge for jobs posted in last 48h */}
+            {isNew && (
+              <View style={{ backgroundColor: GREEN + '18', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, borderWidth: 1, borderColor: GREEN + '35' }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: GREEN }}>NEW</Text>
               </View>
-            ); })()}
+            )}
+            {/* Build-78: match % badge when rank_score exists */}
+            {matchPct > 0 && (
+              <View style={{ backgroundColor: GOLD + '12', borderRadius: 5, paddingHorizontal: 5, paddingVertical: 1.5, borderWidth: 1, borderColor: GOLD + '30' }}>
+                <Text style={{ fontSize: 8, fontWeight: '800', color: GOLD }}>{matchPct}%</Text>
+              </View>
+            )}
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
             <Text style={js.cardCompany}>{listing.company}</Text>

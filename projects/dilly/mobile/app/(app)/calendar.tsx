@@ -15,8 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { TouchableOpacity } from 'react-native';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -138,6 +140,94 @@ const REMINDER_OPTIONS = [
   { days: 3, label: '3 days' },
   { days: 7, label: '1 week' },
 ];
+
+// ── Build-78: Interview Countdown Hero ────────────────────────────────────────
+// When the nearest interview is ≤7 days away, this replaces the generic
+// ThisWeekCard with a focused countdown: big days-remaining number, company +
+// role, prep progress, and a one-tap "Drill questions" button. This is what
+// makes the calendar feel like a career advisor, not a grid.
+
+function InterviewCountdownHero({
+  interview, events, onViewPrepDeck, loadingPrepDeck,
+}: {
+  interview: CalendarEvent;
+  events: CalendarEvent[];
+  onViewPrepDeck: () => void;
+  loadingPrepDeck: boolean;
+}) {
+  const days = daysUntil(interview.date);
+  const prepBlocks = events.filter(
+    e => e.type === 'prep' && e.company === interview.company && !e.completedAt
+  );
+  const prepDone = events.filter(
+    e => e.type === 'prep' && e.company === interview.company && !!e.completedAt
+  ).length;
+  const prepTotal = prepBlocks.length + prepDone;
+  const prepPct = prepTotal > 0 ? Math.round((prepDone / prepTotal) * 100) : 0;
+
+  return (
+    <View style={cs.countdownCard}>
+      <View style={cs.countdownHeader}>
+        <Ionicons name="people" size={14} color={CORAL} />
+        <Text style={cs.countdownLabel}>INTERVIEW COUNTDOWN</Text>
+      </View>
+      <View style={cs.countdownBody}>
+        <View style={cs.countdownLeft}>
+          <Text style={cs.countdownDays}>
+            {days === 0 ? 'TODAY' : days === 1 ? '1' : String(days)}
+          </Text>
+          {days > 0 && <Text style={cs.countdownDaysLabel}>day{days !== 1 ? 's' : ''}</Text>}
+        </View>
+        <View style={cs.countdownRight}>
+          <Text style={cs.countdownCompany} numberOfLines={1}>
+            {interview.company || interview.title}
+          </Text>
+          {interview.role ? (
+            <Text style={cs.countdownRole} numberOfLines={1}>{interview.role}</Text>
+          ) : null}
+          <Text style={cs.countdownDate}>{formatDateFull(interview.date)}</Text>
+        </View>
+      </View>
+      {/* Prep progress */}
+      {prepTotal > 0 && (
+        <View style={cs.countdownPrepRow}>
+          <View style={cs.countdownPrepTrack}>
+            <View style={[cs.countdownPrepFill, { width: `${prepPct}%` }]} />
+          </View>
+          <Text style={cs.countdownPrepText}>
+            {prepDone}/{prepTotal} prep blocks done
+          </Text>
+        </View>
+      )}
+      {/* Actions */}
+      <View style={cs.countdownActions}>
+        <AnimatedPressable
+          style={cs.countdownBtn}
+          onPress={onViewPrepDeck}
+          scaleDown={0.97}
+        >
+          <Ionicons name="reader-outline" size={13} color="#FFFFFF" />
+          <Text style={cs.countdownBtnText}>
+            {loadingPrepDeck ? 'Loading...' : 'Drill questions'}
+          </Text>
+        </AnimatedPressable>
+        <TouchableOpacity
+          style={cs.countdownCalBtn}
+          onPress={() => openAddToCalendar({
+            title: `Interview — ${interview.company || interview.title}`,
+            date: interview.date,
+            description: interview.role ? `Role: ${interview.role}` : 'Interview',
+          })}
+          hitSlop={8}
+        >
+          <Ionicons name="calendar-outline" size={13} color={CORAL} />
+          <Text style={cs.countdownCalBtnText}>Add to cal</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 
 // ── This Week Summary ─────────────────────────────────────────────────────────
 
@@ -600,19 +690,24 @@ export default function CalendarScreen() {
   const [viewYear, setViewYear]   = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
-  // Load deadlines from profile
+  // Build-78: load from profile.deadlines + auto-import from tracker applications.
+  // Also auto-generate "follow up" ghost events for silent applications.
   useEffect(() => {
     (async () => {
       try {
-        const res = await dilly.fetch('/profile');
-        const data = await res.json();
-        const deadlines = data?.deadlines || [];
+        const [profileRes, appsRes] = await Promise.all([
+          dilly.fetch('/profile').then(r => r.json()).catch(() => ({})),
+          dilly.get('/applications').catch(() => ({ applications: [] })),
+        ]);
+
+        // 1. Map profile deadlines (existing behavior)
+        const deadlines = profileRes?.deadlines || [];
         const mapped: CalendarEvent[] = deadlines
           .filter((d: any) => d && d.date)
           .map((d: any) => ({
             id: d.id || uid(),
             title: d.label || d.title || 'Untitled',
-            date: d.date.slice(0, 10),
+            date: (d.date || '').slice(0, 10),
             type: (d.type as EventType) || 'deadline',
             notes: d.notes || d.prep || undefined,
             completedAt: d.completedAt || null,
@@ -622,6 +717,71 @@ export default function CalendarScreen() {
             company: d.company || undefined,
             role: d.role || undefined,
           }));
+
+        // 2. Auto-import application deadlines from the tracker that
+        //    don't already exist in profile.deadlines. Dedupes by
+        //    company+role+date to prevent double-entry.
+        const existingKeys = new Set(
+          mapped.map(e => `${(e.company||'').toLowerCase()}|${(e.role||'').toLowerCase()}|${e.date}`)
+        );
+        const apps = (appsRes as any)?.applications || [];
+        let imported = 0;
+        for (const a of apps) {
+          if (!a || typeof a !== 'object') continue;
+          const deadline = (a.deadline || '').slice(0, 10);
+          if (!deadline) continue;
+          const company = (a.company || '').trim();
+          const role = (a.role || '').trim();
+          const key = `${company.toLowerCase()}|${role.toLowerCase()}|${deadline}`;
+          if (existingKeys.has(key)) continue;
+          existingKeys.add(key);
+          mapped.push({
+            id: a.id || uid(),
+            title: company ? `${company} — ${role || 'Application'}` : (role || 'Application deadline'),
+            date: deadline,
+            type: 'application',
+            notes: a.notes || undefined,
+            completedAt: null,
+            company: company || undefined,
+            role: role || undefined,
+            createdBy: 'tracker',
+          });
+          imported++;
+        }
+
+        // 3. Auto-suggest follow-up ghost events for applied apps
+        //    that haven't had activity in 14+ days.
+        const now = Date.now();
+        const FOLLOW_UP_DAYS = 14;
+        for (const a of apps) {
+          if (!a || typeof a !== 'object') continue;
+          if ((a.status || '').toLowerCase() !== 'applied') continue;
+          const appliedAt = a.applied_at ? new Date(a.applied_at).getTime() : 0;
+          if (!appliedAt || isNaN(appliedAt)) continue;
+          const daysSince = Math.round((now - appliedAt) / 86400000);
+          if (daysSince < 7) continue; // too early
+          const followUpDate = new Date(appliedAt + FOLLOW_UP_DAYS * 86400000);
+          const followUpKey = followUpDate.toISOString().slice(0, 10);
+          const company = (a.company || '').trim();
+          const role = (a.role || '').trim();
+          const dedupKey = `followup|${company.toLowerCase()}|${role.toLowerCase()}|${followUpKey}`;
+          if (existingKeys.has(dedupKey)) continue;
+          existingKeys.add(dedupKey);
+          mapped.push({
+            id: `followup-${a.id || uid()}`,
+            title: `Follow up — ${company || role || 'application'}`,
+            date: followUpKey,
+            type: 'custom',
+            notes: daysSince >= FOLLOW_UP_DAYS
+              ? `${daysSince} days since you applied. A short follow-up doubles response rate.`
+              : `Suggested follow-up date. Applied ${daysSince} days ago.`,
+            completedAt: null,
+            company: company || undefined,
+            role: role || undefined,
+            createdBy: 'dilly-auto',
+          });
+        }
+
         setEvents(mapped);
       } catch {}
       finally { setLoading(false); }
@@ -793,31 +953,81 @@ export default function CalendarScreen() {
             <Ionicons name="chevron-back" size={22} color={colors.t1} />
           </AnimatedPressable>
           <Text style={cs.navTitle}>Calendar</Text>
-          <AnimatedPressable onPress={() => setShowAdd(true)} scaleDown={0.9} hitSlop={12}>
-            <View style={cs.addBtn}>
-              <Ionicons name="add" size={18} color={GOLD} />
-            </View>
-          </AnimatedPressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {/* Build-78: sync to native calendar */}
+            <TouchableOpacity onPress={openSubscribeToDillyCalendar} hitSlop={8}>
+              <Ionicons name="sync-outline" size={18} color={GOLD} />
+            </TouchableOpacity>
+            <AnimatedPressable onPress={() => setShowAdd(true)} scaleDown={0.9} hitSlop={12}>
+              <View style={cs.addBtn}>
+                <Ionicons name="add" size={18} color={GOLD} />
+              </View>
+            </AnimatedPressable>
+          </View>
         </View>
       </FadeInView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[cs.scroll, { paddingBottom: insets.bottom + 40 }]}>
 
-        {/* This week */}
-        <FadeInView delay={60}>
-          <ThisWeekCard events={events} />
-        </FadeInView>
+        {/* Build-78: Interview Countdown Hero (≤7 days to interview)
+            replaces the generic ThisWeekCard when an interview is imminent */}
+        {(() => {
+          const nextInterview = events
+            .filter(e => e.type === 'interview' && !e.completedAt)
+            .sort((a, b) => daysUntil(a.date) - daysUntil(b.date))
+            .find(e => daysUntil(e.date) >= 0 && daysUntil(e.date) <= 7);
+          if (nextInterview) {
+            return (
+              <FadeInView delay={60}>
+                <InterviewCountdownHero
+                  interview={nextInterview}
+                  events={events}
+                  onViewPrepDeck={() => handleViewPrepDeck(nextInterview)}
+                  loadingPrepDeck={loadingPrepDeckId === nextInterview.id}
+                />
+              </FadeInView>
+            );
+          }
+          return (
+            <FadeInView delay={60}>
+              <ThisWeekCard events={events} />
+            </FadeInView>
+          );
+        })()}
 
-        {/* Month navigation */}
+        {/* Month navigation + Today pill */}
         <FadeInView delay={120}>
           <View style={cs.monthNav}>
             <AnimatedPressable onPress={prevMonth} scaleDown={0.9} hitSlop={12}>
               <Ionicons name="chevron-back" size={18} color={colors.t2} />
             </AnimatedPressable>
-            <Text style={cs.monthLabel}>{MONTHS[viewMonth]} {viewYear}</Text>
+            <AnimatedPressable
+              onPress={() => {
+                setViewYear(now.getFullYear());
+                setViewMonth(now.getMonth());
+                setSelectedDay(toDateKey(now));
+              }}
+              scaleDown={0.95}
+            >
+              <Text style={cs.monthLabel}>{MONTHS[viewMonth]} {viewYear}</Text>
+            </AnimatedPressable>
             <AnimatedPressable onPress={nextMonth} scaleDown={0.9} hitSlop={12}>
               <Ionicons name="chevron-forward" size={18} color={colors.t2} />
             </AnimatedPressable>
+            {/* Build-78: Today pill — one tap jumps back to current month */}
+            {(viewMonth !== now.getMonth() || viewYear !== now.getFullYear()) && (
+              <TouchableOpacity
+                style={cs.todayPill}
+                onPress={() => {
+                  setViewYear(now.getFullYear());
+                  setViewMonth(now.getMonth());
+                  setSelectedDay(toDateKey(now));
+                }}
+                hitSlop={6}
+              >
+                <Text style={cs.todayPillText}>Today</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Month grid */}
@@ -830,7 +1040,9 @@ export default function CalendarScreen() {
           />
         </FadeInView>
 
-        {/* Event list */}
+        {/* Build-78: Agenda view — the event list is now the primary view.
+            Shows events for the selected day, or the next 14 days of
+            upcoming events grouped by day if no day is selected. */}
         <FadeInView delay={200}>
           <View style={cs.listHeader}>
             <Text style={cs.listLabel}>
@@ -843,31 +1055,75 @@ export default function CalendarScreen() {
             )}
           </View>
 
+          {/* Build-78: smart empty state */}
           {displayEvents.length === 0 ? (
             <View style={cs.emptyWrap}>
               <Ionicons name="calendar-outline" size={32} color={colors.t3 + '40'} />
               <Text style={cs.emptyText}>
                 {selectedDay ? 'Nothing on this day' : 'No upcoming events'}
               </Text>
+              {!selectedDay && events.length === 0 && (
+                <Text style={cs.emptyHint}>
+                  Track an application with a deadline, or add an interview date — Dilly will build your prep plan automatically.
+                </Text>
+              )}
               <AnimatedPressable style={cs.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
                 <Ionicons name="add" size={14} color={GOLD} />
                 <Text style={cs.emptyBtnText}>Add an event</Text>
               </AnimatedPressable>
             </View>
           ) : (
-            displayEvents.map(event => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onComplete={() => handleComplete(event.id)}
-                onDelete={() => handleDelete(event.id)}
-                onUpdateReminders={(days) => handleUpdateReminders(event.id, days)}
-                onGeneratePrepSchedule={() => handleGeneratePrepSchedule(event)}
-                onViewPrepDeck={() => handleViewPrepDeck(event)}
-                loadingPrepSchedule={loadingPrepScheduleId === event.id}
-                loadingPrepDeck={loadingPrepDeckId === event.id}
-              />
-            ))
+            <>
+              {/* Group events by day for agenda-style rendering when no
+                  specific day is selected */}
+              {!selectedDay ? (
+                (() => {
+                  const grouped: Record<string, CalendarEvent[]> = {};
+                  for (const e of displayEvents) {
+                    const key = e.date;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(e);
+                  }
+                  return Object.entries(grouped).map(([dateKey, dayEvents]) => (
+                    <View key={dateKey} style={cs.agendaDayGroup}>
+                      <View style={cs.agendaDayHeader}>
+                        <Text style={cs.agendaDayLabel}>{formatDateShort(dateKey)}</Text>
+                        <Text style={cs.agendaDaysUntil}>
+                          {daysUntil(dateKey) === 0 ? 'Today' : daysUntil(dateKey) === 1 ? 'Tomorrow' : `${daysUntil(dateKey)}d`}
+                        </Text>
+                      </View>
+                      {dayEvents.map(event => (
+                        <EventCard
+                          key={event.id}
+                          event={event}
+                          onComplete={() => handleComplete(event.id)}
+                          onDelete={() => handleDelete(event.id)}
+                          onUpdateReminders={(d) => handleUpdateReminders(event.id, d)}
+                          onGeneratePrepSchedule={() => handleGeneratePrepSchedule(event)}
+                          onViewPrepDeck={() => handleViewPrepDeck(event)}
+                          loadingPrepSchedule={loadingPrepScheduleId === event.id}
+                          loadingPrepDeck={loadingPrepDeckId === event.id}
+                        />
+                      ))}
+                    </View>
+                  ));
+                })()
+              ) : (
+                displayEvents.map(event => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onComplete={() => handleComplete(event.id)}
+                    onDelete={() => handleDelete(event.id)}
+                    onUpdateReminders={(d) => handleUpdateReminders(event.id, d)}
+                    onGeneratePrepSchedule={() => handleGeneratePrepSchedule(event)}
+                    onViewPrepDeck={() => handleViewPrepDeck(event)}
+                    loadingPrepSchedule={loadingPrepScheduleId === event.id}
+                    loadingPrepDeck={loadingPrepDeckId === event.id}
+                  />
+                ))
+              )}
+            </>
           )}
         </FadeInView>
 
@@ -1083,4 +1339,88 @@ const cs = StyleSheet.create({
   questionText: { fontSize: 14, fontWeight: '600', color: colors.t1, lineHeight: 20 },
   whyFlagged: { fontSize: 11, color: AMBER, marginTop: 6 },
   prepTip: { fontSize: 11, color: colors.t3, marginTop: 4, lineHeight: 16 },
+
+  // ── Build 78 styles ─────────────────────────────────────────────────────
+
+  // Interview Countdown Hero
+  countdownCard: {
+    backgroundColor: '#1C1C2E',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  countdownHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12,
+  },
+  countdownLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  countdownBody: {
+    flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 12,
+  },
+  countdownLeft: { alignItems: 'center', minWidth: 70 },
+  countdownDays: {
+    fontSize: 42, fontWeight: '900', color: CORAL, lineHeight: 46,
+  },
+  countdownDaysLabel: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: -2 },
+  countdownRight: { flex: 1 },
+  countdownCompany: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  countdownRole: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  countdownDate: { fontSize: 10, color: 'rgba(255,255,255,0.45)', marginTop: 4 },
+  countdownPrepRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12,
+  },
+  countdownPrepTrack: {
+    flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  countdownPrepFill: {
+    height: '100%', borderRadius: 2, backgroundColor: GREEN,
+  },
+  countdownPrepText: { fontSize: 10, color: 'rgba(255,255,255,0.5)' },
+  countdownActions: {
+    flexDirection: 'row', gap: 8,
+  },
+  countdownBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: CORAL, borderRadius: 10, paddingVertical: 11,
+  },
+  countdownBtnText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  countdownCalBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10, paddingVertical: 11, paddingHorizontal: 14,
+  },
+  countdownCalBtnText: { fontSize: 11, fontWeight: '700', color: CORAL },
+
+  // Today pill
+  todayPill: {
+    backgroundColor: GOLD + '15', borderRadius: 6, borderWidth: 1, borderColor: GOLD + '35',
+    paddingHorizontal: 8, paddingVertical: 3, marginLeft: 8,
+  },
+  todayPillText: { fontSize: 10, fontWeight: '700', color: GOLD },
+
+  // Agenda day grouping
+  agendaDayGroup: { marginBottom: 12 },
+  agendaDayHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 6, paddingHorizontal: 2,
+  },
+  agendaDayLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1,
+    color: colors.t2,
+  },
+  agendaDaysUntil: { fontSize: 10, color: colors.t3, fontWeight: '600' },
+
+  // Smart empty state hint
+  emptyHint: {
+    fontSize: 11, color: colors.t3, textAlign: 'center',
+    lineHeight: 16, marginTop: 6, paddingHorizontal: 20,
+  },
 });
