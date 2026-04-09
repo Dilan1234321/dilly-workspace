@@ -49,6 +49,9 @@ import FadeInView from '../../components/FadeInView';
 import ResumeScoreDashboard, { EditorScanData, CohortOption } from '../../components/ResumeScoreDashboard';
 import BulletWorthSheet from '../../components/BulletWorthSheet';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import * as DocumentPicker from 'expo-document-picker';
+import { getToken } from '../../lib/auth';
+import { API_BASE } from '../../lib/tokens';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
 
@@ -1738,6 +1741,46 @@ export default function ResumeEditorScreen() {
         >
           <Ionicons name="flash" size={14} color="#2B3A8E" />
           <Text style={rs.tailorBtnText}>Generate resume with AI</Text>
+        </AnimatedPressable>
+
+        {/* Import from LinkedIn */}
+        <AnimatedPressable
+          style={rs.tailorBtn}
+          onPress={async () => {
+            try {
+              const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf'],
+                copyToCacheDirectory: true,
+              });
+              if (result.canceled || !result.assets?.[0]) return;
+              const asset = result.assets[0];
+              const token = await getToken();
+              const formData = new FormData();
+              formData.append('file', {
+                uri: asset.uri,
+                name: asset.name || 'linkedin.pdf',
+                type: 'application/pdf',
+              } as any);
+              const res = await fetch(`${API_BASE}/resume/import-linkedin`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token ?? ''}` },
+                body: formData,
+              });
+              const data = await res.json();
+              if (data?.sections?.length) {
+                commitSections(data.sections);
+                showToast(`Imported ${data.section_count || data.sections.length} sections from LinkedIn.`);
+              } else {
+                Alert.alert('Import failed', data?.detail || 'Could not parse the LinkedIn PDF.');
+              }
+            } catch (e: any) {
+              Alert.alert('Import failed', e?.message || 'Could not import from LinkedIn.');
+            }
+          }}
+          scaleDown={0.97}
+        >
+          <Ionicons name="logo-linkedin" size={14} color="#0A66C2" />
+          <Text style={rs.tailorBtnText}>Import from LinkedIn</Text>
         </AnimatedPressable>
 
         {/* Build-63 dashboard: collapsible header + the dashboard card */}
