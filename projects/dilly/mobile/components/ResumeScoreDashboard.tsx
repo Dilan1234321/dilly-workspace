@@ -19,6 +19,7 @@
 import { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle } from 'react-native-svg';
 import { colors } from '../lib/tokens';
 import AnimatedPressable from './AnimatedPressable';
 
@@ -79,7 +80,6 @@ type TopIssue = {
   total_lift: number;
   affects_vendors?: string[];
   lift_per_vendor?: Record<string, number>;
-  effort_minutes?: number;
 };
 
 export type EditorScanData = {
@@ -103,7 +103,7 @@ function dimensionColor(v: number): string {
   return CORAL;
 }
 
-// ── Dimension ring (single mini ring + number underneath) ─────────────────
+// ── Dimension ring (SVG circular progress with number in the middle) ─────
 
 function DimensionRing({ label, value, missing }: {
   label: string;
@@ -112,23 +112,44 @@ function DimensionRing({ label, value, missing }: {
 }) {
   const color = dimensionColor(value);
   const clamped = Math.max(0, Math.min(100, value));
+  const size = 56;
+  const strokeWidth = 4.5;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  // SVG strokeDashoffset advances CLOCKWISE from 12 o'clock thanks to the rotate(-90)
+  const progressLength = (clamped / 100) * circumference;
+  const dashOffset = circumference - progressLength;
+
   return (
     <View style={s.dimensionCol}>
-      <View style={s.dimRingOuter}>
-        <View style={s.dimRingTrack} />
-        <View
-          style={[
-            s.dimRingFill,
-            {
-              borderTopColor: color,
-              borderRightColor: clamped >= 25 ? color : colors.b1,
-              borderBottomColor: clamped >= 50 ? color : colors.b1,
-              borderLeftColor: clamped >= 75 ? color : colors.b1,
-              transform: [{ rotate: `${-45 + (clamped * 3.6) / 2}deg` }],
-            },
-          ]}
-        />
-        <Text style={[s.dimRingNum, { color }]}>{Math.round(value)}</Text>
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Svg width={size} height={size}>
+          {/* Track */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={colors.b1}
+            strokeWidth={strokeWidth}
+            fill="transparent"
+          />
+          {/* Progress arc — start at 12 o'clock by rotating -90deg around center */}
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={dashOffset}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </Svg>
+        <Text style={[s.dimRingNum, { color, position: 'absolute' }]}>
+          {Math.round(value)}
+        </Text>
       </View>
       <Text style={s.dimLabel}>{label}</Text>
       {missing && missing.length > 0 && (
@@ -191,9 +212,6 @@ function TopIssueRow({ issue, rank, onFix }: {
             <Ionicons name="trending-up" size={9} color={GREEN} />
             <Text style={s.liftText}>+{lift}</Text>
           </View>
-          {issue.effort_minutes && (
-            <Text style={s.effortText}>~{issue.effort_minutes} min</Text>
-          )}
         </View>
       </View>
       <Ionicons name="sparkles" size={14} color={GOLD} />
