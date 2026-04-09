@@ -155,20 +155,32 @@ function StatusPills({ current, onChange }: { current: AppStatus; onChange: (s: 
 
 // ── Application Card ──────────────────────────────────────────────────────────
 
-function AppCard({ app, onStatusChange, onDelete, onPrepInterview, onEdit }: {
+function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }: {
   app: Application;
   onStatusChange: (id: string, status: AppStatus) => void;
   onDelete: (id: string) => void;
-  onPrepInterview: (app: Application) => void;
   onEdit: (app: Application) => void;
+  onTailor: (app: Application) => void;
+  onFollowUp: (app: Application) => void;
 }) {
   const cfg = statusConfig(app.status);
   const isInterviewing = app.status === 'interviewing';
   const appliedAge = daysAgo(app.applied_at);
   const isSilent = app.status === 'applied' && app.applied_at && (() => {
-    const d = new Date(app.applied_at);
-    return (Date.now() - d.getTime()) > 14 * 24 * 60 * 60 * 1000;
+    try { return (Date.now() - new Date(app.applied_at).getTime()) > 14 * 86400000; } catch { return false; }
   })();
+
+  // Deadline info
+  const hasDeadline = !!app.deadline;
+  const deadlineDays = hasDeadline ? (() => {
+    try {
+      const parts = (app.deadline || '').slice(0, 10).split('-');
+      const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+      const now = new Date(); now.setHours(0,0,0,0); d.setHours(0,0,0,0);
+      return Math.ceil((d.getTime() - now.getTime()) / 86400000);
+    } catch { return 999; }
+  })() : 999;
+  const deadlineUrgent = deadlineDays >= 0 && deadlineDays <= 3;
 
   // Next status actions
   const nextStatuses: AppStatus[] = [];
@@ -177,7 +189,7 @@ function AppCard({ app, onStatusChange, onDelete, onPrepInterview, onEdit }: {
   if (app.status === 'interviewing') nextStatuses.push('offer', 'rejected');
 
   return (
-    <AnimatedPressable style={[ts.appCard, isInterviewing && { borderColor: AMBER + '30' }]} onPress={() => onEdit(app)} scaleDown={0.985}>
+    <AnimatedPressable style={[ts.appCard, isInterviewing && { borderColor: AMBER + '30' }, deadlineUrgent && { borderColor: CORAL + '30' }]} onPress={() => onEdit(app)} scaleDown={0.985}>
       {/* Header */}
       <View style={ts.appCardHeader}>
         <View style={{ flex: 1 }}>
@@ -198,6 +210,14 @@ function AppCard({ app, onStatusChange, onDelete, onPrepInterview, onEdit }: {
             <Text style={ts.appMetaText}>{appliedAge}</Text>
           </View>
         ) : null}
+        {hasDeadline && deadlineDays < 999 && (
+          <View style={[ts.appMetaChip, deadlineUrgent && { backgroundColor: CORAL + '10' }]}>
+            <Ionicons name="calendar-outline" size={10} color={deadlineUrgent ? CORAL : colors.t3} />
+            <Text style={[ts.appMetaText, deadlineUrgent && { color: CORAL, fontWeight: '700' }]}>
+              {deadlineDays === 0 ? 'Due today' : deadlineDays === 1 ? 'Due tomorrow' : deadlineDays > 0 ? `${deadlineDays}d left` : 'Overdue'}
+            </Text>
+          </View>
+        )}
         {app.match_pct != null && (
           <View style={ts.appMetaChip}>
             <Ionicons name="analytics-outline" size={10} color={GOLD} />
@@ -220,15 +240,41 @@ function AppCard({ app, onStatusChange, onDelete, onPrepInterview, onEdit }: {
         </View>
       ) : null}
 
-      {/* Interview prep CTA */}
-      {isInterviewing && (
-        <AnimatedPressable style={ts.prepBtn} onPress={() => onPrepInterview(app)} scaleDown={0.97}>
-          <Ionicons name="school" size={12} color="#FFFFFF" />
-          <Text style={ts.prepBtnText}>Prep for interview</Text>
+      {/* Quick actions: tailor + follow-up + calendar */}
+      <View style={ts.quickActionRow}>
+        <AnimatedPressable style={ts.quickAction} onPress={() => onTailor(app)} scaleDown={0.95}>
+          <Ionicons name="document-text-outline" size={11} color={INDIGO} />
+          <Text style={[ts.quickActionText, { color: INDIGO }]}>Tailor</Text>
         </AnimatedPressable>
-      )}
+        {isSilent && (
+          <AnimatedPressable style={ts.quickAction} onPress={() => onFollowUp(app)} scaleDown={0.95}>
+            <Ionicons name="mail-outline" size={11} color={CORAL} />
+            <Text style={[ts.quickActionText, { color: CORAL }]}>Follow up</Text>
+          </AnimatedPressable>
+        )}
+        {hasDeadline && (
+          <AnimatedPressable
+            style={ts.quickAction}
+            onPress={() => openAddToCalendar({
+              title: `${app.company} — ${app.role || 'deadline'}`,
+              date: (app.deadline || '').slice(0, 10),
+              description: app.notes || 'Application deadline',
+            })}
+            scaleDown={0.95}
+          >
+            <Ionicons name="calendar-outline" size={11} color={GREEN} />
+            <Text style={[ts.quickActionText, { color: GREEN }]}>Add to cal</Text>
+          </AnimatedPressable>
+        )}
+        {app.job_url && (
+          <AnimatedPressable style={ts.quickAction} onPress={() => Linking.openURL(app.job_url!)} scaleDown={0.95}>
+            <Ionicons name="open-outline" size={11} color={BLUE} />
+            <Text style={[ts.quickActionText, { color: BLUE }]}>Open</Text>
+          </AnimatedPressable>
+        )}
+      </View>
 
-      {/* Action buttons */}
+      {/* Status progression buttons */}
       <View style={ts.appActions}>
         {nextStatuses.map(ns => {
           const nsCfg = statusConfig(ns);
@@ -258,18 +304,24 @@ function AppCard({ app, onStatusChange, onDelete, onPrepInterview, onEdit }: {
 
 function AddAppModal({ visible, onClose, onAdd }: {
   visible: boolean; onClose: () => void;
-  onAdd: (company: string, role: string, notes: string) => void;
+  onAdd: (company: string, role: string, notes: string, deadline?: string, jobUrl?: string) => void;
 }) {
   const insets = useSafeAreaInsets();
-  const [company, setCompany] = useState('');
-  const [role, setRole]       = useState('');
-  const [notes, setNotes]     = useState('');
+  const [company, setCompany]   = useState('');
+  const [role, setRole]         = useState('');
+  const [notes, setNotes]       = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [jobUrl, setJobUrl]     = useState('');
 
   function handleAdd() {
     if (!company.trim()) { Alert.alert('Company required'); return; }
     if (!role.trim()) { Alert.alert('Role required'); return; }
-    onAdd(company.trim(), role.trim(), notes.trim());
-    setCompany(''); setRole(''); setNotes('');
+    onAdd(
+      company.trim(), role.trim(), notes.trim(),
+      deadline.trim() || undefined,
+      jobUrl.trim() || undefined,
+    );
+    setCompany(''); setRole(''); setNotes(''); setDeadline(''); setJobUrl('');
     onClose();
   }
 
@@ -287,6 +339,8 @@ function AddAppModal({ visible, onClose, onAdd }: {
 
             <TextInput style={ts.modalInput} value={company} onChangeText={setCompany} placeholder="Company name" placeholderTextColor={colors.t3} autoFocus />
             <TextInput style={ts.modalInput} value={role} onChangeText={setRole} placeholder="Role (e.g. Data Science Intern)" placeholderTextColor={colors.t3} />
+            <TextInput style={ts.modalInput} value={deadline} onChangeText={setDeadline} placeholder="Deadline (YYYY-MM-DD, optional)" placeholderTextColor={colors.t3} keyboardType="numbers-and-punctuation" />
+            <TextInput style={ts.modalInput} value={jobUrl} onChangeText={setJobUrl} placeholder="Job URL (optional)" placeholderTextColor={colors.t3} autoCapitalize="none" keyboardType="url" />
             <TextInput style={[ts.modalInput, { minHeight: 56 }]} value={notes} onChangeText={setNotes} placeholder="Notes (optional)" placeholderTextColor={colors.t3} multiline />
 
             <AnimatedPressable style={ts.modalBtn} onPress={handleAdd} scaleDown={0.97}>
@@ -344,11 +398,16 @@ export default function InternshipTrackerScreen() {
     return [...filtered].sort((a, b) => (order[a.status] ?? 5) - (order[b.status] ?? 5));
   }, [filtered]);
 
-  async function handleAdd(company: string, role: string, notes: string) {
+  async function handleAdd(company: string, role: string, notes: string, deadline?: string, jobUrl?: string) {
     try {
       const res = await dilly.fetch('/applications', {
         method: 'POST',
-        body: JSON.stringify({ company, role, status: 'saved', notes: notes || undefined }),
+        body: JSON.stringify({
+          company, role, status: 'saved',
+          notes: notes || undefined,
+          deadline: deadline || undefined,
+          job_url: jobUrl || undefined,
+        }),
       });
       const data = await res.json();
       if (data?.application) {
@@ -386,32 +445,40 @@ export default function InternshipTrackerScreen() {
     ]);
   }
 
-  function handlePrepInterview(app: Application) {
-    const p = profile as any;
-    const firstName = p.name?.trim().split(/\s+/)[0] || 'there';
-    const cohort = p.track || p.cohort || 'General';
-    const score = p.first_audit_snapshot?.scores;
+  function handleTailor(app: Application) {
+    router.push(`/(app)/resume-editor?showQuickTailor=1`);
+  }
 
+  function handleFollowUp(app: Application) {
+    const appliedDays = app.applied_at
+      ? Math.round((Date.now() - new Date(app.applied_at).getTime()) / 86400000)
+      : 14;
     openDillyOverlay({
-      name: firstName,
-      cohort,
-      score: 0,
-      smart: score?.smart || 0,
-      grit: score?.grit || 0,
-      build: score?.build || 0,
-      gap: 0,
-      cohortBar: 75,
+      name: '', cohort: '', score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
       referenceCompany: app.company,
       applicationTarget: `${app.role} at ${app.company}`,
       isPaid: true,
+      initialMessage: `Help me write a follow-up email to ${app.company} about the ${app.role} position I applied to ${appliedDays} days ago. Keep it short, professional, and genuine — not pushy.`,
     });
   }
 
   function handleEdit(app: Application) {
-    Alert.alert(app.company, `${app.role}\n\nStatus: ${statusConfig(app.status).label}${app.notes ? '\n\nNotes: ' + app.notes : ''}${app.next_action ? '\n\nNext: ' + app.next_action : ''}`, [
-      { text: 'Close' },
-      ...(app.job_url ? [{ text: 'Open Link', onPress: () => Linking.openURL(app.job_url!) }] : []),
-    ]);
+    // Show a detail view with all fields and actions
+    const lines: string[] = [];
+    lines.push(`Role: ${app.role}`);
+    lines.push(`Status: ${statusConfig(app.status).label}`);
+    if (app.applied_at) lines.push(`Applied: ${daysAgo(app.applied_at)}`);
+    if (app.deadline) lines.push(`Deadline: ${app.deadline}`);
+    if (app.notes) lines.push(`Notes: ${app.notes}`);
+    if (app.next_action) lines.push(`Next: ${app.next_action}`);
+
+    const buttons: any[] = [{ text: 'Close' }];
+    if (app.job_url) buttons.push({ text: 'Open Link', onPress: () => Linking.openURL(app.job_url!) });
+    buttons.push({
+      text: 'Tailor Resume',
+      onPress: () => handleTailor(app),
+    });
+    Alert.alert(app.company, lines.join('\n'), buttons);
   }
 
   if (loading) {
@@ -480,10 +547,20 @@ export default function InternshipTrackerScreen() {
             <View style={ts.emptyWrap}>
               <Ionicons name="briefcase-outline" size={40} color={colors.t3 + '30'} />
               <Text style={ts.emptyTitle}>No applications yet</Text>
-              <Text style={ts.emptyText}>Start tracking your internship applications. Add companies you're interested in, even before you apply.</Text>
+              <Text style={ts.emptyText}>
+                Find a job on the Internships page and tap "Apply + Track" — or add one manually below.
+              </Text>
               <AnimatedPressable style={ts.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
                 <Ionicons name="add-circle" size={16} color="#FFFFFF" />
-                <Text style={ts.emptyBtnText}>Add your first application</Text>
+                <Text style={ts.emptyBtnText}>Add manually</Text>
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={[ts.emptyBtn, { backgroundColor: colors.s2, borderWidth: 1, borderColor: GOLD + '40', marginTop: 8 }]}
+                onPress={() => router.push('/(app)/jobs')}
+                scaleDown={0.97}
+              >
+                <Ionicons name="search" size={14} color={GOLD} />
+                <Text style={[ts.emptyBtnText, { color: GOLD }]}>Browse internships</Text>
               </AnimatedPressable>
             </View>
           </FadeInView>
@@ -494,8 +571,9 @@ export default function InternshipTrackerScreen() {
                 app={app}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDelete}
-                onPrepInterview={handlePrepInterview}
                 onEdit={handleEdit}
+                onTailor={handleTailor}
+                onFollowUp={handleFollowUp}
               />
             </FadeInView>
           ))
@@ -590,12 +668,17 @@ const ts = StyleSheet.create({
   },
   nextActionText: { fontSize: 11, color: GOLD, flex: 1 },
 
-  // Interview prep
-  prepBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: AMBER, borderRadius: 10, paddingVertical: 10, marginBottom: 8,
+  // Quick action row (tailor, follow-up, calendar, open link)
+  quickActionRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8,
   },
-  prepBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.5, color: '#FFFFFF' },
+  quickAction: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 5,
+    backgroundColor: colors.s3, borderRadius: 7,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  quickActionText: { fontSize: 10, fontWeight: '600' },
 
   // Actions
   appActions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
