@@ -1599,8 +1599,17 @@ async def resume_export_pdf(request: Request, body: ExportRequest):
     if not body.sections:
         raise HTTPException(status_code=400, detail="No sections to export.")
 
-    template_name = (body.template or "tech").lower()
-    if template_name not in ("tech", "business", "academic"):
+    template_name = (body.template or "tech").lower().strip()
+    # Validate against the actual template registry. Both PDF and DOCX
+    # renderers share the same template keys. Fall back to 'tech' for
+    # unknown names so old clients never break.
+    _VALID_TEMPLATES = {
+        "tech", "business", "academic",
+        "modern", "classic", "minimal", "executive", "startup",
+        "consulting", "healthcare", "creative", "finance",
+        "engineering", "clean", "bold",
+    }
+    if template_name not in _VALID_TEMPLATES:
         template_name = "tech"
 
     # Pull candidate name from contact section for the PDF metadata

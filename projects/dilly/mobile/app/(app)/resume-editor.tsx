@@ -2121,9 +2121,21 @@ export default function ResumeEditorScreen() {
             </View>
 
             {([
-              { key: 'tech' as const, label: 'Tech', hint: 'Left-aligned, Skills near top, GitHub prominent' },
-              { key: 'business' as const, label: 'Business', hint: 'Centered contact, formal spacing' },
-              { key: 'academic' as const, label: 'Academic', hint: 'Research-heavy, Education front-loaded' },
+              { key: 'modern',      label: 'Modern',      hint: 'Teal accent, summary + skills first, tight spacing' },
+              { key: 'tech',        label: 'Tech',        hint: 'Blue accent, skills near top, GitHub prominent' },
+              { key: 'clean',       label: 'Clean',       hint: 'Gray accent, ultra-clean, experience first' },
+              { key: 'minimal',     label: 'Minimal',     hint: 'Light gray, maximum whitespace, elegant' },
+              { key: 'business',    label: 'Business',    hint: 'Centered header, formal spacing' },
+              { key: 'consulting',  label: 'Consulting',  hint: 'Navy accent, education first, formal' },
+              { key: 'finance',     label: 'Finance',     hint: 'Dark formal, GPA prominent, certifications' },
+              { key: 'startup',     label: 'Startup',     hint: 'Green accent, projects + skills first' },
+              { key: 'creative',    label: 'Creative',    hint: 'Violet accent, projects prominent' },
+              { key: 'engineering', label: 'Engineering', hint: 'Amber accent, education + skills first' },
+              { key: 'healthcare',  label: 'Healthcare',  hint: 'Teal accent, certifications prominent' },
+              { key: 'executive',   label: 'Executive',   hint: 'Dark navy, centered, summary first' },
+              { key: 'classic',     label: 'Classic',     hint: 'Black, serif font, traditional layout' },
+              { key: 'bold',        label: 'Bold',        hint: 'Red accent, large headings, summary first' },
+              { key: 'academic',    label: 'Academic',    hint: 'Research/publications front-loaded' },
             ]).map(tpl => (
               <AnimatedPressable
                 key={tpl.key}
