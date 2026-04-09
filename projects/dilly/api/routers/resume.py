@@ -47,13 +47,17 @@ _MAX_BULLETS_PER_ENTRY = 20
 # Models
 # ---------------------------------------------------------------------------
 
+def _gen_id() -> str:
+    return _uuid_mod.uuid4().hex[:8]
+
+
 class BulletItem(BaseModel):
-    id: str
-    text: str
+    id: str = Field(default_factory=_gen_id)
+    text: str = ""
 
 
 class ExperienceEntry(BaseModel):
-    id: str
+    id: str = Field(default_factory=_gen_id)
     company: Optional[str] = ""
     role: Optional[str] = ""
     date: Optional[str] = ""
@@ -62,7 +66,7 @@ class ExperienceEntry(BaseModel):
 
 
 class EducationEntry(BaseModel):
-    id: str
+    id: str = Field(default_factory=_gen_id)
     university: Optional[str] = ""
     major: Optional[str] = ""
     minor: Optional[str] = ""
@@ -73,7 +77,7 @@ class EducationEntry(BaseModel):
 
 
 class ProjectEntry(BaseModel):
-    id: str
+    id: str = Field(default_factory=_gen_id)
     name: Optional[str] = ""
     date: Optional[str] = ""
     location: Optional[str] = ""
@@ -90,14 +94,14 @@ class ContactSection(BaseModel):
 
 class SimpleSection(BaseModel):
     """For Skills, Honors, Certifications, Summary, Coursework, Publications — free-text lines."""
-    id: str
+    id: str = Field(default_factory=_gen_id)
     lines: List[str] = Field(default_factory=list)
 
 
 class ResumeSection(BaseModel):
     """One canonical section of the resume."""
     key: str  # e.g. "contact", "education", "professional_experience", "skills"
-    label: str  # display label
+    label: str = ""  # display label (defaulted so older clients that omit it don't 422)
     # Only one of these is set, depending on key
     contact: Optional[ContactSection] = None
     education: Optional[EducationEntry] = None
