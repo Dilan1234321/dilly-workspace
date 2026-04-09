@@ -1437,11 +1437,61 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
     except Exception:
         pass
 
-    # ── 4. Build response ──────────────────────────────────────────────
+    # ── 4. Keyword density (build 69) ──────────────────────────────────
+    keyword_cells: list = []
+    try:
+        from dilly_core.resume_parser import get_sections
+        from dilly_core.ats_keywords import run_keyword_analysis
+        sections_map = get_sections(resume_text)
+        kr = run_keyword_analysis(sections_map, job_description=body.job_description)
+        # Convert KeywordDensityResult.keywords into heatmap cells
+        for k in (kr.keywords or [])[:25]:
+            ctx = getattr(k, "contextual_count", 0) or 0
+            bare = getattr(k, "bare_count", 0) or 0
+            total = ctx + bare
+            if total == 0:
+                continue
+            placement = "strong" if ctx >= 2 else ("adequate" if ctx == 1 else "weak")
+            keyword_cells.append({
+                "keyword": getattr(k, "keyword", ""),
+                "count": total,
+                "placement": placement,
+            })
+    except Exception:
+        keyword_cells = []
+
+    # ── 5. Section reorder suggestion (build 69) ───────────────────────
+    reorder_suggestion: Optional[dict] = None
+    try:
+        from dilly_core.ats_section_reorder import get_all_reorder_suggestions
+        section_keys: list = []
+        for sec in sections:
+            if hasattr(sec, "key"):
+                section_keys.append(sec.key)
+            elif isinstance(sec, dict):
+                section_keys.append(sec.get("key", ""))
+        suggestions = get_all_reorder_suggestions([s for s in section_keys if s])
+        # Pick the most-impactful one — Workday first (strictest), then Greenhouse
+        for vkey in ("workday", "icims", "greenhouse", "lever"):
+            if vkey in suggestions:
+                s = suggestions[vkey]
+                reorder_suggestion = {
+                    "vendor": vkey,
+                    "message": s.get("message"),
+                    "current_order": s.get("current") or [],
+                    "suggested_order": s.get("suggested") or [],
+                }
+                break
+    except Exception:
+        reorder_suggestion = None
+
+    # ── 6. Build response ──────────────────────────────────────────────
     return {
         "v2": v2,
         "rubric_analysis": rubric_summary,
         "top_issues": ranked_issues,
+        "keyword_cells": keyword_cells,
+        "reorder_suggestion": reorder_suggestion,
         "scoring_version": "editor-scan-v1",
     }
 
