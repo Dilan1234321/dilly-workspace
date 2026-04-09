@@ -84,11 +84,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           >
             <Text style={styles.buttonText}>Try again</Text>
           </TouchableOpacity>
-          {__DEV__ && (
-            <Text style={styles.devDetails} numberOfLines={6}>
-              {message}
-            </Text>
-          )}
+          {/* Always show the error message in small grey text — helps
+              beta testers report meaningful bugs instead of "something
+              crashed". Removed the __DEV__ gate that was hiding this
+              in TestFlight builds. */}
+          <Text style={styles.devDetails} numberOfLines={6}>
+            {message}
+          </Text>
         </ScrollView>
       </View>
     );
