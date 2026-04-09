@@ -905,6 +905,30 @@ class EditorScanRequest(BaseModel):
                                            # for telemetry, not scoring logic)
 
 
+@router.get("/resume/cohorts")
+async def list_resume_cohorts(request: Request):
+    """
+    Return the list of rubric cohorts the editor can score against.
+    Used by the cohort switcher in ResumeScoreDashboard to let users
+    preview their resume against a different cohort's scoring rubric.
+    """
+    deps.require_auth(request)
+    try:
+        from dilly_core.rubric_scorer import list_cohort_ids, get_rubric
+        cohort_ids = list_cohort_ids()
+        out = []
+        for cid in cohort_ids:
+            try:
+                rubric = get_rubric(cid) or {}
+                display = rubric.get("display_name") or cid.replace("_", " ").title()
+            except Exception:
+                display = cid.replace("_", " ").title()
+            out.append({"cohort_id": cid, "display_name": display})
+        return {"cohorts": out}
+    except Exception:
+        return {"cohorts": []}
+
+
 @router.post("/resume/editor-scan")
 async def resume_editor_scan(request: Request, body: EditorScanRequest):
     """

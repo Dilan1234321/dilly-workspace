@@ -17,7 +17,7 @@
  */
 
 import { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { colors } from '../lib/tokens';
@@ -219,14 +219,58 @@ function TopIssueRow({ issue, rank, onFix }: {
   );
 }
 
+// ── Cohort switcher chip row ───────────────────────────────────────────────
+
+function ScrollableChips({ options, activeId, onSelect }: {
+  options: Array<{ cohort_id: string; display_name: string }>;
+  activeId: string | null;
+  onSelect: (cohortId: string | null) => void;
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipScroll}>
+      <Pressable
+        style={[s.cohortChip, !activeId && s.cohortChipActive]}
+        onPress={() => onSelect(null)}
+      >
+        <Text style={[s.cohortChipText, !activeId && s.cohortChipTextActive]}>Auto</Text>
+      </Pressable>
+      {options.map(opt => {
+        const isActive = opt.cohort_id === activeId;
+        // Trim the "Tech —" / "Business —" prefix for tighter chip labels
+        const short = opt.display_name.replace(/^(Tech|Business|Science|Health|Social Sciences|Quantitative|Arts & Design)\s*[—-]\s*/i, '');
+        return (
+          <Pressable
+            key={opt.cohort_id}
+            style={[s.cohortChip, isActive && s.cohortChipActive]}
+            onPress={() => onSelect(opt.cohort_id)}
+          >
+            <Text
+              style={[s.cohortChipText, isActive && s.cohortChipTextActive]}
+              numberOfLines={1}
+            >
+              {short}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
+
+export type CohortOption = { cohort_id: string; display_name: string };
 
 export default function ResumeScoreDashboard({
   scan, loading, onFixIssue,
+  cohortOptions, activeCohortId, onSelectCohort,
 }: {
   scan: EditorScanData | null;
   loading: boolean;
   onFixIssue: (issue: TopIssue) => void;
+  cohortOptions?: CohortOption[];
+  activeCohortId?: string | null;
+  onSelectCohort?: (cohortId: string | null) => void;
 }) {
   const ringMissingByDim = useMemo(() => {
     const out: Record<string, string[]> = { smart: [], grit: [], build: [] };
@@ -272,6 +316,18 @@ export default function ResumeScoreDashboard({
 
   return (
     <View style={s.container}>
+      {/* ── Cohort switcher (preview against a different rubric) ───── */}
+      {cohortOptions && cohortOptions.length > 1 && onSelectCohort && (
+        <View style={s.cohortSwitcherWrap}>
+          <Text style={s.cohortSwitcherLabel}>SCORING AGAINST</Text>
+          <ScrollableChips
+            options={cohortOptions}
+            activeId={activeCohortId || null}
+            onSelect={onSelectCohort}
+          />
+        </View>
+      )}
+
       {/* ── Headline composite ──────────────────────────────────────── */}
       <View style={s.heroRow}>
         <View style={s.heroLeft}>
@@ -361,6 +417,23 @@ const s = StyleSheet.create({
     padding: 16, alignItems: 'center',
   },
   emptyText: { fontSize: 11, color: colors.t3 },
+
+  // Cohort switcher
+  cohortSwitcherWrap: { marginBottom: 14 },
+  cohortSwitcherLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1.2, color: GOLD,
+    marginBottom: 6,
+  },
+  chipScroll: { gap: 6, paddingVertical: 2 },
+  cohortChip: {
+    backgroundColor: colors.s3, borderRadius: 14, borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 10, paddingVertical: 5, marginRight: 6,
+  },
+  cohortChipActive: {
+    backgroundColor: GOLD + '18', borderColor: GOLD + '60',
+  },
+  cohortChipText: { fontSize: 11, color: colors.t3, fontWeight: '600', maxWidth: 140 },
+  cohortChipTextActive: { color: GOLD, fontWeight: '700' },
 
   heroRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

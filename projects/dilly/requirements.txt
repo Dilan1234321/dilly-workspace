@@ -11,3 +11,4 @@ pymupdf
 docx2txt==0.9
 resend==2.10.0
 apscheduler==3.11.0
+reportlab==4.4.10
