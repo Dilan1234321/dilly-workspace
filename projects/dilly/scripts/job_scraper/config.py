@@ -26,6 +26,65 @@ GREENHOUSE_BOARD_TOKENS = [
     "relativity",        # Relativity — e-discovery and legal tech
     "thomsonreuters",    # Thomson Reuters — Westlaw, legal information
     "wolterskluwer",     # Wolters Kluwer — legal, regulatory, and compliance
+    # ── Finance / Banking ─────────────────────────────────────────────────────
+    "citadel",           # Citadel — quant finance
+    "twosigma",          # Two Sigma — quant finance
+    "janestreet",        # Jane Street — quant trading
+    # ── Consulting ──────────────────────────────────────────────────────────
+    "mckinsey",          # McKinsey & Company
+    "bcg",               # Boston Consulting Group
+    # ── More Tech ────────────────────────────────────────────────────────────
+    "airbnb",            # Airbnb
+    "notion",            # Notion
+    "discord",           # Discord
+    "plaid",             # Plaid — fintech
+    "brex",              # Brex — fintech
+    "ramp",              # Ramp — fintech
+    "verkada",           # Verkada — security
+    "anduril",           # Anduril — defense tech
+    "palantir",          # Palantir
+    "databricks",        # Databricks
+    "snowflakecomputing",# Snowflake
+    "cockroachlabs",     # CockroachDB
+    "duolingo",          # Duolingo
+    "doordash",          # DoorDash
+    "instacart",         # Instacart
+]
+
+# Lever Job Board API: public, no auth needed.
+# Company slug from https://jobs.lever.co/{company_slug}
+LEVER_COMPANY_SLUGS = [
+    "netflix",           # Netflix
+    "spotify",           # Spotify
+    "openai",            # OpenAI
+    "anthropic",         # Anthropic
+    "coinbase",          # Coinbase
+    "robinhood",         # Robinhood
+    "chime",             # Chime — fintech
+    "wealthsimple",     # Wealthsimple — fintech
+    "figma",             # Figma (also on Greenhouse)
+    "scale",             # Scale AI
+    "replit",            # Replit
+    "vercel",            # Vercel
+    "linear",            # Linear
+    "retool",            # Retool
+    "loom",              # Loom
+    "deel",              # Deel — HR tech
+    "rippling",          # Rippling — HR tech
+    "gusto",             # Gusto — HR/payroll
+    "mercury",           # Mercury — fintech
+    "ramp",              # Ramp (also Greenhouse)
+]
+
+# Ashby Job Board API: public, no auth needed.
+# Org slug from https://jobs.ashbyhq.com/{org_slug}
+ASHBY_ORG_SLUGS = [
+    "notion",            # Notion
+    "linear",            # Linear
+    "vercel",            # Vercel
+    "resend",            # Resend
+    "cal",               # Cal.com
+    "posthog",           # PostHog
 ]
 
 # USAJobs: requires USAJOBS_API_KEY env var. Free at developer.usajobs.gov
