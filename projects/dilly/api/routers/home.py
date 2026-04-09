@@ -480,6 +480,77 @@ def _compute_do_now(
     }
 
 
+# ── Weekly Recap (Dilly Weekly) ────────────────────────────────────────────
+
+def _compute_weekly_recap(
+    audits: List[dict],
+    applications: List[dict],
+    streak: Dict[str, Any],
+    score: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """
+    Build a 'this week in review' card. Only populated on Sundays or
+    when there's meaningful activity to report. Returns None if the
+    student had zero activity this week.
+    """
+    now = time.time()
+    week_ago = now - 7 * 86400
+
+    # Count audits this week
+    audits_this_week = 0
+    for a in audits or []:
+        ts = a.get("ts")
+        if isinstance(ts, (int, float)) and ts > week_ago:
+            audits_this_week += 1
+
+    # Count applications this week
+    apps_this_week = 0
+    for a in applications or []:
+        created = a.get("created_at") or a.get("applied_at")
+        if not created:
+            continue
+        try:
+            from datetime import datetime as _dt
+            if isinstance(created, str):
+                ts = _dt.fromisoformat(created.replace("Z", "+00:00")).timestamp()
+            elif isinstance(created, (int, float)):
+                ts = float(created)
+            else:
+                continue
+            if ts > week_ago:
+                apps_this_week += 1
+        except Exception:
+            continue
+
+    streak_days = streak.get("current", 0)
+    delta = score.get("delta")
+
+    # Only show the recap if there's something to report
+    if audits_this_week == 0 and apps_this_week == 0 and (delta is None or abs(delta) < 1):
+        return None
+
+    # Build headline
+    parts: list = []
+    if audits_this_week > 0:
+        parts.append(f"{audits_this_week} audit{'s' if audits_this_week != 1 else ''}")
+    if delta is not None and abs(delta) >= 1:
+        parts.append(f"{'+' if delta > 0 else ''}{round(delta)} points")
+    if apps_this_week > 0:
+        parts.append(f"{apps_this_week} application{'s' if apps_this_week != 1 else ''}")
+    if streak_days >= 3:
+        parts.append(f"{streak_days}-day streak")
+
+    headline = ", ".join(parts) + "." if parts else "Keep it up."
+
+    return {
+        "headline": headline.capitalize(),
+        "audits_this_week": audits_this_week,
+        "apps_this_week": apps_this_week,
+        "score_delta": delta,
+        "streak_days": streak_days,
+    }
+
+
 # ── Main endpoint ────────────────────────────────────────────────────────
 
 @router.get("/home/brief")
@@ -547,6 +618,7 @@ async def home_brief(request: Request):
     deadlines = _compute_deadlines(applications, profile)
     brief = _compute_brief(score, pipeline, cohort_bar, top_jobs, has_audit)
     do_now = _compute_do_now(has_audit, score, pipeline, deadlines, top_jobs, cohort_bar)
+    weekly_recap = _compute_weekly_recap(audits, applications, streak, score)
 
     return {
         "has_audit": has_audit,
@@ -558,4 +630,5 @@ async def home_brief(request: Request):
         "do_now": do_now,
         "cohort_bar": cohort_bar,
         "top_jobs": top_jobs,
+        "weekly_recap": weekly_recap,
     }

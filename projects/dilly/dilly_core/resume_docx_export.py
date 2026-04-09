@@ -36,9 +36,10 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # ── Template definitions ────────────────────────────────────────────────────
 
 TEMPLATES: Dict[str, Dict[str, Any]] = {
+    # ── Original 3 ──────────────────────────────────────────────────────
     "tech": {
         "label": "Tech",
-        "accent_rgb": (30, 64, 175),  # blue-800
+        "accent_rgb": (30, 64, 175),
         "heading_size": 11,
         "body_size": 10,
         "section_order": ["contact", "skills", "experience", "projects", "education"],
@@ -47,7 +48,7 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
     },
     "business": {
         "label": "Business",
-        "accent_rgb": (17, 24, 39),   # near-black
+        "accent_rgb": (17, 24, 39),
         "heading_size": 11,
         "body_size": 10.5,
         "section_order": ["contact", "education", "experience", "projects", "skills"],
@@ -62,6 +63,115 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
         "section_order": ["contact", "education", "research", "experience", "projects", "skills"],
         "contact_center": False,
         "margin_inches": 0.65,
+    },
+    # ── New templates (build 79) ────────────────────────────────────────
+    "modern": {
+        "label": "Modern",
+        "accent_rgb": (13, 148, 136),  # teal-600
+        "heading_size": 11,
+        "body_size": 10,
+        "section_order": ["contact", "summary", "skills", "experience", "projects", "education"],
+        "contact_center": False,
+        "margin_inches": 0.5,
+    },
+    "classic": {
+        "label": "Classic",
+        "accent_rgb": (0, 0, 0),
+        "heading_size": 11,
+        "body_size": 10.5,
+        "section_order": ["contact", "education", "experience", "skills", "projects"],
+        "contact_center": True,
+        "margin_inches": 0.75,
+    },
+    "minimal": {
+        "label": "Minimal",
+        "accent_rgb": (107, 114, 128),  # gray-500
+        "heading_size": 10,
+        "body_size": 10,
+        "section_order": ["contact", "experience", "education", "skills", "projects"],
+        "contact_center": False,
+        "margin_inches": 0.6,
+    },
+    "executive": {
+        "label": "Executive",
+        "accent_rgb": (30, 58, 95),
+        "heading_size": 12,
+        "body_size": 10.5,
+        "section_order": ["contact", "summary", "experience", "education", "skills"],
+        "contact_center": True,
+        "margin_inches": 0.7,
+    },
+    "startup": {
+        "label": "Startup",
+        "accent_rgb": (5, 150, 105),  # emerald-600
+        "heading_size": 11,
+        "body_size": 10,
+        "section_order": ["contact", "skills", "projects", "experience", "education"],
+        "contact_center": False,
+        "margin_inches": 0.5,
+    },
+    "consulting": {
+        "label": "Consulting",
+        "accent_rgb": (30, 58, 95),
+        "heading_size": 11,
+        "body_size": 10.5,
+        "section_order": ["contact", "education", "experience", "skills", "projects"],
+        "contact_center": True,
+        "margin_inches": 0.7,
+    },
+    "healthcare": {
+        "label": "Healthcare",
+        "accent_rgb": (15, 118, 110),  # teal-700
+        "heading_size": 11,
+        "body_size": 10.5,
+        "section_order": ["contact", "education", "certifications", "experience", "skills"],
+        "contact_center": False,
+        "margin_inches": 0.6,
+    },
+    "creative": {
+        "label": "Creative",
+        "accent_rgb": (124, 58, 237),  # violet-600
+        "heading_size": 11,
+        "body_size": 10,
+        "section_order": ["contact", "summary", "projects", "experience", "skills", "education"],
+        "contact_center": False,
+        "margin_inches": 0.55,
+    },
+    "finance": {
+        "label": "Finance",
+        "accent_rgb": (17, 24, 39),
+        "heading_size": 11,
+        "body_size": 10.5,
+        "section_order": ["contact", "education", "experience", "skills", "certifications"],
+        "contact_center": True,
+        "margin_inches": 0.7,
+    },
+    "engineering": {
+        "label": "Engineering",
+        "accent_rgb": (180, 83, 9),  # amber-700
+        "heading_size": 11,
+        "body_size": 10,
+        "section_order": ["contact", "education", "skills", "experience", "projects"],
+        "contact_center": False,
+        "margin_inches": 0.55,
+    },
+    "clean": {
+        "label": "Clean",
+        "accent_rgb": (55, 65, 81),  # gray-700
+        "heading_size": 10.5,
+        "body_size": 10,
+        "section_order": ["contact", "experience", "projects", "education", "skills"],
+        "contact_center": False,
+        "margin_inches": 0.55,
+    },
+    "bold": {
+        "label": "Bold",
+        "accent_rgb": (220, 38, 38),  # red-600
+        "heading_size": 12,
+        "body_size": 10.5,
+        "section_order": ["contact", "summary", "experience", "skills", "education", "projects"],
+        "contact_center": False,
+        "margin_inches": 0.55,
     },
 }
 

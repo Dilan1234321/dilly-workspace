@@ -49,6 +49,9 @@ import FadeInView from '../../components/FadeInView';
 import ResumeScoreDashboard, { EditorScanData, CohortOption } from '../../components/ResumeScoreDashboard';
 import BulletWorthSheet from '../../components/BulletWorthSheet';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import * as DocumentPicker from 'expo-document-picker';
+import { getToken } from '../../lib/auth';
+import { API_BASE } from '../../lib/tokens';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
 
@@ -1143,9 +1146,29 @@ export default function ResumeEditorScreen() {
     setQuickTailoring(true);
     setQuickTailorData(null);
     try {
+      // Detect if the user pasted a URL instead of a JD.
+      // If so, fetch the JD from the URL first, then tailor.
+      let finalJD = jd;
+      const isUrl = /^https?:\/\//i.test(jd) || /^(www\.)?[\w-]+\.(com|co|io|org|net|jobs)\//i.test(jd);
+      if (isUrl && jd.split('\n').length <= 3) {
+        showToast('Fetching job description from URL...');
+        const fetchRes = await dilly.fetch('/jobs/fetch-jd', {
+          method: 'POST',
+          body: JSON.stringify({ url: jd }),
+        });
+        if (fetchRes.ok) {
+          const fetchData = await fetchRes.json();
+          if (fetchData?.job_description && fetchData.job_description.length > 50) {
+            finalJD = fetchData.job_description;
+            showToast(`Loaded JD from ${fetchData.company || 'job page'}.`);
+          }
+        }
+        // If fetch failed, fall through and use the URL as-is (will likely fail gracefully)
+      }
+
       const res = await dilly.fetch('/resume/jd-quick-tailor', {
         method: 'POST',
-        body: JSON.stringify({ job_description: jd }),
+        body: JSON.stringify({ job_description: finalJD }),
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => null);
@@ -1740,6 +1763,46 @@ export default function ResumeEditorScreen() {
           <Text style={rs.tailorBtnText}>Generate resume with AI</Text>
         </AnimatedPressable>
 
+        {/* Import from LinkedIn */}
+        <AnimatedPressable
+          style={rs.tailorBtn}
+          onPress={async () => {
+            try {
+              const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf'],
+                copyToCacheDirectory: true,
+              });
+              if (result.canceled || !result.assets?.[0]) return;
+              const asset = result.assets[0];
+              const token = await getToken();
+              const formData = new FormData();
+              formData.append('file', {
+                uri: asset.uri,
+                name: asset.name || 'linkedin.pdf',
+                type: 'application/pdf',
+              } as any);
+              const res = await fetch(`${API_BASE}/resume/import-linkedin`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token ?? ''}` },
+                body: formData,
+              });
+              const data = await res.json();
+              if (data?.sections?.length) {
+                commitSections(data.sections);
+                showToast(`Imported ${data.section_count || data.sections.length} sections from LinkedIn.`);
+              } else {
+                Alert.alert('Import failed', data?.detail || 'Could not parse the LinkedIn PDF.');
+              }
+            } catch (e: any) {
+              Alert.alert('Import failed', e?.message || 'Could not import from LinkedIn.');
+            }
+          }}
+          scaleDown={0.97}
+        >
+          <Ionicons name="logo-linkedin" size={14} color="#0A66C2" />
+          <Text style={rs.tailorBtnText}>Import from LinkedIn</Text>
+        </AnimatedPressable>
+
         {/* Build-63 dashboard: collapsible header + the dashboard card */}
         <View style={{ marginBottom: 6 }}>
           <AnimatedPressable
@@ -2121,9 +2184,21 @@ export default function ResumeEditorScreen() {
             </View>
 
             {([
-              { key: 'tech' as const, label: 'Tech', hint: 'Left-aligned, Skills near top, GitHub prominent' },
-              { key: 'business' as const, label: 'Business', hint: 'Centered contact, formal spacing' },
-              { key: 'academic' as const, label: 'Academic', hint: 'Research-heavy, Education front-loaded' },
+              { key: 'modern',      label: 'Modern',      hint: 'Teal accent, summary + skills first, tight spacing' },
+              { key: 'tech',        label: 'Tech',        hint: 'Blue accent, skills near top, GitHub prominent' },
+              { key: 'clean',       label: 'Clean',       hint: 'Gray accent, ultra-clean, experience first' },
+              { key: 'minimal',     label: 'Minimal',     hint: 'Light gray, maximum whitespace, elegant' },
+              { key: 'business',    label: 'Business',    hint: 'Centered header, formal spacing' },
+              { key: 'consulting',  label: 'Consulting',  hint: 'Navy accent, education first, formal' },
+              { key: 'finance',     label: 'Finance',     hint: 'Dark formal, GPA prominent, certifications' },
+              { key: 'startup',     label: 'Startup',     hint: 'Green accent, projects + skills first' },
+              { key: 'creative',    label: 'Creative',    hint: 'Violet accent, projects prominent' },
+              { key: 'engineering', label: 'Engineering', hint: 'Amber accent, education + skills first' },
+              { key: 'healthcare',  label: 'Healthcare',  hint: 'Teal accent, certifications prominent' },
+              { key: 'executive',   label: 'Executive',   hint: 'Dark navy, centered, summary first' },
+              { key: 'classic',     label: 'Classic',     hint: 'Black, serif font, traditional layout' },
+              { key: 'bold',        label: 'Bold',        hint: 'Red accent, large headings, summary first' },
+              { key: 'academic',    label: 'Academic',    hint: 'Research/publications front-loaded' },
             ]).map(tpl => (
               <AnimatedPressable
                 key={tpl.key}
@@ -2223,7 +2298,7 @@ export default function ResumeEditorScreen() {
                     style={rs.quickTailorInput}
                     value={quickJD}
                     onChangeText={setQuickJD}
-                    placeholder="Paste the full job description here…"
+                    placeholder="Paste the job description or the job URL here…"
                     placeholderTextColor={colors.t3}
                     multiline
                     textAlignVertical="top"

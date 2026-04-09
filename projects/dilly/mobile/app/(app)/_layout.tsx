@@ -182,6 +182,13 @@ export default function AppLayout() {
           animation: 'fade',
         }}
       />
+      <Tabs.Screen
+        name="interview-practice"
+        options={{
+          href: null,
+          animation: 'fade',
+        }}
+      />
     </Tabs>
     <DillyAIOverlayWrapper />
     <PaywallModal />

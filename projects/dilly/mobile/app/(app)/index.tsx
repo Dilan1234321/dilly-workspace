@@ -869,6 +869,47 @@ export default function HomeScreen() {
           } catch { return null; }
         })()}
 
+        {/* Weekly recap (Dilly Weekly) - only shows when there's activity */}
+        {brief?.weekly_recap && (
+          <FadeInView delay={420}>
+            <View style={s.weeklyRecapCard}>
+              <View style={s.weeklyRecapHeader}>
+                <Ionicons name="calendar" size={12} color={colors.gold} />
+                <Text style={s.weeklyRecapLabel}>THIS WEEK</Text>
+              </View>
+              <Text style={s.weeklyRecapHeadline}>{brief.weekly_recap.headline}</Text>
+              <View style={s.weeklyRecapStats}>
+                {Number(brief.weekly_recap.audits_this_week) > 0 && (
+                  <View style={s.weeklyRecapStat}>
+                    <Text style={s.weeklyRecapStatNum}>{brief.weekly_recap.audits_this_week}</Text>
+                    <Text style={s.weeklyRecapStatLabel}>audits</Text>
+                  </View>
+                )}
+                {brief.weekly_recap.score_delta != null && Math.abs(brief.weekly_recap.score_delta) >= 1 && (
+                  <View style={s.weeklyRecapStat}>
+                    <Text style={[s.weeklyRecapStatNum, { color: brief.weekly_recap.score_delta > 0 ? colors.green : colors.coral }]}>
+                      {brief.weekly_recap.score_delta > 0 ? '+' : ''}{Math.round(brief.weekly_recap.score_delta)}
+                    </Text>
+                    <Text style={s.weeklyRecapStatLabel}>points</Text>
+                  </View>
+                )}
+                {Number(brief.weekly_recap.apps_this_week) > 0 && (
+                  <View style={s.weeklyRecapStat}>
+                    <Text style={s.weeklyRecapStatNum}>{brief.weekly_recap.apps_this_week}</Text>
+                    <Text style={s.weeklyRecapStatLabel}>applied</Text>
+                  </View>
+                )}
+                {Number(brief.weekly_recap.streak_days) >= 3 && (
+                  <View style={s.weeklyRecapStat}>
+                    <Text style={s.weeklyRecapStatNum}>{brief.weekly_recap.streak_days}</Text>
+                    <Text style={s.weeklyRecapStatLabel}>day streak</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </FadeInView>
+        )}
+
         {/* Build-78: "Come back tomorrow" teaser */}
         <FadeInView delay={440}>
           <View style={s.comeBackCard}>
@@ -1273,6 +1314,25 @@ const s = StyleSheet.create({
     height: '100%', borderRadius: 2, backgroundColor: colors.gold,
   },
   completenessText: { fontSize: 11, color: colors.t2, lineHeight: 15 },
+
+  // Weekly recap
+  weeklyRecapCard: {
+    backgroundColor: colors.s2, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.gold + '30',
+    padding: 14, marginBottom: 10,
+  },
+  weeklyRecapHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6,
+  },
+  weeklyRecapLabel: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1.1,
+    color: colors.gold,
+  },
+  weeklyRecapHeadline: { fontSize: 13, fontWeight: '700', color: colors.t1, marginBottom: 10 },
+  weeklyRecapStats: { flexDirection: 'row', gap: 12 },
+  weeklyRecapStat: { alignItems: 'center' },
+  weeklyRecapStatNum: { fontSize: 18, fontWeight: '800', color: colors.t1 },
+  weeklyRecapStatLabel: { fontSize: 9, color: colors.t3, marginTop: 2 },
 
   comeBackCard: {
     flexDirection: 'row', alignItems: 'center', gap: 8,

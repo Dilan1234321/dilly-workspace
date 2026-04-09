@@ -24,7 +24,7 @@ _WORKSPACE_ROOT = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "..", "
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
@@ -257,6 +257,54 @@ async def get_edited_resume(request: Request):
         raise errors.unauthorized()
     data = _load_resume(email)
     return {"resume": data}
+
+
+@router.post("/resume/import-linkedin")
+async def import_linkedin(request: Request, file: UploadFile = File(None), body: dict = Body(None)):
+    """
+    Import a resume from a LinkedIn PDF export or pasted LinkedIn text.
+    Returns structured sections matching the editor's ResumeSection shape.
+
+    Two modes:
+      - Upload: multipart with a 'file' field (the LinkedIn PDF)
+      - Paste: JSON body with {"text": "...pasted LinkedIn text..."}
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    from dilly_core.linkedin_import import parse_linkedin_pdf, parse_linkedin_text
+
+    result = None
+    if file and file.filename:
+        # PDF upload mode
+        pdf_bytes = await file.read()
+        if len(pdf_bytes) < 100:
+            raise errors.validation_error("File too small to be a LinkedIn PDF.")
+        if len(pdf_bytes) > 10 * 1024 * 1024:
+            raise errors.validation_error("File too large (max 10MB).")
+        result = parse_linkedin_pdf(pdf_bytes)
+    elif body and body.get("text"):
+        # Pasted text mode
+        text = str(body["text"]).strip()
+        if len(text) < 50:
+            raise errors.validation_error("Text too short. Paste your full LinkedIn profile.")
+        result = parse_linkedin_text(text)
+    else:
+        raise errors.validation_error("Upload a LinkedIn PDF or paste your LinkedIn text.")
+
+    if not result or not result.get("sections"):
+        raise errors.internal("Could not parse the LinkedIn data. Try uploading the PDF instead of pasting.")
+
+    return {
+        "ok": True,
+        "sections": result["sections"],
+        "name": result.get("name", ""),
+        "email": result.get("email", ""),
+        "headline": result.get("headline", ""),
+        "section_count": len(result["sections"]),
+    }
 
 
 @router.post("/resume/save")
@@ -1599,8 +1647,17 @@ async def resume_export_pdf(request: Request, body: ExportRequest):
     if not body.sections:
         raise HTTPException(status_code=400, detail="No sections to export.")
 
-    template_name = (body.template or "tech").lower()
-    if template_name not in ("tech", "business", "academic"):
+    template_name = (body.template or "tech").lower().strip()
+    # Validate against the actual template registry. Both PDF and DOCX
+    # renderers share the same template keys. Fall back to 'tech' for
+    # unknown names so old clients never break.
+    _VALID_TEMPLATES = {
+        "tech", "business", "academic",
+        "modern", "classic", "minimal", "executive", "startup",
+        "consulting", "healthcare", "creative", "finance",
+        "engineering", "clean", "bold",
+    }
+    if template_name not in _VALID_TEMPLATES:
         template_name = "tech"
 
     # Pull candidate name from contact section for the PDF metadata
