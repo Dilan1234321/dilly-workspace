@@ -1101,7 +1101,7 @@ const s = StyleSheet.create({
   doNowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   doNowDot: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center', justifyContent: 'center',
   },
   doNowLabel: {
