@@ -763,7 +763,6 @@ export default function ResumeEditorScreen() {
   const [hasChanges, setHasChanges] = useState(false);
   const [major, setMajor]           = useState('');
   const [bulletScores, setBulletScores] = useState<Record<string, number>>({});
-  const [overallScore, setOverallScore] = useState(0);
   const [initialScore, setInitialScore] = useState<number | null>(null);
   const [variants, setVariants]     = useState<any[]>([]);
   const [activeVariant, setActiveVariant] = useState<string | null>(null);
@@ -818,7 +817,6 @@ export default function ResumeEditorScreen() {
           ?? 0;
         if (fs > 0) {
           setInitialScore(Math.round(Number(fs)));
-          setOverallScore(Math.round(Number(fs)));
         }
         if (resumeRes?.resume?.sections?.length) {
           setSections(resumeRes.resume.sections);
@@ -858,28 +856,8 @@ export default function ResumeEditorScreen() {
     })();
   }, []);
 
-  // Single source of truth for the floating overall score badge.
-  // CRITICAL: this must match the Dilly composite from the audit, NOT the
-  // ATS readiness number. Users see their audit dilly_score (e.g. 67) when
-  // they open the editor; if we then swap the badge to v2.overall.value
-  // (ATS composite, e.g. 89) it looks like the score randomly changed.
-  // Priority: rubric_analysis.primary_composite (same as audit) → initial
-  // audit score → v2 overall as a last resort.
-  useEffect(() => {
-    const rubricComposite = scanData?.rubric_analysis?.primary_composite;
-    if (typeof rubricComposite === 'number' && rubricComposite > 0) {
-      setOverallScore(Math.round(rubricComposite));
-      return;
-    }
-    if (initialScore !== null && initialScore > 0) {
-      setOverallScore(initialScore);
-      return;
-    }
-    const v2Overall = scanData?.v2?.overall?.value;
-    if (typeof v2Overall === 'number' && v2Overall > 0) {
-      setOverallScore(Math.round(v2Overall));
-    }
-  }, [scanData, initialScore]);
+  // Overall score UI was removed from the editor (no floating badge, no
+  // dashboard hero). Smart/Grit/Build rings are the only scores shown.
 
   const ph = getPlaceholders(major);
 
@@ -967,7 +945,7 @@ export default function ResumeEditorScreen() {
     openDillyOverlay({
       name: firstName,
       cohort: major || 'General',
-      score: overallScore, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
+      score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
       isPaid: true,
       initialMessage: [
         `I'm working on my resume and Dilly flagged an issue that's worth +${Math.round(issue.total_lift || issue.avg_lift || 0)} points.`,
@@ -1101,7 +1079,6 @@ export default function ResumeEditorScreen() {
         (audit?.final_score != null ? Number(audit.final_score) : null);
       if (freshScore != null && freshScore > 0) {
         setInitialScore(Math.round(freshScore));
-        setOverallScore(Math.round(freshScore));
       }
       // Force the coaching dashboard to refetch so vendor/rubric scores update
       setTimeout(() => { runEditorScan(); }, 100);

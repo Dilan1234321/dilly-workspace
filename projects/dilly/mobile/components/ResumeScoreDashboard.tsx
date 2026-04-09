@@ -101,6 +101,8 @@ export type EditorScanData = {
   top_issues: TopIssue[];
   keyword_cells?: KeywordCell[];
   reorder_suggestion?: ReorderSuggestion | null;
+  legacy_ats_vendors?: Record<string, { system: string; score: number }>;
+  legacy_ats_overall?: number | null;
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -316,26 +318,26 @@ export default function ResumeScoreDashboard({
     );
   }
 
-  // Hero number = Dilly composite (rubric), same as the audit score and the
-  // floating badge. Falls back to the ATS readiness number only if rubric
-  // scoring produced nothing. Showing two different "overall" numbers on the
-  // same screen is what made users think the scores were wrong.
-  const rubricComposite = scan.rubric_analysis?.primary_composite;
-  const atsOverall = scan.v2.overall?.value ?? 0;
-  const overall = (typeof rubricComposite === 'number' && rubricComposite > 0)
-    ? rubricComposite
-    : atsOverall;
-  const forecast = scan.v2.overall_forecast_if_all_fixed ?? atsOverall;
-  const overallColor = scoreColor(overall);
-  const overallLift = forecast - atsOverall;
-
-  // Only render the 5 "real" strict/modern ATS vendors to keep the sidebar compact
-  const vendors = (scan.v2.vendors || []).filter(v =>
-    ['workday', 'taleo', 'icims', 'greenhouse', 'lever', 'ashby', 'successfactors'].includes(v.vendor_key)
-  );
+  // Per-vendor ATS bars now read from legacy_ats_vendors so the numbers
+  // match the dedicated /ats page. The hero "overall score" was removed
+  // per product decision — Smart/Grit/Build rings are the only scores
+  // the coaching dashboard surfaces.
+  const legacyVendors = scan.legacy_ats_vendors || {};
+  const vendorOrder = ['workday', 'taleo', 'icims', 'greenhouse', 'lever', 'ashby', 'successfactors'];
+  const vendorBars = vendorOrder
+    .filter(k => legacyVendors[k] != null)
+    .map(k => ({
+      vendor_key: k,
+      vendor_display: legacyVendors[k].system || k,
+      score: Math.round(legacyVendors[k].score || 0),
+    }));
 
   const ra = scan.rubric_analysis;
-  const hasRubric = ra && ra.primary_composite != null;
+  const hasRubric = !!ra && (
+    (typeof ra.primary_smart === 'number' && ra.primary_smart > 0) ||
+    (typeof ra.primary_grit  === 'number' && ra.primary_grit  > 0) ||
+    (typeof ra.primary_build === 'number' && ra.primary_build > 0)
+  );
 
   return (
     <View style={s.container}>
@@ -350,24 +352,6 @@ export default function ResumeScoreDashboard({
           />
         </View>
       )}
-
-      {/* ── Headline composite ──────────────────────────────────────── */}
-      <View style={s.heroRow}>
-        <View style={s.heroLeft}>
-          <Text style={s.heroLabel}>DILLY SCORE</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-            <Text style={[s.heroNum, { color: overallColor }]}>{Math.round(overall)}</Text>
-            <Text style={s.heroOf}>/100</Text>
-          </View>
-          <Text style={s.heroSub}>ATS readiness: {Math.round(atsOverall)}</Text>
-        </View>
-        {overallLift >= 1 && (
-          <View style={s.forecastChip}>
-            <Ionicons name="trending-up" size={11} color={GREEN} />
-            <Text style={s.forecastChipText}>+{Math.round(overallLift)} if fixed</Text>
-          </View>
-        )}
-      </View>
 
       {/* ── Rubric dimension rings ──────────────────────────────────── */}
       {hasRubric && (
@@ -385,11 +369,24 @@ export default function ResumeScoreDashboard({
         </View>
       )}
 
-      {/* ── Per-vendor ATS sidebar ──────────────────────────────────── */}
-      {vendors.length > 0 && (
+      {/* ── Per-vendor ATS bars (from legacy engine, matches /ats page) ── */}
+      {vendorBars.length > 0 && (
         <View style={s.vendorBlock}>
           <Text style={s.sectionLabel}>BY ATS VENDOR</Text>
-          {vendors.map(v => <VendorBar key={v.vendor_key} vendor={v} />)}
+          {vendorBars.map(v => (
+            <View key={v.vendor_key} style={s.legacyVendorRow}>
+              <Text style={s.legacyVendorName}>{v.vendor_display}</Text>
+              <View style={s.legacyVendorBarTrack}>
+                <View style={[s.legacyVendorBarFill, {
+                  width: `${Math.max(0, Math.min(100, v.score))}%`,
+                  backgroundColor: scoreColor(v.score),
+                }]} />
+              </View>
+              <Text style={[s.legacyVendorScore, { color: scoreColor(v.score) }]}>
+                {v.score}
+              </Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -549,6 +546,16 @@ const s = StyleSheet.create({
 
   // Vendor bars
   vendorBlock: { marginBottom: 12 },
+  legacyVendorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 6,
+  },
+  legacyVendorName: { flex: 0, width: 90, fontSize: 11, color: colors.t2 },
+  legacyVendorBarTrack: {
+    flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.b1, overflow: 'hidden',
+  },
+  legacyVendorBarFill: { height: '100%', borderRadius: 3 },
+  legacyVendorScore: { fontSize: 12, fontWeight: '800', width: 28, textAlign: 'right' },
   vendorBarRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6,
   },

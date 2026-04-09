@@ -1361,10 +1361,70 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
     # different scorer path produced different numbers, which read as
     # "wrong scores". The audit's stored rubric_analysis is the source
     # of truth until the user re-audits.
+    #
+    # Cohort switching: when body.cohort_id is set and differs from the
+    # audit's primary cohort, synthesize the primary_* fields from
+    # audit_rubric.other_cohorts[i] so the rings show PER-COHORT scores
+    # instead of the student's overall primary-cohort scores.
     if audit_rubric:
-        rubric_summary = audit_rubric
+        rubric_summary = dict(audit_rubric)
+        want_cid = (body.cohort_id or "").strip()
+        primary_cid = str(rubric_summary.get("primary_cohort_id") or "")
+        if want_cid and want_cid != primary_cid:
+            picked = None
+            for oc in (rubric_summary.get("other_cohorts") or []):
+                if str(oc.get("cohort_id") or "") == want_cid:
+                    picked = oc
+                    break
+            if picked is not None:
+                rubric_summary["primary_cohort_id"] = picked.get("cohort_id") or want_cid
+                rubric_summary["primary_cohort_display_name"] = picked.get("display_name") or want_cid
+                rubric_summary["primary_composite"] = picked.get("composite") or 0
+                rubric_summary["primary_smart"] = picked.get("smart") or 0
+                rubric_summary["primary_grit"] = picked.get("grit") or 0
+                rubric_summary["primary_build"] = picked.get("build") or 0
+                rubric_summary["recruiter_bar"] = picked.get("recruiter_bar")
+                rubric_summary["above_bar"] = picked.get("above_bar", False)
+                # Matched/unmatched signals are per-cohort too, but the
+                # audit only stored them for the primary cohort. Live
+                # re-score the target cohort against the edited resume
+                # just to get the signal lists for the rings/issues.
+                try:
+                    from dilly_core.rubric_scorer import (
+                        score_for_cohorts as _sfc, build_rubric_analysis_payload as _brap,
+                    )
+                    from dilly_core.scoring import extract_scoring_signals as _ess
+                    _sigs = _ess(resume_text, gpa=None, major="")
+                    _rc = _sfc(_sigs, resume_text, [want_cid])
+                    if _rc:
+                        _live = _brap(want_cid, _rc)
+                        if _live:
+                            rubric_summary["matched_signals"] = _live.get("matched_signals") or []
+                            rubric_summary["unmatched_signals"] = _live.get("unmatched_signals") or []
+                            rubric_summary["fastest_path_moves"] = _live.get("fastest_path_moves") or []
+                except Exception as _exc:
+                    import sys as _sys
+                    _sys.stderr.write(f"[editor_scan_cohort_signals_failed] {type(_exc).__name__}: {str(_exc)[:200]}\n")
     if audit_v2 and audit_v2.get("vendors") and audit_v2.get("overall"):
         v2 = audit_v2
+
+    # Also pull the legacy scan_resume_ats vendor scores — the dedicated
+    # /ats page displays those numbers, and the editor dashboard used to
+    # show different (v2) numbers. Expose a parallel 'legacy_ats_vendors'
+    # map so the dashboard can display numbers that match /ats.
+    legacy_ats_vendors: dict = {}
+    legacy_ats_overall: Optional[float] = None
+    if parsed_resume_text and len(parsed_resume_text) > 50:
+        try:
+            from projects.dilly.api.ats_engine import scan_resume_ats as _sra
+            _legacy = _sra(parsed_resume_text).to_dict()
+            legacy_ats_vendors = _legacy.get("vendors") or {}
+            _ov = _legacy.get("overall_score")
+            if _ov is not None:
+                legacy_ats_overall = float(_ov)
+        except Exception as _exc:
+            import sys as _sys
+            _sys.stderr.write(f"[editor_scan_legacy_ats_failed] {type(_exc).__name__}: {str(_exc)[:200]}\n")
 
     # ── 3. Prioritized issue list (merged + ranked by lift) ────────────
     # We DON'T show effort_minutes in the UI anymore — single bullet edits
@@ -1472,7 +1532,9 @@ async def resume_editor_scan(request: Request, body: EditorScanRequest):
         "top_issues": ranked_issues,
         "keyword_cells": keyword_cells,
         "reorder_suggestion": reorder_suggestion,
-        "scoring_version": "editor-scan-v1",
+        "legacy_ats_vendors": legacy_ats_vendors,
+        "legacy_ats_overall": legacy_ats_overall,
+        "scoring_version": "editor-scan-v2",
     }
 
 
