@@ -70,17 +70,22 @@ export default function AnimatedPressable({
       }
     });
 
-  const longPress = Gesture.LongPress()
-    .enabled(!disabled && !!onLongPress)
-    .minDuration(500)
-    .onStart(() => {
-      'worklet';
-      scale.value = withSpring(1, { stiffness, damping });
-      opacity.value = withSpring(1, { stiffness, damping });
-      if (onLongPress) runOnJS(onLongPress)();
-    });
-
-  const gesture = Gesture.Exclusive(longPress, tap);
+  // Only compose with LongPress if onLongPress is provided.
+  // Using Gesture.Exclusive unconditionally was crashing the app.
+  const gesture = onLongPress
+    ? Gesture.Exclusive(
+        Gesture.LongPress()
+          .enabled(!disabled)
+          .minDuration(500)
+          .onStart(() => {
+            'worklet';
+            scale.value = withSpring(1, { stiffness, damping });
+            opacity.value = withSpring(1, { stiffness, damping });
+            if (onLongPress) runOnJS(onLongPress)();
+          }),
+        tap,
+      )
+    : tap;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
