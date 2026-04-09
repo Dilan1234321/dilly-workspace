@@ -479,7 +479,7 @@ export default function ScoreDetailScreen() {
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
               <AnimatedPressable
                 style={s.gapActionBtn}
-                onPress={() => router.push('/(app)/resume-editor')}
+                onPress={() => router.push(`/(app)/resume-editor?focusDimension=${weakestDim}`)}
                 scaleDown={0.97}
               >
                 <Ionicons name="create-outline" size={12} color={colors.gold} />

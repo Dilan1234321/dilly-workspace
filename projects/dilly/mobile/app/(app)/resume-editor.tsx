@@ -826,7 +826,7 @@ function SimplePreview({ simple, onChange, ph }: { simple: SimpleSection; onChan
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function ResumeEditorScreen() {
-  const { variantId: incomingVariantId } = useLocalSearchParams<{ variantId?: string }>();
+  const { variantId: incomingVariantId, focusDimension } = useLocalSearchParams<{ variantId?: string; focusDimension?: string }>();
   const insets = useSafeAreaInsets();
 
   const [sections, setSections]     = useState<ResumeSection[]>([]);
@@ -882,6 +882,22 @@ export default function ResumeEditorScreen() {
   const [compareLoading, setCompareLoading] = useState(false);
   // Build-73: export format toggle (PDF default, DOCX optional)
   const [exportFormat, setExportFormat] = useState<'pdf' | 'docx'>('pdf');
+
+  // When arriving from the scores page "Fix in editor" button with a
+  // focusDimension param, ensure the coaching dashboard is visible and
+  // show a toast telling the user which dimension to focus on.
+  useEffect(() => {
+    if (!focusDimension) return;
+    const dim = String(focusDimension).toLowerCase();
+    if (!['smart', 'grit', 'build'].includes(dim)) return;
+    // Ensure the dashboard is open
+    setShowDashboard(true);
+    // Toast with the dimension name
+    const label = dim.charAt(0).toUpperCase() + dim.slice(1);
+    setTimeout(() => {
+      showToast(`Focus: improve your ${label} score. Check the coaching dashboard.`);
+    }, 600);
+  }, [focusDimension]);
 
   // Build-70: autosave to AsyncStorage on every change (debounced 800ms).
   // Write a timestamped draft so we can prompt to restore after a crash.
