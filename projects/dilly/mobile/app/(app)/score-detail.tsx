@@ -605,24 +605,8 @@ function renderRecs(visRecs: Rec[], hasLocked: boolean, totalCount: number) {
           </View>
         );
       })}
-      {hasLocked && (
-        <>
-          <View style={s.divider} />
-          <View style={s.lockedRow}>
-            <View style={s.lockedBlur}>
-              <Text style={s.lockedBlurText}>████████████████ ██████████</Text>
-              <Text style={[s.lockedBlurText, { opacity: 0.4 }]}>████████████ ████████</Text>
-            </View>
-            <View style={s.lockedOverlay}>
-              <Ionicons name="lock-closed" size={12} color={colors.indigo} />
-              <Text style={s.lockedCount}>{totalCount - 2} more locked</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={s.unlockBtn} onPress={() => {}} activeOpacity={0.85}>
-            <Text style={s.unlockBtnText}>Unlock all recommendations →</Text>
-          </TouchableOpacity>
-        </>
-      )}
+      {/* Locked section removed - fake paywall placeholder with empty
+          onPress. Will re-add when real subscription is wired. */}
     </>
   );
 }
