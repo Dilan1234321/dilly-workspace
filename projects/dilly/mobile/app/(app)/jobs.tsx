@@ -589,8 +589,11 @@ export default function JobsScreen() {
           cohort_readiness: cr,
         };
       });
-      setListings(parsed.filter((l: any) => !l._skip));
-      setTotal(data.total || 0);
+      const visible = parsed.filter((l: any) => !l._skip);
+      setListings(visible);
+      // Use the VISIBLE count, not the backend total which includes
+      // international jobs we filtered out on the client side.
+      setTotal(visible.length);
       setFiltered(!!search || !!filterCompany);
     } catch {}
     finally { setLoading(false); setRefreshing(false); }
