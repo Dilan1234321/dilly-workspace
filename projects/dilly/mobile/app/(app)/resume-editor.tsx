@@ -673,15 +673,11 @@ function ContactPreview({ contact, onChange }: { contact: ContactSection; onChan
         <InlineField
           value={contact.linkedin}
           onChangeText={v => {
-            // Auto-prefix linkedin.com/in/ if user starts typing a username
-            if (v && !v.startsWith('linkedin.com/in/') && !v.startsWith('http') && v !== 'l' && v.length > 0) {
-              set('linkedin', 'linkedin.com/in/' + v);
-            } else {
-              set('linkedin', v);
-            }
-          }}
-          onFocus={() => {
-            if (!contact.linkedin) set('linkedin', 'linkedin.com/in/');
+            // Strip any double-prefix from paste (www.linkedin.com, https://linkedin.com, etc.)
+            let cleaned = v
+              .replace(/^https?:\/\/(www\.)?/i, '')
+              .replace(/^www\./i, '');
+            set('linkedin', cleaned);
           }}
           placeholder="linkedin.com/in/you"
           muted
@@ -704,17 +700,10 @@ function EducationPreview({ edu, onChange }: { edu: EducationEntry; onChange: (e
         <InlineField value={edu.major} onChangeText={v => set('major', v)} placeholder="B.S. Data Science" style={{ flex: 1, fontStyle: 'italic' }} />
         <InlineField value={edu.graduation} onChangeText={v => set('graduation', v)} placeholder="May 2027" muted style={{ textAlign: 'right' }} />
       </View>
-      {(edu.gpa || edu.honors) ? (
-        <View style={rs.blockHeaderRow}>
-          <InlineField value={edu.gpa ? `GPA: ${edu.gpa}` : ''} onChangeText={v => set('gpa', v.replace('GPA: ', ''))} placeholder="GPA: 3.8" muted style={{ flex: 1 }} />
-          <InlineField value={edu.honors} onChangeText={v => set('honors', v)} placeholder="Dean's List" muted style={{ textAlign: 'right' }} />
-        </View>
-      ) : (
-        <View style={rs.blockHeaderRow}>
-          <InlineField value="" onChangeText={v => set('gpa', v)} placeholder="GPA: 3.8" muted style={{ flex: 1 }} />
-          <InlineField value="" onChangeText={v => set('honors', v)} placeholder="Honors" muted style={{ textAlign: 'right' }} />
-        </View>
-      )}
+      <View style={rs.blockHeaderRow}>
+        <InlineField value={edu.gpa || ''} onChangeText={v => set('gpa', v)} placeholder="3.8 GPA" muted style={{ flex: 1 }} />
+        <InlineField value={edu.honors || ''} onChangeText={v => set('honors', v)} placeholder="Dean's List" muted style={{ textAlign: 'right' }} />
+      </View>
     </View>
   );
 }
@@ -1137,16 +1126,23 @@ export default function ResumeEditorScreen() {
   // suggested_order is a list of section keys. Any key not present is kept
   // in its current position after the reordered ones.
   function handleApplyReorder(suggestedOrder: string[]) {
-    const keySet = new Set(suggestedOrder);
-    const reordered: ResumeSection[] = [];
-    for (const k of suggestedOrder) {
-      const found = sections.find(s => s.key === k);
-      if (found) reordered.push(found);
-    }
-    for (const s of sections) {
-      if (!keySet.has(s.key)) reordered.push(s);
-    }
-    commitSections(reordered);
+    // Use functional update to avoid stale closure reading old sections
+    setSections(prev => {
+      const snapshot = [...prev];
+      undoStackRef.current = [...undoStackRef.current, JSON.parse(JSON.stringify(prev))].slice(-UNDO_LIMIT);
+      setUndoCount(undoStackRef.current.length);
+      const keySet = new Set(suggestedOrder);
+      const reordered: ResumeSection[] = [];
+      for (const k of suggestedOrder) {
+        const found = snapshot.find(s => s.key === k);
+        if (found) reordered.push(found);
+      }
+      for (const s of snapshot) {
+        if (!keySet.has(s.key)) reordered.push(s);
+      }
+      setHasChanges(true);
+      return reordered;
+    });
     showToast('Section order applied. Save to persist.');
   }
 
@@ -1362,12 +1358,16 @@ export default function ResumeEditorScreen() {
   // ── Debounced /resume/editor-scan (build 63 dashboard) ──────────────────
   // Fires 600ms after the last section edit. Non-blocking  -  the editor stays
   // fully interactive while the scan runs in the background.
+  const scanAbortRef = useRef<AbortController | null>(null);
   const runEditorScan = useCallback(async () => {
     if (!sections || sections.length === 0) return;
+    // Cancel any in-flight scan so only the latest one wins
+    if (scanAbortRef.current) scanAbortRef.current.abort();
+    const ctrl = new AbortController();
+    scanAbortRef.current = ctrl;
     setScanLoading(true);
     try {
-      const scanCtrl = new AbortController();
-      const scanTimeout = setTimeout(() => scanCtrl.abort(), 45_000);
+      const scanTimeout = setTimeout(() => ctrl.abort(), 45_000);
       const res = await dilly.fetch('/resume/editor-scan', {
         method: 'POST',
         body: JSON.stringify({
@@ -1375,15 +1375,15 @@ export default function ResumeEditorScreen() {
           cohort_id: cohortOverride || undefined,
           variant_id: activeVariant || undefined,
         }),
-        signal: scanCtrl.signal,
+        signal: ctrl.signal,
       });
       clearTimeout(scanTimeout);
-      if (res.ok) {
+      if (res.ok && !ctrl.signal.aborted) {
         const data = await res.json();
         setScanData(data);
       }
     } catch {} finally {
-      setScanLoading(false);
+      if (scanAbortRef.current === ctrl) setScanLoading(false);
     }
   }, [sections, cohortOverride, activeVariant]);
 
@@ -1584,7 +1584,7 @@ export default function ResumeEditorScreen() {
         );
       }
     } catch (e: any) {
-      Alert.alert('Export failed', e?.message || 'Unknown error.');
+      Alert.alert('Export failed', e?.name === 'AbortError' ? 'This took too long. Try again in a moment.' : (e?.message || 'Unknown error.'));
     } finally {
       setExporting(false);
     }
@@ -1641,7 +1641,7 @@ export default function ResumeEditorScreen() {
         Alert.alert('Cover letter ready', `Copy to Safari: ${url}`);
       }
     } catch (e: any) {
-      Alert.alert('Cover letter failed', e?.message || 'Unknown error.');
+      Alert.alert('Cover letter failed', e?.name === 'AbortError' ? 'This took too long. Try again in a moment.' : (e?.message || 'Unknown error.'));
     } finally {
       setClGenerating(false);
     }
@@ -1914,7 +1914,7 @@ export default function ResumeEditorScreen() {
             ) : (
               <>
                 <Ionicons name="download" size={13} color={GOLD} />
-                <Text style={rs.exportBtnText}>Export PDF</Text>
+                <Text style={rs.exportBtnText}>Export {exportFormat.toUpperCase()}</Text>
               </>
             )}
           </AnimatedPressable>
@@ -2120,18 +2120,27 @@ export default function ResumeEditorScreen() {
                     key={v.id}
                     style={[rs.bentoCard, isActive && rs.bentoCardSelected]}
                     onPress={() => {
-                      // Clear draft + undo when switching variants
-                      AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
-                      undoStackRef.current = [];
-                      setUndoCount(0);
-                      setActiveVariant(v.id);
-                      setShowGrid(false);
-                      setExpanded(new Set());
-                      setHasChanges(false);
-                      dilly.get(`/resume/variants/${v.id}`).then(data => {
-                        const s = data?.sections ?? data?.resume?.sections;
-                        if (s?.length) setSections(s);
-                      }).catch(() => {});
+                      const doSwitch = () => {
+                        AsyncStorage.removeItem(DRAFT_STORAGE_KEY).catch(() => {});
+                        undoStackRef.current = [];
+                        setUndoCount(0);
+                        setActiveVariant(v.id);
+                        setShowGrid(false);
+                        setExpanded(new Set());
+                        setHasChanges(false);
+                        dilly.get(`/resume/variants/${v.id}`).then(data => {
+                          const s = data?.sections ?? data?.resume?.sections;
+                          if (s?.length) setSections(s);
+                        }).catch(() => {});
+                      };
+                      if (hasChanges) {
+                        Alert.alert('Unsaved changes', 'You have unsaved edits. Switch anyway?', [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Switch', style: 'destructive', onPress: doSwitch },
+                        ]);
+                      } else {
+                        doSwitch();
+                      }
                     }}
                     scaleDown={0.96}
                   >
