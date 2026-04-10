@@ -266,22 +266,22 @@ export default function FeedbackScreen() {
             />
           )}
 
-          {/* ── 2. Hero Score ───────────────────────────────── */}
+          {/* ── 2. Hero Score (matches My Scores page style) ── */}
           <View style={f.hero}>
-            <Text style={f.heroEyebrow}>{cohortName}</Text>
-            <View style={f.heroRow}>
-              <ScoreRing score={Math.round(composite)} size={90} />
-              <View style={f.heroDims}>
-                <DimBar label="Smart" value={smart} color={BLUE} />
-                <DimBar label="Grit" value={grit} color={AMBER} />
-                <DimBar label="Build" value={build} color={GREEN} />
-              </View>
-            </View>
+            <Text style={[f.heroScoreBig, { color: scoreColor(Math.round(composite)) }]}>{Math.round(composite)}</Text>
+            <Text style={f.heroCohortName}>{cohortName}</Text>
             <View style={[f.barBadge, { backgroundColor: aboveBar ? GREEN + '15' : GOLD + '15' }]}>
               <Text style={[f.barBadgeText, { color: aboveBar ? GREEN : GOLD }]}>
-                {aboveBar ? 'Above the recruiter bar' : `${Math.round(pointsAway)} ${Math.round(pointsAway) === 1 ? 'point' : 'points'} to the recruiter bar`}
+                {aboveBar ? 'Above the recruiter bar' : `${Math.round(pointsAway)} ${Math.round(pointsAway) === 1 ? 'point' : 'points'} to the bar`}
               </Text>
             </View>
+          </View>
+
+          {/* S/G/B Dimension Bars */}
+          <View style={{ gap: 10, paddingHorizontal: 4 }}>
+            <DimBar label="Smart" value={smart} color={BLUE} />
+            <DimBar label="Grit" value={grit} color={AMBER} />
+            <DimBar label="Build" value={build} color={GREEN} />
           </View>
 
           {/* Dilly take */}
@@ -291,34 +291,6 @@ export default function FeedbackScreen() {
               <Text style={f.takeText}>{audit.dilly_take}</Text>
             </View>
           ) : null}
-
-          {/* ── 3. All Cohorts At-a-Glance ──────────────────── */}
-          {cohortScores.length > 1 && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>All cohorts at a glance</Text>
-              {cohortScores.map((c, i) => (
-                <AnimatedPressable
-                  key={c.cohort_id}
-                  style={[f.glanceRow, i === activeCohortIdx && f.glanceRowActive]}
-                  onPress={() => setActiveCohortIdx(i)}
-                  scaleDown={0.98}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={f.glanceName} numberOfLines={1}>{c.display_name}</Text>
-                    <Text style={f.glanceDims}>
-                      S {Math.round(c.smart)} · G {Math.round(c.grit)} · B {Math.round(c.build)}
-                    </Text>
-                  </View>
-                  <Text style={[f.glanceScore, { color: scoreColor(c.dilly_score) }]}>{Math.round(c.dilly_score)}</Text>
-                  <View style={[f.glanceLevel, { backgroundColor: c.level === 'major' ? GOLD + '15' : colors.s3 }]}>
-                    <Text style={[f.glanceLevelText, { color: c.level === 'major' ? GOLD : colors.t3 }]}>
-                      {c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : c.level?.toUpperCase() || ''}
-                    </Text>
-                  </View>
-                </AnimatedPressable>
-              ))}
-            </View>
-          )}
 
           {/* ── 4. Weakest Dimension Callout ─────────────────── */}
           {weakest && weakest[1] < 80 && (
@@ -469,7 +441,7 @@ export default function FeedbackScreen() {
           )}
 
           {/* ── 9. AI Readiness ─────────────────────────────────── */}
-          <View style={[f.section, { backgroundColor: '#0D1117', borderRadius: radius.lg, padding: spacing.md, marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg + spacing.md }]}>
+          <View style={[f.section, { backgroundColor: '#0D1117', borderRadius: 0, padding: spacing.md, marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg + spacing.md }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Ionicons name="flash" size={14} color="#58A6FF" />
               <Text style={[f.sectionHeading, { color: '#F0F6FC', marginBottom: 0 }]}>AI Readiness</Text>
@@ -550,14 +522,16 @@ const f = StyleSheet.create({
   backText: { fontSize: 15, color: GOLD, fontWeight: '600' },
   scroll: { paddingHorizontal: spacing.lg, gap: 16 },
 
-  // Hero
-  hero: { gap: 12, marginTop: 8 },
-  heroEyebrow: { fontSize: 11, fontWeight: '700', color: colors.t3, letterSpacing: 1.2, textTransform: 'uppercase' },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  // Hero — matches score-detail page with big Cinzel score
+  hero: { alignItems: 'center', paddingTop: 12, paddingBottom: 8, gap: 6 },
+  heroEyebrow: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.2, color: colors.t3, textTransform: 'uppercase' },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 20, width: '100%', paddingHorizontal: 8 },
   heroDims: { flex: 1, gap: 8 },
-  barBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  barBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
   barBadgeText: { fontSize: 12, fontWeight: '700' },
   ringNum: { fontSize: 28, fontWeight: '800' },
+  heroScoreBig: { fontFamily: 'Cinzel_700Bold', fontSize: 64, lineHeight: 72 },
+  heroCohortName: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.8, color: colors.t1, textAlign: 'center' },
 
   // Dim bar
   dimBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -574,15 +548,6 @@ const f = StyleSheet.create({
   section: { gap: 10 },
   sectionHeading: { fontSize: 16, fontWeight: '700', color: colors.t1 },
   sectionSub: { fontSize: 12, color: colors.t3, marginBottom: 4 },
-
-  // Glance (all cohorts)
-  glanceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
-  glanceRowActive: { borderColor: GOLD + '40', backgroundColor: GOLD + '06' },
-  glanceName: { fontSize: 13, fontWeight: '600', color: colors.t1 },
-  glanceDims: { fontSize: 11, color: colors.t3, marginTop: 2 },
-  glanceScore: { fontSize: 20, fontWeight: '800' },
-  glanceLevel: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  glanceLevelText: { fontSize: 8, fontWeight: '700', letterSpacing: 0.5 },
 
   // Callout
   calloutCard: { backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1, borderLeftWidth: 4, padding: spacing.md, gap: 8 },

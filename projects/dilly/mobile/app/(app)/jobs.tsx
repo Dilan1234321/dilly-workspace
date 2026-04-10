@@ -589,7 +589,7 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, color: colors.t1, padding: 0 },
 
   // Filter pills — compact rounded rectangles, not pills
-  filterRow: { paddingHorizontal: spacing.lg, gap: 6, paddingBottom: spacing.xs, height: 36 },
+  filterRow: { paddingHorizontal: spacing.lg, gap: 6, paddingBottom: 4, height: 32 },
   filterPill: {
     paddingHorizontal: 10, paddingVertical: 0, borderRadius: 8,
     backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
