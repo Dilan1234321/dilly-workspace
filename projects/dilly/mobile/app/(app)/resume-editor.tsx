@@ -484,7 +484,7 @@ function BulletEditor({ bullet, placeholder, onChange, onDelete, onScoreUpdate, 
   function handleChange(text: string) {
     onChange(text);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => scoreBullet(text), 600);
+    debounceRef.current = setTimeout(() => scoreBullet(text), 1500); // Reduced from 600ms to avoid lag during typing
   }
 
   // Build 63: fast rule-based rewrite with accept/reject modal.
@@ -910,7 +910,7 @@ export default function ResumeEditorScreen() {
     autosaveTimerRef.current = setTimeout(() => {
       const draft: ResumeDraft = { v: DRAFT_VERSION, savedAt: Date.now(), sections };
       AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft)).catch(() => {});
-    }, 800);
+    }, 3000); // Increased from 800ms — JSON.stringify on every keystroke was causing lag
     return () => {
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     };
@@ -1381,7 +1381,7 @@ export default function ResumeEditorScreen() {
 
   useEffect(() => {
     if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-    scanTimerRef.current = setTimeout(() => { runEditorScan(); }, 650);
+    scanTimerRef.current = setTimeout(() => { runEditorScan(); }, 2500); // Increased from 650ms — frequent network calls during typing caused lag
     return () => {
       if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
     };
