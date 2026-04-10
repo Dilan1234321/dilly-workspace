@@ -1627,21 +1627,36 @@ export default function ResumeEditorScreen() {
       }
       const data = await res.json();
       const url = data?.url;
-      if (!url) {
-        Alert.alert('Cover letter failed', 'Empty response from server.');
-        return;
-      }
+      const letterText = data?.letter_text;
       setShowCoverLetter(false);
       setClCompany('');
       setClRole('');
       setClJD('');
-      try {
-        await Linking.openURL(url);
-      } catch {
-        Alert.alert('Cover letter ready', `Copy to Safari: ${url}`);
+      if (url) {
+        try {
+          await Linking.openURL(url);
+        } catch {
+          // URL failed to open — show letter text if available
+          if (letterText) {
+            Alert.alert('Cover Letter Generated', letterText.slice(0, 500) + (letterText.length > 500 ? '...' : ''), [
+              { text: 'Copy URL', onPress: () => { try { require('react-native').Share.share({ message: url }); } catch {} } },
+              { text: 'OK' },
+            ]);
+          } else {
+            Alert.alert('Cover letter ready', `Open in Safari: ${url}`);
+          }
+        }
+      } else if (letterText) {
+        // No URL but have text — show it directly
+        Alert.alert('Cover Letter', letterText.slice(0, 800));
+      } else {
+        Alert.alert('Cover letter failed', 'Empty response from server.');
       }
     } catch (e: any) {
-      Alert.alert('Cover letter failed', e?.name === 'AbortError' ? 'This took too long. Try again in a moment.' : (e?.message || 'Unknown error.'));
+      const msg = e?.name === 'AbortError'
+        ? 'This took too long. Try again in a moment.'
+        : typeof e?.message === 'string' ? e.message : 'Unknown error.';
+      Alert.alert('Cover letter failed', msg);
     } finally {
       setClGenerating(false);
     }

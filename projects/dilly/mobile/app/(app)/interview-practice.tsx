@@ -10,6 +10,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -258,6 +259,19 @@ export default function InterviewPracticeScreen() {
                   <Text style={s.tipText}>{q.prep_tip}</Text>
                 </View>
               )}
+
+              {/* Ask Dilly for help */}
+              <AnimatedPressable
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: GOLD + '10', borderWidth: 1, borderColor: GOLD + '20', marginBottom: 10 }}
+                onPress={() => openDillyOverlay({
+                  isPaid: true,
+                  initialMessage: `I'm in a mock interview and was asked: "${q.question}". Help me structure a strong answer using the STAR method. ${q.prep_tip ? `Tip: ${q.prep_tip}` : ''}`,
+                })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="sparkles" size={13} color={GOLD} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: GOLD }}>Ask Dilly for help</Text>
+              </AnimatedPressable>
 
               {/* Answer input */}
               <TextInput
