@@ -588,11 +588,12 @@ const s = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: colors.t1, padding: 0 },
 
-  // Filter pills
-  filterRow: { paddingHorizontal: spacing.lg, gap: 6, paddingBottom: spacing.sm },
+  // Filter pills — compact rounded rectangles, not pills
+  filterRow: { paddingHorizontal: spacing.lg, gap: 6, paddingBottom: spacing.xs, height: 36 },
   filterPill: {
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+    paddingHorizontal: 10, paddingVertical: 0, borderRadius: 8,
     backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
+    height: 28, justifyContent: 'center' as const,
   },
   filterPillActive: { backgroundColor: COBALT, borderColor: COBALT },
   filterPillText: { fontSize: 11, fontWeight: '600', color: colors.t2 },
