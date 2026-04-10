@@ -347,6 +347,41 @@ export default function FeedbackScreen() {
             </View>
           )}
 
+          {/* ── 5b. What's NOT Working ─────────────────────── */}
+          {(ra.unmatched_signals || []).length > 0 && (
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>What's not working</Text>
+              <Text style={f.sectionSub}>Signals missing from your resume that recruiters expect.</Text>
+              {(['smart', 'grit', 'build'] as const).map(dim => {
+                const sigs = (ra.unmatched_signals || []).filter(s => s.dimension === dim);
+                if (sigs.length === 0) return null;
+                return (
+                  <View key={`notwork-${dim}`} style={f.dimGroup}>
+                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)} · {sigs.length} missing</Text>
+                    {sigs.slice(0, 5).map((sig, i) => (
+                      <AnimatedPressable
+                        key={i}
+                        style={f.notWorkingRow}
+                        onPress={() => openDillyOverlay({
+                          isPaid: true,
+                          initialMessage: `My resume is missing "${sig.signal}" in the ${dimLabel(dim)} dimension. ${sig.rationale || ''} How do I add this to my resume?`,
+                        })}
+                        scaleDown={0.98}
+                      >
+                        <Ionicons name="close-circle" size={14} color={CORAL} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={f.matchedText}>{sig.signal}</Text>
+                          {sig.rationale ? <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>{sig.rationale}</Text> : null}
+                        </View>
+                        <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                      </AnimatedPressable>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {/* ── 6. Biggest Levers ────────────────────────────── */}
           {Object.values(unmatchedHigh).some(a => a.length > 0) && (
             <View style={f.section}>
@@ -564,6 +599,9 @@ const f = StyleSheet.create({
   // Matched signals
   matchedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 4 },
   matchedText: { flex: 1, fontSize: 13, color: colors.t1, lineHeight: 18 },
+
+  // Not working
+  notWorkingRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 6 },
 
   // Levers
   leverCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
