@@ -35,7 +35,10 @@ export type VisualType =
   | 'cohort_comparison'
   | 'interview_checklist'
   | 'bullet_comparison'
-  | 'timeline';
+  | 'timeline'
+  | 'action_buttons'
+  | 'weekly_plan'
+  | 'job_match';
 
 export interface ScoreBreakdownPayload {
   type: 'score_breakdown';
@@ -96,12 +99,52 @@ export interface TimelinePayload {
   title?: string;
 }
 
+export interface ActionButtonsPayload {
+  type: 'action_buttons';
+  buttons: Array<{
+    label: string;
+    route: string;
+    icon?: string;
+    color?: string;
+    params?: Record<string, string>;
+  }>;
+}
+
+export interface WeeklyPlanPayload {
+  type: 'weekly_plan';
+  title?: string;
+  days: Array<{
+    day: string;
+    task: string;
+    done?: boolean;
+  }>;
+}
+
+export interface JobMatchPayload {
+  type: 'job_match';
+  title: string;
+  company: string;
+  location: string;
+  job_type: string;
+  readiness: 'ready' | 'almost' | 'gap';
+  smart_req: number;
+  grit_req: number;
+  build_req: number;
+  user_smart: number;
+  user_grit: number;
+  user_build: number;
+  apply_url?: string;
+}
+
 export type VisualPayload =
   | ScoreBreakdownPayload
   | CohortComparisonPayload
   | InterviewChecklistPayload
   | BulletComparisonPayload
-  | TimelinePayload;
+  | TimelinePayload
+  | ActionButtonsPayload
+  | WeeklyPlanPayload
+  | JobMatchPayload;
 
 // ── Animated bar ──────────────────────────────────────────────────────────────
 
@@ -382,6 +425,112 @@ export function TimelineCard({ data }: { data: TimelinePayload }) {
   );
 }
 
+// ── Action Buttons Card ──────────────────────────────────────────────────────
+
+export function ActionButtonsCard({ data }: { data: ActionButtonsPayload }) {
+  const { router } = require('expo-router');
+  return (
+    <View style={[vStyles.card, { gap: 8, padding: 12 }]}>
+      {data.buttons.map((btn, i) => (
+        <TouchableOpacity
+          key={i}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 8,
+            paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12,
+            backgroundColor: btn.color ? btn.color + '12' : GOLD + '12',
+            borderWidth: 1, borderColor: btn.color ? btn.color + '25' : GOLD + '25',
+          }}
+          onPress={() => {
+            try { router.push({ pathname: btn.route, params: btn.params }); } catch {}
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: btn.color || GOLD, flex: 1 }}>{btn.label}</Text>
+          <Text style={{ fontSize: 16, color: btn.color || GOLD }}>→</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ── Weekly Plan Card ─────────────────────────────────────────────────────────
+
+export function WeeklyPlanCard({ data }: { data: WeeklyPlanPayload }) {
+  const [checked, setChecked] = useState<boolean[]>(data.days.map(d => d.done ?? false));
+  const toggle = (idx: number) => setChecked(prev => { const next = [...prev]; next[idx] = !next[idx]; return next; });
+  const done = checked.filter(Boolean).length;
+
+  return (
+    <View style={vStyles.card}>
+      <View style={vStyles.cardHeader}>
+        <Text style={vStyles.cardEyebrow}>{data.title || 'YOUR WEEKLY PLAN'}</Text>
+        <Text style={[vStyles.checkProgress, { color: done === data.days.length ? GREEN : GOLD }]}>{done}/{data.days.length}</Text>
+      </View>
+      {data.days.map((day, i) => (
+        <TouchableOpacity key={i} style={vStyles.checkRow} onPress={() => toggle(i)} activeOpacity={0.7}>
+          <View style={[vStyles.checkbox, checked[i] && { backgroundColor: GREEN, borderColor: GREEN }]}>
+            {checked[i] && <Text style={vStyles.checkmark}>✓</Text>}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: GOLD, letterSpacing: 0.5 }}>{day.day}</Text>
+            <Text style={[vStyles.checkLabel, checked[i] && vStyles.checkLabelDone]}>{day.task}</Text>
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+// ── Job Match Card ───────────────────────────────────────────────────────────
+
+function MatchBar({ label, req, yours, color }: { label: string; req: number; yours: number; color: string }) {
+  const met = yours >= req;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 20 }}>
+      <Text style={{ width: 14, fontSize: 11, fontWeight: '700', color: colors.t3, textAlign: 'center' }}>{label}</Text>
+      <View style={{ flex: 1, height: 6, backgroundColor: colors.s3, borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
+        <View style={{ height: '100%', width: `${Math.min(100, yours)}%`, backgroundColor: met ? GREEN : CORAL, borderRadius: 3 }} />
+        <View style={{ position: 'absolute', top: -2, left: `${Math.min(100, req)}%`, width: 2, height: 10, backgroundColor: colors.t1, borderRadius: 1 }} />
+      </View>
+      <Text style={{ width: 24, fontSize: 12, fontWeight: '700', color: met ? GREEN : CORAL, textAlign: 'right' }}>{Math.round(yours)}</Text>
+      <Text style={{ fontSize: 10, color: colors.t3 }}>/</Text>
+      <Text style={{ width: 24, fontSize: 11, color: colors.t3 }}>{Math.round(req)}</Text>
+    </View>
+  );
+}
+
+export function JobMatchCard({ data }: { data: JobMatchPayload }) {
+  const { router } = require('expo-router');
+  const rColor = data.readiness === 'ready' ? GREEN : data.readiness === 'almost' ? AMBER : CORAL;
+  const rLabel = data.readiness === 'ready' ? 'Ready' : data.readiness === 'almost' ? 'Almost' : 'Gap';
+
+  return (
+    <View style={vStyles.card}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.t1 }}>{data.title}</Text>
+          <Text style={{ fontSize: 13, color: colors.t2, marginTop: 2 }}>{data.company} · {data.location}</Text>
+        </View>
+        <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: rColor + '15', borderWidth: 1, borderColor: rColor + '25' }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: rColor }}>{rLabel}</Text>
+        </View>
+      </View>
+      <MatchBar label="S" req={data.smart_req} yours={data.user_smart} color={BLUE} />
+      <MatchBar label="G" req={data.grit_req} yours={data.user_grit} color={AMBER} />
+      <MatchBar label="B" req={data.build_req} yours={data.user_build} color={GREEN} />
+      {data.apply_url && (
+        <TouchableOpacity
+          style={{ marginTop: 10, backgroundColor: GOLD, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+          onPress={() => { const { Linking } = require('react-native'); Linking.openURL(data.apply_url!).catch(() => {}); }}
+          activeOpacity={0.8}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Apply Now</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export function DillyVisual({ payload }: { payload: VisualPayload }) {
@@ -391,6 +540,9 @@ export function DillyVisual({ payload }: { payload: VisualPayload }) {
     case 'interview_checklist': return <InterviewChecklistCard data={payload} />;
     case 'bullet_comparison':   return <BulletComparisonCard data={payload} />;
     case 'timeline':            return <TimelineCard data={payload} />;
+    case 'action_buttons':      return <ActionButtonsCard data={payload} />;
+    case 'weekly_plan':         return <WeeklyPlanCard data={payload} />;
+    case 'job_match':           return <JobMatchCard data={payload} />;
     default:                    return null;
   }
 }

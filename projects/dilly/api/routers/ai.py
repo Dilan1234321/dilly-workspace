@@ -745,8 +745,90 @@ async def ai_chat(request: Request, body: ChatRequest):
             )
             thread.start()
 
-        return ChatResponse(content=content.strip())
+        # ── Auto-attach visual cards based on response content ─────────
+        visual = _detect_visual(content, body.student_context, body.mode, email)
+
+        return ChatResponse(content=content.strip(), visual=visual)
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=502, detail=f"Claude API error: {str(e)}")
+
+
+def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
+    """Auto-detect which visual card to show based on the AI response content."""
+    if mode == "practice":
+        return None  # Interview mode is text-only
+
+    text = content.lower()
+    score = ctx.score if ctx else None
+    smart = ctx.smart if ctx else None
+    grit = ctx.grit if ctx else None
+    build = ctx.build if ctx else None
+    cohort = ctx.cohort if ctx else "General"
+    bar = ctx.cohort_bar if ctx else 70
+
+    # If discussing scores and we have data → show score breakdown
+    score_keywords = ["your score", "smart score", "grit score", "build score", "dilly score", "your smart", "your grit", "your build"]
+    if any(kw in text for kw in score_keywords) and smart is not None and grit is not None and build is not None:
+        return {
+            "type": "score_breakdown",
+            "overall": int(score or ((smart + grit + build) / 3)),
+            "smart": int(smart),
+            "grit": int(grit),
+            "build": int(build),
+            "bar": int(bar or 70),
+            "cohort": str(cohort),
+        }
+
+    # If giving a weekly plan or step-by-step plan → show weekly plan card
+    plan_keywords = ["this week", "your plan", "here's what to do", "step 1", "day 1", "monday", "tuesday"]
+    if any(kw in text for kw in plan_keywords):
+        # Try to extract numbered steps
+        import re
+        steps = re.findall(r'(?:^|\n)\s*(?:\d+[\.\)]\s*|[-*]\s*)(.*?)(?=\n|$)', content)
+        if len(steps) >= 3:
+            days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            plan_days = []
+            for i, step in enumerate(steps[:7]):
+                plan_days.append({
+                    "day": days[i] if i < len(days) else f"Day {i+1}",
+                    "task": step.strip()[:100],
+                })
+            return {
+                "type": "weekly_plan",
+                "title": "YOUR ACTION PLAN",
+                "days": plan_days,
+            }
+
+    # If recommending the editor, audit, or other app features → action buttons
+    action_keywords = {
+        "open the editor": ("/(app)/resume-editor", "Open Resume Editor"),
+        "run an audit": ("/(app)/new-audit", "Run Audit"),
+        "resume editor": ("/(app)/resume-editor", "Open Resume Editor"),
+        "tailor your resume": ("/(app)/resume-editor", "Tailor Resume"),
+        "check the jobs": ("/(app)/jobs", "Browse Jobs"),
+        "practice interview": ("/(app)/interview-practice", "Practice Interview"),
+    }
+    buttons = []
+    for keyword, (route, label) in action_keywords.items():
+        if keyword in text and not any(b["label"] == label for b in buttons):
+            buttons.append({"label": label, "route": route})
+    if buttons:
+        return {"type": "action_buttons", "buttons": buttons[:3]}
+
+    # If discussing a before/after bullet rewrite → bullet comparison
+    before_after = re.findall(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE) if 'import re' or True else []
+    import re
+    before_match = re.search(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE)
+    after_match = re.search(r'(?:after|improved|new|rewritten)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE)
+    if before_match and after_match:
+        return {
+            "type": "bullet_comparison",
+            "before": before_match.group(1)[:200],
+            "after": after_match.group(1)[:200],
+            "dimension": "overall",
+            "impact": "Stronger action verb + quantified metric",
+        }
+
+    return None
