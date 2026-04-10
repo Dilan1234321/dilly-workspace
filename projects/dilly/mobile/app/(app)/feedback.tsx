@@ -464,7 +464,48 @@ export default function FeedbackScreen() {
             </View>
           )}
 
-          {/* ── 9. Other Cohorts ──────────────────────────────── */}
+          {/* ── 9. AI Readiness ─────────────────────────────────── */}
+          <View style={[f.section, { backgroundColor: '#0D1117', borderRadius: radius.lg, padding: spacing.md, marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg + spacing.md }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Ionicons name="flash" size={14} color="#58A6FF" />
+              <Text style={[f.sectionHeading, { color: '#F0F6FC', marginBottom: 0 }]}>AI Readiness</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#8B949E', lineHeight: 18, marginBottom: 12 }}>
+              AI is disrupting entry-level roles across every field. Your resume needs to show skills AI can't replace.
+            </Text>
+            <AnimatedPressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: '#161B22', borderWidth: 1, borderColor: '#21262D' }}
+              onPress={() => openDillyOverlay({
+                isPaid: true,
+                initialMessage: `AI is disrupting entry-level ${cohortName} roles. Review my resume and tell me: which of my skills are AI-proof, which are at risk, and what should I change to be competitive in an AI-driven job market?`,
+              })}
+              scaleDown={0.98}
+            >
+              <Ionicons name="shield-checkmark" size={16} color="#3FB950" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#F0F6FC' }}>Is my resume AI-proof?</Text>
+                <Text style={{ fontSize: 11, color: '#8B949E', marginTop: 2 }}>Dilly will analyze which of your skills are safe and which are at risk</Text>
+              </View>
+              <Ionicons name="sparkles" size={12} color="#58A6FF" />
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: '#161B22', borderWidth: 1, borderColor: '#21262D', marginTop: 8 }}
+              onPress={() => openDillyOverlay({
+                isPaid: true,
+                initialMessage: `What skills should I develop to be AI-proof in ${cohortName}? I want to know what AI can't replace in my field and how to emphasize those skills on my resume.`,
+              })}
+              scaleDown={0.98}
+            >
+              <Ionicons name="rocket" size={16} color="#D29922" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#F0F6FC' }}>What skills should I develop?</Text>
+                <Text style={{ fontSize: 11, color: '#8B949E', marginTop: 2 }}>AI-proof skills for {cohortName.replace(/ & .*$/, '')} careers</Text>
+              </View>
+              <Ionicons name="sparkles" size={12} color="#58A6FF" />
+            </AnimatedPressable>
+          </View>
+
+          {/* ── 10. Other Cohorts ──────────────────────────────── */}
           {ra.other_cohorts && ra.other_cohorts.length > 0 && (
             <View style={f.section}>
               <Text style={f.sectionHeading}>Other tracks you fit</Text>
