@@ -647,7 +647,7 @@ const s = StyleSheet.create({
   readyChipText: { fontSize: 11, fontWeight: '700' },
 
   // List
-  listContent: { paddingHorizontal: spacing.lg, gap: 10, paddingTop: 4 },
+  listContent: { paddingHorizontal: spacing.lg, gap: 8, paddingTop: 2 },
 
   // Job Card
   jobCard: {
@@ -728,7 +728,7 @@ const s = StyleSheet.create({
 
   // Empty state
   emptyCard: {
-    alignItems: 'center', padding: 40, gap: 12, marginTop: 40,
+    alignItems: 'center', padding: 24, gap: 10, marginTop: 20,
   },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.t1, textAlign: 'center' },
   emptySub: { fontSize: 13, color: colors.t2, textAlign: 'center', lineHeight: 19 },

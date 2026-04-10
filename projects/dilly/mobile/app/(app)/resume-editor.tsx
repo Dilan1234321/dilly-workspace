@@ -33,6 +33,7 @@ import Animated, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+import { parseCohortScores } from '../../lib/cohorts';
 
 // Build 70: crash-recovery + autosave
 const DRAFT_STORAGE_KEY = 'dilly_resume_editor_draft_v1';
@@ -847,6 +848,7 @@ export default function ResumeEditorScreen() {
 
   // Build-63 dashboard: debounced /resume/editor-scan result
   const [scanData, setScanData] = useState<EditorScanData | null>(null);
+  const [cohortScoreOverride, setCohortScoreOverride] = useState<any>(null);
   const [scanLoading, setScanLoading] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showExportPicker, setShowExportPicker] = useState(false);
@@ -926,6 +928,12 @@ export default function ResumeEditorScreen() {
           dilly.get('/audit/latest').catch(() => null),
         ]);
         setMajor(profileRes?.majors?.[0] || profileRes?.major || '');
+
+        // Load Claude cohort scores to override dashboard rubric scores
+        const _cs = parseCohortScores(profileRes?.cohort_scores);
+        if (_cs.length > 0) {
+          setCohortScoreOverride(_cs[0]);
+        }
 
         // Seed initial score from latest audit  -  prefer primary cohort
         // composite from rubric_analysis over the legacy aggregate.
@@ -1872,7 +1880,17 @@ export default function ResumeEditorScreen() {
           </AnimatedPressable>
           {showDashboard && (
             <ResumeScoreDashboard
-              scan={scanData}
+              scan={scanData && cohortScoreOverride ? {
+                ...scanData,
+                rubric_analysis: {
+                  ...scanData.rubric_analysis,
+                  primary_smart: cohortScoreOverride.smart,
+                  primary_grit: cohortScoreOverride.grit,
+                  primary_build: cohortScoreOverride.build,
+                  primary_composite: cohortScoreOverride.dilly_score,
+                  primary_cohort_display_name: cohortScoreOverride.display_name,
+                },
+              } : scanData}
               loading={scanLoading}
               onFixIssue={handleFixIssue}
               cohortOptions={cohortOptions}
