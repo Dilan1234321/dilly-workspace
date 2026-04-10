@@ -614,6 +614,10 @@ async def home_brief(request: Request):
     latest_audit = audits[0] if audits else {}
     has_audit = bool(latest_audit and (latest_audit.get("final_score") is not None
                                         or (latest_audit.get("rubric_analysis") or {}).get("primary_composite") is not None))
+    # Also check profile flag and DB cohort_scores — audit may have run but
+    # history file is missing (e.g., deployed to a new instance).
+    if not has_audit:
+        has_audit = bool(profile.get("has_run_first_audit") or profile.get("cohort_scores"))
 
     # Determine cohort + bar
     ra = latest_audit.get("rubric_analysis") or {}
