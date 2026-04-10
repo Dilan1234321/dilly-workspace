@@ -497,7 +497,7 @@ export default function JobsScreen() {
 
       {/* Cohort filter pills */}
       {cohortScores.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 36 }} contentContainerStyle={s.filterRow}>
           <AnimatedPressable
             style={[s.filterPill, !activeCohortFilter && s.filterPillActive]}
             onPress={() => setActiveCohortFilter(null)}
@@ -552,7 +552,7 @@ export default function JobsScreen() {
       {/* Job listings */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[s.listContent, { paddingBottom: insets.bottom + 16 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COBALT} />}
       >
@@ -602,12 +602,12 @@ const s = StyleSheet.create({
   loadingText: { fontSize: 14, color: colors.t2, marginTop: 12 },
 
   // Header
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xs },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },
   headerTitle: { fontSize: 24, fontWeight: '800', color: colors.t1, letterSpacing: -0.5 },
   headerSub: { fontSize: 13, color: colors.t3, marginTop: 2 },
 
   // Search
-  searchRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  searchRow: { paddingHorizontal: spacing.lg, paddingBottom: 4 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: colors.s2, borderRadius: radius.md,
