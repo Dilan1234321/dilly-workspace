@@ -49,6 +49,36 @@ GREENHOUSE_BOARD_TOKENS = [
     "duolingo",          # Duolingo
     "doordash",          # DoorDash
     "instacart",         # Instacart
+    # ── Healthcare ───────────────────────────────────────────────────────────
+    "tempus",            # Tempus — precision medicine
+    "flatiron",          # Flatiron Health — oncology data
+    "ro",                # Ro — telehealth
+    # ── Enterprise Tech ──────────────────────────────────────────────────────
+    "hashicorp",         # HashiCorp
+    "confluent",         # Confluent — Kafka
+    "elastic",           # Elastic
+    "mongodb",           # MongoDB
+    "cloudflare",        # Cloudflare
+    "datadog",           # Datadog
+    "twilio",            # Twilio
+    "okta",              # Okta — identity
+    "crowdstrike",       # CrowdStrike — cybersecurity
+    "sentinelone",       # SentinelOne — cybersecurity
+    # ── Consumer ─────────────────────────────────────────────────────────────
+    "lyft",              # Lyft
+    "pinterest",         # Pinterest
+    "reddit",            # Reddit
+    "snap",              # Snap Inc
+    "spotify",           # Spotify
+    "squarespace",       # Squarespace
+    "etsy",              # Etsy
+    # ── Fintech ──────────────────────────────────────────────────────────────
+    "sofi",              # SoFi
+    "affirm",            # Affirm
+    "marqeta",           # Marqeta
+    # ── Aerospace / Defense ──────────────────────────────────────────────────
+    "relativityspace",   # Relativity Space
+    "astranis",          # Astranis — satellites
 ]
 
 # Lever Job Board API: public, no auth needed.
@@ -74,6 +104,17 @@ LEVER_COMPANY_SLUGS = [
     "gusto",             # Gusto — HR/payroll
     "mercury",           # Mercury — fintech
     "ramp",              # Ramp (also Greenhouse)
+    "stripe",            # Stripe (also Greenhouse)
+    "masterclass",       # MasterClass
+    "notion",            # Notion (also Ashby)
+    "faire",             # Faire — B2B marketplace
+    "webflow",           # Webflow
+    "zapier",            # Zapier
+    "grammarly",         # Grammarly
+    "plaid",             # Plaid (also Greenhouse)
+    "anduril",           # Anduril (also Greenhouse)
+    "airtable",          # Airtable
+    "brex",              # Brex (also Greenhouse)
 ]
 
 # Ashby Job Board API: public, no auth needed.

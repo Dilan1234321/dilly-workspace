@@ -29,6 +29,8 @@ except ImportError:
 
 from .config import (
     GREENHOUSE_BOARD_TOKENS,
+    LEVER_COMPANY_SLUGS,
+    ASHBY_ORG_SLUGS,
     REQUEST_DELAY_SEC,
     USER_AGENT,
     USAJOBS_INTERNSHIP_KEYWORDS,
@@ -287,6 +289,56 @@ def run_job_scraper(
         else:
             print("Skipping USAJobs (set USAJOBS_API_KEY for federal jobs)")
 
-    print(f"\nDone. Total in DB: {stats['greenhouse'] + stats['usajobs']} scraped, {stats['total_inserted']} inserted")
+    # Lever boards
+    stats["lever"] = 0
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+        from dilly_core.job_source_lever import fetch_lever_jobs
+        for slug in LEVER_COMPANY_SLUGS:
+            time.sleep(REQUEST_DELAY_SEC)
+            print(f"Scraping Lever: {slug}")
+            jobs = fetch_lever_jobs(slug, max_jobs=30)
+            # Normalize to scraper format
+            for j in jobs:
+                j["id"] = j.get("id") or str(uuid.uuid4())
+                j["external_id"] = j.get("external_id") or f"lever:{slug}:{j.get('id', '')}"
+                j["source_domain"] = j.get("source_domain") or f"jobs.lever.co/{slug}"
+                j["scraped_at"] = j.get("scraped_at") or datetime.now(timezone.utc).isoformat()
+                j["description"] = (j.get("description") or "")[:5000]
+            stats["lever"] += len(jobs)
+            if jobs:
+                inserted = upsert_jobs(db, jobs)
+                stats["total_inserted"] += inserted
+                print(f"  -> {len(jobs)} jobs, {inserted} new/updated")
+    except Exception as e:
+        print(f"Lever scraping failed: {e}")
+        stats["errors"].append(f"lever: {str(e)[:100]}")
+
+    # Ashby boards
+    stats["ashby"] = 0
+    try:
+        from dilly_core.job_source_ashby import fetch_ashby_jobs
+        for slug in ASHBY_ORG_SLUGS:
+            time.sleep(REQUEST_DELAY_SEC)
+            print(f"Scraping Ashby: {slug}")
+            jobs = fetch_ashby_jobs(slug, max_jobs=30)
+            for j in jobs:
+                j["id"] = j.get("id") or str(uuid.uuid4())
+                j["external_id"] = j.get("external_id") or f"ashby:{slug}:{j.get('id', '')}"
+                j["source_domain"] = j.get("source_domain") or f"jobs.ashbyhq.com/{slug}"
+                j["scraped_at"] = j.get("scraped_at") or datetime.now(timezone.utc).isoformat()
+                j["description"] = (j.get("description") or "")[:5000]
+            stats["ashby"] += len(jobs)
+            if jobs:
+                inserted = upsert_jobs(db, jobs)
+                stats["total_inserted"] += inserted
+                print(f"  -> {len(jobs)} jobs, {inserted} new/updated")
+    except Exception as e:
+        print(f"Ashby scraping failed: {e}")
+        stats["errors"].append(f"ashby: {str(e)[:100]}")
+
+    total = stats['greenhouse'] + stats['usajobs'] + stats['lever'] + stats['ashby']
+    print(f"\nDone. {total} scraped, {stats['total_inserted']} inserted. Errors: {len(stats['errors'])}")
 
     return stats
