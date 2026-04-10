@@ -1,357 +1,368 @@
 /**
- * FEEDBACK SCREEN  -  detailed rubric-driven resume feedback.
+ * FEEDBACK PAGE — the powerhouse. Merges score-detail + feedback into one page.
  *
- * Purpose
- * ───────
- * The student's "what should I change on my resume" page. Reads the rich
- * `rubric_analysis` payload that the backend already attaches to audit
- * responses (post Tier 2 cutover 2026-04-08) and renders it as a complete,
- * actionable feedback experience.
- *
- * This page is the deep-dive companion to results.tsx / new-audit.tsx  - 
- * those screens show the summary, this screen shows every detail: every
- * matched signal with the exact text from the rubric, every unmatched
- * high-impact signal with its cited rationale, every fastest-path move,
- * and every common rejection reason.
- *
- * Data source
- * ───────────
- * Reads from AsyncStorage key 'dilly_latest_audit' (written by the audit
- * flow) on mount, and re-fetches via GET /audit/latest if stale or missing.
- * Falls back to a "run your first audit" empty state if no audit exists.
- *
- * Cohort awareness
- * ────────────────
- * For pre_health and pre_law cohorts, the feedback language shifts from
- * employer/recruiter framing to adcom/admissions framing ("matriculants"
- * instead of "recruiters", "admissions officers" instead of "hiring
- * managers"). The rubric content is already cohort-appropriate; only the
- * wrapper copy changes.
+ * Build 98: Unified page showing:
+ * 1. Cohort switcher (horizontal pills)
+ * 2. Hero score ring + S/G/B dimension bars
+ * 3. At-a-glance multi-cohort comparison
+ * 4. Weakest dimension callout with action buttons
+ * 5. What's working (matched signals)
+ * 6. Biggest levers (unmatched high-impact signals)
+ * 7. Fastest path forward (tappable → AI coach)
+ * 8. Common rejection reasons (tappable → AI coach)
+ * 9. Other cohorts
+ * 10. CTAs (re-audit + editor)
  */
 
 import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Linking,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  ActivityIndicator, Linking,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
+import CohortSwitcher from '../../components/CohortSwitcher';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
-const GOLD  = '#2B3A8E'; // Dilly brand blue
+const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
+const AMBER = '#FF9F0A';
+const CORAL = '#FF453A';
 const BLUE  = '#0A84FF';
 
-// ─── Types (match rubric_analysis shape from backend) ────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
-interface RubricSignal {
-  signal: string;
-  dimension: 'smart' | 'grit' | 'build';
-  tier: 'high' | 'medium' | 'low';
-  weight: number;
-  rationale: string;
-}
-
-type RubricPathMove = string | {
-  move?: string;
-  expected_lift?: string;
-  source?: string;
-  title?: string;
-  action?: string;
-};
-
-type RubricRejection = string | {
-  reason?: string;
-  source?: string;
-};
-
-interface OtherCohort {
-  cohort_id: string;
-  display_name: string;
-  composite: number;
-  smart: number;
-  grit: number;
-  build: number;
-  recruiter_bar: number;
-  above_bar: boolean;
-}
-
+interface RubricSignal { signal: string; dimension: string; tier: string; weight: number; rationale: string; }
+interface RubricPathMove { move?: string; action?: string; title?: string; expected_lift?: string; source?: string; }
+interface OtherCohort { cohort_id: string; display_name: string; composite: number; smart: number; grit: number; build: number; recruiter_bar: number; above_bar: boolean; }
 interface RubricAnalysis {
-  primary_cohort_id: string;
-  primary_cohort_display_name: string;
-  primary_composite: number;
-  primary_smart: number;
-  primary_grit: number;
-  primary_build: number;
-  recruiter_bar: number;
-  above_bar: boolean;
-  matched_signals: RubricSignal[];
-  unmatched_signals: RubricSignal[];
-  fastest_path_moves: RubricPathMove[];
-  common_rejection_reasons?: RubricRejection[];
+  primary_cohort_id: string; primary_cohort_display_name: string;
+  primary_composite: number; primary_smart: number; primary_grit: number; primary_build: number;
+  recruiter_bar: number; above_bar: boolean;
+  matched_signals: RubricSignal[]; unmatched_signals: RubricSignal[];
+  fastest_path_moves: (string | RubricPathMove)[];
+  common_rejection_reasons?: (string | { text: string; source?: string })[];
   other_cohorts?: OtherCohort[];
 }
 
-interface AuditLike {
-  final_score?: number;
-  scores?: { smart?: number; grit?: number; build?: number };
-  detected_track?: string;
-  major?: string;
-  candidate_name?: string;
-  dilly_take?: string;
-  rubric_analysis?: RubricAnalysis;
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function dimColor(dim: string): string {
+  return dim === 'smart' ? BLUE : dim === 'grit' ? GOLD : GREEN;
+}
+function dimLabel(dim: string): string {
+  return dim.charAt(0).toUpperCase() + dim.slice(1);
+}
+function scoreColor(s: number): string {
+  return s >= 75 ? GREEN : s >= 50 ? GOLD : CORAL;
+}
+function extractMoveText(m: string | RubricPathMove): string {
+  if (typeof m === 'string') return m;
+  return m.move || m.action || m.title || '';
+}
+function extractRejectText(r: string | { text: string; source?: string }): { text: string; source?: string } {
+  if (typeof r === 'string') return { text: r };
+  return { text: r.text || '', source: r.source };
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────
+// ── Score Ring ───────────────────────────────────────────────────────────────
 
-function extractFastestPathText(move: RubricPathMove): string {
-  if (typeof move === 'string') return move;
-  return move.move || move.action || move.title || '';
+function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
+  const strokeWidth = 5;
+  const r = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * r;
+  const progress = Math.max(0, Math.min(100, score)) / 100;
+  const dashOffset = circumference * (1 - progress);
+  const color = scoreColor(score);
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size}>
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.b1} strokeWidth={strokeWidth} fill="transparent" />
+        <Circle
+          cx={size / 2} cy={size / 2} r={r}
+          stroke={color} strokeWidth={strokeWidth} fill="transparent"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={dashOffset} strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </Svg>
+      <Text style={[f.ringNum, { color, position: 'absolute' }]}>{Math.round(score)}</Text>
+    </View>
+  );
 }
 
-function extractRejectionText(r: RubricRejection): { text: string; source: string | null } {
-  if (typeof r === 'string') return { text: r, source: null };
-  return { text: r.reason || '', source: r.source || null };
+// ── Dimension Bar ────────────────────────────────────────────────────────────
+
+function DimBar({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <View style={f.dimBarRow}>
+      <Text style={f.dimBarLabel}>{label}</Text>
+      <View style={f.dimBarTrack}>
+        <View style={[f.dimBarFill, { width: `${Math.min(100, value)}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={[f.dimBarScore, { color }]}>{Math.round(value)}</Text>
+    </View>
+  );
 }
 
-function dimensionLabel(d: 'smart' | 'grit' | 'build'): string {
-  if (d === 'smart') return 'Smart';
-  if (d === 'grit') return 'Grit';
-  return 'Build';
-}
-
-function dimensionColor(d: 'smart' | 'grit' | 'build'): string {
-  if (d === 'smart') return BLUE;
-  if (d === 'grit') return GOLD;
-  return GREEN;
-}
-
-function isAdmissionsCohort(cohortId: string | undefined): 'pre_health' | 'pre_law' | null {
-  if (!cohortId) return null;
-  if (cohortId === 'pre_health') return 'pre_health';
-  if (cohortId === 'pre_law') return 'pre_law';
-  return null;
-}
-
-// ─── Main screen ─────────────────────────────────────────────────────
+// ── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [audit, setAudit] = useState<AuditLike | null>(null);
+  const [audit, setAudit] = useState<any>(null);
+  const [ra, setRa] = useState<RubricAnalysis | null>(null);
+  const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
+  const [activeCohortIdx, setActiveCohortIdx] = useState(0);
 
-  // Load the latest audit on mount. Strategy:
-  //  1. Try AsyncStorage (dilly_latest_audit)  -  fastest, populated by audit flow
-  //  2. Fall back to /audit/latest API  -  canonical server-side record
-  //  3. If both fail, show empty state
   useEffect(() => {
-    let cancelled = false;
     (async () => {
       try {
-        // First try AsyncStorage
-        const cached = await AsyncStorage.getItem('dilly_latest_audit');
-        if (cached && !cancelled) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed && parsed.final_score != null) {
-              setAudit(parsed);
-              setLoading(false);
-              // Continue to fetch fresh version in the background
-            }
-          } catch {}
+        // Try AsyncStorage cache first (fast), then API (canonical)
+        let auditObj: any = null;
+        try {
+          const cached = await AsyncStorage.getItem('dilly_latest_audit');
+          if (cached) auditObj = JSON.parse(cached);
+        } catch {}
+
+        const [profileRes, auditRes] = await Promise.all([
+          dilly.get('/profile').catch(() => null),
+          dilly.get('/audit/latest').catch(() => null),
+        ]);
+
+        const apiAudit = auditRes?.audit ?? auditRes;
+        if (apiAudit?.rubric_analysis) {
+          auditObj = apiAudit;
+          AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(apiAudit)).catch(() => {});
         }
 
-        // Then try the API for the freshest version
-        try {
-          const res = await dilly.get('/audit/latest');
-          if (!cancelled && res?.audit) {
-            setAudit(res.audit);
-            // Update AsyncStorage cache
-            try {
-              await AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(res.audit));
-            } catch {}
-          }
-        } catch (apiErr: any) {
-          // API failed  -  if we already have a cached version, that's fine
-          if (!cancelled && !audit) {
-            setError('Could not load your latest audit. Tap to retry.');
-          }
+        setAudit(auditObj);
+        if (auditObj?.rubric_analysis) setRa(auditObj.rubric_analysis as RubricAnalysis);
+
+        // Load cohort scores for switcher
+        const parsed = parseCohortScores(profileRes?.cohort_scores);
+        // Also include ALL cohort_scores (not just major) for the full view
+        const allRaw = profileRes?.cohort_scores;
+        if (allRaw && Object.keys(allRaw).length > 0) {
+          const all: CohortScore[] = Object.entries(allRaw)
+            .filter(([_, v]: [string, any]) => v && typeof v === 'object')
+            .map(([key, v]: [string, any]) => ({
+              cohort_id: key,
+              display_name: v.field || v.cohort || key,
+              smart: Number(v.smart) || 0,
+              grit: Number(v.grit) || 0,
+              build: Number(v.build) || 0,
+              dilly_score: Number(v.dilly_score) || 0,
+              level: (v.level || 'interest') as CohortScore['level'],
+              weight: Number(v.weight) ?? 0,
+              scored_by_claude: !!v.scored_by_claude,
+            }))
+            .sort((a, b) => {
+              const lo: Record<string, number> = { primary: 0, major: 1, minor: 2, interest: 3 };
+              return (lo[a.level] ?? 9) - (lo[b.level] ?? 9) || b.dilly_score - a.dilly_score;
+            });
+          setCohortScores(all);
+        } else {
+          setCohortScores(parsed);
         }
-      } catch (err: any) {
-        if (!cancelled) {
-          setError(err?.message || 'Something went wrong loading your feedback.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      } catch {}
+      finally { setLoading(false); }
     })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Loading state ──────────────────────────────────────────────────
+  const activeCohort = cohortScores[activeCohortIdx] ?? null;
+
   if (loading) {
     return (
-      <View style={[s.container, { paddingTop: insets.top, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[f.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={GOLD} />
       </View>
     );
   }
 
-  // ── Empty state  -  no audit yet ─────────────────────────────────────
-  if (!audit || !audit.rubric_analysis) {
+  // No rubric data — show empty state with action
+  if (!ra) {
     return (
-      <View style={[s.container, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={18} color={GOLD} />
-          <Text style={s.backText}>Back</Text>
-        </TouchableOpacity>
-        <View style={s.emptyWrap}>
-          <View style={s.emptyIconCircle}>
-            <Ionicons name="document-text-outline" size={32} color={GOLD} />
-          </View>
-          <Text style={s.emptyHeading}>No feedback yet.</Text>
-          <Text style={s.emptyBody}>
-            Run your first audit to see exactly which signals on your resume are working,
-            which ones are missing, and the specific actions that move your score fastest  - 
-            each one cited from real employer research.
-          </Text>
-          <TouchableOpacity
-            style={s.primaryBtn}
-            onPress={() => router.push('/(app)/new-audit')}
-            activeOpacity={0.85}
-          >
-            <Text style={s.primaryBtnText}>Run my first audit</Text>
-            <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={[f.container, { paddingTop: insets.top }]}>
+          <TouchableOpacity style={f.backBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={18} color={GOLD} />
+            <Text style={f.backText}>Back</Text>
           </TouchableOpacity>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+            <Ionicons name="analytics-outline" size={48} color={colors.t3} />
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.t1, marginTop: 16, textAlign: 'center' }}>No feedback yet</Text>
+            <Text style={{ fontSize: 14, color: colors.t2, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
+              Run an audit on your resume to get detailed feedback with Smart, Grit, and Build scores.
+            </Text>
+            <AnimatedPressable
+              style={{ marginTop: 24, backgroundColor: GOLD, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999 }}
+              onPress={() => router.push('/(app)/new-audit')}
+              scaleDown={0.97}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Run my first audit</Text>
+            </AnimatedPressable>
+          </View>
         </View>
-      </View>
+      </>
     );
   }
 
-  // ── Loaded state  -  render full feedback ───────────────────────────
-  const ra = audit.rubric_analysis;
-  const admissionType = isAdmissionsCohort(ra.primary_cohort_id);
-  const isAdmissions = !!admissionType;
-
-  // Cohort-aware copy
-  const barLabel = isAdmissions ? 'admissions bar' : 'recruiter bar';
-  const whoLooks = isAdmissions ? 'adcoms' : 'recruiters';
-  const rejectionHeading = isAdmissions
-    ? 'What adcoms reject for in this cohort'
-    : 'What employers reject for in this cohort';
-  const pathHeading = isAdmissions
-    ? 'Your path to the admissions bar'
-    : 'Your path to the recruiter bar';
-  const composite = ra.primary_composite;
-  const bar = ra.recruiter_bar;
+  const composite = activeCohort?.dilly_score ?? ra.primary_composite;
+  const smart = activeCohort?.smart ?? ra.primary_smart;
+  const grit = activeCohort?.grit ?? ra.primary_grit;
+  const build = activeCohort?.build ?? ra.primary_build;
+  const cohortName = activeCohort?.display_name ?? ra.primary_cohort_display_name;
+  const bar = ra.recruiter_bar || 70;
+  const aboveBar = composite >= bar;
   const pointsAway = Math.max(0, bar - composite);
-  const aboveBar = ra.above_bar;
 
-  // Group matched and unmatched signals by dimension for the three-card layout
+  // Weakest dimension
+  const dims = { smart, grit, build };
+  const weakest = (Object.entries(dims) as [string, number][]).sort((a, b) => a[1] - b[1])[0];
+
+  // Group signals by dimension
   const matchedByDim: Record<string, RubricSignal[]> = { smart: [], grit: [], build: [] };
-  for (const sig of ra.matched_signals) {
+  for (const sig of ra.matched_signals || []) {
     if (sig.dimension in matchedByDim) matchedByDim[sig.dimension].push(sig);
   }
-  const unmatchedByDim: Record<string, RubricSignal[]> = { smart: [], grit: [], build: [] };
-  // Only high-impact unmatched signals go in the "biggest levers" section
-  for (const sig of ra.unmatched_signals) {
-    if (sig.tier === 'high' && sig.dimension in unmatchedByDim) {
-      unmatchedByDim[sig.dimension].push(sig);
-    }
+  const unmatchedHigh: Record<string, RubricSignal[]> = { smart: [], grit: [], build: [] };
+  for (const sig of ra.unmatched_signals || []) {
+    if (sig.tier === 'high' && sig.dimension in unmatchedHigh) unmatchedHigh[sig.dimension].push(sig);
   }
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[s.container, { paddingTop: insets.top }]}>
-        {/* Back button */}
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+      <View style={[f.container, { paddingTop: insets.top }]}>
+        <TouchableOpacity style={f.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={18} color={GOLD} />
-          <Text style={s.backText}>Back</Text>
+          <Text style={f.backText}>Back</Text>
         </TouchableOpacity>
 
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + spacing.xxl }]}
+          contentContainerStyle={[f.scroll, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ─── HERO ─────────────────────────────────────────────── */}
-          <Text style={s.eyebrow}>Your detailed feedback</Text>
-          <Text style={s.heading}>
-            {ra.primary_cohort_display_name}
-          </Text>
-          <View style={s.heroScoreRow}>
-            <Text style={s.heroScore}>{Math.round(composite)}</Text>
-            <Text style={s.heroScoreOf}>/100</Text>
-            <View style={s.heroBarDistance}>
-              <Text style={s.heroBarDistanceLabel}>
-                {aboveBar
-                  ? `Above the ${barLabel}`
-                  : `${Math.round(pointsAway)} pts to the ${barLabel}`}
-              </Text>
-              <Text style={s.heroBarDistanceBar}>
-                {aboveBar ? '✓' : `bar: ${Math.round(bar)}`}
+          {/* ── 1. Cohort Switcher ──────────────────────────── */}
+          {cohortScores.length > 1 && (
+            <CohortSwitcher
+              cohorts={cohortScores}
+              activeIndex={activeCohortIdx}
+              onSwitch={setActiveCohortIdx}
+            />
+          )}
+
+          {/* ── 2. Hero Score ───────────────────────────────── */}
+          <View style={f.hero}>
+            <Text style={f.heroEyebrow}>{cohortName}</Text>
+            <View style={f.heroRow}>
+              <ScoreRing score={Math.round(composite)} size={90} />
+              <View style={f.heroDims}>
+                <DimBar label="Smart" value={smart} color={BLUE} />
+                <DimBar label="Grit" value={grit} color={AMBER} />
+                <DimBar label="Build" value={build} color={GREEN} />
+              </View>
+            </View>
+            <View style={[f.barBadge, { backgroundColor: aboveBar ? GREEN + '15' : GOLD + '15' }]}>
+              <Text style={[f.barBadgeText, { color: aboveBar ? GREEN : GOLD }]}>
+                {aboveBar ? 'Above the recruiter bar' : `${Math.round(pointsAway)} ${Math.round(pointsAway) === 1 ? 'point' : 'points'} to the recruiter bar`}
               </Text>
             </View>
-          </View>
-          <View style={s.heroDimsRow}>
-            {(['smart', 'grit', 'build'] as const).map((dim) => {
-              const val = Math.round(
-                dim === 'smart' ? ra.primary_smart :
-                dim === 'grit' ? ra.primary_grit :
-                ra.primary_build
-              );
-              return (
-                <View key={dim} style={s.heroDimTile}>
-                  <Text style={[s.heroDimScore, { color: dimensionColor(dim) }]}>{val}</Text>
-                  <Text style={s.heroDimLabel}>{dimensionLabel(dim)}</Text>
-                </View>
-              );
-            })}
           </View>
 
           {/* Dilly take */}
-          {audit.dilly_take ? (
-            <View style={s.takeCard}>
-              <Ionicons name="chatbubble-outline" size={13} color={GOLD} style={{ marginTop: 1 }} />
-              <Text style={s.takeText}>{audit.dilly_take}</Text>
+          {audit?.dilly_take ? (
+            <View style={f.takeCard}>
+              <Ionicons name="chatbubble-outline" size={12} color={GOLD} />
+              <Text style={f.takeText}>{audit.dilly_take}</Text>
             </View>
           ) : null}
 
-          {/* ─── SECTION 1: WHAT'S WORKING ───────────────────────── */}
-          {ra.matched_signals.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionHeading}>What's working</Text>
-              <Text style={s.sectionSub}>
-                {isAdmissions
-                  ? `Signals adcoms will notice immediately.`
-                  : `Signals ${whoLooks} will notice immediately.`}
+          {/* ── 3. All Cohorts At-a-Glance ──────────────────── */}
+          {cohortScores.length > 1 && (
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>All cohorts at a glance</Text>
+              {cohortScores.map((c, i) => (
+                <AnimatedPressable
+                  key={c.cohort_id}
+                  style={[f.glanceRow, i === activeCohortIdx && f.glanceRowActive]}
+                  onPress={() => setActiveCohortIdx(i)}
+                  scaleDown={0.98}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={f.glanceName} numberOfLines={1}>{c.display_name}</Text>
+                    <Text style={f.glanceDims}>
+                      S {Math.round(c.smart)} · G {Math.round(c.grit)} · B {Math.round(c.build)}
+                    </Text>
+                  </View>
+                  <Text style={[f.glanceScore, { color: scoreColor(c.dilly_score) }]}>{Math.round(c.dilly_score)}</Text>
+                  <View style={[f.glanceLevel, { backgroundColor: c.level === 'major' ? GOLD + '15' : colors.s3 }]}>
+                    <Text style={[f.glanceLevelText, { color: c.level === 'major' ? GOLD : colors.t3 }]}>
+                      {c.level === 'major' ? 'MAJOR' : c.level === 'minor' ? 'MINOR' : c.level?.toUpperCase() || ''}
+                    </Text>
+                  </View>
+                </AnimatedPressable>
+              ))}
+            </View>
+          )}
+
+          {/* ── 4. Weakest Dimension Callout ─────────────────── */}
+          {weakest && weakest[1] < 80 && (
+            <View style={[f.calloutCard, { borderLeftColor: dimColor(weakest[0]) }]}>
+              <Text style={f.calloutTitle}>Focus area: {dimLabel(weakest[0])}</Text>
+              <Text style={f.calloutBody}>
+                Your {dimLabel(weakest[0])} score ({Math.round(weakest[1])}) is your biggest opportunity.
+                Improving it lifts your overall score the fastest.
               </Text>
-              {(['smart', 'grit', 'build'] as const).map((dim) => {
+              <View style={f.calloutActions}>
+                <AnimatedPressable
+                  style={f.calloutBtn}
+                  onPress={() => router.push('/(app)/resume-editor')}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="document-text-outline" size={13} color={GOLD} />
+                  <Text style={f.calloutBtnText}>Fix in editor</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={f.calloutBtn}
+                  onPress={() => openDillyOverlay({
+                    isPaid: true,
+                    initialMessage: `My weakest dimension is ${dimLabel(weakest[0])} at ${Math.round(weakest[1])}. What specific things can I add to my resume to improve it?`,
+                  })}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="sparkles" size={13} color={GOLD} />
+                  <Text style={f.calloutBtnText}>Ask Dilly</Text>
+                </AnimatedPressable>
+              </View>
+            </View>
+          )}
+
+          {/* ── 5. What's Working ────────────────────────────── */}
+          {(ra.matched_signals || []).length > 0 && (
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>What's working</Text>
+              <Text style={f.sectionSub}>Signals recruiters will notice immediately.</Text>
+              {(['smart', 'grit', 'build'] as const).map(dim => {
                 const sigs = matchedByDim[dim];
                 if (sigs.length === 0) return null;
                 return (
-                  <View key={`m-${dim}`} style={s.dimGroup}>
-                    <Text style={[s.dimGroupLabel, { color: dimensionColor(dim) }]}>
-                      {dimensionLabel(dim)} · {sigs.length} matched
-                    </Text>
-                    {sigs.map((sig, i) => (
-                      <View key={`m-${dim}-${i}`} style={s.matchedRow}>
-                        <Ionicons name="checkmark-circle" size={14} color={GREEN} style={{ marginTop: 1, marginRight: 8 }} />
-                        <Text style={s.matchedText}>{sig.signal}</Text>
+                  <View key={dim} style={f.dimGroup}>
+                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)}</Text>
+                    {sigs.slice(0, 4).map((sig, i) => (
+                      <View key={i} style={f.matchedRow}>
+                        <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+                        <Text style={f.matchedText}>{sig.signal}</Text>
                       </View>
                     ))}
                   </View>
@@ -360,33 +371,38 @@ export default function FeedbackScreen() {
             </View>
           )}
 
-          {/* ─── SECTION 2: BIGGEST LEVERS (unmatched high-impact) ─ */}
-          {(unmatchedByDim.smart.length + unmatchedByDim.grit.length + unmatchedByDim.build.length) > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionHeading}>Biggest levers</Text>
-              <Text style={s.sectionSub}>
-                High-impact signals you haven't hit yet. Each one cited to real {isAdmissions ? 'admissions' : 'hiring'} research.
-              </Text>
-              {(['smart', 'grit', 'build'] as const).map((dim) => {
-                const sigs = unmatchedByDim[dim];
+          {/* ── 6. Biggest Levers ────────────────────────────── */}
+          {Object.values(unmatchedHigh).some(a => a.length > 0) && (
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>Biggest levers</Text>
+              <Text style={f.sectionSub}>High-impact signals missing from your resume.</Text>
+              {(['smart', 'grit', 'build'] as const).map(dim => {
+                const sigs = unmatchedHigh[dim];
                 if (sigs.length === 0) return null;
                 return (
-                  <View key={`u-${dim}`} style={s.dimGroup}>
-                    <Text style={[s.dimGroupLabel, { color: dimensionColor(dim) }]}>
-                      {dimensionLabel(dim)} · {sigs.length} lever{sigs.length !== 1 ? 's' : ''}
+                  <View key={dim} style={f.dimGroup}>
+                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>
+                      {dimLabel(dim)} · {sigs.length} lever{sigs.length !== 1 ? 's' : ''}
                     </Text>
                     {sigs.map((sig, i) => (
-                      <View key={`u-${dim}-${i}`} style={s.leverCard}>
-                        <View style={[s.leverNum, { borderColor: dimensionColor(dim) }]}>
-                          <Text style={[s.leverNumText, { color: dimensionColor(dim) }]}>{i + 1}</Text>
+                      <AnimatedPressable
+                        key={i}
+                        style={f.leverCard}
+                        onPress={() => openDillyOverlay({
+                          isPaid: true,
+                          initialMessage: `My resume is missing "${sig.signal}" (${dimLabel(dim)} dimension). ${sig.rationale || ''} Help me add this to my resume.`,
+                        })}
+                        scaleDown={0.98}
+                      >
+                        <View style={[f.leverNum, { borderColor: dimColor(dim) }]}>
+                          <Text style={[f.leverNumText, { color: dimColor(dim) }]}>{i + 1}</Text>
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={s.leverTitle}>{sig.signal}</Text>
-                          {sig.rationale ? (
-                            <Text style={s.leverBody}>{sig.rationale}</Text>
-                          ) : null}
+                          <Text style={f.leverTitle}>{sig.signal}</Text>
+                          {sig.rationale ? <Text style={f.leverBody}>{sig.rationale}</Text> : null}
                         </View>
-                      </View>
+                        <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                      </AnimatedPressable>
                     ))}
                   </View>
                 );
@@ -394,108 +410,86 @@ export default function FeedbackScreen() {
             </View>
           )}
 
-          {/* ─── SECTION 3: FASTEST PATH FORWARD ──────────────────── */}
+          {/* ── 7. Fastest Path Forward ──────────────────────── */}
           {ra.fastest_path_moves && ra.fastest_path_moves.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionHeading}>{pathHeading}</Text>
-              <Text style={s.sectionSub}>
-                Specific moves that move the score fastest. Do these this week.
-              </Text>
-              {ra.fastest_path_moves.map((move, i) => {
-                const text = extractFastestPathText(move);
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>Your fastest path forward</Text>
+              <Text style={f.sectionSub}>Do these this week.</Text>
+              {ra.fastest_path_moves.slice(0, 6).map((move, i) => {
+                const text = extractMoveText(move);
                 if (!text) return null;
                 return (
                   <AnimatedPressable
-                    key={`p-${i}`}
-                    style={s.moveCard}
+                    key={i}
+                    style={f.moveCard}
                     onPress={() => openDillyOverlay({
                       isPaid: true,
-                      initialMessage: `My resume feedback says I should: "${text}". Help me understand exactly what to do and how to add this to my resume.`,
+                      initialMessage: `My feedback says I should: "${text}". Help me do this step by step.`,
                     })}
                     scaleDown={0.98}
                   >
-                    <View style={s.moveNum}>
-                      <Text style={s.moveNumText}>{i + 1}</Text>
-                    </View>
-                    <Text style={[s.moveText, { flex: 1 }]}>{text}</Text>
-                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.5 }} />
+                    <View style={f.moveNum}><Text style={f.moveNumText}>{i + 1}</Text></View>
+                    <Text style={[f.moveText, { flex: 1 }]}>{text}</Text>
+                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
                   </AnimatedPressable>
                 );
               })}
             </View>
           )}
 
-          {/* ─── SECTION 4: COMMON REJECTION REASONS ──────────────── */}
+          {/* ── 8. Common Rejection Reasons ───────────────────── */}
           {ra.common_rejection_reasons && ra.common_rejection_reasons.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionHeading}>{rejectionHeading}</Text>
-              <Text style={s.sectionSub}>
-                Make sure none of these apply to your resume before you apply.
-              </Text>
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>What employers reject for</Text>
+              <Text style={f.sectionSub}>Make sure none of these apply before you hit submit.</Text>
               {ra.common_rejection_reasons.map((r, i) => {
-                const { text, source } = extractRejectionText(r);
+                const { text } = extractRejectText(r);
                 if (!text) return null;
                 return (
                   <AnimatedPressable
-                    key={`r-${i}`}
-                    style={s.rejectRow}
+                    key={i}
+                    style={f.rejectRow}
                     onPress={() => openDillyOverlay({
                       isPaid: true,
-                      initialMessage: `Employers in my cohort reject resumes for: "${text}". Check my resume — do I have this issue? If so, tell me exactly what to fix.`,
+                      initialMessage: `Employers in my cohort reject resumes for: "${text}". Check my resume — do I have this issue? What should I do?`,
                     })}
                     scaleDown={0.98}
                   >
-                    <Ionicons name="alert-circle-outline" size={13} color={colors.t2} style={{ marginTop: 2, marginRight: 8 }} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.rejectText}>{text}</Text>
-                    </View>
-                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.5 }} />
+                    <Ionicons name="alert-circle-outline" size={13} color={CORAL} style={{ marginTop: 2 }} />
+                    <Text style={[f.rejectText, { flex: 1 }]}>{text}</Text>
+                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
                   </AnimatedPressable>
                 );
               })}
             </View>
           )}
 
-          {/* ─── SECTION 5: OTHER TRACKS YOU FIT ──────────────────── */}
+          {/* ── 9. Other Cohorts ──────────────────────────────── */}
           {ra.other_cohorts && ra.other_cohorts.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionHeading}>Other tracks you fit</Text>
-              <Text style={s.sectionSub}>
-                Secondary cohorts based on your minors and interests.
-              </Text>
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>Other tracks you fit</Text>
               {ra.other_cohorts.slice(0, 5).map((c, i) => (
-                <View key={`o-${i}`} style={s.otherCohortRow}>
+                <View key={i} style={f.otherRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.otherCohortName}>{c.display_name}</Text>
-                    <Text style={s.otherCohortDims}>
-                      Smart {Math.round(c.smart)} · Grit {Math.round(c.grit)} · Build {Math.round(c.build)}
-                    </Text>
+                    <Text style={f.otherName}>{c.display_name}</Text>
+                    <Text style={f.otherDims}>S {Math.round(c.smart)} · G {Math.round(c.grit)} · B {Math.round(c.build)}</Text>
                   </View>
-                  <Text style={[s.otherCohortScore, { color: c.above_bar ? GREEN : GOLD }]}>
-                    {Math.round(c.composite)}
-                  </Text>
+                  <Text style={[f.otherScore, { color: c.above_bar ? GREEN : GOLD }]}>{Math.round(c.composite)}</Text>
                 </View>
               ))}
             </View>
           )}
 
-          {/* ─── CTA ROW ─────────────────────────────────────────── */}
-          <View style={s.ctaRow}>
-            <TouchableOpacity
-              style={s.ctaPrimary}
-              onPress={() => router.push('/(app)/new-audit')}
-              activeOpacity={0.85}
-            >
-              <Text style={s.ctaPrimaryText}>Re-audit my resume</Text>
-              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.ctaSecondary}
-              onPress={() => router.push('/(app)/resume-editor')}
-              activeOpacity={0.85}
-            >
-              <Text style={s.ctaSecondaryText}>Open resume editor</Text>
-            </TouchableOpacity>
+          {/* ── 10. CTAs ─────────────────────────────────────── */}
+          <View style={f.ctaRow}>
+            <AnimatedPressable style={f.ctaPrimary} onPress={() => router.push('/(app)/new-audit')} scaleDown={0.97}>
+              <Ionicons name="flash" size={16} color="#fff" />
+              <Text style={f.ctaPrimaryText}>Run new audit</Text>
+            </AnimatedPressable>
+            <AnimatedPressable style={f.ctaSecondary} onPress={() => router.push('/(app)/resume-editor')} scaleDown={0.97}>
+              <Ionicons name="document-text-outline" size={16} color={GOLD} />
+              <Text style={f.ctaSecondaryText}>Open editor</Text>
+            </AnimatedPressable>
           </View>
         </ScrollView>
       </View>
@@ -503,394 +497,91 @@ export default function FeedbackScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    alignSelf: 'flex-start',
-  },
-  backText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: GOLD,
-  },
-  scroll: {
-    paddingHorizontal: spacing.xl,
-  },
-
-  // Empty state
-  emptyWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
-  },
-  emptyIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.golddim,
-    borderWidth: 1,
-    borderColor: colors.goldbdr,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
-  },
-  emptyHeading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 22,
-    color: colors.t1,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontSize: 13,
-    color: colors.t2,
-    lineHeight: 19,
-    textAlign: 'center',
-    maxWidth: 320,
-    marginBottom: spacing.xl,
-  },
-  primaryBtn: {
-    backgroundColor: GOLD,
-    borderRadius: radius.md,
-    paddingVertical: 13,
-    paddingHorizontal: spacing.xxl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  primaryBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+const f = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 18, paddingVertical: 10 },
+  backText: { fontSize: 15, color: GOLD, fontWeight: '600' },
+  scroll: { paddingHorizontal: spacing.lg, gap: 16 },
 
   // Hero
-  eyebrow: {
-    fontSize: 9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.4,
-    color: GOLD,
-    marginBottom: 5,
-    marginTop: spacing.md,
-  },
-  heading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 22,
-    color: colors.t1,
-    lineHeight: 27,
-    marginBottom: spacing.md,
-  },
-  heroScoreRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 4,
-    marginBottom: spacing.sm,
-  },
-  heroScore: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 56,
-    fontWeight: '300',
-    letterSpacing: -2,
-    lineHeight: 60,
-    color: colors.t1,
-  },
-  heroScoreOf: {
-    fontSize: 16,
-    fontWeight: '300',
-    color: colors.t3,
-    paddingBottom: 8,
-    marginRight: spacing.md,
-  },
-  heroBarDistance: {
-    flex: 1,
-    alignItems: 'flex-end',
-    paddingBottom: 10,
-  },
-  heroBarDistanceLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.t1,
-    textAlign: 'right',
-  },
-  heroBarDistanceBar: {
-    fontSize: 9,
-    fontWeight: '500',
-    color: colors.t3,
-    marginTop: 2,
-  },
-  heroDimsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: spacing.md,
-  },
-  heroDimTile: {
-    flex: 1,
-    backgroundColor: colors.s2,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.b1,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-  },
-  heroDimScore: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 22,
-    fontWeight: '300',
-    marginBottom: 2,
-  },
-  heroDimLabel: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: colors.t3,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  takeCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 7,
-    backgroundColor: colors.golddim,
-    borderWidth: 1,
-    borderColor: colors.goldbdr,
-    borderRadius: 11,
-    padding: 10,
-    paddingHorizontal: 12,
-    marginBottom: spacing.lg,
-  },
-  takeText: {
-    fontSize: 11,
-    color: colors.t1,
-    lineHeight: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
+  hero: { gap: 12, marginTop: 8 },
+  heroEyebrow: { fontSize: 11, fontWeight: '700', color: colors.t3, letterSpacing: 1.2, textTransform: 'uppercase' },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  heroDims: { flex: 1, gap: 8 },
+  barBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  barBadgeText: { fontSize: 12, fontWeight: '700' },
+  ringNum: { fontSize: 28, fontWeight: '800' },
 
-  // Sections
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionHeading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 17,
-    color: colors.t1,
-    marginBottom: 4,
-  },
-  sectionSub: {
-    fontSize: 11,
-    color: colors.t2,
-    lineHeight: 16,
-    marginBottom: spacing.md,
-  },
+  // Dim bar
+  dimBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dimBarLabel: { width: 40, fontSize: 11, fontWeight: '600', color: colors.t3 },
+  dimBarTrack: { flex: 1, height: 6, backgroundColor: colors.s3, borderRadius: 3, overflow: 'hidden' },
+  dimBarFill: { height: '100%', borderRadius: 3 },
+  dimBarScore: { width: 28, fontSize: 13, fontWeight: '700', textAlign: 'right' },
 
-  // Dimension groups
-  dimGroup: {
-    marginBottom: spacing.md,
-  },
-  dimGroupLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.0,
-    marginBottom: 6,
-  },
+  // Take
+  takeCard: { flexDirection: 'row', gap: 8, backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1, padding: spacing.md },
+  takeText: { flex: 1, fontSize: 13, color: colors.t2, lineHeight: 19 },
+
+  // Section
+  section: { gap: 10 },
+  sectionHeading: { fontSize: 16, fontWeight: '700', color: colors.t1 },
+  sectionSub: { fontSize: 12, color: colors.t3, marginBottom: 4 },
+
+  // Glance (all cohorts)
+  glanceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
+  glanceRowActive: { borderColor: GOLD + '40', backgroundColor: GOLD + '06' },
+  glanceName: { fontSize: 13, fontWeight: '600', color: colors.t1 },
+  glanceDims: { fontSize: 11, color: colors.t3, marginTop: 2 },
+  glanceScore: { fontSize: 20, fontWeight: '800' },
+  glanceLevel: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  glanceLevelText: { fontSize: 8, fontWeight: '700', letterSpacing: 0.5 },
+
+  // Callout
+  calloutCard: { backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1, borderLeftWidth: 4, padding: spacing.md, gap: 8 },
+  calloutTitle: { fontSize: 14, fontWeight: '700', color: colors.t1 },
+  calloutBody: { fontSize: 12, color: colors.t2, lineHeight: 18 },
+  calloutActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  calloutBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: GOLD + '10', borderWidth: 1, borderColor: GOLD + '20' },
+  calloutBtnText: { fontSize: 12, fontWeight: '600', color: GOLD },
+
+  // Dim group
+  dimGroup: { gap: 6, marginBottom: 8 },
+  dimGroupLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
 
   // Matched signals
-  matchedRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(52,199,89,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(52,199,89,0.18)',
-    borderRadius: 9,
-    padding: 9,
-    paddingHorizontal: 11,
-    marginBottom: 4,
-  },
-  matchedText: {
-    fontSize: 11,
-    color: colors.t1,
-    lineHeight: 15,
-    fontWeight: '500',
-    flex: 1,
-  },
+  matchedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 4 },
+  matchedText: { flex: 1, fontSize: 13, color: colors.t1, lineHeight: 18 },
 
-  // Unmatched levers
-  leverCard: {
-    flexDirection: 'row',
-    gap: 9,
-    backgroundColor: 'rgba(43,58,142,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(43,58,142,0.18)',
-    borderRadius: 11,
-    padding: 11,
-    marginBottom: 6,
-  },
-  leverNum: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.bg,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  leverNumText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  leverTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.t1,
-    marginBottom: 4,
-    lineHeight: 16,
-  },
-  leverBody: {
-    fontSize: 10.5,
-    color: colors.t2,
-    lineHeight: 15,
-  },
+  // Levers
+  leverCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
+  leverNum: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  leverNumText: { fontSize: 10, fontWeight: '800' },
+  leverTitle: { fontSize: 13, fontWeight: '600', color: colors.t1 },
+  leverBody: { fontSize: 11, color: colors.t3, lineHeight: 16, marginTop: 2 },
 
-  // Fastest path moves
-  moveCard: {
-    flexDirection: 'row',
-    gap: 9,
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.b1,
-    borderRadius: 10,
-    padding: 10,
-    paddingHorizontal: 11,
-    marginBottom: 5,
-    alignItems: 'flex-start',
-  },
-  moveNum: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.golddim,
-    borderWidth: 1,
-    borderColor: colors.goldbdr,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  moveNumText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: GOLD,
-  },
-  moveText: {
-    fontSize: 11.5,
-    color: colors.t1,
-    lineHeight: 16,
-    fontWeight: '500',
-    flex: 1,
-  },
+  // Moves
+  moveCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
+  moveNum: { width: 22, height: 22, borderRadius: 11, backgroundColor: GOLD + '15', alignItems: 'center', justifyContent: 'center' },
+  moveNumText: { fontSize: 10, fontWeight: '800', color: GOLD },
+  moveText: { fontSize: 13, color: colors.t1, lineHeight: 18 },
 
-  // Rejection reasons
-  rejectRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.b1,
-    borderRadius: 9,
-    padding: 9,
-    paddingHorizontal: 11,
-    marginBottom: 4,
-  },
-  rejectText: {
-    fontSize: 11,
-    color: colors.t1,
-    lineHeight: 15,
-  },
-  rejectSource: {
-    fontSize: 9,
-    color: BLUE,
-    marginTop: 3,
-    textDecorationLine: 'underline',
-  },
+  // Rejections
+  rejectRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: CORAL + '06', borderWidth: 1, borderColor: CORAL + '15' },
+  rejectText: { fontSize: 13, color: colors.t1, lineHeight: 18 },
 
   // Other cohorts
-  otherCohortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.b1,
-    borderRadius: 11,
-    padding: 12,
-    marginBottom: 6,
-  },
-  otherCohortName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.t1,
-    marginBottom: 2,
-  },
-  otherCohortDims: {
-    fontSize: 9,
-    color: colors.t3,
-  },
-  otherCohortScore: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 22,
-    fontWeight: '400',
-    marginLeft: spacing.sm,
-  },
+  otherRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
+  otherName: { fontSize: 13, fontWeight: '600', color: colors.t1 },
+  otherDims: { fontSize: 11, color: colors.t3, marginTop: 2 },
+  otherScore: { fontSize: 20, fontWeight: '800' },
 
-  // CTA row
-  ctaRow: {
-    flexDirection: 'column',
-    gap: 8,
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  ctaPrimary: {
-    backgroundColor: GOLD,
-    borderRadius: radius.md,
-    paddingVertical: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 7,
-  },
-  ctaPrimaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  ctaSecondary: {
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.b1,
-    borderRadius: radius.md,
-    paddingVertical: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaSecondaryText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.t2,
-  },
+  // CTAs
+  ctaRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  ctaPrimary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: radius.xl, backgroundColor: GOLD },
+  ctaPrimaryText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  ctaSecondary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: radius.xl, backgroundColor: GOLD + '10', borderWidth: 1, borderColor: GOLD + '25' },
+  ctaSecondaryText: { fontSize: 14, fontWeight: '600', color: GOLD },
 });
