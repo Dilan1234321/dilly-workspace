@@ -231,15 +231,16 @@ function InterviewCountdownHero({
         </AnimatedPressable>
         <TouchableOpacity
           style={cs.countdownCalBtn}
-          onPress={() => openAddToCalendar({
-            title: `Interview  -  ${interview.company || interview.title}`,
-            date: interview.date,
-            description: interview.role ? `Role: ${interview.role}` : 'Interview',
-          })}
+          onPress={() => {
+            router.push({
+              pathname: '/(app)/resume-editor',
+              params: { focusDimension: 'tailor' },
+            });
+          }}
           hitSlop={8}
         >
-          <Ionicons name="calendar-number-outline" size={13} color={CORAL} />
-          <Text style={cs.countdownCalBtnText}>Save to Calendar</Text>
+          <Ionicons name="document-text-outline" size={13} color={CORAL} />
+          <Text style={cs.countdownCalBtnText}>Tailor resume</Text>
         </TouchableOpacity>
       </View>
     </View>

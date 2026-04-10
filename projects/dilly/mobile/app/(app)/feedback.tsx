@@ -217,11 +217,15 @@ export default function FeedbackScreen() {
     );
   }
 
-  const composite = activeCohort?.dilly_score ?? ra.primary_composite;
-  const smart = activeCohort?.smart ?? ra.primary_smart;
-  const grit = activeCohort?.grit ?? ra.primary_grit;
-  const build = activeCohort?.build ?? ra.primary_build;
-  const cohortName = activeCohort?.display_name ?? ra.primary_cohort_display_name;
+  // Prefer Claude-scored cohort data; fall back to rubric_analysis only if no cohort data
+  // The rubric scores (ra.primary_*) are from the rule-based scorer and are lower than
+  // the Claude per-cohort scores. Always prefer cohortScores when available.
+  const hasCohortData = activeCohort != null && activeCohort.dilly_score > 0;
+  const composite = hasCohortData ? activeCohort.dilly_score : ra.primary_composite;
+  const smart = hasCohortData ? activeCohort.smart : ra.primary_smart;
+  const grit = hasCohortData ? activeCohort.grit : ra.primary_grit;
+  const build = hasCohortData ? activeCohort.build : ra.primary_build;
+  const cohortName = hasCohortData ? activeCohort.display_name : ra.primary_cohort_display_name;
   const bar = ra.recruiter_bar || 70;
   const aboveBar = composite >= bar;
   const pointsAway = Math.max(0, bar - composite);
