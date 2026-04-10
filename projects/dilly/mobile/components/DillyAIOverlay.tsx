@@ -70,7 +70,10 @@ const MessageAnimIn = ({ children }: { children: React.ReactNode; index?: number
   );
 };
 
-function getInitialSuggestions(ctx?: StudentContext): string[] {
+function getInitialSuggestions(ctx?: StudentContext, mode?: ChatMode): string[] {
+  if (mode === 'practice') {
+    return ['Start the interview', 'Ask me a behavioral question', 'Give me a technical challenge'];
+  }
   if (ctx?.applicationTarget) {
     return ['What gaps do I have?', 'How do I stand out?', 'Prep me for the interview'];
   }
@@ -78,6 +81,13 @@ function getInitialSuggestions(ctx?: StudentContext): string[] {
     return ["What's my weakest area?", 'Where should I apply?', 'How do I improve my score?'];
   }
   return ['Review my resume', 'How do I get an internship?', 'What skills should I build?'];
+}
+
+function getPracticeSuggestions(text: string): string[] {
+  const t = text.toLowerCase();
+  if (t.includes('question') || t.includes('?')) return ['Let me think...', 'Can you rephrase?', 'Next question'];
+  if (t.includes('feedback') || t.includes('improve')) return ['Ask me another', 'How was my structure?', 'Give me a harder one'];
+  return ['I\'d like to try again', 'Next question please', 'How did I do overall?'];
 }
 
 function getResponseSuggestions(text: string): string[] {
@@ -249,7 +259,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         if (done) {
           clearInterval(streamRef.current!);
           streamRef.current = null;
-          const newChips = getResponseSuggestions(fullText);
+          const newChips = mode === 'practice' ? getPracticeSuggestions(fullText) : getResponseSuggestions(fullText);
           setSuggestions(newChips);
           Animated.timing(suggestionsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
         } else {
@@ -284,7 +294,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       setSuggestions([]);
       suggestionsOpacity.setValue(0);
       timeoutsRef.current.push(setTimeout(() => {
-        const chips = getInitialSuggestions(studentContext);
+        const chips = getInitialSuggestions(studentContext, mode);
         setSuggestions(chips);
         Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
       }, 1600));
@@ -427,9 +437,22 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
             </View>
             <View style={s.modePills}>
               {(['coaching', 'practice'] as ChatMode[]).map(m => (
-                <TouchableOpacity key={m} style={[s.modePill, mode === m && s.modePillActive]} onPress={() => setMode(m)}>
+                <TouchableOpacity key={m} style={[s.modePill, mode === m && s.modePillActive]} onPress={() => {
+                  if (mode === m) return;
+                  setMode(m);
+                  setMessages([]);
+                  setRichContext(null);
+                  setSuggestions(getInitialSuggestions(studentContext, m));
+                  suggestionsOpacity.setValue(1);
+                }}>
+                  <Ionicons
+                    name={m === 'coaching' ? 'chatbubble-ellipses-outline' : 'mic-outline'}
+                    size={12}
+                    color={mode === m ? '#fff' : colors.t3}
+                    style={{ marginRight: 4 }}
+                  />
                   <Text style={[s.modePillText, mode === m && s.modePillTextActive]}>
-                    {m === 'coaching' ? 'COACH' : 'PRACTICE'}
+                    {m === 'coaching' ? 'COACH' : 'INTERVIEW'}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -458,11 +481,19 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
           <ScrollView ref={scrollRef} style={s.messageList} contentContainerStyle={s.messageListContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {messages.length === 0 && !richContext && (
               <View style={s.emptyWrap}>
-                <Text style={s.emptyText}>
-                  {mode === 'practice'
-                    ? "Ready to practice? I'll run you through a real interview."
-                    : 'Ask me anything  -  your score, what to fix, where to apply.'}
-                </Text>
+                {mode === 'practice' ? (
+                  <>
+                    <Ionicons name="mic" size={32} color={GOLD} style={{ marginBottom: 12, opacity: 0.6 }} />
+                    <Text style={s.emptyText}>Mock interview mode.</Text>
+                    <Text style={[s.emptyText, { marginTop: 4, opacity: 0.6, fontSize: 13 }]}>
+                      I'll play the interviewer. You answer. I give feedback after each response, then ask the next question.
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={s.emptyText}>
+                    Ask me anything: your score, what to fix, where to apply.
+                  </Text>
+                )}
               </View>
             )}
 
@@ -539,7 +570,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
           <View style={[s.inputBar, { paddingBottom: insets.bottom + 10 }]}>
             <TextInput
               style={s.input}
-              placeholder="Ask Dilly anything..."
+              placeholder={mode === 'practice' ? "Type your answer..." : "Ask Dilly anything..."}
               placeholderTextColor={colors.t3}
               value={input}
               onChangeText={setInput}

@@ -574,13 +574,31 @@ def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: 
         company = (rich or {}).get("reference_company") or (ctx.reference_company if ctx else None) or "a top company"
         name = (rich or {}).get("name") or (ctx.name if ctx else None) or "the student"
         cohort = (rich or {}).get("cohort") or (ctx.cohort if ctx else None) or "General"
+        smart = ctx.smart if ctx else None
+        grit = ctx.grit if ctx else None
+        build = ctx.build if ctx else None
+        score_note = ""
+        if smart is not None and grit is not None and build is not None:
+            weakest = min([("Smart", smart), ("Grit", grit), ("Build", build)], key=lambda x: x[1])
+            score_note = (
+                f"\n\nThe student's scores: Smart {int(smart)}, Grit {int(grit)}, Build {int(build)}. "
+                f"Their weakest area is {weakest[0]} ({int(weakest[1])}). "
+                f"Focus some questions on probing this weakness — but don't tell them you're doing it."
+            )
         return (
             f"You are a tough but fair interviewer at {company}. "
-            f"You are interviewing {name} for an internship or full-time role in {cohort}. "
-            "Conduct a realistic interview simulation. Ask ONE question at a time. "
-            "After each student answer, give 1-2 sentences of direct feedback, then ask your next question. "
-            "Start by briefly introducing yourself and asking your first question. "
-            "Be direct, professional, and challenging."
+            f"You are interviewing {name} for an internship or entry-level role in {cohort}.\n\n"
+            "RULES:\n"
+            "1. Ask ONE question at a time. Wait for their answer.\n"
+            "2. After each answer, give 1-2 sentences of direct, honest feedback.\n"
+            "3. Then ask your next question. Mix behavioral, technical, and fit questions.\n"
+            "4. Be the kind of interviewer who pushes candidates to be specific — "
+            "if they give a vague answer, ask a follow-up.\n"
+            "5. After 5-6 questions, wrap up with brief overall feedback: "
+            "what they did well, what to improve, and a score out of 10.\n\n"
+            "Start by introducing yourself (use a realistic name and title) "
+            f"and asking your first question about why they want to work at {company}."
+            f"{score_note}"
         )
 
     if rich:
