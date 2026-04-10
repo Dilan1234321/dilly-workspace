@@ -52,10 +52,17 @@ def _strip_html(text: str) -> str:
 
 def _infer_job_type(title: str, description: str) -> str:
     """Infer internship vs full_time from title/description."""
-    combined = f"{title} {description}".lower()
-    if any(k in combined for k in ["intern", "internship", "co-op", "coop"]):
+    tl = title.lower()
+    dl = description.lower()[:2000]
+    # Check title first (more reliable) — use word boundaries to avoid "internal" matching "intern"
+    if re.search(r'\bintern\b|\binternship\b|\bco-op\b|\bcoop\b', tl):
         return "internship"
-    if any(k in combined for k in ["entry", "junior", "associate", "new grad"]):
+    if re.search(r'\bentry.level\b|\bjunior\b|\bassociate\b|\bnew.grad\b|\bgraduate\b', tl):
+        return "entry_level"
+    # Fallback to description keywords
+    if re.search(r'\bintern\b|\binternship\b', dl):
+        return "internship"
+    if re.search(r'\bentry.level\b|\bjunior\b|\bnew.grad\b', dl):
         return "entry_level"
     return "full_time"
 
