@@ -147,29 +147,16 @@ export default function FeedbackScreen() {
         setAudit(auditObj);
         if (auditObj?.rubric_analysis) setRa(auditObj.rubric_analysis as RubricAnalysis);
 
-        // Load cohort scores for switcher
-        const parsed = parseCohortScores(profileRes?.cohort_scores);
-        // Also include ALL cohort_scores (not just major) for the full view
-        const allRaw = profileRes?.cohort_scores;
-        if (allRaw && Object.keys(allRaw).length > 0) {
-          const all: CohortScore[] = Object.entries(allRaw)
-            .filter(([_, v]: [string, any]) => v && typeof v === 'object')
-            .map(([key, v]: [string, any]) => ({
-              cohort_id: key,
-              display_name: v.field || v.cohort || key,
-              smart: Number(v.smart) || 0,
-              grit: Number(v.grit) || 0,
-              build: Number(v.build) || 0,
-              dilly_score: Number(v.dilly_score) || 0,
-              level: (v.level || 'interest') as CohortScore['level'],
-              weight: Number(v.weight) ?? 0,
-              scored_by_claude: !!v.scored_by_claude,
-            }))
-            .sort((a, b) => {
-              const lo: Record<string, number> = { primary: 0, major: 1, minor: 2, interest: 3 };
-              return (lo[a.level] ?? 9) - (lo[b.level] ?? 9) || b.dilly_score - a.dilly_score;
-            });
-          setCohortScores(all);
+        // Load cohort scores — only show explicitly chosen cohorts (major/minor/primary),
+        // NOT every interest-level entry from the background Claude scorer.
+        // The user's profile.cohorts array is the source of truth for what's "chosen".
+        const explicitCohorts: string[] | null = Array.isArray(profileRes?.cohorts) && profileRes.cohorts.length > 0
+          ? profileRes.cohorts : null;
+        const parsed = parseCohortScores(profileRes?.cohort_scores); // already filters interest
+        if (explicitCohorts) {
+          // Only show cohorts the user explicitly has
+          const filtered = parsed.filter(c => explicitCohorts.includes(c.cohort_id));
+          setCohortScores(filtered.length > 0 ? filtered : parsed);
         } else {
           setCohortScores(parsed);
         }

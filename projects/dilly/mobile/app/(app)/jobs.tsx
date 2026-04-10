@@ -387,24 +387,17 @@ export default function JobsScreen() {
         dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank`).catch(() => null),
       ]);
 
-      // Parse cohort scores from profile
-      const allCohorts = parseCohortScores(profileRes?.cohort_scores);
-      // Include interest-level cohorts for jobs (broader matching)
-      const allCohortsRaw = profileRes?.cohort_scores;
-      const fullCohorts: CohortScore[] = allCohortsRaw ? Object.entries(allCohortsRaw)
-        .filter(([_, v]: [string, any]) => v && typeof v === 'object')
-        .map(([key, v]: [string, any]) => ({
-          cohort_id: key,
-          display_name: v.field || v.cohort || key,
-          smart: Number(v.smart) || 0,
-          grit: Number(v.grit) || 0,
-          build: Number(v.build) || 0,
-          dilly_score: Number(v.dilly_score) || 0,
-          level: (v.level || 'interest') as CohortScore['level'],
-          weight: Number(v.weight) ?? 0,
-          scored_by_claude: !!v.scored_by_claude,
-        })) : allCohorts;
-      setCohortScores(fullCohorts.length > 0 ? fullCohorts : allCohorts);
+      // Parse cohort scores — only show user's chosen cohorts (major/minor/primary)
+      // NOT all interest-level background entries
+      const parsed = parseCohortScores(profileRes?.cohort_scores); // filters interest
+      const explicitCohorts: string[] | null = Array.isArray(profileRes?.cohorts) && profileRes.cohorts.length > 0
+        ? profileRes.cohorts : null;
+      if (explicitCohorts) {
+        const filtered = parsed.filter(c => explicitCohorts.includes(c.cohort_id));
+        setCohortScores(filtered.length > 0 ? filtered : parsed);
+      } else {
+        setCohortScores(parsed);
+      }
 
       setListings(feedRes?.listings || []);
     } catch {}
