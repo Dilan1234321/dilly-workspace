@@ -328,25 +328,18 @@ export default function HomeScreen() {
 
   // \u2500\u2500 Animate score \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
+  // Animate the displayed score — responds to both audit and cohort switching
+  const effectiveScore = cohortScores[activeCohortIdx]?.dilly_score ?? audit.final_score ?? 0;
   useEffect(() => {
-    const finalScore = audit.final_score;
-    if (!finalScore) return;
-
-    scoreAnim.addListener(({ value }) => setDisplayScore(Math.round(value)));
+    if (!effectiveScore) return;
+    const id = scoreAnim.addListener(({ value }) => setDisplayScore(Math.round(value)));
     Animated.timing(scoreAnim, {
-      toValue: finalScore,
-      duration: 1000,
+      toValue: effectiveScore,
+      duration: 800,
       useNativeDriver: false,
     }).start();
-
-    Animated.timing(barAnim, {
-      toValue: finalScore,
-      duration: 1000,
-      useNativeDriver: false,
-    }).start();
-
-    return () => scoreAnim.removeAllListeners();
-  }, [audit.final_score]);
+    return () => scoreAnim.removeListener(id);
+  }, [effectiveScore, activeCohortIdx]);
 
   // \u2500\u2500 Derived \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
@@ -357,7 +350,7 @@ export default function HomeScreen() {
   const cohort    = activeCohort?.display_name || p.track || p.cohort || 'General';
   const school    = p.school_name || p.school_id || '';
 
-  const hasAudit    = audit.has_audit === true && audit.final_score !== undefined;
+  const hasAudit    = (audit.has_audit === true && audit.final_score !== undefined) || (activeCohort != null && activeCohort.dilly_score > 0);
   const finalScore  = activeCohort?.dilly_score ?? audit.final_score ?? 0;
   const smartScore  = activeCohort?.smart  ?? audit.scores?.smart  ?? 0;
   const gritScore   = activeCohort?.grit   ?? audit.scores?.grit   ?? 0;
