@@ -409,13 +409,25 @@ def _compute_do_now(
             "action_payload": None,
         }
 
-    # Urgent deadline
+    # Urgent deadline / interview / career fair
     for d in deadlines:
         if d.get("days_until", 99) <= 3:
+            days = d["days_until"]
+            event_type = (d.get("type") or "deadline").lower()
+            type_labels = {
+                "interview": "Interview",
+                "career_fair": "Career fair",
+                "info_session": "Info session",
+                "networking": "Networking event",
+                "application": "Application due",
+                "deadline": "Deadline",
+            }
+            type_label = type_labels.get(event_type, event_type.replace("_", " ").title())
+            day_text = "today" if days == 0 else "tomorrow" if days == 1 else f"in {days} days"
             return {
-                "kind": "deadline",
-                "title": f"Deadline in {d['days_until']} day{'s' if d['days_until'] != 1 else ''}",
-                "subtitle": d.get("label") or "Upcoming deadline",
+                "kind": event_type,
+                "title": f"{type_label} {day_text}",
+                "subtitle": d.get("label") or f"Upcoming {type_label.lower()}",
                 "action_label": "Open calendar",
                 "action_route": "/(app)/calendar",
                 "action_payload": {"company": d.get("company"), "role": d.get("role")},

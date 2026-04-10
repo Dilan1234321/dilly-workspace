@@ -2032,18 +2032,20 @@ export default function ResumeEditorScreen() {
         <FadeInView delay={300}>
           <AnimatedPressable
             style={[rs.reauditBtn, reauditing && { opacity: 0.6 }]}
-            onPress={handleReaudit}
+            onPress={async () => {
+              // Save first if dirty, then navigate to the full audit page
+              if (hasChanges) {
+                try {
+                  const sr = await dilly.fetch('/resume/save', { method: 'POST', body: JSON.stringify({ sections }) });
+                  if (sr.ok) { setHasChanges(false); }
+                } catch {}
+              }
+              router.push('/(app)/new-audit');
+            }}
             scaleDown={0.97}
-            disabled={reauditing}
           >
-            {reauditing ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Ionicons name="flash" size={16} color="#FFFFFF" />
-                <Text style={rs.reauditBtnText}>Re-audit my resume</Text>
-              </>
-            )}
+            <Ionicons name="flash" size={16} color="#FFFFFF" />
+            <Text style={rs.reauditBtnText}>Audit my resume</Text>
           </AnimatedPressable>
           <Text style={rs.reauditHint}>Run the full audit pipeline on your current resume</Text>
         </FadeInView>

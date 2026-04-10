@@ -458,7 +458,7 @@ export default function HomeScreen() {
             {/* Build-75: streak flame */}
             {brief && brief.streak.current > 0 && (
               <View style={s.streakPill}>
-                <Text style={s.streakFire}>🔥</Text>
+                <Ionicons name="flame" size={14} color="#FF6B35" />
                 <Text style={s.streakCount}>{brief.streak.current}</Text>
               </View>
             )}

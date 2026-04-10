@@ -45,6 +45,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const GOLD  = '#2B3A8E'; // Dilly brand blue
 const GREEN = '#34C759';
@@ -403,12 +405,21 @@ export default function FeedbackScreen() {
                 const text = extractFastestPathText(move);
                 if (!text) return null;
                 return (
-                  <View key={`p-${i}`} style={s.moveCard}>
+                  <AnimatedPressable
+                    key={`p-${i}`}
+                    style={s.moveCard}
+                    onPress={() => openDillyOverlay({
+                      isPaid: true,
+                      initialMessage: `My resume feedback says I should: "${text}". Help me understand exactly what to do and how to add this to my resume.`,
+                    })}
+                    scaleDown={0.98}
+                  >
                     <View style={s.moveNum}>
                       <Text style={s.moveNumText}>{i + 1}</Text>
                     </View>
-                    <Text style={s.moveText}>{text}</Text>
-                  </View>
+                    <Text style={[s.moveText, { flex: 1 }]}>{text}</Text>
+                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.5 }} />
+                  </AnimatedPressable>
                 );
               })}
             </View>
@@ -425,20 +436,21 @@ export default function FeedbackScreen() {
                 const { text, source } = extractRejectionText(r);
                 if (!text) return null;
                 return (
-                  <View key={`r-${i}`} style={s.rejectRow}>
+                  <AnimatedPressable
+                    key={`r-${i}`}
+                    style={s.rejectRow}
+                    onPress={() => openDillyOverlay({
+                      isPaid: true,
+                      initialMessage: `Employers in my cohort reject resumes for: "${text}". Check my resume — do I have this issue? If so, tell me exactly what to fix.`,
+                    })}
+                    scaleDown={0.98}
+                  >
                     <Ionicons name="alert-circle-outline" size={13} color={colors.t2} style={{ marginTop: 2, marginRight: 8 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={s.rejectText}>{text}</Text>
-                      {source ? (
-                        <TouchableOpacity
-                          onPress={() => Linking.openURL(source).catch(() => null)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={s.rejectSource}>Source: {source}</Text>
-                        </TouchableOpacity>
-                      ) : null}
                     </View>
-                  </View>
+                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.5 }} />
+                  </AnimatedPressable>
                 );
               })}
             </View>

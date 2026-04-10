@@ -25,6 +25,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import CohortPicker from '../../components/CohortPicker';
 import { remindReaudit } from '../../lib/reminders';
 
@@ -340,10 +341,19 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
                 const text = typeof move === 'string' ? move : (move.move || move.action || move.title || '');
                 if (!text) return null;
                 return (
-                  <View key={`p-${i}`} style={ns.moveCard}>
+                  <AnimatedPressable
+                    key={`p-${i}`}
+                    style={ns.moveCard}
+                    onPress={() => openDillyOverlay({
+                      isPaid: true,
+                      initialMessage: `My resume audit says I should: "${text}". Help me understand exactly what to do and how to add this to my resume.`,
+                    })}
+                    scaleDown={0.98}
+                  >
                     <Ionicons name="arrow-forward" size={11} color={GOLD} style={{ marginTop: 2, marginRight: 7 }} />
                     <Text style={ns.moveText}>{text}</Text>
-                  </View>
+                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ marginLeft: 'auto', opacity: 0.5 }} />
+                  </AnimatedPressable>
                 );
               })}
             </View>

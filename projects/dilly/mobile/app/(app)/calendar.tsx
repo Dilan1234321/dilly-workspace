@@ -238,8 +238,8 @@ function InterviewCountdownHero({
           })}
           hitSlop={8}
         >
-          <Ionicons name="calendar-outline" size={13} color={CORAL} />
-          <Text style={cs.countdownCalBtnText}>Add to cal</Text>
+          <Ionicons name="calendar-number-outline" size={13} color={CORAL} />
+          <Text style={cs.countdownCalBtnText}>Save to Calendar</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -999,7 +999,7 @@ export default function CalendarScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {/* Build-78: sync to native calendar */}
             <TouchableOpacity onPress={openSubscribeToDillyCalendar} hitSlop={8}>
-              <Ionicons name="sync-outline" size={18} color={GOLD} />
+              <Ionicons name="cloud-download-outline" size={18} color={GOLD} />
             </TouchableOpacity>
             <AnimatedPressable onPress={() => setShowAdd(true)} scaleDown={0.9} hitSlop={12}>
               <View style={cs.addBtn}>
