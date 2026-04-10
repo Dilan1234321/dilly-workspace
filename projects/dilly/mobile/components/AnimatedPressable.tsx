@@ -55,8 +55,8 @@ export default function AnimatedPressable({
     .enabled(!disabled)
     .onBegin(() => {
       'worklet';
-      scale.value = withSpring(scaleDown, { stiffness: 400, damping: 25 });
-      opacity.value = withSpring(0.85, { stiffness: 400, damping: 25 });
+      scale.value = withSpring(scaleDown, { stiffness: 350, damping: 20 });
+      opacity.value = withSpring(0.7, { stiffness: 350, damping: 20 });
     })
     .onFinalize(() => {
       'worklet';

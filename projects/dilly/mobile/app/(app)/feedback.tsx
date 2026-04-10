@@ -29,6 +29,7 @@ import { colors, spacing, radius } from '../../lib/tokens';
 import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
 import CohortSwitcher from '../../components/CohortSwitcher';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const GOLD  = '#2B3A8E';
@@ -254,7 +255,7 @@ export default function FeedbackScreen() {
           )}
 
           {/* ── 2. Hero Score (matches My Scores page style) ── */}
-          <View style={f.hero}>
+          <FadeInView delay={0}><View style={f.hero}>
             <Text style={[f.heroScoreBig, { color: scoreColor(Math.round(composite)) }]}>{Math.round(composite)}</Text>
             <Text style={f.heroCohortName}>{cohortName}</Text>
             <View style={[f.barBadge, { backgroundColor: aboveBar ? GREEN + '15' : GOLD + '15' }]}>
@@ -262,21 +263,25 @@ export default function FeedbackScreen() {
                 {aboveBar ? 'Above the recruiter bar' : `${Math.round(pointsAway)} ${Math.round(pointsAway) === 1 ? 'point' : 'points'} to the bar`}
               </Text>
             </View>
-          </View>
+          </View></FadeInView>
 
           {/* S/G/B Dimension Bars */}
+          <FadeInView delay={80}>
           <View style={{ gap: 10, paddingHorizontal: 4 }}>
             <DimBar label="Smart" value={smart} color={BLUE} />
             <DimBar label="Grit" value={grit} color={AMBER} />
             <DimBar label="Build" value={build} color={GREEN} />
           </View>
+          </FadeInView>
 
           {/* Dilly take */}
           {audit?.dilly_take ? (
+            <FadeInView delay={140}>
             <View style={f.takeCard}>
               <Ionicons name="chatbubble-outline" size={12} color={GOLD} />
               <Text style={f.takeText}>{audit.dilly_take}</Text>
             </View>
+            </FadeInView>
           ) : null}
 
           {/* ── 4. Weakest Dimension Callout ─────────────────── */}

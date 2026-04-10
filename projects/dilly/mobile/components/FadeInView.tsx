@@ -1,20 +1,16 @@
 /**
- * FadeInView  -  wraps children in a fade + slide-up entrance animation.
+ * FadeInView — wraps children in a smooth fade + slide-up + subtle scale entrance.
+ *
+ * Build 123: improved with cubic easing and micro-scale for professional feel.
  *
  * Usage:
  *   <FadeInView delay={100}>
  *     <ScoreCard />
  *   </FadeInView>
- *
- * Props:
- *   delay      -  ms before animation starts (default 0)
- *   duration   -  ms for the animation (default 450)
- *   distance   -  pixels to slide up from (default 16)
- *   style      -  additional styles
  */
 
 import { ReactNode, useEffect, useRef } from 'react';
-import { Animated, StyleProp, ViewStyle } from 'react-native';
+import { Animated, Easing, StyleProp, ViewStyle } from 'react-native';
 
 interface Props {
   children: ReactNode;
@@ -27,12 +23,13 @@ interface Props {
 export default function FadeInView({
   children,
   delay = 0,
-  duration = 450,
-  distance = 16,
+  duration = 400,
+  distance = 12,
   style,
 }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(distance)).current;
+  const scale = useRef(new Animated.Value(0.97)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -40,19 +37,28 @@ export default function FadeInView({
         toValue: 1,
         duration,
         delay,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: 0,
-        duration,
+        duration: duration + 50,
         delay,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: duration + 100,
+        delay,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
   }, []);
 
   return (
-    <Animated.View style={[style, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View style={[style, { opacity, transform: [{ translateY }, { scale }] }]}>
       {children}
     </Animated.View>
   );
