@@ -805,7 +805,7 @@ export default function HomeScreen() {
                           <View key={`${date}-${i}`} style={[s.deadlineCard, urgent && s.deadlineCardUrgent]}>
                             <AnimatedPressable
                               style={{ flex: 1 }}
-                              onPress={() => router.push('/(app)/internship-tracker')}
+                              onPress={() => router.push({ pathname: '/(app)/calendar', params: { date } })}
                               scaleDown={0.96}
                             >
                               <Text style={[s.deadlineDays, { color: urgent ? colors.coral : colors.t2 }]}>
@@ -1249,9 +1249,9 @@ const s = StyleSheet.create({
   doNowCta: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: 'rgba(255,255,255,0.16)',
-    paddingVertical: 10, borderRadius: 10,
+    paddingVertical: 10, paddingHorizontal: 18, borderRadius: 10,
   },
-  doNowCtaText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
+  doNowCtaText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
 
   // Daily Brief cards
   briefLabel: {

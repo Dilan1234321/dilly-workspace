@@ -25,7 +25,6 @@ import { router } from 'expo-router';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
-import CohortSwitcher from '../../components/CohortSwitcher';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
@@ -49,18 +48,28 @@ interface Listing {
   id: string;
   title: string;
   company: string;
-  location: string;
-  description: string;
-  url: string;
-  posted_date: string;
-  source: string;
-  job_type: string;
-  remote: boolean;
-  cohort_requirements: CohortReq[];
-  primary_cohort: string;
+  // Backend returns location_city/location_state, not a single location string
+  location_city?: string;
+  location_state?: string;
+  location?: string;
+  work_mode?: string;
+  description?: string;
+  description_preview?: string;
+  url?: string;
+  apply_url?: string;
+  posted_date?: string;
+  source?: string;
+  job_type?: string;
+  remote?: boolean;
+  cohort_requirements?: CohortReq[] | null;
+  primary_cohort?: string;
+  required_smart?: number | null;
+  required_grit?: number | null;
+  required_build?: number | null;
   quality_score?: number;
-  // Computed client-side
   readiness?: 'ready' | 'almost' | 'gap';
+  rank_score?: number;
+  cohort_readiness?: any[];
   cohort_matches?: { cohort: string; smart_gap: number; grit_gap: number; build_gap: number; met: boolean }[];
 }
 
@@ -96,24 +105,40 @@ function computeReadiness(
   let totalGaps = 0;
   let maxSingleGap = 0;
 
-  for (const req of listing.cohort_requirements) {
-    const userCohort = userScores[req.cohort];
-    if (!userCohort) continue;
+  const reqs = Array.isArray(listing.cohort_requirements) ? listing.cohort_requirements : [];
 
-    const sg = Math.max(0, req.smart - userCohort.smart);
-    const gg = Math.max(0, req.grit - userCohort.grit);
-    const bg = Math.max(0, req.build - userCohort.build);
-    const gaps = (sg > 0 ? 1 : 0) + (gg > 0 ? 1 : 0) + (bg > 0 ? 1 : 0);
-    totalGaps += gaps;
-    maxSingleGap = Math.max(maxSingleGap, sg, gg, bg);
+  if (reqs.length > 0) {
+    for (const req of reqs) {
+      if (!req || !req.cohort) continue;
+      const userCohort = userScores[req.cohort];
+      if (!userCohort) continue;
 
-    matches.push({
-      cohort: req.cohort,
-      smart_gap: sg,
-      grit_gap: gg,
-      build_gap: bg,
-      met: gaps === 0,
-    });
+      const sg = Math.max(0, (req.smart || 0) - userCohort.smart);
+      const gg = Math.max(0, (req.grit || 0) - userCohort.grit);
+      const bg = Math.max(0, (req.build || 0) - userCohort.build);
+      const gaps = (sg > 0 ? 1 : 0) + (gg > 0 ? 1 : 0) + (bg > 0 ? 1 : 0);
+      totalGaps += gaps;
+      maxSingleGap = Math.max(maxSingleGap, sg, gg, bg);
+
+      matches.push({ cohort: req.cohort, smart_gap: sg, grit_gap: gg, build_gap: bg, met: gaps === 0 });
+    }
+  } else if (listing.required_smart != null) {
+    // Fallback: use flat required_smart/grit/build fields with the user's primary cohort
+    const primary = Object.values(userScores)[0];
+    if (primary) {
+      const sg = Math.max(0, (listing.required_smart || 0) - primary.smart);
+      const gg = Math.max(0, (listing.required_grit || 0) - primary.grit);
+      const bg = Math.max(0, (listing.required_build || 0) - primary.build);
+      const gaps = (sg > 0 ? 1 : 0) + (gg > 0 ? 1 : 0) + (bg > 0 ? 1 : 0);
+      totalGaps = gaps;
+      maxSingleGap = Math.max(sg, gg, bg);
+      matches.push({ cohort: primary.cohort_id, smart_gap: sg, grit_gap: gg, build_gap: bg, met: gaps === 0 });
+    }
+  }
+
+  // Use backend-computed readiness if available, otherwise compute
+  if (listing.readiness && matches.length === 0) {
+    return { readiness: listing.readiness as any, matches: [] };
   }
 
   let readiness: 'ready' | 'almost' | 'gap' = 'gap';
@@ -158,13 +183,17 @@ function JobCard({ listing, userScores, expanded, onToggle }: {
   const { readiness, matches } = computeReadiness(listing, userScores);
   const rColor = readinessColor(readiness);
 
+  const loc = listing.location || [listing.location_city, listing.location_state].filter(Boolean).join(', ');
+  const applyUrl = listing.apply_url || listing.url || '';
+  const desc = listing.description || listing.description_preview || '';
+
   async function handleApply() {
     try {
       await dilly.post('/v2/internships/save', { internship_id: listing.id });
     } catch {}
-    if (listing.url) {
-      Linking.openURL(listing.url).catch(() => {
-        Alert.alert('Could not open link', listing.url);
+    if (applyUrl) {
+      Linking.openURL(applyUrl).catch(() => {
+        Alert.alert('Could not open link', applyUrl);
       });
     }
   }
@@ -206,10 +235,10 @@ function JobCard({ listing, userScores, expanded, onToggle }: {
 
         {/* Meta */}
         <View style={s.jobMeta}>
-          {listing.location ? (
+          {loc ? (
             <View style={s.metaPill}>
               <Ionicons name="location-outline" size={10} color={colors.t3} />
-              <Text style={s.metaText}>{listing.location}</Text>
+              <Text style={s.metaText}>{loc}</Text>
             </View>
           ) : null}
           {listing.job_type === 'internship' && (
@@ -244,7 +273,7 @@ function JobCard({ listing, userScores, expanded, onToggle }: {
           <View style={s.expandedSection}>
             {/* Per-cohort score bars */}
             {(matches || []).map(m => {
-              const req = listing.cohort_requirements.find(r => r.cohort === m.cohort);
+              const req = (listing.cohort_requirements || []).find(r => r.cohort === m.cohort);
               const userC = userScores[m.cohort];
               if (!req || !userC) return null;
               return (
@@ -258,9 +287,9 @@ function JobCard({ listing, userScores, expanded, onToggle }: {
             })}
 
             {/* Description preview */}
-            {listing.description ? (
+            {desc ? (
               <Text style={s.descPreview} numberOfLines={4}>
-                {listing.description.replace(/\s+/g, ' ').slice(0, 300)}
+                {desc.replace(/\s+/g, ' ').slice(0, 300)}
               </Text>
             ) : null}
 
