@@ -305,7 +305,7 @@ def _compute_brief(
             facts.append({
                 "id": "gap",
                 "kind": "score",
-                "headline": f"{round(gap)} points from {company}",
+                "headline": f"{round(gap)} {'point' if round(gap) == 1 else 'points'} away from {company}",
                 "body": f"Your Dilly score is {round(current)}. {company}'s bar is {round(bar)}.",
                 "action_label": "See what to fix",
                 "action_route": "/(app)/resume-editor",
@@ -315,7 +315,7 @@ def _compute_brief(
             facts.append({
                 "id": "above_bar",
                 "kind": "score",
-                "headline": f"You clear {company}'s bar by {round(over)} points",
+                "headline": f"You clear {company}'s bar by {round(over)} {'point' if round(over) == 1 else 'points'}",
                 "body": f"Your Dilly score is {round(current)}. Start applying this week.",
                 "action_label": "See jobs",
                 "action_route": "/(app)/jobs",
@@ -328,7 +328,7 @@ def _compute_brief(
             facts.append({
                 "id": "delta_up",
                 "kind": "progress",
-                "headline": f"+{delta} points since last audit",
+                "headline": f"+{delta} {'point' if abs(delta) == 1 else 'points'} since last audit",
                 "body": "Your work is showing up in the numbers. Keep going.",
                 "action_label": "See history",
                 "action_route": "/(app)/score-detail",
@@ -439,7 +439,7 @@ def _compute_do_now(
         gap = round(bar - current)
         return {
             "kind": "close_gap",
-            "title": f"Close {gap} points on your resume",
+            "title": f"Close {gap} {'point' if gap == 1 else 'points'} on your resume",
             "subtitle": f"Open the editor and tackle your weakest section.",
             "action_label": "Open editor",
             "action_route": "/(app)/resume-editor",

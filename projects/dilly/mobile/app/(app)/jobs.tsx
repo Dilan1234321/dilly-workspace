@@ -174,11 +174,12 @@ function ScoreBar({ label, required, yours, color }: {
 
 // ── Job Card Component ──────────────────────────────────────────────────────
 
-function JobCard({ listing, userScores, expanded, onToggle }: {
+function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
   listing: Listing;
   userScores: Record<string, CohortScore>;
   expanded: boolean;
   onToggle: () => void;
+  activeCohortId?: string | null;
 }) {
   const { readiness, matches } = computeReadiness(listing, userScores);
   const rColor = readinessColor(readiness);
@@ -186,6 +187,12 @@ function JobCard({ listing, userScores, expanded, onToggle }: {
   const loc = listing.location || [listing.location_city, listing.location_state].filter(Boolean).join(', ');
   const applyUrl = listing.apply_url || listing.url || '';
   const desc = listing.description || listing.description_preview || '';
+
+  // Pick the user's cohort to compare against this job
+  const compareWith = activeCohortId ? userScores[activeCohortId] : Object.values(userScores)[0];
+  const reqSmart = Number(listing.required_smart) || 65;
+  const reqGrit = Number(listing.required_grit) || 65;
+  const reqBuild = Number(listing.required_build) || 65;
 
   async function handleApply() {
     try {
@@ -271,20 +278,15 @@ function JobCard({ listing, userScores, expanded, onToggle }: {
         {/* Expanded: Score comparison + actions */}
         {expanded && (
           <View style={s.expandedSection}>
-            {/* Per-cohort score bars */}
-            {(matches || []).map(m => {
-              const req = (listing.cohort_requirements || []).find(r => r.cohort === m.cohort);
-              const userC = userScores[m.cohort];
-              if (!req || !userC) return null;
-              return (
-                <View key={m.cohort} style={s.cohortScoreBlock}>
-                  <Text style={s.cohortScoreLabel}>{m.cohort}</Text>
-                  <ScoreBar label="S" required={req.smart} yours={userC.smart} color={BLUE} />
-                  <ScoreBar label="G" required={req.grit} yours={userC.grit} color={AMBER} />
-                  <ScoreBar label="B" required={req.build} yours={userC.build} color={GREEN} />
-                </View>
-              );
-            })}
+            {/* S/G/B comparison: your scores vs job requirements */}
+            {compareWith && (
+              <View style={s.cohortScoreBlock}>
+                <Text style={s.cohortScoreLabel}>YOUR FIT: {compareWith.display_name || compareWith.cohort_id}</Text>
+                <ScoreBar label="S" required={reqSmart} yours={compareWith.smart} color={BLUE} />
+                <ScoreBar label="G" required={reqGrit} yours={compareWith.grit} color={AMBER} />
+                <ScoreBar label="B" required={reqBuild} yours={compareWith.build} color={GREEN} />
+              </View>
+            )}
 
             {/* Description preview */}
             {desc ? (
@@ -394,12 +396,15 @@ export default function JobsScreen() {
       );
     }
 
-    // Cohort filter — only show jobs matching the selected cohort
+    // Cohort filter — if a cohort is selected, prefer jobs that match it
+    // but still show all jobs (most don't have cohort_requirements populated yet).
+    // Jobs with matching cohort_requirements are sorted first.
     if (activeCohortFilter) {
-      result = result.filter(l =>
-        (l.cohort_requirements || []).some(r => r.cohort === activeCohortFilter)
-        || l.primary_cohort === activeCohortFilter
-      );
+      result = [...result].sort((a, b) => {
+        const aMatch = (a.cohort_requirements || []).some(r => r.cohort === activeCohortFilter) ? 0 : 1;
+        const bMatch = (b.cohort_requirements || []).some(r => r.cohort === activeCohortFilter) ? 0 : 1;
+        return aMatch - bMatch;
+      });
     }
 
     // Readiness filter
@@ -549,6 +554,7 @@ export default function JobsScreen() {
               listing={listing}
               userScores={userScoresMap}
               expanded={expandedId === listing.id}
+              activeCohortId={activeCohortFilter}
               onToggle={() => {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 setExpandedId(expandedId === listing.id ? null : listing.id);
@@ -583,13 +589,13 @@ const s = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, color: colors.t1, padding: 0 },
 
   // Filter pills
-  filterRow: { paddingHorizontal: spacing.lg, gap: 8, paddingBottom: spacing.sm },
+  filterRow: { paddingHorizontal: spacing.lg, gap: 6, paddingBottom: spacing.sm },
   filterPill: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
     backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
   },
   filterPillActive: { backgroundColor: COBALT, borderColor: COBALT },
-  filterPillText: { fontSize: 12, fontWeight: '600', color: colors.t2 },
+  filterPillText: { fontSize: 11, fontWeight: '600', color: colors.t2 },
   filterPillTextActive: { color: '#fff' },
 
   // Tab row
