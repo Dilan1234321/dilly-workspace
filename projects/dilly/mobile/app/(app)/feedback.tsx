@@ -311,18 +311,57 @@ export default function FeedbackScreen() {
             </View>
           )}
 
-          {/* ── 5. What's Working ────────────────────────────── */}
+          {/* ── 5. What Employers Look For ─────────────────── */}
+          {(ra.unmatched_signals || []).length > 0 && (
+            <View style={f.section}>
+              <Text style={f.sectionHeading}>What employers look for</Text>
+              <Text style={f.sectionSub}>Key signals {cohortName} recruiters screen for. Green = you have it. Red = missing.</Text>
+              {(['smart', 'grit', 'build'] as const).map(dim => {
+                const matched = matchedByDim[dim] || [];
+                const unmatched = (ra.unmatched_signals || []).filter(s => s.dimension === dim && s.tier === 'high');
+                if (matched.length === 0 && unmatched.length === 0) return null;
+                return (
+                  <View key={`emp-${dim}`} style={f.dimGroup}>
+                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)}</Text>
+                    {matched.slice(0, 3).map((sig, i) => (
+                      <View key={`m-${i}`} style={f.matchedRow}>
+                        <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+                        <Text style={f.matchedText}>{sig.signal}</Text>
+                      </View>
+                    ))}
+                    {unmatched.slice(0, 3).map((sig, i) => (
+                      <AnimatedPressable
+                        key={`u-${i}`}
+                        style={f.notWorkingRow}
+                        onPress={() => openDillyOverlay({
+                          isPaid: true,
+                          initialMessage: `Employers look for "${sig.signal}" on resumes in ${cohortName}. I'm missing it. How do I add this?`,
+                        })}
+                        scaleDown={0.98}
+                      >
+                        <Ionicons name="close-circle" size={14} color={CORAL} />
+                        <Text style={[f.matchedText, { flex: 1 }]}>{sig.signal}</Text>
+                        <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                      </AnimatedPressable>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* ── 5a. What's working on your resume ──────────── */}
           {(ra.matched_signals || []).length > 0 && (
             <View style={f.section}>
-              <Text style={f.sectionHeading}>What's working</Text>
-              <Text style={f.sectionSub}>Signals recruiters will notice immediately.</Text>
+              <Text style={f.sectionHeading}>What's working on your resume</Text>
+              <Text style={f.sectionSub}>These are already on your resume and scoring you points.</Text>
               {(['smart', 'grit', 'build'] as const).map(dim => {
                 const sigs = matchedByDim[dim];
                 if (sigs.length === 0) return null;
                 return (
                   <View key={dim} style={f.dimGroup}>
-                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)}</Text>
-                    {sigs.slice(0, 4).map((sig, i) => (
+                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)} · {sigs.length} signal{sigs.length !== 1 ? 's' : ''}</Text>
+                    {sigs.slice(0, 5).map((sig, i) => (
                       <View key={i} style={f.matchedRow}>
                         <Ionicons name="checkmark-circle" size={14} color={GREEN} />
                         <Text style={f.matchedText}>{sig.signal}</Text>
