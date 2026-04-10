@@ -403,12 +403,24 @@ export default function NewAuditScreen() {
         const latest = latestRes?.audit;
         if (latest) setLatestAudit(latest);
         setHistory(historyRes?.audits || []);
-        // Load user's cohorts for the cohort picker
-        const cohorts: string[] = profileRes?.cohorts
-          ?? Object.keys(profileRes?.cohort_scores || {}).filter((k: string) => {
-            const v = (profileRes?.cohort_scores || {})[k];
-            return v?.level === 'major' || v?.level === 'primary';
-          });
+        // Load user's cohorts for the cohort picker.
+        // Priority: explicit cohorts array > cohort_scores keys > detect from majors > single cohort field
+        let cohorts: string[] = [];
+        if (Array.isArray(profileRes?.cohorts) && profileRes.cohorts.length > 0) {
+          cohorts = profileRes.cohorts;
+        } else if (profileRes?.cohort_scores && Object.keys(profileRes.cohort_scores).length > 0) {
+          // Sort: major/primary first, then by dilly_score
+          cohorts = Object.entries(profileRes.cohort_scores)
+            .sort(([, a]: [string, any], [, b]: [string, any]) => {
+              const la = a?.level === 'major' || a?.level === 'primary' ? 0 : 1;
+              const lb = b?.level === 'major' || b?.level === 'primary' ? 0 : 1;
+              if (la !== lb) return la - lb;
+              return (b?.dilly_score || 0) - (a?.dilly_score || 0);
+            })
+            .map(([k]) => k);
+        } else if (profileRes?.cohort || profileRes?.track) {
+          cohorts = [profileRes.cohort || profileRes.track];
+        }
         setUserCohorts(cohorts);
         if (cohorts.length > 0 && !selectedCohort) setSelectedCohort(cohorts[0]);
       } catch {}
