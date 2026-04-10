@@ -11,7 +11,7 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -68,10 +68,11 @@ function PulsingDot({ delay = 0 }: { delay?: number }) {
 
 export default function ResumeGenerateScreen() {
   const insets = useSafeAreaInsets();
+  const { jobTitle: paramTitle, company: paramCompany, jd: paramJd } = useLocalSearchParams<{ jobTitle?: string; company?: string; jd?: string }>();
   const [stage, setStage] = useState<Stage>('idle');
-  const [jobTitle, setJobTitle] = useState('');
-  const [company, setCompany] = useState('');
-  const [jd, setJd] = useState('');
+  const [jobTitle, setJobTitle] = useState(paramTitle || '');
+  const [company, setCompany] = useState(paramCompany || '');
+  const [jd, setJd] = useState(paramJd || '');
   const [stepIdx, setStepIdx] = useState(0);
   const [sections, setSections] = useState<GeneratedSection[]>([]);
   const [variantId, setVariantId] = useState<string | null>(null);

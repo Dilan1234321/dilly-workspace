@@ -471,13 +471,21 @@ export default function HomeScreen() {
         {/* Build-75: Daily action banner  -  today's one-line coaching action */}
         {brief?.streak?.daily_action && (
           <FadeInView delay={40}>
-            <View style={s.dailyActionBanner}>
+            <AnimatedPressable
+              style={s.dailyActionBanner}
+              onPress={() => openDillyOverlay({
+                isPaid: true,
+                initialMessage: `Today's recommendation for me: "${brief.streak.daily_action}". Help me do this right now, step by step.`,
+              })}
+              scaleDown={0.98}
+            >
               <Ionicons name="today" size={12} color={colors.gold} />
               <Text style={s.dailyActionText} numberOfLines={2}>
                 <Text style={s.dailyActionLabel}>TODAY · </Text>
                 {brief.streak.daily_action}
               </Text>
-            </View>
+              <Ionicons name="sparkles" size={10} color={colors.gold} style={{ opacity: 0.4 }} />
+            </AnimatedPressable>
           </FadeInView>
         )}
 

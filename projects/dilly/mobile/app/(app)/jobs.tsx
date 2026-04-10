@@ -148,6 +148,20 @@ function computeReadiness(
   return { readiness, matches };
 }
 
+// ── Simple Dim Row (no comparison, just user's score) ───────────────────────
+
+function DimRow({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <View style={s.scoreBarRow}>
+      <Text style={s.scoreBarLabel}>{label.charAt(0)}</Text>
+      <View style={s.scoreBarTrack}>
+        <View style={[s.scoreBarFill, { width: `${Math.min(100, value)}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={[s.scoreBarNum, { color }]}>{Math.round(value)}</Text>
+    </View>
+  );
+}
+
 // ── Score Bar Component ─────────────────────────────────────────────────────
 
 function ScoreBar({ label, required, yours, color }: {
@@ -188,11 +202,20 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
   const applyUrl = listing.apply_url || listing.url || '';
   const desc = listing.description || listing.description_preview || '';
 
-  // Pick the user's cohort to compare against this job
-  const compareWith = activeCohortId ? userScores[activeCohortId] : Object.values(userScores)[0];
-  const reqSmart = Number(listing.required_smart) || 65;
-  const reqGrit = Number(listing.required_grit) || 65;
-  const reqBuild = Number(listing.required_build) || 65;
+  // Pick the user's cohort to compare against this job.
+  // Priority: active filter > job's primary cohort > user's primary (first by level sort)
+  const primaryUserCohort = Object.values(userScores).sort((a, b) => {
+    const lo: Record<string, number> = { primary: 0, major: 1, minor: 2, interest: 3 };
+    return (lo[a.level] ?? 9) - (lo[b.level] ?? 9);
+  })[0];
+  const compareWith = activeCohortId ? userScores[activeCohortId]
+    : (listing.primary_cohort && userScores[listing.primary_cohort])
+    ? userScores[listing.primary_cohort]
+    : primaryUserCohort;
+  const hasRealScores = listing.required_smart != null && listing.required_smart > 0;
+  const reqSmart = hasRealScores ? Number(listing.required_smart) : 0;
+  const reqGrit = hasRealScores ? Number(listing.required_grit) : 0;
+  const reqBuild = hasRealScores ? Number(listing.required_build) : 0;
 
   async function handleApply() {
     try {
@@ -279,12 +302,20 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
         {expanded && (
           <View style={s.expandedSection}>
             {/* S/G/B comparison: your scores vs job requirements */}
-            {compareWith && (
+            {compareWith && hasRealScores && (
               <View style={s.cohortScoreBlock}>
                 <Text style={s.cohortScoreLabel}>YOUR FIT: {compareWith.display_name || compareWith.cohort_id}</Text>
                 <ScoreBar label="S" required={reqSmart} yours={compareWith.smart} color={BLUE} />
                 <ScoreBar label="G" required={reqGrit} yours={compareWith.grit} color={AMBER} />
                 <ScoreBar label="B" required={reqBuild} yours={compareWith.build} color={GREEN} />
+              </View>
+            )}
+            {compareWith && !hasRealScores && (
+              <View style={s.cohortScoreBlock}>
+                <Text style={s.cohortScoreLabel}>YOUR SCORES: {compareWith.display_name || compareWith.cohort_id}</Text>
+                <DimRow label="Smart" value={compareWith.smart} color={BLUE} />
+                <DimRow label="Grit" value={compareWith.grit} color={AMBER} />
+                <DimRow label="Build" value={compareWith.build} color={GREEN} />
               </View>
             )}
 
@@ -308,12 +339,16 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
               <AnimatedPressable
                 style={s.tailorBtn}
                 onPress={() => router.push({
-                  pathname: '/(app)/resume-editor',
-                  params: { focusDimension: 'tailor' },
+                  pathname: '/(app)/resume-generate',
+                  params: {
+                    jobTitle: listing.title || '',
+                    company: listing.company || '',
+                    jd: desc.slice(0, 2000),
+                  },
                 })}
                 scaleDown={0.97}
               >
-                <Ionicons name="document-text-outline" size={14} color={colors.t2} />
+                <Ionicons name="sparkles" size={14} color={colors.t2} />
                 <Text style={s.tailorBtnText}>Tailor</Text>
               </AnimatedPressable>
             </View>
