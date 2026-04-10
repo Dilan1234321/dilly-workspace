@@ -1287,3 +1287,137 @@ async def get_interests_list(request: Request):
         "recommended": recommended,
         "education_levels": EDUCATION_LEVELS,
     }
+
+
+# ── Dilly Card (shareable visual business card) ──────────────────────────────
+
+@router.get("/profile/dilly-card")
+async def get_dilly_card(request: Request):
+    """Generate a beautiful SVG Dilly Card for sharing. Returns SVG with Content-Type image/svg+xml."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    from projects.dilly.api.profile_store import get_profile
+    profile = get_profile(email) or {}
+
+    name = (profile.get("name") or "Student").strip()
+    first = name.split()[0] if name else "Student"
+    cohort = profile.get("cohort") or profile.get("track") or "General"
+    school = "University of Tampa" if profile.get("school_id") == "utampa" else (profile.get("school_name") or "")
+    major = (profile.get("majors") or [None])[0] or profile.get("major") or ""
+
+    # Get scores from DB
+    smart, grit, build, dilly_score = 0, 0, 0, 0
+    try:
+        import psycopg2, psycopg2.extras, json, os
+        pw = os.environ.get("DILLY_DB_PASSWORD", "")
+        if not pw:
+            try: pw = open(os.path.expanduser("~/.dilly_db_pass")).read().strip()
+            except: pass
+        conn = psycopg2.connect(
+            host=os.environ.get("DILLY_DB_HOST", "dilly-db.cgty4eee285w.us-east-1.rds.amazonaws.com"),
+            database="dilly", user="dilly_admin", password=pw, sslmode="require"
+        )
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT cohort_scores FROM students WHERE LOWER(email) = LOWER(%s)", (email,))
+        row = cur.fetchone()
+        if row and row["cohort_scores"]:
+            cs = row["cohort_scores"]
+            if isinstance(cs, str):
+                cs = json.loads(cs)
+            # Find primary/major cohort
+            for cname, cdata in cs.items():
+                if cdata.get("level") in ("major", "primary"):
+                    smart = round(cdata.get("smart", 0))
+                    grit = round(cdata.get("grit", 0))
+                    build = round(cdata.get("build", 0))
+                    dilly_score = round(cdata.get("dilly_score", 0))
+                    cohort = cname
+                    break
+        conn.close()
+    except Exception:
+        pass
+
+    def _esc(s: str) -> str:
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+    # Score arc helper (for the circular score ring)
+    import math
+    def _arc(score: int, cx: int, cy: int, r: int) -> str:
+        angle = (score / 100) * 360
+        rad = math.radians(angle - 90)
+        x = cx + r * math.cos(rad)
+        y = cy + r * math.sin(rad)
+        large = 1 if angle > 180 else 0
+        sx = cx + r * math.cos(math.radians(-90))
+        sy = cy + r * math.sin(math.radians(-90))
+        if score >= 100:
+            return f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#1652F0" stroke-width="4"/>'
+        if score <= 0:
+            return ""
+        return f'<path d="M {sx} {sy} A {r} {r} 0 {large} 1 {x:.1f} {y:.1f}" fill="none" stroke="#1652F0" stroke-width="4" stroke-linecap="round"/>'
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="600" height="340" viewBox="0 0 600 340">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0D1117"/>
+      <stop offset="100%" stop-color="#161B22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1652F0"/>
+      <stop offset="100%" stop-color="#4F8AFF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Card background -->
+  <rect width="600" height="340" rx="20" fill="url(#bg)"/>
+  <rect x="0" y="0" width="600" height="4" rx="2" fill="url(#accent)"/>
+
+  <!-- Dilly logo text -->
+  <text x="32" y="42" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="800" fill="#1652F0" letter-spacing="2">DILLY</text>
+
+  <!-- Name -->
+  <text x="32" y="90" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="800" fill="#F0F6FC">{_esc(name)}</text>
+
+  <!-- Cohort + school -->
+  <text x="32" y="118" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#8B949E">{_esc(cohort)}</text>
+  <text x="32" y="138" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#484F58">{_esc(school)}{(' · ' + _esc(major)) if major else ''}</text>
+
+  <!-- Score ring -->
+  <circle cx="520" cy="90" r="38" fill="none" stroke="#21262D" stroke-width="4"/>
+  {_arc(dilly_score, 520, 90, 38)}
+  <text x="520" y="85" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#F0F6FC" text-anchor="middle" dominant-baseline="central">{dilly_score}</text>
+  <text x="520" y="108" font-family="system-ui, -apple-system, sans-serif" font-size="9" fill="#484F58" text-anchor="middle" letter-spacing="1">DILLY SCORE</text>
+
+  <!-- Dimension bars -->
+  <text x="32" y="185" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#484F58" letter-spacing="1.5">SMART</text>
+  <rect x="100" y="176" width="200" height="6" rx="3" fill="#21262D"/>
+  <rect x="100" y="176" width="{min(200, smart * 2)}" height="6" rx="3" fill="#58A6FF"/>
+  <text x="310" y="184" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#58A6FF">{smart}</text>
+
+  <text x="32" y="215" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#484F58" letter-spacing="1.5">GRIT</text>
+  <rect x="100" y="206" width="200" height="6" rx="3" fill="#21262D"/>
+  <rect x="100" y="206" width="{min(200, grit * 2)}" height="6" rx="3" fill="#D29922"/>
+  <text x="310" y="214" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#D29922">{grit}</text>
+
+  <text x="32" y="245" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#484F58" letter-spacing="1.5">BUILD</text>
+  <rect x="100" y="236" width="200" height="6" rx="3" fill="#21262D"/>
+  <rect x="100" y="236" width="{min(200, build * 2)}" height="6" rx="3" fill="#3FB950"/>
+  <text x="310" y="244" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#3FB950">{build}</text>
+
+  <!-- Bottom tagline -->
+  <line x1="32" y1="280" x2="568" y2="280" stroke="#21262D" stroke-width="1"/>
+  <text x="32" y="310" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#484F58">Career readiness, scored.</text>
+  <text x="568" y="310" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#1652F0" text-anchor="end" font-weight="600">trydilly.com</text>
+</svg>'''
+
+    return Response(
+        content=svg,
+        media_type="image/svg+xml",
+        headers={
+            "Content-Disposition": f'inline; filename="dilly-card-{first.lower()}.svg"',
+            "Cache-Control": "no-store",
+        },
+    )
