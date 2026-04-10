@@ -181,7 +181,7 @@ function ScanProgress({ stageIndex }: { stageIndex: number }) {
 // ── Score History Item ─────────────────────────────────────────────────────────
 
 function HistoryItem({ audit, index, isLatest }: { audit: AuditSummary; index: number; isLatest: boolean }) {
-  const score = audit.final_score ?? 0;
+  const score = Math.round(audit.final_score ?? 0);
   const color = scoreColor(score);
   return (
     <View style={[ns.historyItem, isLatest && { borderColor: GOLD + '30' }]}>
@@ -211,9 +211,10 @@ function HistoryItem({ audit, index, isLatest }: { audit: AuditSummary; index: n
 // ── Before/After Results ──────────────────────────────────────────────────────
 
 function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; previousScore: number | null }) {
-  const score = newAudit.final_score ?? 0;
+  const score = Math.round(newAudit.final_score ?? 0);
   const color = scoreColor(score);
-  const delta = previousScore != null ? score - previousScore : null;
+  const prevRounded = previousScore != null ? Math.round(previousScore) : null;
+  const delta = prevRounded != null ? score - prevRounded : null;
   const barAnim = useSharedValue(0);
 
   useEffect(() => {
@@ -246,11 +247,11 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
         )}
       </View>
 
-      {previousScore != null && (
+      {prevRounded != null && (
         <View style={ns.beforeAfter}>
           <View style={ns.baItem}>
             <Text style={ns.baLabel}>Before</Text>
-            <Text style={[ns.baScore, { color: scoreColor(previousScore) }]}>{previousScore}</Text>
+            <Text style={[ns.baScore, { color: scoreColor(prevRounded) }]}>{prevRounded}</Text>
           </View>
           <Ionicons name="arrow-forward" size={16} color={colors.t3} />
           <View style={ns.baItem}>
@@ -617,8 +618,8 @@ export default function NewAuditScreen() {
                     </Text>
                   </View>
                   <View style={ns.currentScoreRow}>
-                    <Text style={[ns.currentScore, { color: scoreColor(latestAudit.final_score) }]}>
-                      {latestAudit.final_score}
+                    <Text style={[ns.currentScore, { color: scoreColor(Math.round(latestAudit.final_score)) }]}>
+                      {Math.round(latestAudit.final_score)}
                     </Text>
                     <Text style={ns.currentOf}>/100</Text>
                     <View style={{ flex: 1 }} />

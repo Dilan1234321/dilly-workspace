@@ -553,7 +553,7 @@ export default function HomeScreen() {
         {/* ── B. Compact Score Card ───────────────────────────── */}
         <FadeInView delay={160}>
           <AnimatedPressable
-            onPress={() => hasAudit && router.push('/(app)/score-detail')}
+            onPress={() => hasAudit && router.push('/(app)/feedback')}
             disabled={!hasAudit}
             style={s.compactScoreCard}
             scaleDown={0.985}
@@ -608,7 +608,7 @@ export default function HomeScreen() {
         )}
         {auditHistory.length >= 2 && (
           <FadeInView delay={180}>
-            <AnimatedPressable style={s.historyCard} onPress={() => router.push('/(app)/score-detail')} scaleDown={0.985}>
+            <AnimatedPressable style={s.historyCard} onPress={() => router.push('/(app)/feedback')} scaleDown={0.985}>
               <Text style={s.historyLabel}>SCORE HISTORY</Text>
               <Svg width="100%" height={80} viewBox={`0 0 ${(auditHistory.length - 1) * 60 + 20} 80`}>
                 {/* Grid lines */}
@@ -863,7 +863,7 @@ export default function HomeScreen() {
               { icon: 'arrow-up-circle' as const, color: colors.green, label: 'Audit', onPress: () => router.push('/(app)/new-audit') },
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar') },
-              { icon: 'analytics' as const, color: colors.green, label: 'Scores', onPress: () => router.push('/(app)/score-detail') },
+              { icon: 'analytics' as const, color: colors.green, label: 'Feedback', onPress: () => router.push('/(app)/feedback') },
               { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
               { icon: 'shield-checkmark' as const, color: colors.gold, label: 'ATS Scan', onPress: () => router.push('/(app)/ats') },
             ].map(tool => (
