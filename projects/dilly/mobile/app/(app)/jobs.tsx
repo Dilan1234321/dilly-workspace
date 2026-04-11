@@ -27,6 +27,7 @@ import { colors, spacing, radius } from '../../lib/tokens';
 import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import DillyFooter from '../../components/DillyFooter';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const COBALT = '#1652F0';
@@ -623,6 +624,7 @@ export default function JobsScreen() {
             />
           </FadeInView>
         ))}
+        <DillyFooter />
       </ScrollView>
     </View>
   );

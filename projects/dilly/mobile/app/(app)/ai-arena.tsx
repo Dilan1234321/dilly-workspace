@@ -21,6 +21,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import DillyFooter from '../../components/DillyFooter';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const W = Dimensions.get('window').width;
@@ -442,6 +443,7 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
+        <DillyFooter />
       </ScrollView>
     </KeyboardAvoidingView>
   );

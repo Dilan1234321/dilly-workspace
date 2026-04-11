@@ -32,6 +32,7 @@ import { colors, spacing, radius } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import DillyFooter from '../../components/DillyFooter';
 import DillyCardEditor, { type CardData } from '../../components/DillyCard';
 
 const W = Dimensions.get('window').width;
@@ -389,6 +390,7 @@ export default function MyDillyProfileScreen() {
             </View>
           </FadeInView>
         )}
+        <DillyFooter />
       </ScrollView>
     </View>
   );

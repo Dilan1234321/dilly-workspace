@@ -26,6 +26,7 @@ import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
 import CohortSwitcher from '../../components/CohortSwitcher';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import DillyFooter from '../../components/DillyFooter';
 import { Svg, Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 
 // \u2500\u2500 Types \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -969,6 +970,7 @@ export default function HomeScreen() {
           </View>
         </FadeInView>
 
+        <DillyFooter />
       </ScrollView>
 
       <CelebrationPortal />
