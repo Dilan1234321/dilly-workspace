@@ -133,7 +133,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [richContext, setRichContext] = useState<any>(null);
-  const [input,    setInput]    = useState('');
+  const [input,    setInput]    = useState(''); // kept for backward compat but not used for display
+  const inputRef = useRef('');
+  const inputFieldRef = useRef<any>(null);
   const [mode,     setMode]     = useState<ChatMode>('coaching');
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -203,7 +205,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     // Cap displayed messages to 60 to prevent unbounded memory growth in long sessions
     const newHistory: Message[] = [...currentMessages, userMsg].slice(-60);
     setMessages(newHistory);
-    setInput('');
+    inputRef.current = '';
+    if (inputFieldRef.current) inputFieldRef.current.clear();
     setSuggestions([]);
     suggestionsOpacity.setValue(0);
     setIsTyping(true);
@@ -286,7 +289,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     if (visible) {
       setMessages([]);
       setRichContext(null);
-      setInput('');
+      inputRef.current = '';
+      if (inputFieldRef.current) inputFieldRef.current.clear();
       setMode('coaching');
       setIsTyping(false);
       initialMessageSent.current = false;
@@ -402,10 +406,12 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   // ── Manual send ──────────────────────────────────────────────────────────────
 
   const sendMessage = useCallback(async () => {
-    const text = input.trim();
+    const text = (inputRef.current || '').trim();
     if (!text || isTyping || streamRef.current) return;
+    inputRef.current = '';
+    if (inputFieldRef.current) inputFieldRef.current.clear();
     sendMessageWithText(text, messages);
-  }, [input, isTyping, messages, sendMessageWithText]);
+  }, [isTyping, messages, sendMessageWithText]);
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -566,14 +572,15 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
               style={s.input}
               placeholder={mode === 'practice' ? "Type your answer..." : "Ask Dilly anything..."}
               placeholderTextColor={colors.t3}
-              value={input}
-              onChangeText={setInput}
+              defaultValue=""
+              onChangeText={t => { inputRef.current = t; }}
               multiline={false}
               returnKeyType="send"
               onSubmitEditing={sendMessage}
               editable={!isTyping && !streamRef.current}
+              ref={inputFieldRef}
             />
-            <TouchableOpacity style={[s.sendBtn, (!input.trim() || isTyping) && s.sendBtnDisabled]} onPress={sendMessage} disabled={!input.trim() || isTyping} activeOpacity={0.8}>
+            <TouchableOpacity style={[s.sendBtn, isTyping && s.sendBtnDisabled]} onPress={sendMessage} disabled={isTyping} activeOpacity={0.8}>
               <Ionicons name="arrow-up" size={18} color={colors.bg} />
             </TouchableOpacity>
           </View>
