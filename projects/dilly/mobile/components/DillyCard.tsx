@@ -148,13 +148,9 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
         {showBack ? (
           <CardBack />
         ) : (
-          {ViewShot ? (
-            <ViewShot ref={frontRef} options={{ format: 'png', quality: 1, result: 'tmpfile' }}>
-              <CardFront data={data} />
-            </ViewShot>
-          ) : (
+          <View ref={frontRef as any}>
             <CardFront data={data} />
-          )}
+          </View>
         )}
       </TouchableOpacity>
       <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
