@@ -216,9 +216,9 @@ export default function MyDillyProfileScreen() {
           <DillyCardEditor
             initialData={{
               name: fullName,
-              school,
-              major: (p.majors?.[0] || p.major || ''),
-              classYear: p.graduation_year ? String(p.graduation_year) : '',
+              school: p.user_type === 'professional' ? '' : school,
+              major: p.user_type === 'professional' ? (p.career_fields?.[0] || '') : (p.majors?.[0] || p.major || ''),
+              classYear: p.user_type === 'professional' ? '' : (p.graduation_year ? String(p.graduation_year) : ''),
               tagline: p.profile_tagline || p.custom_tagline || '',
               email: p.email || '',
               phones: p.phones || [{ label: 'Cell', number: '' }],
@@ -226,6 +226,7 @@ export default function MyDillyProfileScreen() {
               photoUri: p.profile_slug ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo` : null,
             }}
             onSave={() => {}}
+            userType={p.user_type}
           />
         </FadeInView>
 

@@ -444,21 +444,23 @@ export default function ProfileScreen() {
         <View style={ps.section}>
           <Text style={ps.sectionEyebrow}>ABOUT</Text>
           <View style={ps.aboutGrid}>
+            {p.user_type !== 'professional' && school ? (
+              <View style={ps.aboutItem}>
+                <Ionicons name="school-outline" size={13} color={colors.t3} />
+                <View>
+                  <Text style={ps.aboutLabel}>School</Text>
+                  <Text style={ps.aboutValue}>{school}</Text>
+                </View>
+              </View>
+            ) : null}
             <View style={ps.aboutItem}>
-              <Ionicons name="school-outline" size={13} color={colors.t3} />
+              <Ionicons name={p.user_type === 'professional' ? 'briefcase-outline' : 'book-outline'} size={13} color={colors.t3} />
               <View>
-                <Text style={ps.aboutLabel}>School</Text>
-                <Text style={ps.aboutValue}>{school}</Text>
+                <Text style={ps.aboutLabel}>{p.user_type === 'professional' ? 'Field' : 'Major'}</Text>
+                <Text style={ps.aboutValue}>{p.user_type === 'professional' ? (p.career_fields?.[0] || cohort) : (major || 'Not set')}</Text>
               </View>
             </View>
-            <View style={ps.aboutItem}>
-              <Ionicons name="book-outline" size={13} color={colors.t3} />
-              <View>
-                <Text style={ps.aboutLabel}>Major</Text>
-                <Text style={ps.aboutValue}>{major || 'Not set'}</Text>
-              </View>
-            </View>
-            {p.minors && p.minors.length > 0 && p.minors[0] !== '' && (
+            {p.user_type !== 'professional' && p.minors && p.minors.length > 0 && p.minors[0] !== '' && (
               <View style={ps.aboutItem}>
                 <Ionicons name="library-outline" size={13} color={colors.t3} />
                 <View>
@@ -467,7 +469,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
             )}
-            {p.pre_professional_track && (
+            {p.user_type !== 'professional' && p.pre_professional_track && (
               <View style={ps.aboutItem}>
                 <Ionicons name="medkit-outline" size={13} color={colors.t3} />
                 <View>

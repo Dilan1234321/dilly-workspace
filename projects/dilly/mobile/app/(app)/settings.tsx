@@ -432,8 +432,9 @@ export default function SettingsScreen() {
               <Divider />
               <InfoRow label="Email" value={email || 'Not set'} />
               <Divider />
-              <InfoRow label="School" value={school} />
-              <Divider />
+              {profile.user_type !== 'professional' && school && (
+                <><InfoRow label="School" value={school} /><Divider /></>
+              )}
               <InfoRow label="Cohort" value={cohort} />
               <Divider />
               <LinkRow label="Edit profile" icon="chevron-forward" onPress={() => router.push('/(app)/my-dilly-profile')} />
@@ -698,7 +699,7 @@ export default function SettingsScreen() {
               <Divider />
               <ToggleRow
                 label="Show on leaderboard"
-                hint="Other students can see your rank and score"
+                hint="Others in your cohort can see your rank and score"
                 value={leaderboardOptIn}
                 onToggle={v => { setLeaderboardOptIn(v); saveProfile({ leaderboard_opt_in: v }); }}
               />

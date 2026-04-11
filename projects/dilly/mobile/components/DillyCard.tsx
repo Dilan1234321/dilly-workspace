@@ -111,9 +111,11 @@ function CardBack() {
 interface DillyCardEditorProps {
   initialData: CardData;
   onSave: (data: CardData) => void;
+  /** 'professional' hides school/major/classYear fields */
+  userType?: string;
 }
 
-export default function DillyCardEditor({ initialData, onSave }: DillyCardEditorProps) {
+export default function DillyCardEditor({ initialData, onSave, userType }: DillyCardEditorProps) {
   const [data, setData] = useState<CardData>(initialData);
   const [showBack, setShowBack] = useState(false);
   const frontRef = useRef<any>(null);
@@ -186,20 +188,30 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
         <Text style={c.fieldLabel}>Full Name</Text>
         <TextInput style={c.fieldInput} value={data.name} onChangeText={v => update('name', v)} placeholder="Your name" placeholderTextColor={LIGHT_GRAY} />
       </View>
-      <View style={c.field}>
-        <Text style={c.fieldLabel}>School</Text>
-        <TextInput style={c.fieldInput} value={data.school} onChangeText={v => update('school', v)} placeholder="University" placeholderTextColor={LIGHT_GRAY} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={[c.field, { flex: 1 }]}>
-          <Text style={c.fieldLabel}>Major</Text>
-          <TextInput style={c.fieldInput} value={data.major} onChangeText={v => update('major', v)} placeholder="Major" placeholderTextColor={LIGHT_GRAY} />
+      {userType !== 'professional' && (
+        <>
+          <View style={c.field}>
+            <Text style={c.fieldLabel}>School</Text>
+            <TextInput style={c.fieldInput} value={data.school} onChangeText={v => update('school', v)} placeholder="University" placeholderTextColor={LIGHT_GRAY} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={[c.field, { flex: 1 }]}>
+              <Text style={c.fieldLabel}>Major</Text>
+              <TextInput style={c.fieldInput} value={data.major} onChangeText={v => update('major', v)} placeholder="Major" placeholderTextColor={LIGHT_GRAY} />
+            </View>
+            <View style={[c.field, { width: 80 }]}>
+              <Text style={c.fieldLabel}>Class</Text>
+              <TextInput style={c.fieldInput} value={data.classYear} onChangeText={v => update('classYear', v)} placeholder="2027" placeholderTextColor={LIGHT_GRAY} keyboardType="number-pad" />
+            </View>
+          </View>
+        </>
+      )}
+      {userType === 'professional' && (
+        <View style={c.field}>
+          <Text style={c.fieldLabel}>Field</Text>
+          <TextInput style={c.fieldInput} value={data.major} onChangeText={v => update('major', v)} placeholder="Your career field" placeholderTextColor={LIGHT_GRAY} />
         </View>
-        <View style={[c.field, { width: 80 }]}>
-          <Text style={c.fieldLabel}>Class</Text>
-          <TextInput style={c.fieldInput} value={data.classYear} onChangeText={v => update('classYear', v)} placeholder="2027" placeholderTextColor={LIGHT_GRAY} keyboardType="number-pad" />
-        </View>
-      </View>
+      )}
       <View style={c.field}>
         <Text style={c.fieldLabel}>Tagline</Text>
         <TextInput style={c.fieldInput} value={data.tagline} onChangeText={v => update('tagline', v.slice(0, 50))} placeholder="e.g. Aspiring Investment Banker" placeholderTextColor={LIGHT_GRAY} maxLength={50} />
