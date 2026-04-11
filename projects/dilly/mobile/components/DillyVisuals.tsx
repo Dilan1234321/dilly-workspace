@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../lib/tokens';
 
 const GOLD   = '#2B3A8E';
@@ -281,7 +282,7 @@ export function InterviewChecklistCard({ data }: { data: InterviewChecklistPaylo
       {data.items.map((item, i) => (
         <TouchableOpacity key={i} style={vStyles.checkRow} onPress={() => toggle(i)} activeOpacity={0.7}>
           <View style={[vStyles.checkbox, checked[i] && { backgroundColor: GREEN, borderColor: GREEN }]}>
-            {checked[i] && <Text style={vStyles.checkmark}>✓</Text>}
+            {checked[i] && <Ionicons name="checkmark" size={14} color="#fff" />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[vStyles.checkLabel, checked[i] && vStyles.checkLabelDone]}>{item.label}</Text>
@@ -326,11 +327,12 @@ export function BulletComparisonCard({ data }: { data: BulletComparisonPayload }
 
 // ── Timeline Card ─────────────────────────────────────────────────────────────
 
-const EVENT_ICONS: Record<string, string> = {
-  interview: '🎯',
-  meeting:   '📞',
-  deadline:  '📋',
-  other:     '📌',
+// Event type → Ionicons name (no emojis)
+const EVENT_ICON_NAMES: Record<string, string> = {
+  interview: 'mic-outline',
+  meeting:   'call-outline',
+  deadline:  'document-text-outline',
+  other:     'flag-outline',
 };
 
 function daysUntil(dateStr: string): number {
@@ -400,13 +402,13 @@ export function TimelineCard({ data }: { data: TimelinePayload }) {
         {/* Events */}
         {events.map((event, idx) => {
           const color = urgencyColor(event.days);
-          const icon  = EVENT_ICONS[event.type] ?? '📌';
+          const iconName = EVENT_ICON_NAMES[event.type] ?? 'flag-outline';
           return (
             <View key={event.id} style={[vStyles.tlNode, { width: NODE_W, marginRight: idx < events.length - 1 ? NODE_GAP : 0 }]}>
               <View style={[vStyles.tlDot, { backgroundColor: color, shadowColor: color }]} />
               <View style={[vStyles.tlCard, { borderColor: color + '40' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 }}>
-                  <Text style={{ fontSize: 14 }}>{icon}</Text>
+                  <Ionicons name={iconName as any} size={14} color={color} />
                   <Text style={[vStyles.cardEyebrow, { color }]}>{event.type.toUpperCase()}</Text>
                 </View>
                 <Text style={vStyles.tlLabel} numberOfLines={2}>{event.label}</Text>
@@ -469,7 +471,7 @@ export function WeeklyPlanCard({ data }: { data: WeeklyPlanPayload }) {
       {data.days.map((day, i) => (
         <TouchableOpacity key={i} style={vStyles.checkRow} onPress={() => toggle(i)} activeOpacity={0.7}>
           <View style={[vStyles.checkbox, checked[i] && { backgroundColor: GREEN, borderColor: GREEN }]}>
-            {checked[i] && <Text style={vStyles.checkmark}>✓</Text>}
+            {checked[i] && <Ionicons name="checkmark" size={14} color="#fff" />}
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 11, fontWeight: '700', color: GOLD, letterSpacing: 0.5 }}>{day.day}</Text>
