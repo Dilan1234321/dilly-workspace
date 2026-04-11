@@ -455,7 +455,7 @@ export default function AIArenaScreen() {
                   <Ionicons name="bulb" size={14} color={AMBER} />
                   <Text style={a.simStrategyText}>{simResult.survival_strategy}</Text>
                 </View>
-                {simResult.skills_to_develop && (
+                {Array.isArray(simResult.skills_to_develop) && simResult.skills_to_develop.length > 0 && (
                   <View style={a.skillsRow}>
                     {simResult.skills_to_develop.map((s: string, i: number) => (
                       <AnimatedPressable

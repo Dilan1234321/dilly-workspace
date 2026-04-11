@@ -462,10 +462,10 @@ function PrepDeckModalMobile({ deck, onClose }: { deck: PrepDeck; onClose: () =>
 
           <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
             {/* Dimension gaps */}
-            {deck.dimension_gaps.length > 0 && (
+            {(deck.dimension_gaps?.length ?? 0) > 0 && (
               <View style={cs.prepSection}>
                 <Text style={cs.prepSectionLabel}>YOUR GAP AREAS</Text>
-                {deck.dimension_gaps.map(g => (
+                {(deck.dimension_gaps || []).map(g => (
                   <View key={g.dimension} style={cs.gapCard}>
                     <Text style={cs.gapDim}>{g.dimension}</Text>
                     <Text style={cs.gapPts}>{g.gap} pts gap</Text>
