@@ -262,6 +262,48 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
         <Ionicons name="share-outline" size={16} color="#fff" />
         <Text style={c.shareBtnText}>Share Dilly Card</Text>
       </TouchableOpacity>
+
+      {/* Print section */}
+      <View style={c.printSection}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <Ionicons name="print-outline" size={14} color={GRAY} />
+          <Text style={{ fontSize: 12, fontWeight: '600', color: DARK }}>Print as business cards</Text>
+        </View>
+        <Text style={{ fontSize: 11, color: GRAY, lineHeight: 16, marginBottom: 10 }}>
+          Download high-quality files to print at Vistaprint, Moo, or your local print shop. Standard size: 3.5" x 2".
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity
+            style={c.printBtn}
+            onPress={async () => {
+              try {
+                const { Linking } = require('react-native');
+                await Linking.openURL(`https://api.trydilly.com/profile/dilly-card`);
+              } catch {}
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="download-outline" size={14} color={DILLY_BLUE} />
+            <Text style={c.printBtnText}>Front</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={c.printBtn}
+            onPress={async () => {
+              try {
+                const { Linking } = require('react-native');
+                await Linking.openURL(`https://api.trydilly.com/profile/dilly-card?side=back`);
+              } catch {}
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="download-outline" size={14} color={DILLY_BLUE} />
+            <Text style={c.printBtnText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={{ fontSize: 9, color: LIGHT_GRAY, marginTop: 6 }}>
+          Tip: Upload both files to vistaprint.com → Business Cards → Upload Your Design
+        </Text>
+      </View>
     </View>
   );
 }
@@ -325,4 +367,16 @@ const c = StyleSheet.create({
     backgroundColor: DILLY_BLUE, paddingVertical: 14, borderRadius: 10,
   },
   shareBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  // Print
+  printSection: {
+    backgroundColor: '#F9FAFB', borderRadius: 10, padding: 14,
+    borderWidth: 1, borderColor: '#E5E7EB',
+  },
+  printBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: DILLY_BLUE + '30',
+    backgroundColor: DILLY_BLUE + '08',
+  },
+  printBtnText: { fontSize: 13, fontWeight: '600', color: DILLY_BLUE },
 });
