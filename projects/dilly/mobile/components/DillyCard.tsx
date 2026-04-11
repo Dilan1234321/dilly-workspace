@@ -28,6 +28,11 @@ const DARK = '#1A1A2E';
 const GRAY = '#6B7280';
 const LIGHT_GRAY = '#9CA3AF';
 
+interface PhoneEntry {
+  label: string; // "Work", "Home", "Cell", "Other"
+  number: string;
+}
+
 interface CardData {
   name: string;
   school: string;
@@ -35,6 +40,7 @@ interface CardData {
   classYear: string;
   tagline: string;
   email: string;
+  phones: PhoneEntry[];
   username: string;
   photoUri: string | null;
 }
@@ -71,8 +77,10 @@ function CardFront({ data }: { data: CardData }) {
 
         <View style={{ flex: 1 }} />
 
-        <Text style={c.cardEmail}>{data.email || ''}</Text>
-        {(data as any).phone ? <Text style={c.cardEmail}>{(data as any).phone}</Text> : null}
+        {data.email ? <Text style={c.cardEmail}>{data.email}</Text> : null}
+        {data.phones?.filter(p => p.number).map((p, i) => (
+          <Text key={i} style={c.cardPhone}>{p.label}: {p.number}</Text>
+        ))}
         <Text style={{ fontSize: 9, color: LIGHT_GRAY, marginTop: 4 }}>{profileUrl}</Text>
       </View>
     </View>
@@ -141,13 +149,22 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
   return (
     <View style={{ gap: 16 }}>
       {/* Live preview */}
-      <TouchableOpacity onPress={handleFlip} activeOpacity={0.9}>
-        <Animated.View style={{ transform: [{ perspective: 1000 }, { rotateY: flipRotate }] }}>
-          {showBack ? <CardBack /> : (
-            <View ref={frontRef}>
-              <CardFront data={data} />
-            </View>
-          )}
+      <TouchableOpacity onPress={handleFlip} activeOpacity={0.95} style={{ height: CARD_H }}>
+        {/* Front */}
+        <Animated.View style={{
+          position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
+          transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }],
+        }}>
+          <View ref={frontRef}>
+            <CardFront data={data} />
+          </View>
+        </Animated.View>
+        {/* Back */}
+        <Animated.View style={{
+          position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
+          transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] }) }],
+        }}>
+          <CardBack />
         </Animated.View>
       </TouchableOpacity>
       <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
@@ -182,8 +199,47 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
         <TextInput style={c.fieldInput} value={data.email} onChangeText={v => update('email', v)} placeholder="you@email.com" placeholderTextColor={LIGHT_GRAY} keyboardType="email-address" autoCapitalize="none" />
       </View>
       <View style={c.field}>
-        <Text style={c.fieldLabel}>Phone</Text>
-        <TextInput style={c.fieldInput} value={(data as any).phone || ''} onChangeText={v => setData(prev => ({ ...prev, phone: v } as any))} placeholder="(555) 123-4567" placeholderTextColor={LIGHT_GRAY} keyboardType="phone-pad" />
+        <Text style={c.fieldLabel}>Phone Numbers</Text>
+        {(data.phones || []).map((phone, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 6 }}>
+            <TextInput
+              style={[c.fieldInput, { width: 70, textAlign: 'center' }]}
+              value={phone.label}
+              onChangeText={v => {
+                const updated = [...(data.phones || [])];
+                updated[i] = { ...updated[i], label: v };
+                setData(prev => ({ ...prev, phones: updated }));
+              }}
+              placeholder="Cell"
+              placeholderTextColor={LIGHT_GRAY}
+            />
+            <TextInput
+              style={[c.fieldInput, { flex: 1 }]}
+              value={phone.number}
+              onChangeText={v => {
+                const updated = [...(data.phones || [])];
+                updated[i] = { ...updated[i], number: v };
+                setData(prev => ({ ...prev, phones: updated }));
+              }}
+              placeholder="(555) 123-4567"
+              placeholderTextColor={LIGHT_GRAY}
+              keyboardType="phone-pad"
+            />
+            <TouchableOpacity onPress={() => {
+              const updated = (data.phones || []).filter((_, idx) => idx !== i);
+              setData(prev => ({ ...prev, phones: updated }));
+            }} style={{ justifyContent: 'center', paddingHorizontal: 4 }}>
+              <Ionicons name="close-circle" size={18} color={LIGHT_GRAY} />
+            </TouchableOpacity>
+          </View>
+        ))}
+        <TouchableOpacity
+          onPress={() => setData(prev => ({ ...prev, phones: [...(prev.phones || []), { label: 'Cell', number: '' }] }))}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6 }}
+        >
+          <Ionicons name="add-circle-outline" size={16} color={DILLY_BLUE} />
+          <Text style={{ fontSize: 12, color: DILLY_BLUE, fontWeight: '500' }}>Add phone number</Text>
+        </TouchableOpacity>
       </View>
       <View style={c.field}>
         <Text style={c.fieldLabel}>Profile URL</Text>
@@ -236,6 +292,7 @@ const c = StyleSheet.create({
   cardMajor: { fontSize: 12, color: GRAY },
   cardTagline: { fontSize: 11, color: GRAY, fontStyle: 'italic', marginTop: 4 },
   cardEmail: { fontSize: 11, color: GRAY },
+  cardPhone: { fontSize: 10, color: GRAY, marginTop: 1 },
 
   // QR
   qrRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 4 },

@@ -221,8 +221,9 @@ export default function MyDillyProfileScreen() {
               classYear: p.graduation_year ? String(p.graduation_year) : '',
               tagline: p.profile_tagline || p.custom_tagline || '',
               email: p.email || '',
+              phones: p.phones || [{ label: 'Cell', number: '' }],
               username: p.profile_slug || '',
-              photoUri: null,
+              photoUri: p.profile_slug ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo` : null,
             }}
             onSave={() => {}}
           />
