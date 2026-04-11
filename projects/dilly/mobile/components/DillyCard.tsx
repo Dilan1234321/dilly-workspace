@@ -14,9 +14,11 @@ import {
   TextInput, ScrollView, Alert, Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import QRCode from 'react-native-qrcode-svg';
-import ViewShot from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
+// Lazy-load native modules to prevent crash if not properly linked
+let QRCode: any = null;
+let ViewShot: any = null;
+try { QRCode = require('react-native-qrcode-svg').default; } catch {}
+try { ViewShot = require('react-native-view-shot').default; } catch {}
 
 const W = Dimensions.get('window').width;
 const CARD_W = W - 48;
@@ -73,12 +75,18 @@ function CardFront({ data }: { data: CardData }) {
         <View style={c.qrRow}>
           <View style={{ flex: 1 }} />
           <View style={c.qrWrap}>
-            <QRCode
-              value={`https://${profileUrl}`}
-              size={50}
-              color={DILLY_BLUE}
-              backgroundColor="#FFFFFF"
-            />
+            {QRCode ? (
+              <QRCode
+                value={`https://${profileUrl}`}
+                size={50}
+                color={DILLY_BLUE}
+                backgroundColor="#FFFFFF"
+              />
+            ) : (
+              <View style={{ width: 50, height: 50, backgroundColor: '#F3F4F6', borderRadius: 4, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 8, color: GRAY }}>QR</Text>
+              </View>
+            )}
             <Text style={c.qrUrl}>{profileUrl}</Text>
           </View>
         </View>
@@ -115,15 +123,19 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
 
   async function handleShare() {
     try {
+      // Try to capture and share as image
       if (frontRef.current?.capture) {
-        const uri = await frontRef.current.capture();
-        const canShare = await Sharing.isAvailableAsync();
-        if (canShare) {
-          await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Dilly Card' });
-        } else {
-          await Share.share({ message: `Check out my Dilly Card: https://hellodilly.com/p/${data.username}` });
-        }
+        try {
+          const uri = await frontRef.current.capture();
+          const Sharing = await import('expo-sharing').catch(() => null);
+          if (Sharing && await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Dilly Card' });
+            return;
+          }
+        } catch {}
       }
+      // Fallback: share as text
+      await Share.share({ message: `Check out my Dilly Card: https://hellodilly.com/p/${data.username}` });
     } catch {
       Alert.alert('Could not share', 'Try again in a moment.');
     }
@@ -136,9 +148,13 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
         {showBack ? (
           <CardBack />
         ) : (
-          <ViewShot ref={frontRef} options={{ format: 'png', quality: 1, result: 'tmpfile' }}>
+          {ViewShot ? (
+            <ViewShot ref={frontRef} options={{ format: 'png', quality: 1, result: 'tmpfile' }}>
+              <CardFront data={data} />
+            </ViewShot>
+          ) : (
             <CardFront data={data} />
-          </ViewShot>
+          )}
         )}
       </TouchableOpacity>
       <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
