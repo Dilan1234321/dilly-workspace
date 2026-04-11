@@ -347,7 +347,7 @@ export default function MyDillyProfileScreen() {
         {/* ── 6. What Dilly Still Needs ────────────────────────── */}
         {missingCore.length > 0 && (
           <FadeInView delay={320}>
-            <Text style={d.sectionLabel}>TELL DILLY MORE</Text>
+            <Text style={d.sectionLabel}>HELP DILLY HELP YOU</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {missingCore.map(m => {
                 const cfg = STRENGTH_CATEGORIES[m.key];
@@ -379,8 +379,8 @@ export default function MyDillyProfileScreen() {
             <View style={d.activityCard}>
               <Ionicons name="pulse" size={14} color={colors.green} />
               <Text style={d.activityText}>
-                {totalFacts} fact{totalFacts !== 1 ? 's' : ''} learned
-                {completeness < 100 && ` · ${100 - completeness}% to go`}
+                Dilly has learned {totalFacts} fact{totalFacts !== 1 ? 's' : ''} about your career
+                {completeness < 100 && `. ${100 - completeness}% to go.`}
               </Text>
             </View>
           </FadeInView>

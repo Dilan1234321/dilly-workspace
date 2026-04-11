@@ -165,9 +165,9 @@ export default function InterviewPracticeScreen() {
                 <View style={s.setupIcon}>
                   <Ionicons name="mic" size={28} color={PURPLE} />
                 </View>
-                <Text style={s.setupTitle}>Practice for your interview</Text>
+                <Text style={s.setupTitle}>Interview Practice</Text>
                 <Text style={s.setupSub}>
-                  Paste the job description and Dilly will generate real interview questions specific to this exact role. The more detail, the better the questions.
+                  Company-specific questions powered by AI. Paste the job description and Dilly will generate the exact questions you're likely to face.
                 </Text>
                 <Text style={{ fontSize: 12, fontWeight: '600', color: colors.t2, marginBottom: 4, marginTop: 8 }}>Company <Text style={{ color: '#FF453A' }}>*</Text></Text>
                 <TextInput

@@ -490,8 +490,8 @@ export default function JobsScreen() {
     <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>Jobs for You</Text>
-        <Text style={s.headerSub}>{stats.total} opportunities</Text>
+        <Text style={s.headerTitle}>Your Matches</Text>
+        <Text style={s.headerSub}>Matched to your profile. Scored by your readiness.</Text>
       </View>
 
       {/* Search */}

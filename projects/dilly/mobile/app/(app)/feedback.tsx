@@ -319,7 +319,7 @@ export default function FeedbackScreen() {
           {/* ── 5. What Employers Look For ─────────────────── */}
           {(ra.unmatched_signals || []).length > 0 && (
             <View style={f.section}>
-              <Text style={f.sectionHeading}>What employers look for</Text>
+              <Text style={f.sectionHeading}>What employers in your field are looking for</Text>
               <Text style={f.sectionSub}>Key signals {cohortName} recruiters screen for. Green = you have it. Red = missing.</Text>
               {(['smart', 'grit', 'build'] as const).map(dim => {
                 const matched = matchedByDim[dim] || [];
@@ -416,8 +416,8 @@ export default function FeedbackScreen() {
           {/* ── 6. Biggest Levers ────────────────────────────── */}
           {Object.values(unmatchedHigh).some(a => a.length > 0) && (
             <View style={f.section}>
-              <Text style={f.sectionHeading}>Biggest levers</Text>
-              <Text style={f.sectionSub}>High-impact signals missing from your resume.</Text>
+              <Text style={f.sectionHeading}>Your biggest opportunities</Text>
+              <Text style={f.sectionSub}>Fix these first for the fastest score improvement.</Text>
               {(['smart', 'grit', 'build'] as const).map(dim => {
                 const sigs = unmatchedHigh[dim];
                 if (sigs.length === 0) return null;
@@ -455,7 +455,7 @@ export default function FeedbackScreen() {
           {/* ── 7. Fastest Path Forward ──────────────────────── */}
           {ra.fastest_path_moves && ra.fastest_path_moves.length > 0 && (
             <View style={f.section}>
-              <Text style={f.sectionHeading}>Your fastest path forward</Text>
+              <Text style={f.sectionHeading}>Your path forward</Text>
               <Text style={f.sectionSub}>Do these this week.</Text>
               {ra.fastest_path_moves.slice(0, 6).map((move, i) => {
                 const text = extractMoveText(move);
@@ -482,7 +482,7 @@ export default function FeedbackScreen() {
           {/* ── 8. Common Rejection Reasons ───────────────────── */}
           {ra.common_rejection_reasons && ra.common_rejection_reasons.length > 0 && (
             <View style={f.section}>
-              <Text style={f.sectionHeading}>What employers reject for</Text>
+              <Text style={f.sectionHeading}>Why you might get rejected</Text>
               <Text style={f.sectionSub}>Make sure none of these apply before you hit submit.</Text>
               {ra.common_rejection_reasons.map((r, i) => {
                 const { text } = extractRejectText(r);

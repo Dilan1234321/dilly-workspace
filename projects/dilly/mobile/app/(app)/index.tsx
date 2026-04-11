@@ -460,7 +460,7 @@ export default function HomeScreen() {
                 {(() => {
                   const hr = new Date().getHours();
                   const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-                  return firstName ? `${greeting}, ${firstName}` : greeting;
+                  return firstName ? `${greeting}, ${firstName}. Here's your career today.` : `${greeting}. Here's your career today.`;
                 })()}
               </Text>
               {activeCohort ? (
@@ -531,16 +531,16 @@ export default function HomeScreen() {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
               {(!hasAudit ? [
-                { label: 'How do I get started?', msg: 'How do I get started with Dilly? What should I do first?' },
-                { label: 'What can you help me with?', msg: 'What can you help me with?' },
+                { label: 'What should I do first?', msg: 'I just joined Dilly. What should I do first to get the most out of it?' },
+                { label: 'What can Dilly do?', msg: 'What can you help me with? Give me the full picture.' },
               ] : gap > 0 ? [
-                { label: 'What should I work on?', msg: `What should I work on to improve my score? My weakest area is ${weakestLabel}.` },
-                { label: `How close am I to ${cohortCfg.company}?`, msg: `How close am I to ${cohortCfg.company}'s hiring bar? What do I need to do to get there?` },
-                { label: 'Help with my resume', msg: 'Help me improve my resume. What are the biggest things I should fix?' },
+                { label: 'What should I work on today?', msg: `What should I work on today? My weakest area is ${weakestLabel}. Give me one specific thing.` },
+                { label: `Am I ready for ${cohortCfg.company}?`, msg: `Am I ready for a role at ${cohortCfg.company}? What do I need to close the gap?` },
+                { label: 'How is AI affecting my field?', msg: `How is AI affecting careers in ${cohort}? What should I be doing about it?` },
               ] : [
-                { label: "I'm above the bar  -  now what?", msg: `I'm above ${cohortCfg.company}'s hiring bar. What should I do this week to maximize my chances?` },
+                { label: "What's my next move?", msg: `I'm above the bar. What should I focus on this week to maximize my chances?` },
                 { label: 'Prep me for interviews', msg: 'Help me prepare for interviews. What should I expect and how should I practice?' },
-                { label: 'Where should I apply?', msg: 'Based on my profile, where should I apply this week?' },
+                { label: 'Review my profile', msg: 'Look at everything you know about me and tell me what I should improve.' },
               ]).map(chip => (
                 <AnimatedPressable
                   key={chip.label}

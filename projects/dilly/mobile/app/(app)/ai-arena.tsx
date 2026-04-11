@@ -168,7 +168,7 @@ export default function AIArenaScreen() {
       >
         {/* ── Headline ──────────────────────────────────────── */}
         <FadeInView delay={0}>
-          <Text style={a.headline}>AI is replacing entry-level jobs.{'\n'}Are you ready?</Text>
+          <Text style={a.headline}>AI is coming for your job.{'\n'}Are you ready?</Text>
         </FadeInView>
 
         {/* ── Shield Score Hero ──────────────────────────────── */}
@@ -181,9 +181,9 @@ export default function AIArenaScreen() {
                 <Text style={a.heroSub}>
                   {shieldScore >= 80 ? 'Your profile is AI-proof.'
                     : shieldScore >= 60 ? 'Strong foundation. A few fixes will fortify you.'
-                    : shieldScore >= 40 ? 'Some vulnerabilities detected.'
-                    : shieldScore > 0 ? 'Your profile needs AI-proofing.'
-                    : 'Scan your profile to get your score.'}
+                    : shieldScore >= 40 ? 'Some vulnerabilities detected. Dilly can help.'
+                    : shieldScore > 0 ? 'Your profile needs AI-proofing. Let Dilly show you how.'
+                    : 'Upload your resume or talk to Dilly to activate your Shield Score.'}
                 </Text>
                 {disruptionPct > 0 && (
                   <View style={a.disruptionBadge}>
@@ -199,12 +199,12 @@ export default function AIArenaScreen() {
         {/* ── Feature Grid ──────────────────────────────────── */}
         <FadeInView delay={120}>
           <View style={a.grid}>
-            <FeatureCard icon="scan" title="Threat Scanner" sub="Scan every bullet for AI risk" color={CYAN} onPress={() => toggleFeature('scan')} active={activeFeature === 'scan'} />
-            <FeatureCard icon="swap-horizontal" title="Replace Me" sub="Can AI write your bullet?" color={RED} onPress={() => toggleFeature('replace')} active={activeFeature === 'replace'} />
-            <FeatureCard icon="rocket" title="Career Sim" sub="Your role in 5 years" color={AMBER} onPress={() => toggleFeature('simulate')} active={activeFeature === 'simulate'} />
-            <FeatureCard icon="shield-half" title="Firewall" sub="AI recruiter vulnerabilities" color={RED} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
-            <FeatureCard icon="lock-closed" title="Skill Vault" sub="AI-proof skills to collect" color={GREEN} onPress={() => toggleFeature('vault')} active={activeFeature === 'vault'} />
-            <FeatureCard icon="bar-chart" title="Disruption" sub="Your field vs AI" color={AMBER} onPress={() => toggleFeature('index')} active={activeFeature === 'index'} />
+            <FeatureCard icon="scan" title="Threat Scanner" sub="See which parts of your experience AI can replace" color={CYAN} onPress={() => toggleFeature('scan')} active={activeFeature === 'scan'} />
+            <FeatureCard icon="swap-horizontal" title="Replace Me" sub="Can AI do what you do? Let's find out." color={RED} onPress={() => toggleFeature('replace')} active={activeFeature === 'replace'} />
+            <FeatureCard icon="rocket" title="Career Sim" sub="See how AI reshapes your career over 5 years" color={AMBER} onPress={() => toggleFeature('simulate')} active={activeFeature === 'simulate'} />
+            <FeatureCard icon="shield-half" title="Firewall" sub="How would an AI recruiter judge you?" color={RED} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
+            <FeatureCard icon="lock-closed" title="Skill Vault" sub="Your AI-proof skills vs the ones you need" color={GREEN} onPress={() => toggleFeature('vault')} active={activeFeature === 'vault'} />
+            <FeatureCard icon="bar-chart" title="Disruption" sub="How much AI is disrupting your field right now" color={AMBER} onPress={() => toggleFeature('index')} active={activeFeature === 'index'} />
           </View>
         </FadeInView>
 

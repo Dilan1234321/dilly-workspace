@@ -125,11 +125,11 @@ function formatBytes(bytes: number): string {
 // ── Scanning animation stages ─────────────────────────────────────────────────
 
 const SCAN_STAGES = [
-  { label: 'Parsing your resume', icon: 'document-text', duration: 2500 },
-  { label: 'Analyzing bullet impact', icon: 'analytics', duration: 3000 },
-  { label: 'Scoring dimensions', icon: 'speedometer', duration: 2500 },
-  { label: 'Calculating your rank', icon: 'podium', duration: 2000 },
-  { label: 'Generating insights', icon: 'bulb', duration: 1500 },
+  { label: 'Reading your resume', icon: 'document-text', duration: 2500 },
+  { label: 'Analyzing against industry standards', icon: 'analytics', duration: 3000 },
+  { label: 'Comparing to what employers want', icon: 'speedometer', duration: 2500 },
+  { label: 'Checking AI readiness', icon: 'shield-checkmark', duration: 2000 },
+  { label: 'Building your action plan', icon: 'bulb', duration: 1500 },
 ];
 
 function ScanProgress({ stageIndex }: { stageIndex: number }) {
