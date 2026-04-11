@@ -25,6 +25,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
+// Lazy-load haptics to prevent crash if not available
+let _haptics: any = null;
+try { _haptics = require('expo-haptics'); } catch {}
+function lightHaptic() {
+  try { _haptics?.impactAsync?.(_haptics.ImpactFeedbackStyle?.Light); } catch {}
+}
+
 interface Props {
   children: ReactNode;
   onPress?: () => void;
@@ -65,6 +72,7 @@ export default function AnimatedPressable({
     })
     .onEnd(() => {
       'worklet';
+      runOnJS(lightHaptic)();
       if (onPress) {
         runOnJS(onPress)();
       }

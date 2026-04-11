@@ -94,10 +94,12 @@ export default function AIArenaScreen() {
   // Feature-specific state
   const [scanResults, setScanResults] = useState<any>(null);
   const [scanLoading, setScanLoading] = useState(false);
-  const [replaceInput, setReplaceInput] = useState('');
+  const replaceInputRef = useRef('');
+  const replaceFieldRef = useRef<any>(null);
   const [replaceResult, setReplaceResult] = useState<any>(null);
   const [replaceLoading, setReplaceLoading] = useState(false);
-  const [simJob, setSimJob] = useState('');
+  const simJobRef = useRef('');
+  const simFieldRef = useRef<any>(null);
   const [simResult, setSimResult] = useState<any>(null);
   const [simLoading, setSimLoading] = useState(false);
 
@@ -129,25 +131,27 @@ export default function AIArenaScreen() {
 
   // Replace
   const runReplace = useCallback(async () => {
-    if (replaceInput.trim().length < 10) return;
+    const text = replaceInputRef.current.trim();
+    if (text.length < 10) return;
     setReplaceLoading(true);
     try {
       const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 30_000);
-      const res = await dilly.fetch('/ai-arena/replace-test', { method: 'POST', body: JSON.stringify({ bullet: replaceInput.trim() }), signal: ctrl.signal });
+      const res = await dilly.fetch('/ai-arena/replace-test', { method: 'POST', body: JSON.stringify({ bullet: text }), signal: ctrl.signal });
       if (res.ok) { const d = await res.json(); setReplaceResult(d); }
     } catch {} finally { setReplaceLoading(false); }
-  }, [replaceInput]);
+  }, []);
 
   // Simulate
   const runSim = useCallback(async () => {
-    if (!simJob.trim()) return;
+    const text = simJobRef.current.trim();
+    if (!text) return;
     setSimLoading(true);
     try {
       const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 60_000);
-      const res = await dilly.fetch('/ai-arena/simulate', { method: 'POST', body: JSON.stringify({ job_title: simJob.trim() }), signal: ctrl.signal });
+      const res = await dilly.fetch('/ai-arena/simulate', { method: 'POST', body: JSON.stringify({ job_title: text }), signal: ctrl.signal });
       if (res.ok) { const d = await res.json(); setSimResult(d); }
     } catch {} finally { setSimLoading(false); }
-  }, [simJob]);
+  }, []);
 
   const shieldScore = shield?.shield_score ?? 0;
   const shieldLabel = shield?.shield_label ?? '';
@@ -273,11 +277,11 @@ export default function AIArenaScreen() {
             <View style={a.expandedCard}>
               <Text style={a.expandedTitle}>Can AI Replace You?</Text>
               <Text style={a.expandedSub}>Paste a bullet. AI will try to write it. See if it can.</Text>
-              <TextInput style={a.input} value={replaceInput} onChangeText={setReplaceInput}
-                placeholder="Paste a bullet from your profile..." placeholderTextColor={DIM} multiline />
+              <TextInput style={a.input} defaultValue="" onChangeText={t => { replaceInputRef.current = t; }}
+                placeholder="Paste a bullet from your profile..." placeholderTextColor={DIM} multiline ref={replaceFieldRef} />
               <AnimatedPressable
-                style={[a.actionBtn, { backgroundColor: RED, opacity: replaceInput.trim().length < 10 ? 0.4 : 1 }]}
-                onPress={runReplace} disabled={replaceInput.trim().length < 10 || replaceLoading} scaleDown={0.97}
+                style={[a.actionBtn, { backgroundColor: RED }]}
+                onPress={runReplace} disabled={replaceLoading} scaleDown={0.97}
               >
                 {replaceLoading ? <ActivityIndicator size="small" color="#000" /> : (
                   <><Ionicons name="flash" size={16} color="#000" /><Text style={a.actionBtnText}>Test It</Text></>
@@ -303,7 +307,7 @@ export default function AIArenaScreen() {
                   )}
                   {replaceResult.verdict !== 'human-only' && (
                     <AnimatedPressable style={a.fixInline}
-                      onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `AI rated my bullet ${replaceResult.replaceability}/10 replaceable: "${replaceInput}". Rewrite it so AI CAN'T replicate it.` })}
+                      onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `AI rated my bullet ${replaceResult.replaceability}/10 replaceable: "${replaceResult.original || replaceInputRef.current}". Rewrite it so AI CAN'T replicate it.` })}
                       scaleDown={0.97}>
                       <Ionicons name="sparkles" size={12} color={CYAN} /><Text style={{ fontSize: 12, fontWeight: '600', color: CYAN }}>Make it AI-proof</Text>
                     </AnimatedPressable>
@@ -321,11 +325,11 @@ export default function AIArenaScreen() {
               <Text style={a.expandedTitle}>Career Simulator</Text>
               <Text style={a.expandedSub}>See how AI transforms your dream role over 5 years.</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TextInput style={[a.input, { flex: 1 }]} value={simJob} onChangeText={setSimJob}
-                  placeholder="Job title (e.g. Data Scientist)" placeholderTextColor={DIM} />
+                <TextInput style={[a.input, { flex: 1 }]} defaultValue="" onChangeText={t => { simJobRef.current = t; }}
+                  placeholder="Job title (e.g. Data Scientist)" placeholderTextColor={DIM} ref={simFieldRef} />
                 <AnimatedPressable
-                  style={[a.actionBtn, { paddingHorizontal: 16, backgroundColor: AMBER, opacity: simJob.trim() ? 1 : 0.4 }]}
-                  onPress={runSim} disabled={!simJob.trim() || simLoading} scaleDown={0.97}>
+                  style={[a.actionBtn, { paddingHorizontal: 16, backgroundColor: AMBER }]}
+                  onPress={runSim} disabled={simLoading} scaleDown={0.97}>
                   {simLoading ? <ActivityIndicator size="small" color="#000" /> : <Ionicons name="rocket" size={16} color="#000" />}
                 </AnimatedPressable>
               </View>
