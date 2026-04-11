@@ -31,7 +31,7 @@ export default function WelcomeProScreen() {
       const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ email: trimmed, user_type: 'professional' }),
       });
       const data = await res.json();
       if (!res.ok) {

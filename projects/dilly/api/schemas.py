@@ -25,7 +25,8 @@ class OkMessageResponse(BaseModel):
     message: str = ""
 
 class AuthSendCodeRequest(BaseModel):
-    email: str = Field(..., min_length=1, description=".edu email")
+    email: str = Field(..., min_length=1, description="Email address")
+    user_type: str = Field(default="student", description="'student' or 'professional'")
 
 class AuthVerifyCodeRequest(BaseModel):
     email: str = Field(..., min_length=1, description=".edu email")

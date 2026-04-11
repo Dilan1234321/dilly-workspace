@@ -63,16 +63,24 @@ async def send_magic_link(request: Request, body: AuthSendCodeRequest):
 
 @router.post("/send-verification-code", responses=ERROR_RESPONSES)
 async def send_verification_code(request: Request, body: AuthSendCodeRequest):
-    """Send a 6-digit verification code to the user's .edu email."""
+    """Send a 6-digit verification code. Students need .edu, professionals can use any email."""
     deps.rate_limit(request, "send-code", max_requests=5, window_sec=300)
     email = (body.email or "").strip().lower()
-    if not re.search(r"\.edu\s*$", email):
-        raise errors.validation_error("Dilly is for students — use your .edu email.")
-    from projects.dilly.api.schools import get_school_from_email
-    if not get_school_from_email(email):
-        raise errors.validation_error(
-            "Dilly isn't available at your school yet.",
-        )
+    is_professional = (body.user_type or "").strip().lower() == "professional"
+
+    if not is_professional:
+        # Student path: require .edu + known school
+        if not re.search(r"\.edu\s*$", email):
+            raise errors.validation_error("Students need a .edu email. Tap 'I'm a professional' if you're not a student.")
+        from projects.dilly.api.schools import get_school_from_email
+        if not get_school_from_email(email):
+            raise errors.validation_error(
+                "Dilly isn't available at your school yet.",
+            )
+    else:
+        # Professional path: basic email validation only
+        if not email or "@" not in email or "." not in email:
+            raise errors.validation_error("Enter a valid email address.")
     try:
         from projects.dilly.api.auth_store import create_verification_code
         from projects.dilly.api.email_sender import send_verification_email
