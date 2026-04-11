@@ -137,10 +137,11 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
 
   async function handleShare() {
     try {
-      // Try to capture and share as image
-      if (frontRef.current?.capture) {
+      // Capture front side as PNG using react-native-view-shot
+      if (ViewShot && frontRef.current) {
         try {
-          const uri = await frontRef.current.capture();
+          const captureViewShot = require('react-native-view-shot').captureRef;
+          const uri = await captureViewShot(frontRef.current, { format: 'png', quality: 1 });
           const Sharing = await import('expo-sharing').catch(() => null);
           if (Sharing && await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Dilly Card' });
@@ -148,7 +149,7 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
           }
         } catch {}
       }
-      // Fallback: share as text
+      // Fallback: share as text with profile link
       await Share.share({ message: `Check out my Dilly Card: https://hellodilly.com/p/${data.username}` });
     } catch {
       Alert.alert('Could not share', 'Try again in a moment.');
