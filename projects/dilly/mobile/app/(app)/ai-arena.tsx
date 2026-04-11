@@ -150,12 +150,30 @@ export default function AIArenaScreen() {
   const [replaceLoading, setReplaceLoading] = useState(false);
   const [replaceResult, setReplaceResult] = useState<any>(null);
 
-  // Load shield score on mount
+  // Load shield score + profile data on mount
   useEffect(() => {
     (async () => {
       try {
-        const data = await dilly.get('/ai-arena/shield');
-        setShield(data);
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 30_000);
+        const [shieldRes, profileRes] = await Promise.all([
+          dilly.fetch('/ai-arena/shield', { signal: ctrl.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+          dilly.get('/profile').catch(() => null),
+        ]);
+        clearTimeout(timeout);
+        if (shieldRes) {
+          setShield(shieldRes);
+        } else if (profileRes?.cohort_scores) {
+          // Fallback: build basic shield from cohort data
+          const cohort = profileRes.cohort || profileRes.track || 'General';
+          setShield({
+            shield_score: 50,
+            shield_label: 'Loading',
+            cohort,
+            disruption_pct: 30,
+            recommendation: 'Run a scan to get your full AI readiness score.',
+          });
+        }
       } catch {}
       finally { setLoading(false); }
     })();

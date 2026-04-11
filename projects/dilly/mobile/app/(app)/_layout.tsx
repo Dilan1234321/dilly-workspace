@@ -113,10 +113,17 @@ export default function AppLayout() {
             <Ionicons
               name={focused ? 'shield' : 'shield-outline'}
               size={20}
-              color={focused ? '#1652F0' : colors.t3}
+              color={focused ? '#58A6FF' : '#484F58'}
             />
           ),
-          tabBarActiveTintColor: '#1652F0',
+          tabBarActiveTintColor: '#58A6FF',
+          tabBarInactiveTintColor: '#484F58',
+          tabBarStyle: {
+            backgroundColor: '#0D1117',
+            borderTopWidth: 1,
+            borderTopColor: '#21262D',
+            paddingTop: 6,
+          },
         }}
       />
       <Tabs.Screen
