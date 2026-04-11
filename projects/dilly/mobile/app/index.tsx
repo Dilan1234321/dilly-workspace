@@ -21,7 +21,7 @@ export default function Index() {
       if (hasOnboarded === 'true') {
         router.replace('/onboarding/verify?returning=true');
       } else {
-        router.replace('/onboarding/welcome');
+        router.replace('/onboarding/choose-path');
       }
     }
     checkAuth();

@@ -39,8 +39,8 @@ export default function ChoosePathScreen() {
             <View style={[s.cardIcon, { backgroundColor: '#5E5CE6' + '15' }]}>
               <Ionicons name="school" size={24} color="#5E5CE6" />
             </View>
-            <Text style={s.cardTitle}>I'm a student</Text>
-            <Text style={s.cardSub}>College or university. Get student pricing with your .edu email.</Text>
+            <Text style={s.cardTitle}>I'm in college</Text>
+            <Text style={s.cardSub}>Use your .edu email for student pricing.</Text>
             <View style={s.cardArrow}>
               <Ionicons name="arrow-forward" size={16} color={colors.t3} />
             </View>
@@ -54,27 +54,10 @@ export default function ChoosePathScreen() {
             scaleDown={0.97}
           >
             <View style={[s.cardIcon, { backgroundColor: GOLD + '15' }]}>
-              <Ionicons name="briefcase" size={24} color={GOLD} />
+              <Ionicons name="person" size={24} color={GOLD} />
             </View>
-            <Text style={s.cardTitle}>I'm a professional</Text>
-            <Text style={s.cardSub}>Working, job searching, career pivoting, or exploring your options.</Text>
-            <View style={s.cardArrow}>
-              <Ionicons name="arrow-forward" size={16} color={colors.t3} />
-            </View>
-          </AnimatedPressable>
-        </FadeInView>
-
-        <FadeInView delay={300}>
-          <AnimatedPressable
-            style={s.card}
-            onPress={() => router.push('/onboarding/welcome-pro')}
-            scaleDown={0.97}
-          >
-            <View style={[s.cardIcon, { backgroundColor: '#34C759' + '15' }]}>
-              <Ionicons name="compass" size={24} color="#34C759" />
-            </View>
-            <Text style={s.cardTitle}>I'm exploring</Text>
-            <Text style={s.cardSub}>Not sure yet. Dilly will help you figure out where you stand.</Text>
+            <Text style={s.cardTitle}>I'm not in college</Text>
+            <Text style={s.cardSub}>Working, job searching, career pivoting, or just getting started.</Text>
             <View style={s.cardArrow}>
               <Ionicons name="arrow-forward" size={16} color={colors.t3} />
             </View>
