@@ -372,6 +372,8 @@ export default function JobsScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
   const [activeCohortFilter, setActiveCohortFilter] = useState<string | null>(null);
+  const [userCities, setUserCities] = useState<string[]>([]);
+  const [cityFilterEnabled, setCityFilterEnabled] = useState(false);
 
   // Build a lookup map of user's cohort scores
   const userScoresMap = useMemo(() => {
@@ -387,9 +389,8 @@ export default function JobsScreen() {
         dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank`).catch(() => null),
       ]);
 
-      // Parse cohort scores — only show user's chosen cohorts (major/minor/primary)
-      // NOT all interest-level background entries
-      const parsed = parseCohortScores(profileRes?.cohort_scores); // filters interest
+      // Parse cohort scores — only show user's chosen cohorts
+      const parsed = parseCohortScores(profileRes?.cohort_scores);
       const explicitCohorts: string[] | null = Array.isArray(profileRes?.cohorts) && profileRes.cohorts.length > 0
         ? profileRes.cohorts : null;
       if (explicitCohorts) {
@@ -398,6 +399,11 @@ export default function JobsScreen() {
       } else {
         setCohortScores(parsed);
       }
+
+      // Load user's preferred cities for location filtering
+      const cities: string[] = profileRes?.job_locations || [];
+      setUserCities(cities);
+      setCityFilterEnabled(cities.length > 0);
 
       setListings(feedRes?.listings || []);
     } catch {}
@@ -435,6 +441,19 @@ export default function JobsScreen() {
       });
     }
 
+    // City filter — only show jobs in user's preferred cities + remote
+    if (cityFilterEnabled && userCities.length > 0) {
+      const cityLower = userCities.map(c => c.toLowerCase().trim());
+      result = result.filter(l => {
+        const loc = (l.location || l.location_city || '').toLowerCase();
+        const mode = (l.work_mode || '').toLowerCase();
+        // Always show remote jobs
+        if (mode === 'remote' || loc.includes('remote')) return true;
+        // Check if job location matches any user city
+        return cityLower.some(c => loc.includes(c));
+      });
+    }
+
     // Readiness filter
     if (readinessFilter !== 'all') {
       result = result.filter(l => {
@@ -444,7 +463,7 @@ export default function JobsScreen() {
     }
 
     return result;
-  }, [listings, search, activeCohortFilter, readinessFilter, userScoresMap]);
+  }, [listings, search, activeCohortFilter, readinessFilter, userScoresMap, cityFilterEnabled, userCities]);
 
   // Stats
   const stats = useMemo(() => {
@@ -518,6 +537,20 @@ export default function JobsScreen() {
             </AnimatedPressable>
           ))}
         </ScrollView>
+      )}
+
+      {/* City filter toggle */}
+      {userCities.length > 0 && (
+        <AnimatedPressable
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.lg, paddingBottom: 4 }}
+          onPress={() => setCityFilterEnabled(!cityFilterEnabled)}
+          scaleDown={0.97}
+        >
+          <Ionicons name={cityFilterEnabled ? 'location' : 'location-outline'} size={14} color={cityFilterEnabled ? COBALT : colors.t3} />
+          <Text style={{ fontSize: 11, color: cityFilterEnabled ? COBALT : colors.t3, fontWeight: '600' }}>
+            {cityFilterEnabled ? `Showing: ${userCities.slice(0, 2).join(', ')}${userCities.length > 2 ? ` +${userCities.length - 2}` : ''} + Remote` : 'All locations'}
+          </Text>
+        </AnimatedPressable>
       )}
 
       {/* Readiness + Type filter row */}
