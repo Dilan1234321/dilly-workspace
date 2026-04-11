@@ -272,7 +272,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       setMessages([...newHistory, {
         id: ++_msgId,
         role: 'assistant',
-        content: 'Something went wrong. Make sure the API is running and ANTHROPIC_API_KEY is set in .env.',
+        content: 'Dilly is having trouble connecting right now. Please try again in a moment.',
       }]);
     }
   }, [mode, studentContext, canSendAIMessage]);
@@ -445,14 +445,8 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
                   setSuggestions(getInitialSuggestions(studentContext, m));
                   suggestionsOpacity.setValue(1);
                 }}>
-                  <Ionicons
-                    name={m === 'coaching' ? 'chatbubble-ellipses-outline' : 'mic-outline'}
-                    size={12}
-                    color={mode === m ? '#fff' : colors.t3}
-                    style={{ marginRight: 4 }}
-                  />
                   <Text style={[s.modePillText, mode === m && s.modePillTextActive]}>
-                    {m === 'coaching' ? 'COACH' : 'INTERVIEW'}
+                    {m === 'coaching' ? 'COACH' : 'PRACTICE'}
                   </Text>
                 </TouchableOpacity>
               ))}

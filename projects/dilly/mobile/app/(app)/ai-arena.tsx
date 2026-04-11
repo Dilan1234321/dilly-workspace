@@ -179,11 +179,11 @@ export default function AIArenaScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={a.heroLabel}>{shieldLabel || 'AI Readiness'}</Text>
                 <Text style={a.heroSub}>
-                  {shieldScore >= 80 ? 'Your resume is AI-proof.'
+                  {shieldScore >= 80 ? 'Your profile is AI-proof.'
                     : shieldScore >= 60 ? 'Strong foundation. A few fixes will fortify you.'
                     : shieldScore >= 40 ? 'Some vulnerabilities detected.'
-                    : shieldScore > 0 ? 'Your resume needs AI-proofing.'
-                    : 'Scan your resume to get your score.'}
+                    : shieldScore > 0 ? 'Your profile needs AI-proofing.'
+                    : 'Scan your profile to get your score.'}
                 </Text>
                 {disruptionPct > 0 && (
                   <View style={a.disruptionBadge}>
@@ -215,11 +215,11 @@ export default function AIArenaScreen() {
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
               <Text style={a.expandedTitle}>Threat Scanner</Text>
-              <Text style={a.expandedSub}>Every bullet on your resume, analyzed for AI vulnerability.</Text>
+              <Text style={a.expandedSub}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
               {!scanResults && !scanLoading && (
                 <AnimatedPressable style={a.actionBtn} onPress={runScan} scaleDown={0.97}>
                   <Ionicons name="flash" size={16} color="#000" />
-                  <Text style={a.actionBtnText}>Scan My Resume</Text>
+                  <Text style={a.actionBtnText}>Scan My Profile</Text>
                 </AnimatedPressable>
               )}
               {scanLoading && <ActivityIndicator size="small" color={CYAN} style={{ paddingVertical: 20 }} />}
@@ -273,7 +273,7 @@ export default function AIArenaScreen() {
               <Text style={a.expandedTitle}>Can AI Replace You?</Text>
               <Text style={a.expandedSub}>Paste a bullet. AI will try to write it. See if it can.</Text>
               <TextInput style={a.input} value={replaceInput} onChangeText={setReplaceInput}
-                placeholder="Paste a resume bullet..." placeholderTextColor={DIM} multiline />
+                placeholder="Paste a bullet from your profile..." placeholderTextColor={DIM} multiline />
               <AnimatedPressable
                 style={[a.actionBtn, { backgroundColor: RED, opacity: replaceInput.trim().length < 10 ? 0.4 : 1 }]}
                 onPress={runReplace} disabled={replaceInput.trim().length < 10 || replaceLoading} scaleDown={0.97}
@@ -365,12 +365,12 @@ export default function AIArenaScreen() {
         {activeFeature === 'firewall' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Resume Firewall</Text>
-              <Text style={a.expandedSub}>How would an AI recruiter evaluate your resume? Find vulnerabilities before you apply.</Text>
+              <Text style={a.expandedTitle}>Profile Firewall</Text>
+              <Text style={a.expandedSub}>How would an AI recruiter evaluate your profile? Find vulnerabilities before you apply.</Text>
               <AnimatedPressable style={[a.actionBtn, { backgroundColor: RED }]}
                 onPress={() => openDillyOverlay({
                   isPaid: true,
-                  initialMessage: `Analyze my resume as if you were an AI screening tool at a top company. What vulnerabilities would you flag? What would get me auto-rejected? Be specific and harsh.`,
+                  initialMessage: `Analyze my Dilly Profile as if you were an AI screening tool at a top company. Based on everything you know about me, what vulnerabilities would you flag? What would get me auto-rejected? Be specific and harsh.`,
                 })} scaleDown={0.97}>
                 <Ionicons name="scan" size={16} color="#000" /><Text style={a.actionBtnText}>Run Firewall Check</Text>
               </AnimatedPressable>
@@ -383,7 +383,7 @@ export default function AIArenaScreen() {
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
               <Text style={a.expandedTitle}>Skill Vault</Text>
-              <Text style={a.expandedSub}>AI-proof skills for your field. Unlocked = on your resume. Locked = develop next.</Text>
+              <Text style={a.expandedSub}>AI-proof skills for your field. Unlocked = in your profile. Locked = develop next.</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                 {(shield.resistant_signals || []).slice(0, 5).map((s: string, i: number) => (
                   <View key={`u-${i}`} style={a.skillUnlocked}>
@@ -393,7 +393,7 @@ export default function AIArenaScreen() {
                 ))}
                 {(shield.ai_resistant_skills || []).slice(0, 5).map((s: string, i: number) => (
                   <AnimatedPressable key={`l-${i}`} style={a.skillLocked}
-                    onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `I need to develop "${s}" as an AI-proof skill. How do I build this and show it on my resume?` })}
+                    onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `I need to develop "${s}" as an AI-proof skill. How do I build this and add it to my Dilly Profile?` })}
                     scaleDown={0.95}>
                     <Ionicons name="lock-closed" size={11} color={DIM} />
                     <Text style={a.skillLockedText} numberOfLines={1}>{s}</Text>
