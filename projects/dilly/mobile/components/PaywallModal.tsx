@@ -16,7 +16,7 @@ const FEATURES = [
   { icon: 'shield-checkmark', label: 'ATS Compatibility', sub: 'Scan against every major ATS system' },
   { icon: 'git-compare', label: 'Gap Analysis', sub: 'Smart/Grit/Build breakdown per job listing' },
   { icon: 'flash', label: 'Ask Dilly per Job', sub: 'AI coaching tailored to each opportunity' },
-  { icon: 'create', label: 'Resume Editor', sub: 'Live bullet scoring with real-time AI feedback' },
+  { icon: 'shield-checkmark', label: 'AI Arena', sub: 'AI readiness scoring, threat scanning, career simulation' },
   { icon: 'briefcase', label: 'Application Tracker', sub: 'Full pipeline CRM with status tracking' },
   { icon: 'trending-up', label: 'Score Tracking', sub: 'Watch your readiness score improve over time' },
 ];
@@ -26,7 +26,7 @@ const FEATURE_PROMPTS: Record<string, string> = {
   audit_limit: "You've used your free audit. Upgrade to re-audit every time you update your resume.",
   ats: "ATS scanning is a Pro feature. See exactly how your resume scores on every hiring system.",
   gap_analysis: "Gap analysis is a Pro feature. See exactly where you stand for each job.",
-  resume_editor: "The live Resume Editor is a Pro feature. Score every bullet as you write.",
+  ai_arena: "AI Arena is a Pro feature. See how AI affects your career and what to do about it.",
   tracker: "The Application Tracker is a Pro feature. Manage your full pipeline in one place.",
 };
 

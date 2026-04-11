@@ -299,7 +299,7 @@ export default function FeedbackScreen() {
                   scaleDown={0.97}
                 >
                   <Ionicons name="document-text-outline" size={13} color={GOLD} />
-                  <Text style={f.calloutBtnText}>Fix in editor</Text>
+                  <Text style={f.calloutBtnText}>Talk to Dilly</Text>
                 </AnimatedPressable>
                 <AnimatedPressable
                   style={f.calloutBtn}
@@ -571,7 +571,7 @@ export default function FeedbackScreen() {
             </AnimatedPressable>
             <AnimatedPressable style={f.ctaSecondary} onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.97}>
               <Ionicons name="document-text-outline" size={16} color={GOLD} />
-              <Text style={f.ctaSecondaryText}>Open editor</Text>
+              <Text style={f.ctaSecondaryText}>Talk to Dilly</Text>
             </AnimatedPressable>
           </View>
         </ScrollView>

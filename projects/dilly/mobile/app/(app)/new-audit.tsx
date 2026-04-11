@@ -854,7 +854,7 @@ export default function NewAuditScreen() {
                   scaleDown={0.97}
                 >
                   <Ionicons name="create-outline" size={14} color="#FFFFFF" />
-                  <Text style={[ns.quickActionText, { color: '#FFFFFF' }]}>Fix in editor</Text>
+                  <Text style={[ns.quickActionText, { color: '#FFFFFF' }]}>See feedback</Text>
                 </AnimatedPressable>
                 <AnimatedPressable
                   style={[ns.quickActionBtn, { backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1 }]}

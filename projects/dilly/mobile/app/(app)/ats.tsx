@@ -262,7 +262,7 @@ export default function ATSScreen() {
       if (!res.ok) {
         if (data.detail?.includes('No resume')) {
           setHasResume(false);
-          Alert.alert('No resume found', 'Upload your resume first through New Audit or the Resume Editor.');
+          Alert.alert('No resume found', 'Upload your resume first through New Audit.');
         } else {
           Alert.alert('Scan failed', data.detail || 'Could not run ATS scan.');
         }
@@ -415,7 +415,7 @@ export default function ATSScreen() {
         strictness ? `${systemName} uses ${strictness}.` : '',
         `The specific issue: "${issue}".`,
         `Explain exactly what I need to fix in my resume to improve my ${systemName} score. Be specific and actionable.`,
-        `Then ask me if I want to go to my Resume Editor to apply these fixes.`,
+        `Tell me exactly what to change.`,
         `[ATS_FIX_CTX:${atsFixData}]`,
       ].filter(Boolean).join(' '),
     });
@@ -706,7 +706,7 @@ export default function ATSScreen() {
                           score: 0, smart: 0, grit: 0, build: 0, gap: 0, cohortBar: 75,
                           referenceCompany: companyResult.company || companySearch,
                           isPaid: true,
-                          initialMessage: `I'm applying to ${companyResult.company || companySearch}, which uses ${vendorName}. The specific issue: "${iss.title}". Fixing it will lift my ${vendorName} score by about +${Math.round(iss.lift)} points. What exactly should I change in my resume? Then ask me if I want to go to my Resume Editor to apply these fixes.`,
+                          initialMessage: `I'm applying to ${companyResult.company || companySearch}, which uses ${vendorName}. The specific issue: "${iss.title}". Fixing it will lift my ${vendorName} score by about +${Math.round(iss.lift)} points. What exactly should I change in my resume? Tell me exactly what to change.`,
                         });
                       }}
                     />
