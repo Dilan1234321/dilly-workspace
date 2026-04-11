@@ -831,4 +831,19 @@ def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
             "impact": "Stronger action verb + quantified metric",
         }
 
+    # If the AI learned something new about the user → profile update visual
+    profile_keywords = ["i'll remember", "i've noted", "saved to your profile", "added to your dilly",
+                        "i'll keep that in mind", "noted!", "got it, i", "i've saved"]
+    if any(kw in text for kw in profile_keywords):
+        learned = re.search(r'(?:you|your)\s+(\w+(?:\s+\w+){1,8})', content[:400])
+        if learned:
+            return {
+                "type": "profile_update",
+                "category": "general",
+                "label": "Added to your Dilly",
+                "value": learned.group(0)[:120],
+                "icon": "sparkles",
+                "color": "#1652F0",
+            }
+
     return None

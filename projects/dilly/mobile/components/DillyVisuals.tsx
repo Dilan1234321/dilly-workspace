@@ -39,7 +39,8 @@ export type VisualType =
   | 'timeline'
   | 'action_buttons'
   | 'weekly_plan'
-  | 'job_match';
+  | 'job_match'
+  | 'profile_update';
 
 export interface ScoreBreakdownPayload {
   type: 'score_breakdown';
@@ -137,6 +138,15 @@ export interface JobMatchPayload {
   apply_url?: string;
 }
 
+export interface ProfileUpdatePayload {
+  type: 'profile_update';
+  category: string;
+  label: string;
+  value: string;
+  icon?: string;
+  color?: string;
+}
+
 export type VisualPayload =
   | ScoreBreakdownPayload
   | CohortComparisonPayload
@@ -145,7 +155,8 @@ export type VisualPayload =
   | TimelinePayload
   | ActionButtonsPayload
   | WeeklyPlanPayload
-  | JobMatchPayload;
+  | JobMatchPayload
+  | ProfileUpdatePayload;
 
 // ── Animated bar ──────────────────────────────────────────────────────────────
 
@@ -533,6 +544,32 @@ export function JobMatchCard({ data }: { data: JobMatchPayload }) {
   );
 }
 
+// ── Profile Update Card ──────────────────────────────────────────────────────
+
+export function ProfileUpdateCard({ data }: { data: ProfileUpdatePayload }) {
+  const iconName = data.icon || 'sparkles';
+  const accentColor = data.color || '#1652F0';
+
+  return (
+    <View style={[vStyles.card, { borderColor: accentColor + '30', backgroundColor: accentColor + '06' }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: accentColor + '15', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={iconName as any} size={14} color={accentColor} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 1, color: accentColor }}>ADDED TO YOUR DILLY</Text>
+        </View>
+        <Ionicons name="checkmark-circle" size={16} color={GREEN} />
+      </View>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.t1 }}>{data.label}</Text>
+      <Text style={{ fontSize: 12, color: colors.t2, lineHeight: 17, marginTop: 2 }}>{data.value}</Text>
+      <Text style={{ fontSize: 10, color: colors.t3, marginTop: 6, fontStyle: 'italic' }}>
+        {data.category.replace(/_/g, ' ')}
+      </Text>
+    </View>
+  );
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export function DillyVisual({ payload }: { payload: VisualPayload }) {
@@ -545,6 +582,7 @@ export function DillyVisual({ payload }: { payload: VisualPayload }) {
     case 'action_buttons':      return <ActionButtonsCard data={payload} />;
     case 'weekly_plan':         return <WeeklyPlanCard data={payload} />;
     case 'job_match':           return <JobMatchCard data={payload} />;
+    case 'profile_update':      return <ProfileUpdateCard data={payload} />;
     default:                    return null;
   }
 }
