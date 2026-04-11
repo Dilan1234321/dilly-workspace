@@ -10,6 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import FadeInView from '../../components/FadeInView';
+import AnimatedPressable from '../../components/AnimatedPressable';
+import Svg, { Circle } from 'react-native-svg';
 
 if (Platform.OS === 'android') UIManager.setLayoutAnimationEnabledExperimental?.(true);
 
@@ -285,12 +288,26 @@ export default function MyDillyProfileScreen() {
 
   // ── Render ───────────────────────────────────────────────────────────────
 
+  // Profile strength ring helper
+  const strengthColor = completeness >= 70 ? colors.green : completeness >= 40 ? colors.amber : colors.coral;
+  const ringSize = 72;
+  const ringStroke = 5;
+  const ringR = (ringSize - ringStroke) / 2;
+  const ringCirc = 2 * Math.PI * ringR;
+  const ringDash = ringCirc * (1 - completeness / 100);
+
+  const p = profile as any;
+  const firstName = (p.name || '').trim().split(/\s+/)[0] || 'You';
+  const cohort = p.cohort || p.track || '';
+
   return (
     <View style={s.container}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <View style={{ width: 36 }} />
-        <Text style={s.headerTitle}>MY DILLY</Text>
+        <TouchableOpacity onPress={() => router.push('/(app)/profile')} hitSlop={12}>
+          <Ionicons name="person-circle-outline" size={22} color={colors.t2} />
+        </TouchableOpacity>
+        <Text style={s.headerTitle}>My Dilly</Text>
         <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>
           <Ionicons name="settings-outline" size={20} color={colors.t3} />
         </TouchableOpacity>
@@ -301,88 +318,107 @@ export default function MyDillyProfileScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
       >
-        {/* ── Narrative Card ─────────────────────────────────────────── */}
-        <View style={s.narrativeCard}>
-          <View style={s.narrativeHeader}>
-            <Ionicons name="sparkles" size={14} color={colors.gold} />
-            <Text style={s.narrativeTitle}>What Dilly Knows</Text>
-            {data?.narrative_updated_relative && (
-              <Text style={s.narrativeAge}>{data.narrative_updated_relative}</Text>
-            )}
-          </View>
-          {data?.narrative ? (
-            <Text style={s.narrativeText}>{data.narrative}</Text>
-          ) : (
-            <View style={s.narrativeEmpty}>
-              <Text style={s.narrativeEmptyText}>
-                Chat with Dilly to start building your profile. The more you talk, the better Dilly knows you.
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* ── Completeness Card ──────────────────────────────────────── */}
-        {totalFacts > 0 && completeness < 100 && (
-          <View style={s.completenessCard}>
-            <View style={s.completenessHeader}>
+        {/* ── Hero: Profile Strength + Identity ──────────────────────── */}
+        <FadeInView delay={0}>
+          <View style={s.heroCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              {/* Strength Ring */}
+              <View style={{ width: ringSize, height: ringSize, alignItems: 'center', justifyContent: 'center' }}>
+                <Svg width={ringSize} height={ringSize}>
+                  <Circle cx={ringSize / 2} cy={ringSize / 2} r={ringR} stroke={colors.b2} strokeWidth={ringStroke} fill="transparent" />
+                  <Circle
+                    cx={ringSize / 2} cy={ringSize / 2} r={ringR}
+                    stroke={strengthColor} strokeWidth={ringStroke} fill="transparent"
+                    strokeDasharray={`${ringCirc} ${ringCirc}`}
+                    strokeDashoffset={ringDash} strokeLinecap="round"
+                    transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
+                  />
+                </Svg>
+                <Text style={{ position: 'absolute', fontSize: 20, fontWeight: '800', color: strengthColor }}>{completeness}%</Text>
+              </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.completenessTitle}>Profile Strength</Text>
-                <Text style={s.completenessPercent}>
-                  <Text style={{ color: completeness >= 70 ? colors.green : completeness >= 40 ? colors.amber : colors.coral }}>
-                    {completeness}%
-                  </Text>
-                  <Text style={{ color: colors.t3 }}> complete</Text>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: colors.t1 }}>
+                  {firstName}'s Dilly
+                </Text>
+                {cohort ? <Text style={{ fontSize: 12, color: colors.t2, marginTop: 2 }}>{cohort}</Text> : null}
+                <Text style={{ fontSize: 11, color: colors.t3, marginTop: 4 }}>
+                  {totalFacts} facts learned{sessionCount > 0 ? ` from ${sessionCount} conversation${sessionCount !== 1 ? 's' : ''}` : ''}
                 </Text>
               </View>
-              {/* Ring */}
-              <View style={s.ringWrap}>
-                <View style={s.ringBg} />
-                <View style={[s.ringFill, {
-                  borderTopColor: completeness >= 70 ? colors.green : completeness >= 40 ? colors.amber : colors.coral,
-                  borderRightColor: completeness >= 50 ? (completeness >= 70 ? colors.green : colors.amber) : 'transparent',
-                  borderBottomColor: completeness >= 75 ? colors.green : 'transparent',
-                  borderLeftColor: completeness >= 100 ? colors.green : 'transparent',
-                  transform: [{ rotate: `${(completeness / 100) * 360}deg` }],
-                }]} />
-                <Text style={s.ringText}>{filledCore.length}/{CORE_CATEGORIES.length}</Text>
-              </View>
             </View>
 
-            {/* Bar */}
-            <View style={s.completenessBar}>
-              <View style={[s.completenessFill, {
-                width: `${completeness}%`,
-                backgroundColor: completeness >= 70 ? colors.green : completeness >= 40 ? colors.amber : colors.coral,
-              }]} />
+            {/* Strength bar */}
+            <View style={{ height: 4, backgroundColor: colors.s3, borderRadius: 2, marginTop: 14, overflow: 'hidden' }}>
+              <View style={{ height: '100%', width: `${completeness}%`, backgroundColor: strengthColor, borderRadius: 2 }} />
             </View>
 
-            {/* Missing nudges */}
-            {missingCore.length > 0 && (
-              <View style={s.nudgeList}>
-                <Text style={s.nudgeLabel}>Tell Dilly more about:</Text>
-                {missingCore.slice(0, 3).map(m => {
-                  const cfg = CATEGORY_CONFIG[m.key];
-                  return (
-                    <TouchableOpacity
-                      key={m.key}
-                      style={s.nudgeChip}
-                      onPress={() => startTellDillyFlow(m.nudge, m.key)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name={cfg?.icon as any || 'ellipse'} size={11} color={cfg?.color || colors.t3} />
-                      <Text style={s.nudgeText}>{m.nudge}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+            {/* Tell Dilly More CTA */}
+            <AnimatedPressable
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14, backgroundColor: colors.gold, paddingVertical: 12, borderRadius: 10 }}
+              onPress={() => openDillyOverlay({
+                isPaid: true,
+                initialMessage: `I want to tell you more about myself so you can build better resumes for me. Ask me about something you don't know yet.`,
+              })}
+              scaleDown={0.97}
+            >
+              <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Tell Dilly More</Text>
+            </AnimatedPressable>
+          </View>
+        </FadeInView>
+
+        {/* ── Your Story (narrative) ─────────────────────────────────── */}
+        <FadeInView delay={80}>
+          <View style={s.narrativeCard}>
+            <View style={s.narrativeHeader}>
+              <Ionicons name="book-outline" size={14} color={colors.gold} />
+              <Text style={s.narrativeTitle}>Your Story</Text>
+              {data?.narrative_updated_relative && (
+                <Text style={s.narrativeAge}>{data.narrative_updated_relative}</Text>
+              )}
+            </View>
+            {data?.narrative ? (
+              <Text style={s.narrativeText}>{data.narrative}</Text>
+            ) : (
+              <View style={s.narrativeEmpty}>
+                <Text style={s.narrativeEmptyText}>
+                  Chat with Dilly to start building your story. The more you share, the better your generated resumes will be.
+                </Text>
               </View>
             )}
           </View>
+        </FadeInView>
+
+        {/* ── Missing nudges (what Dilly doesn't know yet) ───────────── */}
+        {missingCore.length > 0 && (
+          <FadeInView delay={140}>
+            <View style={{ gap: 6, marginBottom: 8 }}>
+              <Text style={s.sectionEyebrow}>WHAT DILLY STILL NEEDS</Text>
+              {missingCore.slice(0, 4).map(m => {
+                const cfg = CATEGORY_CONFIG[m.key];
+                return (
+                  <AnimatedPressable
+                    key={m.key}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 }}
+                    onPress={() => startTellDillyFlow(m.nudge, m.key)}
+                    scaleDown={0.98}
+                  >
+                    <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: (cfg?.color || colors.t3) + '15', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={cfg?.icon as any || 'ellipse'} size={13} color={cfg?.color || colors.t3} />
+                    </View>
+                    <Text style={{ flex: 1, fontSize: 13, color: colors.t1 }}>{m.nudge}</Text>
+                    <Ionicons name="chatbubble-outline" size={14} color={colors.gold} />
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          </FadeInView>
         )}
 
-        {/* ── Fact Categories ────────────────────────────────────────── */}
+        {/* ── What Dilly Knows ───────────────────────────────────────── */}
         {orderedCategories.length > 0 ? (
-          <>
-            <Text style={s.sectionEyebrow}>WHAT DILLY KNOWS ABOUT YOU</Text>
+          <FadeInView delay={200}>
+            <Text style={s.sectionEyebrow}>WHAT DILLY KNOWS</Text>
 
             {orderedCategories.map(cat => {
               const cfg = CATEGORY_CONFIG[cat] || { icon: 'ellipse', label: cat, color: colors.t2 };
@@ -450,22 +486,25 @@ export default function MyDillyProfileScreen() {
                 </View>
               );
             })}
-          </>
+          </FadeInView>
         ) : (
           <View style={s.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={44} color={colors.t3} style={{ marginBottom: 14 }} />
-            <Text style={s.emptyTitle}>Your profile is empty</Text>
+            <Ionicons name="sparkles" size={44} color={colors.gold} style={{ marginBottom: 14 }} />
+            <Text style={s.emptyTitle}>Your Dilly Profile is empty</Text>
             <Text style={s.emptyText}>
-              Every time you chat with Dilly, it learns about you  -  your goals, skills, interests, and more. The more you talk, the more personalized your experience becomes.
+              Tell Dilly about yourself — your goals, projects, skills, what you're good at. The more Dilly knows, the better your custom resumes will be.
             </Text>
-            <TouchableOpacity
+            <AnimatedPressable
               style={s.emptyCta}
-              onPress={() => router.push('/(app)/voice')}
-              activeOpacity={0.85}
+              onPress={() => openDillyOverlay({
+                isPaid: true,
+                initialMessage: `I want to build my Dilly Profile. Ask me about my experiences, projects, skills, and career goals so you can generate better resumes for me.`,
+              })}
+              scaleDown={0.97}
             >
-              <Ionicons name="chatbubble" size={14} color="#FFFFFF" />
-              <Text style={s.emptyCtaText}>Talk to Dilly</Text>
-            </TouchableOpacity>
+              <Ionicons name="chatbubble-ellipses" size={14} color="#FFFFFF" />
+              <Text style={s.emptyCtaText}>Start building your profile</Text>
+            </AnimatedPressable>
           </View>
         )}
 
@@ -629,7 +668,16 @@ const s = StyleSheet.create({
     color: colors.t1,
   },
 
-  scroll: { paddingHorizontal: spacing.xl, paddingTop: 16 },
+  scroll: { paddingHorizontal: spacing.xl, paddingTop: 16, gap: 16 },
+
+  // ── Hero
+  heroCard: {
+    backgroundColor: colors.s1,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.goldbdr,
+    padding: 18,
+  },
 
   // ── Narrative ─────────────────────────────────────────────────────────────
   narrativeCard: {
@@ -638,7 +686,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.goldbdr,
     padding: 16,
-    marginBottom: 20,
   },
   narrativeHeader: {
     flexDirection: 'row',
