@@ -464,7 +464,7 @@ const d = StyleSheet.create({
   storyText: { fontSize: 14, color: colors.t1, lineHeight: 21 },
 
   // Section label
-  sectionLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, color: colors.t3, marginBottom: -8 },
+  sectionLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, color: colors.t3, marginBottom: 4 },
 
   // Strengths Map
   strengthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
