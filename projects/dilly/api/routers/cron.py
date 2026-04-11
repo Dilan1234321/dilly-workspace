@@ -328,3 +328,76 @@ def crawl_niche_sources(token: str = ""):
     with _get_db_ctx() as conn:
         stats = ingest_niche_sources(conn)
     return {"ok": True, "stats": stats}
+
+
+@router.get("/dedup-jobs", summary="Dedup + quality gate on internship listings")
+def dedup_jobs(token: str = ""):
+    """Remove exact-match duplicates and jobs without descriptions.
+    Call with ?token=CRON_SECRET. Run daily after crawl."""
+    _require_cron_secret(token)
+    from projects.dilly.api.scripts.dedup_jobs import dedup_exact, enforce_quality_gate, _get_db
+    conn = _get_db()
+    try:
+        deduped = dedup_exact(conn)
+        gated = enforce_quality_gate(conn)
+        return {"ok": True, "duplicates_removed": deduped, "quality_gate_removed": gated}
+    finally:
+        conn.close()
+
+
+@router.get("/rescore-jobs", summary="Rescore all jobs missing S/G/B requirements")
+def rescore_jobs(token: str = ""):
+    """Run the job rescoring engine on all active jobs with cohort_requirements
+    but missing per-cohort S/G/B scores. Call with ?token=CRON_SECRET."""
+    _require_cron_secret(token)
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    script_path = os.path.join(_SCRIPT_DIR, "..", "scripts", "rescore_jobs.py")
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, script_path],
+        capture_output=True, text=True, timeout=600
+    )
+    return {"ok": result.returncode == 0, "output": result.stdout[-2000:] if result.stdout else result.stderr[-500:]}
+
+
+@router.get("/daily-pipeline", summary="Run full daily job pipeline: scrape → dedup → rescore")
+def daily_pipeline(token: str = ""):
+    """Master endpoint: runs the full daily job pipeline in order.
+    1. Scrape all ATS sources
+    2. Scrape niche sources
+    3. Dedup + quality gate
+    4. Rescore any new unscored jobs
+
+    Call with ?token=CRON_SECRET. Intended to run once per day."""
+    _require_cron_secret(token)
+    results = {}
+
+    # 1. Scrape
+    try:
+        r = crawl_internships(token=token)
+        results["crawl"] = r
+    except Exception as e:
+        results["crawl"] = {"error": str(e)}
+
+    # 2. Niche sources
+    try:
+        r = crawl_niche_sources(token=token)
+        results["niche"] = r
+    except Exception as e:
+        results["niche"] = {"error": str(e)}
+
+    # 3. Dedup
+    try:
+        r = dedup_jobs(token=token)
+        results["dedup"] = r
+    except Exception as e:
+        results["dedup"] = {"error": str(e)}
+
+    # 4. Rescore
+    try:
+        r = rescore_jobs(token=token)
+        results["rescore"] = r
+    except Exception as e:
+        results["rescore"] = {"error": str(e)}
+
+    return {"ok": True, "pipeline": results}
