@@ -289,11 +289,11 @@ export default function MyDillyProfileScreen() {
     <View style={s.container}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color={colors.t1} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>MY DILLY PROFILE</Text>
         <View style={{ width: 36 }} />
+        <Text style={s.headerTitle}>MY DILLY</Text>
+        <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>
+          <Ionicons name="settings-outline" size={20} color={colors.t3} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
