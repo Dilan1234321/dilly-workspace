@@ -12,6 +12,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
   Animated, Easing, Alert, LayoutAnimation, Dimensions,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -161,8 +162,8 @@ export default function AIArenaScreen() {
   }
 
   return (
-    <View style={[a.container, { paddingTop: insets.top }]}>
-      <ScrollView
+    <KeyboardAvoidingView style={[a.container, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView keyboardShouldPersistTaps="handled"
         contentContainerStyle={[a.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -438,7 +439,7 @@ export default function AIArenaScreen() {
         )}
 
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -375,23 +375,6 @@ def _compute_brief(
             "action_route": f"/(app)/jobs?focus={job.get('id', '')}",
         })
 
-    # Card 4 (if room): AI disruption awareness
-    if len(facts) < 3 and cohort_bar.get("cohort_id"):
-        try:
-            from dilly_core.ai_disruption import get_cohort_disruption
-            dis = get_cohort_disruption(str(cohort_bar.get("label") or ""))
-            pct = dis.get("disruption_pct", 30)
-            facts.append({
-                "id": "ai_disruption",
-                "kind": "ai",
-                "headline": f"{pct}% of entry-level {str(cohort_bar.get('label', 'your field')).split(' ')[0].lower()} roles are being disrupted by AI",
-                "body": dis.get("headline", "Stay ahead of the curve."),
-                "action_label": "See what to do",
-                "action_route": "/(app)/feedback",
-            })
-        except Exception:
-            pass
-
     return facts[:3]
 
 

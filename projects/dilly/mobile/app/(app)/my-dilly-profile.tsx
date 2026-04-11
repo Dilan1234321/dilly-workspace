@@ -21,7 +21,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   LayoutAnimation, Alert, RefreshControl, Animated, Easing,
-  Dimensions,
+  Dimensions, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -197,7 +197,11 @@ export default function MyDillyProfileScreen() {
       {/* Header */}
       <View style={[d.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.push('/(app)/profile')} hitSlop={12}>
-          <Ionicons name="person-circle-outline" size={22} color={colors.t2} />
+          {p.profile_slug ? (
+            <Image source={{ uri: `https://api.trydilly.com/profile/public/${p.profile_slug}/photo?_t=${Date.now()}` }} style={{ width: 28, height: 28, borderRadius: 14 }} />
+          ) : (
+            <Ionicons name="person-circle-outline" size={28} color={colors.t2} />
+          )}
         </TouchableOpacity>
         <Text style={d.headerTitle}>My Dilly</Text>
         <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>

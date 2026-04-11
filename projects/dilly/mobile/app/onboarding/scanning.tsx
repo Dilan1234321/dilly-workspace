@@ -106,7 +106,7 @@ const orb = StyleSheet.create({
     width: 108,
     height: 108,
     borderRadius: 54,
-    backgroundColor: '#0d0900',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(201,168,76,0.35)',
     alignItems: 'center',

@@ -460,7 +460,7 @@ export default function HomeScreen() {
                 {(() => {
                   const hr = new Date().getHours();
                   const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-                  return firstName ? `${greeting}, ${firstName}. Here's your career today.` : `${greeting}. Here's your career today.`;
+                  return firstName ? `${greeting}, ${firstName}.` : `${greeting}.`;
                 })()}
               </Text>
               {activeCohort ? (
@@ -590,13 +590,6 @@ export default function HomeScreen() {
                 <View style={[s.compactPctBadge, { backgroundColor: (brief.score.delta >= 0 ? colors.green : colors.coral) + '15' }]}>
                   <Text style={[s.compactPctText, { color: brief.score.delta >= 0 ? colors.green : colors.coral }]}>
                     {brief.score.delta >= 0 ? '↑' : '↓'} {Math.abs(brief.score.delta)}
-                  </Text>
-                </View>
-              )}
-              {hasAudit && (brief?.score?.delta == null || Math.abs(brief.score.delta) < 1) && brief?.cohort_bar && (
-                <View style={[s.compactPctBadge, { backgroundColor: sColor + '15' }]}>
-                  <Text style={[s.compactPctText, { color: sColor }]} numberOfLines={1}>
-                    {brief.cohort_bar.label}
                   </Text>
                 </View>
               )}

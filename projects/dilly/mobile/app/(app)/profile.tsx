@@ -394,24 +394,16 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Build-88: My Cohorts section */}
+        {/* My Cohorts section — view only, add/remove on New Audit page */}
         <View style={ps.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <Text style={ps.sectionEyebrow}>MY COHORTS</Text>
-            <AnimatedPressable
-              onPress={() => setShowCohortPicker(true)}
-              scaleDown={0.9}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: '#1652F0' + '12', borderWidth: 1, borderColor: '#1652F0' + '25' }}
-            >
-              <Ionicons name="add" size={14} color="#1652F0" />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#1652F0' }}>Add</Text>
-            </AnimatedPressable>
           </View>
           {userCohorts.length === 0 && (
-            <AnimatedPressable onPress={() => setShowCohortPicker(true)} scaleDown={0.98} style={{ padding: 20, borderRadius: 12, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1, alignItems: 'center' }}>
+            <View style={{ padding: 20, borderRadius: 12, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1, alignItems: 'center' }}>
               <Ionicons name="layers-outline" size={24} color={colors.t3} />
-              <Text style={{ fontSize: 13, color: colors.t2, marginTop: 8, textAlign: 'center' }}>Add cohorts to see how your resume scores against different fields.</Text>
-            </AnimatedPressable>
+              <Text style={{ fontSize: 13, color: colors.t2, marginTop: 8, textAlign: 'center' }}>Run an audit to add cohorts to your profile.</Text>
+            </View>
           )}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {userCohorts.map(name => {
@@ -421,19 +413,6 @@ export default function ProfileScreen() {
                 <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1 }}>
                   <Text style={{ fontSize: 12, fontWeight: '600', color: colors.t1 }} numberOfLines={1}>{name}</Text>
                   {score != null && <Text style={{ fontSize: 11, fontWeight: '700', color: '#1652F0' }}>{score}</Text>}
-                  <AnimatedPressable
-                    onPress={() => {
-                      if (userCohorts.length <= 1) {
-                        Alert.alert('Cannot remove', 'You need at least one cohort.');
-                        return;
-                      }
-                      handleCohortToggle(name, false);
-                    }}
-                    scaleDown={0.85}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="close-circle" size={16} color={colors.t3} />
-                  </AnimatedPressable>
                 </View>
               );
             })}
@@ -596,12 +575,6 @@ export default function ProfileScreen() {
         profile={profile}
         photoUri={photoUri}
         onSaved={() => setRefreshKey(k => k + 1)}
-      />
-      <CohortPicker
-        visible={showCohortPicker}
-        onClose={() => setShowCohortPicker(false)}
-        activeCohorts={userCohorts}
-        onToggle={handleCohortToggle}
       />
     </View>
   );

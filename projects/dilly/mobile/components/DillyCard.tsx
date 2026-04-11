@@ -102,6 +102,7 @@ function CardBack() {
   return (
     <View style={[c.card, { justifyContent: 'center', alignItems: 'center' }]}>
       <Image source={require('../assets/logo.png')} style={{ width: 120, height: 40 }} resizeMode="contain" />
+      <Text style={{ fontSize: 9, color: LIGHT_GRAY, position: 'absolute', bottom: 12 }}>hellodilly.com</Text>
     </View>
   );
 }
@@ -118,6 +119,7 @@ interface DillyCardEditorProps {
 export default function DillyCardEditor({ initialData, onSave, userType }: DillyCardEditorProps) {
   const [data, setData] = useState<CardData>(initialData);
   const [showBack, setShowBack] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const frontRef = useRef<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
 
@@ -139,11 +141,11 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
 
   async function handleShare() {
     try {
-      // Capture front side as PNG using react-native-view-shot
-      if (ViewShot && frontRef.current) {
+      // Capture front side as PNG and share image only — no link
+      if (frontRef.current) {
         try {
-          const captureViewShot = require('react-native-view-shot').captureRef;
-          const uri = await captureViewShot(frontRef.current, { format: 'png', quality: 1 });
+          const captureRef = require('react-native-view-shot').captureRef;
+          const uri = await captureRef(frontRef.current, { format: 'png', quality: 1 });
           const Sharing = await import('expo-sharing').catch(() => null);
           if (Sharing && await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Dilly Card' });
@@ -151,8 +153,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
           }
         } catch {}
       }
-      // Fallback: share as text with profile link
-      await Share.share({ message: `Check out my Dilly Card: https://hellodilly.com/p/${data.username}` });
+      Alert.alert('Could not capture card', 'Try again in a moment.');
     } catch {
       Alert.alert('Could not share', 'Try again in a moment.');
     }
@@ -183,7 +184,18 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
         Tap card to flip
       </Text>
 
+      {/* Editor toggle */}
+      <TouchableOpacity
+        onPress={() => setEditorOpen(!editorOpen)}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 }}
+        activeOpacity={0.7}
+      >
+        <Ionicons name={editorOpen ? 'chevron-up' : 'create-outline'} size={14} color={GRAY} />
+        <Text style={{ fontSize: 12, fontWeight: '600', color: GRAY }}>{editorOpen ? 'Hide editor' : 'Edit your card'}</Text>
+      </TouchableOpacity>
+
       {/* Editor fields */}
+      {editorOpen && (<>
       <View style={c.field}>
         <Text style={c.fieldLabel}>Full Name</Text>
         <TextInput style={c.fieldInput} value={data.name} onChangeText={v => update('name', v)} placeholder="Your name" placeholderTextColor={LIGHT_GRAY} />
@@ -269,10 +281,12 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
         <Text style={[c.fieldInput, { color: GRAY }]}>hellodilly.com/p/{data.username || 'you'}</Text>
       </View>
 
+      </>)}
+
       {/* Share button */}
       <TouchableOpacity style={c.shareBtn} onPress={handleShare} activeOpacity={0.85}>
         <Ionicons name="share-outline" size={16} color="#fff" />
-        <Text style={c.shareBtnText}>Share Dilly Card</Text>
+        <Text style={c.shareBtnText}>Share your Dilly Card</Text>
       </TouchableOpacity>
 
       {/* Print section */}
