@@ -195,6 +195,7 @@ Return ONLY valid JSON array:
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1000,
+        temperature=0,  # Deterministic — same resume always gets same scores
         messages=[{"role": "user", "content": prompt}]
     )
     
