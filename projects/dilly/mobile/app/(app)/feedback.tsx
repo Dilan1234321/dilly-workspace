@@ -513,7 +513,7 @@ export default function FeedbackScreen() {
               <Text style={[f.sectionHeading, { color: '#F0F6FC', marginBottom: 0 }]}>AI Readiness</Text>
             </View>
             <Text style={{ fontSize: 12, color: '#8B949E', lineHeight: 18, marginBottom: 12 }}>
-              AI is disrupting entry-level roles across every field. Your resume needs to show skills AI can't replace.
+              AI is disrupting roles across every field. Your profile needs to show skills AI can't replace.
             </Text>
             <AnimatedPressable
               style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: '#161B22', borderWidth: 1, borderColor: '#21262D' }}

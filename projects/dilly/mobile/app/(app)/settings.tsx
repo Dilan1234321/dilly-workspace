@@ -549,7 +549,7 @@ export default function SettingsScreen() {
                 <Text style={st.inputLabel}>Career goal</Text>
                 <TextInput
                   style={st.textInput}
-                  placeholder="e.g. Software engineering internship at a top-tier company"
+                  placeholder="e.g. Software engineering role at a top-tier company"
                   placeholderTextColor={colors.t3}
                   value={careerGoal}
                   onChangeText={setCareerGoal}

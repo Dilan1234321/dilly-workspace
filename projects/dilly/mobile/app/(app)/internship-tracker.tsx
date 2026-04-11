@@ -560,7 +560,7 @@ export default function InternshipTrackerScreen() {
                 scaleDown={0.97}
               >
                 <Ionicons name="search" size={14} color={GOLD} />
-                <Text style={[ts.emptyBtnText, { color: GOLD }]}>Browse internships</Text>
+                <Text style={[ts.emptyBtnText, { color: GOLD }]}>Browse jobs</Text>
               </AnimatedPressable>
             </View>
           </FadeInView>
