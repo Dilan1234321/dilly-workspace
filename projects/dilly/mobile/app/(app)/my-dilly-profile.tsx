@@ -32,6 +32,7 @@ import { colors, spacing, radius } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import DillyCardEditor, { type CardData } from '../../components/DillyCard';
 
 const W = Dimensions.get('window').width;
 const GOLD = '#2B3A8E';
@@ -210,45 +211,21 @@ export default function MyDillyProfileScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={GOLD} />}
       >
 
-        {/* ── 1. Identity Card ─────────────────────────────────── */}
+        {/* ── 1. Dilly Card ──────────────────────────────────── */}
         <FadeInView delay={0}>
-          <View style={d.idCard}>
-            <View style={d.idCardGradient}>
-              <View style={d.idCardTop}>
-                <View style={{ flex: 1 }}>
-                  <Text style={d.idCardBrand}>DILLY</Text>
-                  <Text style={d.idCardName}>{fullName}</Text>
-                  {cohort ? <Text style={d.idCardCohort}>{cohort}</Text> : null}
-                  {school ? <Text style={d.idCardSchool}>{school}</Text> : null}
-                </View>
-                <StrengthRing pct={completeness} />
-              </View>
-              <View style={d.idCardBottom}>
-                <View style={d.idCardStat}>
-                  <Text style={d.idCardStatNum}>{totalFacts}</Text>
-                  <Text style={d.idCardStatLabel}>Facts</Text>
-                </View>
-                <View style={d.idCardStat}>
-                  <Text style={d.idCardStatNum}>{filledCore.length}</Text>
-                  <Text style={d.idCardStatLabel}>Areas</Text>
-                </View>
-                <View style={d.idCardStat}>
-                  <Text style={d.idCardStatNum}>{completeness}%</Text>
-                  <Text style={d.idCardStatLabel}>Complete</Text>
-                </View>
-                <AnimatedPressable
-                  style={d.shareBtn}
-                  onPress={() => {
-                    const { Share } = require('react-native');
-                    Share.share({ message: `I scored ${completeness}% on my Dilly Profile. ${cohort} at ${school}. trydilly.com` });
-                  }}
-                  scaleDown={0.95}
-                >
-                  <Ionicons name="share-outline" size={14} color="rgba(255,255,255,0.7)" />
-                </AnimatedPressable>
-              </View>
-            </View>
-          </View>
+          <DillyCardEditor
+            initialData={{
+              name: fullName,
+              school,
+              major: (p.majors?.[0] || p.major || ''),
+              classYear: p.graduation_year ? String(p.graduation_year) : '',
+              tagline: p.profile_tagline || p.custom_tagline || '',
+              email: p.email || '',
+              username: p.profile_slug || '',
+              photoUri: null,
+            }}
+            onSave={() => {}}
+          />
         </FadeInView>
 
         {/* ── 2. Talk to Dilly (rotating prompt) ───────────────── */}
