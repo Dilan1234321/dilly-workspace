@@ -106,6 +106,20 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="ai-arena"
+        options={{
+          title: 'AI Arena',
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'shield' : 'shield-outline'}
+              size={20}
+              color={focused ? '#1652F0' : colors.t3}
+            />
+          ),
+          tabBarActiveTintColor: '#1652F0',
+        }}
+      />
+      <Tabs.Screen
         name="score-detail"
         options={{
           href: null,
