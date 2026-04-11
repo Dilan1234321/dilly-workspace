@@ -519,6 +519,120 @@ export default function AIArenaScreen() {
             </AnimatedPressable>
           </FadeInView>
         )}
+        {/* ── 6. Displacement Index ─────────────────────────── */}
+        {shield?.disruption_pct != null && (
+          <FadeInView delay={450}>
+            <View style={a.section}>
+              <View style={a.sectionHeader}>
+                <Ionicons name="trending-up" size={16} color={RED} />
+                <Text style={a.sectionTitle}>Displacement Index</Text>
+              </View>
+              <Text style={a.sectionSub}>How fast AI is disrupting entry-level roles in your field.</Text>
+
+              {/* Big number */}
+              <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                <Text style={{ fontSize: 56, fontWeight: '900', color: shield.disruption_pct >= 40 ? RED : shield.disruption_pct >= 25 ? AMBER : GREEN }}>
+                  {shield.disruption_pct}%
+                </Text>
+                <Text style={{ fontSize: 12, color: SUB, marginTop: 4 }}>
+                  of entry-level {(shield.cohort || '').split(' ')[0]} roles disrupted
+                </Text>
+              </View>
+
+              {shield.disruption_headline ? (
+                <View style={{ backgroundColor: BG, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: BORDER }}>
+                  <Text style={{ fontSize: 13, color: TEXT, lineHeight: 19 }}>{shield.disruption_headline}</Text>
+                </View>
+              ) : null}
+
+              {/* AI-resistant vs vulnerable skills */}
+              {(shield.ai_resistant_skills?.length > 0 || shield.ai_vulnerable_skills?.length > 0) && (
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                  {shield.ai_resistant_skills?.length > 0 && (
+                    <View style={{ flex: 1, backgroundColor: GREEN + '10', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: GREEN + '20' }}>
+                      <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 1, color: GREEN, marginBottom: 6 }}>AI-PROOF</Text>
+                      {shield.ai_resistant_skills.slice(0, 3).map((s: string, i: number) => (
+                        <Text key={i} style={{ fontSize: 11, color: SUB, lineHeight: 16 }}>{s}</Text>
+                      ))}
+                    </View>
+                  )}
+                  {shield.ai_vulnerable_skills?.length > 0 && (
+                    <View style={{ flex: 1, backgroundColor: RED + '10', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: RED + '20' }}>
+                      <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 1, color: RED, marginBottom: 6 }}>AT RISK</Text>
+                      {shield.ai_vulnerable_skills.slice(0, 3).map((s: string, i: number) => (
+                        <Text key={i} style={{ fontSize: 11, color: SUB, lineHeight: 16 }}>{s}</Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </FadeInView>
+        )}
+
+        {/* ── 7. Skill Vault ──────────────────────────────────── */}
+        {shield?.ai_resistant_skills?.length > 0 && (
+          <FadeInView delay={500}>
+            <View style={a.section}>
+              <View style={a.sectionHeader}>
+                <Ionicons name="lock-closed" size={16} color={GREEN} />
+                <Text style={a.sectionTitle}>Skill Vault</Text>
+              </View>
+              <Text style={a.sectionSub}>AI-proof skills for your field. Unlocked = on your resume. Locked = develop next.</Text>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                {/* Unlocked skills (from resistant signals on resume) */}
+                {(shield.resistant_signals || []).slice(0, 5).map((s: string, i: number) => (
+                  <View key={`u-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: GREEN + '12', borderWidth: 1, borderColor: GREEN + '25' }}>
+                    <Ionicons name="lock-open" size={12} color={GREEN} />
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: GREEN }} numberOfLines={1}>{s.slice(0, 40)}</Text>
+                  </View>
+                ))}
+                {/* Locked skills (AI-resistant skills not yet on resume) */}
+                {shield.ai_resistant_skills.slice(0, 5).map((s: string, i: number) => (
+                  <AnimatedPressable
+                    key={`l-${i}`}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: BORDER, borderWidth: 1, borderColor: BORDER }}
+                    onPress={() => openDillyOverlay({
+                      isPaid: true,
+                      initialMessage: `I need to develop "${s}" as an AI-proof skill. How do I build this and show it on my resume?`,
+                    })}
+                    scaleDown={0.95}
+                  >
+                    <Ionicons name="lock-closed" size={12} color={DIM} />
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: DIM }} numberOfLines={1}>{s}</Text>
+                    <Ionicons name="sparkles" size={9} color={CYAN} style={{ opacity: 0.4 }} />
+                  </AnimatedPressable>
+                ))}
+              </View>
+            </View>
+          </FadeInView>
+        )}
+
+        {/* ── 8. Resume Firewall ──────────────────────────────── */}
+        <FadeInView delay={550}>
+          <AnimatedPressable
+            style={[a.section, { borderColor: RED + '25' }]}
+            onPress={() => openDillyOverlay({
+              isPaid: true,
+              initialMessage: `Analyze my resume as if you were an AI screening tool at a top company. What vulnerabilities would you flag? What would get me auto-rejected? Be specific and harsh — I need to know.`,
+            })}
+            scaleDown={0.98}
+          >
+            <View style={a.sectionHeader}>
+              <Ionicons name="shield-half" size={16} color={RED} />
+              <Text style={a.sectionTitle}>Resume Firewall</Text>
+            </View>
+            <Text style={a.sectionSub}>
+              How would AI recruiters evaluate your resume? Tap to find vulnerabilities before you apply.
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, alignSelf: 'flex-start', backgroundColor: RED + '12', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: RED + '20' }}>
+              <Ionicons name="scan" size={14} color={RED} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: RED }}>Run Firewall Check</Text>
+            </View>
+          </AnimatedPressable>
+        </FadeInView>
+
       </ScrollView>
     </View>
   );
