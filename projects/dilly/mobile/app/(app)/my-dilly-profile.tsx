@@ -184,9 +184,7 @@ export default function MyDillyProfileScreen() {
     return (
       <View style={[d.container, { paddingTop: insets.top }]}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Animated.View style={{ opacity: useRef(new Animated.Value(0.5)).current }}>
-            <Ionicons name="person-circle" size={60} color={colors.t3} />
-          </Animated.View>
+          <Ionicons name="person-circle" size={60} color={colors.t3} />
           <Text style={{ color: colors.t3, marginTop: 12, fontSize: 13 }}>Loading your Dilly...</Text>
         </View>
       </View>

@@ -86,11 +86,11 @@ export default function AppLayout() {
         name="ai-arena"
         options={{
           title: 'AI Arena',
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'shield' : 'shield-outline'}
               size={20}
-              color={focused ? '#58A6FF' : '#484F58'}
+              color={color}
             />
           ),
           tabBarActiveTintColor: '#58A6FF',
