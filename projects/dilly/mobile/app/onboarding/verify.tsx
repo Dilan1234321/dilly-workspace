@@ -54,9 +54,10 @@ const pb = StyleSheet.create({
 
 export default function VerifyScreen() {
   const insets = useSafeAreaInsets();
-  const { email: emailParam, returning } = useLocalSearchParams<{
+  const { email: emailParam, returning, userType } = useLocalSearchParams<{
     email: string;
     returning?: string;
+    userType?: string;
   }>();
 
   const isReturning = returning === 'true';
@@ -118,7 +119,7 @@ export default function VerifyScreen() {
         } else {
           const isNewUser = data.is_new_user !== false;
           if (isNewUser) {
-            router.replace('/onboarding/profile');
+            router.replace(userType === 'professional' ? '/onboarding/profile-pro' : '/onboarding/profile');
           } else {
             router.replace('/(app)');
           }

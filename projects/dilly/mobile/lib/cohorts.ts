@@ -61,6 +61,68 @@ export function parseCohortScores(raw: Record<string, any> | null | undefined): 
     });
 }
 
+// ── Career Field → Cohort mapping (for non-student onboarding) ──────────────
+// Maps career fields/industries to the same cohort IDs that detectCohorts() uses.
+// A mid-career accountant and a finance major land in the same cohort.
+
+export const CAREER_FIELDS: string[] = [
+  'Software Engineering', 'Data Science & Analytics', 'Cybersecurity & IT',
+  'Finance & Accounting', 'Consulting & Strategy', 'Marketing & Advertising',
+  'Management & Operations', 'Healthcare & Clinical', 'Design & Creative',
+  'Media & Communications', 'Legal & Compliance', 'Education & Teaching',
+  'Human Resources', 'Sales & Business Development', 'Real Estate',
+  'Supply Chain & Logistics', 'Environmental & Sustainability',
+  'Life Sciences & Research', 'Engineering (Mechanical/Aerospace)',
+  'Engineering (Electrical/Computer)', 'Engineering (Civil/Environmental)',
+  'Architecture & Urban Planning', 'Performing Arts & Film',
+  'Entrepreneurship & Startups', 'Government & Public Policy',
+  'Nonprofit & Social Impact', 'Hospitality & Events',
+];
+
+export const FIELD_TO_COHORTS: Record<string, string[]> = {
+  'Software Engineering': ['Software Engineering & CS'],
+  'Data Science & Analytics': ['Data Science & Analytics'],
+  'Cybersecurity & IT': ['Cybersecurity & IT'],
+  'Finance & Accounting': ['Finance & Accounting'],
+  'Consulting & Strategy': ['Consulting & Strategy'],
+  'Marketing & Advertising': ['Marketing & Advertising'],
+  'Management & Operations': ['Management & Operations'],
+  'Healthcare & Clinical': ['Healthcare & Clinical'],
+  'Design & Creative': ['Design & Creative'],
+  'Media & Communications': ['Media & Communications'],
+  'Legal & Compliance': ['Legal & Compliance'],
+  'Education & Teaching': ['Education & Teaching'],
+  'Human Resources': ['Human Resources & People'],
+  'Sales & Business Development': ['Management & Operations', 'Consulting & Strategy'],
+  'Real Estate': ['Real Estate & Construction'],
+  'Supply Chain & Logistics': ['Supply Chain & Logistics'],
+  'Environmental & Sustainability': ['Environmental & Sustainability'],
+  'Life Sciences & Research': ['Life Sciences & Research'],
+  'Engineering (Mechanical/Aerospace)': ['Mechanical & Aerospace Engineering'],
+  'Engineering (Electrical/Computer)': ['Electrical & Computer Engineering'],
+  'Engineering (Civil/Environmental)': ['Civil & Environmental Engineering'],
+  'Architecture & Urban Planning': ['Architecture & Urban Planning'],
+  'Performing Arts & Film': ['Performing Arts & Film'],
+  'Entrepreneurship & Startups': ['Entrepreneurship & Innovation'],
+  'Government & Public Policy': ['Economics & Public Policy'],
+  'Nonprofit & Social Impact': ['Social Sciences & Nonprofit'],
+  'Hospitality & Events': ['Hospitality & Events'],
+};
+
+/**
+ * Detect cohorts from career fields (for non-student onboarding).
+ * Parallels detectCohorts() but takes career fields instead of majors.
+ */
+export function fieldToCohorts(fields: string[]): string[] {
+  const cohorts = new Set<string>();
+  for (const field of fields) {
+    const mapped = FIELD_TO_COHORTS[field];
+    if (mapped) mapped.forEach(c => cohorts.add(c));
+  }
+  if (cohorts.size === 0) cohorts.add('Management & Operations');
+  return Array.from(cohorts);
+}
+
 // ── Major → Cohort mapping ──────────────────────────────────────────────────
 
 export const MAJOR_TO_COHORTS: Record<string, string[]> = {
