@@ -818,11 +818,21 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* Version */}
+        {/* About Dilly */}
         <FadeInView delay={440}>
+          <View style={[st.card, { marginTop: 16 }]}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1, marginBottom: 6 }}>About Dilly</Text>
+            <Text style={{ fontSize: 12, color: colors.t2, lineHeight: 18 }}>
+              Dilly is your personal career guide through the AI takeover. Built to help you navigate your career with AI-powered insights, personalized guidance, and real-time market awareness.
+            </Text>
+          </View>
+        </FadeInView>
+
+        {/* Version */}
+        <FadeInView delay={460}>
           <View style={st.versionWrap}>
             <Text style={st.versionText}>Dilly v{APP_VERSION}</Text>
-            <Text style={st.versionSub}>Made for students who want to win.</Text>
+            <Text style={st.versionSub}>Your career. Your guide. Your move.</Text>
             <AnimatedPressable
               onPress={handleDeleteAccount}
               scaleDown={0.97}
