@@ -148,6 +148,7 @@ from projects.dilly.api.routers import voice_history as voice_history_router
 from projects.dilly.api.routers import internal_voice_extract as internal_voice_extract_router
 from projects.dilly.api.routers import internal_voice_agent as internal_voice_agent_router
 from projects.dilly.api.routers import ai as ai_router
+from projects.dilly.api.routers import ai_arena as ai_arena_router
 from projects.dilly.api.routers import calendar_feed as calendar_feed_router
 from projects.dilly.api.routers import interview_prep as interview_prep_router
 from projects.dilly.api.routers import cron_jobs_cleanup
@@ -173,6 +174,7 @@ app.include_router(career_brain_router.router)
 app.include_router(habits_router.router)
 app.include_router(home_router.router)
 app.include_router(job_url_router.router)
+app.include_router(ai_arena_router.router)
 app.include_router(internships_v2_router.router)
 app.include_router(push_router.router)
 app.include_router(notifications_router.router)
