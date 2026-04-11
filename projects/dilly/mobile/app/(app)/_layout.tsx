@@ -41,7 +41,7 @@ export default function AppLayout() {
 
   return (
     <SubscriptionProvider>
-    <ErrorBoundary surface="the career center">
+    <ErrorBoundary surface="this page">
     <>
     <Tabs
       screenOptions={{
@@ -95,7 +95,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="jobs"
         options={{
-          title: 'Internships',
+          title: 'Jobs',
           tabBarIcon: ({ focused }) => (
             <Ionicons
               name={focused ? 'briefcase' : 'briefcase-outline'}
