@@ -37,40 +37,68 @@ async def get_shield_score(request: Request):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
 
-    # Load resume text
+    # Load profile text from multiple sources (Dilly Profile first, resume as fallback)
     resume_text = ""
+    cohort = "General"
     try:
         from projects.dilly.api.profile_store import get_profile
         profile = get_profile(email) or {}
         cohort = profile.get("cohort") or profile.get("track") or "General"
 
-        from projects.dilly.api.dilly_profile_txt import get_dilly_profile_txt_content
-        resume_text = get_dilly_profile_txt_content(email, max_chars=15000) or ""
-    except Exception:
-        pass
-
-    if not resume_text:
-        # Try loading from resume_edited
+        # Source 1: Dilly Profile memory surface (preferred — this is the Dilly Profile)
         try:
-            from projects.dilly.api.routers.resume import _load_resume, _sections_to_text, ResumeSection
-            saved = _load_resume(email)
-            if saved and saved.get("sections"):
-                sections_typed = [ResumeSection(**s) for s in saved["sections"]]
-                resume_text = _sections_to_text(sections_typed)
+            from projects.dilly.api.memory_surface_store import get_memory_surface
+            surface = get_memory_surface(email)
+            if surface:
+                facts = surface.get("items") or []
+                narrative = (surface.get("narrative") or "").strip()
+                if facts:
+                    lines = []
+                    for f in facts:
+                        lines.append(f"{f.get('label', '')}: {f.get('value', '')}")
+                    resume_text = narrative + "\n" + "\n".join(lines) if narrative else "\n".join(lines)
         except Exception:
             pass
 
-    if not resume_text or len(resume_text.strip()) < 50:
+        # Source 2: Parsed resume text (fallback)
+        if not resume_text or len(resume_text.strip()) < 50:
+            try:
+                from projects.dilly.api.dilly_profile_txt import get_dilly_profile_txt_content
+                resume_text = get_dilly_profile_txt_content(email, max_chars=15000) or resume_text
+            except Exception:
+                pass
+
+        # Source 3: Saved resume sections (last resort)
+        if not resume_text or len(resume_text.strip()) < 50:
+            try:
+                from projects.dilly.api.routers.resume import _load_resume, _sections_to_text, ResumeSection
+                saved = _load_resume(email)
+                if saved and saved.get("sections"):
+                    sections_typed = [ResumeSection(**s) for s in saved["sections"]]
+                    resume_text = _sections_to_text(sections_typed)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    if not resume_text or len(resume_text.strip()) < 30:
+        # Even with no text, return cohort disruption data (not zeros)
+        from dilly_core.ai_disruption import get_cohort_disruption
+        disruption = get_cohort_disruption(cohort)
         return {
             "shield_score": 0,
-            "shield_label": "No resume",
+            "shield_label": "Tell Dilly more",
             "cracks": 0,
             "total_bullets": 0,
             "safe_bullets": 0,
             "at_risk_bullets": 0,
-            "cohort": cohort if 'cohort' in dir() else "General",
-            "disruption_pct": 30,
-            "recommendation": "Upload your resume to get your AI readiness shield score.",
+            "cohort": cohort,
+            "disruption_pct": disruption.get("disruption_pct", 30),
+            "disruption_headline": disruption.get("headline", ""),
+            "ai_resistant_skills": disruption.get("ai_resistant_skills", [])[:5],
+            "ai_vulnerable_skills": disruption.get("ai_vulnerable_skills", [])[:5],
+            "what_to_do": disruption.get("what_to_do", ""),
+            "recommendation": "Talk to Dilly to build your profile. The more Dilly knows, the better your AI readiness score.",
         }
 
     from dilly_core.ai_disruption import score_ai_readiness, get_cohort_disruption
