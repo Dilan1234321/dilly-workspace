@@ -381,6 +381,10 @@ export default function HomeScreen() {
     extrapolate: 'clamp',
   });
 
+  // White screen fix: if loading is done but no profile loaded, show retry state
+  const dataLoaded = !loading && (profile?.name || profile?.email || audit?.has_audit || cohortScores.length > 0);
+  const showEmptyState = !loading && !dataLoaded;
+
   if (loading) {
     return (
       <View style={[s.container]}>
@@ -413,6 +417,25 @@ export default function HomeScreen() {
             <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
             <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
           </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  if (showEmptyState) {
+    return (
+      <View style={[s.container, { paddingTop: insets.top }]}>
+        <ScrollView
+          contentContainerStyle={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
+        >
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.t3} />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.t1, marginTop: 16, textAlign: 'center' }}>
+            Couldn't load the career center
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.t2, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
+            Check your connection and pull down to refresh.
+          </Text>
         </ScrollView>
       </View>
     );
@@ -468,7 +491,7 @@ export default function HomeScreen() {
               style={s.dailyActionBanner}
               onPress={() => openDillyOverlay({
                 isPaid: true,
-                initialMessage: `Today's recommendation for me: "${brief.streak.daily_action}". Help me do this right now, step by step.`,
+                initialMessage: `Today's recommendation for me: "${brief?.streak?.daily_action || ''}". Help me do this right now, step by step.`,
               })}
               scaleDown={0.98}
             >
