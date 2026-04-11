@@ -26,9 +26,11 @@ interface Props {
   onToggle: (cohortId: string, added: boolean) => void;
   /** Maximum cohorts allowed (default 5) */
   maxCohorts?: number;
+  /** Cohorts that can't be removed (from majors/minors) */
+  protectedCohorts?: string[];
 }
 
-export default function CohortPicker({ visible, onClose, activeCohorts, onToggle, maxCohorts = 5 }: Props) {
+export default function CohortPicker({ visible, onClose, activeCohorts, onToggle, maxCohorts = 5, protectedCohorts = [] }: Props) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
 
@@ -45,6 +47,10 @@ export default function CohortPicker({ visible, onClose, activeCohorts, onToggle
   function handleToggle(cohortId: string) {
     const isActive = activeCohorts.includes(cohortId);
     if (isActive) {
+      if (protectedCohorts.includes(cohortId)) {
+        Alert.alert('Cannot remove', 'This cohort comes from your major or minor and cannot be removed.');
+        return;
+      }
       if (activeCohorts.length <= 1) {
         Alert.alert('Cannot remove', 'You need at least one cohort on your profile.');
         return;

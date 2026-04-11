@@ -318,15 +318,57 @@ export default function MyDillyProfileScreen() {
             {/* Expanded category details */}
             {expandedCat && data?.grouped?.[expandedCat] && (
               <View style={d.expandedFacts}>
-                {data.grouped[expandedCat].slice(0, 5).map((fact, i) => (
-                  <View key={fact.id || i} style={d.factRow}>
+                {data.grouped[expandedCat].slice(0, 8).map((fact, i) => (
+                  <AnimatedPressable
+                    key={fact.id || i}
+                    style={d.factRow}
+                    onPress={() => {
+                      Alert.alert(fact.label, fact.value, [
+                        { text: 'Edit', onPress: () => openDillyOverlay({
+                          isPaid: true,
+                          initialMessage: `I want to update something in my profile. Currently it says "${fact.label}: ${fact.value}". Help me update this — ask me what the correct information should be.`,
+                        })},
+                        { text: 'Delete', style: 'destructive', onPress: async () => {
+                          try {
+                            await dilly.fetch(`/memory/items/${fact.id}`, { method: 'DELETE' });
+                            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                            setData(prev => {
+                              if (!prev) return prev;
+                              const items = prev.items.filter(it => it.id !== fact.id);
+                              const grouped: Record<string, any[]> = {};
+                              for (const item of items) {
+                                if (!grouped[item.category]) grouped[item.category] = [];
+                                grouped[item.category].push(item);
+                              }
+                              return { ...prev, items, grouped };
+                            });
+                          } catch {}
+                        }},
+                        { text: 'Cancel', style: 'cancel' },
+                      ]);
+                    }}
+                    scaleDown={0.98}
+                  >
                     <View style={[d.factDot, { backgroundColor: STRENGTH_CATEGORIES[expandedCat]?.color || colors.t3 }]} />
                     <View style={{ flex: 1 }}>
                       <Text style={d.factLabel}>{fact.label}</Text>
                       <Text style={d.factValue}>{fact.value}</Text>
                     </View>
-                  </View>
+                    <Ionicons name="ellipsis-horizontal" size={14} color={colors.t3} />
+                  </AnimatedPressable>
                 ))}
+                {/* Add new fact */}
+                <AnimatedPressable
+                  style={[d.factRow, { borderTopWidth: 1, borderTopColor: colors.b1, paddingTop: 10 }]}
+                  onPress={() => openDillyOverlay({
+                    isPaid: true,
+                    initialMessage: `I want to add something new to my ${STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat} profile. Ask me what I want to add.`,
+                  })}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="add-circle" size={16} color={colors.gold} />
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: colors.gold }}>Add to {STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat}</Text>
+                </AnimatedPressable>
               </View>
             )}
           </FadeInView>
