@@ -94,7 +94,7 @@ export default function AppLayout() {
             />
           ),
           tabBarActiveTintColor: '#58A6FF',
-          tabBarInactiveTintColor: '#484F58',
+          tabBarInactiveTintColor: '#8B949E',
           tabBarStyle: {
             backgroundColor: '#0D1117',
             borderTopWidth: 1,
@@ -102,6 +102,11 @@ export default function AppLayout() {
             paddingBottom: insets.bottom,
             paddingTop: 6,
             height: 49 + insets.bottom,
+          },
+          tabBarLabelStyle: {
+            fontSize: 9,
+            fontWeight: '500',
+            marginTop: 2,
           },
         }}
       />
