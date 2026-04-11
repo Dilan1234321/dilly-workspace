@@ -307,8 +307,8 @@ def _compute_brief(
                 "kind": "score",
                 "headline": f"{round(gap)} {'point' if round(gap) == 1 else 'points'} away from {company}",
                 "body": f"Your Dilly score is {round(current)}. {company}'s bar is {round(bar)}.",
-                "action_label": "See what to fix",
-                "action_route": "/(app)/resume-editor",
+                "action_label": "See breakdown",
+                "action_route": "/(app)/score-detail",
             })
         else:
             over = current - bar
@@ -343,7 +343,29 @@ def _compute_brief(
                 "action_route": "/(app)/score-detail",
             })
 
-    # Card 3: stale applications or pipeline progress
+    # Card 3: dimension insight — tell user their weakest dimension
+    if has_audit and score.get("scores"):
+        scores_raw = score["scores"]
+        dims = {"Smart": scores_raw.get("smart", 0), "Grit": scores_raw.get("grit", 0), "Build": scores_raw.get("build", 0)}
+        weakest = min(dims, key=dims.get)
+        strongest = max(dims, key=dims.get)
+        spread = dims[strongest] - dims[weakest]
+        if spread >= 8:
+            dim_tips = {
+                "Smart": "Add quantified results and metrics to your bullets.",
+                "Grit": "Show persistence — long tenures, promotions, or comeback stories.",
+                "Build": "Highlight projects you shipped end-to-end.",
+            }
+            facts.append({
+                "id": "dim_insight",
+                "kind": "insight",
+                "headline": f"{weakest} is your biggest opportunity ({round(dims[weakest])})",
+                "body": dim_tips.get(weakest, "Focus here for the fastest score improvement."),
+                "action_label": "See details",
+                "action_route": "/(app)/score-detail",
+            })
+
+    # Card 4: stale applications or pipeline progress
     if pipeline.get("silent_2_weeks", 0) > 0:
         n = pipeline["silent_2_weeks"]
         facts.append({
@@ -364,7 +386,9 @@ def _compute_brief(
             "action_label": "Open drafts",
             "action_route": "/(app)/internship-tracker",
         })
-    elif top_jobs:
+
+    # Card 5: job match
+    if top_jobs:
         job = top_jobs[0]
         facts.append({
             "id": "new_match",
@@ -375,7 +399,7 @@ def _compute_brief(
             "action_route": f"/(app)/jobs?focus={job.get('id', '')}",
         })
 
-    return facts[:3]
+    return facts[:4]
 
 
 # ── "Do this now" single actionable card ─────────────────────────────────
@@ -451,10 +475,10 @@ def _compute_do_now(
         gap = round(bar - current)
         return {
             "kind": "close_gap",
-            "title": f"Close {gap} {'point' if gap == 1 else 'points'} on your resume",
-            "subtitle": f"Open the editor and tackle your weakest section.",
-            "action_label": "Open editor",
-            "action_route": "/(app)/resume-editor",
+            "title": f"Close the {gap}-point gap to {company}",
+            "subtitle": f"Ask Dilly what to improve first.",
+            "action_label": "Ask Dilly",
+            "action_route": "/(app)/score-detail",
             "action_payload": None,
         }
 
@@ -484,10 +508,10 @@ def _compute_do_now(
     # Default fallback
     return {
         "kind": "polish",
-        "title": "Tighten your strongest bullet",
-        "subtitle": "Small improvements compound. Open the editor.",
-        "action_label": "Open editor",
-        "action_route": "/(app)/resume-editor",
+        "title": "Talk to Dilly about your next move",
+        "subtitle": "Get personalized advice on what to focus on.",
+        "action_label": "Open Dilly",
+        "action_route": "/(app)/feedback",
         "action_payload": None,
     }
 

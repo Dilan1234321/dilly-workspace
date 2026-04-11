@@ -288,7 +288,7 @@ def _fallback_feed(
     s_cohort_scores: dict | None = None,
 ):
     """Serve the feed using on-the-fly scoring (no match_scores rows needed)."""
-    where = ["i.status = 'active'"]
+    where = ["i.status = 'active'", "i.description IS NOT NULL", "length(i.description) > 100"]
     params: list = []
 
     if tab != "all":
@@ -332,6 +332,14 @@ def _fallback_feed(
     for r in rows:
         if r["id"] in dismissed:
             continue
+
+        # Fallback: derive S/G/B from quality_score when not explicitly set
+        if not r["required_smart"] and r["quality_score"]:
+            qs = float(r["quality_score"])
+            # Split evenly with slight Smart emphasis (most jobs reward this)
+            r["required_smart"] = round(qs * 0.38, 1)
+            r["required_grit"]  = round(qs * 0.32, 1)
+            r["required_build"] = round(qs * 0.30, 1)
 
         # Try cohort-specific readiness first; fall back to flat required scores
         cr_list, cohort_rd = _cohort_readiness(
