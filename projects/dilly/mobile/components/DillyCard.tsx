@@ -11,7 +11,7 @@
 import { useRef, useState } from 'react';
 import {
   View, Text, Image, StyleSheet, Dimensions, TouchableOpacity,
-  TextInput, ScrollView, Alert, Share,
+  TextInput, ScrollView, Alert, Share, Animated, Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 // Lazy-load native modules to prevent crash if not properly linked
@@ -60,36 +60,20 @@ function CardFront({ data }: { data: CardData }) {
 
       {/* Right: Info */}
       <View style={c.infoSection}>
-        <Text style={c.cardName}>{data.name || 'Your Name'}</Text>
-        <View style={{ height: 6 }} />
-        <Text style={c.cardSchool}>{data.school || 'Your School'}</Text>
-        <Text style={c.cardMajor}>
-          {data.major || 'Your Major'}{data.classYear ? `, Class of ${data.classYear}` : ''}
-        </Text>
+        <Text style={c.cardName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{data.name || 'Your Name'}</Text>
+        {data.school ? <Text style={c.cardSchool}>{data.school}</Text> : null}
         {data.tagline ? <Text style={c.cardTagline}>{data.tagline}</Text> : null}
+        {data.major ? (
+          <Text style={c.cardMajor}>
+            {data.major}{data.classYear ? `, Class of ${data.classYear}` : ''}
+          </Text>
+        ) : null}
 
         <View style={{ flex: 1 }} />
 
-        <Text style={c.cardEmail}>{data.email || 'your@email.com'}</Text>
-
-        <View style={c.qrRow}>
-          <View style={{ flex: 1 }} />
-          <View style={c.qrWrap}>
-            {QRCode ? (
-              <QRCode
-                value={`https://${profileUrl}`}
-                size={50}
-                color={DILLY_BLUE}
-                backgroundColor="#FFFFFF"
-              />
-            ) : (
-              <View style={{ width: 50, height: 50, backgroundColor: '#F3F4F6', borderRadius: 4, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontSize: 8, color: GRAY }}>QR</Text>
-              </View>
-            )}
-            <Text style={c.qrUrl}>{profileUrl}</Text>
-          </View>
-        </View>
+        <Text style={c.cardEmail}>{data.email || ''}</Text>
+        {(data as any).phone ? <Text style={c.cardEmail}>{(data as any).phone}</Text> : null}
+        <Text style={{ fontSize: 9, color: LIGHT_GRAY, marginTop: 4 }}>{profileUrl}</Text>
       </View>
     </View>
   );
@@ -100,7 +84,7 @@ function CardFront({ data }: { data: CardData }) {
 function CardBack() {
   return (
     <View style={[c.card, { justifyContent: 'center', alignItems: 'center' }]}>
-      <Text style={{ fontSize: 28, fontWeight: '900', color: DILLY_BLUE, letterSpacing: 4 }}>DILLY</Text>
+      <Image source={require('../assets/logo.png')} style={{ width: 120, height: 40 }} resizeMode="contain" />
     </View>
   );
 }
@@ -115,7 +99,20 @@ interface DillyCardEditorProps {
 export default function DillyCardEditor({ initialData, onSave }: DillyCardEditorProps) {
   const [data, setData] = useState<CardData>(initialData);
   const [showBack, setShowBack] = useState(false);
-  const frontRef = useRef<ViewShot>(null);
+  const frontRef = useRef<any>(null);
+  const flipAnim = useRef(new Animated.Value(0)).current;
+
+  function handleFlip() {
+    const toValue = showBack ? 0 : 1;
+    Animated.timing(flipAnim, {
+      toValue,
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => setShowBack(!showBack));
+  }
+
+  const flipRotate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
 
   function update(key: keyof CardData, value: string) {
     setData(prev => ({ ...prev, [key]: value }));
@@ -144,14 +141,14 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
   return (
     <View style={{ gap: 16 }}>
       {/* Live preview */}
-      <TouchableOpacity onPress={() => setShowBack(!showBack)} activeOpacity={0.9}>
-        {showBack ? (
-          <CardBack />
-        ) : (
-          <View ref={frontRef as any}>
-            <CardFront data={data} />
-          </View>
-        )}
+      <TouchableOpacity onPress={handleFlip} activeOpacity={0.9}>
+        <Animated.View style={{ transform: [{ perspective: 1000 }, { rotateY: flipRotate }] }}>
+          {showBack ? <CardBack /> : (
+            <View ref={frontRef}>
+              <CardFront data={data} />
+            </View>
+          )}
+        </Animated.View>
       </TouchableOpacity>
       <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
         Tap card to flip
@@ -177,13 +174,16 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
         </View>
       </View>
       <View style={c.field}>
-        <Text style={c.fieldLabel}>Tagline (optional)</Text>
+        <Text style={c.fieldLabel}>Tagline</Text>
         <TextInput style={c.fieldInput} value={data.tagline} onChangeText={v => update('tagline', v.slice(0, 50))} placeholder="e.g. Aspiring Investment Banker" placeholderTextColor={LIGHT_GRAY} maxLength={50} />
       </View>
       <View style={c.field}>
         <Text style={c.fieldLabel}>Email</Text>
         <TextInput style={c.fieldInput} value={data.email} onChangeText={v => update('email', v)} placeholder="you@email.com" placeholderTextColor={LIGHT_GRAY} keyboardType="email-address" autoCapitalize="none" />
-        <Text style={c.fieldHint}>This email will be visible on your card</Text>
+      </View>
+      <View style={c.field}>
+        <Text style={c.fieldLabel}>Phone</Text>
+        <TextInput style={c.fieldInput} value={(data as any).phone || ''} onChangeText={v => setData(prev => ({ ...prev, phone: v } as any))} placeholder="(555) 123-4567" placeholderTextColor={LIGHT_GRAY} keyboardType="phone-pad" />
       </View>
       <View style={c.field}>
         <Text style={c.fieldLabel}>Profile URL</Text>
@@ -231,7 +231,7 @@ const c = StyleSheet.create({
 
   // Info section (right 75%)
   infoSection: { flex: 1, padding: 16, justifyContent: 'flex-start' },
-  cardName: { fontSize: 18, fontWeight: '700', color: DARK },
+  cardName: { fontSize: 22, fontWeight: '800', color: DARK, letterSpacing: -0.3 },
   cardSchool: { fontSize: 12, color: GRAY },
   cardMajor: { fontSize: 12, color: GRAY },
   cardTagline: { fontSize: 11, color: GRAY, fontStyle: 'italic', marginTop: 4 },
