@@ -21,6 +21,7 @@ import { parseCohortScores, COHORT_META, type CohortScore } from '../../lib/coho
 import CohortSwitcher from '../../components/CohortSwitcher';
 import CohortPicker from '../../components/CohortPicker';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import FadeInView from '../../components/FadeInView';
 import EditProfileModal from '../../components/EditProfileModal';
 
 const GOLD  = '#2B3A8E';
@@ -332,7 +333,7 @@ export default function ProfileScreen() {
       >
 
         {/* \u2500\u2500 Hero \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
-        <View style={ps.hero}>
+        <FadeInView delay={0}><View style={ps.hero}>
           {photoUri ? (
             <Image source={{ uri: photoUri }} style={ps.heroPhoto} />
           ) : (
@@ -582,6 +583,7 @@ export default function ProfileScreen() {
           <Ionicons name="share-outline" size={16} color={GOLD} />
           <Text style={ps.shareBtnText}>Share your Dilly card</Text>
         </TouchableOpacity>
+        </FadeInView>
 
       </ScrollView>
 

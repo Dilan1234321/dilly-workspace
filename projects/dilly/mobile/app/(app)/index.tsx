@@ -382,7 +382,7 @@ export default function HomeScreen() {
   });
 
   // White screen fix: if loading is done but no profile loaded, show retry state
-  const dataLoaded = !loading && (profile?.name || profile?.email || audit?.has_audit || cohortScores.length > 0);
+  const dataLoaded = !loading && ((profile as any)?.name || (profile as any)?.email || audit?.has_audit || cohortScores.length > 0);
   const showEmptyState = !loading && !dataLoaded;
 
   if (loading) {
