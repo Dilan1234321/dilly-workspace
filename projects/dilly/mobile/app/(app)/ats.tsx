@@ -433,7 +433,7 @@ export default function ATSScreen() {
       issues,
       tips: [],
     }));
-    router.push(`/resume-editor?ats_fix=1&ats_data=${fixData}`);
+    router.push('/(app)/feedback');
   }
 
   // Build mock scan results for display when we have vendor sim data

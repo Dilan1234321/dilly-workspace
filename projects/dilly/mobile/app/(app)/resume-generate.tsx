@@ -399,9 +399,9 @@ export default function ResumeGenerateScreen() {
               style={[styles.actionBtn, styles.actionBtnPrimary]}
               onPress={() => {
                 if (variantId) {
-                  router.replace({ pathname: '/(app)/resume-editor', params: { variantId } });
+                  router.replace('/(app)/my-dilly-profile');
                 } else {
-                  router.replace('/(app)/resume-editor');
+                  router.replace('/(app)/my-dilly-profile');
                 }
               }}
             >

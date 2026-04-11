@@ -295,7 +295,7 @@ export default function FeedbackScreen() {
               <View style={f.calloutActions}>
                 <AnimatedPressable
                   style={f.calloutBtn}
-                  onPress={() => router.push('/(app)/resume-editor')}
+                  onPress={() => router.push('/(app)/my-dilly-profile')}
                   scaleDown={0.97}
                 >
                   <Ionicons name="document-text-outline" size={13} color={GOLD} />
@@ -569,7 +569,7 @@ export default function FeedbackScreen() {
               <Ionicons name="flash" size={16} color="#fff" />
               <Text style={f.ctaPrimaryText}>Run new audit</Text>
             </AnimatedPressable>
-            <AnimatedPressable style={f.ctaSecondary} onPress={() => router.push('/(app)/resume-editor')} scaleDown={0.97}>
+            <AnimatedPressable style={f.ctaSecondary} onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.97}>
               <Ionicons name="document-text-outline" size={16} color={GOLD} />
               <Text style={f.ctaSecondaryText}>Open editor</Text>
             </AnimatedPressable>

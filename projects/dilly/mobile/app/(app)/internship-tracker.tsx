@@ -446,7 +446,7 @@ export default function InternshipTrackerScreen() {
   }
 
   function handleTailor(app: Application) {
-    router.push(`/(app)/resume-editor?showQuickTailor=1`);
+    router.push('/(app)/resume-generate');
   }
 
   function handleFollowUp(app: Application) {

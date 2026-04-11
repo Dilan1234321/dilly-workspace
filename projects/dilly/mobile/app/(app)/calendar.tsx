@@ -233,7 +233,7 @@ function InterviewCountdownHero({
           style={cs.countdownCalBtn}
           onPress={() => {
             router.push({
-              pathname: '/(app)/resume-editor',
+              pathname: '/(app)/resume-generate',
               params: { focusDimension: 'tailor' },
             });
           }}

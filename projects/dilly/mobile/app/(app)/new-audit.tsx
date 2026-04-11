@@ -369,7 +369,7 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
             const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
             await AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(newAudit));
           } catch {}
-          router.push(newAudit.rubric_analysis ? '/(app)/feedback' : '/(app)/score-detail');
+          router.push('/(app)/feedback');
         }}
         scaleDown={0.97}
       >
@@ -850,7 +850,7 @@ export default function NewAuditScreen() {
               <View style={ns.quickActions}>
                 <AnimatedPressable
                   style={[ns.quickActionBtn, { backgroundColor: GOLD }]}
-                  onPress={() => router.push('/(app)/resume-editor')}
+                  onPress={() => router.push('/(app)/feedback')}
                   scaleDown={0.97}
                 >
                   <Ionicons name="create-outline" size={14} color="#FFFFFF" />

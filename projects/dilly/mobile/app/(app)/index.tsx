@@ -681,7 +681,7 @@ export default function HomeScreen() {
                     <AnimatedPressable
                       style={s.doNowCard}
                       onPress={() => {
-                        try { router.push((doNow.action_route || '/(app)/resume-editor') as any); } catch {}
+                        try { router.push((doNow.action_route || '/(app)/feedback') as any); } catch {}
                       }}
                       scaleDown={0.985}
                     >
@@ -720,7 +720,7 @@ export default function HomeScreen() {
                           key={key}
                           style={s.briefCard}
                           onPress={() => {
-                            try { router.push((card.action_route || '/(app)/resume-editor') as any); } catch {}
+                            try { router.push((card.action_route || '/(app)/feedback') as any); } catch {}
                           }}
                           scaleDown={0.985}
                         >

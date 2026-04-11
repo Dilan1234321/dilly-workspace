@@ -365,7 +365,7 @@ export default function ProfileScreen() {
         {hasAudit && (
           <TouchableOpacity
             style={ps.scoreCard}
-            onPress={() => router.push('/(app)/score-detail')}
+            onPress={() => router.push('/(app)/feedback')}
             activeOpacity={0.8}
           >
             <View style={ps.scoreCardLeft}>

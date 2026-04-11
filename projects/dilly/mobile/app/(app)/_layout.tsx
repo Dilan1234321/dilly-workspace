@@ -142,14 +142,8 @@ export default function AppLayout() {
       />
 
       {/* ── Hidden screens (accessible via navigation) ──── */}
-      <Tabs.Screen
-        name="resume-editor"
-        options={{ href: null, animation: 'fade' }}
-      />
-      <Tabs.Screen
-        name="score-detail"
-        options={{ href: null, animation: 'fade' }}
-      />
+      <Tabs.Screen name="resume-editor" options={{ href: null, animation: 'fade' }} />
+      <Tabs.Screen name="score-detail" options={{ href: null, animation: 'fade' }} />
       <Tabs.Screen
         name="profile"
         options={{ href: null, animation: 'fade' }}
