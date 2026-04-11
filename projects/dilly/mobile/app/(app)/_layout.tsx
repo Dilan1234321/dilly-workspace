@@ -64,6 +64,7 @@ export default function AppLayout() {
         animation: 'shift',
       }}
     >
+      {/* ── Tab 1: Career Center (Home) ──────────────────── */}
       <Tabs.Screen
         name="index"
         options={{
@@ -79,32 +80,8 @@ export default function AppLayout() {
           },
         }}
       />
-      <Tabs.Screen
-        name="resume-editor"
-        options={{
-          title: 'Resume',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'document-text' : 'document-text-outline'}
-              size={20}
-              color={focused ? colors.t1 : colors.t3}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="jobs"
-        options={{
-          title: 'Jobs',
-          tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name={focused ? 'briefcase' : 'briefcase-outline'}
-              size={20}
-              color={focused ? colors.t1 : colors.t3}
-            />
-          ),
-        }}
-      />
+
+      {/* ── Tab 2: AI Arena ──────────────────────────────── */}
       <Tabs.Screen
         name="ai-arena"
         options={{
@@ -122,93 +99,91 @@ export default function AppLayout() {
             backgroundColor: '#0D1117',
             borderTopWidth: 1,
             borderTopColor: '#21262D',
+            paddingBottom: insets.bottom,
             paddingTop: 6,
+            height: 49 + insets.bottom,
           },
         }}
       />
-      <Tabs.Screen
-        name="score-detail"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
-      />
+
+      {/* ── Tab 3: My Dilly (Profile/Identity) ───────────── */}
       <Tabs.Screen
         name="my-dilly-profile"
         options={{
-          href: null,
-          animation: 'fade',
+          title: 'My Dilly',
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              size={22}
+              color={focused ? colors.t1 : colors.t3}
+            />
+          ),
         }}
+      />
+
+      {/* ── Tab 4: Jobs ──────────────────────────────────── */}
+      <Tabs.Screen
+        name="jobs"
+        options={{
+          title: 'Jobs',
+          tabBarIcon: ({ focused }) => (
+            <Ionicons
+              name={focused ? 'briefcase' : 'briefcase-outline'}
+              size={20}
+              color={focused ? colors.t1 : colors.t3}
+            />
+          ),
+        }}
+      />
+
+      {/* ── Hidden screens (accessible via navigation) ──── */}
+      <Tabs.Screen
+        name="resume-editor"
+        options={{ href: null, animation: 'fade' }}
+      />
+      <Tabs.Screen
+        name="score-detail"
+        options={{ href: null, animation: 'fade' }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="settings"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
-<Tabs.Screen
+      <Tabs.Screen
         name="voice"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="calendar"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="internship-tracker"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="new-audit"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="ats"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="resume-generate"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="feedback"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
         name="interview-practice"
-        options={{
-          href: null,
-          animation: 'fade',
-        }}
+        options={{ href: null, animation: 'fade' }}
       />
     </Tabs>
     <DillyAIOverlayWrapper />
