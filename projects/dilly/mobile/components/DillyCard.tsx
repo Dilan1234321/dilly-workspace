@@ -47,16 +47,25 @@ interface CardData {
 
 // ── Card Front ───────────────────────────────────────────────────────────────
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
 function CardFront({ data }: { data: CardData }) {
   const initial = data.name ? data.name[0].toUpperCase() : '?';
   const profileUrl = `hellodilly.com/p/${data.username || 'you'}`;
+  // Cache-bust photo so it updates when changed
+  const photoWithCache = data.photoUri ? `${data.photoUri}${data.photoUri.includes('?') ? '&' : '?'}_t=${Date.now()}` : null;
 
   return (
     <View style={c.card}>
       {/* Left: Photo */}
       <View style={c.photoSection}>
-        {data.photoUri ? (
-          <Image source={{ uri: data.photoUri }} style={c.photo} />
+        {photoWithCache ? (
+          <Image source={{ uri: photoWithCache }} style={c.photo} />
         ) : (
           <View style={c.photoPlaceholder}>
             <Text style={c.photoInitial}>{initial}</Text>
@@ -78,8 +87,8 @@ function CardFront({ data }: { data: CardData }) {
         <View style={{ flex: 1 }} />
 
         {data.email ? <Text style={c.cardEmail}>{data.email}</Text> : null}
-        {data.phones?.filter(p => p.number).map((p, i) => (
-          <Text key={i} style={c.cardPhone}>{p.label}: {p.number}</Text>
+        {data.phones?.filter(p => p.number.replace(/\D/g, '').length >= 3).map((p, i) => (
+          <Text key={i} style={c.cardPhone}>{p.label}: {formatPhone(p.number)}</Text>
         ))}
         <Text style={{ fontSize: 9, color: LIGHT_GRAY, marginTop: 4 }}>{profileUrl}</Text>
       </View>
@@ -215,10 +224,11 @@ export default function DillyCardEditor({ initialData, onSave }: DillyCardEditor
             />
             <TextInput
               style={[c.fieldInput, { flex: 1 }]}
-              value={phone.number}
+              value={formatPhone(phone.number)}
               onChangeText={v => {
+                const digits = v.replace(/\D/g, '').slice(0, 10);
                 const updated = [...(data.phones || [])];
-                updated[i] = { ...updated[i], number: v };
+                updated[i] = { ...updated[i], number: digits };
                 setData(prev => ({ ...prev, phones: updated }));
               }}
               placeholder="(555) 123-4567"
@@ -265,7 +275,7 @@ const c = StyleSheet.create({
   card: {
     width: CARD_W,
     height: CARD_H,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFAF8',
     borderRadius: 12,
     flexDirection: 'row',
     overflow: 'hidden',
@@ -277,7 +287,7 @@ const c = StyleSheet.create({
   },
 
   // Photo section (left 25%)
-  photoSection: { width: '25%', height: '100%' },
+  photoSection: { width: '30%', height: '100%' },
   photo: { width: '100%', height: '100%', resizeMode: 'cover' },
   photoPlaceholder: {
     width: '100%', height: '100%', backgroundColor: DILLY_BLUE,
