@@ -114,6 +114,250 @@ def _detect_track_for_audit(major: str, text: str) -> str:
     return get_track_from_major_and_text(major or "Unknown", text or "")
 
 
+# ── Profile-Based Scoring (no resume required) ──────────────────────────────
+
+PROFILE_SCORE_PROMPT = """You are the Dilly Scorer. You evaluate a student's professional readiness based on their Dilly Profile, which is everything Dilly knows about them: their education, experiences, skills, projects, goals, and anything they've shared.
+
+You score three dimensions:
+- Smart (0-100): Academic rigor, intellectual depth, relevant knowledge. GPA, major difficulty, honors, research, certifications, coursework.
+- Grit (0-100): Leadership, impact, hustle. Roles held, quantifiable outcomes, work density, initiative, consistency.
+- Build (0-100): Track-specific proof of readiness. For Tech: projects, deployments, tech stack. For Pre-Health: clinical hours, shadowing, research. For Business: deals, campaigns, strategy. For each field, what proves they can do the job.
+
+RULES:
+1. Only score based on information in the profile. Never invent or assume.
+2. If a dimension has little evidence, score it low but explain what's missing.
+3. Be specific: cite the exact fact, experience, or skill from the profile.
+4. Be calibrated: a student with strong GPA + honors + research in a rigorous major should score Smart 70-85. A student who founded a company and led teams should score Grit 70-85.
+5. The final_score uses cohort-specific weights (provided below).
+6. Never use em dashes. Use hyphens, commas, or periods.
+
+Output valid JSON only:
+{
+  "smart_score": number 0-100,
+  "grit_score": number 0-100,
+  "build_score": number 0-100,
+  "final_score": number 0-100,
+  "dilly_take": "Strength-first headline. Open with what's working, then the one thing that would raise their score most. Second person. 20-35 words.",
+  "audit_findings": ["Smart: ...", "Grit: ...", "Build: ..."],
+  "evidence": {"smart": "one sentence citing specific profile facts", "grit": "one sentence", "build": "one sentence"},
+  "gaps": ["What Dilly doesn't know yet that would help score higher. 2-4 specific questions or missing info."],
+  "recommendations": [{"type": "action", "title": "short label", "action": "concrete next step", "score_target": "Smart|Grit|Build"}]
+}"""
+
+
+def _build_profile_text_for_scoring(profile: dict, facts: list[dict]) -> str:
+    """Assemble all profile data into a structured text block for the LLM scorer."""
+    parts: list[str] = []
+
+    # Identity
+    name = profile.get("name") or profile.get("full_name") or "Unknown"
+    parts.append(f"Name: {name}")
+    school = profile.get("school") or ""
+    if school:
+        parts.append(f"School: {school}")
+    major = profile.get("major") or ""
+    minors = profile.get("minors") or profile.get("minor") or ""
+    if major:
+        parts.append(f"Major: {major}")
+    if minors:
+        parts.append(f"Minor(s): {minors if isinstance(minors, str) else ', '.join(minors)}")
+    gpa = profile.get("gpa") or profile.get("transcript_gpa")
+    if gpa:
+        parts.append(f"GPA: {gpa}")
+    class_year = profile.get("class_year") or profile.get("graduation_year") or ""
+    if class_year:
+        parts.append(f"Class Year: {class_year}")
+    target = profile.get("application_target") or "exploring"
+    parts.append(f"Application Target: {target}")
+
+    # Cohorts
+    cohorts = profile.get("cohorts") or []
+    if cohorts:
+        parts.append(f"Cohorts: {', '.join(cohorts)}")
+
+    # Profile facts (organized by category)
+    if facts:
+        by_cat: dict[str, list[str]] = {}
+        for f in facts:
+            cat = f.get("category", "other")
+            text = f"{f.get('label', '')}: {f.get('value', '')}".strip()
+            if text and text != ":":
+                by_cat.setdefault(cat, []).append(text)
+        for cat, items in sorted(by_cat.items()):
+            parts.append(f"\n[{cat.upper()}]")
+            for item in items[:30]:
+                parts.append(f"  - {item}")
+
+    # Beyond resume (Voice-captured)
+    beyond = profile.get("beyond_resume") or []
+    if beyond:
+        parts.append("\n[ADDITIONAL INFO (shared with Dilly)]")
+        for item in beyond[:20]:
+            if isinstance(item, dict):
+                t = item.get("type", "")
+                text = item.get("text", "")
+                if text:
+                    parts.append(f"  - [{t}] {text}")
+
+    # Experience expansion
+    expansion = profile.get("experience_expansion") or []
+    if expansion:
+        parts.append("\n[EXPERIENCE DETAILS]")
+        for entry in expansion[:10]:
+            if not isinstance(entry, dict):
+                continue
+            role = entry.get("role_label", "")
+            org = entry.get("organization", "")
+            label = f"{role} at {org}" if org else role
+            if not label:
+                continue
+            parts.append(f"  {label}")
+            skills = entry.get("skills") or []
+            if skills:
+                parts.append(f"    Skills: {', '.join(skills[:15])}")
+            tools = entry.get("tools_used") or []
+            if tools:
+                parts.append(f"    Tools: {', '.join(tools[:15])}")
+            omitted = entry.get("omitted") or []
+            if omitted:
+                parts.append(f"    Not on resume: {'; '.join(omitted[:5])}")
+
+    # Goals
+    goals = profile.get("goals") or []
+    if goals:
+        parts.append(f"\nGoals: {', '.join(str(g) for g in goals[:5])}")
+
+    return "\n".join(parts)
+
+
+@router.post("/audit/profile-score")
+async def audit_profile_score(request: Request, body: dict = Body(default={})):
+    """Score the user's Dilly Profile. No resume upload required.
+    Reads all profile facts and profile data, sends to LLM for S/G/B scoring.
+    """
+    user = deps.require_auth(request)
+    email = user["email"]
+
+    # Load profile + facts
+    from projects.dilly.api.profile_store import get_profile
+    from projects.dilly.api.memory_surface_store import get_items as get_facts
+
+    profile = get_profile(email) or {}
+    facts = get_facts(email)
+
+    profile_text = _build_profile_text_for_scoring(profile, facts)
+
+    if len(profile_text.split()) < 20:
+        raise errors.bad_request(
+            "Your Dilly Profile doesn't have enough information yet. "
+            "Tell Dilly about your experiences, skills, and goals first."
+        )
+
+    # Detect cohort and build cohort-specific instruction
+    major = profile.get("major") or "Unknown"
+    track = _detect_track_for_audit(major, profile_text)
+    cohort = body.get("cohort") or (profile.get("cohorts") or [None])[0] if profile.get("cohorts") else None
+
+    # Get cohort weights if available
+    weight_instruction = ""
+    if cohort:
+        try:
+            from projects.dilly.api.cohort_scoring_weights import COHORT_WEIGHTS
+            w = COHORT_WEIGHTS.get(cohort)
+            if w:
+                weight_instruction = (
+                    f"\nCohort: {cohort}. "
+                    f"Scoring weights: Smart={w['smart']}, Grit={w['grit']}, Build={w['build']}. "
+                    f"Recruiter bar: {w.get('recruiter_bar', 70)}. "
+                    f"Compute final_score as: {w['smart']}*smart + {w['grit']}*grit + {w['build']}*build."
+                )
+        except Exception:
+            pass
+    if not weight_instruction:
+        weight_instruction = "\nUse default weights: final_score = 0.30*smart + 0.45*grit + 0.25*build."
+
+    # Call LLM
+    if not is_llm_available():
+        raise errors.service_unavailable("AI scoring is not available right now.")
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            temperature=0.2,
+            system=PROFILE_SCORE_PROMPT,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"Score this student's Dilly Profile. Track: {track}.{weight_instruction}\n\n"
+                    f"---DILLY PROFILE---\n{profile_text[:12000]}\n---END---"
+                ),
+            }],
+        )
+        raw = response.content[0].text
+        # Parse JSON from response
+        json_start = raw.find("{")
+        json_end = raw.rfind("}") + 1
+        if json_start == -1:
+            raise ValueError("No JSON in response")
+        result = json.loads(raw[json_start:json_end])
+    except json.JSONDecodeError as e:
+        logging.error(f"[profile-score] JSON parse error: {e}")
+        raise errors.service_unavailable("Could not parse scoring response.")
+    except Exception as e:
+        logging.error(f"[profile-score] LLM error: {e}")
+        raise errors.service_unavailable("AI scoring failed. Try again.")
+
+    # Save scores to profile
+    from projects.dilly.api.profile_store import save_profile
+    scores_to_save = {
+        "smart": result.get("smart_score", 0),
+        "grit": result.get("grit_score", 0),
+        "build": result.get("build_score", 0),
+    }
+    save_profile(email, {
+        "overall_smart": scores_to_save["smart"],
+        "overall_grit": scores_to_save["grit"],
+        "overall_build": scores_to_save["build"],
+        "overall_final": result.get("final_score", 0),
+        "has_run_first_audit": True,
+        "last_profile_score_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+
+    # Also update cohort_scores if cohort is known
+    if cohort:
+        existing_cs = profile.get("cohort_scores") or {}
+        if isinstance(existing_cs, str):
+            try:
+                existing_cs = json.loads(existing_cs)
+            except Exception:
+                existing_cs = {}
+        existing_cs[cohort] = {
+            "smart": scores_to_save["smart"],
+            "grit": scores_to_save["grit"],
+            "build": scores_to_save["build"],
+            "final": result.get("final_score", 0),
+            "level": "primary",
+        }
+        save_profile(email, {"cohort_scores": existing_cs})
+
+    return {
+        "scores": scores_to_save,
+        "final_score": result.get("final_score", 0),
+        "dilly_take": result.get("dilly_take", ""),
+        "audit_findings": result.get("audit_findings", []),
+        "evidence": result.get("evidence", {}),
+        "gaps": result.get("gaps", []),
+        "recommendations": result.get("recommendations", []),
+        "track": track,
+        "cohort": cohort,
+        "profile_facts_count": len(facts),
+        "scoring_method": "profile",
+    }
+
+
 def _allowed_resume_file(filename: str) -> bool:
     if not filename:
         return False

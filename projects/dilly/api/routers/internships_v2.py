@@ -598,6 +598,18 @@ async def get_internship_feed(
         cr = r["cohort_readiness"]
         if isinstance(cr, str):
             cr = json.loads(cr)
+        # Parse cohort_requirements for S/G/B display on mobile
+        cq = r.get("cohort_requirements")
+        if isinstance(cq, str):
+            try: cq = json.loads(cq)
+            except Exception: cq = None
+        # Derive flat required_smart/grit/build from first cohort requirement
+        first_cq = (cq or [{}])[0] if cq else {}
+        # Also try first cohort_readiness entry as fallback
+        first_cr = (cr or [{}])[0] if cr else {}
+        req_s = first_cq.get("smart") or first_cr.get("required_smart") or 0
+        req_g = first_cq.get("grit")  or first_cr.get("required_grit")  or 0
+        req_b = first_cq.get("build") or first_cr.get("required_build") or 0
         listings.append({
             "id": r["id"],
             "title": r["title"],
@@ -616,6 +628,10 @@ async def get_internship_feed(
             "rank_score": float(r["rank_score"]) if r["rank_score"] else 0,
             "readiness": r["readiness"],
             "cohort_readiness": cr,
+            "cohort_requirements": cq,
+            "required_smart": float(req_s) if req_s else None,
+            "required_grit": float(req_g) if req_g else None,
+            "required_build": float(req_b) if req_b else None,
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
         })
 
