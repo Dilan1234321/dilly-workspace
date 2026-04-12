@@ -786,7 +786,6 @@ def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
     plan_keywords = ["this week", "your plan", "here's what to do", "step 1", "day 1", "monday", "tuesday"]
     if any(kw in text for kw in plan_keywords):
         # Try to extract numbered steps
-        import re
         steps = re.findall(r'(?:^|\n)\s*(?:\d+[\.\)]\s*|[-*]\s*)(.*?)(?=\n|$)', content)
         if len(steps) >= 3:
             days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -819,8 +818,7 @@ def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
         return {"type": "action_buttons", "buttons": buttons[:3]}
 
     # If discussing a before/after bullet rewrite → bullet comparison
-    before_after = re.findall(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE) if 'import re' or True else []
-    import re
+    before_after = re.findall(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE) if True else []
     before_match = re.search(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE)
     after_match = re.search(r'(?:after|improved|new|rewritten)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE)
     if before_match and after_match:
