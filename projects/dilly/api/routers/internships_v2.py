@@ -314,7 +314,7 @@ def _fallback_feed(
             i.id, i.title, i.description, i.location_city, i.location_state,
             i.work_mode, i.is_paid, i.apply_url, i.deadline, i.job_type,
             i.posted_date, i.required_smart, i.required_grit, i.required_build,
-            i.quality_score, i.cohort_requirements,
+            i.quality_score, i.cohort_requirements, i.quick_glance,
             c.name as company_name, c.logo_url, c.website, c.industry
         FROM internships i
         JOIN companies c ON i.company_id = c.id
@@ -382,6 +382,7 @@ def _fallback_feed(
             "required_grit":  float(r["required_grit"])  if r["required_grit"]  else None,
             "required_build": float(r["required_build"]) if r["required_build"] else None,
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
+            "quick_glance": json.loads(r.get("quick_glance") or "[]") if isinstance(r.get("quick_glance"), str) else (r.get("quick_glance") or []),
         })
 
     # Sort
@@ -575,7 +576,7 @@ async def get_internship_feed(
         SELECT
             i.id, i.title, i.description, i.location_city, i.location_state,
             i.work_mode, i.is_paid, i.apply_url, i.deadline, i.job_type,
-            i.cohort_requirements, i.posted_date,
+            i.cohort_requirements, i.posted_date, i.quick_glance,
             c.name as company_name, c.logo_url, c.website, c.industry,
             m.rank_score, m.readiness, m.cohort_readiness,
             m.location_score, m.work_mode_score, m.compensation_score
@@ -633,6 +634,7 @@ async def get_internship_feed(
             "required_grit": float(req_g) if req_g else None,
             "required_build": float(req_b) if req_b else None,
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
+            "quick_glance": json.loads(r["quick_glance"]) if isinstance(r.get("quick_glance"), str) else (r.get("quick_glance") or []),
         })
 
     conn.close()

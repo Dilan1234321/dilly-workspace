@@ -323,7 +323,7 @@ def classify_unclassified(conn, api_key=None):
     except:
         COHORT_LIST = ["Software Engineering & CS","Data Science & Analytics","Finance & Accounting","Marketing & Advertising","Management & Operations","Consulting & Strategy","Cybersecurity & IT","Healthcare & Clinical","Design & Creative Arts","Media & Communications","Law & Government","Education & Human Development","Social Sciences & Nonprofit","Entrepreneurship & Innovation","Life Sciences & Research","Physical Sciences & Math","Electrical & Computer Engineering","Mechanical & Aerospace Engineering","Civil & Environmental Engineering","Chemical & Biomedical Engineering","Biotech & Pharmaceutical","Economics & Public Policy"]
     
-    SYSTEM = f'You classify internship listings into cohorts and score requirements. COHORTS: {json.dumps(COHORT_LIST)}. Pick 1-3 cohorts. Score each with Smart/Grit/Build (0-100) based on the actual JD. Smart=academic rigor relative to field. Grit=field-relevant leadership/impact. Build=field-specific proof of work. Vague=40-60. ONLY JSON: {{"cohorts":[{{"cohort":"exact name","smart":int,"grit":int,"build":int}}]}}'
+    SYSTEM = f'You classify internship listings into cohorts, score requirements, and extract a quick glance summary. COHORTS: {json.dumps(COHORT_LIST)}. Pick 1-3 cohorts. Score each with Smart/Grit/Build (0-100) based on the actual JD. Smart=academic rigor relative to field. Grit=field-relevant leadership/impact. Build=field-specific proof of work. Vague=40-60. Also extract 3-4 key requirements as short bullet points (most important qualifications, skills, or requirements from the JD). Never use em dashes. ONLY JSON: {{"cohorts":[{{"cohort":"exact name","smart":int,"grit":int,"build":int}}],"quick_glance":["bullet 1","bullet 2","bullet 3"]}}'
 
     print(f"[classify] Classifying {len(listings)} new internships...")
     scored = 0
@@ -336,10 +336,12 @@ def classify_unclassified(conn, api_key=None):
             with urllib.request.urlopen(req, timeout=30) as resp:
                 text = json.loads(resp.read())['content'][0]['text'].strip()
             text = text.replace('```json','').replace('```','').strip()
-            cohorts = [c for c in json.loads(text).get('cohorts',[]) if c.get('cohort') in COHORT_LIST]
+            parsed = json.loads(text)
+            cohorts = [c for c in parsed.get('cohorts',[]) if c.get('cohort') in COHORT_LIST]
             if not cohorts:
                 cohorts = [{'cohort':'Social Sciences & Nonprofit','smart':60,'grit':60,'build':50}]
-            cur.execute('UPDATE internships SET cohort_requirements=%s WHERE id=%s', (json.dumps(cohorts), iid))
+            quick_glance = parsed.get('quick_glance', [])[:4]
+            cur.execute('UPDATE internships SET cohort_requirements=%s, quick_glance=%s WHERE id=%s', (json.dumps(cohorts), json.dumps(quick_glance), iid))
             conn.commit()
             scored += 1
         except:
