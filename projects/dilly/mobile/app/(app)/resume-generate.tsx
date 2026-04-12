@@ -38,6 +38,11 @@ type Stage = 'idle' | 'generating' | 'done' | 'error';
 interface GeneratedSection {
   key: string;
   label: string;
+  contact?: { name?: string; email?: string; phone?: string; location?: string; linkedin?: string };
+  education?: { university?: string; major?: string; minor?: string; graduation?: string; location?: string; gpa?: string; honors?: string };
+  experiences?: { company?: string; role?: string; date?: string; location?: string; bullets?: { text: string }[] }[];
+  projects?: { name?: string; date?: string; tech?: string; bullets?: { text: string }[] }[];
+  simple?: { lines?: string[] };
 }
 
 const GENERATION_STEPS = [
@@ -372,23 +377,59 @@ export default function ResumeGenerateScreen() {
               {sections.map((sec: any, si: number) => (
                 <View key={sec.key ?? si} style={styles.previewSection}>
                   <Text style={styles.previewSectionLabel}>{sec.label ?? sec.key}</Text>
-                  {Array.isArray(sec.entries) && sec.entries.map((entry: any, ei: number) => (
-                    <View key={entry.id ?? ei} style={styles.previewEntry}>
-                      {!!entry.title && <Text style={styles.previewEntryTitle}>{entry.title}{entry.company ? ` — ${entry.company}` : ''}</Text>}
-                      {!!entry.dates && <Text style={styles.previewEntryDates}>{entry.dates}</Text>}
-                      {Array.isArray(entry.bullets) && entry.bullets.map((b: any, bi: number) => (
+
+                  {/* Contact */}
+                  {sec.contact && (
+                    <View style={styles.previewEntry}>
+                      {!!sec.contact.name && <Text style={styles.previewEntryTitle}>{sec.contact.name}</Text>}
+                      <Text style={styles.previewEntryDates}>
+                        {[sec.contact.email, sec.contact.phone, sec.contact.location, sec.contact.linkedin].filter(Boolean).join(' | ')}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Education */}
+                  {sec.education && (
+                    <View style={styles.previewEntry}>
+                      <Text style={styles.previewEntryTitle}>{sec.education.university}</Text>
+                      <Text style={styles.previewEntryDates}>
+                        {[sec.education.major, sec.education.minor ? `Minor: ${sec.education.minor}` : '', sec.education.graduation].filter(Boolean).join(' | ')}
+                      </Text>
+                      {!!sec.education.gpa && <Text style={styles.previewBullet}>GPA: {sec.education.gpa}</Text>}
+                      {!!sec.education.honors && <Text style={styles.previewBullet}>{sec.education.honors}</Text>}
+                    </View>
+                  )}
+
+                  {/* Experiences */}
+                  {Array.isArray(sec.experiences) && sec.experiences.map((exp: any, ei: number) => (
+                    <View key={exp.id ?? ei} style={styles.previewEntry}>
+                      <Text style={styles.previewEntryTitle}>{exp.role}{exp.company ? `, ${exp.company}` : ''}</Text>
+                      <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' | ')}</Text>
+                      {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
                         <Text key={b.id ?? bi} style={styles.previewBullet}>• {typeof b === 'string' ? b : b.text}</Text>
                       ))}
-                      {/* Handle non-experience sections (skills, education with flat text) */}
-                      {typeof entry === 'string' && <Text style={styles.previewBullet}>{entry}</Text>}
                     </View>
                   ))}
-                  {/* Skills-style sections with items array */}
-                  {Array.isArray(sec.items) && (
-                    <Text style={styles.previewBullet}>{sec.items.join(' • ')}</Text>
+
+                  {/* Projects */}
+                  {Array.isArray(sec.projects) && sec.projects.map((proj: any, pi: number) => (
+                    <View key={proj.id ?? pi} style={styles.previewEntry}>
+                      <Text style={styles.previewEntryTitle}>{proj.name}</Text>
+                      <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' | ')}</Text>
+                      {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
+                        <Text key={b.id ?? bi} style={styles.previewBullet}>• {typeof b === 'string' ? b : b.text}</Text>
+                      ))}
+                    </View>
+                  ))}
+
+                  {/* Skills (simple lines) */}
+                  {sec.simple?.lines && (
+                    <View style={styles.previewEntry}>
+                      {sec.simple.lines.map((line: string, li: number) => (
+                        <Text key={li} style={styles.previewBullet}>{line}</Text>
+                      ))}
+                    </View>
                   )}
-                  {/* Flat content */}
-                  {typeof sec.content === 'string' && <Text style={styles.previewBullet}>{sec.content}</Text>}
                 </View>
               ))}
             </View>
