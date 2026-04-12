@@ -119,7 +119,7 @@ export default function VerifyScreen() {
         } else {
           const isNewUser = data.is_new_user !== false;
           if (isNewUser) {
-            router.replace(userType === 'professional' ? '/onboarding/profile-pro' : '/onboarding/profile');
+            router.replace(userType === 'general' || userType === 'professional' ? '/onboarding/profile-pro' : '/onboarding/profile');
           } else {
             router.replace('/(app)');
           }

@@ -1,5 +1,5 @@
 /**
- * Welcome (Professional) — onboarding for non-students.
+ * Welcome (General) -- onboarding for non-students.
  * Accepts any email address. No .edu restriction.
  */
 
@@ -31,14 +31,14 @@ export default function WelcomeProScreen() {
       const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed, user_type: 'professional' }),
+        body: JSON.stringify({ email: trimmed, user_type: 'general' }),
       });
       const data = await res.json();
       if (!res.ok) {
         const detail = data?.detail;
         throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
       }
-      router.push({ pathname: '/onboarding/verify', params: { email: trimmed, userType: 'professional' } });
+      router.push({ pathname: '/onboarding/verify', params: { email: trimmed, userType: 'general' } });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
@@ -60,10 +60,9 @@ export default function WelcomeProScreen() {
       >
         <FadeInView delay={0}>
           <View style={s.top}>
-            <Text style={s.eyebrow}>AI is replacing 50% of entry-level tasks</Text>
-            <Text style={s.headline}>Your personal career{'\n'}guide through the{'\n'}AI takeover.</Text>
+            <Text style={s.headline}>Your career,{'\n'}guided by Dilly.</Text>
             <Text style={s.sub}>
-              Dilly builds a deep profile of who you are, then shows you where you stand in the AI-driven job market.
+              Dilly learns who you are and what you want, then helps you get there.
             </Text>
           </View>
         </FadeInView>
@@ -114,7 +113,6 @@ export default function WelcomeProScreen() {
 const s = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, justifyContent: 'space-between' },
   top: { gap: 12 },
-  eyebrow: { fontSize: 12, fontWeight: '600', color: '#FF453A', letterSpacing: 0.5 },
   headline: { fontSize: 30, fontWeight: '900', color: colors.t1, lineHeight: 36, letterSpacing: -0.5 },
   sub: { fontSize: 15, color: colors.t2, lineHeight: 22 },
   bottom: { gap: 14, marginTop: 32 },

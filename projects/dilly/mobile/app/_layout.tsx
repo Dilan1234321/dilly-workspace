@@ -169,7 +169,11 @@ export default function RootLayout() {
   }, []);
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+        <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34 }} resizeMode="contain" />
+      </View>
+    );
   }
 
   if (phase === 'loading') {

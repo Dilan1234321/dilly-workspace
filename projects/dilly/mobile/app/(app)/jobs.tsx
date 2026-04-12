@@ -408,20 +408,7 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
                 <Ionicons name="sparkles" size={14} color={COBALT} />
                 <Text style={s.dillyBtnText}>Ask Dilly</Text>
               </AnimatedPressable>
-              {tailoredResumeId ? (
-                <AnimatedPressable
-                  style={[s.tailorBtn, { borderColor: GREEN + '40', backgroundColor: GREEN + '08' }]}
-                  onPress={() => router.push({
-                    pathname: '/(app)/resume-generate',
-                    params: { viewId: tailoredResumeId },
-                  })}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="document-text" size={14} color={GREEN} />
-                  <Text style={[s.tailorBtnText, { color: GREEN }]}>Resume</Text>
-                </AnimatedPressable>
-              ) : (
-                <AnimatedPressable
+              <AnimatedPressable
                   style={s.tailorBtn}
                   onPress={() => router.push({
                     pathname: '/(app)/resume-generate',
@@ -429,6 +416,7 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
                       jobTitle: listing.title || '',
                       company: listing.company || '',
                       jd: desc.slice(0, 2000),
+                      fresh: '1',
                     },
                   })}
                   scaleDown={0.97}
@@ -436,7 +424,6 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
                   <Ionicons name="sparkles" size={14} color={colors.t2} />
                   <Text style={s.tailorBtnText}>Tailor</Text>
                 </AnimatedPressable>
-              )}
             </View>
           </View>
         )}

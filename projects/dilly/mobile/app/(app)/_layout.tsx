@@ -5,14 +5,26 @@ import { colors } from '../../lib/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DillyAIOverlay from '../../components/DillyAIOverlay';
 import { useDillyOverlayState } from '../../hooks/useDillyOverlay';
-import { SubscriptionProvider } from '../../hooks/useSubscription';
-import PaywallModal from '../../components/PaywallModal';
+import { SubscriptionProvider, useSubscription } from '../../hooks/useSubscription';
+import DillyGate from '../../components/DillyGate';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import ScoringMigrationModal from '../../components/ScoringMigrationModal';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
   return <DillyAIOverlay visible={visible} onClose={close} studentContext={studentContext} />;
+}
+
+function DillyGateWrapper() {
+  const { gateVisible, gateMessage, gateRequiredPlan, dismissGate } = useSubscription();
+  return (
+    <DillyGate
+      visible={gateVisible}
+      message={gateMessage}
+      requiredPlan={gateRequiredPlan}
+      onDismiss={dismissGate}
+    />
+  );
 }
 
 function DillyTabIcon({ focused }: { focused: boolean }) {
@@ -64,7 +76,7 @@ export default function AppLayout() {
         animation: 'shift',
       }}
     >
-      {/* ── Tab 1: Career Center (Home) ──────────────────── */}
+      {/* -- Tab 1: Career Center (Home) -------------------- */}
       <Tabs.Screen
         name="index"
         options={{
@@ -81,7 +93,7 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Tab 2: AI Arena ──────────────────────────────── */}
+      {/* -- Tab 2: AI Arena -------------------------------- */}
       <Tabs.Screen
         name="ai-arena"
         options={{
@@ -111,7 +123,7 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Tab 3: My Dilly (Profile/Identity) ───────────── */}
+      {/* -- Tab 3: My Dilly (Profile/Identity) ------------- */}
       <Tabs.Screen
         name="my-dilly-profile"
         options={{
@@ -126,7 +138,7 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Tab 4: Jobs ──────────────────────────────────── */}
+      {/* -- Tab 4: Jobs ------------------------------------ */}
       <Tabs.Screen
         name="jobs"
         options={{
@@ -141,7 +153,7 @@ export default function AppLayout() {
         }}
       />
 
-      {/* ── Hidden screens (accessible via navigation) ──── */}
+      {/* -- Hidden screens (accessible via navigation) ----- */}
 <Tabs.Screen name="score-detail" options={{ href: null, animation: 'fade' }} />
       <Tabs.Screen
         name="profile"
@@ -185,7 +197,7 @@ export default function AppLayout() {
       />
     </Tabs>
     <DillyAIOverlayWrapper />
-    <PaywallModal />
+    <DillyGateWrapper />
     <ScoringMigrationModal />
   </>
   </ErrorBoundary>

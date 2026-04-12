@@ -1,8 +1,8 @@
 /**
- * AI Arena — AI Readiness Command Center.
+ * AI Arena -- Three-Act AI Readiness Narrative + Tools.
  *
- * Dark variant of the Dilly design system.
- * Uses indigo + green + amber only. No rainbow.
+ * A flowing story you scroll through, not a feature menu.
+ * Dark navy background, off-white accents, green for good, amber for warning.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -24,11 +24,11 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const W = Dimensions.get('window').width;
 
-// Dark navy background, off-white accents
+// Design tokens
 const BG = '#111827';
 const CARD = '#1F2937';
 const BORDER = '#374151';
-const ACCENT = '#F0F0F0';        // off-white accent (replaces dark blue)
+const ACCENT = '#F0F0F0';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const TEXT = '#F9FAFB';
@@ -61,42 +61,57 @@ function ShieldRing({ score, size = 100 }: { score: number; size?: number }) {
   );
 }
 
-// ── Feature Card (full-width horizontal) ────────────────────────────────────
+// ── Signal Card ──────────────────────────────────────────────────────────────
 
-function FeatureCard({ icon, title, sub, color, onPress, active }: {
+function SignalCard({ signal, reason, accentColor }: { signal: string; reason: string; accentColor: string }) {
+  return (
+    <View style={[a.signalCard, { borderLeftColor: accentColor }]}>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={a.signalText}>{signal}</Text>
+        <Text style={a.signalReason}>{reason}</Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Tool Row ─────────────────────────────────────────────────────────────────
+
+function ToolRow({ icon, title, sub, color, onPress, active }: {
   icon: string; title: string; sub: string; color: string;
   onPress: () => void; active: boolean;
 }) {
   return (
     <AnimatedPressable
       style={[
-        a.featureCard,
+        a.toolRow,
         active && { borderLeftColor: color, borderLeftWidth: 4, backgroundColor: color + '06' },
       ]}
       onPress={onPress}
       scaleDown={0.98}
     >
-      <View style={[a.featureIcon, { backgroundColor: color + '15' }]}>
-        <Ionicons name={icon as any} size={20} color={color} />
+      <View style={[a.toolIcon, { backgroundColor: color + '15' }]}>
+        <Ionicons name={icon as any} size={18} color={color} />
       </View>
-      <View style={a.featureTextWrap}>
-        <Text style={a.featureTitle}>{title}</Text>
-        <Text style={a.featureSub} numberOfLines={1}>{sub}</Text>
+      <View style={a.toolTextWrap}>
+        <Text style={a.toolTitle}>{title}</Text>
+        <Text style={a.toolSub} numberOfLines={1}>{sub}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={active ? color : DIM} />
+      <Ionicons name={active ? 'chevron-down' : 'chevron-forward'} size={16} color={active ? color : DIM} />
     </AnimatedPressable>
   );
 }
 
-// ── Threat Level Badge ──────────────────────────────────────────────────────
+// ── Act Divider ──────────────────────────────────────────────────────────────
 
-function ThreatBadge({ score }: { score: number }) {
-  const level = score >= 80 ? 'LOW' : score >= 60 ? 'MEDIUM' : score >= 40 ? 'HIGH' : 'CRITICAL';
-  const color = score >= 80 ? GREEN : score >= 60 ? ACCENT : score >= 40 ? AMBER : AMBER;
+function ActDivider({ number, title }: { number: string; title: string }) {
   return (
-    <View style={[a.threatBadge, { backgroundColor: color + '18', borderColor: color + '30' }]}>
-      <View style={[a.threatDot, { backgroundColor: color }]} />
-      <Text style={[a.threatText, { color }]}>{level}</Text>
+    <View style={a.actDivider}>
+      <View style={a.actLine} />
+      <View style={a.actLabelWrap}>
+        <Text style={a.actNumber}>{number}</Text>
+        <Text style={a.actTitle}>{title}</Text>
+      </View>
+      <View style={a.actLine} />
     </View>
   );
 }
@@ -186,9 +201,11 @@ export default function AIArenaScreen() {
   const shieldScore = shield?.shield_score ?? 0;
   const shieldLabel = shield?.shield_label ?? '';
   const disruptionPct = shield?.disruption_pct ?? 0;
-
-  // Derive threat-level color for disruption bar
-  const disruptionColor = disruptionPct >= 50 ? AMBER : disruptionPct >= 30 ? AMBER : GREEN;
+  const cohort = shield?.cohort ?? 'your field';
+  const vulnerableSignals = shield?.vulnerable_signals ?? [];
+  const resistantSignals = shield?.resistant_signals ?? [];
+  const recommendation = shield?.recommendation ?? '';
+  const aiResistantSkills = shield?.ai_resistant_skills ?? [];
 
   if (loading) {
     return (
@@ -206,60 +223,187 @@ export default function AIArenaScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ACCENT} progressBackgroundColor={BG} />}
       >
 
-        {/* ── 1. Header ──────────────────────────────────────── */}
+        {/* Header */}
         <FadeInView delay={0}>
-          <Text style={a.header}>AI READINESS</Text>
+          <View style={{ paddingTop: 8, paddingBottom: 16 }}>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: TEXT, lineHeight: 28 }}>Let's see how AI will impact your career.</Text>
+            <Text style={{ fontSize: 14, color: SUB, marginTop: 6 }}>Don't worry. We know exactly how to help you.</Text>
+          </View>
         </FadeInView>
 
-        {/* ── 2. Shield Score Hero ────────────────────────────── */}
+        {/* ════════════════════════════════════════════════════════
+            ACT 1: THE THREAT
+            ════════════════════════════════════════════════════════ */}
+
+        <FadeInView delay={40}>
+          <ActDivider number="I" title="THE THREAT" />
+        </FadeInView>
+
+        {/* Shield Score Ring -- centered, big */}
         <FadeInView delay={60}>
-          <View style={a.heroCard}>
-            <View style={a.heroRow}>
-              <ShieldRing score={shieldScore} size={120} />
-              <View style={a.heroInfo}>
-                <Text style={a.heroScore}>{Math.round(shieldScore)}</Text>
-                <Text style={a.heroLabel}>{shieldLabel || 'AI SHIELD SCORE'}</Text>
-                <ThreatBadge score={shieldScore} />
-              </View>
-            </View>
-
-            {/* Disruption bar */}
-            <View style={a.disruptionSection}>
-              <View style={a.disruptionLabelRow}>
-                <Text style={a.disruptionLabel}>FIELD DISRUPTION</Text>
-                <Text style={[a.disruptionValue, { color: disruptionColor }]}>{disruptionPct}%</Text>
-              </View>
-              <View style={a.disruptionBarBg}>
-                <View style={[a.disruptionBarFill, { width: `${Math.min(disruptionPct, 100)}%`, backgroundColor: disruptionColor }]} />
-              </View>
-            </View>
+          <View style={a.ringSection}>
+            <ShieldRing score={shieldScore} size={120} />
+            <Text style={a.ringScore}>{Math.round(shieldScore)}</Text>
+            <Text style={a.ringLabel}>{shieldLabel || 'AI SHIELD SCORE'}</Text>
           </View>
         </FadeInView>
 
-        {/* ── 3. Live Stats Row (2 stats: Shield Score + Field Disruption) ── */}
+        {/* Disruption stat */}
         <FadeInView delay={100}>
-          <View style={a.statsRow}>
-            <View style={a.statCard}>
-              <Text style={[a.statNum, { color: ACCENT }]}>{Math.round(shieldScore)}</Text>
-              <Text style={a.statLabel}>SHIELD SCORE</Text>
-            </View>
-            <View style={a.statCard}>
-              <Text style={[a.statNum, { color: disruptionColor }]}>{disruptionPct}%</Text>
-              <Text style={a.statLabel}>FIELD DISRUPTION</Text>
-            </View>
-          </View>
+          <Text style={a.disruptionStatement}>
+            In {cohort}, AI is disrupting {disruptionPct}% of entry-level roles.
+          </Text>
         </FadeInView>
 
-        {/* ── 4. Feature Sections ─────────────────────────────── */}
+        {/* Vulnerable signals */}
         <FadeInView delay={140}>
-          <Text style={a.sectionTitle}>COMMAND CENTER</Text>
+          <Text style={a.actSectionHeader}>YOUR VULNERABLE SPOTS</Text>
         </FadeInView>
 
-        <FadeInView delay={160}>
-          <FeatureCard icon="scan" title="Threat Scanner" sub="See which bullets AI can replace" color={ACCENT} onPress={() => toggleFeature('scan')} active={activeFeature === 'scan'} />
+        {vulnerableSignals.length > 0 ? (
+          vulnerableSignals.map((sig: any, i: number) => (
+            <FadeInView key={`v-${i}`} delay={160 + i * 30}>
+              <SignalCard
+                signal={typeof sig === 'string' ? sig : sig.signal || sig.text || ''}
+                reason={typeof sig === 'string' ? 'AI tools can automate or replicate this skill today.' : sig.reason || sig.why || 'AI tools can automate or replicate this skill today.'}
+                accentColor={AMBER}
+              />
+            </FadeInView>
+          ))
+        ) : (
+          <FadeInView delay={160}>
+            <View style={a.emptyCard}>
+              <Ionicons name="help-circle-outline" size={20} color={DIM} />
+              <Text style={a.emptyText}>
+                Dilly needs to learn more about you to assess your vulnerabilities.
+              </Text>
+            </View>
+          </FadeInView>
+        )}
+
+
+        {/* ════════════════════════════════════════════════════════
+            ACT 2: YOUR EDGE
+            ════════════════════════════════════════════════════════ */}
+
+        <FadeInView delay={200}>
+          <ActDivider number="II" title="YOUR EDGE" />
         </FadeInView>
 
-        {/* THREAT SCANNER expanded */}
+        <FadeInView delay={220}>
+          <Text style={a.actSectionHeader}>WHAT AI CAN'T TOUCH</Text>
+        </FadeInView>
+
+        {resistantSignals.length > 0 ? (
+          resistantSignals.map((sig: any, i: number) => (
+            <FadeInView key={`r-${i}`} delay={240 + i * 30}>
+              <SignalCard
+                signal={typeof sig === 'string' ? sig : sig.signal || sig.text || ''}
+                reason={typeof sig === 'string' ? 'This requires human judgment, creativity, or relationships that AI cannot replicate.' : sig.reason || sig.why || 'This requires human judgment, creativity, or relationships that AI cannot replicate.'}
+                accentColor={GREEN}
+              />
+            </FadeInView>
+          ))
+        ) : (
+          <FadeInView delay={240}>
+            <View style={a.emptyCard}>
+              <Ionicons name="bulb-outline" size={20} color={DIM} />
+              <Text style={a.emptyText}>
+                Tell Dilly about your leadership, creative work, and human skills.
+              </Text>
+              <AnimatedPressable
+                style={a.emptyBtn}
+                onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'I want to add human-only skills to my profile. Help me identify my leadership, creative work, and interpersonal strengths.' })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="chatbubble" size={14} color={ACCENT} />
+                <Text style={a.emptyBtnText}>Talk to Dilly</Text>
+              </AnimatedPressable>
+            </View>
+          </FadeInView>
+        )}
+
+        {resistantSignals.length > 0 && resistantSignals.length < 3 && (
+          <FadeInView delay={300}>
+            <AnimatedPressable
+              style={a.addMoreBtn}
+              onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'I want to strengthen my AI-proof profile. Help me identify and add more human-only skills like leadership, creative work, and interpersonal strengths.' })}
+              scaleDown={0.97}
+            >
+              <Ionicons name="add-circle-outline" size={16} color={ACCENT} />
+              <Text style={a.addMoreText}>Tell Dilly about more human skills</Text>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
+
+        {/* ════════════════════════════════════════════════════════
+            ACT 3: YOUR PLAYBOOK
+            ════════════════════════════════════════════════════════ */}
+
+        <FadeInView delay={320}>
+          <ActDivider number="III" title="YOUR PLAYBOOK" />
+        </FadeInView>
+
+        <FadeInView delay={340}>
+          <Text style={a.actSectionHeader}>HERE'S YOUR PLAN</Text>
+        </FadeInView>
+
+        {/* Recommendation card */}
+        {recommendation ? (
+          <FadeInView delay={360}>
+            <View style={a.recommendationCard}>
+              <Ionicons name="bulb" size={18} color={ACCENT} />
+              <Text style={a.recommendationText}>{recommendation}</Text>
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* AI-resistant skills to develop */}
+        {aiResistantSkills.length > 0 && (
+          <FadeInView delay={380}>
+            <View style={a.skillPillWrap}>
+              {aiResistantSkills.map((skill: string, i: number) => (
+                <View key={`sk-${i}`} style={a.skillPill}>
+                  <Text style={a.skillPillText}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+          </FadeInView>
+        )}
+
+        {/* Improve My Score CTA */}
+        <FadeInView delay={400}>
+          <AnimatedPressable
+            style={a.improveBtn}
+            onPress={() => {
+              const vulnList = vulnerableSignals.map((s: any) => typeof s === 'string' ? s : s.signal || s.text || '').join(', ');
+              openDillyOverlay({
+                isPaid: true,
+                initialMessage: `My AI readiness is ${Math.round(shieldScore)} (${shieldLabel}). Vulnerable: ${vulnList || 'unknown'}. What specific things should I add to my Dilly Profile to become more AI-proof in ${cohort}?`,
+              });
+            }}
+            scaleDown={0.97}
+          >
+            <Ionicons name="trending-up" size={18} color={BG} />
+            <Text style={a.improveBtnText}>Improve My Score</Text>
+          </AnimatedPressable>
+        </FadeInView>
+
+
+        {/* ════════════════════════════════════════════════════════
+            TOOLS SECTION
+            ════════════════════════════════════════════════════════ */}
+
+        <FadeInView delay={440}>
+          <Text style={a.toolsSectionHeader}>AI TOOLS</Text>
+        </FadeInView>
+
+        {/* 1. Threat Scanner */}
+        <FadeInView delay={460}>
+          <ToolRow icon="scan" title="Threat Scanner" sub="See which bullets AI can replace" color={ACCENT} onPress={() => toggleFeature('scan')} active={activeFeature === 'scan'} />
+        </FadeInView>
+
         {activeFeature === 'scan' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -315,11 +459,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        <FadeInView delay={180}>
-          <FeatureCard icon="swap-horizontal" title="Replace Me" sub="Can AI do what you do? Let's find out." color={AMBER} onPress={() => toggleFeature('replace')} active={activeFeature === 'replace'} />
+        {/* 2. Replace Me */}
+        <FadeInView delay={480}>
+          <ToolRow icon="swap-horizontal" title="Replace Me" sub="Can AI do what you do?" color={AMBER} onPress={() => toggleFeature('replace')} active={activeFeature === 'replace'} />
         </FadeInView>
 
-        {/* REPLACE ME expanded */}
         {activeFeature === 'replace' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -366,11 +510,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        <FadeInView delay={200}>
-          <FeatureCard icon="rocket" title="Career Sim" sub="See how AI reshapes your career over 5 years" color={AMBER} onPress={() => toggleFeature('simulate')} active={activeFeature === 'simulate'} />
+        {/* 3. Career Sim */}
+        <FadeInView delay={500}>
+          <ToolRow icon="rocket" title="Career Sim" sub="See how AI reshapes your career over 5 years" color={AMBER} onPress={() => toggleFeature('simulate')} active={activeFeature === 'simulate'} />
         </FadeInView>
 
-        {/* CAREER SIMULATOR expanded */}
         {activeFeature === 'simulate' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -418,11 +562,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        <FadeInView delay={220}>
-          <FeatureCard icon="lock-closed" title="Skill Vault" sub="Your AI-proof skills vs the ones you need" color={GREEN} onPress={() => toggleFeature('vault')} active={activeFeature === 'vault'} />
+        {/* 4. Skill Vault */}
+        <FadeInView delay={520}>
+          <ToolRow icon="lock-closed" title="Skill Vault" sub="Your AI-proof skills vs the ones you need" color={GREEN} onPress={() => toggleFeature('vault')} active={activeFeature === 'vault'} />
         </FadeInView>
 
-        {/* SKILL VAULT expanded */}
         {activeFeature === 'vault' && shield && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -449,11 +593,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        <FadeInView delay={240}>
-          <FeatureCard icon="shield-half" title="Firewall" sub="How would an AI recruiter judge you?" color={AMBER} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
+        {/* 5. Firewall */}
+        <FadeInView delay={540}>
+          <ToolRow icon="shield-half" title="Firewall" sub="How would an AI recruiter judge you?" color={AMBER} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
         </FadeInView>
 
-        {/* RESUME FIREWALL expanded */}
         {activeFeature === 'firewall' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -470,11 +614,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        <FadeInView delay={260}>
-          <FeatureCard icon="bar-chart" title="Disruption Index" sub="How much AI is disrupting your field right now" color={AMBER} onPress={() => toggleFeature('index')} active={activeFeature === 'index'} />
+        {/* 6. Disruption Index */}
+        <FadeInView delay={560}>
+          <ToolRow icon="bar-chart" title="Disruption Index" sub="How much AI is disrupting your field" color={AMBER} onPress={() => toggleFeature('index')} active={activeFeature === 'index'} />
         </FadeInView>
 
-        {/* DISPLACEMENT INDEX expanded */}
         {activeFeature === 'index' && shield && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -506,46 +650,7 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* ── 5. AI Readiness Actions ─────────────────────────── */}
-        <FadeInView delay={300}>
-          <Text style={a.sectionTitle}>AI READINESS ACTIONS</Text>
-        </FadeInView>
-
-        <FadeInView delay={320}>
-          <AnimatedPressable
-            style={a.actionCard}
-            onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'Is my resume AI-proof? Analyze every bullet for AI vulnerability and tell me exactly what to fix.' })}
-            scaleDown={0.98}
-          >
-            <View style={[a.actionCardIcon, { backgroundColor: ACCENT + '15' }]}>
-              <Ionicons name="document-text" size={20} color={ACCENT} />
-            </View>
-            <View style={a.actionCardTextWrap}>
-              <Text style={a.actionCardTitle}>Is my resume AI-proof?</Text>
-              <Text style={a.actionCardSub}>Get a full vulnerability analysis from Dilly</Text>
-            </View>
-            <Ionicons name="arrow-forward" size={16} color={ACCENT} />
-          </AnimatedPressable>
-        </FadeInView>
-
-        <FadeInView delay={340}>
-          <AnimatedPressable
-            style={a.actionCard}
-            onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'What skills should I develop to stay ahead of AI in my field? Be specific to my profile and career goals.' })}
-            scaleDown={0.98}
-          >
-            <View style={[a.actionCardIcon, { backgroundColor: GREEN + '15' }]}>
-              <Ionicons name="trending-up" size={20} color={GREEN} />
-            </View>
-            <View style={a.actionCardTextWrap}>
-              <Text style={a.actionCardTitle}>What skills should I develop?</Text>
-              <Text style={a.actionCardSub}>AI-proof skill recommendations for your career</Text>
-            </View>
-            <Ionicons name="arrow-forward" size={16} color={GREEN} />
-          </AnimatedPressable>
-        </FadeInView>
-
-        {/* ── 6. Footer ──────────────────────────────────────── */}
+        {/* ── Footer ──────────────────────────────────────────── */}
         <DillyFooter />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -556,173 +661,249 @@ export default function AIArenaScreen() {
 
 const a = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
-  scroll: { paddingHorizontal: 20, gap: 20 },
+  scroll: { paddingHorizontal: 20, gap: 16 },
 
-  // 1. Header
-  header: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: SUB,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    paddingTop: 16,
-    fontFamily: Platform.OS === 'ios' ? 'Cinzel' : undefined,
-  },
-
-  // 2. Hero
-  heroCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
-    gap: 20,
-  },
-  heroRow: {
+  // Act dividers
+  actDivider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 12,
+    marginTop: 28,
+    marginBottom: 4,
   },
-  heroInfo: {
+  actLine: {
     flex: 1,
-    gap: 4,
+    height: 1,
+    backgroundColor: BORDER,
   },
-  heroScore: {
-    fontSize: 44,
+  actLabelWrap: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  actNumber: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: DIM,
+    letterSpacing: 2,
+  },
+  actTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: ACCENT,
+    letterSpacing: 2,
+  },
+
+  // Ring section (Act 1 hero)
+  ringSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 6,
+  },
+  ringScore: {
+    fontSize: 48,
     fontWeight: '900',
     color: TEXT,
-    lineHeight: 48,
+    marginTop: 8,
   },
-  heroLabel: {
+  ringLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: SUB,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
-  threatBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginTop: 4,
-  },
-  threatDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  threatText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  disruptionSection: {
-    gap: 6,
-  },
-  disruptionLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  disruptionLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: DIM,
-    letterSpacing: 1,
-  },
-  disruptionValue: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  disruptionBarBg: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BORDER,
-    overflow: 'hidden',
-  },
-  disruptionBarFill: {
-    height: 6,
-    borderRadius: 3,
+
+  // Disruption statement
+  disruptionStatement: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: SUB,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 12,
   },
 
-  // 3. Stats Row
-  statsRow: {
-    flexDirection: 'row',
-    gap: 8,
+  // Act section headers
+  actSectionHeader: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: DIM,
+    letterSpacing: 2,
+    marginTop: 12,
+    marginBottom: 2,
   },
-  statCard: {
-    flex: 1,
+
+  // Signal cards
+  signalCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: CARD,
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    alignItems: 'center',
+    padding: 14,
     borderWidth: 1,
     borderColor: BORDER,
-    gap: 4,
+    borderLeftWidth: 4,
+    gap: 10,
   },
-  statNum: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  statLabel: {
-    fontSize: 8,
+  signalText: {
+    fontSize: 13,
     fontWeight: '700',
+    color: TEXT,
+    lineHeight: 18,
+  },
+  signalReason: {
+    fontSize: 11,
     color: DIM,
-    letterSpacing: 0.8,
+    lineHeight: 16,
+  },
+
+  // Empty state
+  emptyCard: {
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: SUB,
     textAlign: 'center',
+    lineHeight: 19,
   },
-
-  // Section title
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: DIM,
-    letterSpacing: 1.5,
-    marginTop: 4,
-  },
-
-  // 4. Feature cards (full-width horizontal)
-  featureCard: {
+  emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: ACCENT + '12',
+    borderWidth: 1,
+    borderColor: ACCENT + '20',
+  },
+  emptyBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ACCENT,
+  },
+  addMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  addMoreText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: ACCENT,
+  },
+
+  // Recommendation card (Act 3)
+  recommendationCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     backgroundColor: CARD,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
+    borderColor: ACCENT + '20',
+    gap: 12,
+  },
+  recommendationText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: TEXT,
+    lineHeight: 21,
+  },
+
+  // Skill pills
+  skillPillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  skillPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: GREEN + '15',
+    borderWidth: 1,
+    borderColor: GREEN + '30',
+  },
+  skillPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: GREEN,
+  },
+
+  // Improve button
+  improveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: ACCENT,
+    marginTop: 4,
+  },
+  improveBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: BG,
+  },
+
+  // Tools section header
+  toolsSectionHeader: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: DIM,
+    letterSpacing: 2,
+    marginTop: 28,
+    marginBottom: 4,
+  },
+
+  // Tool rows
+  toolRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
     borderColor: BORDER,
     borderLeftWidth: 1,
     borderLeftColor: BORDER,
-    gap: 14,
+    gap: 12,
   },
-  featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  toolIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  featureTextWrap: {
+  toolTextWrap: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
-  featureTitle: {
+  toolTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: TEXT,
   },
-  featureSub: {
+  toolSub: {
     fontSize: 11,
     color: DIM,
     lineHeight: 15,
   },
 
-  // Expanded
+  // Expanded card
   expandedCard: {
     backgroundColor: CARD,
     borderRadius: 16,
@@ -856,37 +1037,4 @@ const a = StyleSheet.create({
   compCol: { flex: 1, borderRadius: 10, padding: 10, borderWidth: 1 },
   compLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
   compItem: { fontSize: 11, color: SUB, lineHeight: 16 },
-
-  // 5. Action cards
-  actionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: CARD,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-    gap: 14,
-  },
-  actionCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionCardTextWrap: {
-    flex: 1,
-    gap: 2,
-  },
-  actionCardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: TEXT,
-  },
-  actionCardSub: {
-    fontSize: 11,
-    color: DIM,
-    lineHeight: 15,
-  },
 });

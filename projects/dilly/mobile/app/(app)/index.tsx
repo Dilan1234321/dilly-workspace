@@ -905,7 +905,6 @@ export default function HomeScreen() {
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar') },
               { icon: 'analytics' as const, color: colors.green, label: 'Feedback', onPress: () => router.push('/(app)/feedback') },
               { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
-              { icon: 'shield-checkmark' as const, color: colors.gold, label: 'ATS Scan', onPress: () => router.push('/(app)/ats') },
             ].map(tool => (
               <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
                 <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>

@@ -244,13 +244,7 @@ export default function MyDillyProfileScreen() {
 
       {/* Header */}
       <View style={[d.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => router.push('/(app)/profile')} hitSlop={12}>
-          {p.profile_slug ? (
-            <Image source={{ uri: `https://api.trydilly.com/profile/public/${p.profile_slug}/photo?_t=${Date.now()}` }} style={{ width: 28, height: 28, borderRadius: 14 }} />
-          ) : (
-            <Ionicons name="person-circle-outline" size={28} color={colors.t2} />
-          )}
-        </TouchableOpacity>
+        <View style={{ width: 28 }} />
         <Text style={d.headerTitle}>My Dilly</Text>
         <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>
           <Ionicons name="settings-outline" size={20} color={colors.t3} />

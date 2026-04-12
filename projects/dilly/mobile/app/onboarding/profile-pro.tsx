@@ -1,7 +1,7 @@
 /**
- * Professional Profile — onboarding for non-students.
- * Collects: name, career fields (→ cohorts), career target, photo.
- * No school, major, minor, graduation year, pre-professional track.
+ * Profile setup -- onboarding for non-students.
+ * Collects: name, career fields (-> cohorts), career target, photo.
+ * No school, major, minor, graduation year, pre-health/pre-law track.
  */
 
 import { useState, useRef } from 'react';
@@ -91,7 +91,7 @@ export default function ProfileProScreen() {
           cohorts: detectedCohorts,
           track: primaryCohort,
           application_target: TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'new_role',
-          user_type: 'professional',
+          user_type: 'general',
           onboarding_complete: false,
         }),
       });
@@ -108,7 +108,7 @@ export default function ProfileProScreen() {
         ['dilly_onboarding_target', TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'new_role'],
       ]);
 
-      // Go to upload (optional for professionals)
+      // Go to upload (optional for non-students)
       router.push({
         pathname: '/onboarding/upload',
         params: { cohort: primaryCohort, name: fullName.trim().split(/\s+/)[0], optional: '1' },
@@ -174,7 +174,7 @@ export default function ProfileProScreen() {
         {/* Career Fields */}
         <FadeInView delay={140}>
           <View style={s.field}>
-            <Text style={s.label}>Your career field(s) <Text style={{ color: colors.coral }}>*</Text></Text>
+            <Text style={s.label}>What field are you in? <Text style={{ color: colors.coral }}>*</Text></Text>
             <Text style={{ fontSize: 12, color: colors.t3, marginBottom: 8 }}>Select up to 3. This determines how Dilly scores and matches you.</Text>
 
             <TextInput

@@ -519,7 +519,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
                   </>
                 ) : (
                   <>
-                    <DillyFace size={80} />
+                    <View style={{ width: 90, height: 90, borderRadius: 45, borderWidth: 2, borderColor: colors.indigo, alignItems: 'center', justifyContent: 'center' }}>
+                      <DillyFace size={70} />
+                    </View>
                     <Text style={[s.emptyText, { marginTop: 16 }]}>
                       Ask me anything: your score, what to fix, where to apply.
                     </Text>

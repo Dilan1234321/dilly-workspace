@@ -42,15 +42,17 @@ def _stripe_family_configured() -> bool:
 
 @router.post("/send-magic-link")
 async def send_magic_link(request: Request, body: AuthSendCodeRequest):
-    """Send magic link to email. In dev, returns magic_link URL. Only allowed school domains."""
+    """Send magic link to email. In dev, returns magic_link URL."""
     email = (body.email or "").strip().lower()
-    if not re.search(r"\.edu\s*$", email):
-        raise errors.validation_error("Dilly is for students — use your .edu email.")
-    from projects.dilly.api.schools import get_school_from_email
-    if not get_school_from_email(email):
-        raise errors.validation_error(
-            "Dilly isn't available at your school yet.",
-        )
+    user_type = (body.user_type or "student").strip().lower()
+    if user_type != "general":
+        # Student path: require .edu
+        if not re.search(r"\.edu\s*$", email):
+            raise errors.validation_error("Use your .edu email to sign up as a student.")
+    else:
+        # General path: any valid email
+        if not email or "@" not in email or "." not in email:
+            raise errors.validation_error("Enter a valid email address.")
     try:
         from projects.dilly.api.auth_store import create_magic_token
         token = create_magic_token(email)
@@ -63,29 +65,26 @@ async def send_magic_link(request: Request, body: AuthSendCodeRequest):
 
 @router.post("/send-verification-code", responses=ERROR_RESPONSES)
 async def send_verification_code(request: Request, body: AuthSendCodeRequest):
-    """Send a 6-digit verification code. Students need .edu, professionals can use any email."""
+    """Send a 6-digit verification code. Students need .edu, general users can use any email."""
     deps.rate_limit(request, "send-code", max_requests=5, window_sec=300)
     email = (body.email or "").strip().lower()
-    is_professional = (body.user_type or "").strip().lower() == "professional"
+    user_type = (body.user_type or "student").strip().lower()
+    is_general = user_type == "general"
 
-    if not is_professional:
-        # Student path: require .edu + known school
+    if not is_general:
+        # Student path: require .edu (any .edu domain, no school whitelist)
         if not re.search(r"\.edu\s*$", email):
-            raise errors.validation_error("Students need a .edu email. Tap 'I'm a professional' if you're not a student.")
-        from projects.dilly.api.schools import get_school_from_email
-        if not get_school_from_email(email):
-            raise errors.validation_error(
-                "Dilly isn't available at your school yet.",
-            )
+            raise errors.validation_error("Use your .edu email to sign up as a student.")
     else:
-        # Professional path: basic email validation only
+        # General path: basic email validation only
         if not email or "@" not in email or "." not in email:
             raise errors.validation_error("Enter a valid email address.")
     try:
         from projects.dilly.api.auth_store import create_verification_code
         from projects.dilly.api.email_sender import send_verification_email
+        from projects.dilly.api.schools import get_school_from_email
         code = create_verification_code(email)
-        school = get_school_from_email(email)
+        school = get_school_from_email(email)  # None for non-.edu; used for theming only
         sent, code_for_dev = send_verification_email(email, code, school)
     except ValueError as e:
         raise errors.validation_error(str(e))
@@ -104,8 +103,6 @@ async def auth_verify_code(request: Request, body: AuthVerifyCodeRequest):
     email = (body.email or "").strip().lower()
     code = (body.code or "").strip()
     from projects.dilly.api.schools import get_school_from_email
-    if not get_school_from_email(email):
-        raise errors.validation_error("Dilly isn't available at your school yet.")
     from projects.dilly.api.auth_store import (
         verify_verification_code,
         create_session,

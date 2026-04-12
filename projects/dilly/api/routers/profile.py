@@ -249,6 +249,25 @@ async def get_profile(request: Request):
             except Exception:
                 pass
 
+        # -- Plan field: default to 'starter' if not set -------------------------
+        if profile.get("plan") not in ("starter", "dilly", "pro"):
+            profile["plan"] = "starter"
+
+        # -- is_student: .edu email AND graduation_year >= current year ----------
+        try:
+            from datetime import datetime as _dt_is_student
+            _grad = profile.get("graduation_year")
+            _edu = (email or "").strip().lower().endswith(".edu")
+            _grad_ok = False
+            if _grad is not None:
+                try:
+                    _grad_ok = int(_grad) >= _dt_is_student.now().year
+                except (TypeError, ValueError):
+                    pass
+            profile["is_student"] = _edu and _grad_ok
+        except Exception:
+            profile["is_student"] = False
+
         return profile
     except ValueError as e:
         raise errors.validation_error(str(e))
@@ -348,8 +367,11 @@ async def update_profile(request: Request, body: dict = Body(...)):
     """Update current user's profile. Merges with existing. Only allowed fields are updated."""
     user = deps.require_auth(request)
     email = user.get("email") or ""
-    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "cohorts", "career_fields", "user_type", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year"}
+    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "cohorts", "career_fields", "user_type", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year", "plan"}
     data = {k: v for k, v in (body or {}).items() if k in allowed}
+    # Validate plan field: only accept known tier values.
+    if "plan" in data and data["plan"] not in ("starter", "dilly", "pro"):
+        data.pop("plan", None)
     # Normalize graduation_year: coerce to int, reject nonsense values.
     # Coach (ai.py:187) and leaderboard (leaderboard_page.py) both read this field,
     # so persisting a bad value here would corrupt downstream rendering.

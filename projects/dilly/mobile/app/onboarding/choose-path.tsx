@@ -1,96 +1,228 @@
 /**
- * Choose Path — the onboarding fork.
+ * Choose Path -- unified login screen.
  *
- * "I'm a student" → student flow (existing, .edu email)
- * Everything else → professional flow (any email, career fields)
+ * Two email sections:
+ * 1. General (top, primary) -- any email
+ * 2. Student (below) -- .edu email
  */
 
-import { View, Text, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+} from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, radius } from '../../lib/tokens';
-import AnimatedPressable from '../../components/AnimatedPressable';
+import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import FadeInView from '../../components/FadeInView';
-
-const GOLD = '#2B3A8E';
 
 export default function ChoosePathScreen() {
   const insets = useSafeAreaInsets();
 
+  // General email state
+  const [generalEmail, setGeneralEmail] = useState('');
+  const [generalError, setGeneralError] = useState('');
+  const [generalLoading, setGeneralLoading] = useState(false);
+
+  // Student email state
+  const [studentEmail, setStudentEmail] = useState('');
+  const [studentError, setStudentError] = useState('');
+  const [studentLoading, setStudentLoading] = useState(false);
+
+  async function handleGeneralSubmit() {
+    setGeneralError('');
+    const trimmed = generalEmail.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes('@') || !trimmed.includes('.')) {
+      setGeneralError('Enter a valid email address.');
+      return;
+    }
+    setGeneralLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed, user_type: 'general' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const detail = data?.detail;
+        throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
+      }
+      router.push({ pathname: '/onboarding/verify', params: { email: trimmed, userType: 'general' } });
+    } catch (err: unknown) {
+      setGeneralError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setGeneralLoading(false);
+    }
+  }
+
+  async function handleStudentSubmit() {
+    setStudentError('');
+    const trimmed = studentEmail.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes('@') || !trimmed.includes('.')) {
+      setStudentError('Enter a valid email address.');
+      return;
+    }
+    if (!/\.edu\s*$/.test(trimmed)) {
+      setStudentError('Use your .edu email to sign up as a student.');
+      return;
+    }
+    setStudentLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const detail = data?.detail;
+        throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
+      }
+      router.push({ pathname: '/onboarding/verify', params: { email: trimmed, userType: 'student' } });
+    } catch (err: unknown) {
+      setStudentError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setStudentLoading(false);
+    }
+  }
+
+  const generalActive = generalEmail.trim().length > 0 && !generalLoading;
+  const studentActive = studentEmail.trim().length > 0 && !studentLoading;
+
   return (
-    <View style={[s.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
-      {/* Hero */}
-      <FadeInView delay={0}>
-        <Text style={s.headline}>Your career.{'\n'}Your guide.{'\n'}Your move.</Text>
-        <Text style={s.sub}>
-          Dilly builds a deep profile of who you are, then guides you through the AI-driven job market.
-        </Text>
-      </FadeInView>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.bg }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={[s.scroll, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero */}
+        <FadeInView delay={0}>
+          <Text style={s.headline}>Your career.{'\n'}Your guide.{'\n'}Your move.</Text>
+          <Text style={s.sub}>
+            Dilly builds a deep profile of who you are, then guides you through the AI-driven job market.
+          </Text>
+        </FadeInView>
 
-      {/* Path options */}
-      <View style={s.cards}>
+        {/* Section 1: General / non-student (primary, on top) */}
         <FadeInView delay={100}>
-          <AnimatedPressable
-            style={s.card}
-            onPress={() => router.push('/onboarding/welcome')}
-            scaleDown={0.97}
-          >
-            <View style={[s.cardIcon, { backgroundColor: '#5E5CE6' + '15' }]}>
-              <Ionicons name="school" size={24} color="#5E5CE6" />
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>Get started</Text>
+            <View style={s.inputWrapper}>
+              <TextInput
+                style={[s.input, generalEmail.length > 0 && s.inputActive]}
+                placeholder="you@email.com"
+                placeholderTextColor={colors.t3}
+                value={generalEmail}
+                onChangeText={v => { setGeneralEmail(v); setGeneralError(''); }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                editable={!generalLoading}
+                returnKeyType="go"
+                onSubmitEditing={handleGeneralSubmit}
+              />
+              {generalError ? <Text style={s.errorText}>{generalError}</Text> : null}
             </View>
-            <Text style={s.cardTitle}>I'm in college</Text>
-            <Text style={s.cardSub}>Use your .edu email for student pricing.</Text>
-            <View style={s.cardArrow}>
-              <Ionicons name="arrow-forward" size={16} color={colors.t3} />
-            </View>
-          </AnimatedPressable>
+            <TouchableOpacity
+              style={[s.button, generalActive ? s.buttonActive : s.buttonDisabled]}
+              onPress={handleGeneralSubmit}
+              disabled={!generalActive}
+              activeOpacity={0.9}
+            >
+              {generalLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={s.buttonText}>Continue</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </FadeInView>
 
+        {/* Divider */}
+        <FadeInView delay={150}>
+          <View style={s.divider}>
+            <View style={s.dividerLine} />
+            <Text style={s.dividerText}>or</Text>
+            <View style={s.dividerLine} />
+          </View>
+        </FadeInView>
+
+        {/* Section 2: Student (.edu) */}
         <FadeInView delay={200}>
-          <AnimatedPressable
-            style={s.card}
-            onPress={() => router.push('/onboarding/welcome-pro')}
-            scaleDown={0.97}
-          >
-            <View style={[s.cardIcon, { backgroundColor: GOLD + '15' }]}>
-              <Ionicons name="person" size={24} color={GOLD} />
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>College student? Use your .edu email</Text>
+            <View style={s.inputWrapper}>
+              <TextInput
+                style={[s.input, studentEmail.length > 0 && s.inputActive]}
+                placeholder="you@school.edu"
+                placeholderTextColor={colors.t3}
+                value={studentEmail}
+                onChangeText={v => { setStudentEmail(v); setStudentError(''); }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                editable={!studentLoading}
+                returnKeyType="go"
+                onSubmitEditing={handleStudentSubmit}
+              />
+              {studentError ? <Text style={s.errorText}>{studentError}</Text> : null}
             </View>
-            <Text style={s.cardTitle}>I'm not in college</Text>
-            <Text style={s.cardSub}>Working, job searching, career pivoting, or just getting started.</Text>
-            <View style={s.cardArrow}>
-              <Ionicons name="arrow-forward" size={16} color={colors.t3} />
-            </View>
-          </AnimatedPressable>
+            <TouchableOpacity
+              style={[s.button, studentActive ? s.buttonActive : s.buttonDisabled]}
+              onPress={handleStudentSubmit}
+              disabled={!studentActive}
+              activeOpacity={0.9}
+            >
+              {studentLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={s.buttonText}>Continue</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </FadeInView>
-      </View>
 
-      {/* Footer */}
-      <FadeInView delay={400}>
-        <Text style={s.footer}>
-          AI is reshaping the job market. Dilly shows you where you stand and what to do next.
-        </Text>
-      </FadeInView>
-    </View>
+        {/* Footer */}
+        <FadeInView delay={400}>
+          <Text style={s.footer}>
+            AI is reshaping the job market. Dilly shows you where you stand and what to do next.
+          </Text>
+        </FadeInView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: spacing.xl },
+  scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, gap: 0 },
 
   headline: { fontSize: 32, fontWeight: '900', color: colors.t1, lineHeight: 38, letterSpacing: -0.5 },
-  sub: { fontSize: 15, color: colors.t2, lineHeight: 22, marginTop: 12, marginBottom: 32 },
+  sub: { fontSize: 15, color: colors.t2, lineHeight: 22, marginTop: 12, marginBottom: 28 },
 
-  cards: { gap: 12, flex: 1 },
-  card: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: colors.s1, borderRadius: 14, padding: 18,
-    borderWidth: 1, borderColor: colors.b1,
+  section: { gap: 12 },
+  sectionLabel: { fontSize: 15, fontWeight: '700', color: colors.t1 },
+  inputWrapper: { gap: 6 },
+  input: {
+    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 16, paddingVertical: 16, fontSize: 16, color: colors.t1,
   },
-  cardIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.t1 },
-  cardSub: { fontSize: 12, color: colors.t2, lineHeight: 17, marginTop: 2, flex: 1 },
-  cardArrow: { marginLeft: 'auto' },
+  inputActive: { borderColor: colors.gold },
+  errorText: { fontSize: 12, color: '#FF453A', paddingHorizontal: 4 },
+  button: { borderRadius: 12, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
+  buttonActive: { backgroundColor: colors.gold },
+  buttonDisabled: { backgroundColor: colors.s3 },
+  buttonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
 
-  footer: { fontSize: 12, color: colors.t3, textAlign: 'center', lineHeight: 17, paddingHorizontal: 20 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.b1 },
+  dividerText: { fontSize: 13, color: colors.t3, fontWeight: '500' },
+
+  footer: { fontSize: 12, color: colors.t3, textAlign: 'center', lineHeight: 17, paddingHorizontal: 20, marginTop: 28 },
 });
