@@ -18,6 +18,7 @@ import { getToken } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { DillyFace } from '../../components/DillyFace';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
+import { mediumHaptic } from '../../lib/haptics';
 import useCelebration from '../../hooks/useCelebration';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
@@ -145,6 +146,12 @@ export default function HomeScreen() {
 
   const scoreAnim = useRef(new Animated.Value(0)).current;
   const barAnim   = useRef(new Animated.Value(0)).current;
+  const smartAnim = useRef(new Animated.Value(0)).current;
+  const gritAnim  = useRef(new Animated.Value(0)).current;
+  const buildAnim = useRef(new Animated.Value(0)).current;
+  const [displaySmart, setDisplaySmart] = useState(0);
+  const [displayGrit, setDisplayGrit]   = useState(0);
+  const [displayBuild, setDisplayBuild] = useState(0);
 
   const [refreshing, setRefreshing] = useState(false);
   const { celebrate, CelebrationPortal } = useCelebration();
@@ -322,6 +329,7 @@ export default function HomeScreen() {
   }, [profileRefreshKey]);
 
   const handleRefresh = useCallback(async () => {
+    mediumHaptic();
     setRefreshing(true);
     setProfileRefreshKey(k => k + 1);
     setTimeout(() => setRefreshing(false), 1200);
@@ -341,6 +349,31 @@ export default function HomeScreen() {
     }).start();
     return () => scoreAnim.removeListener(id);
   }, [effectiveScore, activeCohortIdx]);
+
+  // Animate S/G/B dimension scores on cohort switch
+  useEffect(() => {
+    const s = cohortScores[activeCohortIdx]?.smart  ?? audit.scores?.smart  ?? 0;
+    const g = cohortScores[activeCohortIdx]?.grit   ?? audit.scores?.grit   ?? 0;
+    const b = cohortScores[activeCohortIdx]?.build  ?? audit.scores?.build  ?? 0;
+    if (!s && !g && !b) return;
+
+    const ids: string[] = [];
+    ids.push(smartAnim.addListener(({ value }) => setDisplaySmart(Math.round(value))));
+    ids.push(gritAnim.addListener(({ value }) => setDisplayGrit(Math.round(value))));
+    ids.push(buildAnim.addListener(({ value }) => setDisplayBuild(Math.round(value))));
+
+    Animated.parallel([
+      Animated.timing(smartAnim, { toValue: s, duration: 700, useNativeDriver: false }),
+      Animated.timing(gritAnim,  { toValue: g, duration: 700, useNativeDriver: false }),
+      Animated.timing(buildAnim, { toValue: b, duration: 700, useNativeDriver: false }),
+    ]).start();
+
+    return () => {
+      smartAnim.removeListener(ids[0]);
+      gritAnim.removeListener(ids[1]);
+      buildAnim.removeListener(ids[2]);
+    };
+  }, [activeCohortIdx, cohortScores.length]);
 
   // \u2500\u2500 Derived \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
@@ -453,7 +486,7 @@ export default function HomeScreen() {
         {/* \u2500\u2500 Header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
         <FadeInView delay={0}>
           <View style={s.header}>
-            <AnimatedPressable onPress={() => router.push('/(app)/profile')} scaleDown={0.92}>
+            <AnimatedPressable onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.92}>
               <ProfilePhoto name={firstName} photoUri={photoUri} size={36} />
             </AnimatedPressable>
             <View style={{ flex: 1, marginLeft: 10 }}>
@@ -597,13 +630,13 @@ export default function HomeScreen() {
             </View>
             <View style={s.compactDims}>
               {[
-                { label: 'S', score: smartScore, color: colors.blue },
-                { label: 'G', score: gritScore, color: colors.gold },
-                { label: 'B', score: buildScore, color: colors.green },
+                { label: 'S', score: displaySmart, color: colors.blue },
+                { label: 'G', score: displayGrit, color: colors.gold },
+                { label: 'B', score: displayBuild, color: colors.green },
               ].map(d => (
                 <View key={d.label} style={s.compactDim}>
                   <Text style={[s.compactDimScore, { color: hasAudit ? d.color : colors.t3 }]}>
-                    {hasAudit ? Math.round(d.score) : '-'}
+                    {hasAudit ? d.score : '-'}
                   </Text>
                   <Text style={s.compactDimLabel}>{d.label}</Text>
                 </View>
@@ -675,7 +708,8 @@ export default function HomeScreen() {
                     <AnimatedPressable
                       style={s.doNowCard}
                       onPress={() => {
-                        try { router.push((doNow.action_route || '/(app)/feedback') as any); } catch {}
+                        const route = (doNow.action_route || '/(app)/feedback').replace('resume-editor', 'feedback');
+                        try { router.push(route as any); } catch {}
                       }}
                       scaleDown={0.985}
                     >
@@ -714,7 +748,8 @@ export default function HomeScreen() {
                           key={key}
                           style={s.briefCard}
                           onPress={() => {
-                            try { router.push((card.action_route || '/(app)/feedback') as any); } catch {}
+                            const route = (card.action_route || '/(app)/feedback').replace('resume-editor', 'feedback');
+                            try { router.push(route as any); } catch {}
                           }}
                           scaleDown={0.985}
                         >
@@ -903,7 +938,7 @@ export default function HomeScreen() {
               <FadeInView delay={400}>
                 <AnimatedPressable
                   style={s.completenessCard}
-                  onPress={() => router.push('/(app)/profile')}
+                  onPress={() => router.push('/(app)/my-dilly-profile')}
                   scaleDown={0.985}
                 >
                   <View style={s.completenessBar}>

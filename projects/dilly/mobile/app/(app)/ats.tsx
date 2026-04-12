@@ -6,7 +6,7 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
-  Alert,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,7 @@ import FadeInView from '../../components/FadeInView';
 import ATSDeepScan, { RewriteSuggestion, KeywordCell, ATSScoreV2 } from '../../components/ATSDeepScan';
 import ATSCompareView from '../../components/ATSCompareView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 
 const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
@@ -142,8 +143,10 @@ function KeywordRow({ keyword, count, status }: { keyword: string; count: number
 
 export default function ATSScreen() {
   const insets = useSafeAreaInsets();
+  const toast = useInlineToast();
   const [tab, setTab] = useState<TabMode>('scan');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState<Record<string, any>>({});
 
   // Universal scan state
@@ -167,15 +170,23 @@ export default function ATSScreen() {
   const [matchLoading, setMatchLoading] = useState(false);
 
   // Load profile
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await dilly.fetch('/profile');
-        const p = await res.json();
-        setProfile(p || {});
-      } catch {}
-    })();
+  const fetchATSProfile = useCallback(async () => {
+    try {
+      const res = await dilly.fetch('/profile');
+      const p = await res.json();
+      setProfile(p || {});
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    fetchATSProfile();
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchATSProfile();
+    setRefreshing(false);
+  }, [fetchATSProfile]);
 
   // Extract bullet lines from raw resume text for the rewrite engine.
   // Keeps only lines that start with a bullet character and have real content.
@@ -262,9 +273,9 @@ export default function ATSScreen() {
       if (!res.ok) {
         if (data.detail?.includes('No resume')) {
           setHasResume(false);
-          Alert.alert('No resume found', 'Upload your resume first through New Audit.');
+          toast.show({ message: 'Upload your resume first.' });
         } else {
-          Alert.alert('Scan failed', data.detail || 'Could not run ATS scan.');
+          toast.show({ message: 'Scan failed. Try again.' });
         }
         setLoading(false);
         return;
@@ -308,7 +319,7 @@ export default function ATSScreen() {
         } catch {}
       })();
     } catch (e: any) {
-      Alert.alert('Scan failed', e.message || 'Could not run ATS scan.');
+      toast.show({ message: 'Scan failed. Try again.' });
     }
     finally { setLoading(false); }
   }
@@ -332,11 +343,11 @@ export default function ATSScreen() {
           if (scanRes.ok) {
             setCompanyScanData(scanData);
           }
-        } catch { Alert.alert('Scan Error', 'Could not scan this company. Try again.'); }
+        } catch { toast.show({ message: 'Could not scan this company.' }); }
         finally { setCompanyScanLoading(false); }
       }
     } catch {
-      Alert.alert('Lookup failed', 'Could not find ATS information for that company.');
+      toast.show({ message: 'Lookup failed. Try another company.' });
     }
     finally { setCompanyLoading(false); }
   }
@@ -345,7 +356,7 @@ export default function ATSScreen() {
   // /ats-keyword-density with the JD so we can render the heatmap + per-JD placement.
   async function runKeywordMatch() {
     if (!jdText.trim() || jdText.length < 50) {
-      Alert.alert('Paste a job description', 'The description needs to be at least 50 characters.');
+      toast.show({ message: 'Paste a longer job description.' });
       return;
     }
     setMatchLoading(true);
@@ -387,7 +398,7 @@ export default function ATSScreen() {
         setKeywordCells(cells);
       }
     } catch {
-      Alert.alert('Analysis failed', 'Could not analyze keywords.');
+      toast.show({ message: 'Keyword analysis failed.' });
     }
     finally { setMatchLoading(false); }
   }
@@ -499,7 +510,8 @@ export default function ATSScreen() {
         </View>
       </FadeInView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ss.scroll, { paddingBottom: insets.bottom + 40 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[ss.scroll, { paddingBottom: insets.bottom + 40 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
 
         {/* ── Universal Scan ──────────────────────────────────────────── */}
         {tab === 'scan' && (
@@ -872,6 +884,7 @@ export default function ATSScreen() {
         visible={compareVisible}
         onClose={() => setCompareVisible(false)}
       />
+      <InlineToastView {...toast.props} />
     </View>
   );
 }

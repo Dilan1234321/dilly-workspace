@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, ScrollView, TextInput, StyleSheet, Alert,
+  View, Text, ScrollView, TextInput, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -11,6 +11,7 @@ import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -35,6 +36,7 @@ interface DimensionGap {
 type Phase = 'setup' | 'loading' | 'practice' | 'review';
 
 export default function InterviewPracticeScreen() {
+  const toast = useInlineToast();
   const insets = useSafeAreaInsets();
   const { company: paramCompany, role: paramRole } = useLocalSearchParams<{ company?: string; role?: string }>();
 
@@ -60,11 +62,11 @@ export default function InterviewPracticeScreen() {
 
   async function loadDeck(c: string, r: string, jd: string) {
     if (!c.trim() || !r.trim()) {
-      Alert.alert('Missing info', 'Enter a company name and role.');
+      toast.show({ message: 'Enter a company and role.' });
       return;
     }
     if (!jd.trim() || jd.trim().length < 20) {
-      Alert.alert('Job description required', 'Paste the job description so Dilly can generate questions specific to this role.');
+      toast.show({ message: 'Paste the job description.' });
       return;
     }
     setPhase('loading');
@@ -114,7 +116,7 @@ export default function InterviewPracticeScreen() {
       setCurrentAnswer('');
       setPhase('practice');
     } catch (e: any) {
-      Alert.alert('Prep failed', e?.message || 'Unknown error.');
+      toast.show({ message: 'Prep failed. Try again.' });
       setPhase('setup');
     }
   }
@@ -376,6 +378,7 @@ export default function InterviewPracticeScreen() {
           </FadeInView>
         </ScrollView>
       )}
+      <InlineToastView {...toast.props} />
     </View>
   );
 }

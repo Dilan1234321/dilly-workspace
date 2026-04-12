@@ -8,20 +8,19 @@
  * Sections:
  * 1. Identity Card (premium gradient hero)
  * 2. Talk to Dilly (rotating conversation starter)
- * 3. Your Story (AI-generated narrative)
- * 4. Strengths Map (visual grid of career strengths)
- * 5. Skills Cloud (tag cloud with confidence sizing)
- * 6. Experiences (timeline with extracted details)
- * 7. Generated Resumes Gallery
- * 8. What Dilly Still Needs (missing profile areas)
- * 9. Profile Activity
+ * 3. Strengths Map (visual grid of career strengths)
+ * 4. Skills Cloud (tag cloud with confidence sizing)
+ * 5. Experiences (timeline with extracted details)
+ * 6. Generated Resumes Gallery
+ * 7. What Dilly Still Needs (missing profile areas)
+ * 8. Profile Activity
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  LayoutAnimation, Alert, RefreshControl, Animated, Easing,
-  Dimensions, Image,
+  LayoutAnimation, RefreshControl, Animated, Easing,
+  Dimensions, Image, TextInput, Keyboard,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,11 +28,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { mediumHaptic } from '../../lib/haptics';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
 import DillyCardEditor, { type CardData } from '../../components/DillyCard';
+import InlinePopup, { type PopupAction } from '../../components/InlinePopup';
+import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 
 const W = Dimensions.get('window').width;
 const GOLD = '#2B3A8E';
@@ -48,9 +50,6 @@ interface FactItem {
 }
 
 interface MemorySurface {
-  narrative: string | null;
-  narrative_updated_at: string | null;
-  narrative_updated_relative?: string;
   items: FactItem[];
   grouped: Record<string, FactItem[]>;
 }
@@ -68,6 +67,10 @@ const STRENGTH_CATEGORIES: Record<string, { icon: string; label: string; color: 
   soft_skill:           { icon: 'people',        label: 'Soft Skills',    color: '#AF52DE' },
   hobby:                { icon: 'football',      label: 'Interests',      color: '#FF9F0A' },
   strength:             { icon: 'trending-up',   label: 'Strengths',      color: colors.green },
+  weakness:             { icon: 'alert-circle',  label: 'Weaknesses',     color: colors.coral },
+  challenge:            { icon: 'fitness',       label: 'Challenges',     color: colors.amber },
+  area_for_improvement: { icon: 'arrow-up',      label: 'To Improve',     color: colors.amber },
+  fear:                 { icon: 'thunderstorm',  label: 'Concerns',       color: '#8E8E93' },
   company_culture_pref: { icon: 'storefront',    label: 'Culture Fit',    color: '#FFD700' },
   life_context:         { icon: 'home',          label: 'Background',     color: '#FF9F0A' },
 };
@@ -116,29 +119,61 @@ function StrengthRing({ pct, size = 56 }: { pct: number; size?: number }) {
   );
 }
 
+// ── Fact Row (measures own position for inline popup) ────────────────────────
+
+function FactRow({ fact, color, onPress }: { fact: FactItem; color: string; onPress: (anchor: { x: number; y: number }) => void }) {
+  const rowRef = useRef<View>(null);
+  return (
+    <AnimatedPressable
+      style={d.factRow}
+      onPress={() => {
+        rowRef.current?.measureInWindow((x, y, w, h) => {
+          onPress({ x: x + w - 30, y: y + h / 2 });
+        });
+      }}
+      scaleDown={0.98}
+    >
+      <View ref={rowRef} style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
+        <View style={[d.factDot, { backgroundColor: color }]} />
+        <View style={{ flex: 1 }}>
+          <Text style={d.factLabel}>{fact.label}</Text>
+          <Text style={d.factValue}>{fact.value}</Text>
+        </View>
+        <Ionicons name="ellipsis-horizontal" size={14} color={colors.t3} />
+      </View>
+    </AnimatedPressable>
+  );
+}
+
 // ── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function MyDillyProfileScreen() {
   const insets = useSafeAreaInsets();
+  const toast = useInlineToast();
   const [data, setData] = useState<MemorySurface | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [starterIdx, setStarterIdx] = useState(0);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [popup, setPopup] = useState<{ visible: boolean; anchor?: { x: number; y: number }; fact?: FactItem }>({ visible: false });
+  const [editingFact, setEditingFact] = useState<{ fact: FactItem; label: string; value: string } | null>(null);
+  const [resumes, setResumes] = useState<{ id: string; job_title: string; company: string; created_at: string }[]>([]);
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
   const fetchData = useCallback(async () => {
     try {
-      const [memRes, profileRes] = await Promise.all([
+      const [memRes, profileRes, resumesRes] = await Promise.all([
         dilly.fetch('/memory'),
         dilly.get('/profile').catch(() => null),
+        dilly.get('/generated-resumes').catch(() => null),
       ]);
       if (memRes.ok) {
         const json = await memRes.json();
         setData(json);
       }
       if (profileRes) setProfile(profileRes || {});
+      if (resumesRes?.resumes) setResumes(resumesRes.resumes);
     } catch {} finally { setLoading(false); }
   }, []);
 
@@ -156,6 +191,7 @@ export default function MyDillyProfileScreen() {
   }, []);
 
   const handleRefresh = useCallback(async () => {
+    mediumHaptic();
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
@@ -182,12 +218,17 @@ export default function MyDillyProfileScreen() {
   // Strength categories that have facts
   const strengthCats = Object.keys(STRENGTH_CATEGORIES).filter(k => (data?.grouped?.[k]?.length ?? 0) > 0);
 
+  // Share a resume card
+  const handleShareResume = (resume: { id: string; job_title: string; company: string }) => {
+    router.push({ pathname: '/(app)/resume-generate', params: { viewId: resume.id } });
+  };
+
   if (loading) {
     return (
       <View style={[d.container, { paddingTop: insets.top }]}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <Ionicons name="person-circle" size={60} color={colors.t3} />
-          <Text style={{ color: colors.t3, marginTop: 12, fontSize: 13 }}>Loading your Dilly...</Text>
+          <Text style={{ color: colors.t3, marginTop: 12, fontSize: 13 }}>Loading your Dilly profile...</Text>
         </View>
       </View>
     );
@@ -195,6 +236,12 @@ export default function MyDillyProfileScreen() {
 
   return (
     <View style={d.container}>
+      {/* Toast overlay — absolute, top-most z-index */}
+      <InlineToastView
+        {...toast.props}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999 }}
+      />
+
       {/* Header */}
       <View style={[d.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.push('/(app)/profile')} hitSlop={12}>
@@ -258,26 +305,10 @@ export default function MyDillyProfileScreen() {
           </AnimatedPressable>
         </FadeInView>
 
-        {/* ── 3. Your Story ────────────────────────────────────── */}
-        {data?.narrative && (
-          <FadeInView delay={140}>
-            <View style={d.storyCard}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <Ionicons name="book-outline" size={13} color={GOLD} />
-                <Text style={d.storyLabel}>YOUR STORY</Text>
-                {data.narrative_updated_relative && (
-                  <Text style={d.storyAge}>{data.narrative_updated_relative}</Text>
-                )}
-              </View>
-              <Text style={d.storyText}>{data.narrative}</Text>
-            </View>
-          </FadeInView>
-        )}
-
-        {/* ── 4. Strengths Map ─────────────────────────────────── */}
+        {/* ── 3. Strengths Map ─────────────────────────────────── */}
         {strengthCats.length > 0 && (
           <FadeInView delay={200}>
-            <Text style={d.sectionLabel}>YOUR STRENGTHS</Text>
+            <Text style={d.sectionLabel}>WHAT WE KNOW ABOUT YOU</Text>
             <View style={d.strengthGrid}>
               {Object.entries(STRENGTH_CATEGORIES).map(([key, cfg]) => {
                 const facts = data?.grouped?.[key] || [];
@@ -319,43 +350,12 @@ export default function MyDillyProfileScreen() {
             {expandedCat && data?.grouped?.[expandedCat] && (
               <View style={d.expandedFacts}>
                 {data.grouped[expandedCat].slice(0, 8).map((fact, i) => (
-                  <AnimatedPressable
+                  <FactRow
                     key={fact.id || i}
-                    style={d.factRow}
-                    onPress={() => {
-                      Alert.alert(fact.label, fact.value, [
-                        { text: 'Edit', onPress: () => openDillyOverlay({
-                          isPaid: true,
-                          initialMessage: `I want to update something in my profile. Currently it says "${fact.label}: ${fact.value}". Help me update this — ask me what the correct information should be.`,
-                        })},
-                        { text: 'Delete', style: 'destructive', onPress: async () => {
-                          try {
-                            await dilly.fetch(`/memory/items/${fact.id}`, { method: 'DELETE' });
-                            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                            setData(prev => {
-                              if (!prev) return prev;
-                              const items = prev.items.filter(it => it.id !== fact.id);
-                              const grouped: Record<string, any[]> = {};
-                              for (const item of items) {
-                                if (!grouped[item.category]) grouped[item.category] = [];
-                                grouped[item.category].push(item);
-                              }
-                              return { ...prev, items, grouped };
-                            });
-                          } catch {}
-                        }},
-                        { text: 'Cancel', style: 'cancel' },
-                      ]);
-                    }}
-                    scaleDown={0.98}
-                  >
-                    <View style={[d.factDot, { backgroundColor: STRENGTH_CATEGORIES[expandedCat]?.color || colors.t3 }]} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={d.factLabel}>{fact.label}</Text>
-                      <Text style={d.factValue}>{fact.value}</Text>
-                    </View>
-                    <Ionicons name="ellipsis-horizontal" size={14} color={colors.t3} />
-                  </AnimatedPressable>
+                    fact={fact}
+                    color={STRENGTH_CATEGORIES[expandedCat]?.color || colors.t3}
+                    onPress={(anchor) => setPopup({ visible: true, anchor, fact })}
+                  />
                 ))}
                 {/* Add new fact */}
                 <AnimatedPressable
@@ -374,7 +374,7 @@ export default function MyDillyProfileScreen() {
           </FadeInView>
         )}
 
-        {/* ── 5. Skills Cloud ──────────────────────────────────── */}
+        {/* ── 4. Skills Cloud ──────────────────────────────────── */}
         {allSkills.length > 0 && (
           <FadeInView delay={260}>
             <Text style={d.sectionLabel}>SKILLS DILLY KNOWS</Text>
@@ -391,49 +391,217 @@ export default function MyDillyProfileScreen() {
           </FadeInView>
         )}
 
-        {/* ── 6. What Dilly Still Needs ────────────────────────── */}
-        {missingCore.length > 0 && (
-          <FadeInView delay={320}>
-            <Text style={d.sectionLabel}>HELP DILLY HELP YOU</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {missingCore.map(m => {
-                const cfg = STRENGTH_CATEGORIES[m.key];
-                return (
-                  <AnimatedPressable
-                    key={m.key}
-                    style={d.nudgeCard}
-                    onPress={() => openDillyOverlay({
-                      isPaid: true,
-                      initialMessage: `I want to tell you about ${m.nudge}. Ask me a specific question to get started.`,
-                    })}
-                    scaleDown={0.97}
+        {/* ── 5. Help Dilly Help You (always visible) ─────────── */}
+        <FadeInView delay={320}>
+          <Text style={d.sectionLabel}>HELP DILLY HELP YOU</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {[
+              { icon: 'people', text: 'Tell Dilly about a leadership role you held', color: colors.indigo },
+              { icon: 'rocket', text: 'Share a project you are proud of', color: colors.green },
+              { icon: 'briefcase', text: 'Tell Dilly about an internship experience', color: colors.amber },
+              { icon: 'compass', text: 'Share your career goals', color: COBALT },
+              { icon: 'build', text: 'Tell Dilly about a skill you are developing', color: colors.coral },
+              { icon: 'heart', text: 'Share a challenge you overcame', color: '#E040FB' },
+              { icon: 'hand-left', text: 'Tell Dilly about volunteer work', color: colors.green },
+              { icon: 'school', text: 'Share your GPA or academic honors', color: colors.indigo },
+              { icon: 'flag', text: 'Tell Dilly about a club or organization', color: colors.amber },
+              { icon: 'globe', text: 'Share what industries interest you', color: COBALT },
+              { icon: 'star', text: 'Tell Dilly about your dream companies', color: GOLD },
+              { icon: 'chatbubbles', text: 'Describe a time you worked on a team', color: colors.coral },
+            ].slice((totalFacts % 8), (totalFacts % 8) + 4).concat(
+              [{ icon: 'people', text: 'Tell Dilly about a leadership role', color: colors.indigo },
+               { icon: 'rocket', text: 'Share a project you are proud of', color: colors.green },
+               { icon: 'briefcase', text: 'Tell Dilly about an internship', color: colors.amber },
+               { icon: 'compass', text: 'Share your career goals', color: COBALT }]
+            ).slice(0, 4).map((item, i) => (
+              <AnimatedPressable
+                key={i}
+                style={d.nudgeCard}
+                onPress={() => openDillyOverlay({
+                  isPaid: true,
+                  initialMessage: `${item.text}. Ask me a specific question to get started.`,
+                })}
+                scaleDown={0.97}
+              >
+                <View style={[d.nudgeIcon, { backgroundColor: item.color + '15' }]}>
+                  <Ionicons name={item.icon as any} size={16} color={item.color} />
+                </View>
+                <Text style={d.nudgeText}>{item.text}</Text>
+                <Ionicons name="chevron-forward" size={12} color={colors.t3} />
+              </AnimatedPressable>
+            ))}
+          </ScrollView>
+        </FadeInView>
+
+        {/* ── 5b. Milestones ──────────────────────────────────── */}
+        <FadeInView delay={350}>
+          <Text style={d.sectionLabel}>YOUR MILESTONES</Text>
+          <View style={{ gap: 6 }}>
+            {totalFacts > 0 && (
+              <View style={d.milestoneRow}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
+                <Text style={d.milestoneText}>{totalFacts} fact{totalFacts !== 1 ? 's' : ''} in your Dilly Profile</Text>
+              </View>
+            )}
+            {resumes.length > 0 && (
+              <View style={d.milestoneRow}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.green} />
+                <Text style={d.milestoneText}>{resumes.length} tailored resume{resumes.length !== 1 ? 's' : ''} generated</Text>
+              </View>
+            )}
+            {totalFacts === 0 && resumes.length === 0 && (
+              <View style={d.milestoneRow}>
+                <Ionicons name="ellipse-outline" size={16} color={colors.t3} />
+                <Text style={d.milestoneText}>Start telling Dilly about yourself to unlock milestones</Text>
+              </View>
+            )}
+          </View>
+        </FadeInView>
+        {/* ── 7. My Resumes ──────────────────────────────────── */}
+        {resumes.length > 0 && (
+          <FadeInView delay={400}>
+            <Text style={d.sectionLabel}>MY RESUMES</Text>
+            {resumes.slice(0, 5).map((r) => {
+              const date = new Date(r.created_at);
+              const dateStr = `${date.toLocaleString('default', { month: 'short' })} ${date.getDate()}`;
+              return (
+                <AnimatedPressable
+                  key={r.id}
+                  style={d.resumeCard}
+                  onPress={() => router.push({ pathname: '/(app)/resume-generate', params: { viewId: r.id } })}
+                  scaleDown={0.98}
+                >
+                  <Ionicons name="document-text-outline" size={18} color={COBALT} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={d.resumeTitle}>{r.job_title}</Text>
+                    <Text style={d.resumeSub}>{r.company} · {dateStr}</Text>
+                  </View>
+                  <TouchableOpacity
+                    hitSlop={10}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleShareResume(r);
+                    }}
+                    style={d.resumeShareBtn}
                   >
-                    <View style={[d.nudgeIcon, { backgroundColor: (cfg?.color || GOLD) + '15' }]}>
-                      <Ionicons name={(cfg?.icon || 'chatbubble') as any} size={16} color={cfg?.color || GOLD} />
-                    </View>
-                    <Text style={d.nudgeText}>{m.nudge}</Text>
-                    <Ionicons name="chatbubble-outline" size={12} color={COBALT} />
-                  </AnimatedPressable>
-                );
-              })}
-            </ScrollView>
+                    <Ionicons name="share-outline" size={16} color={COBALT} />
+                  </TouchableOpacity>
+                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                </AnimatedPressable>
+              );
+            })}
           </FadeInView>
         )}
 
-        {/* ── 7. Profile Activity ──────────────────────────────── */}
-        {totalFacts > 0 && (
-          <FadeInView delay={380}>
-            <View style={d.activityCard}>
-              <Ionicons name="pulse" size={14} color={colors.green} />
-              <Text style={d.activityText}>
-                Dilly has learned {totalFacts} fact{totalFacts !== 1 ? 's' : ''} about your career
-                {completeness < 100 && `. ${100 - completeness}% to go.`}
-              </Text>
-            </View>
-          </FadeInView>
-        )}
         <DillyFooter />
       </ScrollView>
+
+      {/* Inline popup for fact editing */}
+      <InlinePopup
+        visible={popup.visible}
+        anchor={popup.anchor}
+        title={popup.fact?.label}
+        message={popup.fact?.value}
+        actions={[
+          {
+            label: 'Edit',
+            onPress: () => {
+              if (!popup.fact) return;
+              setEditingFact({ fact: popup.fact, label: popup.fact.label, value: popup.fact.value });
+            },
+          },
+          {
+            label: 'Delete',
+            destructive: true,
+            onPress: async () => {
+              if (!popup.fact) return;
+              const factId = popup.fact.id;
+              try {
+                await dilly.fetch(`/memory/items/${factId}`, { method: 'DELETE' });
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setData(prev => {
+                  if (!prev) return prev;
+                  const items = prev.items.filter(it => it.id !== factId);
+                  const grouped: Record<string, any[]> = {};
+                  for (const item of items) {
+                    if (!grouped[item.category]) grouped[item.category] = [];
+                    grouped[item.category].push(item);
+                  }
+                  return { ...prev, items, grouped };
+                });
+              } catch {}
+            },
+          },
+        ]}
+        onClose={() => setPopup({ visible: false })}
+      />
+
+      {/* Inline fact editor */}
+      {editingFact && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <TouchableOpacity
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.15)' }]}
+            activeOpacity={1}
+            onPress={() => { Keyboard.dismiss(); setEditingFact(null); }}
+          />
+          <View style={d.inlineEditor}>
+            <Text style={d.inlineEditorFieldLabel}>Title</Text>
+            <TextInput
+              style={d.inlineEditorLabelInput}
+              value={editingFact.label}
+              onChangeText={(v) => setEditingFact(prev => prev ? { ...prev, label: v } : prev)}
+              autoFocus
+              returnKeyType="next"
+            />
+            <Text style={[d.inlineEditorFieldLabel, { marginTop: 12 }]}>Value</Text>
+            <TextInput
+              style={d.inlineEditorInput}
+              value={editingFact.value}
+              onChangeText={(v) => setEditingFact(prev => prev ? { ...prev, value: v } : prev)}
+              multiline
+              returnKeyType="done"
+              blurOnSubmit
+            />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <TouchableOpacity
+                style={d.inlineEditorCancel}
+                onPress={() => setEditingFact(null)}
+              >
+                <Text style={{ fontSize: 13, color: colors.t2 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={d.inlineEditorSave}
+                onPress={async () => {
+                  if (!editingFact) return;
+                  const { fact, label, value } = editingFact;
+                  if (label.trim() === fact.label && value.trim() === fact.value) { setEditingFact(null); return; }
+                  try {
+                    await dilly.fetch(`/memory/items/${fact.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ label: label.trim(), value: value.trim() }),
+                    });
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setData(prev => {
+                      if (!prev) return prev;
+                      const items = prev.items.map(it => it.id === fact.id ? { ...it, label: label.trim(), value: value.trim() } : it);
+                      const grouped: Record<string, any[]> = {};
+                      for (const item of items) {
+                        if (!grouped[item.category]) grouped[item.category] = [];
+                        grouped[item.category].push(item);
+                      }
+                      return { ...prev, items, grouped };
+                    });
+                  } catch {}
+                  setEditingFact(null);
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -480,15 +648,6 @@ const d = StyleSheet.create({
   },
   talkPrompt: { fontSize: 14, fontWeight: '600', color: colors.t1, lineHeight: 19 },
   talkHint: { fontSize: 11, color: COBALT, marginTop: 2, fontWeight: '500' },
-
-  // Story
-  storyCard: {
-    backgroundColor: colors.s1, borderRadius: 14, padding: 16,
-    borderWidth: 1, borderColor: colors.goldbdr,
-  },
-  storyLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.2, color: colors.t3 },
-  storyAge: { fontSize: 9, color: colors.t3, marginLeft: 'auto' },
-  storyText: { fontSize: 14, color: colors.t1, lineHeight: 21 },
 
   // Section label
   sectionLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, color: colors.t3, marginBottom: 4 },
@@ -538,4 +697,62 @@ const d = StyleSheet.create({
     borderWidth: 1, borderColor: colors.b1,
   },
   activityText: { fontSize: 12, color: colors.t2, fontWeight: '500' },
+
+  // Milestones
+  milestoneRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.s1, borderRadius: 10, padding: 12,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  milestoneText: { fontSize: 12, color: colors.t2, fontWeight: '500' },
+
+  // My Resumes
+  resumeCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.s1, borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: colors.b1, marginBottom: 8,
+  },
+  resumeTitle: { fontSize: 13, fontWeight: '600', color: colors.t1 },
+  resumeSub: { fontSize: 11, color: colors.t3, marginTop: 2 },
+  resumeShareBtn: {
+    padding: 6, borderRadius: 8, backgroundColor: COBALT + '10',
+  },
+
+  // Inline fact editor
+  inlineEditor: {
+    position: 'absolute',
+    top: '30%',
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.b1,
+  },
+  inlineEditorLabel: { fontSize: 12, fontWeight: '700', color: colors.t2, marginBottom: 8 },
+  inlineEditorFieldLabel: { fontSize: 11, fontWeight: '600', color: colors.t3, marginBottom: 4, letterSpacing: 0.5 },
+  inlineEditorLabelInput: {
+    fontSize: 15, fontWeight: '600', color: colors.t1,
+    borderWidth: 1, borderColor: colors.b1, borderRadius: 10,
+    paddingVertical: 10, paddingHorizontal: 12,
+  },
+  inlineEditorInput: {
+    fontSize: 15, color: colors.t1, lineHeight: 21,
+    borderWidth: 1, borderColor: colors.b1, borderRadius: 10,
+    padding: 12, minHeight: 60, textAlignVertical: 'top',
+  },
+  inlineEditorCancel: {
+    flex: 1, alignItems: 'center', paddingVertical: 10,
+    borderRadius: 10, backgroundColor: colors.s2,
+  },
+  inlineEditorSave: {
+    flex: 1, alignItems: 'center', paddingVertical: 10,
+    borderRadius: 10, backgroundColor: GOLD,
+  },
 });

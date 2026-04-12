@@ -1,0 +1,1148 @@
+{
+  "generated_at": "20260408_085028",
+  "rubrics_tested": [
+    "arts_design",
+    "business_accounting",
+    "business_consulting",
+    "business_finance",
+    "business_marketing",
+    "health_nursing_allied",
+    "humanities_communications",
+    "pre_health",
+    "pre_law",
+    "quantitative_math_stats",
+    "science_research",
+    "social_sciences",
+    "sport_management",
+    "tech_cybersecurity",
+    "tech_data_science",
+    "tech_software_engineering"
+  ],
+  "rubric_count": 16,
+  "resume_count": 3,
+  "results": [
+    {
+      "filename": "Abbigail Stasiuk-Resume.pdf",
+      "extraction_ok": true,
+      "parsed": {
+        "name": "Abbigail Stasiuk",
+        "major": "Entrepreneurship",
+        "gpa": null,
+        "section_keys": [
+          "education",
+          "skills",
+          "certifications",
+          "experience",
+          "contact details"
+        ],
+        "text_length": 5271
+      },
+      "legacy": {
+        "track": "Business",
+        "smart": 52.5,
+        "grit": 30,
+        "build": 13.2,
+        "final": 32.5
+      },
+      "rubric_scores": {
+        "tech_software_engineering": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 25.0,
+          "composite": 12.5,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 11,
+          "unmeasured_count": 2,
+          "top_matched": [
+            "At least one of Python / JavaScript / TypeScript / Go / Rust / Java mentioned with context"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in CS or quantitative major",
+            "Relevant CS coursework listed (DSA, systems, distributed, ML)",
+            "Recognized cloud certification (AWS, GCP, Azure)",
+            "GitHub link on resume (baseline signal \u2014 hire tool can't verify commit graph)"
+          ]
+        },
+        "tech_data_science": {
+          "smart": 0.0,
+          "grit": 38.9,
+          "build": 0.0,
+          "composite": 8.6,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 11,
+          "unmeasured_count": 2,
+          "top_matched": [
+            "Prior data / research / analyst internship or RA position"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.5+ GPA in quantitative major (Stats, Math, CS, Data Science, Physics, Econ, Engineering)",
+            "Coursework in probability, stats, regression, experimental design, or causal inference",
+            "3.0 to 3.49 GPA in quantitative major",
+            "Kaggle participation (competitions, datasets, notebooks)"
+          ]
+        },
+        "business_finance": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 12,
+          "unmeasured_count": 3,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in Finance / Accounting / Economics / quantitative major",
+            "CFA Level 1 passed or registered/sat",
+            "3.5 to 3.69 GPA in a finance-adjacent major",
+            "Bloomberg Market Concepts (BMC) or Wall Street Prep / Training the Street / BIWS certification"
+          ]
+        },
+        "pre_health": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 80.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 16,
+          "unmeasured_count": 1,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "Cumulative GPA 3.7+ (matriculant median 3.77)",
+            "BCPM GPA 3.6+ (field is separately extracted from transcript by dilly_core)",
+            "MCAT mentioned on resume",
+            "Strong grades in upper-level science (biochem, genetics, physiology, anatomy)"
+          ]
+        },
+        "business_marketing": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 68.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 11,
+          "unmeasured_count": 2,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in marketing / business / communications / data science",
+            "Google Analytics / HubSpot / Meta Blueprint / Google Ads certification",
+            "Coursework in stats, marketing research, consumer behavior, econometrics",
+            "Prior marketing-adjacent work (any paid marketing/comms role)"
+          ]
+        },
+        "business_accounting": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 13,
+          "unmeasured_count": 0,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in Accounting",
+            "Clear 150-credit-hour plan (MAcc, dual major, or 5-year program) mentioned",
+            "CPA exam sections mentioned or in progress",
+            "Dean's List / Honors in accounting coursework"
+          ]
+        },
+        "tech_cybersecurity": {
+          "smart": 0.0,
+          "grit": 70.0,
+          "build": 0.0,
+          "composite": 21.0,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 10,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "TryHackMe / HackTheBox sustained rank (with profile link)",
+            "CTF competition participation"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "Security+ / Network+ / CEH / OSCP / CySA+ certification",
+            "GPA 3.3+ in Cybersecurity / CS / IT major",
+            "Security-adjacent coursework (networks, systems, cryptography)",
+            "Honors or Dean's List in a technical major"
+          ]
+        },
+        "science_research": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 75.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 12,
+          "unmeasured_count": 0,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in a science major",
+            "Honors program / honors college / honors thesis",
+            "Graduate-level coursework taken as undergrad",
+            "GRE General or Subject test mentioned"
+          ]
+        },
+        "health_nursing_allied": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 11,
+          "unmeasured_count": 0,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in nursing / health science / public health major",
+            "BLS / ACLS / PALS certification",
+            "NCLEX prep or passed (for nursing)",
+            "Clinical rotations or patient care work"
+          ]
+        },
+        "social_sciences": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 10,
+          "unmeasured_count": 0,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.5+ GPA in a social science major",
+            "Statistical software fluency (SPSS, R, Stata, SAS)",
+            "Relevant coursework (research methods, statistics, quantitative analysis)",
+            "Research experience (lab assistant, RA, undergraduate thesis)"
+          ]
+        },
+        "humanities_communications": {
+          "smart": 25.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 6.2,
+          "recruiter_bar": 66.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Relevant coursework (writing-intensive, journalism, rhetoric)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in humanities / comms major",
+            "Editor or staff writer at student publication",
+            "Internship at media company / nonprofit / comms agency",
+            "Multi-role leadership (student org, publication, club)"
+          ]
+        },
+        "arts_design": {
+          "smart": 25.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 3.8,
+          "recruiter_bar": 65.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 8,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "3.3+ GPA (nice-to-have, not required)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "Any arts/design major",
+            "Multi-role creative leadership (club, festival, production)",
+            "Prior creative work experience (agency, studio, in-house)",
+            "Portfolio link (Behance, ArtStation, Dribbble, personal site)"
+          ]
+        },
+        "quantitative_math_stats": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 10,
+          "unmeasured_count": 0,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in Math / Stats / quantitative major",
+            "Actuarial exams passed (P, FM, IFM, etc.)",
+            "Upper-level math coursework (real analysis, abstract algebra, topology)",
+            "Competitive programming / math competitions"
+          ]
+        },
+        "sport_management": {
+          "smart": 0.0,
+          "grit": 25.0,
+          "build": 0.0,
+          "composite": 11.2,
+          "recruiter_bar": 68.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Multi-role experience (volunteer + work)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in Sport Management / Business / Recreation",
+            "Sport analytics or stats coursework",
+            "Internship with team / league / agency / athletic department",
+            "Game day / event staff experience"
+          ]
+        },
+        "business_consulting": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 76.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 13,
+          "unmeasured_count": 0,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in quantitative or business major",
+            "Case interview preparation signal",
+            "3.5 to 3.69 GPA in relevant major",
+            "Quantitative coursework (stats, econometrics, micro/macro)"
+          ]
+        },
+        "pre_law": {
+          "smart": 13.9,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 7.6,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 12,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "3.5 to 3.79 GPA"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.8+ GPA (T14 competitive)",
+            "LSAT mentioned on resume (score or prep)",
+            "Pre-law or rigorous major (Philosophy, Political Science, History, English, Economics)",
+            "Honors / Dean's List"
+          ]
+        }
+      },
+      "errors": [],
+      "signals_summary": {
+        "gpa": 3.5,
+        "work_entries": 6,
+        "impacts": 0,
+        "leadership": 0,
+        "has_research": false,
+        "deployed_app": false,
+        "recognized_tech_employer": false,
+        "honors": 0
+      },
+      "elapsed_sec": 0.12
+    },
+    {
+      "filename": "Aidan Rina Resume.docx",
+      "extraction_ok": true,
+      "parsed": {
+        "name": "Aidan Rina",
+        "major": "Finance",
+        "gpa": 4.0,
+        "section_keys": [
+          "_top",
+          "education",
+          "honors program student",
+          "experience",
+          "skills",
+          "activities"
+        ],
+        "text_length": 2071
+      },
+      "legacy": {
+        "track": "Finance",
+        "smart": 87.2,
+        "grit": 20,
+        "build": 4.8,
+        "final": 36.4
+      },
+      "rubric_scores": {
+        "tech_software_engineering": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 12,
+          "unmeasured_count": 2,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in CS or quantitative major",
+            "Relevant CS coursework listed (DSA, systems, distributed, ML)",
+            "Recognized cloud certification (AWS, GCP, Azure)",
+            "GitHub link on resume (baseline signal \u2014 hire tool can't verify commit graph)"
+          ]
+        },
+        "tech_data_science": {
+          "smart": 0.0,
+          "grit": 38.9,
+          "build": 0.0,
+          "composite": 8.6,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 11,
+          "unmeasured_count": 2,
+          "top_matched": [
+            "Prior data / research / analyst internship or RA position"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.5+ GPA in quantitative major (Stats, Math, CS, Data Science, Physics, Econ, Engineering)",
+            "Coursework in probability, stats, regression, experimental design, or causal inference",
+            "3.0 to 3.49 GPA in quantitative major",
+            "Kaggle participation (competitions, datasets, notebooks)"
+          ]
+        },
+        "business_finance": {
+          "smart": 57.7,
+          "grit": 25.0,
+          "build": 0.0,
+          "composite": 33.5,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 3,
+          "unmatched_count": 9,
+          "unmeasured_count": 3,
+          "top_matched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in Finance / Accounting / Economics / quantitative major",
+            "Honors (Dean's list, scholarship, Latin honors)"
+          ],
+          "top_unmatched": [
+            "CFA Level 1 passed or registered/sat",
+            "3.5 to 3.69 GPA in a finance-adjacent major",
+            "Bloomberg Market Concepts (BMC) or Wall Street Prep / Training the Street / BIWS certification",
+            "Prior finance-adjacent internship (wealth management, corporate finance, Big 4 transaction advisory, equity research, regional bank)",
+            "Leadership in investment club, finance society, student-run fund"
+          ]
+        },
+        "pre_health": {
+          "smart": 11.9,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 5.9,
+          "recruiter_bar": 80.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 15,
+          "unmeasured_count": 1,
+          "top_matched": [
+            "Cumulative GPA 3.7+ (matriculant median 3.77)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "BCPM GPA 3.6+ (field is separately extracted from transcript by dilly_core)",
+            "MCAT mentioned on resume",
+            "Strong grades in upper-level science (biochem, genetics, physiology, anatomy)",
+            "Pre-med major (Biochemistry, Biomedical Sciences, Biology) with any honors signal"
+          ]
+        },
+        "business_marketing": {
+          "smart": 58.3,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 11.7,
+          "recruiter_bar": 68.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 9,
+          "unmeasured_count": 2,
+          "top_matched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in marketing / business / communications / data science"
+          ],
+          "top_unmatched": [
+            "Google Analytics / HubSpot / Meta Blueprint / Google Ads certification",
+            "Coursework in stats, marketing research, consumer behavior, econometrics",
+            "Prior marketing-adjacent work (any paid marketing/comms role)",
+            "Leadership in marketing club, AMA chapter, business frat marketing committee",
+            "Social media with documented growth or engagement"
+          ]
+        },
+        "business_accounting": {
+          "smart": 62.9,
+          "grit": 0.0,
+          "build": 25.0,
+          "composite": 31.4,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 4,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in Accounting",
+            "Dean's List / Honors in accounting coursework",
+            "ERP / accounting software exposure (SAP, Oracle, NetSuite, QuickBooks)"
+          ],
+          "top_unmatched": [
+            "Clear 150-credit-hour plan (MAcc, dual major, or 5-year program) mentioned",
+            "CPA exam sections mentioned or in progress",
+            "Coursework in Intermediate Accounting, Audit, Tax, AIS",
+            "Beta Alpha Psi member with officer role",
+            "VITA (Volunteer Income Tax Assistance) volunteer \u2014 IRS certified"
+          ]
+        },
+        "tech_cybersecurity": {
+          "smart": 0.0,
+          "grit": 12.5,
+          "build": 0.0,
+          "composite": 3.8,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 11,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Honors or Dean's List in a technical major"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "Security+ / Network+ / CEH / OSCP / CySA+ certification",
+            "GPA 3.3+ in Cybersecurity / CS / IT major",
+            "Security-adjacent coursework (networks, systems, cryptography)",
+            "TryHackMe / HackTheBox sustained rank (with profile link)"
+          ]
+        },
+        "science_research": {
+          "smart": 10.4,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 4.7,
+          "recruiter_bar": 75.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 11,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Honors program / honors college / honors thesis"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in a science major",
+            "Graduate-level coursework taken as undergrad",
+            "GRE General or Subject test mentioned",
+            "Multi-year research experience (research_longevity_years >= 2)"
+          ]
+        },
+        "health_nursing_allied": {
+          "smart": 0.0,
+          "grit": 25.0,
+          "build": 0.0,
+          "composite": 10.0,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 10,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Honors or recognition"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in nursing / health science / public health major",
+            "BLS / ACLS / PALS certification",
+            "NCLEX prep or passed (for nursing)",
+            "Clinical rotations or patient care work"
+          ]
+        },
+        "social_sciences": {
+          "smart": 0.0,
+          "grit": 25.0,
+          "build": 0.0,
+          "composite": 8.8,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Honors, Dean's List, Psi Chi (psychology honor society)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.5+ GPA in a social science major",
+            "Statistical software fluency (SPSS, R, Stata, SAS)",
+            "Relevant coursework (research methods, statistics, quantitative analysis)",
+            "Research experience (lab assistant, RA, undergraduate thesis)"
+          ]
+        },
+        "humanities_communications": {
+          "smart": 25.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 6.2,
+          "recruiter_bar": 66.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Relevant coursework (writing-intensive, journalism, rhetoric)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in humanities / comms major",
+            "Editor or staff writer at student publication",
+            "Internship at media company / nonprofit / comms agency",
+            "Multi-role leadership (student org, publication, club)"
+          ]
+        },
+        "arts_design": {
+          "smart": 25.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 3.8,
+          "recruiter_bar": 65.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 8,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "3.3+ GPA (nice-to-have, not required)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "Any arts/design major",
+            "Multi-role creative leadership (club, festival, production)",
+            "Prior creative work experience (agency, studio, in-house)",
+            "Portfolio link (Behance, ArtStation, Dribbble, personal site)"
+          ]
+        },
+        "quantitative_math_stats": {
+          "smart": 0.0,
+          "grit": 25.0,
+          "build": 0.0,
+          "composite": 6.2,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Honors / Dean's List"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in Math / Stats / quantitative major",
+            "Actuarial exams passed (P, FM, IFM, etc.)",
+            "Upper-level math coursework (real analysis, abstract algebra, topology)",
+            "Competitive programming / math competitions"
+          ]
+        },
+        "sport_management": {
+          "smart": 0.0,
+          "grit": 76.7,
+          "build": 0.0,
+          "composite": 34.5,
+          "recruiter_bar": 68.0,
+          "above_bar": false,
+          "matched_count": 3,
+          "unmatched_count": 7,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Internship with team / league / agency / athletic department",
+            "Game day / event staff experience",
+            "Multi-role experience (volunteer + work)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in Sport Management / Business / Recreation",
+            "Sport analytics or stats coursework",
+            "Leadership in sports marketing / sports management club",
+            "Sports analytics project or dashboard"
+          ]
+        },
+        "business_consulting": {
+          "smart": 57.7,
+          "grit": 14.3,
+          "build": 0.0,
+          "composite": 28.1,
+          "recruiter_bar": 76.0,
+          "above_bar": false,
+          "matched_count": 3,
+          "unmatched_count": 10,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in quantitative or business major",
+            "Honors / Dean's List"
+          ],
+          "top_unmatched": [
+            "Case interview preparation signal",
+            "3.5 to 3.69 GPA in relevant major",
+            "Quantitative coursework (stats, econometrics, micro/macro)",
+            "Leadership in consulting club with real engagement",
+            "Prior analyst / strategy / research experience"
+          ]
+        },
+        "pre_law": {
+          "smart": 23.8,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 13.1,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 11,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "3.8+ GPA (T14 competitive)",
+            "Honors / Dean's List"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "LSAT mentioned on resume (score or prep)",
+            "Pre-law or rigorous major (Philosophy, Political Science, History, English, Economics)",
+            "3.5 to 3.79 GPA",
+            "Legal experience: law firm, DA's office, public defender, federal judiciary, legal aid"
+          ]
+        }
+      },
+      "errors": [],
+      "signals_summary": {
+        "gpa": 4.0,
+        "work_entries": 4,
+        "impacts": 0,
+        "leadership": 0,
+        "has_research": false,
+        "deployed_app": false,
+        "recognized_tech_employer": false,
+        "honors": 2
+      },
+      "elapsed_sec": 0.06
+    },
+    {
+      "filename": "Aldana CV 2025.pdf",
+      "extraction_ok": true,
+      "parsed": {
+        "name": "Aldana Aniana Flores",
+        "major": "Cybersecurity",
+        "gpa": null,
+        "section_keys": [
+          "_top",
+          "education",
+          "skills",
+          "certifications"
+        ],
+        "text_length": 5508
+      },
+      "legacy": {
+        "track": "Tech",
+        "smart": 92.2,
+        "grit": 100.0,
+        "build": 6.0,
+        "final": 71.8
+      },
+      "rubric_scores": {
+        "tech_software_engineering": {
+          "smart": 70.0,
+          "grit": 0.0,
+          "build": 25.0,
+          "composite": 30.0,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 3,
+          "unmatched_count": 9,
+          "unmeasured_count": 2,
+          "top_matched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in CS or quantitative major",
+            "At least one of Python / JavaScript / TypeScript / Go / Rust / Java mentioned with context"
+          ],
+          "top_unmatched": [
+            "Relevant CS coursework listed (DSA, systems, distributed, ML)",
+            "Recognized cloud certification (AWS, GCP, Azure)",
+            "GitHub link on resume (baseline signal \u2014 hire tool can't verify commit graph)",
+            "Deployed application with live URL",
+            "Hackathon participation"
+          ]
+        },
+        "tech_data_science": {
+          "smart": 0.0,
+          "grit": 38.9,
+          "build": 22.5,
+          "composite": 17.1,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 10,
+          "unmeasured_count": 2,
+          "top_matched": [
+            "Prior data / research / analyst internship or RA position",
+            "Python fluency with pandas / numpy / scikit-learn / ML libs"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.5+ GPA in quantitative major (Stats, Math, CS, Data Science, Physics, Econ, Engineering)",
+            "Coursework in probability, stats, regression, experimental design, or causal inference",
+            "3.0 to 3.49 GPA in quantitative major",
+            "Kaggle participation (competitions, datasets, notebooks)"
+          ]
+        },
+        "business_finance": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 12,
+          "unmeasured_count": 3,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in Finance / Accounting / Economics / quantitative major",
+            "CFA Level 1 passed or registered/sat",
+            "3.5 to 3.69 GPA in a finance-adjacent major",
+            "Bloomberg Market Concepts (BMC) or Wall Street Prep / Training the Street / BIWS certification"
+          ]
+        },
+        "pre_health": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 19.6,
+          "composite": 2.9,
+          "recruiter_bar": 80.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 15,
+          "unmeasured_count": 1,
+          "top_matched": [
+            "Any research mentioned (extracted by dilly_core as has_research boolean)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "Cumulative GPA 3.7+ (matriculant median 3.77)",
+            "BCPM GPA 3.6+ (field is separately extracted from transcript by dilly_core)",
+            "MCAT mentioned on resume",
+            "Strong grades in upper-level science (biochem, genetics, physiology, anatomy)"
+          ]
+        },
+        "business_marketing": {
+          "smart": 0.0,
+          "grit": 41.2,
+          "build": 25.0,
+          "composite": 24.9,
+          "recruiter_bar": 68.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 9,
+          "unmeasured_count": 2,
+          "top_matched": [
+            "Prior marketing-adjacent work (any paid marketing/comms role)",
+            "Visual / creative tools mentioned (Figma, Canva, Adobe Creative Cloud, Photoshop, Illustrator)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in marketing / business / communications / data science",
+            "Google Analytics / HubSpot / Meta Blueprint / Google Ads certification",
+            "Coursework in stats, marketing research, consumer behavior, econometrics",
+            "Leadership in marketing club, AMA chapter, business frat marketing committee"
+          ]
+        },
+        "business_accounting": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 0.0,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 0,
+          "unmatched_count": 13,
+          "unmeasured_count": 0,
+          "top_matched": [],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.5+ in Accounting",
+            "Clear 150-credit-hour plan (MAcc, dual major, or 5-year program) mentioned",
+            "CPA exam sections mentioned or in progress",
+            "Dean's List / Honors in accounting coursework"
+          ]
+        },
+        "tech_cybersecurity": {
+          "smart": 55.1,
+          "grit": 0.0,
+          "build": 25.0,
+          "composite": 25.0,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 3,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "GPA 3.3+ in Cybersecurity / CS / IT major",
+            "Scripting for security: Python, Bash, PowerShell"
+          ],
+          "top_unmatched": [
+            "Security+ / Network+ / CEH / OSCP / CySA+ certification",
+            "Security-adjacent coursework (networks, systems, cryptography)",
+            "TryHackMe / HackTheBox sustained rank (with profile link)",
+            "CTF competition participation",
+            "Honors or Dean's List in a technical major"
+          ]
+        },
+        "science_research": {
+          "smart": 0.0,
+          "grit": 21.5,
+          "build": 25.0,
+          "composite": 12.7,
+          "recruiter_bar": 75.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 10,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Any research experience (has_research = true)",
+            "Data analysis tools: R, Python, MATLAB, Mathematica"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in a science major",
+            "Honors program / honors college / honors thesis",
+            "Graduate-level coursework taken as undergrad",
+            "GRE General or Subject test mentioned"
+          ]
+        },
+        "health_nursing_allied": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 62.3,
+          "composite": 15.6,
+          "recruiter_bar": 72.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Research experience relevant to health (public health, clinical research)",
+            "Spanish or second-language fluency (patient communication)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in nursing / health science / public health major",
+            "BLS / ACLS / PALS certification",
+            "NCLEX prep or passed (for nursing)",
+            "Clinical rotations or patient care work"
+          ]
+        },
+        "social_sciences": {
+          "smart": 0.0,
+          "grit": 41.2,
+          "build": 0.0,
+          "composite": 14.4,
+          "recruiter_bar": 70.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 9,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Research experience (lab assistant, RA, undergraduate thesis)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.5+ GPA in a social science major",
+            "Statistical software fluency (SPSS, R, Stata, SAS)",
+            "Relevant coursework (research methods, statistics, quantitative analysis)",
+            "Internship at nonprofit, government agency, think tank"
+          ]
+        },
+        "humanities_communications": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 25.0,
+          "composite": 11.2,
+          "recruiter_bar": 66.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 8,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Adobe Creative Cloud / design tools (InDesign, Illustrator, Photoshop)",
+            "Foreign language proficiency"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in humanities / comms major",
+            "Relevant coursework (writing-intensive, journalism, rhetoric)",
+            "Editor or staff writer at student publication",
+            "Internship at media company / nonprofit / comms agency"
+          ]
+        },
+        "arts_design": {
+          "smart": 25.0,
+          "grit": 0.0,
+          "build": 0.0,
+          "composite": 3.8,
+          "recruiter_bar": 65.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 8,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "3.3+ GPA (nice-to-have, not required)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "Any arts/design major",
+            "Multi-role creative leadership (club, festival, production)",
+            "Prior creative work experience (agency, studio, in-house)",
+            "Portfolio link (Behance, ArtStation, Dribbble, personal site)"
+          ]
+        },
+        "quantitative_math_stats": {
+          "smart": 0.0,
+          "grit": 46.7,
+          "build": 28.8,
+          "composite": 17.4,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 8,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Research experience (REU, senior thesis)",
+            "Programming fluency: Python, R, MATLAB, Mathematica, Julia"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in Math / Stats / quantitative major",
+            "Actuarial exams passed (P, FM, IFM, etc.)",
+            "Upper-level math coursework (real analysis, abstract algebra, topology)",
+            "Competitive programming / math competitions"
+          ]
+        },
+        "sport_management": {
+          "smart": 0.0,
+          "grit": 25.0,
+          "build": 28.8,
+          "composite": 21.3,
+          "recruiter_bar": 68.0,
+          "above_bar": false,
+          "matched_count": 2,
+          "unmatched_count": 8,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Multi-role experience (volunteer + work)",
+            "Social media / content creation for sports (running an athlete or team account)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.3+ GPA in Sport Management / Business / Recreation",
+            "Sport analytics or stats coursework",
+            "Internship with team / league / agency / athletic department",
+            "Game day / event staff experience"
+          ]
+        },
+        "business_consulting": {
+          "smart": 0.0,
+          "grit": 0.0,
+          "build": 25.0,
+          "composite": 6.2,
+          "recruiter_bar": 76.0,
+          "above_bar": false,
+          "matched_count": 1,
+          "unmatched_count": 12,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "Research project with structured methodology"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.7+ GPA in quantitative or business major",
+            "Case interview preparation signal",
+            "3.5 to 3.69 GPA in relevant major",
+            "Quantitative coursework (stats, econometrics, micro/macro)"
+          ]
+        },
+        "pre_law": {
+          "smart": 13.9,
+          "grit": 43.6,
+          "build": 0.0,
+          "composite": 18.5,
+          "recruiter_bar": 78.0,
+          "above_bar": false,
+          "matched_count": 3,
+          "unmatched_count": 10,
+          "unmeasured_count": 0,
+          "top_matched": [
+            "3.5 to 3.79 GPA",
+            "Moot court, mock trial, debate team",
+            "Research assistant to professor (legal or related fields)"
+          ],
+          "top_unmatched": [
+            "Baseline cohort fit \u2014 student is in a major relevant to this cohort",
+            "3.8+ GPA (T14 competitive)",
+            "LSAT mentioned on resume (score or prep)",
+            "Pre-law or rigorous major (Philosophy, Political Science, History, English, Economics)",
+            "Honors / Dean's List"
+          ]
+        }
+      },
+      "errors": [],
+      "signals_summary": {
+        "gpa": 3.5,
+        "work_entries": 15,
+        "impacts": 0,
+        "leadership": 0,
+        "has_research": true,
+        "deployed_app": false,
+        "recognized_tech_employer": false,
+        "honors": 0
+      },
+      "elapsed_sec": 0.04
+    }
+  ]
+}

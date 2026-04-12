@@ -1,41 +1,39 @@
 /**
- * AI Arena — the AI readiness command center.
+ * AI Arena — AI Readiness Command Center.
  *
- * Hub design: headline + shield + feature grid at the top.
- * Tapping a feature card expands it inline with full content.
- * Dark-themed throughout. Every element interactive.
- *
- * "Everything for $9.99? I'd pay $9.99 just for this."
+ * Dark variant of the Dilly design system.
+ * Uses indigo + green + amber only. No rainbow.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
   Animated, Easing, Alert, LayoutAnimation, Dimensions,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { mediumHaptic } from '../../lib/haptics';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const W = Dimensions.get('window').width;
-const BG = '#0D1117';
-const CARD = '#161B22';
-const BORDER = '#21262D';
-const COBALT = '#1652F0';
-const CYAN = '#58A6FF';
-const GREEN = '#3FB950';
-const AMBER = '#D29922';
-const RED = '#F85149';
-const TEXT = '#F0F6FC';
-const SUB = '#8B949E';
-const DIM = '#484F58';
+
+// Dark navy background, off-white accents
+const BG = '#111827';
+const CARD = '#1F2937';
+const BORDER = '#374151';
+const ACCENT = '#F0F0F0';        // off-white accent (replaces dark blue)
+const GREEN = '#34C759';
+const AMBER = '#FF9F0A';
+const TEXT = '#F9FAFB';
+const SUB = '#9CA3AF';
+const DIM = '#6B7280';
 
 type ActiveFeature = null | 'scan' | 'replace' | 'simulate' | 'firewall' | 'vault' | 'index';
 
@@ -46,7 +44,7 @@ function ShieldRing({ score, size = 100 }: { score: number; size?: number }) {
   const r = (size - sw) / 2;
   const circ = 2 * Math.PI * r;
   const dash = circ * (1 - Math.max(0, Math.min(100, score)) / 100);
-  const color = score >= 80 ? GREEN : score >= 60 ? COBALT : score >= 40 ? AMBER : RED;
+  const color = score >= 80 ? GREEN : score >= 60 ? ACCENT : score >= 40 ? AMBER : AMBER;
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size}>
@@ -56,14 +54,14 @@ function ShieldRing({ score, size = 100 }: { score: number; size?: number }) {
           transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       </Svg>
       <View style={{ position: 'absolute', alignItems: 'center' }}>
-        <Ionicons name="shield-checkmark" size={24} color={color} />
-        <Text style={{ fontSize: 28, fontWeight: '900', color: TEXT, marginTop: 2 }}>{Math.round(score)}</Text>
+        <Ionicons name="shield-checkmark" size={28} color={color} />
+        <Text style={{ fontSize: 32, fontWeight: '900', color: TEXT, marginTop: 2 }}>{Math.round(score)}</Text>
       </View>
     </View>
   );
 }
 
-// ── Feature Card (hub grid item) ─────────────────────────────────────────────
+// ── Feature Card (full-width horizontal) ────────────────────────────────────
 
 function FeatureCard({ icon, title, sub, color, onPress, active }: {
   icon: string; title: string; sub: string; color: string;
@@ -71,16 +69,35 @@ function FeatureCard({ icon, title, sub, color, onPress, active }: {
 }) {
   return (
     <AnimatedPressable
-      style={[a.featureCard, active && { borderColor: color + '50', backgroundColor: color + '08' }]}
+      style={[
+        a.featureCard,
+        active && { borderLeftColor: color, borderLeftWidth: 4, backgroundColor: color + '06' },
+      ]}
       onPress={onPress}
-      scaleDown={0.96}
+      scaleDown={0.98}
     >
       <View style={[a.featureIcon, { backgroundColor: color + '15' }]}>
-        <Ionicons name={icon as any} size={18} color={color} />
+        <Ionicons name={icon as any} size={20} color={color} />
       </View>
-      <Text style={a.featureTitle}>{title}</Text>
-      <Text style={a.featureSub} numberOfLines={2}>{sub}</Text>
+      <View style={a.featureTextWrap}>
+        <Text style={a.featureTitle}>{title}</Text>
+        <Text style={a.featureSub} numberOfLines={1}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={active ? color : DIM} />
     </AnimatedPressable>
+  );
+}
+
+// ── Threat Level Badge ──────────────────────────────────────────────────────
+
+function ThreatBadge({ score }: { score: number }) {
+  const level = score >= 80 ? 'LOW' : score >= 60 ? 'MEDIUM' : score >= 40 ? 'HIGH' : 'CRITICAL';
+  const color = score >= 80 ? GREEN : score >= 60 ? ACCENT : score >= 40 ? AMBER : AMBER;
+  return (
+    <View style={[a.threatBadge, { backgroundColor: color + '18', borderColor: color + '30' }]}>
+      <View style={[a.threatDot, { backgroundColor: color }]} />
+      <Text style={[a.threatText, { color }]}>{level}</Text>
+    </View>
   );
 }
 
@@ -90,6 +107,7 @@ export default function AIArenaScreen() {
   const insets = useSafeAreaInsets();
   const [shield, setShield] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeFeature, setActiveFeature] = useState<ActiveFeature>(null);
 
   // Feature-specific state
@@ -104,17 +122,28 @@ export default function AIArenaScreen() {
   const [simResult, setSimResult] = useState<any>(null);
   const [simLoading, setSimLoading] = useState(false);
 
+  const fetchShield = useCallback(async () => {
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 30_000);
+      const res = await dilly.fetch('/ai-arena/shield', { signal: ctrl.signal });
+      if (res.ok) setShield(await res.json());
+    } catch {}
+  }, []);
+
   useEffect(() => {
     (async () => {
-      try {
-        const ctrl = new AbortController();
-        setTimeout(() => ctrl.abort(), 30_000);
-        const res = await dilly.fetch('/ai-arena/shield', { signal: ctrl.signal });
-        if (res.ok) setShield(await res.json());
-      } catch {}
-      finally { setLoading(false); }
+      await fetchShield();
+      setLoading(false);
     })();
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    mediumHaptic();
+    setRefreshing(true);
+    await fetchShield();
+    setRefreshing(false);
+  }, [fetchShield]);
 
   function toggleFeature(f: ActiveFeature) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -158,10 +187,13 @@ export default function AIArenaScreen() {
   const shieldLabel = shield?.shield_label ?? '';
   const disruptionPct = shield?.disruption_pct ?? 0;
 
+  // Derive threat-level color for disruption bar
+  const disruptionColor = disruptionPct >= 50 ? AMBER : disruptionPct >= 30 ? AMBER : GREEN;
+
   if (loading) {
     return (
       <View style={[a.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={CYAN} />
+        <ActivityIndicator size="large" color={ACCENT} />
       </View>
     );
   }
@@ -171,52 +203,63 @@ export default function AIArenaScreen() {
       <ScrollView keyboardShouldPersistTaps="handled"
         contentContainerStyle={[a.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ACCENT} progressBackgroundColor={BG} />}
       >
-        {/* ── Headline ──────────────────────────────────────── */}
+
+        {/* ── 1. Header ──────────────────────────────────────── */}
         <FadeInView delay={0}>
-          <Text style={a.headline}>AI is coming for your job.{'\n'}Are you ready?</Text>
+          <Text style={a.header}>AI READINESS</Text>
         </FadeInView>
 
-        {/* ── Shield Score Hero ──────────────────────────────── */}
+        {/* ── 2. Shield Score Hero ────────────────────────────── */}
         <FadeInView delay={60}>
           <View style={a.heroCard}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
-              <ShieldRing score={shieldScore} />
-              <View style={{ flex: 1 }}>
-                <Text style={a.heroLabel}>{shieldLabel || 'AI Readiness'}</Text>
-                <Text style={a.heroSub}>
-                  {shieldScore >= 80 ? 'Your profile is AI-proof.'
-                    : shieldScore >= 60 ? 'Strong foundation. A few fixes will fortify you.'
-                    : shieldScore >= 40 ? 'Some vulnerabilities detected. Dilly can help.'
-                    : shieldScore > 0 ? 'Your profile needs AI-proofing. Let Dilly show you how.'
-                    : 'Upload your resume or talk to Dilly to activate your Shield Score.'}
-                </Text>
-                {disruptionPct > 0 && (
-                  <View style={a.disruptionBadge}>
-                    <Ionicons name="trending-up" size={10} color={RED} />
-                    <Text style={a.disruptionText}>{disruptionPct}% of your field disrupted</Text>
-                  </View>
-                )}
+            <View style={a.heroRow}>
+              <ShieldRing score={shieldScore} size={120} />
+              <View style={a.heroInfo}>
+                <Text style={a.heroScore}>{Math.round(shieldScore)}</Text>
+                <Text style={a.heroLabel}>{shieldLabel || 'AI SHIELD SCORE'}</Text>
+                <ThreatBadge score={shieldScore} />
+              </View>
+            </View>
+
+            {/* Disruption bar */}
+            <View style={a.disruptionSection}>
+              <View style={a.disruptionLabelRow}>
+                <Text style={a.disruptionLabel}>FIELD DISRUPTION</Text>
+                <Text style={[a.disruptionValue, { color: disruptionColor }]}>{disruptionPct}%</Text>
+              </View>
+              <View style={a.disruptionBarBg}>
+                <View style={[a.disruptionBarFill, { width: `${Math.min(disruptionPct, 100)}%`, backgroundColor: disruptionColor }]} />
               </View>
             </View>
           </View>
         </FadeInView>
 
-        {/* ── Feature Grid ──────────────────────────────────── */}
-        <FadeInView delay={120}>
-          <View style={a.grid}>
-            <FeatureCard icon="scan" title="Threat Scanner" sub="See which parts of your experience AI can replace" color={CYAN} onPress={() => toggleFeature('scan')} active={activeFeature === 'scan'} />
-            <FeatureCard icon="swap-horizontal" title="Replace Me" sub="Can AI do what you do? Let's find out." color={RED} onPress={() => toggleFeature('replace')} active={activeFeature === 'replace'} />
-            <FeatureCard icon="rocket" title="Career Sim" sub="See how AI reshapes your career over 5 years" color={AMBER} onPress={() => toggleFeature('simulate')} active={activeFeature === 'simulate'} />
-            <FeatureCard icon="shield-half" title="Firewall" sub="How would an AI recruiter judge you?" color={RED} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
-            <FeatureCard icon="lock-closed" title="Skill Vault" sub="Your AI-proof skills vs the ones you need" color={GREEN} onPress={() => toggleFeature('vault')} active={activeFeature === 'vault'} />
-            <FeatureCard icon="bar-chart" title="Disruption" sub="How much AI is disrupting your field right now" color={AMBER} onPress={() => toggleFeature('index')} active={activeFeature === 'index'} />
+        {/* ── 3. Live Stats Row (2 stats: Shield Score + Field Disruption) ── */}
+        <FadeInView delay={100}>
+          <View style={a.statsRow}>
+            <View style={a.statCard}>
+              <Text style={[a.statNum, { color: ACCENT }]}>{Math.round(shieldScore)}</Text>
+              <Text style={a.statLabel}>SHIELD SCORE</Text>
+            </View>
+            <View style={a.statCard}>
+              <Text style={[a.statNum, { color: disruptionColor }]}>{disruptionPct}%</Text>
+              <Text style={a.statLabel}>FIELD DISRUPTION</Text>
+            </View>
           </View>
         </FadeInView>
 
-        {/* ── Expanded Feature Content ──────────────────────── */}
+        {/* ── 4. Feature Sections ─────────────────────────────── */}
+        <FadeInView delay={140}>
+          <Text style={a.sectionTitle}>COMMAND CENTER</Text>
+        </FadeInView>
 
-        {/* THREAT SCANNER */}
+        <FadeInView delay={160}>
+          <FeatureCard icon="scan" title="Threat Scanner" sub="See which bullets AI can replace" color={ACCENT} onPress={() => toggleFeature('scan')} active={activeFeature === 'scan'} />
+        </FadeInView>
+
+        {/* THREAT SCANNER expanded */}
         {activeFeature === 'scan' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -224,11 +267,11 @@ export default function AIArenaScreen() {
               <Text style={a.expandedSub}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
               {!scanResults && !scanLoading && (
                 <AnimatedPressable style={a.actionBtn} onPress={runScan} scaleDown={0.97}>
-                  <Ionicons name="flash" size={16} color="#000" />
+                  <Ionicons name="flash" size={16} color="#fff" />
                   <Text style={a.actionBtnText}>Scan My Profile</Text>
                 </AnimatedPressable>
               )}
-              {scanLoading && <ActivityIndicator size="small" color={CYAN} style={{ paddingVertical: 20 }} />}
+              {scanLoading && <ActivityIndicator size="small" color={ACCENT} style={{ paddingVertical: 20 }} />}
               {scanResults && (
                 <>
                   <View style={a.scanSummary}>
@@ -236,17 +279,17 @@ export default function AIArenaScreen() {
                       <Text style={[a.scanStatNum, { color: GREEN }]}>{scanResults.summary?.safe ?? 0}</Text>
                       <Text style={a.scanStatLabel}>Safe</Text>
                     </View>
-                    <View style={[a.scanStat, { backgroundColor: RED + '15' }]}>
-                      <Text style={[a.scanStatNum, { color: RED }]}>{scanResults.summary?.at_risk ?? 0}</Text>
+                    <View style={[a.scanStat, { backgroundColor: AMBER + '15' }]}>
+                      <Text style={[a.scanStatNum, { color: AMBER }]}>{scanResults.summary?.at_risk ?? 0}</Text>
                       <Text style={a.scanStatLabel}>At Risk</Text>
                     </View>
-                    <View style={[a.scanStat, { backgroundColor: AMBER + '15' }]}>
-                      <Text style={[a.scanStatNum, { color: AMBER }]}>{scanResults.summary?.neutral ?? 0}</Text>
+                    <View style={[a.scanStat, { backgroundColor: ACCENT + '15' }]}>
+                      <Text style={[a.scanStatNum, { color: ACCENT }]}>{scanResults.summary?.neutral ?? 0}</Text>
                       <Text style={a.scanStatLabel}>Neutral</Text>
                     </View>
                   </View>
                   {(scanResults.bullets || []).slice(0, 10).map((b: any, i: number) => {
-                    const c = b.status === 'safe' ? GREEN : b.status === 'at_risk' ? RED : AMBER;
+                    const c = b.status === 'safe' ? GREEN : b.status === 'at_risk' ? AMBER : ACCENT;
                     return (
                       <View key={i} style={[a.bulletRow, { borderLeftColor: c }]}>
                         <Ionicons name={b.status === 'safe' ? 'shield-checkmark' : b.status === 'at_risk' ? 'warning' : 'help-circle'} size={14} color={c} />
@@ -272,7 +315,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* REPLACE ME */}
+        <FadeInView delay={180}>
+          <FeatureCard icon="swap-horizontal" title="Replace Me" sub="Can AI do what you do? Let's find out." color={AMBER} onPress={() => toggleFeature('replace')} active={activeFeature === 'replace'} />
+        </FadeInView>
+
+        {/* REPLACE ME expanded */}
         {activeFeature === 'replace' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -281,20 +328,20 @@ export default function AIArenaScreen() {
               <TextInput style={a.input} defaultValue="" onChangeText={t => { replaceInputRef.current = t; }}
                 placeholder="Paste a bullet from your profile..." placeholderTextColor={DIM} multiline ref={replaceFieldRef} />
               <AnimatedPressable
-                style={[a.actionBtn, { backgroundColor: RED }]}
+                style={[a.actionBtn, { backgroundColor: AMBER }]}
                 onPress={runReplace} disabled={replaceLoading} scaleDown={0.97}
               >
                 {replaceLoading ? <ActivityIndicator size="small" color="#000" /> : (
-                  <><Ionicons name="flash" size={16} color="#000" /><Text style={a.actionBtnText}>Test It</Text></>
+                  <><Ionicons name="flash" size={16} color="#000" /><Text style={[a.actionBtnText, { color: '#000' }]}>Test It</Text></>
                 )}
               </AnimatedPressable>
               {replaceResult && (
-                <View style={[a.resultCard, { borderColor: replaceResult.verdict === 'human-only' ? GREEN + '40' : replaceResult.verdict === 'replaceable' ? RED + '40' : AMBER + '40' }]}>
+                <View style={[a.resultCard, { borderColor: replaceResult.verdict === 'human-only' ? GREEN + '40' : replaceResult.verdict === 'replaceable' ? AMBER + '40' : ACCENT + '40' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Ionicons
                       name={replaceResult.verdict === 'human-only' ? 'shield-checkmark' : replaceResult.verdict === 'replaceable' ? 'warning' : 'help-circle'}
-                      size={18} color={replaceResult.verdict === 'human-only' ? GREEN : replaceResult.verdict === 'replaceable' ? RED : AMBER} />
-                    <Text style={[a.resultVerdict, { color: replaceResult.verdict === 'human-only' ? GREEN : replaceResult.verdict === 'replaceable' ? RED : AMBER }]}>
+                      size={18} color={replaceResult.verdict === 'human-only' ? GREEN : replaceResult.verdict === 'replaceable' ? AMBER : ACCENT} />
+                    <Text style={[a.resultVerdict, { color: replaceResult.verdict === 'human-only' ? GREEN : replaceResult.verdict === 'replaceable' ? AMBER : ACCENT }]}>
                       {replaceResult.verdict === 'human-only' ? 'AI Cannot Replace This' : replaceResult.verdict === 'replaceable' ? 'AI Can Replace This' : 'Borderline'}
                     </Text>
                     <Text style={a.resultScore}>{replaceResult.replaceability}/10</Text>
@@ -310,7 +357,7 @@ export default function AIArenaScreen() {
                     <AnimatedPressable style={a.fixInline}
                       onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `AI rated my bullet ${replaceResult.replaceability}/10 replaceable: "${replaceResult.original || replaceInputRef.current}". Rewrite it so AI CAN'T replicate it.` })}
                       scaleDown={0.97}>
-                      <Ionicons name="sparkles" size={12} color={CYAN} /><Text style={{ fontSize: 12, fontWeight: '600', color: CYAN }}>Make it AI-proof</Text>
+                      <Ionicons name="sparkles" size={12} color={ACCENT} /><Text style={{ fontSize: 12, fontWeight: '600', color: ACCENT }}>Make it AI-proof</Text>
                     </AnimatedPressable>
                   )}
                 </View>
@@ -319,7 +366,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* CAREER SIMULATOR */}
+        <FadeInView delay={200}>
+          <FeatureCard icon="rocket" title="Career Sim" sub="See how AI reshapes your career over 5 years" color={AMBER} onPress={() => toggleFeature('simulate')} active={activeFeature === 'simulate'} />
+        </FadeInView>
+
+        {/* CAREER SIMULATOR expanded */}
         {activeFeature === 'simulate' && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -338,7 +389,7 @@ export default function AIArenaScreen() {
                 <>
                   <Text style={a.simVerdict}>{simResult.verdict}</Text>
                   {(simResult.years || []).map((y: any, i: number) => {
-                    const yc = y.risk_level === 'high' ? RED : y.risk_level === 'medium' ? AMBER : GREEN;
+                    const yc = y.risk_level === 'high' ? AMBER : y.risk_level === 'medium' ? AMBER : GREEN;
                     return (
                       <View key={y.year} style={a.yearRow}>
                         <View style={[a.yearDot, { backgroundColor: yc }]} />
@@ -367,24 +418,11 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* RESUME FIREWALL */}
-        {activeFeature === 'firewall' && (
-          <FadeInView delay={0}>
-            <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Profile Firewall</Text>
-              <Text style={a.expandedSub}>How would an AI recruiter evaluate your profile? Find vulnerabilities before you apply.</Text>
-              <AnimatedPressable style={[a.actionBtn, { backgroundColor: RED }]}
-                onPress={() => openDillyOverlay({
-                  isPaid: true,
-                  initialMessage: `Analyze my Dilly Profile as if you were an AI screening tool at a top company. Based on everything you know about me, what vulnerabilities would you flag? What would get me auto-rejected? Be specific and harsh.`,
-                })} scaleDown={0.97}>
-                <Ionicons name="scan" size={16} color="#000" /><Text style={a.actionBtnText}>Run Firewall Check</Text>
-              </AnimatedPressable>
-            </View>
-          </FadeInView>
-        )}
+        <FadeInView delay={220}>
+          <FeatureCard icon="lock-closed" title="Skill Vault" sub="Your AI-proof skills vs the ones you need" color={GREEN} onPress={() => toggleFeature('vault')} active={activeFeature === 'vault'} />
+        </FadeInView>
 
-        {/* SKILL VAULT */}
+        {/* SKILL VAULT expanded */}
         {activeFeature === 'vault' && shield && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
@@ -403,7 +441,7 @@ export default function AIArenaScreen() {
                     scaleDown={0.95}>
                     <Ionicons name="lock-closed" size={11} color={DIM} />
                     <Text style={a.skillLockedText} numberOfLines={1}>{s}</Text>
-                    <Ionicons name="sparkles" size={9} color={CYAN} style={{ opacity: 0.4 }} />
+                    <Ionicons name="sparkles" size={9} color={ACCENT} style={{ opacity: 0.4 }} />
                   </AnimatedPressable>
                 ))}
               </View>
@@ -411,13 +449,38 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* DISPLACEMENT INDEX */}
+        <FadeInView delay={240}>
+          <FeatureCard icon="shield-half" title="Firewall" sub="How would an AI recruiter judge you?" color={AMBER} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
+        </FadeInView>
+
+        {/* RESUME FIREWALL expanded */}
+        {activeFeature === 'firewall' && (
+          <FadeInView delay={0}>
+            <View style={a.expandedCard}>
+              <Text style={a.expandedTitle}>Profile Firewall</Text>
+              <Text style={a.expandedSub}>How would an AI recruiter evaluate your profile? Find vulnerabilities before you apply.</Text>
+              <AnimatedPressable style={[a.actionBtn, { backgroundColor: AMBER }]}
+                onPress={() => openDillyOverlay({
+                  isPaid: true,
+                  initialMessage: `Analyze my Dilly Profile as if you were an AI screening tool at a top company. Based on everything you know about me, what vulnerabilities would you flag? What would get me auto-rejected? Be specific and harsh.`,
+                })} scaleDown={0.97}>
+                <Ionicons name="scan" size={16} color="#000" /><Text style={[a.actionBtnText, { color: '#000' }]}>Run Firewall Check</Text>
+              </AnimatedPressable>
+            </View>
+          </FadeInView>
+        )}
+
+        <FadeInView delay={260}>
+          <FeatureCard icon="bar-chart" title="Disruption Index" sub="How much AI is disrupting your field right now" color={AMBER} onPress={() => toggleFeature('index')} active={activeFeature === 'index'} />
+        </FadeInView>
+
+        {/* DISPLACEMENT INDEX expanded */}
         {activeFeature === 'index' && shield && (
           <FadeInView delay={0}>
             <View style={a.expandedCard}>
               <Text style={a.expandedTitle}>Displacement Index</Text>
               <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-                <Text style={[a.bigNum, { color: disruptionPct >= 40 ? RED : disruptionPct >= 25 ? AMBER : GREEN }]}>{disruptionPct}%</Text>
+                <Text style={[a.bigNum, { color: disruptionPct >= 40 ? AMBER : disruptionPct >= 25 ? AMBER : GREEN }]}>{disruptionPct}%</Text>
                 <Text style={{ fontSize: 12, color: SUB }}>of entry-level {(shield.cohort || '').split(' ')[0]} roles disrupted</Text>
               </View>
               {shield.disruption_headline && (
@@ -431,8 +494,8 @@ export default function AIArenaScreen() {
                       <Text key={i} style={a.compItem}>{s}</Text>
                     ))}
                   </View>
-                  <View style={[a.compCol, { backgroundColor: RED + '08', borderColor: RED + '20' }]}>
-                    <Text style={[a.compLabel, { color: RED }]}>AT RISK</Text>
+                  <View style={[a.compCol, { backgroundColor: AMBER + '08', borderColor: AMBER + '20' }]}>
+                    <Text style={[a.compLabel, { color: AMBER }]}>AT RISK</Text>
                     {(shield.ai_vulnerable_skills || []).slice(0, 4).map((s: string, i: number) => (
                       <Text key={i} style={a.compItem}>{s}</Text>
                     ))}
@@ -443,6 +506,46 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
+        {/* ── 5. AI Readiness Actions ─────────────────────────── */}
+        <FadeInView delay={300}>
+          <Text style={a.sectionTitle}>AI READINESS ACTIONS</Text>
+        </FadeInView>
+
+        <FadeInView delay={320}>
+          <AnimatedPressable
+            style={a.actionCard}
+            onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'Is my resume AI-proof? Analyze every bullet for AI vulnerability and tell me exactly what to fix.' })}
+            scaleDown={0.98}
+          >
+            <View style={[a.actionCardIcon, { backgroundColor: ACCENT + '15' }]}>
+              <Ionicons name="document-text" size={20} color={ACCENT} />
+            </View>
+            <View style={a.actionCardTextWrap}>
+              <Text style={a.actionCardTitle}>Is my resume AI-proof?</Text>
+              <Text style={a.actionCardSub}>Get a full vulnerability analysis from Dilly</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={16} color={ACCENT} />
+          </AnimatedPressable>
+        </FadeInView>
+
+        <FadeInView delay={340}>
+          <AnimatedPressable
+            style={a.actionCard}
+            onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'What skills should I develop to stay ahead of AI in my field? Be specific to my profile and career goals.' })}
+            scaleDown={0.98}
+          >
+            <View style={[a.actionCardIcon, { backgroundColor: GREEN + '15' }]}>
+              <Ionicons name="trending-up" size={20} color={GREEN} />
+            </View>
+            <View style={a.actionCardTextWrap}>
+              <Text style={a.actionCardTitle}>What skills should I develop?</Text>
+              <Text style={a.actionCardSub}>AI-proof skill recommendations for your career</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={16} color={GREEN} />
+          </AnimatedPressable>
+        </FadeInView>
+
+        {/* ── 6. Footer ──────────────────────────────────────── */}
         <DillyFooter />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -453,49 +556,229 @@ export default function AIArenaScreen() {
 
 const a = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
-  scroll: { paddingHorizontal: 20, gap: 16 },
+  scroll: { paddingHorizontal: 20, gap: 20 },
 
-  headline: { fontSize: 24, fontWeight: '900', color: TEXT, lineHeight: 30, paddingTop: 12, letterSpacing: -0.5 },
-
-  // Hero
-  heroCard: { backgroundColor: CARD, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: BORDER },
-  heroLabel: { fontSize: 16, fontWeight: '700', color: TEXT },
-  heroSub: { fontSize: 12, color: SUB, lineHeight: 17, marginTop: 4 },
-  disruptionBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, alignSelf: 'flex-start', backgroundColor: RED + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  disruptionText: { fontSize: 10, fontWeight: '600', color: RED },
-
-  // Grid
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  featureCard: {
-    width: (W - 40 - 10) / 2, backgroundColor: CARD, borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: BORDER, gap: 6,
+  // 1. Header
+  header: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: SUB,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    paddingTop: 16,
+    fontFamily: Platform.OS === 'ios' ? 'Cinzel' : undefined,
   },
-  featureIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  featureTitle: { fontSize: 13, fontWeight: '700', color: TEXT },
-  featureSub: { fontSize: 10, color: DIM, lineHeight: 14 },
+
+  // 2. Hero
+  heroCard: {
+    backgroundColor: CARD,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 20,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  heroInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  heroScore: {
+    fontSize: 44,
+    fontWeight: '900',
+    color: TEXT,
+    lineHeight: 48,
+  },
+  heroLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: SUB,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  threatBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  threatDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  threatText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  disruptionSection: {
+    gap: 6,
+  },
+  disruptionLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  disruptionLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: DIM,
+    letterSpacing: 1,
+  },
+  disruptionValue: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  disruptionBarBg: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BORDER,
+    overflow: 'hidden',
+  },
+  disruptionBarFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+
+  // 3. Stats Row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: CARD,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 4,
+  },
+  statNum: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  statLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: DIM,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+  },
+
+  // Section title
+  sectionTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: DIM,
+    letterSpacing: 1.5,
+    marginTop: 4,
+  },
+
+  // 4. Feature cards (full-width horizontal)
+  featureCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderLeftWidth: 1,
+    borderLeftColor: BORDER,
+    gap: 14,
+  },
+  featureIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  featureTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: TEXT,
+  },
+  featureSub: {
+    fontSize: 11,
+    color: DIM,
+    lineHeight: 15,
+  },
 
   // Expanded
-  expandedCard: { backgroundColor: CARD, borderRadius: 16, padding: 18, borderWidth: 1, borderColor: BORDER, gap: 10 },
+  expandedCard: {
+    backgroundColor: CARD,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 10,
+  },
   expandedTitle: { fontSize: 18, fontWeight: '800', color: TEXT },
   expandedSub: { fontSize: 12, color: SUB, lineHeight: 17 },
 
   // Action button
-  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, backgroundColor: CYAN },
-  actionBtnText: { fontSize: 14, fontWeight: '700', color: '#000' },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: ACCENT,
+  },
+  actionBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
   // Input
-  input: { backgroundColor: BG, borderRadius: 10, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 14, paddingVertical: 12, fontSize: 13, color: TEXT, minHeight: 44 },
+  input: {
+    backgroundColor: BG,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 13,
+    color: TEXT,
+    minHeight: 44,
+  },
 
   // Scan
   scanSummary: { flexDirection: 'row', gap: 8 },
   scanStat: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10 },
   scanStatNum: { fontSize: 22, fontWeight: '800' },
   scanStatLabel: { fontSize: 9, color: SUB, fontWeight: '600', letterSpacing: 0.5, marginTop: 2 },
-  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, backgroundColor: BG, borderLeftWidth: 3, marginTop: 4 },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: BG,
+    borderLeftWidth: 3,
+    marginTop: 4,
+  },
   bulletText: { fontSize: 12, color: TEXT, lineHeight: 17 },
   bulletReason: { fontSize: 10, color: DIM, marginTop: 2 },
-  fixBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: CYAN + '15' },
-  fixBtnText: { fontSize: 10, fontWeight: '600', color: CYAN },
+  fixBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: ACCENT + '15' },
+  fixBtnText: { fontSize: 10, fontWeight: '600', color: ACCENT },
 
   // Replace result
   resultCard: { backgroundColor: BG, borderRadius: 12, borderWidth: 1, padding: 14, gap: 8 },
@@ -505,7 +788,18 @@ const a = StyleSheet.create({
   aiAttempt: { backgroundColor: CARD, borderRadius: 8, padding: 10, marginTop: 4 },
   aiAttemptLabel: { fontSize: 8, fontWeight: '700', color: DIM, letterSpacing: 1, marginBottom: 4 },
   aiAttemptText: { fontSize: 12, color: SUB, lineHeight: 17, fontStyle: 'italic' },
-  fixInline: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: CYAN + '12', borderWidth: 1, borderColor: CYAN + '20' },
+  fixInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: ACCENT + '12',
+    borderWidth: 1,
+    borderColor: ACCENT + '20',
+  },
 
   // Simulation
   simVerdict: { fontSize: 13, fontWeight: '600', color: AMBER, lineHeight: 18 },
@@ -517,13 +811,42 @@ const a = StyleSheet.create({
   yearDesc: { fontSize: 11, color: SUB, lineHeight: 16, marginTop: 3 },
   yearBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   yearBadgeText: { fontSize: 10, fontWeight: '700' },
-  strategyBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: AMBER + '10', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: AMBER + '20' },
+  strategyBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: AMBER + '10',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: AMBER + '20',
+  },
   strategyText: { flex: 1, fontSize: 12, color: AMBER, lineHeight: 17, fontWeight: '600' },
 
   // Skill vault
-  skillUnlocked: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: GREEN + '12', borderWidth: 1, borderColor: GREEN + '25' },
+  skillUnlocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: GREEN + '12',
+    borderWidth: 1,
+    borderColor: GREEN + '25',
+  },
   skillUnlockedText: { fontSize: 11, fontWeight: '600', color: GREEN },
-  skillLocked: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: BORDER, borderWidth: 1, borderColor: BORDER },
+  skillLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: BORDER,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
   skillLockedText: { fontSize: 11, fontWeight: '600', color: DIM },
 
   // Displacement
@@ -533,4 +856,37 @@ const a = StyleSheet.create({
   compCol: { flex: 1, borderRadius: 10, padding: 10, borderWidth: 1 },
   compLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
   compItem: { fontSize: 11, color: SUB, lineHeight: 16 },
+
+  // 5. Action cards
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    gap: 14,
+  },
+  actionCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionCardTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  actionCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: TEXT,
+  },
+  actionCardSub: {
+    fontSize: 11,
+    color: DIM,
+    lineHeight: 15,
+  },
 });

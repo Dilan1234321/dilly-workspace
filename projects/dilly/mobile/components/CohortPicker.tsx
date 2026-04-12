@@ -6,13 +6,14 @@
 
 import { useState, useMemo } from 'react';
 import {
-  View, Text, TextInput, ScrollView, Modal, StyleSheet, Alert,
+  View, Text, TextInput, ScrollView, Modal, StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COHORT_META } from '../lib/cohorts';
 import { colors, spacing, radius } from '../lib/tokens';
 import AnimatedPressable from './AnimatedPressable';
+import InlineToastView, { useInlineToast } from './InlineToast';
 
 const COBALT = '#1652F0';
 const ALL_COHORTS = Object.keys(COHORT_META).sort();
@@ -33,6 +34,7 @@ interface Props {
 export default function CohortPicker({ visible, onClose, activeCohorts, onToggle, maxCohorts = 5, protectedCohorts = [] }: Props) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
+  const toast = useInlineToast();
 
   const filtered = useMemo(() => {
     if (!search.trim()) return ALL_COHORTS;
@@ -48,17 +50,17 @@ export default function CohortPicker({ visible, onClose, activeCohorts, onToggle
     const isActive = activeCohorts.includes(cohortId);
     if (isActive) {
       if (protectedCohorts.includes(cohortId)) {
-        Alert.alert('Cannot remove', 'This cohort comes from your major or minor and cannot be removed.');
+        toast.show({ message: 'This cohort comes from your major or minor.' });
         return;
       }
       if (activeCohorts.length <= 1) {
-        Alert.alert('Cannot remove', 'You need at least one cohort on your profile.');
+        toast.show({ message: 'You need at least one cohort.' });
         return;
       }
       onToggle(cohortId, false);
     } else {
       if (activeCohorts.length >= maxCohorts) {
-        Alert.alert('Limit reached', `You can have up to ${maxCohorts} cohorts. Remove one first.`);
+        toast.show({ message: `Max ${maxCohorts} cohorts. Remove one first.` });
         return;
       }
       onToggle(cohortId, true);
@@ -136,6 +138,7 @@ export default function CohortPicker({ visible, onClose, activeCohorts, onToggle
             </AnimatedPressable>
           </View>
         </View>
+        <InlineToastView {...toast.props} />
       </View>
     </Modal>
   );

@@ -381,6 +381,7 @@ def _fallback_feed(
             "required_smart": float(r["required_smart"]) if r["required_smart"] else None,
             "required_grit":  float(r["required_grit"])  if r["required_grit"]  else None,
             "required_build": float(r["required_build"]) if r["required_build"] else None,
+            "description": re.sub(r"<[^>]+>", "", (r["description"] or "")).strip(),
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
             "quick_glance": json.loads(r.get("quick_glance") or "[]") if isinstance(r.get("quick_glance"), str) else (r.get("quick_glance") or []),
         })
@@ -633,6 +634,7 @@ async def get_internship_feed(
             "required_smart": float(req_s) if req_s else None,
             "required_grit": float(req_g) if req_g else None,
             "required_build": float(req_b) if req_b else None,
+            "description": re.sub(r"<[^>]+>", "", (r["description"] or "")).strip(),
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
             "quick_glance": json.loads(r["quick_glance"]) if isinstance(r.get("quick_glance"), str) else (r.get("quick_glance") or []),
         })

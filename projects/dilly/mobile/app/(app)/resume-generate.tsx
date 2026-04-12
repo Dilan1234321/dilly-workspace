@@ -68,8 +68,8 @@ function PulsingDot({ delay = 0 }: { delay?: number }) {
 
 export default function ResumeGenerateScreen() {
   const insets = useSafeAreaInsets();
-  const { jobTitle: paramTitle, company: paramCompany, jd: paramJd } = useLocalSearchParams<{ jobTitle?: string; company?: string; jd?: string }>();
-  const [stage, setStage] = useState<Stage>('idle');
+  const { jobTitle: paramTitle, company: paramCompany, jd: paramJd, viewId } = useLocalSearchParams<{ jobTitle?: string; company?: string; jd?: string; viewId?: string }>();
+  const [stage, setStage] = useState<Stage>(viewId ? 'done' : 'idle');
   const [jobTitle, setJobTitle] = useState(paramTitle || '');
   const [company, setCompany] = useState(paramCompany || '');
   const [jd, setJd] = useState(paramJd || '');
@@ -90,6 +90,20 @@ export default function ResumeGenerateScreen() {
   useEffect(() => {
     (async () => {
       try {
+        // If viewing an existing resume, load it
+        if (viewId) {
+          const resume = await dilly.get(`/generated-resumes/${viewId}`);
+          if (resume) {
+            setJobTitle(resume.job_title || '');
+            setCompany(resume.company || '');
+            setJd(resume.job_description || '');
+            setSections(resume.sections || []);
+            setSaved(true);
+            setVariantId(viewId);
+            setStage('done');
+          }
+        }
+
         const [profileRes, auditRes] = await Promise.all([
           dilly.get('/profile'),
           dilly.get('/audit/latest').catch(() => null),
@@ -183,20 +197,17 @@ export default function ResumeGenerateScreen() {
 
   async function saveVariant(sectionsToSave: GeneratedSection[]) {
     try {
-      const now = new Date();
-      const month = now.toLocaleString('default', { month: 'short' });
-      const year = now.getFullYear();
-      const label = `${company.trim()}  -  ${jobTitle.trim()}, ${month} ${year}`;
-
-      const meta: any = await dilly.post('/resume/variants', { label });
-      const id = meta?.variant?.id ?? meta?.id;
-      if (!id) return;
-
-      await dilly.put(`/resume/variants/${id}`, { sections: sectionsToSave });
-      setVariantId(id);
+      const res = await dilly.post('/generated-resumes', {
+        job_title: jobTitle.trim(),
+        company: company.trim(),
+        job_description: jd.trim() || undefined,
+        sections: sectionsToSave,
+      });
+      const id = res?.id;
+      if (id) setVariantId(id);
       setSaved(true);
     } catch {
-      // Saving failed silently  -  not blocking
+      // Saving failed silently — not blocking
     }
   }
 
@@ -394,21 +405,34 @@ export default function ResumeGenerateScreen() {
               )}
             </View>
 
-            {/* Actions */}
-            <AnimatedPressable
-              style={[styles.actionBtn, styles.actionBtnPrimary]}
-              onPress={() => {
-                if (variantId) {
-                  router.replace('/(app)/my-dilly-profile');
-                } else {
-                  router.replace('/(app)/my-dilly-profile');
-                }
-              }}
-            >
-              <Ionicons name="document-text" size={18} color="#fff" />
-              <Text style={styles.actionBtnText}>See Resume</Text>
-            </AnimatedPressable>
+            {/* Inline resume preview */}
+            <View style={styles.previewCard}>
+              <Text style={styles.previewTitle}>Your Tailored Resume</Text>
+              {sections.map((sec: any, si: number) => (
+                <View key={sec.key ?? si} style={styles.previewSection}>
+                  <Text style={styles.previewSectionLabel}>{sec.label ?? sec.key}</Text>
+                  {Array.isArray(sec.entries) && sec.entries.map((entry: any, ei: number) => (
+                    <View key={entry.id ?? ei} style={styles.previewEntry}>
+                      {!!entry.title && <Text style={styles.previewEntryTitle}>{entry.title}{entry.company ? ` — ${entry.company}` : ''}</Text>}
+                      {!!entry.dates && <Text style={styles.previewEntryDates}>{entry.dates}</Text>}
+                      {Array.isArray(entry.bullets) && entry.bullets.map((b: any, bi: number) => (
+                        <Text key={b.id ?? bi} style={styles.previewBullet}>• {typeof b === 'string' ? b : b.text}</Text>
+                      ))}
+                      {/* Handle non-experience sections (skills, education with flat text) */}
+                      {typeof entry === 'string' && <Text style={styles.previewBullet}>{entry}</Text>}
+                    </View>
+                  ))}
+                  {/* Skills-style sections with items array */}
+                  {Array.isArray(sec.items) && (
+                    <Text style={styles.previewBullet}>{sec.items.join(' • ')}</Text>
+                  )}
+                  {/* Flat content */}
+                  {typeof sec.content === 'string' && <Text style={styles.previewBullet}>{sec.content}</Text>}
+                </View>
+              ))}
+            </View>
 
+            {/* Actions */}
             <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
               <Ionicons name="refresh" size={18} color={INDIGO} />
               <Text style={[styles.actionBtnText, { color: INDIGO }]}>Generate Another</Text>
@@ -729,5 +753,56 @@ const styles = StyleSheet.create({
     color: colors.t2,
     textAlign: 'center',
     lineHeight: 19,
+  },
+
+  // Inline resume preview
+  previewCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.b1,
+    padding: 20,
+    marginTop: 16,
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.t1,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  previewSection: {
+    marginBottom: 14,
+  },
+  previewSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: colors.t2,
+    textTransform: 'uppercase',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.b1,
+    paddingBottom: 4,
+    marginBottom: 8,
+  },
+  previewEntry: {
+    marginBottom: 10,
+  },
+  previewEntryTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.t1,
+  },
+  previewEntryDates: {
+    fontSize: 11,
+    color: colors.t3,
+    marginBottom: 4,
+  },
+  previewBullet: {
+    fontSize: 12,
+    color: colors.t2,
+    lineHeight: 18,
+    paddingLeft: 4,
+    marginBottom: 2,
   },
 });

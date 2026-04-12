@@ -93,12 +93,12 @@ export default function AppLayout() {
               color={color}
             />
           ),
-          tabBarActiveTintColor: '#58A6FF',
-          tabBarInactiveTintColor: '#8B949E',
+          tabBarActiveTintColor: '#F0F0F0',
+          tabBarInactiveTintColor: '#6B7280',
           tabBarStyle: {
-            backgroundColor: '#0D1117',
+            backgroundColor: '#111827',
             borderTopWidth: 1,
-            borderTopColor: '#21262D',
+            borderTopColor: '#374151',
             paddingBottom: insets.bottom,
             paddingTop: 6,
             height: 49 + insets.bottom,
@@ -116,11 +116,11 @@ export default function AppLayout() {
         name="my-dilly-profile"
         options={{
           title: 'My Dilly',
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'person-circle' : 'person-circle-outline'}
               size={22}
-              color={focused ? colors.t1 : colors.t3}
+              color={color}
             />
           ),
         }}
@@ -131,19 +131,18 @@ export default function AppLayout() {
         name="jobs"
         options={{
           title: 'Jobs',
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'briefcase' : 'briefcase-outline'}
               size={20}
-              color={focused ? colors.t1 : colors.t3}
+              color={color}
             />
           ),
         }}
       />
 
       {/* ── Hidden screens (accessible via navigation) ──── */}
-      <Tabs.Screen name="resume-editor" options={{ href: null, animation: 'fade' }} />
-      <Tabs.Screen name="score-detail" options={{ href: null, animation: 'fade' }} />
+<Tabs.Screen name="score-detail" options={{ href: null, animation: 'fade' }} />
       <Tabs.Screen
         name="profile"
         options={{ href: null, animation: 'fade' }}

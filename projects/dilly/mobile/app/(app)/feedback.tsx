@@ -1,23 +1,19 @@
 /**
- * FEEDBACK PAGE — the powerhouse. Merges score-detail + feedback into one page.
+ * FEEDBACK PAGE — tabbed card system.
  *
- * Build 98: Unified page showing:
- * 1. Cohort switcher (horizontal pills)
- * 2. Hero score ring + S/G/B dimension bars
- * 3. At-a-glance multi-cohort comparison
- * 4. Weakest dimension callout with action buttons
- * 5. What's working (matched signals)
- * 6. Biggest levers (unmatched high-impact signals)
- * 7. Fastest path forward (tappable → AI coach)
- * 8. Common rejection reasons (tappable → AI coach)
- * 9. Other cohorts
- * 10. CTAs (re-audit + editor)
+ * Build 160: Rewritten render with 3-tab design:
+ *   - Score Hero (always visible): big score, cohort name, bar badge, S/G/B bars
+ *   - Tab 1 "Overview": Dilly's take, focus area, congrats card
+ *   - Tab 2 "Signals": working for you (green) + missing (red), grouped by dim
+ *   - Tab 3 "Action Plan": this week moves, watch out, biggest opportunities
+ *
+ * Data fetching & types unchanged from build 98.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Linking,
+  ActivityIndicator, Linking, RefreshControl,
 } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { mediumHaptic, selectionHaptic } from '../../lib/haptics';
 import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
 import CohortSwitcher from '../../components/CohortSwitcher';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -73,32 +70,7 @@ function extractRejectText(r: string | { text: string; source?: string }): { tex
   return { text: r.text || '', source: r.source };
 }
 
-// ── Score Ring ───────────────────────────────────────────────────────────────
-
-function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
-  const strokeWidth = 5;
-  const r = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * r;
-  const progress = Math.max(0, Math.min(100, score)) / 100;
-  const dashOffset = circumference * (1 - progress);
-  const color = scoreColor(score);
-
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.b1} strokeWidth={strokeWidth} fill="transparent" />
-        <Circle
-          cx={size / 2} cy={size / 2} r={r}
-          stroke={color} strokeWidth={strokeWidth} fill="transparent"
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={dashOffset} strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <Text style={[f.ringNum, { color, position: 'absolute' }]}>{Math.round(score)}</Text>
-    </View>
-  );
-}
+type TabKey = 'overview' | 'signals' | 'action';
 
 // ── Dimension Bar ────────────────────────────────────────────────────────────
 
@@ -119,52 +91,60 @@ function DimBar({ label, value, color }: { label: string; value: number; color: 
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [audit, setAudit] = useState<any>(null);
   const [ra, setRa] = useState<RubricAnalysis | null>(null);
   const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
   const [activeCohortIdx, setActiveCohortIdx] = useState(0);
+  const [activeTab, setActiveTab] = useState<TabKey>('overview');
+
+  const fetchFeedbackData = useCallback(async () => {
+    try {
+      let auditObj: any = null;
+      try {
+        const cached = await AsyncStorage.getItem('dilly_latest_audit');
+        if (cached) auditObj = JSON.parse(cached);
+      } catch {}
+
+      const [profileRes, auditRes] = await Promise.all([
+        dilly.get('/profile').catch(() => null),
+        dilly.get('/audit/latest').catch(() => null),
+      ]);
+
+      const apiAudit = auditRes?.audit ?? auditRes;
+      if (apiAudit?.rubric_analysis) {
+        auditObj = apiAudit;
+        AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(apiAudit)).catch(() => {});
+      }
+
+      setAudit(auditObj);
+      if (auditObj?.rubric_analysis) setRa(auditObj.rubric_analysis as RubricAnalysis);
+
+      const explicitCohorts: string[] | null = Array.isArray(profileRes?.cohorts) && profileRes.cohorts.length > 0
+        ? profileRes.cohorts : null;
+      const parsed = parseCohortScores(profileRes?.cohort_scores);
+      if (explicitCohorts) {
+        const filtered = parsed.filter(c => explicitCohorts.includes(c.cohort_id));
+        setCohortScores(filtered.length > 0 ? filtered : parsed);
+      } else {
+        setCohortScores(parsed);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     (async () => {
-      try {
-        // Try AsyncStorage cache first (fast), then API (canonical)
-        let auditObj: any = null;
-        try {
-          const cached = await AsyncStorage.getItem('dilly_latest_audit');
-          if (cached) auditObj = JSON.parse(cached);
-        } catch {}
-
-        const [profileRes, auditRes] = await Promise.all([
-          dilly.get('/profile').catch(() => null),
-          dilly.get('/audit/latest').catch(() => null),
-        ]);
-
-        const apiAudit = auditRes?.audit ?? auditRes;
-        if (apiAudit?.rubric_analysis) {
-          auditObj = apiAudit;
-          AsyncStorage.setItem('dilly_latest_audit', JSON.stringify(apiAudit)).catch(() => {});
-        }
-
-        setAudit(auditObj);
-        if (auditObj?.rubric_analysis) setRa(auditObj.rubric_analysis as RubricAnalysis);
-
-        // Load cohort scores — only show explicitly chosen cohorts (major/minor/primary),
-        // NOT every interest-level entry from the background Claude scorer.
-        // The user's profile.cohorts array is the source of truth for what's "chosen".
-        const explicitCohorts: string[] | null = Array.isArray(profileRes?.cohorts) && profileRes.cohorts.length > 0
-          ? profileRes.cohorts : null;
-        const parsed = parseCohortScores(profileRes?.cohort_scores); // already filters interest
-        if (explicitCohorts) {
-          // Only show cohorts the user explicitly has
-          const filtered = parsed.filter(c => explicitCohorts.includes(c.cohort_id));
-          setCohortScores(filtered.length > 0 ? filtered : parsed);
-        } else {
-          setCohortScores(parsed);
-        }
-      } catch {}
-      finally { setLoading(false); }
+      await fetchFeedbackData();
+      setLoading(false);
     })();
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    mediumHaptic();
+    setRefreshing(true);
+    await fetchFeedbackData();
+    setRefreshing(false);
+  }, [fetchFeedbackData]);
 
   const activeCohort = cohortScores[activeCohortIdx] ?? null;
 
@@ -206,8 +186,6 @@ export default function FeedbackScreen() {
   }
 
   // Prefer Claude-scored cohort data; fall back to rubric_analysis only if no cohort data
-  // The rubric scores (ra.primary_*) are from the rule-based scorer and are lower than
-  // the Claude per-cohort scores. Always prefer cohortScores when available.
   const hasCohortData = activeCohort != null && activeCohort.dilly_score > 0;
   const composite = hasCohortData ? activeCohort.dilly_score : ra.primary_composite;
   const smart = hasCohortData ? activeCohort.smart : ra.primary_smart;
@@ -232,348 +210,324 @@ export default function FeedbackScreen() {
     if (sig.tier === 'high' && sig.dimension in unmatchedHigh) unmatchedHigh[sig.dimension].push(sig);
   }
 
+  // All unmatched grouped by dimension (for Signals tab)
+  const unmatchedByDim: Record<string, RubricSignal[]> = { smart: [], grit: [], build: [] };
+  for (const sig of ra.unmatched_signals || []) {
+    if (sig.dimension in unmatchedByDim) unmatchedByDim[sig.dimension].push(sig);
+  }
+
+  const tabs: { key: TabKey; label: string }[] = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'signals', label: 'Signals' },
+    { key: 'action', label: 'Action Plan' },
+  ];
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[f.container, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={f.backBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={18} color={GOLD} />
-          <Text style={f.backText}>Back</Text>
-        </TouchableOpacity>
+        {/* Header */}
+        <View style={f.header}>
+          <TouchableOpacity style={f.backBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={18} color={GOLD} />
+            <Text style={f.backText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={f.headerTitle}>YOUR FEEDBACK</Text>
+          <View style={{ width: 60 }} />
+        </View>
 
         <ScrollView
           contentContainerStyle={[f.scroll, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         >
-          {/* ── 1. Cohort Switcher ──────────────────────────── */}
+          {/* ── Cohort Switcher ──────────────────────────── */}
           {cohortScores.length > 1 && (
             <CohortSwitcher
               cohorts={cohortScores}
               activeIndex={activeCohortIdx}
-              onSwitch={setActiveCohortIdx}
+              onSwitch={(idx: number) => { selectionHaptic(); setActiveCohortIdx(idx); }}
             />
           )}
 
-          {/* ── 2. Hero Score (matches My Scores page style) ── */}
-          <FadeInView delay={0}><View style={f.hero}>
-            <Text style={[f.heroScoreBig, { color: scoreColor(Math.round(composite)) }]}>{Math.round(composite)}</Text>
-            <Text style={f.heroCohortName}>{cohortName}</Text>
-            <View style={[f.barBadge, { backgroundColor: aboveBar ? GREEN + '15' : GOLD + '15' }]}>
-              <Text style={[f.barBadgeText, { color: aboveBar ? GREEN : GOLD }]}>
-                {aboveBar ? 'Above the recruiter bar' : `${Math.round(pointsAway)} ${Math.round(pointsAway) === 1 ? 'point' : 'points'} to the bar`}
+          {/* ── Score Hero ──────────────────────────────── */}
+          <FadeInView delay={0}>
+            <View style={f.heroCard}>
+              <Text style={[f.heroScoreBig, { color: scoreColor(Math.round(composite)) }]}>
+                {Math.round(composite)}
               </Text>
+              <Text style={f.heroCohortName}>{cohortName}</Text>
+              <View style={[f.barBadge, { backgroundColor: aboveBar ? GREEN + '15' : GOLD + '15' }]}>
+                <Text style={[f.barBadgeText, { color: aboveBar ? GREEN : GOLD }]}>
+                  {aboveBar ? 'Above the recruiter bar' : `${Math.round(pointsAway)} ${Math.round(pointsAway) === 1 ? 'point' : 'points'} to the bar`}
+                </Text>
+              </View>
+              <View style={f.heroDims}>
+                <DimBar label="Smart" value={smart} color={BLUE} />
+                <DimBar label="Grit" value={grit} color={AMBER} />
+                <DimBar label="Build" value={build} color={GREEN} />
+              </View>
             </View>
-          </View></FadeInView>
-
-          {/* S/G/B Dimension Bars */}
-          <FadeInView delay={80}>
-          <View style={{ gap: 10, paddingHorizontal: 4 }}>
-            <DimBar label="Smart" value={smart} color={BLUE} />
-            <DimBar label="Grit" value={grit} color={AMBER} />
-            <DimBar label="Build" value={build} color={GREEN} />
-          </View>
           </FadeInView>
 
-          {/* Dilly take */}
-          {audit?.dilly_take ? (
-            <FadeInView delay={140}>
-            <View style={f.takeCard}>
-              <Ionicons name="chatbubble-outline" size={12} color={GOLD} />
-              <Text style={f.takeText}>{audit.dilly_take}</Text>
-            </View>
-            </FadeInView>
-          ) : null}
-
-          {/* ── 4. Weakest Dimension Callout ─────────────────── */}
-          {weakest && weakest[1] < 80 && (
-            <View style={[f.calloutCard, { borderLeftColor: dimColor(weakest[0]) }]}>
-              <Text style={f.calloutTitle}>Focus area: {dimLabel(weakest[0])}</Text>
-              <Text style={f.calloutBody}>
-                Your {dimLabel(weakest[0])} score ({Math.round(weakest[1])}) is your biggest opportunity.
-                Improving it lifts your overall score the fastest.
-              </Text>
-              <View style={f.calloutActions}>
-                <AnimatedPressable
-                  style={f.calloutBtn}
-                  onPress={() => router.push('/(app)/my-dilly-profile')}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="document-text-outline" size={13} color={GOLD} />
-                  <Text style={f.calloutBtnText}>Talk to Dilly</Text>
-                </AnimatedPressable>
-                <AnimatedPressable
-                  style={f.calloutBtn}
-                  onPress={() => openDillyOverlay({
-                    isPaid: true,
-                    initialMessage: `My weakest dimension is ${dimLabel(weakest[0])} at ${Math.round(weakest[1])}. What specific things can I add to my resume to improve it?`,
-                  })}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="sparkles" size={13} color={GOLD} />
-                  <Text style={f.calloutBtnText}>Ask Dilly</Text>
-                </AnimatedPressable>
-              </View>
-            </View>
-          )}
-
-          {/* ── 5. What Employers Look For ─────────────────── */}
-          {(ra.unmatched_signals || []).length > 0 && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>What employers in your field are looking for</Text>
-              <Text style={f.sectionSub}>Key signals {cohortName} recruiters screen for. Green = you have it. Red = missing.</Text>
-              {(['smart', 'grit', 'build'] as const).map(dim => {
-                const matched = matchedByDim[dim] || [];
-                const unmatched = (ra.unmatched_signals || []).filter(s => s.dimension === dim && s.tier === 'high');
-                if (matched.length === 0 && unmatched.length === 0) return null;
+          {/* ── Tab Switcher ─────────────────────────────── */}
+          <FadeInView delay={60}>
+            <View style={f.tabRow}>
+              {tabs.map(tab => {
+                const isActive = activeTab === tab.key;
                 return (
-                  <View key={`emp-${dim}`} style={f.dimGroup}>
-                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)}</Text>
-                    {matched.slice(0, 3).map((sig, i) => (
-                      <View key={`m-${i}`} style={f.matchedRow}>
-                        <Ionicons name="checkmark-circle" size={14} color={GREEN} />
-                        <Text style={f.matchedText}>{sig.signal}</Text>
-                      </View>
-                    ))}
-                    {unmatched.slice(0, 3).map((sig, i) => (
-                      <AnimatedPressable
-                        key={`u-${i}`}
-                        style={f.notWorkingRow}
-                        onPress={() => openDillyOverlay({
-                          isPaid: true,
-                          initialMessage: `Employers look for "${sig.signal}" on resumes in ${cohortName}. I'm missing it. How do I add this?`,
-                        })}
-                        scaleDown={0.98}
-                      >
-                        <Ionicons name="close-circle" size={14} color={CORAL} />
-                        <Text style={[f.matchedText, { flex: 1 }]}>{sig.signal}</Text>
-                        <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
-                      </AnimatedPressable>
-                    ))}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* ── 5a. What's working on your resume ──────────── */}
-          {(ra.matched_signals || []).length > 0 && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>What's working on your resume</Text>
-              <Text style={f.sectionSub}>These are already on your resume and scoring you points.</Text>
-              {(['smart', 'grit', 'build'] as const).map(dim => {
-                const sigs = matchedByDim[dim];
-                if (sigs.length === 0) return null;
-                return (
-                  <View key={dim} style={f.dimGroup}>
-                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)} · {sigs.length} signal{sigs.length !== 1 ? 's' : ''}</Text>
-                    {sigs.slice(0, 5).map((sig, i) => (
-                      <View key={i} style={f.matchedRow}>
-                        <Ionicons name="checkmark-circle" size={14} color={GREEN} />
-                        <Text style={f.matchedText}>{sig.signal}</Text>
-                      </View>
-                    ))}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* ── 5b. What's NOT Working ─────────────────────── */}
-          {(ra.unmatched_signals || []).length > 0 && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>What's not working</Text>
-              <Text style={f.sectionSub}>Signals missing from your resume that recruiters expect.</Text>
-              {(['smart', 'grit', 'build'] as const).map(dim => {
-                const sigs = (ra.unmatched_signals || []).filter(s => s.dimension === dim);
-                if (sigs.length === 0) return null;
-                return (
-                  <View key={`notwork-${dim}`} style={f.dimGroup}>
-                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)} · {sigs.length} missing</Text>
-                    {sigs.slice(0, 5).map((sig, i) => (
-                      <AnimatedPressable
-                        key={i}
-                        style={f.notWorkingRow}
-                        onPress={() => openDillyOverlay({
-                          isPaid: true,
-                          initialMessage: `My resume is missing "${sig.signal}" in the ${dimLabel(dim)} dimension. ${sig.rationale || ''} How do I add this to my resume?`,
-                        })}
-                        scaleDown={0.98}
-                      >
-                        <Ionicons name="close-circle" size={14} color={CORAL} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={f.matchedText}>{sig.signal}</Text>
-                          {sig.rationale ? <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>{sig.rationale}</Text> : null}
-                        </View>
-                        <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
-                      </AnimatedPressable>
-                    ))}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* ── 6. Biggest Levers ────────────────────────────── */}
-          {Object.values(unmatchedHigh).some(a => a.length > 0) && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>Your biggest opportunities</Text>
-              <Text style={f.sectionSub}>Fix these first for the fastest score improvement.</Text>
-              {(['smart', 'grit', 'build'] as const).map(dim => {
-                const sigs = unmatchedHigh[dim];
-                if (sigs.length === 0) return null;
-                return (
-                  <View key={dim} style={f.dimGroup}>
-                    <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>
-                      {dimLabel(dim)} · {sigs.length} lever{sigs.length !== 1 ? 's' : ''}
+                  <AnimatedPressable
+                    key={tab.key}
+                    style={[f.tabPill, isActive && f.tabPillActive]}
+                    onPress={() => { selectionHaptic(); setActiveTab(tab.key); }}
+                    scaleDown={0.97}
+                  >
+                    <Text style={[f.tabPillText, isActive && f.tabPillTextActive]}>
+                      {tab.label}
                     </Text>
-                    {sigs.map((sig, i) => (
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          </FadeInView>
+
+          {/* ── Tab Content ──────────────────────────────── */}
+
+          {activeTab === 'overview' && (
+            <FadeInView delay={100}>
+              <View style={f.tabContent}>
+                {/* Dilly's take */}
+                {audit?.dilly_take ? (
+                  <View style={f.card}>
+                    <View style={f.cardHeader}>
+                      <Ionicons name="chatbubble-outline" size={13} color={GOLD} />
+                      <Text style={f.cardHeaderText}>Dilly's Take</Text>
+                    </View>
+                    <Text style={f.cardBody}>{audit.dilly_take}</Text>
+                  </View>
+                ) : null}
+
+                {/* Focus area callout */}
+                {weakest && weakest[1] < 80 && (
+                  <View style={[f.card, { borderLeftWidth: 4, borderLeftColor: dimColor(weakest[0]) }]}>
+                    <Text style={f.cardTitle}>Focus area: {dimLabel(weakest[0])}</Text>
+                    <Text style={f.cardBody}>
+                      Your {dimLabel(weakest[0])} score ({Math.round(weakest[1])}) is your biggest opportunity.
+                      Improving it lifts your overall score the fastest.
+                    </Text>
+                    <View style={f.cardActions}>
                       <AnimatedPressable
-                        key={i}
-                        style={f.leverCard}
+                        style={f.actionBtn}
                         onPress={() => openDillyOverlay({
                           isPaid: true,
-                          initialMessage: `My resume is missing "${sig.signal}" (${dimLabel(dim)} dimension). ${sig.rationale || ''} Help me add this to my resume.`,
+                          initialMessage: `My weakest dimension is ${dimLabel(weakest[0])} at ${Math.round(weakest[1])}. What specific things can I add to my resume to improve it?`,
                         })}
-                        scaleDown={0.98}
+                        scaleDown={0.97}
                       >
-                        <View style={[f.leverNum, { borderColor: dimColor(dim) }]}>
-                          <Text style={[f.leverNumText, { color: dimColor(dim) }]}>{i + 1}</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={f.leverTitle}>{sig.signal}</Text>
-                          {sig.rationale ? <Text style={f.leverBody}>{sig.rationale}</Text> : null}
-                        </View>
-                        <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                        <Ionicons name="sparkles" size={13} color={GOLD} />
+                        <Text style={f.actionBtnText}>Ask Dilly</Text>
                       </AnimatedPressable>
-                    ))}
+                    </View>
                   </View>
-                );
-              })}
-            </View>
-          )}
+                )}
 
-          {/* ── 7. Fastest Path Forward ──────────────────────── */}
-          {ra.fastest_path_moves && ra.fastest_path_moves.length > 0 && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>Your path forward</Text>
-              <Text style={f.sectionSub}>Do these this week.</Text>
-              {ra.fastest_path_moves.slice(0, 6).map((move, i) => {
-                const text = extractMoveText(move);
-                if (!text) return null;
-                return (
-                  <AnimatedPressable
-                    key={i}
-                    style={f.moveCard}
-                    onPress={() => openDillyOverlay({
-                      isPaid: true,
-                      initialMessage: `My feedback says I should: "${text}". Help me do this step by step.`,
-                    })}
-                    scaleDown={0.98}
-                  >
-                    <View style={f.moveNum}><Text style={f.moveNumText}>{i + 1}</Text></View>
-                    <Text style={[f.moveText, { flex: 1 }]}>{text}</Text>
-                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
-                  </AnimatedPressable>
-                );
-              })}
-            </View>
-          )}
-
-          {/* ── 8. Common Rejection Reasons ───────────────────── */}
-          {ra.common_rejection_reasons && ra.common_rejection_reasons.length > 0 && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>Why you might get rejected</Text>
-              <Text style={f.sectionSub}>Make sure none of these apply before you hit submit.</Text>
-              {ra.common_rejection_reasons.map((r, i) => {
-                const { text } = extractRejectText(r);
-                if (!text) return null;
-                return (
-                  <AnimatedPressable
-                    key={i}
-                    style={f.rejectRow}
-                    onPress={() => openDillyOverlay({
-                      isPaid: true,
-                      initialMessage: `Employers in my cohort reject resumes for: "${text}". Check my resume — do I have this issue? What should I do?`,
-                    })}
-                    scaleDown={0.98}
-                  >
-                    <Ionicons name="alert-circle-outline" size={13} color={CORAL} style={{ marginTop: 2 }} />
-                    <Text style={[f.rejectText, { flex: 1 }]}>{text}</Text>
-                    <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
-                  </AnimatedPressable>
-                );
-              })}
-            </View>
-          )}
-
-          {/* ── 9. AI Readiness ─────────────────────────────────── */}
-          <View style={[f.section, { backgroundColor: '#0D1117', borderRadius: 0, padding: spacing.md, marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg + spacing.md }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Ionicons name="flash" size={14} color="#58A6FF" />
-              <Text style={[f.sectionHeading, { color: '#F0F6FC', marginBottom: 0 }]}>AI Readiness</Text>
-            </View>
-            <Text style={{ fontSize: 12, color: '#8B949E', lineHeight: 18, marginBottom: 12 }}>
-              AI is disrupting roles across every field. Your profile needs to show skills AI can't replace.
-            </Text>
-            <AnimatedPressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: '#161B22', borderWidth: 1, borderColor: '#21262D' }}
-              onPress={() => openDillyOverlay({
-                isPaid: true,
-                initialMessage: `AI is disrupting entry-level ${cohortName} roles. Review my resume and tell me: which of my skills are AI-proof, which are at risk, and what should I change to be competitive in an AI-driven job market?`,
-              })}
-              scaleDown={0.98}
-            >
-              <Ionicons name="shield-checkmark" size={16} color="#3FB950" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#F0F6FC' }}>Is my resume AI-proof?</Text>
-                <Text style={{ fontSize: 11, color: '#8B949E', marginTop: 2 }}>Dilly will analyze which of your skills are safe and which are at risk</Text>
-              </View>
-              <Ionicons name="sparkles" size={12} color="#58A6FF" />
-            </AnimatedPressable>
-            <AnimatedPressable
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.md, backgroundColor: '#161B22', borderWidth: 1, borderColor: '#21262D', marginTop: 8 }}
-              onPress={() => openDillyOverlay({
-                isPaid: true,
-                initialMessage: `What skills should I develop to be AI-proof in ${cohortName}? I want to know what AI can't replace in my field and how to emphasize those skills on my resume.`,
-              })}
-              scaleDown={0.98}
-            >
-              <Ionicons name="rocket" size={16} color="#D29922" />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#F0F6FC' }}>What skills should I develop?</Text>
-                <Text style={{ fontSize: 11, color: '#8B949E', marginTop: 2 }}>AI-proof skills for {cohortName.replace(/ & .*$/, '')} careers</Text>
-              </View>
-              <Ionicons name="sparkles" size={12} color="#58A6FF" />
-            </AnimatedPressable>
-          </View>
-
-          {/* ── 10. Other Cohorts ──────────────────────────────── */}
-          {ra.other_cohorts && ra.other_cohorts.length > 0 && (
-            <View style={f.section}>
-              <Text style={f.sectionHeading}>Other tracks you fit</Text>
-              {ra.other_cohorts.slice(0, 5).map((c, i) => (
-                <View key={i} style={f.otherRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={f.otherName}>{c.display_name}</Text>
-                    <Text style={f.otherDims}>S {Math.round(c.smart)} · G {Math.round(c.grit)} · B {Math.round(c.build)}</Text>
+                {/* Above bar congratulations */}
+                {aboveBar && (
+                  <View style={[f.card, { backgroundColor: GREEN + '08', borderColor: GREEN + '20' }]}>
+                    <View style={f.cardHeader}>
+                      <Ionicons name="checkmark-circle" size={15} color={GREEN} />
+                      <Text style={[f.cardHeaderText, { color: GREEN }]}>Above the bar</Text>
+                    </View>
+                    <Text style={f.cardBody}>
+                      Your resume scores above the recruiter bar for {cohortName}. You're competitive for roles in this cohort.
+                    </Text>
+                    <View style={f.cardActions}>
+                      <AnimatedPressable
+                        style={[f.actionBtn, { backgroundColor: GREEN + '12', borderColor: GREEN + '25' }]}
+                        onPress={() => router.push('/(app)/jobs')}
+                        scaleDown={0.97}
+                      >
+                        <Ionicons name="briefcase-outline" size={13} color={GREEN} />
+                        <Text style={[f.actionBtnText, { color: GREEN }]}>See matching jobs</Text>
+                      </AnimatedPressable>
+                    </View>
                   </View>
-                  <Text style={[f.otherScore, { color: c.above_bar ? GREEN : GOLD }]}>{Math.round(c.composite)}</Text>
+                )}
+
+                {/* CTAs */}
+                <View style={f.ctaRow}>
+                  <AnimatedPressable style={f.ctaPrimary} onPress={() => router.push('/(app)/new-audit')} scaleDown={0.97}>
+                    <Ionicons name="flash" size={16} color="#fff" />
+                    <Text style={f.ctaPrimaryText}>Run new audit</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable style={f.ctaSecondary} onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.97}>
+                    <Ionicons name="document-text-outline" size={16} color={GOLD} />
+                    <Text style={f.ctaSecondaryText}>Talk to Dilly</Text>
+                  </AnimatedPressable>
                 </View>
-              ))}
-            </View>
+              </View>
+            </FadeInView>
           )}
 
-          {/* ── 10. CTAs ─────────────────────────────────────── */}
-          <View style={f.ctaRow}>
-            <AnimatedPressable style={f.ctaPrimary} onPress={() => router.push('/(app)/new-audit')} scaleDown={0.97}>
-              <Ionicons name="flash" size={16} color="#fff" />
-              <Text style={f.ctaPrimaryText}>Run new audit</Text>
-            </AnimatedPressable>
-            <AnimatedPressable style={f.ctaSecondary} onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.97}>
-              <Ionicons name="document-text-outline" size={16} color={GOLD} />
-              <Text style={f.ctaSecondaryText}>Talk to Dilly</Text>
-            </AnimatedPressable>
-          </View>
+          {activeTab === 'signals' && (
+            <FadeInView delay={100}>
+              <View style={f.tabContent}>
+                {/* Working for you */}
+                {(ra.matched_signals || []).length > 0 && (
+                  <View style={f.card}>
+                    <Text style={[f.cardTitle, { color: GREEN }]}>Working for you</Text>
+                    {(['smart', 'grit', 'build'] as const).map(dim => {
+                      const sigs = matchedByDim[dim];
+                      if (sigs.length === 0) return null;
+                      return (
+                        <View key={dim} style={f.dimGroup}>
+                          <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)}</Text>
+                          {sigs.slice(0, 3).map((sig, i) => (
+                            <View key={i} style={f.signalRow}>
+                              <Ionicons name="checkmark-circle" size={14} color={GREEN} />
+                              <Text style={f.signalText}>{sig.signal}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Missing */}
+                {(ra.unmatched_signals || []).length > 0 && (
+                  <View style={f.card}>
+                    <Text style={[f.cardTitle, { color: CORAL }]}>Missing</Text>
+                    {(['smart', 'grit', 'build'] as const).map(dim => {
+                      const sigs = unmatchedByDim[dim];
+                      if (sigs.length === 0) return null;
+                      return (
+                        <View key={dim} style={f.dimGroup}>
+                          <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)}</Text>
+                          {sigs.slice(0, 3).map((sig, i) => (
+                            <AnimatedPressable
+                              key={i}
+                              style={f.signalRow}
+                              onPress={() => openDillyOverlay({
+                                isPaid: true,
+                                initialMessage: `My resume is missing "${sig.signal}" in the ${dimLabel(dim)} dimension. ${sig.rationale || ''} How do I add this to my resume?`,
+                              })}
+                              scaleDown={0.98}
+                            >
+                              <Ionicons name="close-circle" size={14} color={CORAL} />
+                              <Text style={[f.signalText, { flex: 1 }]}>{sig.signal}</Text>
+                              <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                            </AnimatedPressable>
+                          ))}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            </FadeInView>
+          )}
+
+          {activeTab === 'action' && (
+            <FadeInView delay={100}>
+              <View style={f.tabContent}>
+                {/* This week */}
+                {ra.fastest_path_moves && ra.fastest_path_moves.length > 0 && (
+                  <View style={f.card}>
+                    <Text style={f.cardTitle}>This week</Text>
+                    <Text style={f.cardSub}>Do these first for the fastest improvement.</Text>
+                    {ra.fastest_path_moves.slice(0, 6).map((move, i) => {
+                      const text = extractMoveText(move);
+                      if (!text) return null;
+                      return (
+                        <AnimatedPressable
+                          key={i}
+                          style={f.numberedRow}
+                          onPress={() => openDillyOverlay({
+                            isPaid: true,
+                            initialMessage: `My feedback says I should: "${text}". Help me do this step by step.`,
+                          })}
+                          scaleDown={0.98}
+                        >
+                          <View style={f.numBadge}>
+                            <Text style={f.numBadgeText}>{i + 1}</Text>
+                          </View>
+                          <Text style={[f.numberedText, { flex: 1 }]}>{text}</Text>
+                          <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                        </AnimatedPressable>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Watch out for */}
+                {ra.common_rejection_reasons && ra.common_rejection_reasons.length > 0 && (
+                  <View style={[f.card, { backgroundColor: CORAL + '06', borderColor: CORAL + '15' }]}>
+                    <View style={f.cardHeader}>
+                      <Ionicons name="alert-circle" size={14} color={CORAL} />
+                      <Text style={[f.cardTitle, { color: CORAL, marginBottom: 0 }]}>Watch out for</Text>
+                    </View>
+                    {ra.common_rejection_reasons.map((r, i) => {
+                      const { text } = extractRejectText(r);
+                      if (!text) return null;
+                      return (
+                        <AnimatedPressable
+                          key={i}
+                          style={f.rejectRow}
+                          onPress={() => openDillyOverlay({
+                            isPaid: true,
+                            initialMessage: `Employers in my cohort reject resumes for: "${text}". Check my resume — do I have this issue? What should I do?`,
+                          })}
+                          scaleDown={0.98}
+                        >
+                          <Ionicons name="alert-circle-outline" size={13} color={CORAL} style={{ marginTop: 2 }} />
+                          <Text style={[f.rejectText, { flex: 1 }]}>{text}</Text>
+                          <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                        </AnimatedPressable>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Biggest opportunities */}
+                {Object.values(unmatchedHigh).some(a => a.length > 0) && (
+                  <View style={f.card}>
+                    <Text style={f.cardTitle}>Biggest opportunities</Text>
+                    <Text style={f.cardSub}>High-impact signals missing from your resume.</Text>
+                    {(['smart', 'grit', 'build'] as const).map(dim => {
+                      const sigs = unmatchedHigh[dim];
+                      if (sigs.length === 0) return null;
+                      return (
+                        <View key={dim} style={f.dimGroup}>
+                          <Text style={[f.dimGroupLabel, { color: dimColor(dim) }]}>{dimLabel(dim)}</Text>
+                          {sigs.map((sig, i) => (
+                            <AnimatedPressable
+                              key={i}
+                              style={f.numberedRow}
+                              onPress={() => openDillyOverlay({
+                                isPaid: true,
+                                initialMessage: `My resume is missing "${sig.signal}" (${dimLabel(dim)} dimension). ${sig.rationale || ''} Help me add this to my resume.`,
+                              })}
+                              scaleDown={0.98}
+                            >
+                              <View style={[f.numBadge, { borderColor: dimColor(dim), backgroundColor: 'transparent' }]}>
+                                <Text style={[f.numBadgeText, { color: dimColor(dim) }]}>{i + 1}</Text>
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={f.numberedText}>{sig.signal}</Text>
+                                {sig.rationale ? <Text style={f.numberedSub}>{sig.rationale}</Text> : null}
+                              </View>
+                              <Ionicons name="sparkles" size={10} color={GOLD} style={{ opacity: 0.4 }} />
+                            </AnimatedPressable>
+                          ))}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            </FadeInView>
+          )}
         </ScrollView>
       </View>
     </>
@@ -584,20 +538,26 @@ export default function FeedbackScreen() {
 
 const f = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 18, paddingVertical: 10 },
-  backText: { fontSize: 15, color: GOLD, fontWeight: '600' },
-  scroll: { paddingHorizontal: spacing.lg, gap: 16 },
 
-  // Hero — matches score-detail page with big Cinzel score
-  hero: { alignItems: 'center', paddingTop: 12, paddingBottom: 8, gap: 6 },
-  heroEyebrow: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 1.2, color: colors.t3, textTransform: 'uppercase' },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 20, width: '100%', paddingHorizontal: 8 },
-  heroDims: { flex: 1, gap: 8 },
+  // Header
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
+  headerTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1.2, color: colors.t3, textAlign: 'center' },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 10 },
+  backText: { fontSize: 15, color: GOLD, fontWeight: '600' },
+
+  scroll: { paddingHorizontal: spacing.lg, gap: 12 },
+
+  // Score Hero card
+  heroCard: {
+    alignItems: 'center', paddingTop: 16, paddingBottom: 16, gap: 6,
+    backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: spacing.md,
+  },
+  heroScoreBig: { fontFamily: 'Cinzel_700Bold', fontSize: 56, lineHeight: 64 },
+  heroCohortName: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.8, color: colors.t1, textAlign: 'center' },
   barBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
   barBadgeText: { fontSize: 12, fontWeight: '700' },
-  ringNum: { fontSize: 28, fontWeight: '800' },
-  heroScoreBig: { fontFamily: 'Cinzel_700Bold', fontSize: 64, lineHeight: 72 },
-  heroCohortName: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 0.8, color: colors.t1, textAlign: 'center' },
+  heroDims: { gap: 8, width: '100%', marginTop: 8 },
 
   // Dim bar
   dimBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -606,59 +566,68 @@ const f = StyleSheet.create({
   dimBarFill: { height: '100%', borderRadius: 3 },
   dimBarScore: { width: 28, fontSize: 13, fontWeight: '700', textAlign: 'right' },
 
-  // Take
-  takeCard: { flexDirection: 'row', gap: 8, backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1, padding: spacing.md },
-  takeText: { flex: 1, fontSize: 13, color: colors.t2, lineHeight: 19 },
+  // Tab switcher
+  tabRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', paddingVertical: 4 },
+  tabPill: {
+    paddingHorizontal: 18, paddingVertical: 8, borderRadius: 999,
+    backgroundColor: colors.s2,
+  },
+  tabPillActive: { backgroundColor: GOLD },
+  tabPillText: { fontSize: 13, fontWeight: '600', color: colors.t2 },
+  tabPillTextActive: { color: '#fff' },
 
-  // Section
-  section: { gap: 10 },
-  sectionHeading: { fontSize: 16, fontWeight: '700', color: colors.t1 },
-  sectionSub: { fontSize: 12, color: colors.t3, marginBottom: 4 },
+  // Tab content wrapper
+  tabContent: { gap: 12 },
 
-  // Callout
-  calloutCard: { backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1, borderLeftWidth: 4, padding: spacing.md, gap: 8 },
-  calloutTitle: { fontSize: 14, fontWeight: '700', color: colors.t1 },
-  calloutBody: { fontSize: 12, color: colors.t2, lineHeight: 18 },
-  calloutActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  calloutBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: GOLD + '10', borderWidth: 1, borderColor: GOLD + '20' },
-  calloutBtnText: { fontSize: 12, fontWeight: '600', color: GOLD },
+  // Card (generic)
+  card: {
+    backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1,
+    padding: spacing.md, gap: 8,
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  cardHeaderText: { fontSize: 13, fontWeight: '700', color: GOLD },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: colors.t1, marginBottom: 2 },
+  cardSub: { fontSize: 12, color: colors.t3, marginBottom: 4 },
+  cardBody: { fontSize: 13, color: colors.t2, lineHeight: 19 },
+  cardActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+
+  // Action buttons
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+    backgroundColor: GOLD + '10', borderWidth: 1, borderColor: GOLD + '20',
+  },
+  actionBtnText: { fontSize: 12, fontWeight: '600', color: GOLD },
 
   // Dim group
-  dimGroup: { gap: 6, marginBottom: 8 },
-  dimGroupLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  dimGroup: { gap: 6, marginBottom: 4 },
+  dimGroupLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: 4 },
 
-  // Matched signals
-  matchedRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 4 },
-  matchedText: { flex: 1, fontSize: 13, color: colors.t1, lineHeight: 18 },
+  // Signal rows (Signals tab)
+  signalRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 4 },
+  signalText: { flex: 1, fontSize: 13, color: colors.t1, lineHeight: 18 },
 
-  // Not working
-  notWorkingRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 6 },
+  // Numbered rows (Action Plan tab)
+  numberedRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    paddingVertical: 8, paddingHorizontal: 10, borderRadius: radius.md,
+    backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
+  },
+  numBadge: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: GOLD + '15', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: GOLD,
+  },
+  numBadgeText: { fontSize: 10, fontWeight: '800', color: GOLD },
+  numberedText: { fontSize: 13, color: colors.t1, lineHeight: 18 },
+  numberedSub: { fontSize: 11, color: colors.t3, lineHeight: 16, marginTop: 2 },
 
-  // Levers
-  leverCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
-  leverNum: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  leverNumText: { fontSize: 10, fontWeight: '800' },
-  leverTitle: { fontSize: 13, fontWeight: '600', color: colors.t1 },
-  leverBody: { fontSize: 11, color: colors.t3, lineHeight: 16, marginTop: 2 },
-
-  // Moves
-  moveCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
-  moveNum: { width: 22, height: 22, borderRadius: 11, backgroundColor: GOLD + '15', alignItems: 'center', justifyContent: 'center' },
-  moveNumText: { fontSize: 10, fontWeight: '800', color: GOLD },
-  moveText: { fontSize: 13, color: colors.t1, lineHeight: 18 },
-
-  // Rejections
-  rejectRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: CORAL + '06', borderWidth: 1, borderColor: CORAL + '15' },
+  // Rejection rows
+  rejectRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 6 },
   rejectText: { fontSize: 13, color: colors.t1, lineHeight: 18 },
 
-  // Other cohorts
-  otherRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 },
-  otherName: { fontSize: 13, fontWeight: '600', color: colors.t1 },
-  otherDims: { fontSize: 11, color: colors.t3, marginTop: 2 },
-  otherScore: { fontSize: 20, fontWeight: '800' },
-
   // CTAs
-  ctaRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  ctaRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   ctaPrimary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: radius.xl, backgroundColor: GOLD },
   ctaPrimaryText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   ctaSecondary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: radius.xl, backgroundColor: GOLD + '10', borderWidth: 1, borderColor: GOLD + '25' },

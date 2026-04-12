@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Linking,
   Clipboard,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { clearAuth } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
+import { mediumHaptic } from '../../lib/haptics';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
@@ -170,6 +172,7 @@ export default function SettingsScreen() {
 
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Toggles
@@ -209,36 +212,47 @@ export default function SettingsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const searchRef = useRef<TextInput>(null);
 
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await dilly.fetch('/profile');
+      const data = await res.json();
+      const p = data ?? {};
+      setProfile(p);
+      setNotifEnabled(p.notification_prefs?.enabled !== false);
+      setDeadlineReminders(p.notification_prefs?.deadline_reminders !== false);
+      setLeaderboardOptIn(p.leaderboard_opt_in !== false);
+      setSoundEffects(p.sound_effects !== false);
+      setRitualsEnabled(!!p.rituals_enabled);
+      setWeeklyReviewDay(p.weekly_review_day || 'Mon');
+      setVoiceTone(p.voice_tone || 'encouraging');
+      setVoiceAlwaysAsk(!!p.voice_always_end_with_ask);
+      setVoiceMaxRecs(typeof p.voice_max_recommendations === 'number' ? p.voice_max_recommendations : 2);
+      setNudgePrefs(p.nudge_preferences ?? {});
+      setVoiceSaveToProfile(p.voice_save_to_profile !== false);
+      setProfileVisibleToRecruiters(p.dilly_profile_visible_to_recruiters !== false);
+      setRecruiterPrivacy(p.dilly_profile_privacy ?? { scores: true, activity: true, applications: true, experience: true });
+      setTagline(p.profile_tagline || '');
+      setBio(p.profile_bio || '');
+      setCareerGoal(p.career_goal || '');
+      setParentEmail(p.parent_email || '');
+      setParentMilestones(!!p.parent_milestone_opt_in);
+      setVoiceNotes(Array.isArray(p.voice_notes) ? p.voice_notes : []);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     (async () => {
-      try {
-        const res = await dilly.fetch('/profile');
-        const data = await res.json();
-        const p = data ?? {};
-        setProfile(p);
-        setNotifEnabled(p.notification_prefs?.enabled !== false);
-        setDeadlineReminders(p.notification_prefs?.deadline_reminders !== false);
-        setLeaderboardOptIn(p.leaderboard_opt_in !== false);
-        setSoundEffects(p.sound_effects !== false);
-        setRitualsEnabled(!!p.rituals_enabled);
-        setWeeklyReviewDay(p.weekly_review_day || 'Mon');
-        setVoiceTone(p.voice_tone || 'encouraging');
-        setVoiceAlwaysAsk(!!p.voice_always_end_with_ask);
-        setVoiceMaxRecs(typeof p.voice_max_recommendations === 'number' ? p.voice_max_recommendations : 2);
-        setNudgePrefs(p.nudge_preferences ?? {});
-        setVoiceSaveToProfile(p.voice_save_to_profile !== false);
-        setProfileVisibleToRecruiters(p.dilly_profile_visible_to_recruiters !== false);
-        setRecruiterPrivacy(p.dilly_profile_privacy ?? { scores: true, activity: true, applications: true, experience: true });
-        setTagline(p.profile_tagline || '');
-        setBio(p.profile_bio || '');
-        setCareerGoal(p.career_goal || '');
-        setParentEmail(p.parent_email || '');
-        setParentMilestones(!!p.parent_milestone_opt_in);
-        setVoiceNotes(Array.isArray(p.voice_notes) ? p.voice_notes : []);
-      } catch {}
-      finally { setLoading(false); }
+      await fetchProfile();
+      setLoading(false);
     })();
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    mediumHaptic();
+    setRefreshing(true);
+    await fetchProfile();
+    setRefreshing(false);
+  }, [fetchProfile]);
 
   const email = profile.email || '';
   const name = profile.name || '';
@@ -422,6 +436,7 @@ export default function SettingsScreen() {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[st.scroll, { paddingBottom: insets.bottom + 60 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
       >
         {/* ── 1. Account ─────────────────────────────────────────────────── */}
         <View style={!sectionVisible('account') && { display: 'none' }} onLayout={e => { sectionRefs.current.account = e.nativeEvent.layout.y; }}>

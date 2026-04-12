@@ -203,7 +203,6 @@ export type MemoryAction =
   | "open_voice"
   | "open_calendar"
   | "open_audit"
-  | "open_resume_editor"
   | "open_applications"
   | "open_leaderboard"
   | "open_jobs"

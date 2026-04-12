@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -28,6 +27,7 @@ import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import CohortPicker from '../../components/CohortPicker';
 import { remindReaudit } from '../../lib/reminders';
+import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -387,6 +387,7 @@ function ResultsCard({ newAudit, previousScore }: { newAudit: AuditSummary; prev
 export default function NewAuditScreen() {
   const insets = useSafeAreaInsets();
 
+  const toast = useInlineToast();
   const [phase, setPhase]                 = useState<Phase>('idle');
   const [file, setFile]                   = useState<PickedFile | null>(null);
   const [latestAudit, setLatestAudit]     = useState<AuditSummary | null>(null);
@@ -396,6 +397,7 @@ export default function NewAuditScreen() {
   const [scanStage, setScanStage]         = useState(0);
   const [loading, setLoading]             = useState(true);
   const [useEditor, setUseEditor]         = useState(false);
+  const [useProfileScore, setUseProfileScore] = useState(true);
   const [userCohorts, setUserCohorts]     = useState<string[]>([]);
   const [selectedCohort, setSelectedCohort] = useState<string | null>(null);
   const [showCohortPicker, setShowCohortPicker] = useState(false);
@@ -448,20 +450,20 @@ export default function NewAuditScreen() {
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
       if (asset.size && asset.size > 10 * 1024 * 1024) {
-        Alert.alert('File too large', 'Max file size is 10MB.');
+        toast.show({ message: 'File too large. Max 10MB.' });
         return;
       }
       setFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType || 'application/pdf', size: asset.size || 0 });
       setUseEditor(false);
     } catch {
-      Alert.alert('Error', 'Could not access your files. Please try again.');
+      toast.show({ message: 'Could not access files. Try again.' });
     }
   }
 
   // Run audit
   async function runAudit() {
-    if (!file && !useEditor) {
-      Alert.alert('No resume', 'Upload a PDF or use your saved resume from the editor.');
+    if (!file && !useEditor && !useProfileScore) {
+      toast.show({ message: 'Choose a scoring method.' });
       return;
     }
 
@@ -483,7 +485,34 @@ export default function NewAuditScreen() {
     try {
       let result: any;
 
-      if (useEditor) {
+      if (useProfileScore) {
+        // Profile-based scoring - no resume needed
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 60_000);
+        const res = await dilly.fetch('/audit/profile-score', {
+          method: 'POST',
+          body: JSON.stringify({ cohort: selectedCohort || undefined }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timeout);
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => null);
+          throw new Error(errBody?.detail || `Scoring failed (${res.status})`);
+        }
+        const profileResult = await res.json();
+        // Map profile score response to audit result shape
+        result = {
+          scores: profileResult.scores,
+          final_score: profileResult.final_score,
+          dilly_take: profileResult.dilly_take,
+          audit_findings: profileResult.audit_findings,
+          evidence: profileResult.evidence,
+          recommendations: profileResult.recommendations,
+          detected_track: profileResult.track,
+          scoring_method: 'profile',
+          gaps: profileResult.gaps,
+        };
+      } else if (useEditor) {
         // Audit from saved editor resume — can take 30-60s with Claude + rubric scoring
         const editorCtrl = new AbortController();
         const editorTimeout = setTimeout(() => editorCtrl.abort(), 120_000);
@@ -582,15 +611,14 @@ export default function NewAuditScreen() {
           : typeof result?.error === 'string' ? result.error
           : typeof result?.detail === 'object' ? JSON.stringify(result.detail)
           : 'Resume audit failed. Please try uploading again.';
-        Alert.alert('Audit Failed', errMsg);
+        toast.show({ message: 'Audit failed. Try again.' });
       }
 
       setPhase('done');
     } catch (e: any) {
       if (scanTimer.current) clearTimeout(scanTimer.current);
       setPhase('idle');
-      const msg = typeof e?.message === 'string' ? e.message : typeof e === 'string' ? e : 'Resume audit failed. Please try uploading again.';
-      Alert.alert('Error', msg);
+      toast.show({ message: 'Audit failed. Please try again.' });
     }
   }
 
@@ -686,31 +714,19 @@ export default function NewAuditScreen() {
                   </View>
                 </AnimatedPressable>
               ) : (
-                /* Two side-by-side cards for choosing the source */
-                <View style={ns.sourceRow}>
-                  <AnimatedPressable
-                    style={[ns.sourceCard, !useEditor && ns.sourceCardActive]}
-                    onPress={() => { setUseEditor(false); pickFile(); }}
-                    scaleDown={0.97}
-                  >
-                    <View style={ns.sourceIcon}>
-                      <Ionicons name="cloud-upload-outline" size={22} color={!useEditor ? GOLD : colors.t3} />
-                    </View>
-                    <Text style={[ns.sourceTitle, !useEditor && { color: GOLD }]}>Upload PDF</Text>
-                    <Text style={ns.sourceSub}>PDF or DOCX · Max 10MB</Text>
-                  </AnimatedPressable>
-                  <AnimatedPressable
-                    style={[ns.sourceCard, useEditor && ns.sourceCardActive]}
-                    onPress={() => { setUseEditor(true); setFile(null); }}
-                    scaleDown={0.97}
-                  >
-                    <View style={ns.sourceIcon}>
-                      <Ionicons name="create-outline" size={22} color={useEditor ? GOLD : colors.t3} />
-                    </View>
-                    <Text style={[ns.sourceTitle, useEditor && { color: GOLD }]}>From editor</Text>
-                    <Text style={ns.sourceSub}>Re-audit saved resume</Text>
-                  </AnimatedPressable>
-                </View>
+                <AnimatedPressable
+                  style={ns.profileScoreCard}
+                  onPress={() => { setUseProfileScore(true); }}
+                  scaleDown={0.97}
+                >
+                  <View style={ns.sourceIcon}>
+                    <Ionicons name="person-circle" size={24} color={GOLD} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[ns.sourceTitle, { color: GOLD }]}>Score My Profile</Text>
+                    <Text style={ns.sourceSub}>Based on everything Dilly knows about you</Text>
+                  </View>
+                </AnimatedPressable>
               )}
             </FadeInView>
 
@@ -721,14 +737,14 @@ export default function NewAuditScreen() {
                   <Ionicons name="layers-outline" size={12} color={GOLD} />
                   <Text style={ns.tipsTitle}>SCORE AGAINST</Text>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 4 }}>
                   {userCohorts.map(name => (
                     <AnimatedPressable
                       key={name}
                       style={{
-                        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999,
+                        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
                         backgroundColor: selectedCohort === name ? '#1652F0' : colors.s2,
-                        borderWidth: 1, borderColor: selectedCohort === name ? '#1652F0' : colors.b1,
+                        borderWidth: 1, borderColor: selectedCohort === name ? '#1652F0' : colors.b2,
                       }}
                       onPress={() => setSelectedCohort(name)}
                       scaleDown={0.95}
@@ -741,7 +757,7 @@ export default function NewAuditScreen() {
                   ))}
                   <AnimatedPressable
                     style={{
-                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+                      paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
                       backgroundColor: '#1652F0' + '10', borderWidth: 1, borderColor: '#1652F0' + '25',
                       flexDirection: 'row', alignItems: 'center', gap: 4,
                     }}
@@ -751,7 +767,7 @@ export default function NewAuditScreen() {
                     <Ionicons name="add" size={14} color="#1652F0" />
                     <Text style={{ fontSize: 12, fontWeight: '600', color: '#1652F0' }}>Add cohort</Text>
                   </AnimatedPressable>
-                </ScrollView>
+                </View>
               </View>
             </FadeInView>
 
@@ -891,6 +907,7 @@ export default function NewAuditScreen() {
           dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ cohorts: updated }) }).catch(() => {});
         }}
       />
+      <InlineToastView {...toast.props} />
     </View>
   );
 }
@@ -1063,6 +1080,11 @@ const ns = StyleSheet.create({
   },
   sourceCardActive: {
     borderColor: GOLD + '50', backgroundColor: 'rgba(43,58,142,0.04)',
+  },
+  profileScoreCard: {
+    width: '100%', backgroundColor: 'rgba(43,58,142,0.04)', borderRadius: 14,
+    borderWidth: 1.5, borderColor: GOLD + '50',
+    padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   sourceIcon: {
     width: 40, height: 40, borderRadius: 20,

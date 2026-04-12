@@ -9,6 +9,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -728,6 +729,7 @@ export default function CalendarScreen() {
 
   const [events, setEvents]         = useState<CalendarEvent[]>([]);
   const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showAdd, setShowAdd]       = useState(false);
   const [prepDeck, setPrepDeck]     = useState<PrepDeck | null>(null);
@@ -741,101 +743,111 @@ export default function CalendarScreen() {
 
   // Build-78: load from profile.deadlines + auto-import from tracker applications.
   // Also auto-generate "follow up" ghost events for silent applications.
+  const fetchCalendarData = useCallback(async () => {
+    try {
+      const [profileRes, appsRes] = await Promise.all([
+        dilly.fetch('/profile').then(r => r.json()).catch(() => ({})),
+        dilly.get('/applications').catch(() => ({ applications: [] })),
+      ]);
+
+      // 1. Map profile deadlines (existing behavior)
+      const deadlines = profileRes?.deadlines || [];
+      const mapped: CalendarEvent[] = deadlines
+        .filter((d: any) => d && d.date)
+        .map((d: any) => ({
+          id: d.id || uid(),
+          title: d.label || d.title || 'Untitled',
+          date: (d.date || '').slice(0, 10),
+          type: (d.type as EventType) || 'deadline',
+          notes: d.notes || d.prep || undefined,
+          completedAt: d.completedAt || null,
+          reminder_days: Array.isArray(d.reminder_days) ? d.reminder_days : undefined,
+          prep_type: d.prep_type || undefined,
+          createdBy: d.createdBy || undefined,
+          company: d.company || undefined,
+          role: d.role || undefined,
+        }));
+
+      // 2. Auto-import application deadlines from the tracker that
+      //    don't already exist in profile.deadlines. Dedupes by
+      //    company+role+date to prevent double-entry.
+      const existingKeys = new Set(
+        mapped.map(e => `${(e.company||'').toLowerCase()}|${(e.role||'').toLowerCase()}|${e.date}`)
+      );
+      const apps = (appsRes as any)?.applications || [];
+      let imported = 0;
+      for (const a of apps) {
+        if (!a || typeof a !== 'object') continue;
+        const deadline = (a.deadline || '').slice(0, 10);
+        if (!deadline) continue;
+        const company = (a.company || '').trim();
+        const role = (a.role || '').trim();
+        const key = `${company.toLowerCase()}|${role.toLowerCase()}|${deadline}`;
+        if (existingKeys.has(key)) continue;
+        existingKeys.add(key);
+        mapped.push({
+          id: a.id || uid(),
+          title: company ? `${company}  -  ${role || 'Application'}` : (role || 'Application deadline'),
+          date: deadline,
+          type: 'application',
+          notes: a.notes || undefined,
+          completedAt: null,
+          company: company || undefined,
+          role: role || undefined,
+          createdBy: 'tracker',
+        });
+        imported++;
+      }
+
+      // 3. Auto-suggest follow-up ghost events for applied apps
+      //    that haven't had activity in 14+ days.
+      const now = Date.now();
+      const FOLLOW_UP_DAYS = 14;
+      for (const a of apps) {
+        if (!a || typeof a !== 'object') continue;
+        if ((a.status || '').toLowerCase() !== 'applied') continue;
+        const appliedAt = a.applied_at ? new Date(a.applied_at).getTime() : 0;
+        if (!appliedAt || isNaN(appliedAt)) continue;
+        const daysSince = Math.round((now - appliedAt) / 86400000);
+        if (daysSince < 7) continue; // too early
+        const followUpDate = new Date(appliedAt + FOLLOW_UP_DAYS * 86400000);
+        const followUpKey = followUpDate.toISOString().slice(0, 10);
+        const company = (a.company || '').trim();
+        const role = (a.role || '').trim();
+        const dedupKey = `followup|${company.toLowerCase()}|${role.toLowerCase()}|${followUpKey}`;
+        if (existingKeys.has(dedupKey)) continue;
+        existingKeys.add(dedupKey);
+        mapped.push({
+          id: `followup-${a.id || uid()}`,
+          title: `Follow up  -  ${company || role || 'application'}`,
+          date: followUpKey,
+          type: 'custom',
+          notes: daysSince >= FOLLOW_UP_DAYS
+            ? `${daysSince} days since you applied. A short follow-up doubles response rate.`
+            : `Suggested follow-up date. Applied ${daysSince} days ago.`,
+          completedAt: null,
+          company: company || undefined,
+          role: role || undefined,
+          createdBy: 'dilly-auto',
+        });
+      }
+
+      setEvents(mapped);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     (async () => {
-      try {
-        const [profileRes, appsRes] = await Promise.all([
-          dilly.fetch('/profile').then(r => r.json()).catch(() => ({})),
-          dilly.get('/applications').catch(() => ({ applications: [] })),
-        ]);
-
-        // 1. Map profile deadlines (existing behavior)
-        const deadlines = profileRes?.deadlines || [];
-        const mapped: CalendarEvent[] = deadlines
-          .filter((d: any) => d && d.date)
-          .map((d: any) => ({
-            id: d.id || uid(),
-            title: d.label || d.title || 'Untitled',
-            date: (d.date || '').slice(0, 10),
-            type: (d.type as EventType) || 'deadline',
-            notes: d.notes || d.prep || undefined,
-            completedAt: d.completedAt || null,
-            reminder_days: Array.isArray(d.reminder_days) ? d.reminder_days : undefined,
-            prep_type: d.prep_type || undefined,
-            createdBy: d.createdBy || undefined,
-            company: d.company || undefined,
-            role: d.role || undefined,
-          }));
-
-        // 2. Auto-import application deadlines from the tracker that
-        //    don't already exist in profile.deadlines. Dedupes by
-        //    company+role+date to prevent double-entry.
-        const existingKeys = new Set(
-          mapped.map(e => `${(e.company||'').toLowerCase()}|${(e.role||'').toLowerCase()}|${e.date}`)
-        );
-        const apps = (appsRes as any)?.applications || [];
-        let imported = 0;
-        for (const a of apps) {
-          if (!a || typeof a !== 'object') continue;
-          const deadline = (a.deadline || '').slice(0, 10);
-          if (!deadline) continue;
-          const company = (a.company || '').trim();
-          const role = (a.role || '').trim();
-          const key = `${company.toLowerCase()}|${role.toLowerCase()}|${deadline}`;
-          if (existingKeys.has(key)) continue;
-          existingKeys.add(key);
-          mapped.push({
-            id: a.id || uid(),
-            title: company ? `${company}  -  ${role || 'Application'}` : (role || 'Application deadline'),
-            date: deadline,
-            type: 'application',
-            notes: a.notes || undefined,
-            completedAt: null,
-            company: company || undefined,
-            role: role || undefined,
-            createdBy: 'tracker',
-          });
-          imported++;
-        }
-
-        // 3. Auto-suggest follow-up ghost events for applied apps
-        //    that haven't had activity in 14+ days.
-        const now = Date.now();
-        const FOLLOW_UP_DAYS = 14;
-        for (const a of apps) {
-          if (!a || typeof a !== 'object') continue;
-          if ((a.status || '').toLowerCase() !== 'applied') continue;
-          const appliedAt = a.applied_at ? new Date(a.applied_at).getTime() : 0;
-          if (!appliedAt || isNaN(appliedAt)) continue;
-          const daysSince = Math.round((now - appliedAt) / 86400000);
-          if (daysSince < 7) continue; // too early
-          const followUpDate = new Date(appliedAt + FOLLOW_UP_DAYS * 86400000);
-          const followUpKey = followUpDate.toISOString().slice(0, 10);
-          const company = (a.company || '').trim();
-          const role = (a.role || '').trim();
-          const dedupKey = `followup|${company.toLowerCase()}|${role.toLowerCase()}|${followUpKey}`;
-          if (existingKeys.has(dedupKey)) continue;
-          existingKeys.add(dedupKey);
-          mapped.push({
-            id: `followup-${a.id || uid()}`,
-            title: `Follow up  -  ${company || role || 'application'}`,
-            date: followUpKey,
-            type: 'custom',
-            notes: daysSince >= FOLLOW_UP_DAYS
-              ? `${daysSince} days since you applied. A short follow-up doubles response rate.`
-              : `Suggested follow-up date. Applied ${daysSince} days ago.`,
-            completedAt: null,
-            company: company || undefined,
-            role: role || undefined,
-            createdBy: 'dilly-auto',
-          });
-        }
-
-        setEvents(mapped);
-      } catch {}
-      finally { setLoading(false); }
+      await fetchCalendarData();
+      setLoading(false);
     })();
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchCalendarData();
+    setRefreshing(false);
+  }, [fetchCalendarData]);
 
   // Save events back to profile as deadlines
   async function saveEvents(updated: CalendarEvent[]) {
@@ -1011,7 +1023,8 @@ export default function CalendarScreen() {
         </View>
       </FadeInView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[cs.scroll, { paddingBottom: insets.bottom + 40 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[cs.scroll, { paddingBottom: insets.bottom + 40 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
 
         {/* Build-78: Interview Countdown Hero (≤7 days to interview)
             replaces the generic ThisWeekCard when an interview is imminent */}

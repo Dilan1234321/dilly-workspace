@@ -1,15 +1,17 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
-  Dimensions, RefreshControl, Alert,
+  Dimensions, RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { mediumHaptic } from '../../lib/haptics';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,6 +89,7 @@ function Skeleton({ width, height = 14, style }: { width: number | string; heigh
 
 export default function ScoreDetailScreen() {
   const insets = useSafeAreaInsets();
+  const toast = useInlineToast();
   const [cohorts, setCohorts]           = useState<CohortEntry[]>([]);
   const [activeIdx, setActiveIdx]       = useState(0);
   const [recs, setRecs]                 = useState<Rec[]>([]);
@@ -110,7 +113,7 @@ export default function ScoreDetailScreen() {
     build: new Animated.Value(0),
   }).current;
 
-  const pillScrollRef = useRef<ScrollView>(null);
+  // pillScrollRef removed — cohort badges now use flex-wrap View
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 
@@ -200,7 +203,7 @@ export default function ScoreDetailScreen() {
           });
         }
       } catch {
-        Alert.alert('Error', 'Could not load scores. Pull down to refresh.');
+        toast.show({ message: 'Could not load scores. Pull to refresh.' });
       } finally {
         setLoading(false);
       }
@@ -208,6 +211,7 @@ export default function ScoreDetailScreen() {
   }, [fetchKey]);
 
   const handleRefresh = useCallback(async () => {
+    mediumHaptic();
     setRefreshing(true);
     setFetchKey(k => k + 1);
     setTimeout(() => setRefreshing(false), 1200);
@@ -368,14 +372,8 @@ export default function ScoreDetailScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
       >
-        {/* ── Cohort Pills ─────────────────────────────────────────────── */}
-        <ScrollView
-          ref={pillScrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.pillRow}
-          style={s.pillScroll}
-        >
+        {/* ── Cohort Badges ────────────────────────────────────────────── */}
+        <View style={s.pillWrap}>
           {cohorts.map((c, i) => {
             const isActive = i === activeIdx;
             return (
@@ -397,7 +395,7 @@ export default function ScoreDetailScreen() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
         {/* ── Cohort Hero ──────────────────────────────────────────────── */}
         {active && (
@@ -479,11 +477,14 @@ export default function ScoreDetailScreen() {
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
               <AnimatedPressable
                 style={s.gapActionBtn}
-                onPress={() => router.push(`/(app)/resume-editor?focusDimension=${weakestDim}`)}
+                onPress={() => openDillyOverlay({
+                  isPaid: true,
+                  initialMessage: `Help me improve my ${weakestDim} score. It's currently ${Math.round(activeScores[weakestDim])} and the peer average is ${peerAvgs[weakestDim]}. What should I focus on?`,
+                })}
                 scaleDown={0.97}
               >
-                <Ionicons name="create-outline" size={12} color={colors.gold} />
-                <Text style={s.gapActionText}>Fix in editor</Text>
+                <Ionicons name="chatbubble-outline" size={12} color={colors.gold} />
+                <Text style={s.gapActionText}>Ask Dilly</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 style={s.gapActionBtn}
@@ -525,6 +526,10 @@ export default function ScoreDetailScreen() {
           </Text>
         </View>
       </ScrollView>
+      <InlineToastView
+        {...toast.props}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999 }}
+      />
     </View>
   );
 }
@@ -643,18 +648,21 @@ const s = StyleSheet.create({
 
   scroll: { paddingHorizontal: spacing.xl, paddingTop: 8 },
 
-  // ── Cohort Pills ─────────────────────────────────────────────────────────
-  pillScroll: { marginHorizontal: -spacing.xl, marginBottom: 4 },
-  pillRow: { paddingHorizontal: spacing.xl, gap: 8, paddingVertical: 12 },
+  // ── Cohort Badges (flex-wrap rectangles) ──────────────────────────────────
+  pillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingVertical: 12,
+  },
   pill: {
     borderWidth: 1,
     borderColor: colors.b2,
-    borderRadius: radius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: colors.s2,
     alignItems: 'center',
-    maxWidth: 200,
   },
   pillActive: {
     borderColor: colors.gold,

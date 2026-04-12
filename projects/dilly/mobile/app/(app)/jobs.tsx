@@ -17,7 +17,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
-  Alert, Linking, RefreshControl, LayoutAnimation,
+  Linking, RefreshControl, LayoutAnimation,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +28,7 @@ import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
+import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 
 const COBALT = '#1652F0';
@@ -72,6 +73,7 @@ interface Listing {
   rank_score?: number;
   cohort_readiness?: any[];
   cohort_matches?: { cohort: string; smart_gap: number; grit_gap: number; build_gap: number; met: boolean }[];
+  quick_glance?: string[];
 }
 
 type Tab = 'all' | 'internship' | 'entry_level';
@@ -189,13 +191,16 @@ function ScoreBar({ label, required, yours, color }: {
 
 // ── Job Card Component ──────────────────────────────────────────────────────
 
-function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
+function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tailoredResumeId }: {
   listing: Listing;
   userScores: Record<string, CohortScore>;
   expanded: boolean;
   onToggle: () => void;
   activeCohortId?: string | null;
+  tailoredResumeId?: string | null;
 }) {
+  const toast = useInlineToast();
+  const [showFullDesc, setShowFullDesc] = useState(false);
   const { readiness, matches } = computeReadiness(listing, userScores);
   const rColor = readinessColor(readiness);
 
@@ -213,18 +218,41 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
     : (listing.primary_cohort && userScores[listing.primary_cohort])
     ? userScores[listing.primary_cohort]
     : primaryUserCohort;
-  const hasRealScores = listing.required_smart != null && listing.required_smart > 0;
-  const reqSmart = hasRealScores ? Number(listing.required_smart) : 0;
-  const reqGrit = hasRealScores ? Number(listing.required_grit) : 0;
-  const reqBuild = hasRealScores ? Number(listing.required_build) : 0;
+  // Derive required scores: prefer matching cohort requirement, fallback to flat fields
+  const reqs = Array.isArray(listing.cohort_requirements) ? listing.cohort_requirements : [];
+  const matchingReq = compareWith
+    ? reqs.find(r => r?.cohort === compareWith.cohort_id || r?.cohort === compareWith.display_name)
+    : reqs[0];
+  const hasRealScores = (matchingReq && matchingReq.smart > 0) || (listing.required_smart != null && listing.required_smart > 0);
+  const reqSmart = matchingReq?.smart ?? (listing.required_smart || 0);
+  const reqGrit = matchingReq?.grit ?? (listing.required_grit || 0);
+  const reqBuild = matchingReq?.build ?? (listing.required_build || 0);
 
   async function handleApply() {
     try {
       await dilly.post('/v2/internships/save', { internship_id: listing.id });
     } catch {}
+    // Add to internship tracker
+    try {
+      await dilly.fetch('/applications', {
+        method: 'POST',
+        body: JSON.stringify({
+          company: listing.company,
+          role: listing.title,
+          status: 'applied',
+          job_id: listing.id,
+          job_url: applyUrl || listing.url || '',
+          applied_at: new Date().toISOString().slice(0, 10),
+          notes: `Applied via ${listing.source || 'Dilly'}. ${loc}`.trim(),
+        }),
+      });
+      toast.show({ message: `${listing.company} added to your tracker!`, type: 'success' });
+    } catch {
+      toast.show({ message: 'Applied but could not save to tracker.' });
+    }
     if (applyUrl) {
       Linking.openURL(applyUrl).catch(() => {
-        Alert.alert('Could not open link', applyUrl);
+        toast.show({ message: 'Could not open link.' });
       });
     }
   }
@@ -247,6 +275,7 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
   }
 
   return (
+    <>
     <AnimatedPressable style={s.jobCard} onPress={onToggle} scaleDown={0.985}>
       {/* Accent bar */}
       <View style={[s.jobAccent, { backgroundColor: rColor }]} />
@@ -282,8 +311,8 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
           ) : null}
         </View>
 
-        {/* Cohort match pills */}
-        {matches && matches.length > 0 && (
+        {/* Cohort pills: show from matches OR from cohort_requirements */}
+        {matches && matches.length > 0 ? (
           <View style={s.cohortMatchRow}>
             {matches.map(m => (
               <View key={m.cohort} style={[s.cohortMatchPill, {
@@ -297,7 +326,20 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
               </View>
             ))}
           </View>
-        )}
+        ) : reqs.length > 0 ? (
+          <View style={s.cohortMatchRow}>
+            {reqs.map((r, i) => (
+              <View key={r.cohort || i} style={[s.cohortMatchPill, {
+                backgroundColor: COBALT + '10', borderColor: COBALT + '20',
+              }]}>
+                <Ionicons name="school-outline" size={10} color={COBALT} />
+                <Text style={[s.cohortMatchText, { color: COBALT }]} numberOfLines={1}>
+                  {(r.cohort || '').replace(/ & .*$/, '')}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {/* Expanded: Score comparison + actions */}
         {expanded && (
@@ -311,6 +353,14 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
                 <ScoreBar label="B" required={reqBuild} yours={compareWith.build} color={GREEN} />
               </View>
             )}
+            {!compareWith && hasRealScores && (
+              <View style={s.cohortScoreBlock}>
+                <Text style={s.cohortScoreLabel}>JOB REQUIREMENTS</Text>
+                <ScoreBar label="S" required={reqSmart} yours={0} color={BLUE} />
+                <ScoreBar label="G" required={reqGrit} yours={0} color={AMBER} />
+                <ScoreBar label="B" required={reqBuild} yours={0} color={GREEN} />
+              </View>
+            )}
             {compareWith && !hasRealScores && (
               <View style={s.cohortScoreBlock}>
                 <Text style={s.cohortScoreLabel}>YOUR SCORES: {compareWith.display_name || compareWith.cohort_id}</Text>
@@ -320,11 +370,32 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
               </View>
             )}
 
-            {/* Description preview */}
+            {/* Quick Glance bullets */}
+            {listing.quick_glance && listing.quick_glance.length > 0 && (
+              <View style={s.quickGlance}>
+                <Text style={s.quickGlanceLabel}>QUICK GLANCE</Text>
+                {listing.quick_glance.map((b, i) => (
+                  <View key={i} style={s.quickGlanceBullet}>
+                    <View style={s.quickGlanceDot} />
+                    <Text style={s.quickGlanceText}>{b}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Full description (collapsible) */}
             {desc ? (
-              <Text style={s.descPreview} numberOfLines={4}>
-                {desc.replace(/\s+/g, ' ').slice(0, 300)}
-              </Text>
+              <AnimatedPressable
+                style={s.descToggle}
+                onPress={() => setShowFullDesc(prev => !prev)}
+                scaleDown={0.98}
+              >
+                <Ionicons name={showFullDesc ? 'chevron-up' : 'document-text-outline'} size={13} color={colors.t3} />
+                <Text style={s.descToggleText}>{showFullDesc ? 'Hide description' : 'Full description'}</Text>
+              </AnimatedPressable>
+            ) : null}
+            {showFullDesc && desc ? (
+              <Text style={s.descFull}>{desc.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}</Text>
             ) : null}
 
             {/* Action buttons */}
@@ -337,26 +408,42 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId }: {
                 <Ionicons name="sparkles" size={14} color={COBALT} />
                 <Text style={s.dillyBtnText}>Ask Dilly</Text>
               </AnimatedPressable>
-              <AnimatedPressable
-                style={s.tailorBtn}
-                onPress={() => router.push({
-                  pathname: '/(app)/resume-generate',
-                  params: {
-                    jobTitle: listing.title || '',
-                    company: listing.company || '',
-                    jd: desc.slice(0, 2000),
-                  },
-                })}
-                scaleDown={0.97}
-              >
-                <Ionicons name="sparkles" size={14} color={colors.t2} />
-                <Text style={s.tailorBtnText}>Tailor</Text>
-              </AnimatedPressable>
+              {tailoredResumeId ? (
+                <AnimatedPressable
+                  style={[s.tailorBtn, { borderColor: GREEN + '40', backgroundColor: GREEN + '08' }]}
+                  onPress={() => router.push({
+                    pathname: '/(app)/resume-generate',
+                    params: { viewId: tailoredResumeId },
+                  })}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="document-text" size={14} color={GREEN} />
+                  <Text style={[s.tailorBtnText, { color: GREEN }]}>Resume</Text>
+                </AnimatedPressable>
+              ) : (
+                <AnimatedPressable
+                  style={s.tailorBtn}
+                  onPress={() => router.push({
+                    pathname: '/(app)/resume-generate',
+                    params: {
+                      jobTitle: listing.title || '',
+                      company: listing.company || '',
+                      jd: desc.slice(0, 2000),
+                    },
+                  })}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name="sparkles" size={14} color={colors.t2} />
+                  <Text style={s.tailorBtnText}>Tailor</Text>
+                </AnimatedPressable>
+              )}
             </View>
           </View>
         )}
       </View>
     </AnimatedPressable>
+    <InlineToastView {...toast.props} />
+    </>
   );
 }
 
@@ -375,6 +462,7 @@ export default function JobsScreen() {
   const [activeCohortFilter, setActiveCohortFilter] = useState<string | null>(null);
   const [userCities, setUserCities] = useState<string[]>([]);
   const [cityFilterEnabled, setCityFilterEnabled] = useState(false);
+  const [tailoredResumes, setTailoredResumes] = useState<{ id: string; job_title: string; company: string }[]>([]);
 
   // Build a lookup map of user's cohort scores
   const userScoresMap = useMemo(() => {
@@ -385,10 +473,12 @@ export default function JobsScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, feedRes] = await Promise.all([
+      const [profileRes, feedRes, resumesRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
         dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank`).catch(() => null),
+        dilly.get('/generated-resumes').catch(() => null),
       ]);
+      setTailoredResumes(Array.isArray(resumesRes) ? resumesRes : resumesRes?.resumes || []);
 
       // Parse cohort scores — only show user's chosen cohorts
       const parsed = parseCohortScores(profileRes?.cohort_scores);
@@ -570,17 +660,23 @@ export default function JobsScreen() {
           </AnimatedPressable>
         ))}
         <View style={{ flex: 1 }} />
-        {/* Readiness chips */}
-        {stats.ready > 0 && (
-          <AnimatedPressable
-            style={[s.readyChip, readinessFilter === 'ready' && { backgroundColor: GREEN + '20' }]}
-            onPress={() => setReadinessFilter(readinessFilter === 'ready' ? 'all' : 'ready')}
-            scaleDown={0.95}
-          >
-            <View style={[s.readyDot, { backgroundColor: GREEN }]} />
-            <Text style={[s.readyChipText, { color: GREEN }]}>{stats.ready}</Text>
-          </AnimatedPressable>
-        )}
+        {/* Readiness filter chips */}
+        {(['ready', 'almost', 'gap'] as const).map(r => {
+          const count = r === 'ready' ? stats.ready : r === 'almost' ? stats.almost : stats.gap;
+          const col = r === 'ready' ? GREEN : r === 'almost' ? AMBER : CORAL;
+          const active = readinessFilter === r;
+          return (
+            <AnimatedPressable
+              key={r}
+              style={[s.readyChip, active && { backgroundColor: col + '20' }]}
+              onPress={() => setReadinessFilter(active ? 'all' : r)}
+              scaleDown={0.95}
+            >
+              <View style={[s.readyDot, { backgroundColor: col }]} />
+              <Text style={[s.readyChipText, { color: col }]}>{count || 0}</Text>
+            </AnimatedPressable>
+          );
+        })}
       </View>
 
       {/* Job listings */}
@@ -617,6 +713,12 @@ export default function JobsScreen() {
               userScores={userScoresMap}
               expanded={expandedId === listing.id}
               activeCohortId={activeCohortFilter}
+              tailoredResumeId={
+                tailoredResumes.find(r =>
+                  r.company?.toLowerCase() === listing.company?.toLowerCase()
+                  && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
+                )?.id || null
+              }
               onToggle={() => {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 setExpandedId(expandedId === listing.id ? null : listing.id);
@@ -740,6 +842,14 @@ const s = StyleSheet.create({
 
   // Description
   descPreview: { fontSize: 12, color: colors.t2, lineHeight: 17 },
+  quickGlance: { gap: 6, marginTop: 4 },
+  quickGlanceLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: colors.t3, marginBottom: 2 },
+  quickGlanceBullet: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  quickGlanceDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COBALT, marginTop: 5 },
+  quickGlanceText: { flex: 1, fontSize: 12, color: colors.t1, lineHeight: 17 },
+  descToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
+  descToggleText: { fontSize: 11, color: colors.t3, fontWeight: '500' },
+  descFull: { fontSize: 12, color: colors.t2, lineHeight: 18 },
 
   // Action buttons
   actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },

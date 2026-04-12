@@ -7,10 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { colors, API_BASE } from '../lib/tokens';
+import { mediumHaptic } from '../lib/haptics';
 import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
 import RichText from './RichText';
 import { DillyVisual, VisualPayload } from './DillyVisuals';
+import { DillyFace } from './DillyFace';
 import { useSubscription } from '../hooks/useSubscription';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -214,9 +216,13 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
 
     try {
       const token = await getToken();
+      if (!token) throw new Error('auth');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
       const res = await fetch(`${API_BASE}/ai/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           messages: apiHistory,
           mode,
@@ -236,8 +242,18 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         }),
       });
 
+      clearTimeout(timeout);
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) throw new Error('auth');
+        const errData = await res.json().catch(() => ({}));
+        const detail = errData.detail;
+        const errMsg = typeof detail === 'string' ? detail
+          : typeof detail === 'object' && detail?.message ? detail.message
+          : `Server error ${res.status}`;
+        if (res.status === 503) throw new Error(errMsg);
+        throw new Error(errMsg);
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Request failed');
 
       const visual: VisualPayload | undefined = data.visual || undefined;
       const fullText = data.content as string;
@@ -270,12 +286,23 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         }
       }, 45);
 
-    } catch {
+    } catch (err: any) {
       setIsTyping(false);
+      console.warn('[DillyAI] error:', err?.message || err);
+      const errMsg = err?.message || '';
+      const isAuth = errMsg === 'auth' || errMsg.includes('Sign in') || errMsg.includes('401') || errMsg.includes('session');
+      const isTimeout = err?.name === 'AbortError';
+      const msg = isAuth
+        ? 'Your session expired. Close this and reopen Dilly to reconnect.'
+        : isTimeout
+        ? 'That took too long. Check your connection and try again.'
+        : errMsg.includes('Server error')
+        ? `Dilly's servers are busy. Try again in a moment. (${errMsg})`
+        : `Something went wrong: ${errMsg.slice(0, 100)}`;
       setMessages([...newHistory, {
         id: ++_msgId,
         role: 'assistant',
-        content: 'Dilly is having trouble connecting right now. Please try again in a moment.',
+        content: msg,
       }]);
     }
   }, [mode, studentContext, canSendAIMessage]);
@@ -287,6 +314,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
 
   useEffect(() => {
     if (visible) {
+      mediumHaptic();
       setMessages([]);
       setRichContext(null);
       inputRef.current = '';
@@ -490,9 +518,12 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
                     </Text>
                   </>
                 ) : (
-                  <Text style={s.emptyText}>
-                    Ask me anything: your score, what to fix, where to apply.
-                  </Text>
+                  <>
+                    <DillyFace size={80} />
+                    <Text style={[s.emptyText, { marginTop: 16 }]}>
+                      Ask me anything: your score, what to fix, where to apply.
+                    </Text>
+                  </>
                 )}
               </View>
             )}
@@ -623,9 +654,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: colors.bg, borderWidth: 2, borderColor: colors.indigo, borderRadius: 16, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.b1, zIndex: 10 },
-  wordmark: { flexDirection: 'row', alignItems: 'baseline', gap: 1, flex: 1 },
+  wordmark: { flexDirection: 'row', alignItems: 'center', gap: 3, flex: 1 },
   wordmarkLogo: { height: 24, width: 68 },
   wordmarkAI: { fontFamily: 'Cinzel_900Black', fontSize: 22, color: GOLD, letterSpacing: 1, lineHeight: 24, marginBottom: -1 },
   modePills: { flexDirection: 'row', gap: 4, marginRight: 10 },

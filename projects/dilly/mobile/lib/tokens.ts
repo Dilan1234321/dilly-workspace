@@ -61,6 +61,5 @@ export const radius = {
   full: 999,
 };
 
-// Development: localhost for Simulator. Production: set EXPO_PUBLIC_API_BASE in eas.json.
-// EAS requires the EXPO_PUBLIC_ prefix for variables accessible in JS bundles.
-export const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'http://localhost:8000';
+// Production by default. For local dev: EXPO_PUBLIC_API_BASE=http://localhost:8000
+export const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'https://api.trydilly.com';
