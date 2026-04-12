@@ -116,6 +116,7 @@ from projects.dilly.api.routers import recruiter as recruiter_router
 from projects.dilly.api.routers import profile as profile_router
 from projects.dilly.api.routers import jobs as jobs_router
 from projects.dilly.api.routers import jobs_listings as jobs_listings_router
+from projects.dilly.api.routers import jobs_narrative as jobs_narrative_router
 from projects.dilly.api.routers import audit as audit_router
 from projects.dilly.api.routers import voice as voice_router
 from projects.dilly.api.routers import ats as ats_router
@@ -158,6 +159,7 @@ app.include_router(auth_router.router)
 app.include_router(recruiter_router.router)
 app.include_router(profile_router.router)
 app.include_router(jobs_router.router)
+app.include_router(jobs_narrative_router.router)
 app.include_router(audit_router.router)
 app.include_router(voice_router.router)
 app.include_router(ats_router.router)

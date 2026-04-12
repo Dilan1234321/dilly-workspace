@@ -1,30 +1,20 @@
 /**
- * Jobs Page — cohort-filtered job matching with S/G/B score comparison.
+ * Jobs Page -- fit narrative driven job matching.
  *
- * Build 88: Complete rewrite. Shows jobs filtered by user's cohorts.
- * Each job has per-cohort S/G/B requirements. The user sees how their
- * scores stack up against each matching cohort requirement.
- *
- * Key UX decisions:
- * - Only shows jobs for cohorts the user has on their profile
- * - Multi-cohort jobs (e.g. quant finance = Data Science + Finance) only
- *   appear if the user has ALL required cohorts
- * - Readiness: Ready (all dims met), Almost (1 gap <=15), Gap (2+ gaps)
- * - "Apply" adds to tracker + opens URL
- * - "Ask Dilly" opens the AI coach with gap context
+ * Build 89: Removed all S/G/B scoring. Jobs now show a fit narrative
+ * (strengths, gaps, action steps) fetched on-demand when expanded.
  */
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
-  Linking, RefreshControl, LayoutAnimation,
+  Linking, RefreshControl, LayoutAnimation, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
-import { parseCohortScores, type CohortScore } from '../../lib/cohorts';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
@@ -37,20 +27,12 @@ const AMBER  = '#FF9F0A';
 const CORAL  = '#FF453A';
 const BLUE   = '#0A84FF';
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-interface CohortReq {
-  cohort: string;
-  smart: number;
-  grit: number;
-  build: number;
-}
+// -- Types ------------------------------------------------------------------
 
 interface Listing {
   id: string;
   title: string;
   company: string;
-  // Backend returns location_city/location_state, not a single location string
   location_city?: string;
   location_state?: string;
   location?: string;
@@ -63,31 +45,22 @@ interface Listing {
   source?: string;
   job_type?: string;
   remote?: boolean;
-  cohort_requirements?: CohortReq[] | null;
-  primary_cohort?: string;
-  required_smart?: number | null;
-  required_grit?: number | null;
-  required_build?: number | null;
+  cohort_requirements?: { cohort: string }[] | null;
   quality_score?: number;
-  readiness?: 'ready' | 'almost' | 'gap';
   rank_score?: number;
-  cohort_readiness?: any[];
-  cohort_matches?: { cohort: string; smart_gap: number; grit_gap: number; build_gap: number; met: boolean }[];
   quick_glance?: string[];
 }
 
+interface FitNarrativeData {
+  what_you_have: string;
+  whats_missing: string;
+  what_to_do: string;
+  fit_color: 'green' | 'amber' | 'red';
+}
+
 type Tab = 'all' | 'internship' | 'entry_level';
-type ReadinessFilter = 'all' | 'ready' | 'almost' | 'gap';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function readinessColor(r: string): string {
-  return r === 'ready' ? GREEN : r === 'almost' ? AMBER : CORAL;
-}
-
-function readinessLabel(r: string): string {
-  return r === 'ready' ? 'Ready' : r === 'almost' ? 'Almost' : 'Gap';
-}
+// -- Helpers ----------------------------------------------------------------
 
 function daysAgo(dateStr: string): string {
   if (!dateStr) return '';
@@ -100,139 +73,126 @@ function daysAgo(dateStr: string): string {
   return `${Math.floor(diff / 30)}mo ago`;
 }
 
-function computeReadiness(
-  listing: Listing,
-  userScores: Record<string, CohortScore>,
-): { readiness: 'ready' | 'almost' | 'gap'; matches: Listing['cohort_matches'] } {
-  const matches: NonNullable<Listing['cohort_matches']> = [];
-  let totalGaps = 0;
-  let maxSingleGap = 0;
-
-  const reqs = Array.isArray(listing.cohort_requirements) ? listing.cohort_requirements : [];
-
-  if (reqs.length > 0) {
-    for (const req of reqs) {
-      if (!req || !req.cohort) continue;
-      const userCohort = userScores[req.cohort];
-      if (!userCohort) continue;
-
-      const sg = Math.max(0, (req.smart || 0) - userCohort.smart);
-      const gg = Math.max(0, (req.grit || 0) - userCohort.grit);
-      const bg = Math.max(0, (req.build || 0) - userCohort.build);
-      const gaps = (sg > 0 ? 1 : 0) + (gg > 0 ? 1 : 0) + (bg > 0 ? 1 : 0);
-      totalGaps += gaps;
-      maxSingleGap = Math.max(maxSingleGap, sg, gg, bg);
-
-      matches.push({ cohort: req.cohort, smart_gap: sg, grit_gap: gg, build_gap: bg, met: gaps === 0 });
-    }
-  } else if (listing.required_smart != null) {
-    // Fallback: use flat required_smart/grit/build fields with the user's primary cohort
-    const primary = Object.values(userScores)[0];
-    if (primary) {
-      const sg = Math.max(0, (listing.required_smart || 0) - primary.smart);
-      const gg = Math.max(0, (listing.required_grit || 0) - primary.grit);
-      const bg = Math.max(0, (listing.required_build || 0) - primary.build);
-      const gaps = (sg > 0 ? 1 : 0) + (gg > 0 ? 1 : 0) + (bg > 0 ? 1 : 0);
-      totalGaps = gaps;
-      maxSingleGap = Math.max(sg, gg, bg);
-      matches.push({ cohort: primary.cohort_id, smart_gap: sg, grit_gap: gg, build_gap: bg, met: gaps === 0 });
-    }
-  }
-
-  // Use backend-computed readiness if available, otherwise compute
-  if (listing.readiness && matches.length === 0) {
-    return { readiness: listing.readiness as any, matches: [] };
-  }
-
-  let readiness: 'ready' | 'almost' | 'gap' = 'gap';
-  if (totalGaps === 0) readiness = 'ready';
-  else if (totalGaps <= 1 && maxSingleGap <= 15) readiness = 'almost';
-
-  return { readiness, matches };
+function fitColorHex(c?: string): string {
+  if (c === 'green') return GREEN;
+  if (c === 'amber') return AMBER;
+  if (c === 'red') return CORAL;
+  return GREEN;
 }
 
-// ── Simple Dim Row (no comparison, just user's score) ───────────────────────
+// -- Skeleton Pulse Lines ---------------------------------------------------
 
-function DimRow({ label, value, color }: { label: string; value: number; color: string }) {
+function SkeletonLines() {
+  const opacity = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.7, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.3, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
   return (
-    <View style={s.scoreBarRow}>
-      <Text style={s.scoreBarLabel}>{label.charAt(0)}</Text>
-      <View style={s.scoreBarTrack}>
-        <View style={[s.scoreBarFill, { width: `${Math.min(100, value)}%`, backgroundColor: color }]} />
-      </View>
-      <Text style={[s.scoreBarNum, { color }]}>{Math.round(value)}</Text>
+    <View style={s.narrativeWrap}>
+      {[0.9, 0.75, 0.6].map((widthFrac, i) => (
+        <Animated.View
+          key={i}
+          style={[s.skeletonLine, { opacity, width: `${widthFrac * 100}%` }]}
+        />
+      ))}
     </View>
   );
 }
 
-// ── Score Bar Component ─────────────────────────────────────────────────────
+// -- Fit Narrative Component ------------------------------------------------
 
-function ScoreBar({ label, required, yours, color }: {
-  label: string; required: number; yours: number; color: string;
-}) {
-  const gap = required - yours;
-  const met = gap <= 0;
-  return (
-    <View style={s.scoreBarRow}>
-      <Text style={s.scoreBarLabel}>{label}</Text>
-      <View style={s.scoreBarTrack}>
-        <View style={[s.scoreBarFill, {
-          width: `${Math.min(100, yours)}%`,
-          backgroundColor: met ? GREEN : gap <= 15 ? AMBER : CORAL,
-        }]} />
-        <View style={[s.scoreBarReq, { left: `${Math.min(100, required)}%` }]} />
+function FitNarrative({ listing }: { listing: Listing }) {
+  const [data, setData] = useState<FitNarrativeData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fetched = useRef(false);
+
+  useEffect(() => {
+    if (fetched.current) return;
+    fetched.current = true;
+
+    (async () => {
+      try {
+        const res = await dilly.fetch('/jobs/fit-narrative', {
+          method: 'POST',
+          body: JSON.stringify({ job_id: listing.id }),
+        });
+        const json = typeof res === 'string' ? JSON.parse(res) : res;
+        setData(json);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+      } catch (e: any) {
+        if (e?.status === 403 || e?.message?.includes('403')) {
+          setError("You've used all your fit assessments this month.");
+        } else {
+          setError('Could not load fit narrative.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [listing.id, fadeAnim]);
+
+  if (loading) return <SkeletonLines />;
+
+  if (error) {
+    return (
+      <View style={s.narrativeWrap}>
+        <Text style={[s.narrativeText, { color: colors.t3 }]}>{error}</Text>
       </View>
-      <Text style={[s.scoreBarNum, { color: met ? GREEN : CORAL }]}>{Math.round(yours)}</Text>
-      <Text style={s.scoreBarSlash}>/</Text>
-      <Text style={s.scoreBarReqNum}>{Math.round(required)}</Text>
-    </View>
+    );
+  }
+
+  if (!data) return null;
+
+  const sections: { label: string; text: string; color: string }[] = [
+    { label: 'WHAT YOU HAVE', text: data.what_you_have, color: GREEN },
+    { label: "WHAT'S MISSING", text: data.whats_missing, color: data.whats_missing.toLowerCase().startsWith('nothing major') ? GREEN : AMBER },
+    { label: 'WHAT TO DO', text: data.what_to_do, color: BLUE },
+  ];
+
+  return (
+    <Animated.View style={[s.narrativeWrap, { opacity: fadeAnim }]}>
+      {sections.map((sec, i) => (
+        <View key={i} style={s.narrativeSection}>
+          <Text style={[s.narrativeLabel, { color: sec.color }]}>{sec.label}</Text>
+          <Text style={s.narrativeText}>{sec.text}</Text>
+        </View>
+      ))}
+    </Animated.View>
   );
 }
 
-// ── Job Card Component ──────────────────────────────────────────────────────
+// -- Job Card Component -----------------------------------------------------
 
-function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tailoredResumeId }: {
+function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache, onNarrativeLoaded }: {
   listing: Listing;
-  userScores: Record<string, CohortScore>;
   expanded: boolean;
   onToggle: () => void;
-  activeCohortId?: string | null;
   tailoredResumeId?: string | null;
+  narrativeCache?: FitNarrativeData | null;
+  onNarrativeLoaded?: (jobId: string, data: FitNarrativeData) => void;
 }) {
   const toast = useInlineToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
-  const { readiness, matches } = computeReadiness(listing, userScores);
-  const rColor = readinessColor(readiness);
 
   const loc = listing.location || [listing.location_city, listing.location_state].filter(Boolean).join(', ');
   const applyUrl = listing.apply_url || listing.url || '';
   const desc = listing.description || listing.description_preview || '';
 
-  // Pick the user's cohort to compare against this job.
-  // Priority: active filter > job's primary cohort > user's primary (first by level sort)
-  const primaryUserCohort = Object.values(userScores).sort((a, b) => {
-    const lo: Record<string, number> = { primary: 0, major: 1, minor: 2, interest: 3 };
-    return (lo[a.level] ?? 9) - (lo[b.level] ?? 9);
-  })[0];
-  const compareWith = activeCohortId ? userScores[activeCohortId]
-    : (listing.primary_cohort && userScores[listing.primary_cohort])
-    ? userScores[listing.primary_cohort]
-    : primaryUserCohort;
-  // Derive required scores: prefer matching cohort requirement, fallback to flat fields
-  const reqs = Array.isArray(listing.cohort_requirements) ? listing.cohort_requirements : [];
-  const matchingReq = compareWith
-    ? reqs.find(r => r?.cohort === compareWith.cohort_id || r?.cohort === compareWith.display_name)
-    : reqs[0];
-  const hasRealScores = (matchingReq && matchingReq.smart > 0) || (listing.required_smart != null && listing.required_smart > 0);
-  const reqSmart = matchingReq?.smart ?? (listing.required_smart || 0);
-  const reqGrit = matchingReq?.grit ?? (listing.required_grit || 0);
-  const reqBuild = matchingReq?.build ?? (listing.required_build || 0);
-
   async function handleApply() {
     try {
       await dilly.post('/v2/internships/save', { internship_id: listing.id });
     } catch {}
-    // Add to internship tracker
     try {
       await dilly.fetch('/applications', {
         method: 'POST',
@@ -258,28 +218,17 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
   }
 
   function handleAskDilly() {
-    const gapSummary = (matches || [])
-      .filter(m => !m.met)
-      .map(m => {
-        const gaps = [];
-        if (m.smart_gap > 0) gaps.push(`Smart -${Math.round(m.smart_gap)}`);
-        if (m.grit_gap > 0) gaps.push(`Grit -${Math.round(m.grit_gap)}`);
-        if (m.build_gap > 0) gaps.push(`Build -${Math.round(m.build_gap)}`);
-        return `${m.cohort}: ${gaps.join(', ')}`;
-      })
-      .join('. ');
     openDillyOverlay({
       isPaid: true,
-      initialMessage: `I'm looking at the ${listing.title} role at ${listing.company}. My gaps: ${gapSummary || 'none'}. What should I work on to close these gaps and be competitive for this role?`,
+      initialMessage: `I'm looking at the ${listing.title} role at ${listing.company}. Can you help me understand how well I fit and what I should work on to be competitive for this role?`,
     });
   }
+
+  const dotColor = narrativeCache ? fitColorHex(narrativeCache.fit_color) : null;
 
   return (
     <>
     <AnimatedPressable style={s.jobCard} onPress={onToggle} scaleDown={0.985}>
-      {/* Accent bar */}
-      <View style={[s.jobAccent, { backgroundColor: rColor }]} />
-
       <View style={s.jobContent}>
         {/* Header */}
         <View style={s.jobHeader}>
@@ -287,10 +236,7 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
             <Text style={s.jobTitle} numberOfLines={2}>{listing.title}</Text>
             <Text style={s.jobCompany}>{listing.company}</Text>
           </View>
-          <View style={[s.readinessBadge, { backgroundColor: rColor + '15', borderColor: rColor + '30' }]}>
-            <View style={[s.readinessDot, { backgroundColor: rColor }]} />
-            <Text style={[s.readinessText, { color: rColor }]}>{readinessLabel(readiness)}</Text>
-          </View>
+          {dotColor && <View style={[s.fitDot, { backgroundColor: dotColor }]} />}
         </View>
 
         {/* Meta */}
@@ -306,69 +252,22 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
               <Text style={[s.metaText, { color: COBALT }]}>Internship</Text>
             </View>
           )}
+          {listing.work_mode ? (
+            <View style={s.metaPill}>
+              <Ionicons name="wifi-outline" size={10} color={colors.t3} />
+              <Text style={s.metaText}>{listing.work_mode}</Text>
+            </View>
+          ) : null}
           {listing.posted_date ? (
             <Text style={s.metaDate}>{daysAgo(listing.posted_date)}</Text>
           ) : null}
         </View>
 
-        {/* Cohort pills: show from matches OR from cohort_requirements */}
-        {matches && matches.length > 0 ? (
-          <View style={s.cohortMatchRow}>
-            {matches.map(m => (
-              <View key={m.cohort} style={[s.cohortMatchPill, {
-                backgroundColor: m.met ? GREEN + '12' : CORAL + '12',
-                borderColor: m.met ? GREEN + '25' : CORAL + '25',
-              }]}>
-                <Ionicons name={m.met ? 'checkmark' : 'arrow-up'} size={10} color={m.met ? GREEN : CORAL} />
-                <Text style={[s.cohortMatchText, { color: m.met ? GREEN : CORAL }]} numberOfLines={1}>
-                  {m.cohort.replace(/ & .*$/, '')}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : reqs.length > 0 ? (
-          <View style={s.cohortMatchRow}>
-            {reqs.map((r, i) => (
-              <View key={r.cohort || i} style={[s.cohortMatchPill, {
-                backgroundColor: COBALT + '10', borderColor: COBALT + '20',
-              }]}>
-                <Ionicons name="school-outline" size={10} color={COBALT} />
-                <Text style={[s.cohortMatchText, { color: COBALT }]} numberOfLines={1}>
-                  {(r.cohort || '').replace(/ & .*$/, '')}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {/* Expanded: Score comparison + actions */}
+        {/* Expanded: Narrative + Quick Glance + Actions */}
         {expanded && (
           <View style={s.expandedSection}>
-            {/* S/G/B comparison: your scores vs job requirements */}
-            {compareWith && hasRealScores && (
-              <View style={s.cohortScoreBlock}>
-                <Text style={s.cohortScoreLabel}>YOUR FIT: {compareWith.display_name || compareWith.cohort_id}</Text>
-                <ScoreBar label="S" required={reqSmart} yours={compareWith.smart} color={BLUE} />
-                <ScoreBar label="G" required={reqGrit} yours={compareWith.grit} color={AMBER} />
-                <ScoreBar label="B" required={reqBuild} yours={compareWith.build} color={GREEN} />
-              </View>
-            )}
-            {!compareWith && hasRealScores && (
-              <View style={s.cohortScoreBlock}>
-                <Text style={s.cohortScoreLabel}>JOB REQUIREMENTS</Text>
-                <ScoreBar label="S" required={reqSmart} yours={0} color={BLUE} />
-                <ScoreBar label="G" required={reqGrit} yours={0} color={AMBER} />
-                <ScoreBar label="B" required={reqBuild} yours={0} color={GREEN} />
-              </View>
-            )}
-            {compareWith && !hasRealScores && (
-              <View style={s.cohortScoreBlock}>
-                <Text style={s.cohortScoreLabel}>YOUR SCORES: {compareWith.display_name || compareWith.cohort_id}</Text>
-                <DimRow label="Smart" value={compareWith.smart} color={BLUE} />
-                <DimRow label="Grit" value={compareWith.grit} color={AMBER} />
-                <DimRow label="Build" value={compareWith.build} color={GREEN} />
-              </View>
-            )}
+            {/* Fit Narrative */}
+            <FitNarrative listing={listing} />
 
             {/* Quick Glance bullets */}
             {listing.quick_glance && listing.quick_glance.length > 0 && (
@@ -409,21 +308,21 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
                 <Text style={s.dillyBtnText}>Ask Dilly</Text>
               </AnimatedPressable>
               <AnimatedPressable
-                  style={s.tailorBtn}
-                  onPress={() => router.push({
-                    pathname: '/(app)/resume-generate',
-                    params: {
-                      jobTitle: listing.title || '',
-                      company: listing.company || '',
-                      jd: desc.slice(0, 2000),
-                      fresh: '1',
-                    },
-                  })}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="sparkles" size={14} color={colors.t2} />
-                  <Text style={s.tailorBtnText}>Tailor</Text>
-                </AnimatedPressable>
+                style={s.tailorBtn}
+                onPress={() => router.push({
+                  pathname: '/(app)/resume-generate',
+                  params: {
+                    jobTitle: listing.title || '',
+                    company: listing.company || '',
+                    jd: desc.slice(0, 2000),
+                    fresh: '1',
+                  },
+                })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="sparkles" size={14} color={colors.t2} />
+                <Text style={s.tailorBtnText}>Tailor</Text>
+              </AnimatedPressable>
             </View>
           </View>
         )}
@@ -434,7 +333,7 @@ function JobCard({ listing, userScores, expanded, onToggle, activeCohortId, tail
   );
 }
 
-// ── Main Screen ─────────────────────────────────────────────────────────────
+// -- Main Screen ------------------------------------------------------------
 
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
@@ -443,20 +342,15 @@ export default function JobsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<Tab>('all');
-  const [readinessFilter, setReadinessFilter] = useState<ReadinessFilter>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [cohortScores, setCohortScores] = useState<CohortScore[]>([]);
-  const [activeCohortFilter, setActiveCohortFilter] = useState<string | null>(null);
   const [userCities, setUserCities] = useState<string[]>([]);
   const [cityFilterEnabled, setCityFilterEnabled] = useState(false);
   const [tailoredResumes, setTailoredResumes] = useState<{ id: string; job_title: string; company: string }[]>([]);
+  const [narrativeCache, setNarrativeCache] = useState<Record<string, FitNarrativeData>>({});
 
-  // Build a lookup map of user's cohort scores
-  const userScoresMap = useMemo(() => {
-    const map: Record<string, CohortScore> = {};
-    for (const c of cohortScores) map[c.cohort_id] = c;
-    return map;
-  }, [cohortScores]);
+  const handleNarrativeLoaded = useCallback((jobId: string, data: FitNarrativeData) => {
+    setNarrativeCache(prev => ({ ...prev, [jobId]: data }));
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -466,17 +360,6 @@ export default function JobsScreen() {
         dilly.get('/generated-resumes').catch(() => null),
       ]);
       setTailoredResumes(Array.isArray(resumesRes) ? resumesRes : resumesRes?.resumes || []);
-
-      // Parse cohort scores — only show user's chosen cohorts
-      const parsed = parseCohortScores(profileRes?.cohort_scores);
-      const explicitCohorts: string[] | null = Array.isArray(profileRes?.cohorts) && profileRes.cohorts.length > 0
-        ? profileRes.cohorts : null;
-      if (explicitCohorts) {
-        const filtered = parsed.filter(c => explicitCohorts.includes(c.cohort_id));
-        setCohortScores(filtered.length > 0 ? filtered : parsed);
-      } else {
-        setCohortScores(parsed);
-      }
 
       // Load user's preferred cities for location filtering
       const cities: string[] = profileRes?.job_locations || [];
@@ -496,7 +379,7 @@ export default function JobsScreen() {
     setRefreshing(false);
   }, [fetchData]);
 
-  // Filter listings by search, cohort, and readiness
+  // Filter listings by search and city
   const filtered = useMemo(() => {
     let result = listings;
 
@@ -508,52 +391,19 @@ export default function JobsScreen() {
       );
     }
 
-    // Cohort filter — if a cohort is selected, prefer jobs that match it
-    // but still show all jobs (most don't have cohort_requirements populated yet).
-    // Jobs with matching cohort_requirements are sorted first.
-    if (activeCohortFilter) {
-      result = [...result].sort((a, b) => {
-        const aMatch = (a.cohort_requirements || []).some(r => r.cohort === activeCohortFilter) ? 0 : 1;
-        const bMatch = (b.cohort_requirements || []).some(r => r.cohort === activeCohortFilter) ? 0 : 1;
-        return aMatch - bMatch;
-      });
-    }
-
-    // City filter — only show jobs in user's preferred cities + remote
+    // City filter
     if (cityFilterEnabled && userCities.length > 0) {
       const cityLower = userCities.map(c => c.toLowerCase().trim());
       result = result.filter(l => {
         const loc = (l.location || l.location_city || '').toLowerCase();
         const mode = (l.work_mode || '').toLowerCase();
-        // Always show remote jobs
         if (mode === 'remote' || loc.includes('remote')) return true;
-        // Check if job location matches any user city
         return cityLower.some(c => loc.includes(c));
       });
     }
 
-    // Readiness filter
-    if (readinessFilter !== 'all') {
-      result = result.filter(l => {
-        const { readiness } = computeReadiness(l, userScoresMap);
-        return readiness === readinessFilter;
-      });
-    }
-
     return result;
-  }, [listings, search, activeCohortFilter, readinessFilter, userScoresMap, cityFilterEnabled, userCities]);
-
-  // Stats
-  const stats = useMemo(() => {
-    let ready = 0, almost = 0, gap = 0;
-    for (const l of listings) {
-      const { readiness } = computeReadiness(l, userScoresMap);
-      if (readiness === 'ready') ready++;
-      else if (readiness === 'almost') almost++;
-      else gap++;
-    }
-    return { ready, almost, gap, total: listings.length };
-  }, [listings, userScoresMap]);
+  }, [listings, search, cityFilterEnabled, userCities]);
 
   if (loading) {
     return (
@@ -569,7 +419,7 @@ export default function JobsScreen() {
       {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>Your Matches</Text>
-        <Text style={s.headerSub}>Matched to your profile. Scored by your readiness.</Text>
+        <Text style={s.headerSub}>Matched to your profile. Tap to see your fit.</Text>
       </View>
 
       {/* Search */}
@@ -592,31 +442,6 @@ export default function JobsScreen() {
         </View>
       </View>
 
-      {/* Cohort filter pills */}
-      {cohortScores.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 36 }} contentContainerStyle={s.filterRow}>
-          <AnimatedPressable
-            style={[s.filterPill, !activeCohortFilter && s.filterPillActive]}
-            onPress={() => setActiveCohortFilter(null)}
-            scaleDown={0.95}
-          >
-            <Text style={[s.filterPillText, !activeCohortFilter && s.filterPillTextActive]}>All</Text>
-          </AnimatedPressable>
-          {cohortScores.map(c => (
-            <AnimatedPressable
-              key={c.cohort_id}
-              style={[s.filterPill, activeCohortFilter === c.cohort_id && s.filterPillActive]}
-              onPress={() => setActiveCohortFilter(activeCohortFilter === c.cohort_id ? null : c.cohort_id)}
-              scaleDown={0.95}
-            >
-              <Text style={[s.filterPillText, activeCohortFilter === c.cohort_id && s.filterPillTextActive]} numberOfLines={1}>
-                {c.display_name.replace(/ & .*$/, '')}
-              </Text>
-            </AnimatedPressable>
-          ))}
-        </ScrollView>
-      )}
-
       {/* City filter toggle */}
       {userCities.length > 0 && (
         <AnimatedPressable
@@ -631,9 +456,8 @@ export default function JobsScreen() {
         </AnimatedPressable>
       )}
 
-      {/* Readiness + Type filter row */}
+      {/* Type tabs */}
       <View style={s.tabRow}>
-        {/* Type tabs */}
         {(['all', 'internship', 'entry_level'] as Tab[]).map(t => (
           <AnimatedPressable
             key={t}
@@ -646,24 +470,6 @@ export default function JobsScreen() {
             </Text>
           </AnimatedPressable>
         ))}
-        <View style={{ flex: 1 }} />
-        {/* Readiness filter chips */}
-        {(['ready', 'almost', 'gap'] as const).map(r => {
-          const count = r === 'ready' ? stats.ready : r === 'almost' ? stats.almost : stats.gap;
-          const col = r === 'ready' ? GREEN : r === 'almost' ? AMBER : CORAL;
-          const active = readinessFilter === r;
-          return (
-            <AnimatedPressable
-              key={r}
-              style={[s.readyChip, active && { backgroundColor: col + '20' }]}
-              onPress={() => setReadinessFilter(active ? 'all' : r)}
-              scaleDown={0.95}
-            >
-              <View style={[s.readyDot, { backgroundColor: col }]} />
-              <Text style={[s.readyChipText, { color: col }]}>{count || 0}</Text>
-            </AnimatedPressable>
-          );
-        })}
       </View>
 
       {/* Job listings */}
@@ -678,16 +484,12 @@ export default function JobsScreen() {
             <View style={s.emptyCard}>
               <Ionicons name="briefcase-outline" size={40} color={colors.t3} />
               <Text style={s.emptyTitle}>
-                {cohortScores.length === 0
-                  ? 'Add cohorts to see matching jobs'
-                  : search.trim()
+                {search.trim()
                   ? `No jobs matching "${search}"`
                   : 'No jobs found for this filter'}
               </Text>
               <Text style={s.emptySub}>
-                {cohortScores.length === 0
-                  ? 'Go to your Profile and add the fields you want to work in.'
-                  : "We're adding more jobs daily. Try a different filter or check back soon."}
+                We are adding more jobs daily. Try a different filter or check back soon.
               </Text>
             </View>
           </FadeInView>
@@ -697,9 +499,9 @@ export default function JobsScreen() {
           <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
             <JobCard
               listing={listing}
-              userScores={userScoresMap}
               expanded={expandedId === listing.id}
-              activeCohortId={activeCohortFilter}
+              narrativeCache={narrativeCache[listing.id] || null}
+              onNarrativeLoaded={handleNarrativeLoaded}
               tailoredResumeId={
                 tailoredResumes.find(r =>
                   r.company?.toLowerCase() === listing.company?.toLowerCase()
@@ -719,7 +521,7 @@ export default function JobsScreen() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// -- Styles -----------------------------------------------------------------
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
@@ -740,17 +542,6 @@ const s = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: colors.t1, padding: 0 },
 
-  // Filter pills — compact rounded rectangles, not pills
-  filterRow: { paddingHorizontal: spacing.lg, gap: 6, paddingBottom: 4, height: 32 },
-  filterPill: {
-    paddingHorizontal: 10, paddingVertical: 0, borderRadius: 8,
-    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
-    height: 28, justifyContent: 'center' as const,
-  },
-  filterPillActive: { backgroundColor: COBALT, borderColor: COBALT },
-  filterPillText: { fontSize: 11, fontWeight: '600', color: colors.t2 },
-  filterPillTextActive: { color: '#fff' },
-
   // Tab row
   tabRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -763,12 +554,6 @@ const s = StyleSheet.create({
   tabPillActive: { backgroundColor: colors.t1, borderColor: colors.t1 },
   tabPillText: { fontSize: 11, fontWeight: '600', color: colors.t3 },
   tabPillTextActive: { color: colors.bg },
-  readyChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
-  },
-  readyDot: { width: 6, height: 6, borderRadius: 3 },
-  readyChipText: { fontSize: 11, fontWeight: '700' },
 
   // List
   listContent: { paddingHorizontal: spacing.lg, gap: 8, paddingTop: 2 },
@@ -779,17 +564,13 @@ const s = StyleSheet.create({
     backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
     overflow: 'hidden',
   },
-  jobAccent: { width: 4, borderTopLeftRadius: radius.lg, borderBottomLeftRadius: radius.lg },
   jobContent: { flex: 1, padding: spacing.md, gap: 8 },
   jobHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   jobTitle: { fontSize: 15, fontWeight: '700', color: colors.t1, lineHeight: 20 },
   jobCompany: { fontSize: 13, color: colors.t2, marginTop: 2 },
-  readinessBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1,
-  },
-  readinessDot: { width: 6, height: 6, borderRadius: 3 },
-  readinessText: { fontSize: 11, fontWeight: '700' },
+
+  // Fit dot
+  fitDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
 
   // Meta
   jobMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
@@ -801,39 +582,24 @@ const s = StyleSheet.create({
   metaText: { fontSize: 10, color: colors.t3, fontWeight: '500' },
   metaDate: { fontSize: 10, color: colors.t3 },
 
-  // Cohort match pills
-  cohortMatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  cohortMatchPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1,
-  },
-  cohortMatchText: { fontSize: 10, fontWeight: '600' },
-
   // Expanded section
   expandedSection: { gap: 12, marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.b1 },
-  cohortScoreBlock: { gap: 6, marginBottom: 8 },
-  cohortScoreLabel: { fontSize: 11, fontWeight: '700', color: colors.t2, textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  // Score bars
-  scoreBarRow: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 20 },
-  scoreBarLabel: { width: 14, fontSize: 11, fontWeight: '700', color: colors.t3, textAlign: 'center' },
-  scoreBarTrack: {
-    flex: 1, height: 6, backgroundColor: colors.s3, borderRadius: 3,
-    overflow: 'hidden', position: 'relative',
-  },
-  scoreBarFill: { height: '100%', borderRadius: 3 },
-  scoreBarReq: { position: 'absolute', top: -2, width: 2, height: 10, backgroundColor: colors.t1, borderRadius: 1 },
-  scoreBarNum: { width: 24, fontSize: 12, fontWeight: '700', textAlign: 'right' },
-  scoreBarSlash: { fontSize: 10, color: colors.t3 },
-  scoreBarReqNum: { width: 24, fontSize: 11, color: colors.t3 },
+  // Fit Narrative
+  narrativeWrap: { padding: 12, gap: 12 },
+  narrativeSection: { gap: 4 },
+  narrativeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  narrativeText: { fontSize: 13, color: colors.t1, lineHeight: 19 },
+  skeletonLine: { height: 12, borderRadius: 6, backgroundColor: colors.s3 },
 
-  // Description
-  descPreview: { fontSize: 12, color: colors.t2, lineHeight: 17 },
+  // Quick Glance
   quickGlance: { gap: 6, marginTop: 4 },
   quickGlanceLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: colors.t3, marginBottom: 2 },
   quickGlanceBullet: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   quickGlanceDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COBALT, marginTop: 5 },
   quickGlanceText: { flex: 1, fontSize: 12, color: colors.t1, lineHeight: 17 },
+
+  // Description
   descToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
   descToggleText: { fontSize: 11, color: colors.t3, fontWeight: '500' },
   descFull: { fontSize: 12, color: colors.t2, lineHeight: 18 },

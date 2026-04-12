@@ -56,6 +56,8 @@ def setup_users_table(token: str = ""):
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS majors JSONB",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS minors JSONB",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS pre_professional_track TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS narrative_count_month INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS narrative_count_reset_date TEXT DEFAULT ''",
         ]:
             cur.execute(stmt)
         # -- Sessions table (auth_store) --
