@@ -1,8 +1,9 @@
 /**
  * FEEDBACK PAGE — tabbed card system.
  *
- * Build 160: Rewritten render with 3-tab design:
- *   - Score Hero (always visible): big score, cohort name, bar badge, S/G/B bars
+ * Build 161: Removed scoring displays (S/G/B bars, composite number, bar badge).
+ * Kept narrative feedback: Dilly's Take, focus areas, signals, action plan.
+ *
  *   - Tab 1 "Overview": Dilly's take, focus area, congrats card
  *   - Tab 2 "Signals": working for you (green) + missing (red), grouped by dim
  *   - Tab 3 "Action Plan": this week moves, watch out, biggest opportunities
@@ -19,7 +20,6 @@ import { router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { mediumHaptic, selectionHaptic } from '../../lib/haptics';
@@ -58,9 +58,6 @@ function dimColor(dim: string): string {
 function dimLabel(dim: string): string {
   return dim.charAt(0).toUpperCase() + dim.slice(1);
 }
-function scoreColor(s: number): string {
-  return s >= 75 ? GREEN : s >= 50 ? GOLD : CORAL;
-}
 function extractMoveText(m: string | RubricPathMove): string {
   if (typeof m === 'string') return m;
   return m.move || m.action || m.title || '';
@@ -71,20 +68,6 @@ function extractRejectText(r: string | { text: string; source?: string }): { tex
 }
 
 type TabKey = 'overview' | 'signals' | 'action';
-
-// ── Dimension Bar ────────────────────────────────────────────────────────────
-
-function DimBar({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <View style={f.dimBarRow}>
-      <Text style={f.dimBarLabel}>{label}</Text>
-      <View style={f.dimBarTrack}>
-        <View style={[f.dimBarFill, { width: `${Math.min(100, value)}%`, backgroundColor: color }]} />
-      </View>
-      <Text style={[f.dimBarScore, { color }]}>{Math.round(value)}</Text>
-    </View>
-  );
-}
 
 // ── Main Screen ─────────────────────────────────────────────────────────────
 
@@ -170,7 +153,7 @@ export default function FeedbackScreen() {
             <Ionicons name="analytics-outline" size={48} color={colors.t3} />
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.t1, marginTop: 16, textAlign: 'center' }}>No feedback yet</Text>
             <Text style={{ fontSize: 14, color: colors.t2, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
-              Run an audit on your resume to get detailed feedback with Smart, Grit, and Build scores.
+              Run an audit on your resume to get detailed feedback on your strengths and gaps.
             </Text>
             <AnimatedPressable
               style={{ marginTop: 24, backgroundColor: GOLD, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999 }}
@@ -185,20 +168,9 @@ export default function FeedbackScreen() {
     );
   }
 
-  // Prefer Claude-scored cohort data; fall back to rubric_analysis only if no cohort data
   const hasCohortData = activeCohort != null && activeCohort.dilly_score > 0;
-  const composite = hasCohortData ? activeCohort.dilly_score : ra.primary_composite;
-  const smart = hasCohortData ? activeCohort.smart : ra.primary_smart;
-  const grit = hasCohortData ? activeCohort.grit : ra.primary_grit;
-  const build = hasCohortData ? activeCohort.build : ra.primary_build;
   const cohortName = hasCohortData ? activeCohort.display_name : ra.primary_cohort_display_name;
-  const bar = ra.recruiter_bar || 70;
-  const aboveBar = composite >= bar;
-  const pointsAway = Math.max(0, bar - composite);
-
-  // Weakest dimension
-  const dims = { smart, grit, build };
-  const weakest = (Object.entries(dims) as [string, number][]).sort((a, b) => a[1] - b[1])[0];
+  const aboveBar = hasCohortData ? activeCohort.dilly_score >= (ra.recruiter_bar || 70) : ra.above_bar;
 
   // Group signals by dimension
   const matchedByDim: Record<string, RubricSignal[]> = { smart: [], grit: [], build: [] };
@@ -215,6 +187,11 @@ export default function FeedbackScreen() {
   for (const sig of ra.unmatched_signals || []) {
     if (sig.dimension in unmatchedByDim) unmatchedByDim[sig.dimension].push(sig);
   }
+
+  // Find the dimension with the most missing signals for the focus area
+  const unmatchedCounts = Object.entries(unmatchedByDim).map(([dim, sigs]) => ({ dim, count: sigs.length }));
+  unmatchedCounts.sort((a, b) => b.count - a.count);
+  const focusDim = unmatchedCounts[0]?.count > 0 ? unmatchedCounts[0].dim : null;
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'overview', label: 'Overview' },
@@ -250,22 +227,14 @@ export default function FeedbackScreen() {
             />
           )}
 
-          {/* ── Score Hero ──────────────────────────────── */}
+          {/* ── Cohort Hero ──────────────────────────────── */}
           <FadeInView delay={0}>
             <View style={f.heroCard}>
-              <Text style={[f.heroScoreBig, { color: scoreColor(Math.round(composite)) }]}>
-                {Math.round(composite)}
-              </Text>
               <Text style={f.heroCohortName}>{cohortName}</Text>
               <View style={[f.barBadge, { backgroundColor: aboveBar ? GREEN + '15' : GOLD + '15' }]}>
                 <Text style={[f.barBadgeText, { color: aboveBar ? GREEN : GOLD }]}>
-                  {aboveBar ? 'Above the recruiter bar' : `${Math.round(pointsAway)} ${Math.round(pointsAway) === 1 ? 'point' : 'points'} to the bar`}
+                  {aboveBar ? 'Competitive for this cohort' : 'Room to grow in this cohort'}
                 </Text>
-              </View>
-              <View style={f.heroDims}>
-                <DimBar label="Smart" value={smart} color={BLUE} />
-                <DimBar label="Grit" value={grit} color={AMBER} />
-                <DimBar label="Build" value={build} color={GREEN} />
               </View>
             </View>
           </FadeInView>
@@ -308,19 +277,19 @@ export default function FeedbackScreen() {
                 ) : null}
 
                 {/* Focus area callout */}
-                {weakest && weakest[1] < 80 && (
-                  <View style={[f.card, { borderLeftWidth: 4, borderLeftColor: dimColor(weakest[0]) }]}>
-                    <Text style={f.cardTitle}>Focus area: {dimLabel(weakest[0])}</Text>
+                {focusDim && (
+                  <View style={[f.card, { borderLeftWidth: 4, borderLeftColor: dimColor(focusDim) }]}>
+                    <Text style={f.cardTitle}>Focus area: {dimLabel(focusDim)}</Text>
                     <Text style={f.cardBody}>
-                      Your {dimLabel(weakest[0])} score ({Math.round(weakest[1])}) is your biggest opportunity.
-                      Improving it lifts your overall score the fastest.
+                      {dimLabel(focusDim)} has the most gaps in your resume right now.
+                      Strengthening it will have the biggest impact on your competitiveness.
                     </Text>
                     <View style={f.cardActions}>
                       <AnimatedPressable
                         style={f.actionBtn}
                         onPress={() => openDillyOverlay({
                           isPaid: true,
-                          initialMessage: `My weakest dimension is ${dimLabel(weakest[0])} at ${Math.round(weakest[1])}. What specific things can I add to my resume to improve it?`,
+                          initialMessage: `My biggest area for improvement is ${dimLabel(focusDim)}. What specific things can I add to my resume to strengthen it?`,
                         })}
                         scaleDown={0.97}
                       >
@@ -336,10 +305,10 @@ export default function FeedbackScreen() {
                   <View style={[f.card, { backgroundColor: GREEN + '08', borderColor: GREEN + '20' }]}>
                     <View style={f.cardHeader}>
                       <Ionicons name="checkmark-circle" size={15} color={GREEN} />
-                      <Text style={[f.cardHeaderText, { color: GREEN }]}>Above the bar</Text>
+                      <Text style={[f.cardHeaderText, { color: GREEN }]}>Competitive</Text>
                     </View>
                     <Text style={f.cardBody}>
-                      Your resume scores above the recruiter bar for {cohortName}. You're competitive for roles in this cohort.
+                      Your resume is competitive for {cohortName}. You're well-positioned for roles in this cohort.
                     </Text>
                     <View style={f.cardActions}>
                       <AnimatedPressable
@@ -410,7 +379,7 @@ export default function FeedbackScreen() {
                               style={f.signalRow}
                               onPress={() => openDillyOverlay({
                                 isPaid: true,
-                                initialMessage: `My resume is missing "${sig.signal}" in the ${dimLabel(dim)} dimension. ${sig.rationale || ''} How do I add this to my resume?`,
+                                initialMessage: `My resume is missing "${sig.signal}" in the ${dimLabel(dim)} area. ${sig.rationale || ''} How do I add this to my resume?`,
                               })}
                               scaleDown={0.98}
                             >
@@ -506,7 +475,7 @@ export default function FeedbackScreen() {
                               style={f.numberedRow}
                               onPress={() => openDillyOverlay({
                                 isPaid: true,
-                                initialMessage: `My resume is missing "${sig.signal}" (${dimLabel(dim)} dimension). ${sig.rationale || ''} Help me add this to my resume.`,
+                                initialMessage: `My resume is missing "${sig.signal}" (${dimLabel(dim)} area). ${sig.rationale || ''} Help me add this to my resume.`,
                               })}
                               scaleDown={0.98}
                             >
@@ -547,24 +516,15 @@ const f = StyleSheet.create({
 
   scroll: { paddingHorizontal: spacing.lg, gap: 12 },
 
-  // Score Hero card
+  // Cohort Hero card
   heroCard: {
-    alignItems: 'center', paddingTop: 16, paddingBottom: 16, gap: 6,
+    alignItems: 'center', paddingTop: 20, paddingBottom: 16, gap: 8,
     backgroundColor: colors.s1, borderRadius: radius.md, borderWidth: 1, borderColor: colors.b1,
     paddingHorizontal: spacing.md,
   },
-  heroScoreBig: { fontFamily: 'Cinzel_700Bold', fontSize: 56, lineHeight: 64 },
-  heroCohortName: { fontFamily: 'Cinzel_700Bold', fontSize: 12, letterSpacing: 0.8, color: colors.t1, textAlign: 'center' },
+  heroCohortName: { fontFamily: 'Cinzel_700Bold', fontSize: 16, letterSpacing: 0.8, color: colors.t1, textAlign: 'center' },
   barBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
   barBadgeText: { fontSize: 12, fontWeight: '700' },
-  heroDims: { gap: 8, width: '100%', marginTop: 8 },
-
-  // Dim bar
-  dimBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dimBarLabel: { width: 40, fontSize: 11, fontWeight: '600', color: colors.t3 },
-  dimBarTrack: { flex: 1, height: 6, backgroundColor: colors.s3, borderRadius: 3, overflow: 'hidden' },
-  dimBarFill: { height: '100%', borderRadius: 3 },
-  dimBarScore: { width: 28, fontSize: 13, fontWeight: '700', textAlign: 'right' },
 
   // Tab switcher
   tabRow: { flexDirection: 'row', gap: 8, justifyContent: 'center', paddingVertical: 4 },

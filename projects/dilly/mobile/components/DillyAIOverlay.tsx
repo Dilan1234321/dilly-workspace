@@ -80,9 +80,9 @@ function getInitialSuggestions(ctx?: StudentContext, mode?: ChatMode): string[] 
     return ['What gaps do I have?', 'How do I stand out?', 'Prep me for the interview'];
   }
   if (ctx?.score && ctx.score > 0) {
-    return ["What's my weakest area?", 'Where should I apply?', 'How do I improve my score?'];
+    return ["What's my weakest area?", 'Where should I apply?', 'How do I improve my fit?'];
   }
-  return ['Review my resume', 'How do I get an internship?', 'What skills should I build?'];
+  return ['Review my resume', 'How do I get an internship?', 'What skills should I develop?'];
 }
 
 function getPracticeSuggestions(text: string): string[] {
@@ -96,13 +96,14 @@ function getResponseSuggestions(text: string): string[] {
   const t = text.toLowerCase();
   const chips: string[] = [];
   if (t.includes('resume') || t.includes('bullet')) chips.push('Show me an example bullet');
-  if (t.includes('smart') || t.includes('academic') || t.includes('gpa')) chips.push('How do I raise my Smart score?');
-  if (t.includes('grit') || t.includes('leadership') || t.includes('club')) chips.push('What builds Grit fastest?');
-  if (t.includes('build') || t.includes('project') || t.includes('portfolio')) chips.push('What project should I build?');
+  if (t.includes('academic') || t.includes('gpa') || t.includes('coursework') || t.includes('technical')) chips.push('How do I improve my fit?');
+  if (t.includes('leadership') || t.includes('club') || t.includes('experience')) chips.push('What experience am I missing?');
+  if (t.includes('project') || t.includes('portfolio')) chips.push('What project should I build?');
   if (t.includes('interview')) chips.push('Help me prep for my interview');
   if (t.includes('apply') || t.includes('internship') || t.includes('company')) chips.push('Where should I apply first?');
   if (t.includes('linkedin')) chips.push('How do I optimize my LinkedIn?');
   if (t.includes('network') || t.includes('recruiter') || t.includes('coffee')) chips.push('How do I reach out to recruiters?');
+  if (t.includes('skill') || t.includes('learn') || t.includes('gap')) chips.push('What skills should I develop?');
   const fallbacks = ['What should I do first?', 'Give me an example', 'Tell me more'];
   while (chips.length < 2 && fallbacks.length > 0) chips.push(fallbacks.shift()!);
   return chips.slice(0, 3);
@@ -523,7 +524,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
                       <DillyFace size={70} />
                     </View>
                     <Text style={[s.emptyText, { marginTop: 16 }]}>
-                      Ask me anything: your score, what to fix, where to apply.
+                      Ask me anything: your strengths, what to fix, where to apply.
                     </Text>
                   </>
                 )}
