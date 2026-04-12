@@ -291,6 +291,18 @@ def _fallback_feed(
     where = ["i.status = 'active'", "i.description IS NOT NULL", "length(i.description) > 100"]
     params: list = []
 
+    # Filter: US/Canada only
+    _intl_exclude = [
+        'India', 'Bengaluru', 'Mumbai', 'London', 'England', 'United Kingdom',
+        'Dublin', 'Ireland', 'Singapore', 'Tokyo', 'Japan', 'Berlin', 'Germany',
+        'Paris', 'France', 'Amsterdam', 'Sydney', 'Australia', 'Tel Aviv', 'Israel',
+        'Seoul', 'South Korea', 'Shanghai', 'Beijing', 'China', 'Sao Paulo', 'Brazil',
+    ]
+    _intl_clauses = " AND ".join([f"COALESCE(i.location_city,'') || ' ' || COALESCE(i.location_state,'') NOT ILIKE %s" for _ in _intl_exclude])
+    if _intl_clauses:
+        where.append(f"({_intl_clauses})")
+        params.extend([f"%{c}%" for c in _intl_exclude])
+
     if tab != "all":
         where.append("i.job_type = %s")
         params.append(tab)
@@ -540,6 +552,27 @@ async def get_internship_feed(
     # ── Pre-computed path (existing logic) ────────────────────
     where = ["m.student_id = %s", "i.status = 'active'"]
     params: list = [student_id]
+
+    # Filter: US/Canada only (exclude international jobs)
+    _intl_exclude = [
+        'India', 'Bengaluru', 'Mumbai', 'Hyderabad', 'Delhi', 'Pune', 'Chennai',
+        'London', 'England', 'United Kingdom', 'UK',
+        'Dublin', 'Ireland',
+        'Singapore',
+        'Tokyo', 'Japan',
+        'Berlin', 'Germany', 'Munich',
+        'Paris', 'France',
+        'Amsterdam', 'Netherlands',
+        'Sydney', 'Australia', 'Melbourne',
+        'Tel Aviv', 'Israel',
+        'Sao Paulo', 'Brazil',
+        'Seoul', 'South Korea',
+        'Shanghai', 'Beijing', 'China',
+    ]
+    _intl_clauses = " AND ".join([f"COALESCE(i.location_city,'') || ' ' || COALESCE(i.location_state,'') NOT ILIKE %s" for _ in _intl_exclude])
+    if _intl_clauses:
+        where.append(f"({_intl_clauses})")
+        params.extend([f"%{c}%" for c in _intl_exclude])
 
     if tab != "all":
         where.append("i.job_type = %s")

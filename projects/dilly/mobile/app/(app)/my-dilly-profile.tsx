@@ -164,17 +164,18 @@ export default function MyDillyProfileScreen() {
   const fetchData = useCallback(async () => {
     try {
       const [memRes, profileRes, resumesRes] = await Promise.all([
-        dilly.fetch('/memory'),
+        dilly.fetch('/memory').catch(() => null),
         dilly.get('/profile').catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
       ]);
-      if (memRes.ok) {
+      if (memRes?.ok) {
         const json = await memRes.json();
         setData(json);
       }
-      if (profileRes) setProfile(profileRes || {});
-      if (resumesRes?.resumes) setResumes(resumesRes.resumes);
-    } catch {} finally { setLoading(false); }
+      if (profileRes) setProfile(profileRes);
+      if (Array.isArray(resumesRes)) setResumes(resumesRes);
+      else if (resumesRes?.resumes) setResumes(resumesRes.resumes);
+    } catch (e) { console.warn('[MyDilly] fetch error:', e); } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, []);
@@ -256,6 +257,46 @@ export default function MyDillyProfileScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={GOLD} />}
       >
+
+        {/* ── 0. Cities ──────────────────────────────────────── */}
+        <FadeInView delay={0}>
+          <View style={d.citySection}>
+            <Text style={d.sectionLabel}>WHERE YOU WANT TO WORK</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {(p.job_locations || []).map((city: string, i: number) => (
+                <View key={i} style={d.cityChip}>
+                  <Ionicons name="location" size={12} color={colors.indigo} />
+                  <Text style={d.cityChipText}>{city}</Text>
+                  <AnimatedPressable
+                    onPress={async () => {
+                      const updated = (p.job_locations || []).filter((_: string, j: number) => j !== i);
+                      setProfile((prev: any) => ({ ...prev, job_locations: updated }));
+                      await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ job_locations: updated }) }).catch(() => {});
+                    }}
+                    scaleDown={0.9}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="close-circle" size={14} color={colors.t3} />
+                  </AnimatedPressable>
+                </View>
+              ))}
+              <AnimatedPressable
+                style={d.addCityChip}
+                onPress={() => {
+                  openDillyOverlay({
+                    isPaid: true,
+                    initialMessage: 'I want to update the cities I am open to working in. Ask me which cities I want to add.',
+                  });
+                }}
+                scaleDown={0.95}
+              >
+                <Ionicons name="add" size={14} color={colors.indigo} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.indigo }}>Add city</Text>
+              </AnimatedPressable>
+            </View>
+            <Text style={{ fontSize: 10, color: colors.t3, marginTop: 6 }}>Jobs will be filtered to these cities + remote roles.</Text>
+          </View>
+        </FadeInView>
 
         {/* ── 1. Dilly Card ──────────────────────────────────── */}
         <FadeInView delay={0}>
@@ -645,6 +686,20 @@ const d = StyleSheet.create({
 
   // Section label
   sectionLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, color: colors.t3, marginBottom: 4 },
+  citySection: { gap: 8 },
+  cityChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.idim, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: colors.ibdr,
+  },
+  cityChipText: { fontSize: 12, fontWeight: '600', color: colors.t1 },
+  addCityChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.idim, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: colors.ibdr, borderStyle: 'dashed' as any,
+  },
 
   // Strengths Map
   strengthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

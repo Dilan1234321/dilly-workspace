@@ -299,7 +299,7 @@ export default function ResumeGenerateScreen() {
                 onChangeText={setJd}
                 multiline
                 textAlignVertical="top"
-                returnKeyType="default"
+                returnKeyType="done"
               />
             </View>
 

@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
-  Linking, RefreshControl, LayoutAnimation, Animated,
+  Linking, RefreshControl, LayoutAnimation, Animated, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,6 +49,7 @@ interface Listing {
   quality_score?: number;
   rank_score?: number;
   quick_glance?: string[];
+  company_logo?: string | null;
 }
 
 interface FitNarrativeData {
@@ -236,6 +237,13 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
       <View style={s.jobContent}>
         {/* Header */}
         <View style={s.jobHeader}>
+          {listing.company_logo ? (
+            <Image source={{ uri: listing.company_logo }} style={s.companyLogo} />
+          ) : (
+            <View style={s.companyLogoPlaceholder}>
+              <Text style={s.companyLogoInitial}>{listing.company?.[0]?.toUpperCase() || '?'}</Text>
+            </View>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={s.jobTitle} numberOfLines={2}>{listing.title}</Text>
             <Text style={s.jobCompany}>{listing.company}</Text>
@@ -569,6 +577,9 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   jobContent: { flex: 1, padding: spacing.md, gap: 8 },
+  companyLogo: { width: 36, height: 36, borderRadius: 8, backgroundColor: colors.s2 },
+  companyLogoPlaceholder: { width: 36, height: 36, borderRadius: 8, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' },
+  companyLogoInitial: { fontSize: 16, fontWeight: '700', color: colors.t3 },
   jobHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   jobTitle: { fontSize: 15, fontWeight: '700', color: colors.t1, lineHeight: 20 },
   jobCompany: { fontSize: 13, color: colors.t2, marginTop: 2 },
