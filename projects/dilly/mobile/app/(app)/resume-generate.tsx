@@ -78,7 +78,6 @@ export default function ResumeGenerateScreen() {
   const [variantId, setVariantId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [profile, setProfile] = useState<Record<string, any>>({});
-  const [audit, setAudit] = useState<Record<string, any> | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -104,13 +103,8 @@ export default function ResumeGenerateScreen() {
           }
         }
 
-        const [profileRes, auditRes] = await Promise.all([
-          dilly.get('/profile'),
-          dilly.get('/audit/latest').catch(() => null),
-        ]);
+        const profileRes = await dilly.get('/profile');
         setProfile(profileRes || {});
-        const auditObj = auditRes?.audit ?? auditRes;
-        if (auditObj?.final_score) setAudit(auditObj);
       } catch {}
       finally { setProfileLoaded(true); }
     })();
@@ -125,7 +119,7 @@ export default function ResumeGenerateScreen() {
       return;
     }
     if (!jd.trim()) {
-      Alert.alert('Job description required', 'Paste the job description so the AI can accurately score and tailor your resume for this role.');
+      Alert.alert('Job description required', 'Paste the job description so Dilly can tailor your resume for this role.');
       return;
     }
 
@@ -291,51 +285,18 @@ export default function ResumeGenerateScreen() {
               />
             </View>
 
-            {/* Profile / score snapshot */}
-            {profileLoaded && (
-              !profile.track ? (
-                <View style={styles.warnCard}>
-                  <Ionicons name="warning-outline" size={18} color={AMBER} />
-                  <View style={{ flex: 1, gap: 3 }}>
-                    <Text style={styles.warnTitle}>Set your career track first</Text>
-                    <Text style={styles.warnSub}>
-                      Without a track, the AI can't assign the correct cohort to this job or compare your Smart, Grit, and Build scores accurately. Go to Profile → Settings to add your track.
-                    </Text>
-                  </View>
-                </View>
-              ) : !audit ? (
-                <View style={styles.warnCard}>
-                  <Ionicons name="information-circle-outline" size={18} color={INDIGO} />
-                  <Text style={[styles.warnSub, { flex: 1 }]}>
-                    Run your first Dilly Audit to unlock score-based resume tailoring for your <Text style={{ fontWeight: '700' }}>{profile.track}</Text> cohort.
-                  </Text>
-                </View>
-              ) : (
+            {/* Profile info */}
+            {profileLoaded && profile.track && (
                 <View style={styles.scoreCard}>
                   <View style={styles.scoreCardHeader}>
-                    <Text style={styles.scoreCardLabel}>YOUR SCORES</Text>
+                    <Text style={styles.scoreCardLabel}>YOUR PROFILE</Text>
                     <View style={styles.cohortBadge}>
                       <Ionicons name="school-outline" size={10} color={INDIGO} />
                       <Text style={styles.cohortBadgeText}>{profile.track}</Text>
                     </View>
                   </View>
-                  <View style={styles.scoreDims}>
-                    {(['Smart', 'Grit', 'Build'] as const).map(dim => {
-                      const val = Math.round(audit.scores?.[dim.toLowerCase()] ?? 0);
-                      const c = val >= 75 ? GREEN : val >= 55 ? AMBER : CORAL;
-                      return (
-                        <View key={dim} style={styles.scoreDim}>
-                          <Text style={styles.scoreDimLabel}>{dim}</Text>
-                          <Text style={[styles.scoreDimVal, { color: c }]}>{val}</Text>
-                          <View style={styles.scoreDimBar}>
-                            <View style={[styles.scoreDimFill, { width: `${val}%`, backgroundColor: c }]} />
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
                   <Text style={styles.scoreNote}>
-                    The AI will read this JD, assign its cohort, and tailor your resume to close the gap.
+                    Dilly will read the job description and build the best resume from your profile for this role.
                   </Text>
                 </View>
               )
