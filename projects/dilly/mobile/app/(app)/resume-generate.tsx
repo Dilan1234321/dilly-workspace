@@ -291,21 +291,20 @@ export default function ResumeGenerateScreen() {
             </View>
 
             {/* Profile info */}
-            {profileLoaded && profile.track && (
-                <View style={styles.scoreCard}>
-                  <View style={styles.scoreCardHeader}>
-                    <Text style={styles.scoreCardLabel}>YOUR PROFILE</Text>
-                    <View style={styles.cohortBadge}>
-                      <Ionicons name="school-outline" size={10} color={INDIGO} />
-                      <Text style={styles.cohortBadgeText}>{profile.track}</Text>
-                    </View>
+            {profileLoaded && profile.track ? (
+              <View style={styles.scoreCard}>
+                <View style={styles.scoreCardHeader}>
+                  <Text style={styles.scoreCardLabel}>YOUR PROFILE</Text>
+                  <View style={styles.cohortBadge}>
+                    <Ionicons name="school-outline" size={10} color={INDIGO} />
+                    <Text style={styles.cohortBadgeText}>{profile.track}</Text>
                   </View>
-                  <Text style={styles.scoreNote}>
-                    Dilly will read the job description and build the best resume from your profile for this role.
-                  </Text>
                 </View>
-              )
-            )}
+                <Text style={styles.scoreNote}>
+                  Dilly will read the job description and build the best resume from your profile for this role.
+                </Text>
+              </View>
+            ) : null}
 
             <AnimatedPressable style={styles.generateBtn} onPress={handleGenerate}>
               <Ionicons name="sparkles" size={18} color="#fff" />
