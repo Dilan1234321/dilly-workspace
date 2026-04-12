@@ -78,7 +78,7 @@ const STRENGTH_CATEGORIES: Record<string, { icon: string; label: string; color: 
 const CORE_CATEGORIES = [
   { key: 'goal', nudge: 'your career goals' },
   { key: 'target_company', nudge: 'your dream companies' },
-  { key: 'skill_unlisted', nudge: 'skills not on your resume' },
+  { key: 'skill_unlisted', nudge: 'skills not in your profile yet' },
   { key: 'project_detail', nudge: 'a project you worked on' },
   { key: 'motivation', nudge: 'what drives you' },
   { key: 'personality', nudge: 'your work style' },
@@ -92,7 +92,7 @@ const CORE_CATEGORIES = [
 const CONVERSATION_STARTERS = [
   { prompt: 'Tell me about a project you are proud of', icon: 'construct' },
   { prompt: 'What kind of company culture do you thrive in?', icon: 'storefront' },
-  { prompt: 'What is a skill you have that is not on your resume?', icon: 'code-slash' },
+  { prompt: 'What is a skill you have that Dilly does not know about yet?', icon: 'code-slash' },
   { prompt: 'What are you most passionate about in your career?', icon: 'heart' },
   { prompt: 'Describe your biggest professional achievement', icon: 'trophy' },
   { prompt: 'What does your ideal first job look like?', icon: 'business' },

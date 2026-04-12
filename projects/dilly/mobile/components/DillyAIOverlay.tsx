@@ -82,7 +82,7 @@ function getInitialSuggestions(ctx?: StudentContext, mode?: ChatMode): string[] 
   if (ctx?.score && ctx.score > 0) {
     return ["What's my weakest area?", 'Where should I apply?', 'How do I improve my fit?'];
   }
-  return ['Review my resume', 'How do I get an internship?', 'What skills should I develop?'];
+  return ['Review my profile', 'How do I get an internship?', 'What skills should I develop?'];
 }
 
 function getPracticeSuggestions(text: string): string[] {
@@ -95,7 +95,7 @@ function getPracticeSuggestions(text: string): string[] {
 function getResponseSuggestions(text: string): string[] {
   const t = text.toLowerCase();
   const chips: string[] = [];
-  if (t.includes('resume') || t.includes('bullet')) chips.push('Show me an example bullet');
+  if (t.includes('profile') || t.includes('fact')) chips.push('What should I add to my profile?');
   if (t.includes('academic') || t.includes('gpa') || t.includes('coursework') || t.includes('technical')) chips.push('How do I improve my fit?');
   if (t.includes('leadership') || t.includes('club') || t.includes('experience')) chips.push('What experience am I missing?');
   if (t.includes('project') || t.includes('portfolio')) chips.push('What project should I build?');
@@ -168,6 +168,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   const glowLoopRef    = useRef<Animated.CompositeAnimation | null>(null);
   const dotLoopsRef    = useRef<(Animated.CompositeAnimation | null)[]>([]);
   const scrollRef      = useRef<ScrollView>(null);
+  const userScrolledUp = useRef(false);
   const streamRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutsRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -213,6 +214,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
     setSuggestions([]);
     suggestionsOpacity.setValue(0);
     setIsTyping(true);
+    userScrolledUp.current = false;
     timeoutsRef.current.push(setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50));
 
     try {
@@ -282,7 +284,7 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
           const newChips = mode === 'practice' ? getPracticeSuggestions(fullText) : getResponseSuggestions(fullText);
           setSuggestions(newChips);
           Animated.timing(suggestionsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-        } else {
+        } else if (!userScrolledUp.current) {
           scrollRef.current?.scrollToEnd({ animated: false });
         }
       }, 45);
@@ -507,7 +509,13 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
           </View>
 
           {/* Messages */}
-          <ScrollView ref={scrollRef} style={s.messageList} contentContainerStyle={s.messageListContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={scrollRef} style={s.messageList} contentContainerStyle={s.messageListContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={() => { userScrolledUp.current = true; }}
+            onScrollEndDrag={(e) => {
+              const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+              const isAtBottom = contentOffset.y >= contentSize.height - layoutMeasurement.height - 40;
+              if (isAtBottom) userScrolledUp.current = false;
+            }}>
             {messages.length === 0 && !richContext && (
               <View style={s.emptyWrap}>
                 {mode === 'practice' ? (
