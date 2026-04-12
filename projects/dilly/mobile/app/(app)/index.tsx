@@ -223,7 +223,7 @@ export default function HomeScreen() {
         {/* -- Header ---------------------------------------------------- */}
         <FadeInView delay={0}>
           <View style={s.header}>
-            <AnimatedPressable onPress={() => router.push('/(app)/profile')} scaleDown={0.92}>
+            <AnimatedPressable onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.92}>
               <ProfilePhoto name={firstName} photoUri={photoUri} size={36} />
             </AnimatedPressable>
             <View style={{ flex: 1, marginLeft: 10 }}>
@@ -334,11 +334,11 @@ export default function HomeScreen() {
         <FadeInView delay={320}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
             {[
-              { icon: 'person' as const, color: colors.gold, label: 'Profile', onPress: () => router.push('/(app)/my-dilly-profile') },
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
               { icon: 'briefcase' as const, color: colors.green, label: 'Jobs', onPress: () => router.push('/(app)/jobs') },
+              { icon: 'analytics' as const, color: colors.indigo, label: 'Feedback', onPress: () => router.push('/(app)/feedback') },
+              { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar') },
-              { icon: 'document-text' as const, color: colors.indigo, label: 'Resume', onPress: () => router.push('/(app)/resume-editor') },
             ].map(tool => (
               <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
                 <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>

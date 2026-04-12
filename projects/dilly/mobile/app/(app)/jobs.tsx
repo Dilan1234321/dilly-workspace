@@ -127,7 +127,11 @@ function FitNarrative({ listing }: { listing: Listing }) {
           method: 'POST',
           body: JSON.stringify({ job_id: listing.id }),
         });
-        const json = typeof res === 'string' ? JSON.parse(res) : res;
+        if (!res.ok) {
+          if (res.status === 403) throw { status: 403 };
+          throw new Error(`Server error ${res.status}`);
+        }
+        const json = await res.json();
         setData(json);
         Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
       } catch (e: any) {
