@@ -75,9 +75,22 @@ export default function ResumeGenerateScreen() {
   const insets = useSafeAreaInsets();
   const { jobTitle: paramTitle, company: paramCompany, jd: paramJd, viewId } = useLocalSearchParams<{ jobTitle?: string; company?: string; jd?: string; viewId?: string }>();
   const [stage, setStage] = useState<Stage>(viewId ? 'done' : 'idle');
-  const [jobTitle, setJobTitle] = useState(paramTitle || '');
-  const [company, setCompany] = useState(paramCompany || '');
-  const [jd, setJd] = useState(paramJd || '');
+  const [jobTitle, setJobTitle] = useState('');
+  const [company, setCompany] = useState('');
+  const [jd, setJd] = useState('');
+
+  // Always sync from params when they change (handles navigating from different jobs)
+  useEffect(() => {
+    if (paramTitle) setJobTitle(paramTitle);
+    if (paramCompany) setCompany(paramCompany);
+    if (paramJd) setJd(paramJd);
+    if (paramTitle || paramCompany || paramJd) {
+      setStage('idle');
+      setSections([]);
+      setVariantId(null);
+      setSaved(false);
+    }
+  }, [paramTitle, paramCompany, paramJd]);
   const [stepIdx, setStepIdx] = useState(0);
   const [sections, setSections] = useState<GeneratedSection[]>([]);
   const [variantId, setVariantId] = useState<string | null>(null);
@@ -290,21 +303,6 @@ export default function ResumeGenerateScreen() {
               />
             </View>
 
-            {/* Profile info */}
-            {profileLoaded && profile.track ? (
-              <View style={styles.scoreCard}>
-                <View style={styles.scoreCardHeader}>
-                  <Text style={styles.scoreCardLabel}>YOUR PROFILE</Text>
-                  <View style={styles.cohortBadge}>
-                    <Ionicons name="school-outline" size={10} color={INDIGO} />
-                    <Text style={styles.cohortBadgeText}>{profile.track}</Text>
-                  </View>
-                </View>
-                <Text style={styles.scoreNote}>
-                  Dilly will read the job description and build the best resume from your profile for this role.
-                </Text>
-              </View>
-            ) : null}
 
             <AnimatedPressable style={styles.generateBtn} onPress={handleGenerate}>
               <Ionicons name="sparkles" size={18} color="#fff" />

@@ -235,9 +235,8 @@ export default function HomeScreen() {
               <ProfilePhoto name={firstName} photoUri={photoUri} size={40} />
             </AnimatedPressable>
             <View style={s.headerCenter}>
-              <Text style={s.greeting}>
-                {getGreeting()}, {firstName || 'there'}.
-              </Text>
+              <Text style={s.greeting}>Welcome, {firstName || 'there'}.</Text>
+              <Text style={s.greetingSub}>Welcome to your future.</Text>
             </View>
             <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
               <Ionicons name="settings-outline" size={22} color={colors.t3} />
@@ -245,28 +244,25 @@ export default function HomeScreen() {
           </View>
         </FadeInView>
 
-        {/* -- 2. Your Next Move (hero) ------------------------------------ */}
+        {/* -- 2. Dilly's insight (conversational, no card) ---------------- */}
         <FadeInView delay={80}>
           <AnimatedPressable
-            style={s.nextMoveCard}
             onPress={() => openDillyOverlay({
               name: firstName,
               cohort: (p.track || p.cohort || 'General'),
               isPaid: false,
               initialMessage: dillyTake || undefined,
             })}
-            scaleDown={0.98}
+            scaleDown={0.99}
           >
-            <View style={s.nextMoveHeader}>
-              <DillyFace size={28} />
-              <Text style={s.nextMoveLabel}>YOUR NEXT MOVE</Text>
-            </View>
-            <Text style={s.nextMoveText}>
-              {dillyTake || 'Tell Dilly about yourself. The more I know, the better I can help.'}
+            <Text style={s.dillyInsight}>
+              {dillyTake
+                ? `Hey ${firstName || 'there'}, ${dillyTake.charAt(0).toLowerCase()}${dillyTake.slice(1)}`
+                : `Hey ${firstName || 'there'}, tell me about yourself. The more I know, the more I can help you.`}
             </Text>
-            <View style={s.nextMoveFooter}>
-              <Text style={s.nextMoveCta}>Talk to Dilly</Text>
-              <Ionicons name="arrow-forward" size={14} color={colors.indigo} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+              <Ionicons name="chatbubble" size={12} color={colors.indigo} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.indigo }}>Talk to Dilly</Text>
             </View>
           </AnimatedPressable>
         </FadeInView>
@@ -359,10 +355,15 @@ const s = StyleSheet.create({
     marginLeft: 12,
   },
   greeting: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: colors.t1,
     letterSpacing: -0.3,
+  },
+  greetingSub: {
+    fontSize: 13,
+    color: colors.t3,
+    marginTop: 2,
   },
   avatar: {
     backgroundColor: colors.s3,
@@ -377,6 +378,12 @@ const s = StyleSheet.create({
   },
 
   // Next Move card
+  dillyInsight: {
+    fontSize: 15,
+    color: colors.t1,
+    lineHeight: 22,
+    marginBottom: 4,
+  },
   nextMoveCard: {
     backgroundColor: colors.s1,
     borderRadius: radius.lg,
