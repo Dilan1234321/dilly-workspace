@@ -101,9 +101,17 @@ async def get_shield_score(request: Request):
             "recommendation": "Talk to Dilly to build your profile. The more Dilly knows, the better your AI readiness score.",
         }
 
-    from dilly_core.ai_disruption import score_ai_readiness, get_cohort_disruption
+    from dilly_core.ai_disruption import score_ai_readiness, get_cohort_disruption, score_ai_readiness_llm
+    from dilly_core.llm_client import is_llm_available
 
-    readiness = score_ai_readiness(resume_text, cohort)
+    # Prefer LLM-based scoring (more accurate), fall back to keyword-based
+    if is_llm_available():
+        try:
+            readiness = score_ai_readiness_llm(resume_text, cohort)
+        except Exception:
+            readiness = score_ai_readiness(resume_text, cohort)
+    else:
+        readiness = score_ai_readiness(resume_text, cohort)
     disruption = get_cohort_disruption(cohort)
 
     # Count bullets

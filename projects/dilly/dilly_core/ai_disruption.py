@@ -114,6 +114,60 @@ def get_cohort_disruption(cohort: str) -> dict:
     return COHORT_AI_DISRUPTION.get(cohort, _DEFAULT_DISRUPTION)
 
 
+def score_ai_readiness_llm(profile_text: str, cohort: str = "") -> dict:
+    """LLM-based AI readiness scoring. More accurate than keyword matching."""
+    import os, json
+    try:
+        import anthropic
+    except ImportError:
+        return score_ai_readiness(profile_text, cohort)
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return score_ai_readiness(profile_text, cohort)
+
+    disruption = get_cohort_disruption(cohort)
+
+    prompt = f"""You assess how AI-proof a student's profile is. Their field is {cohort} ({disruption.get('disruption_pct', 30)}% disrupted by AI).
+
+AI-resistant skills in this field: {', '.join(disruption.get('ai_resistant_skills', []))}
+AI-vulnerable skills: {', '.join(disruption.get('ai_vulnerable_skills', []))}
+
+Read the profile below and return JSON:
+{{
+  "ai_readiness": number 0-100 (how AI-proof they are - higher is better),
+  "resistant_signals": ["up to 5 specific things from their profile that AI cannot replace"],
+  "vulnerable_signals": ["up to 5 things that AI could automate or replace"],
+  "recommendation": "One sentence of actionable advice to become more AI-proof. No em dashes."
+}}
+
+Only use evidence from the profile. If the profile is thin, score lower and say what's missing."""
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            temperature=0.2,
+            system=prompt,
+            messages=[{"role": "user", "content": f"Profile:\n{profile_text[:8000]}"}],
+        )
+        raw = response.content[0].text
+        j_start = raw.find("{")
+        j_end = raw.rfind("}") + 1
+        if j_start == -1:
+            return score_ai_readiness(profile_text, cohort)
+        result = json.loads(raw[j_start:j_end])
+        return {
+            "ai_readiness": max(10, min(95, result.get("ai_readiness", 50))),
+            "resistant_signals": result.get("resistant_signals", [])[:5],
+            "vulnerable_signals": result.get("vulnerable_signals", [])[:5],
+            "recommendation": result.get("recommendation", ""),
+        }
+    except Exception:
+        return score_ai_readiness(profile_text, cohort)
+
+
 # ── Resume AI Readiness Score ──────────────────────────────────────────────
 # Scans resume text for AI-resistant vs AI-vulnerable signals.
 
