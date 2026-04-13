@@ -289,7 +289,7 @@ export default function MyDillyProfileScreen() {
         {/* ── 0. Cities ──────────────────────────────────────── */}
         <FadeInView delay={0}>
           <View style={d.citySection}>
-            <Text style={d.sectionLabel}>WHERE YOU WANT TO WORK</Text>
+            <Text style={d.sectionLabel}>CITIES YOU'RE AVAILABLE IN</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {(p.job_locations || []).map((city: string, i: number) => (
                 <View key={i} style={d.cityChip}>
@@ -366,6 +366,7 @@ export default function MyDillyProfileScreen() {
               phones: p.phones || [{ label: 'Cell', number: '' }],
               username: p.profile_slug || '',
               photoUri: p.profile_slug ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo` : null,
+              city: (p.job_locations || [])[0] || '',
             }}
             onSave={() => {}}
             userType={p.user_type}

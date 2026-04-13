@@ -7,8 +7,8 @@
  *
  * Supports capture to PNG via react-native-view-shot for sharing.
  *
- * Templates (4 total):
- *   clean, photo, dark, statement
+ * Templates (8 total):
+ *   photo (Default), clean, dark, statement, navy, sage, coral, midnight
  */
 
 import { useRef, useState } from 'react';
@@ -50,17 +50,22 @@ interface CardData {
   phones: PhoneEntry[];
   username: string;
   photoUri: string | null;
+  city?: string;
 }
 
 // ── Templates ────────────────────────────────────────────────────────────────
 
-export type CardTemplate = 'clean' | 'photo' | 'dark' | 'statement';
+export type CardTemplate = 'photo' | 'clean' | 'dark' | 'statement' | 'navy' | 'sage' | 'coral' | 'midnight';
 
 export const CARD_TEMPLATES: { id: CardTemplate; label: string }[] = [
+  { id: 'photo', label: 'Default' },
   { id: 'clean', label: 'Clean' },
-  { id: 'photo', label: 'Photo' },
   { id: 'dark', label: 'Dark' },
   { id: 'statement', label: 'Statement' },
+  { id: 'navy', label: 'Navy' },
+  { id: 'sage', label: 'Sage' },
+  { id: 'coral', label: 'Coral' },
+  { id: 'midnight', label: 'Midnight' },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,7 +89,7 @@ function PhotoCircle({ photoUri, initial, size, bgColor }: { photoUri: string | 
   );
 }
 
-/** Minimal contact block: email, first phone, profile URL */
+/** Minimal contact block: email, first phone, city, profile URL */
 function MinimalContact({ data, colors }: { data: CardData; colors: { email: string; phone: string; url: string } }) {
   const profileUrl = `hellodilly.com/p/${data.username || 'you'}`;
   const firstPhone = (data.phones || []).find(p => p.number.replace(/\D/g, '').length >= 3);
@@ -94,6 +99,7 @@ function MinimalContact({ data, colors }: { data: CardData; colors: { email: str
       {firstPhone ? (
         <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{formatPhone(firstPhone.number)}</Text>
       ) : null}
+      {data.city ? <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{data.city}</Text> : null}
       <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>
     </>
   );
@@ -101,7 +107,7 @@ function MinimalContact({ data, colors }: { data: CardData; colors: { email: str
 
 // ── Card Front ───────────────────────────────────────────────────────────────
 
-function CardFront({ data, template = 'clean' }: { data: CardData; template?: CardTemplate }) {
+function CardFront({ data, template = 'photo' }: { data: CardData; template?: CardTemplate }) {
   const initial = data.name ? data.name[0].toUpperCase() : '?';
   const photoWithCache = data.photoUri ? `${data.photoUri}${data.photoUri.includes('?') ? '&' : '?'}_t=${Date.now()}` : null;
 
@@ -126,7 +132,7 @@ function CardFront({ data, template = 'clean' }: { data: CardData; template?: Ca
     );
   }
 
-  // ── Photo: face on the left 35%, info on the right ──
+  // ── Photo (Default): face on the left 35%, info on the right ──
   if (template === 'photo') {
     return (
       <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'row', overflow: 'hidden' }]}>
@@ -181,39 +187,145 @@ function CardFront({ data, template = 'clean' }: { data: CardData; template?: Ca
   }
 
   // ── Statement: giant watermark name ──
+  if (template === 'statement') {
+    return (
+      <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, overflow: 'hidden' }]}>
+        <Text
+          style={{
+            position: 'absolute',
+            top: '15%',
+            left: 10,
+            right: -10,
+            fontSize: 36,
+            fontWeight: '900',
+            color: '#E8E8E8',
+            lineHeight: 40,
+          }}
+          numberOfLines={2}
+        >
+          {(data.name || 'Your Name')}
+        </Text>
+        <Text
+          style={{ fontSize: 14, fontWeight: '700', color: '#1A1A2E', zIndex: 1 }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {data.name || 'Your Name'}
+        </Text>
+        {data.tagline ? (
+          <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2, zIndex: 1 }}>{data.tagline}</Text>
+        ) : null}
+        <View style={{ flex: 1 }} />
+        <View style={{ zIndex: 1 }}>
+          <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Navy: photo circle left, navy blue background ──
+  if (template === 'navy') {
+    return (
+      <View style={[c.card, { backgroundColor: '#1B2838', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={50} bgColor="#2A3F55" />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {data.name || 'Your Name'}
+            </Text>
+            {data.tagline ? (
+              <Text style={{ fontSize: 10, color: '#8BA4C4', marginTop: 2 }}>{data.tagline}</Text>
+            ) : null}
+          </View>
+        </View>
+        <View style={{ flex: 1 }} />
+        <View style={{ alignItems: 'flex-end' }}>
+          <MinimalContact data={data} colors={{ email: '#8BA4C4', phone: '#8BA4C4', url: '#5A7FA0' }} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Sage: green-tinted, photo top-right corner ──
+  if (template === 'sage') {
+    return (
+      <View style={[c.card, { backgroundColor: '#F5F7F4', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
+        <View style={{ position: 'absolute', top: 14, right: 16 }}>
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={42} bgColor="#5C6B5C" />
+        </View>
+        <Text
+          style={{ fontSize: 18, fontWeight: '700', color: '#2D3B2D', paddingRight: 54 }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {data.name || 'Your Name'}
+        </Text>
+        {data.tagline ? (
+          <Text style={{ fontSize: 11, color: '#5C6B5C', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
+        ) : null}
+        <View style={{ flex: 1 }} />
+        <MinimalContact data={data} colors={{ email: '#5C6B5C', phone: '#5C6B5C', url: '#8A9B8A' }} />
+      </View>
+    );
+  }
+
+  // ── Coral: warm coral accent, no photo ──
+  if (template === 'coral') {
+    return (
+      <View style={[c.card, { backgroundColor: '#FFF5F3', flexDirection: 'column', paddingBottom: 14, overflow: 'hidden' }]}>
+        <View style={{ width: '100%', height: 2, backgroundColor: '#E8705A' }} />
+        <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16 }}>
+          <Text
+            style={{ fontSize: 20, fontWeight: '700', color: '#2C2C2C' }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          >
+            {data.name || 'Your Name'}
+          </Text>
+          {data.tagline ? (
+            <Text style={{ fontSize: 11, color: '#E8705A', marginTop: 2 }}>{data.tagline}</Text>
+          ) : null}
+          <View style={{ flex: 1 }} />
+          <MinimalContact data={data} colors={{ email: '#8B8B8B', phone: '#8B8B8B', url: '#BBBBBB' }} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Midnight: photo on right 40%, dark cinematic ──
   return (
-    <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, overflow: 'hidden' }]}>
-      {/* Giant faded watermark name */}
-      <Text
-        style={{
-          position: 'absolute',
-          top: '15%',
-          left: 10,
-          right: -10,
-          fontSize: 36,
-          fontWeight: '900',
-          color: '#E8E8E8',
-          lineHeight: 40,
-        }}
-        numberOfLines={2}
-      >
-        {(data.name || 'Your Name')}
-      </Text>
-      {/* Actual name overlay */}
-      <Text
-        style={{ fontSize: 14, fontWeight: '700', color: '#1A1A2E', zIndex: 1 }}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.6}
-      >
-        {data.name || 'Your Name'}
-      </Text>
-      {data.tagline ? (
-        <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2, zIndex: 1 }}>{data.tagline}</Text>
-      ) : null}
-      <View style={{ flex: 1 }} />
-      <View style={{ zIndex: 1 }}>
-        <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+    <View style={[c.card, { backgroundColor: '#0F1724', flexDirection: 'row', overflow: 'hidden' }]}>
+      <View style={{ width: '60%', paddingHorizontal: 20, paddingVertical: 16, justifyContent: 'flex-start' }}>
+        <Text
+          style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {data.name || 'Your Name'}
+        </Text>
+        {data.tagline ? (
+          <Text style={{ fontSize: 10, color: '#6B8DB5', marginTop: 2 }}>{data.tagline}</Text>
+        ) : null}
+        <View style={{ flex: 1 }} />
+        <MinimalContact data={data} colors={{ email: '#6B8DB5', phone: '#6B8DB5', url: '#4A6A8A' }} />
+      </View>
+      <View style={{ width: '40%', height: '100%' }}>
+        {photoWithCache ? (
+          <Image source={{ uri: photoWithCache }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+        ) : (
+          <View style={{ width: '100%', height: '100%', backgroundColor: '#1A2A3E', justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ fontSize: 36, fontWeight: '800', color: '#3A5A7A' }}>{initial}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -221,10 +333,14 @@ function CardFront({ data, template = 'clean' }: { data: CardData; template?: Ca
 
 // ── Card Back ────────────────────────────────────────────────────────────────
 
-function CardBack({ template = 'clean', username }: { template?: CardTemplate; username?: string }) {
-  const isDark = template === 'dark';
-  const bg = isDark ? '#111111' : '#FFFFFF';
-  const color = isDark ? '#555555' : '#6B7280';
+function CardBack({ template = 'photo', username }: { template?: CardTemplate; username?: string }) {
+  const isDark = template === 'dark' || template === 'navy' || template === 'midnight';
+  const bg = isDark
+    ? (template === 'navy' ? '#1B2838' : template === 'midnight' ? '#0F1724' : '#111111')
+    : (template === 'sage' ? '#F5F7F4' : template === 'coral' ? '#FFF5F3' : '#FFFFFF');
+  const color = isDark
+    ? (template === 'navy' ? '#5A7FA0' : template === 'midnight' ? '#4A6A8A' : '#555555')
+    : (template === 'sage' ? '#5C6B5C' : template === 'coral' ? '#E8705A' : '#6B7280');
   const profileUrl = `hellodilly.com/p/${username || 'you'}`;
 
   return (
@@ -286,7 +402,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   const [data, setData] = useState<CardData>(initialData);
   const [showBack, setShowBack] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [template, setTemplate] = useState<CardTemplate>('clean');
+  const [template, setTemplate] = useState<CardTemplate>('photo');
   const frontRef = useRef<any>(null);
   const backRef = useRef<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
