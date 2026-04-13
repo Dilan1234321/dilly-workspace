@@ -454,58 +454,43 @@ export default function JobsScreen() {
         </View>
       </View>
 
-      {/* City filter chips */}
-      {userCities.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, paddingBottom: 6 }}>
-          <AnimatedPressable
-            style={[s.cityChip, selectedCities.length === 0 && s.cityChipActive]}
-            onPress={() => setSelectedCities([])}
-            scaleDown={0.95}
-          >
-            <Text style={[s.cityChipText, selectedCities.length === 0 && s.cityChipTextActive]}>All</Text>
-          </AnimatedPressable>
-          {userCities.map(city => {
-            const active = selectedCities.includes(city);
-            return (
-              <AnimatedPressable
-                key={city}
-                style={[s.cityChip, active && s.cityChipActive]}
-                onPress={() => {
-                  setSelectedCities(prev =>
-                    prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]
-                  );
-                }}
-                scaleDown={0.95}
-              >
-                <Ionicons name="location" size={10} color={active ? '#fff' : colors.t3} />
-                <Text style={[s.cityChipText, active && s.cityChipTextActive]}>{city.replace(/,\s*\w{2}$/, '')}</Text>
-              </AnimatedPressable>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* Type tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabRow}>
+      {/* Filters: type + city in one row */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, paddingVertical: 6 }}>
+        {/* Job type pills */}
         {([
           { key: 'all', label: 'All' },
           { key: 'internship', label: 'Internships' },
           { key: 'entry_level', label: 'Entry Level' },
           { key: 'full_time', label: 'Full Time' },
           { key: 'part_time', label: 'Part Time' },
-          { key: 'other', label: 'Other' },
         ] as { key: Tab; label: string }[]).map(t => (
           <AnimatedPressable
             key={t.key}
-            style={[s.tabPill, tab === t.key && s.tabPillActive]}
+            style={[s.filterPill, tab === t.key && s.filterPillActive]}
             onPress={() => { setTab(t.key); setLoading(true); }}
             scaleDown={0.95}
           >
-            <Text style={[s.tabPillText, tab === t.key && s.tabPillTextActive]}>
-              {t.label}
-            </Text>
+            <Text style={[s.filterPillText, tab === t.key && s.filterPillTextActive]}>{t.label}</Text>
           </AnimatedPressable>
         ))}
+
+        {/* Divider */}
+        {userCities.length > 0 && <View style={{ width: 1, backgroundColor: colors.b1, marginHorizontal: 2 }} />}
+
+        {/* City pills */}
+        {userCities.map(city => {
+          const active = selectedCities.includes(city);
+          return (
+            <AnimatedPressable
+              key={city}
+              style={[s.filterPill, active && s.filterPillActive]}
+              onPress={() => setSelectedCities(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city])}
+              scaleDown={0.95}
+            >
+              <Text style={[s.filterPillText, active && s.filterPillTextActive]}>{city.replace(/,\s*\w{2}$/, '')}</Text>
+            </AnimatedPressable>
+          );
+        })}
       </ScrollView>
 
       {/* Job listings */}
@@ -578,26 +563,14 @@ const s = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, color: colors.t1, padding: 0 },
 
-  // Tab row
-  tabRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
-  },
-  tabPill: {
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+  // Filter pills (unified for job type + city)
+  filterPill: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
     backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
   },
-  tabPillActive: { backgroundColor: colors.t1, borderColor: colors.t1 },
-  cityChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6,
-    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
-  },
-  cityChipActive: { backgroundColor: COBALT, borderColor: COBALT },
-  cityChipText: { fontSize: 10, fontWeight: '600', color: colors.t2 },
-  cityChipTextActive: { color: '#fff' },
-  tabPillText: { fontSize: 11, fontWeight: '600', color: colors.t3 },
-  tabPillTextActive: { color: colors.bg },
+  filterPillActive: { backgroundColor: colors.t1, borderColor: colors.t1 },
+  filterPillText: { fontSize: 11, fontWeight: '600', color: colors.t2 },
+  filterPillTextActive: { color: '#fff' },
 
   // List
   listContent: { paddingHorizontal: spacing.lg, gap: 8, paddingTop: 2 },
