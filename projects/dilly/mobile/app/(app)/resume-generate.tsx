@@ -35,7 +35,7 @@ const GREEN = colors.green;
 const AMBER = colors.amber;
 const CORAL = colors.coral;
 
-type Stage = 'idle' | 'generating' | 'done' | 'error';
+type Stage = 'idle' | 'generating' | 'done' | 'error' | 'not_ready';
 
 interface GeneratedSection {
   key: string;
@@ -98,6 +98,7 @@ export default function ResumeGenerateScreen() {
   const [variantId, setVariantId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [profile, setProfile] = useState<Record<string, any>>({});
+  const [atsInfo, setAtsInfo] = useState<any>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumePreviewRef = useRef<View>(null);
@@ -214,16 +215,33 @@ export default function ResumeGenerateScreen() {
         throw new Error(`Server error ${res.status}`);
       }
 
-      const text = await res.text();
-      // The endpoint streams raw JSON  -  find the JSON array in the response
-      const jsonStart = text.indexOf('[');
-      const jsonEnd = text.lastIndexOf(']');
-      if (jsonStart === -1 || jsonEnd === -1) {
-        throw new Error('Invalid response from server');
+      const data = await res.json();
+
+      // Handle not_ready response
+      if (data.not_ready) {
+        if (stepTimer.current) { clearInterval(stepTimer.current); stepTimer.current = null; }
+        setAtsInfo(data);
+        setStage('not_ready');
+        return;
       }
 
-      const parsed: GeneratedSection[] = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+      // New format: JSON object with sections array
+      const parsed: GeneratedSection[] = data.sections || [];
+      if (parsed.length === 0) {
+        // Fallback: try old format (raw JSON array)
+        const text = JSON.stringify(data);
+        const jsonStart = text.indexOf('[');
+        const jsonEnd = text.lastIndexOf(']');
+        if (jsonStart >= 0 && jsonEnd > jsonStart) {
+          const fallback = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+          if (Array.isArray(fallback) && fallback.length > 0) {
+            parsed.push(...fallback);
+          }
+        }
+      }
+
       setSections(parsed);
+      setAtsInfo(data);
       progressAnim.value = withTiming(1, { duration: 500 });
       setStage('done');
 
@@ -391,6 +409,40 @@ export default function ResumeGenerateScreen() {
                 ))}
               </View>
 
+              {/* ATS Badge */}
+              {atsInfo?.ats && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F0FFF4', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#C6F6D5', marginTop: 8 }}>
+                  <Ionicons name="shield-checkmark" size={14} color={GREEN} />
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: GREEN }}>
+                    {atsInfo.ats_label || `Formatted for ${(atsInfo.ats || '').charAt(0).toUpperCase() + (atsInfo.ats || '').slice(1)}`}
+                  </Text>
+                </View>
+              )}
+
+              {/* Gaps warning */}
+              {atsInfo?.readiness === 'gaps' && Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
+                <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#FDE68A', marginTop: 8, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="alert-circle" size={14} color={AMBER} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: AMBER }}>Gaps detected</Text>
+                  </View>
+                  {atsInfo.gaps.map((g: string, i: number) => (
+                    <Text key={i} style={{ fontSize: 12, color: colors.t2, lineHeight: 17 }}>- {g}</Text>
+                  ))}
+                  <AnimatedPressable
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}
+                    onPress={() => openDillyOverlay({
+                      isPaid: true,
+                      initialMessage: `My resume for ${jobTitle} at ${company} has gaps: ${atsInfo.gaps.join(', ')}. Help me figure out how to close these gaps.`,
+                    })}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="chatbubble" size={11} color={colors.indigo} />
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.indigo }}>Ask Dilly how to close these gaps</Text>
+                  </AnimatedPressable>
+                </View>
+              )}
+
               {saved && (
                 <View style={styles.savedBadge}>
                   <Ionicons name="bookmark" size={13} color={INDIGO} />
@@ -471,6 +523,44 @@ export default function ResumeGenerateScreen() {
             <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
               <Ionicons name="refresh" size={18} color={INDIGO} />
               <Text style={[styles.actionBtnText, { color: INDIGO }]}>Generate Another</Text>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
+        {/* Not Ready */}
+        {stage === 'not_ready' && atsInfo && (
+          <FadeInView>
+            <View style={[styles.errorCard, { borderColor: colors.ibdr, backgroundColor: colors.idim }]}>
+              <Ionicons name="hand-left" size={36} color={colors.indigo} />
+              <Text style={styles.errorTitle}>You're not ready for this one yet.</Text>
+              <Text style={styles.errorSub}>
+                {atsInfo.summary || 'Your profile does not have enough relevant experience for this role.'}
+              </Text>
+              {Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
+                <View style={{ marginTop: 12, gap: 6, width: '100%' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t1 }}>What you need:</Text>
+                  {atsInfo.gaps.map((g: string, i: number) => (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.indigo, marginTop: 6 }} />
+                      <Text style={{ fontSize: 13, color: colors.t2, lineHeight: 18, flex: 1 }}>{g}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+            <AnimatedPressable
+              style={[styles.actionBtn, styles.actionBtnPrimary]}
+              onPress={() => openDillyOverlay({
+                isPaid: true,
+                initialMessage: `I tried to generate a resume for ${jobTitle} at ${company} but I'm not ready yet. Help me figure out what I need to do to become competitive for this role.`,
+              })}
+            >
+              <Ionicons name="chatbubble" size={16} color="#fff" />
+              <Text style={styles.actionBtnText}>Ask Dilly for help</Text>
+            </AnimatedPressable>
+            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
+              <Ionicons name="refresh" size={18} color={INDIGO} />
+              <Text style={[styles.actionBtnText, { color: INDIGO }]}>Try a different role</Text>
             </AnimatedPressable>
           </FadeInView>
         )}
