@@ -1,14 +1,14 @@
 /**
- * DillyCard — premium digital business card.
+ * DillyCard - premium digital business card.
  *
  * Reusable component that renders a business card (3.5:2 ratio).
- * Front: photo + name + school + major + email + QR code.
- * Back: template-specific design with Dilly branding.
+ * Front: name + tagline + contact info (template-dependent layout).
+ * Back: Dilly branding with logo and profile URL.
  *
  * Supports capture to PNG via react-native-view-shot for sharing.
  *
- * Templates (8 total):
- *   classic, dark, minimal, executive, modern, bold, gradient, stripe
+ * Templates (4 total):
+ *   clean, photo, dark, statement
  */
 
 import { useRef, useState } from 'react';
@@ -54,16 +54,13 @@ interface CardData {
 
 // ── Templates ────────────────────────────────────────────────────────────────
 
-export type CardTemplate = 'classic' | 'dark' | 'minimal' | 'executive' | 'modern' | 'bold' | 'stripe';
+export type CardTemplate = 'clean' | 'photo' | 'dark' | 'statement';
 
-export const CARD_TEMPLATES: { id: CardTemplate; label: string; bg: string; fg: string }[] = [
-  { id: 'classic',   label: 'Classic',   bg: '#FAFAF8', fg: DARK },
-  { id: 'dark',      label: 'Dark',      bg: '#1A1A2E', fg: '#FFFFFF' },
-  { id: 'minimal',   label: 'Minimal',   bg: '#FFFFFF', fg: DARK },
-  { id: 'executive', label: 'Executive', bg: '#F5F0E8', fg: '#2C2C2C' },
-  { id: 'modern',    label: 'Modern',    bg: '#FFFFFF', fg: DARK },
-  { id: 'bold',      label: 'Bold',      bg: '#000000', fg: '#FFFFFF' },
-  { id: 'stripe',    label: 'Stripe',    bg: '#FFFFFF', fg: DARK },
+export const CARD_TEMPLATES: { id: CardTemplate; label: string }[] = [
+  { id: 'clean', label: 'Clean' },
+  { id: 'photo', label: 'Photo' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'statement', label: 'Statement' },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -87,177 +84,136 @@ function PhotoCircle({ photoUri, initial, size, bgColor }: { photoUri: string | 
   );
 }
 
-function ContactBlock({ data, colors: cl }: { data: CardData; colors: { email: string; phone: string; url: string } }) {
+/** Minimal contact block: email, first phone, profile URL */
+function MinimalContact({ data, colors }: { data: CardData; colors: { email: string; phone: string; url: string } }) {
   const profileUrl = `hellodilly.com/p/${data.username || 'you'}`;
+  const firstPhone = (data.phones || []).find(p => p.number.replace(/\D/g, '').length >= 3);
   return (
     <>
-      {data.email ? <Text style={{ fontSize: 11, color: cl.email }}>{data.email}</Text> : null}
-      {data.phones?.filter(p => p.number.replace(/\D/g, '').length >= 3).map((p, i) => (
-        <Text key={i} style={{ fontSize: 10, color: cl.phone, marginTop: 1 }}>{p.label}: {formatPhone(p.number)}</Text>
-      ))}
-      <Text style={{ fontSize: 9, color: cl.url, marginTop: 4 }}>{profileUrl}</Text>
+      {data.email ? <Text style={{ fontSize: 11, color: colors.email }}>{data.email}</Text> : null}
+      {firstPhone ? (
+        <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{formatPhone(firstPhone.number)}</Text>
+      ) : null}
+      <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>
     </>
   );
 }
 
 // ── Card Front ───────────────────────────────────────────────────────────────
 
-function CardFront({ data, template = 'classic' }: { data: CardData; template?: CardTemplate }) {
+function CardFront({ data, template = 'clean' }: { data: CardData; template?: CardTemplate }) {
   const initial = data.name ? data.name[0].toUpperCase() : '?';
   const photoWithCache = data.photoUri ? `${data.photoUri}${data.photoUri.includes('?') ? '&' : '?'}_t=${Date.now()}` : null;
 
-  // ── Classic: photo rectangle left, off-white bg ──
-  if (template === 'classic') {
+  // ── Clean: extreme white space, typography only ──
+  if (template === 'clean') {
     return (
-      <View style={c.card}>
-        <View style={c.photoSection}>
+      <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14 }]}>
+        <Text
+          style={{ fontSize: 18, fontWeight: '700', color: '#1A1A2E' }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {data.name || 'Your Name'}
+        </Text>
+        {data.tagline ? (
+          <Text style={{ fontSize: 11, color: '#6B7280', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
+        ) : null}
+        <View style={{ flex: 1 }} />
+        <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+      </View>
+    );
+  }
+
+  // ── Photo: face on the left 35%, info on the right ──
+  if (template === 'photo') {
+    return (
+      <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'row', overflow: 'hidden' }]}>
+        <View style={{ width: '35%', height: '100%' }}>
           {photoWithCache ? (
-            <Image source={{ uri: photoWithCache }} style={c.photo} />
+            <Image source={{ uri: photoWithCache }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
           ) : (
-            <View style={c.photoPlaceholder}>
-              <Text style={c.photoInitial}>{initial}</Text>
+            <View style={{ width: '100%', height: '100%', backgroundColor: DILLY_BLUE, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ fontSize: 36, fontWeight: '800', color: '#fff' }}>{initial}</Text>
             </View>
           )}
         </View>
-        <View style={c.infoSection}>
-          <Text style={c.cardName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{data.name || 'Your Name'}</Text>
-          {data.school ? <Text style={c.cardSchool}>{data.school}</Text> : null}
-          {data.tagline ? <Text style={c.cardTagline}>{data.tagline}</Text> : null}
-          {data.major ? <Text style={c.cardMajor}>{data.major}{data.classYear ? `, Class of ${data.classYear}` : ''}</Text> : null}
+        <View style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 16, justifyContent: 'flex-start' }}>
+          <Text
+            style={{ fontSize: 18, fontWeight: '700', color: '#1A1A2E' }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          >
+            {data.name || 'Your Name'}
+          </Text>
+          {data.tagline ? (
+            <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{data.tagline}</Text>
+          ) : null}
           <View style={{ flex: 1 }} />
-          <ContactBlock data={data} colors={{ email: GRAY, phone: GRAY, url: LIGHT_GRAY }} />
+          <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
         </View>
       </View>
     );
   }
 
-  // ── Dark: same layout, deep navy bg ──
+  // ── Dark: premium matte black ──
   if (template === 'dark') {
     return (
-      <View style={[c.card, { backgroundColor: '#1A1A2E' }]}>
-        <View style={c.photoSection}>
-          {photoWithCache ? (
-            <Image source={{ uri: photoWithCache }} style={c.photo} />
-          ) : (
-            <View style={[c.photoPlaceholder, { backgroundColor: '#2D2D5E' }]}>
-              <Text style={c.photoInitial}>{initial}</Text>
-            </View>
-          )}
-        </View>
-        <View style={c.infoSection}>
-          <Text style={[c.cardName, { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{data.name || 'Your Name'}</Text>
-          {data.school ? <Text style={[c.cardSchool, { color: '#A0A0C0' }]}>{data.school}</Text> : null}
-          {data.tagline ? <Text style={[c.cardTagline, { color: '#8888BB' }]}>{data.tagline}</Text> : null}
-          {data.major ? <Text style={[c.cardMajor, { color: '#A0A0C0' }]}>{data.major}{data.classYear ? `, Class of ${data.classYear}` : ''}</Text> : null}
-          <View style={{ flex: 1 }} />
-          <ContactBlock data={data} colors={{ email: '#A0A0C0', phone: '#A0A0C0', url: '#6B6B9E' }} />
-        </View>
-      </View>
-    );
-  }
-
-  // ── Minimal: no photo, centered, accent bar ──
-  if (template === 'minimal') {
-    return (
-      <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 }]}>
-        <View style={{ width: 40, height: 3, backgroundColor: DILLY_BLUE, borderRadius: 2, marginBottom: 12 }} />
-        <Text style={[c.cardName, { textAlign: 'center', fontSize: 20 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{data.name || 'Your Name'}</Text>
-        {data.tagline ? <Text style={[c.cardTagline, { textAlign: 'center', marginTop: 2 }]}>{data.tagline}</Text> : null}
-        {data.school ? <Text style={[c.cardSchool, { textAlign: 'center', marginTop: 6 }]}>{data.school}</Text> : null}
-        {data.major ? <Text style={[c.cardMajor, { textAlign: 'center' }]}>{data.major}{data.classYear ? ` '${data.classYear.slice(-2)}` : ''}</Text> : null}
-        <View style={{ flex: 1 }} />
-        <View style={{ alignItems: 'center' }}>
-          <ContactBlock data={data} colors={{ email: GRAY, phone: GRAY, url: LIGHT_GRAY }} />
-        </View>
-      </View>
-    );
-  }
-
-  // ── Executive: circle photo centered top, info below, warm cream bg ──
-  if (template === 'executive') {
-    const CREAM = '#F5F0E8';
-    const EXEC_TEXT = '#2C2C2C';
-    const EXEC_SUB = '#7A7060';
-    return (
-      <View style={[c.card, { backgroundColor: CREAM, flexDirection: 'column', alignItems: 'center', paddingTop: 14, paddingBottom: 12, paddingHorizontal: 20 }]}>
-        <PhotoCircle photoUri={data.photoUri} initial={initial} size={52} bgColor="#8B7E6A" />
-        <Text style={[c.cardName, { color: EXEC_TEXT, textAlign: 'center', fontSize: 18, marginTop: 6, letterSpacing: 0.5 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
-          {(data.name || 'Your Name').toUpperCase()}
-        </Text>
-        {data.tagline ? <Text style={{ fontSize: 10, color: EXEC_SUB, fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{data.tagline}</Text> : null}
-        <View style={{ width: 24, height: 1, backgroundColor: '#C4B99A', marginVertical: 6 }} />
-        {data.school ? <Text style={{ fontSize: 10, color: EXEC_SUB, textAlign: 'center' }}>{data.school}</Text> : null}
-        {data.major ? <Text style={{ fontSize: 10, color: EXEC_SUB, textAlign: 'center' }}>{data.major}{data.classYear ? `, ${data.classYear}` : ''}</Text> : null}
-        <View style={{ flex: 1 }} />
-        <View style={{ alignItems: 'center' }}>
-          <ContactBlock data={data} colors={{ email: EXEC_SUB, phone: EXEC_SUB, url: '#B0A890' }} />
-        </View>
-      </View>
-    );
-  }
-
-  // ── Modern: small circle top-left, bold oversized name, thin accent line ──
-  if (template === 'modern') {
-    const MOD_ACCENT = '#3B82F6';
-    return (
-      <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'column', paddingHorizontal: 18, paddingVertical: 14 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <PhotoCircle photoUri={data.photoUri} initial={initial} size={38} bgColor={MOD_ACCENT} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 20, fontWeight: '900', color: DARK, letterSpacing: -0.5 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{data.name || 'Your Name'}</Text>
-            {data.tagline ? <Text style={{ fontSize: 10, color: GRAY }}>{data.tagline}</Text> : null}
-          </View>
-        </View>
-        <View style={{ width: '100%', height: 2, backgroundColor: MOD_ACCENT, borderRadius: 1, marginVertical: 8 }} />
-        <View style={{ flex: 1, justifyContent: 'space-between' }}>
-          <View>
-            {data.school ? <Text style={{ fontSize: 11, color: GRAY }}>{data.school}</Text> : null}
-            {data.major ? <Text style={{ fontSize: 11, color: GRAY }}>{data.major}{data.classYear ? ` '${data.classYear.slice(-2)}` : ''}</Text> : null}
-          </View>
-          <View>
-            <ContactBlock data={data} colors={{ email: GRAY, phone: GRAY, url: LIGHT_GRAY }} />
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  // ── Bold: black bg, huge name, no photo, contact at bottom ──
-  if (template === 'bold') {
-    return (
-      <View style={[c.card, { backgroundColor: '#000000', flexDirection: 'column', paddingHorizontal: 20, paddingVertical: 16 }]}>
+      <View style={[c.card, { backgroundColor: '#111111', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14 }]}>
         <Text
-          style={{ fontSize: 28, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.8, lineHeight: 32 }}
-          numberOfLines={2}
+          style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF' }}
+          numberOfLines={1}
           adjustsFontSizeToFit
-          minimumFontScale={0.5}
+          minimumFontScale={0.6}
         >
-          {(data.name || 'Your Name').toUpperCase()}
+          {data.name || 'Your Name'}
         </Text>
-        {data.tagline ? <Text style={{ fontSize: 11, color: '#888888', marginTop: 4, fontWeight: '500' }}>{data.tagline}</Text> : null}
+        {data.tagline ? (
+          <Text style={{ fontSize: 11, color: '#666666', marginTop: 2 }}>{data.tagline}</Text>
+        ) : null}
+        <View style={{ width: 30, height: 1, backgroundColor: '#FFFFFF', marginTop: 8 }} />
         <View style={{ flex: 1 }} />
-        <View>
-          {data.school ? <Text style={{ fontSize: 10, color: '#666666' }}>{data.school}</Text> : null}
-          {data.major ? <Text style={{ fontSize: 10, color: '#666666' }}>{data.major}{data.classYear ? ` '${data.classYear.slice(-2)}` : ''}</Text> : null}
-          <View style={{ height: 6 }} />
-          <ContactBlock data={data} colors={{ email: '#AAAAAA', phone: '#AAAAAA', url: '#555555' }} />
-        </View>
+        <MinimalContact data={data} colors={{ email: '#999999', phone: '#999999', url: '#555555' }} />
       </View>
     );
   }
 
-  // ── Stripe: white card with indigo vertical stripe on left, info on right ──
+  // ── Statement: giant watermark name ──
   return (
-    <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'row', overflow: 'hidden' }]}>
-      {/* Indigo stripe */}
-      <View style={{ width: '8%', backgroundColor: '#4338CA', height: '100%' }} />
-      <View style={{ flex: 1, padding: 16, justifyContent: 'flex-start' }}>
-        <Text style={[c.cardName, { color: '#1E1B4B', fontSize: 20 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{data.name || 'Your Name'}</Text>
-        {data.tagline ? <Text style={{ fontSize: 11, color: '#6366F1', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text> : null}
-        {data.school ? <Text style={{ fontSize: 11, color: GRAY, marginTop: 4 }}>{data.school}</Text> : null}
-        {data.major ? <Text style={{ fontSize: 11, color: GRAY }}>{data.major}{data.classYear ? `, Class of ${data.classYear}` : ''}</Text> : null}
-        <View style={{ flex: 1 }} />
-        <ContactBlock data={data} colors={{ email: GRAY, phone: GRAY, url: '#A5B4FC' }} />
+    <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, overflow: 'hidden' }]}>
+      {/* Giant faded watermark name */}
+      <Text
+        style={{
+          position: 'absolute',
+          top: '15%',
+          left: 10,
+          right: -10,
+          fontSize: 36,
+          fontWeight: '900',
+          color: '#E8E8E8',
+          lineHeight: 40,
+        }}
+        numberOfLines={2}
+      >
+        {(data.name || 'Your Name')}
+      </Text>
+      {/* Actual name overlay */}
+      <Text
+        style={{ fontSize: 14, fontWeight: '700', color: '#1A1A2E', zIndex: 1 }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+      >
+        {data.name || 'Your Name'}
+      </Text>
+      {data.tagline ? (
+        <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2, zIndex: 1 }}>{data.tagline}</Text>
+      ) : null}
+      <View style={{ flex: 1 }} />
+      <View style={{ zIndex: 1 }}>
+        <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
       </View>
     </View>
   );
@@ -265,22 +221,21 @@ function CardFront({ data, template = 'classic' }: { data: CardData; template?: 
 
 // ── Card Back ────────────────────────────────────────────────────────────────
 
-function CardBack({ template = 'classic' }: { template?: CardTemplate }) {
-  // All backs: logo center, website bottom. Logo color = website color.
-  const configs: Record<CardTemplate, { bg: string; color: string }> = {
-    classic:   { bg: '#F8F7F4', color: LIGHT_GRAY },
-    dark:      { bg: '#1A1A2E', color: '#6B6B9E' },
-    minimal:   { bg: '#FFFFFF', color: '#9CA3AF' },
-    executive: { bg: '#F5F0E8', color: '#B0A890' },
-    modern:    { bg: '#FFFFFF', color: '#93C5FD' },
-    bold:      { bg: '#000000', color: '#555555' },
-    stripe:    { bg: '#FFFFFF', color: '#A5B4FC' },
-  };
-  const cfg = configs[template] || configs.classic;
+function CardBack({ template = 'clean', username }: { template?: CardTemplate; username?: string }) {
+  const isDark = template === 'dark';
+  const bg = isDark ? '#111111' : '#FFFFFF';
+  const color = isDark ? '#555555' : '#6B7280';
+  const profileUrl = `hellodilly.com/p/${username || 'you'}`;
+
   return (
-    <View style={[c.card, { backgroundColor: cfg.bg, justifyContent: 'center', alignItems: 'center' }]}>
-      <Image source={require('../assets/logo.png')} style={{ width: 120, height: 40, tintColor: cfg.color }} resizeMode="contain" />
-      <Text style={{ fontSize: 9, color: cfg.color, position: 'absolute', bottom: 12 }}>hellodilly.com</Text>
+    <View style={[c.card, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center' }]}>
+      <Image source={require('../assets/logo.png')} style={{ width: 120, height: 40, tintColor: color }} resizeMode="contain" />
+      {QRCode ? (
+        <View style={{ marginTop: 10 }}>
+          <QRCode value={`https://${profileUrl}`} size={40} color={color} backgroundColor="transparent" />
+        </View>
+      ) : null}
+      <Text style={{ fontSize: 9, color, position: 'absolute', bottom: 12 }}>{profileUrl}</Text>
     </View>
   );
 }
@@ -292,10 +247,9 @@ function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSele
     <View style={{ gap: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={{ fontSize: 13, fontWeight: '700', color: DARK }}>Choose a style</Text>
-        <Text style={{ fontSize: 11, color: LIGHT_GRAY }}>Swipe for more →</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
-        {CARD_TEMPLATES.map((t, idx) => {
+        {CARD_TEMPLATES.map((t) => {
           const active = t.id === selected;
           return (
             <TouchableOpacity
@@ -332,7 +286,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   const [data, setData] = useState<CardData>(initialData);
   const [showBack, setShowBack] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [template, setTemplate] = useState<CardTemplate>('classic');
+  const [template, setTemplate] = useState<CardTemplate>('clean');
   const frontRef = useRef<any>(null);
   const backRef = useRef<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -397,7 +351,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
           <CardFront data={data} template={template} />
         </View>
         <View ref={backRef} collapsable={false}>
-          <CardBack template={template} />
+          <CardBack template={template} username={data.username} />
         </View>
       </View>
 
@@ -415,14 +369,14 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
           position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
           transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] }) }],
         }}>
-          <CardBack template={template} />
+          <CardBack template={template} username={data.username} />
         </Animated.View>
       </TouchableOpacity>
       <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
         Tap card to flip
       </Text>
 
-      {/* Template picker — always visible */}
+      {/* Template picker - always visible */}
       <TemplatePicker selected={template} onSelect={setTemplate} />
 
       {/* Editor toggle */}
@@ -575,7 +529,7 @@ const c = StyleSheet.create({
   card: {
     width: CARD_W,
     height: CARD_H,
-    backgroundColor: '#FAFAF8',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     flexDirection: 'row',
     overflow: 'hidden',
@@ -586,8 +540,8 @@ const c = StyleSheet.create({
     elevation: 4,
   },
 
-  // Photo section (left 30%) — used by classic + dark
-  photoSection: { width: '30%', height: '100%' },
+  // Photo section (left 35%) - used by photo template
+  photoSection: { width: '35%', height: '100%' },
   photo: { width: '100%', height: '100%', resizeMode: 'cover' },
   photoPlaceholder: {
     width: '100%', height: '100%', backgroundColor: DILLY_BLUE,
@@ -595,7 +549,7 @@ const c = StyleSheet.create({
   },
   photoInitial: { fontSize: 32, fontWeight: '800', color: '#fff' },
 
-  // Info section (right 70%) — used by classic + dark
+  // Info section (right side) - used by photo template
   infoSection: { flex: 1, padding: 16, justifyContent: 'flex-start' },
   cardName: { fontSize: 22, fontWeight: '800', color: DARK, letterSpacing: -0.3 },
   cardSchool: { fontSize: 12, color: GRAY },
