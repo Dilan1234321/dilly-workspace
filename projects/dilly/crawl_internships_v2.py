@@ -1,5 +1,5 @@
 """
-Dilly Internship Crawler v2 — PostgreSQL + Multi-ATS
+Dilly Job Crawler v2 — PostgreSQL + Multi-ATS (all job types)
 """
 import json, os, re, time, uuid, urllib.request, urllib.error
 from datetime import datetime, timezone
@@ -59,6 +59,43 @@ GREENHOUSE_COMPANIES = {
     'justworks':('Justworks','Tech'),'lattice':('Lattice','Tech'),
     'airtable':('Airtable','Tech'),'calendly':('Calendly','Tech'),
     'webflow':('Webflow','Tech'),'vercel':('Vercel','Tech'),
+    # Big Tech (added 2026-04-12)
+    'coinbase':('Coinbase','Finance'),'instacart':('Instacart','Consumer'),
+    'snap':('Snap','Tech'),'reddit':('Reddit','Tech'),
+    'discord':('Discord','Tech'),'github':('GitHub','Tech'),
+    'plaid':('Plaid','Finance'),'notion':('Notion','Tech'),
+    'canva':('Canva','Tech'),'hashicorp':('HashiCorp','Tech'),
+    'datadog':('Datadog','Tech'),'hubspot':('HubSpot','Tech'),
+    'gitlab':('GitLab','Tech'),'pagerduty':('PagerDuty','Tech'),
+    'confluent':('Confluent','Tech'),'cockroachlabs':('Cockroach Labs','Tech'),
+    'dbt-labs':('dbt Labs','Tech'),'snyk':('Snyk','Tech'),
+    'mux':('Mux','Tech'),'replit':('Replit','Tech'),
+    # Healthcare (added 2026-04-12)
+    'oscar':('Oscar Health','Healthcare'),'cityblock':('Cityblock Health','Healthcare'),
+    'ro':('Ro','Healthcare'),'hims':('Hims & Hers','Healthcare'),
+    'color':('Color Health','Healthcare'),'devoted':('Devoted Health','Healthcare'),
+    'flatiron':('Flatiron Health','Healthcare'),
+    # Finance (added 2026-04-12)
+    'chime':('Chime','Finance'),'greenlight':('Greenlight','Finance'),
+    'ramp':('Ramp','Finance'),'dave':('Dave','Finance'),
+    'fundrise':('Fundrise','Finance'),
+    # Consumer / Retail (added 2026-04-12)
+    'warbyparker':('Warby Parker','Consumer'),'glossier':('Glossier','Consumer'),
+    'allbirds':('Allbirds','Consumer'),'sweetgreen':('Sweetgreen','Consumer'),
+    'peloton':('Peloton','Consumer'),'gopuff':('Gopuff','Consumer'),
+    # Media / Entertainment (added 2026-04-12)
+    'spotify':('Spotify','Media'),'hbo':('HBO','Media'),
+    'buzzfeed':('BuzzFeed','Media'),'vox':('Vox Media','Media'),
+    # Real Estate / PropTech (added 2026-04-12)
+    'compass':('Compass','Real Estate'),'opendoor':('Opendoor','Real Estate'),
+    'offerpad':('Offerpad','Real Estate'),
+    # Enterprise / B2B (added 2026-04-12)
+    'amplitude':('Amplitude','Tech'),'segment':('Segment','Tech'),
+    'mixpanel':('Mixpanel','Tech'),'contentful':('Contentful','Tech'),
+    'launchdarkly':('LaunchDarkly','Tech'),'rollbar':('Rollbar','Tech'),
+    # Consulting / Professional Services (added 2026-04-12)
+    'mckinsey':('McKinsey','Consulting'),'bain':('Bain','Consulting'),
+    'bcg':('BCG','Consulting'),
 }
 
 LEVER_COMPANIES = {
@@ -68,18 +105,40 @@ LEVER_COMPANIES = {
     "flexport":("Flexport","Consumer"),"nerdwallet":("NerdWallet","Finance"),
     "masterclass":("MasterClass","Media"),"gusto":("Gusto","Tech"),"benchling":("Benchling","Healthcare"),
     "tempus":("Tempus","Healthcare"),"ziprecruiter":("ZipRecruiter","Tech"),"toast":("Toast","Tech"),
+    # AI / Tech (added 2026-04-12)
+    "loom":("Loom","Tech"),"figma":("Figma","Tech"),
+    "anthropic":("Anthropic","Tech"),"openai":("OpenAI","Tech"),
+    "perplexity":("Perplexity","Tech"),"mistral":("Mistral","Tech"),
+    "cohere":("Cohere","Tech"),"runway":("Runway","Tech"),
+    "jasper":("Jasper","Tech"),"snorkel":("Snorkel AI","Tech"),
+    # Other industries (added 2026-04-12)
+    "alan":("Alan","Healthcare"),"faire":("Faire","Consumer"),
+    "pilot":("Pilot","Finance"),"standard":("Standard AI","Tech"),
 }
 
 ASHBY_COMPANIES = {
     "ramp":("Ramp","Finance"),"notion":("Notion","Tech"),"linear":("Linear","Tech"),
     "vercel":("Vercel","Tech"),"retool":("Retool","Tech"),"mercury":("Mercury","Finance"),
     "ironclad":("Ironclad","Tech"),"algolia":("Algolia","Tech"),
+    # Dev tools / Open source (added 2026-04-12)
+    "anthropic":("Anthropic","Tech"),"supabase":("Supabase","Tech"),
+    "clerk":("Clerk","Tech"),"resend":("Resend","Tech"),
+    "cal":("Cal.com","Tech"),"dub":("Dub","Tech"),
+    "tinybird":("Tinybird","Tech"),"inngest":("Inngest","Tech"),
 }
 
 SMARTRECRUITERS_COMPANIES = {
     "Visa":("Visa","Finance"),"Bosch":("Bosch","Tech"),"KPMG":("KPMG","Consulting"),
     "PwC":("PwC","Consulting"),"EY":("EY","Consulting"),"Accenture":("Accenture","Consulting"),
     "Deloitte":("Deloitte","Consulting"),
+    # Large enterprises (added 2026-04-12)
+    "Johnson&Johnson":("Johnson & Johnson","Healthcare"),
+    "Novartis":("Novartis","Healthcare"),"Siemens":("Siemens","Tech"),
+    "SAP":("SAP","Tech"),"Salesforce":("Salesforce","Tech"),
+    "LinkedIn":("LinkedIn","Tech"),"McDonalds":("McDonald's","Consumer"),
+    "Starbucks":("Starbucks","Consumer"),"Nike":("Nike","Consumer"),
+    "Adidas":("Adidas","Consumer"),"Disney":("Disney","Media"),
+    "NBCUniversal":("NBCUniversal","Media"),"WarnerBros":("Warner Bros","Media"),
 }
 
 INTERN_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [r'\bintern\b',r'\binternship\b',r'\bco-op\b',r'\bsummer\s+\d{4}\b',r'\bsummer\s+analyst\b',r'\bsummer\s+associate\b',r'\bfellowship\b']]
@@ -107,13 +166,8 @@ PART_TIME_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
 ]]
 
 def classify_listing(title, description=""):
-    """Classify a job listing. Returns: 'internship', 'entry_level', 'part_time', or None (skip)."""
-    # Skip non-undergrad
-    if any(p.search(title) for p in NON_UNDERGRAD):
-        return None
-    # Skip senior roles
-    if any(p.search(title) for p in SENIOR_PATTERNS):
-        return None
+    """Classify a job listing. Returns: 'internship', 'entry_level', 'part_time', or 'other'.
+    All jobs are kept — classification is informational, not exclusionary."""
     # Check internship first (highest priority)
     if any(p.search(title) for p in INTERN_PATTERNS):
         return 'internship'
@@ -130,11 +184,11 @@ def classify_listing(title, description=""):
         'early talent', 'emerging talent', 'start your career']
     if any(signal in desc_lower for signal in entry_desc_signals):
         return 'entry_level'
-    return None  # Not student-appropriate based on keywords
+    return 'other'
 
 def is_internship(title):
-    """Backward compatible — returns True if listing is any student-appropriate type."""
-    return classify_listing(title) is not None
+    """Backward compatible — returns True if listing is an internship or entry-level type."""
+    return classify_listing(title) in ('internship', 'entry_level', 'part_time')
 
 def is_remote(location):
     loc = (location or "").lower()
@@ -181,9 +235,7 @@ def crawl_greenhouse(slug, company_name):
         title = (job.get("title") or "").strip()
         desc = strip_html(job.get("content") or "")
         job_type = classify_listing(title, desc)
-        if not job_type: continue
         location = (job.get("location") or {}).get("name", "") if isinstance(job.get("location"), dict) else str(job.get("location", ""))
-        desc = strip_html(job.get("content") or "")
         depts = [d.get("name","") for d in (job.get("departments") or [])]
         posted = (job.get("updated_at") or job.get("first_published_at") or "")[:10]
         apply_url = job.get("absolute_url") or f"https://boards.greenhouse.io/{slug}/jobs/{job.get('id','')}"
@@ -197,8 +249,6 @@ def crawl_lever(slug, company_name):
     results = []
     for job in data:
         title = (job.get("text") or "").strip()
-        job_type = classify_listing(title)
-        if not job_type: continue
         cats = job.get("categories") or {}
         location = cats.get("location") or ""
         team = cats.get("team") or cats.get("department") or ""
@@ -210,6 +260,7 @@ def crawl_lever(slug, company_name):
                 if clean: desc_parts.append(clean)
         desc = " ".join(desc_parts)[:5000]
         if not desc: desc = strip_html(job.get("descriptionPlain") or job.get("description") or "")
+        job_type = classify_listing(title, desc)
         posted = ""
         if job.get("createdAt"):
             try: posted = time.strftime("%Y-%m-%d", time.gmtime(job["createdAt"]/1000))
@@ -231,9 +282,7 @@ def crawl_ashby(slug, company_name):
             title = (job.get("title") or "").strip()
             desc = strip_html(job.get("descriptionHtml") or "")
             job_type = classify_listing(title, desc)
-            if not job_type: continue
             location = job.get("locationName") or ""
-            desc = strip_html(job.get("descriptionHtml") or "")
             apply_url = f"https://jobs.ashbyhq.com/{slug}/{job.get('id','')}"
             city, state = parse_location(location)
             results.append({"external_id":f"ashby-{slug}-{job.get('id','')}","title":title,"company":company_name,"description":desc,"apply_url":apply_url,"location_city":city,"location_state":state,"work_mode":"remote" if is_remote(location) else "unknown","posted_date":None,"source_ats":"ashby","team":team_name,"remote":is_remote(location),"tags":extract_tags(title,desc),"job_type":job_type})
@@ -249,17 +298,16 @@ def crawl_smartrecruiters(company_id, company_name):
         if not postings: break
         for job in postings:
             title = (job.get("name") or "").strip()
-            job_type = classify_listing(title)
-            if not job_type: continue
             loc = job.get("location") or {}
             city = loc.get("city") or ""
             state = loc.get("region") or ""
             country = loc.get("country") or ""
-            if country and country.upper() not in ("US","USA","UNITED STATES",""): continue
+            if country and country.upper() not in ("US","USA","UNITED STATES","CA","CAN","CANADA",""): continue
             location = f"{city}, {state}" if city and state else city or state or ""
             desc = ""
             try: desc = strip_html(job.get("jobAd",{}).get("sections",{}).get("jobDescription",{}).get("text",""))
             except: pass
+            job_type = classify_listing(title, desc)
             dept = ""
             try: dept = (job.get("department") or {}).get("label","")
             except: pass
@@ -352,7 +400,7 @@ def classify_unclassified(conn, api_key=None):
 
 def crawl_all():
     print("=" * 60)
-    print("Dilly Internship Crawler v2 (PostgreSQL)")
+    print("Dilly Job Crawler v2 (PostgreSQL)")
     print(f"Started: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("=" * 60)
     if not DB_CONFIG["password"]:
@@ -367,7 +415,7 @@ def crawl_all():
         try:
             jobs = crawl_greenhouse(slug, name)
             new = write_listings(conn, jobs, name, "greenhouse", industry)
-            print(f"{len(jobs)} internships ({new} new)")
+            print(f"{len(jobs)} jobs ({new} new)")
             total_found += len(jobs); total_new += new
         except Exception as e:
             print(f"ERROR: {e}")
@@ -379,7 +427,7 @@ def crawl_all():
         try:
             jobs = crawl_lever(slug, name)
             new = write_listings(conn, jobs, name, "lever", industry)
-            print(f"{len(jobs)} internships ({new} new)")
+            print(f"{len(jobs)} jobs ({new} new)")
             total_found += len(jobs); total_new += new
         except Exception as e:
             print(f"ERROR: {e}")
@@ -391,7 +439,7 @@ def crawl_all():
         try:
             jobs = crawl_ashby(slug, name)
             new = write_listings(conn, jobs, name, "ashby", industry)
-            print(f"{len(jobs)} internships ({new} new)")
+            print(f"{len(jobs)} jobs ({new} new)")
             total_found += len(jobs); total_new += new
         except Exception as e:
             print(f"ERROR: {e}")
@@ -403,7 +451,7 @@ def crawl_all():
         try:
             jobs = crawl_smartrecruiters(slug, name)
             new = write_listings(conn, jobs, name, "smartrecruiters", industry)
-            print(f"{len(jobs)} internships ({new} new)")
+            print(f"{len(jobs)} jobs ({new} new)")
             total_found += len(jobs); total_new += new
         except Exception as e:
             print(f"ERROR: {e}")
@@ -416,9 +464,9 @@ def crawl_all():
     total_companies = cur.fetchone()[0]
     print(f"\n{'=' * 60}")
     print(f"Crawl complete!")
-    print(f"  Found:     {total_found} internships across all sources")
+    print(f"  Found:     {total_found} jobs across all sources")
     print(f"  New:       {total_new} new listings added")
-    print(f"  Active:    {total_active} total active internships")
+    print(f"  Active:    {total_active} total active jobs")
     print(f"  Companies: {total_companies} companies with active listings")
     print(f"{'=' * 60}")
     conn.close()
