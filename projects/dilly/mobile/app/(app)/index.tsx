@@ -223,14 +223,9 @@ export default function HomeScreen() {
         {/* -- Header ---------------------------------------------------- */}
         <FadeInView delay={0}>
           <View style={s.header}>
-            <AnimatedPressable onPress={() => router.push('/(app)/profile')} scaleDown={0.92}>
-              <ProfilePhoto name={firstName} photoUri={photoUri} size={36} />
-            </AnimatedPressable>
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
-              {cohort ? (
-                <Text style={s.headerCohort}>{cohort} cohort{school ? ` / ${school}` : ''}</Text>
-              ) : null}
+            <View style={{ flex: 1 }}>
+              <Text style={s.headerName}>Welcome, {firstName || 'there'}.</Text>
+              <Text style={s.headerSub}>Welcome to your future.</Text>
             </View>
             <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
               <Ionicons name="settings-outline" size={20} color={colors.t3} />
@@ -239,90 +234,40 @@ export default function HomeScreen() {
         </FadeInView>
 
 
-        {/* -- A. AI Coach Card (HERO) ----------------------------------- */}
+        {/* -- Dilly's message ------------------------------------------ */}
         <FadeInView delay={80}>
-          <View style={s.aiCard}>
-            <AnimatedPressable
-              style={s.aiPrompt}
-              onPress={() => openDillyOverlay({
-                name: firstName, cohort,
-                isPaid: false,
-              })}
-              scaleDown={0.98}
-            >
-              <View style={s.aiPromptIcon}>
-                <DillyFace size={36} />
-              </View>
-              <Text style={s.aiPromptText}>Ask Dilly anything...</Text>
-              <View style={s.aiPromptArrow}>
-                <Ionicons name="arrow-forward-circle" size={28} color={colors.gold} />
-              </View>
-            </AnimatedPressable>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
-              {[
-                { label: 'What should I work on?', msg: 'What should I work on to stand out in my job search?' },
-                { label: 'Help with my resume', msg: 'Help me improve my resume. What are the biggest things I should fix?' },
-                { label: 'Where should I apply?', msg: 'Based on my profile, where should I apply this week?' },
-              ].map(chip => (
-                <AnimatedPressable
-                  key={chip.label}
-                  style={s.chip}
-                  onPress={() => openDillyOverlay({
-                    name: firstName, cohort,
-                    isPaid: false,
-                    initialMessage: chip.msg,
-                  })}
-                  scaleDown={0.95}
-                >
-                  <Text style={s.chipText}>{chip.label}</Text>
-                </AnimatedPressable>
-              ))}
-            </ScrollView>
+          <View style={{ alignItems: 'center', marginVertical: 20 }}>
+            <DillyFace size={80} />
           </View>
-        </FadeInView>
-
-        {/* -- B. Insight Card ------------------------------------------- */}
-        <FadeInView delay={160}>
-          <View style={s.insightCard}>
-            <View style={s.insightHeader}>
-              <View style={s.insightDot}>
-                <DillyFace size={24} />
-              </View>
-              <Text style={s.insightLabel}>
-                {dillyTake ? 'DILLY SAYS' : 'GET STARTED'}
-              </Text>
-            </View>
-            <Text style={s.insightText}>
-              {dillyTake || 'Talk to Dilly about your goals, experience, and what you are looking for. The more Dilly knows, the better your recommendations.'}
+          <AnimatedPressable
+            onPress={() => openDillyOverlay({ name: firstName, isPaid: false, initialMessage: dillyTake || undefined })}
+            scaleDown={0.99}
+          >
+            <Text style={{ fontSize: 16, color: colors.t1, lineHeight: 24, textAlign: 'center' }}>
+              {dillyTake
+                ? `Hey ${firstName || 'there'}, ${dillyTake.charAt(0).toLowerCase()}${dillyTake.slice(1)}`
+                : `Hey ${firstName || 'there'}, tell me about yourself and I'll help you figure out what's next.`}
             </Text>
-            <AnimatedPressable
-              style={s.insightBtn}
-              onPress={() => openDillyOverlay({
-                name: firstName, cohort,
-                isPaid: false,
-              })}
-              scaleDown={0.97}
-            >
-              <Text style={s.insightBtnText}>{dillyTake ? 'Talk to Dilly' : 'Get started with Dilly'}</Text>
-            </AnimatedPressable>
-          </View>
+          </AnimatedPressable>
+          <AnimatedPressable
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.indigo, paddingVertical: 14, borderRadius: 12, marginTop: 20 }}
+            onPress={() => openDillyOverlay({ name: firstName, isPaid: false })}
+            scaleDown={0.97}
+          >
+            <Ionicons name="chatbubble" size={16} color="#fff" />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Talk to Dilly</Text>
+          </AnimatedPressable>
         </FadeInView>
 
-        {/* -- Top Matches ---------------------------------------------- */}
+        {/* -- Recent activity ------------------------------------------ */}
         {topJobs.length > 0 && (
-          <FadeInView delay={240}>
-            <Text style={s.jobsLabel}>TOP MATCHES</Text>
+          <FadeInView delay={160}>
+            <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.2, color: colors.t3, marginTop: 28, marginBottom: 10 }}>RECENT JOBS</Text>
             {topJobs.map((job: any) => (
-              <AnimatedPressable
-                key={job.id}
-                style={s.jobCard}
-                onPress={() => router.push('/(app)/jobs')}
-                scaleDown={0.98}
-              >
+              <AnimatedPressable key={job.id} style={s.jobCard} onPress={() => router.push('/(app)/jobs')} scaleDown={0.98}>
                 <View style={s.jobInfo}>
                   <Text style={s.jobTitle} numberOfLines={1}>{job.title}</Text>
-                  <Text style={s.jobCompany} numberOfLines={1}>{job.company} / {job.location || 'Remote'}</Text>
+                  <Text style={s.jobCompany} numberOfLines={1}>{job.company}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color={colors.t3} />
               </AnimatedPressable>
@@ -330,15 +275,16 @@ export default function HomeScreen() {
           </FadeInView>
         )}
 
-        {/* -- D. Tools Row (compact horizontal) ------------------------- */}
-        <FadeInView delay={320}>
+        {/* -- Tools Row ------------------------------------------------ */}
+        <FadeInView delay={240}>
+          <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1.2, color: colors.t3, marginTop: 24, marginBottom: 10 }}>QUICK TOOLS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
             {[
-              { icon: 'person' as const, color: colors.gold, label: 'Profile', onPress: () => router.push('/(app)/my-dilly-profile') },
+              { icon: 'sparkles' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
-              { icon: 'briefcase' as const, color: colors.green, label: 'Jobs', onPress: () => router.push('/(app)/jobs') },
+              { icon: 'chatbubbles' as const, color: colors.green, label: 'What We Think', onPress: () => router.push('/(app)/feedback') },
+              { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar') },
-              { icon: 'document-text' as const, color: colors.indigo, label: 'Resume', onPress: () => router.push('/(app)/resume-editor') },
             ].map(tool => (
               <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
                 <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
