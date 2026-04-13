@@ -104,7 +104,10 @@ export default function WhatWeThinkScreen() {
   const fetchLetter = useCallback(async () => {
     try {
       setError(null);
-      const res = await dilly.fetch('/insights/letter', { method: 'POST', body: JSON.stringify({}) });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+      const res = await dilly.fetch('/insights/letter', { method: 'POST', body: JSON.stringify({}), signal: controller.signal });
+      clearTimeout(timeout);
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const letter: InsightsLetter = await res.json();
       setData(letter);

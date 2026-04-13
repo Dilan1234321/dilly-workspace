@@ -42,6 +42,18 @@ const GOLD = '#2B3A8E';
 const COBALT = '#1652F0';
 const CYAN = '#58A6FF';
 
+const US_CANADA_CITIES = [
+  'New York, NY', 'San Francisco, CA', 'Los Angeles, CA', 'Chicago, IL', 'Boston, MA',
+  'Seattle, WA', 'Austin, TX', 'Denver, CO', 'Miami, FL', 'Washington, DC',
+  'Atlanta, GA', 'Dallas, TX', 'Houston, TX', 'San Diego, CA', 'Philadelphia, PA',
+  'Phoenix, AZ', 'Portland, OR', 'Nashville, TN', 'Charlotte, NC', 'Raleigh, NC',
+  'Minneapolis, MN', 'San Jose, CA', 'Pittsburgh, PA', 'Detroit, MI', 'Salt Lake City, UT',
+  'Tampa, FL', 'Orlando, FL', 'Indianapolis, IN', 'Columbus, OH', 'St. Louis, MO',
+  'Kansas City, MO', 'Richmond, VA', 'Baltimore, MD', 'Milwaukee, WI', 'Sacramento, CA',
+  'Toronto, ON', 'Vancouver, BC', 'Montreal, QC', 'Calgary, AB', 'Ottawa, ON',
+  'Remote',
+];
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface FactItem {
@@ -159,7 +171,23 @@ export default function MyDillyProfileScreen() {
   const [popup, setPopup] = useState<{ visible: boolean; anchor?: { x: number; y: number }; fact?: FactItem }>({ visible: false });
   const [editingFact, setEditingFact] = useState<{ fact: FactItem; label: string; value: string } | null>(null);
   const [resumes, setResumes] = useState<{ id: string; job_title: string; company: string; created_at: string }[]>([]);
+  const [citySearch, setCitySearch] = useState('');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
   const starterOpacity = useRef(new Animated.Value(1)).current;
+
+  async function addCity(city: string) {
+    const current = profile.job_locations || [];
+    if (current.some((c: string) => c.toLowerCase() === city.toLowerCase())) {
+      setCitySearch('');
+      setShowCityDropdown(false);
+      return;
+    }
+    const updated = [...current, city];
+    setProfile((prev: any) => ({ ...prev, job_locations: updated }));
+    setCitySearch('');
+    setShowCityDropdown(false);
+    await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ job_locations: updated }) }).catch(() => {});
+  }
 
   const fetchData = useCallback(async () => {
     try {
@@ -280,20 +308,47 @@ export default function MyDillyProfileScreen() {
                   </AnimatedPressable>
                 </View>
               ))}
-              <AnimatedPressable
-                style={d.addCityChip}
-                onPress={() => {
-                  openDillyOverlay({
-                    isPaid: true,
-                    initialMessage: 'I want to update the cities I am open to working in. Ask me which cities I want to add.',
-                  });
-                }}
-                scaleDown={0.95}
-              >
-                <Ionicons name="add" size={14} color={colors.indigo} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.indigo }}>Add city</Text>
-              </AnimatedPressable>
             </View>
+            {/* City search input */}
+            <View style={d.cityInputRow}>
+              <TextInput
+                style={d.cityInput}
+                placeholder="Type a city (e.g. New York)"
+                placeholderTextColor={colors.t3}
+                value={citySearch}
+                onChangeText={(t) => { setCitySearch(t); setShowCityDropdown(t.length >= 2); }}
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  if (citySearch.trim().length >= 2) {
+                    addCity(citySearch.trim());
+                  }
+                }}
+              />
+              {citySearch.trim().length >= 2 && (
+                <AnimatedPressable
+                  style={d.cityAddBtn}
+                  onPress={() => addCity(citySearch.trim())}
+                  scaleDown={0.95}
+                >
+                  <Ionicons name="add" size={16} color="#fff" />
+                </AnimatedPressable>
+              )}
+            </View>
+            {showCityDropdown && (
+              <View style={d.cityDropdown}>
+                {US_CANADA_CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).slice(0, 5).map((city, i) => (
+                  <AnimatedPressable
+                    key={i}
+                    style={d.cityDropdownItem}
+                    onPress={() => addCity(city)}
+                    scaleDown={0.98}
+                  >
+                    <Ionicons name="location-outline" size={14} color={colors.t2} />
+                    <Text style={d.cityDropdownText}>{city}</Text>
+                  </AnimatedPressable>
+                ))}
+              </View>
+            )}
             <Text style={{ fontSize: 10, color: colors.t3, marginTop: 6 }}>Jobs will be filtered to these cities + remote roles.</Text>
           </View>
         </FadeInView>
@@ -700,6 +755,29 @@ const d = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 7,
     borderWidth: 1, borderColor: colors.ibdr, borderStyle: 'dashed' as any,
   },
+  cityInputRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8,
+  },
+  cityInput: {
+    flex: 1, backgroundColor: colors.s1, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: colors.t1,
+  },
+  cityAddBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: colors.indigo, alignItems: 'center', justifyContent: 'center',
+  },
+  cityDropdown: {
+    backgroundColor: colors.s1, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    marginTop: 4, overflow: 'hidden',
+  },
+  cityDropdownItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: colors.b1,
+  },
+  cityDropdownText: { fontSize: 13, color: colors.t1 },
 
   // Strengths Map
   strengthGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

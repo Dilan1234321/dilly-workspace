@@ -81,15 +81,9 @@ export default function AppLayout() {
         name="index"
         options={{
           title: 'Career Center',
-          tabBarIcon: ({ focused }) => <DillyTabIcon focused={focused} />,
-          tabBarActiveTintColor: colors.gold,
-          tabBarInactiveTintColor: colors.gold,
-          tabBarLabelStyle: {
-            fontSize: 9,
-            fontWeight: '600',
-            color: colors.gold,
-            marginTop: 2,
-          },
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={20} color={color} />
+          ),
         }}
       />
 

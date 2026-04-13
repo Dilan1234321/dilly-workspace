@@ -39,23 +39,55 @@ type ActiveFeature = null | 'scan' | 'replace' | 'simulate' | 'firewall' | 'vaul
 
 // ── Shield Ring ──────────────────────────────────────────────────────────────
 
-function ShieldRing({ score, size = 100 }: { score: number; size?: number }) {
-  const sw = 5;
+function ShieldRing({ score, size = 160 }: { score: number; size?: number }) {
+  const sw = 8;
   const r = (size - sw) / 2;
   const circ = 2 * Math.PI * r;
-  const dash = circ * (1 - Math.max(0, Math.min(100, score)) / 100);
-  const color = score >= 80 ? GREEN : score >= 60 ? ACCENT : score >= 40 ? AMBER : AMBER;
+  const fillPct = Math.max(0, Math.min(100, score)) / 100;
+  const dash = circ * (1 - fillPct);
+  const CYAN = '#00E5FF';
+
+  // Animate the ring filling in
+  const fillAnim = useRef(new Animated.Value(circ)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Fill animation
+    Animated.timing(fillAnim, {
+      toValue: dash,
+      duration: 1200,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    // Pulse glow animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ).start();
+  }, [score]);
+
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: size + 20, height: size + 20, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Glow effect behind the ring */}
+      <Animated.View style={{
+        position: 'absolute', width: size, height: size, borderRadius: size / 2,
+        shadowColor: CYAN, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 20,
+        backgroundColor: 'transparent', transform: [{ scale: pulseAnim }],
+      }} />
       <Svg width={size} height={size}>
+        {/* Background ring */}
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={BORDER} strokeWidth={sw} fill="transparent" />
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth={sw} fill="transparent"
+        {/* Filled ring */}
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke={CYAN} strokeWidth={sw} fill="transparent"
           strokeDasharray={`${circ} ${circ}`} strokeDashoffset={dash} strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       </Svg>
       <View style={{ position: 'absolute', alignItems: 'center' }}>
-        <Ionicons name="shield-checkmark" size={28} color={color} />
-        <Text style={{ fontSize: 32, fontWeight: '900', color: TEXT, marginTop: 2 }}>{Math.round(score)}</Text>
+        <Text style={{ fontSize: 48, fontWeight: '900', color: TEXT }}>{Math.round(score)}</Text>
+        <Text style={{ fontSize: 16, color: SUB, marginTop: -4 }}>/100</Text>
       </View>
     </View>
   );
