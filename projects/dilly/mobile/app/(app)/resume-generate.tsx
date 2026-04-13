@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Share,
 } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -98,6 +100,35 @@ export default function ResumeGenerateScreen() {
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [profileLoaded, setProfileLoaded] = useState(false);
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resumePreviewRef = useRef<View>(null);
+
+  async function handleDownload() {
+    try {
+      let captureRef: any = null;
+      try { captureRef = require('react-native-view-shot').captureRef; } catch {}
+      if (!captureRef || !resumePreviewRef.current) {
+        Alert.alert('Cannot capture', 'Resume capture is not available.');
+        return;
+      }
+      const uri = await captureRef(resumePreviewRef.current, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+      if (!uri) return;
+      const name = (profile.name || 'Resume').replace(/[^a-zA-Z0-9 ]/g, '').trim();
+      const filename = `${name} ${jobTitle} at ${company} Resume.png`;
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          UTI: 'public.png',
+          dialogTitle: filename.replace('.png', ''),
+        });
+      }
+    } catch (e: any) {
+      Alert.alert('Error', 'Could not download resume.');
+    }
+  }
 
   const progressAnim = useSharedValue(0);
   const progressStyle = useAnimatedStyle(() => ({
@@ -369,7 +400,7 @@ export default function ResumeGenerateScreen() {
             </View>
 
             {/* Inline resume preview */}
-            <View style={styles.previewCard}>
+            <View ref={resumePreviewRef} collapsable={false} style={styles.previewCard}>
               <Text style={styles.previewTitle}>Your Tailored Resume</Text>
               {sections.map((sec: any, si: number) => (
                 <View key={sec.key ?? si} style={styles.previewSection}>
@@ -432,6 +463,11 @@ export default function ResumeGenerateScreen() {
             </View>
 
             {/* Actions */}
+            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={handleDownload}>
+              <Ionicons name="download-outline" size={18} color="#fff" />
+              <Text style={styles.actionBtnText}>Download Resume</Text>
+            </AnimatedPressable>
+
             <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
               <Ionicons name="refresh" size={18} color={INDIGO} />
               <Text style={[styles.actionBtnText, { color: INDIGO }]}>Generate Another</Text>
