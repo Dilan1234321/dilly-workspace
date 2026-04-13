@@ -46,7 +46,7 @@ const QUANT_OPTIONS: Option[] = [
   {
     id: 'Not sure yet',
     label: 'Not sure yet',
-    sub: 'Dilly uses balanced scoring  -  update anytime',
+    sub: 'Dilly uses a balanced approach - update anytime',
     icon: '?', iconColor: colors.t3, iconBg: colors.s4,
   },
 ];
@@ -73,7 +73,7 @@ const DATA_SCIENCE_OPTIONS: Option[] = [
   {
     id: 'Not sure yet',
     label: 'Not sure yet',
-    sub: 'Dilly defaults to Tech cohort  -  update anytime',
+    sub: 'Dilly defaults to Tech cohort - update anytime',
     icon: '?', iconColor: colors.t3, iconBg: colors.s4,
   },
 ];
@@ -141,7 +141,7 @@ export default function IndustryTargetScreen() {
     } catch { /* non-fatal */ }
     const cohort = cohortParam || (isQuantitative ? 'Quantitative' : 'Tech');
     router.push({
-      pathname: '/onboarding/you-are-in',
+      pathname: '/onboarding/upload',
       params: { cohort, name, industryTarget: finalSelection },
     });
   }
@@ -163,7 +163,7 @@ export default function IndustryTargetScreen() {
           </View>
           <Text style={s.heading}>{heading}</Text>
           <Text style={s.sub}>
-            Dilly scores you differently depending on your target industry. This makes your score much more accurate.
+            Dilly tailors your profile and opportunities based on your target industry.
           </Text>
         </View>
 

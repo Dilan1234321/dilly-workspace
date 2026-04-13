@@ -858,6 +858,13 @@ export default function SettingsScreen() {
             </AnimatedPressable>
           </View>
         </FadeInView>
+
+        {/* AI Disclaimer */}
+        <View style={{ paddingVertical: 24, paddingHorizontal: 8 }}>
+          <Text style={{ fontSize: 10, color: colors.t3, textAlign: 'center', lineHeight: 15 }}>
+            Dilly uses AI to generate career insights, fit assessments, and resume content. AI-generated content may not always be accurate. Always verify important information independently. Dilly is not a substitute for professional career advice.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );

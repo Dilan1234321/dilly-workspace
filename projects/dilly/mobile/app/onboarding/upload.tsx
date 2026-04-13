@@ -26,7 +26,7 @@ function truncateFilename(name: string, max = 28): string {
   if (name.length <= max) return name;
   const idx = name.lastIndexOf('.');
   const ext = idx !== -1 ? name.slice(idx) : '';
-  return name.slice(0, max - ext.length - 1) + '…' + ext;
+  return name.slice(0, max - ext.length - 1) + '...' + ext;
 }
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
@@ -164,6 +164,15 @@ export default function UploadScreen() {
     router.push('/onboarding/scanning');
   }
 
+  async function handleSkip() {
+    // Clear any pending upload
+    pendingUpload.uri      = null;
+    pendingUpload.name     = null;
+    pendingUpload.mimeType = null;
+    await AsyncStorage.setItem(PENDING_UPLOAD_KEY, JSON.stringify({ uri: null, name: null, mimeType: null }));
+
+    router.push('/onboarding/scanning');
+  }
 
   const zoneBorderColor = isError
     ? 'rgba(255,69,58,0.55)'
@@ -183,10 +192,10 @@ export default function UploadScreen() {
 
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.eyebrow}>Step 5 of 6 · Your resume</Text>
-        <Text style={s.heading}>{"Your resume goes in.\nYour future comes out."}</Text>
+        <Text style={s.eyebrow}>Optional</Text>
+        <Text style={s.heading}>Want to speed things up?</Text>
         <Text style={s.sub}>
-          Dilly reads it the way a recruiter does and tells you exactly where you stand.
+          Upload your resume and Dilly will build your profile automatically. You can always add more later.
         </Text>
       </View>
 
@@ -241,8 +250,12 @@ export default function UploadScreen() {
       <View style={[s.ctaWrap, { paddingBottom: insets.bottom + spacing.lg }]}>
         <TouchableOpacity style={s.button} onPress={handleContinue} activeOpacity={0.85}>
           <Text style={s.buttonText}>
-            {file ? 'Score my resume →' : 'See my Dilly score →'}
+            {file ? 'Continue with resume' : 'Continue'}
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.skipButton} onPress={handleSkip} activeOpacity={0.85}>
+          <Text style={s.skipText}>Skip for now</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -280,7 +293,7 @@ const s = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1.4,
-    color: colors.gold,
+    color: colors.t3,
     marginBottom: 7,
   },
   heading: {
@@ -292,9 +305,9 @@ const s = StyleSheet.create({
     marginBottom: 5,
   },
   sub: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.t2,
-    lineHeight: 17,
+    lineHeight: 18,
   },
   zoneWrap: {
     marginHorizontal: spacing.xl,
@@ -388,5 +401,15 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: -0.1,
+  },
+  skipButton: {
+    borderRadius: 13,
+    padding: 13,
+    alignItems: 'center',
+  },
+  skipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.t3,
   },
 });

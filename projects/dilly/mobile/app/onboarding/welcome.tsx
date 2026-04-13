@@ -24,7 +24,7 @@ export default function WelcomeScreen() {
     setError('');
     const trimmed = email.trim().toLowerCase();
     if (!trimmed.endsWith('.edu')) {
-      setError('Use your .edu email  -  Dilly is for students.');
+      setError('Use your .edu email - Dilly is for students.');
       return;
     }
     setLoading(true);
@@ -39,7 +39,6 @@ export default function WelcomeScreen() {
         const detail = data?.detail;
         throw new Error(typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.');
       }
-      // Store email for the verify screen via router params
       router.push({ pathname: '/onboarding/verify', params: { email: trimmed } });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -65,24 +64,14 @@ export default function WelcomeScreen() {
       >
         {/* Top section */}
         <View style={styles.top}>
-          {/* Gold glow blob */}
-          <View style={styles.glowContainer} pointerEvents="none">
-            <View style={styles.glow} />
-          </View>
-
-          {/* Stat eyebrow */}
-          <Text style={styles.eyebrow}>
-            74% of Tech resumes are missing a GitHub link
-          </Text>
-
           {/* Headline */}
           <Text style={styles.headline}>
-            The bar that{'\n'}gets you hired.
+            Your career{'\n'}starts here.
           </Text>
 
           {/* Subheadline */}
           <Text style={styles.sub}>
-            Dilly scores your resume the way Goldman reads it  -  and tells you exactly where you rank against your peers.
+            Dilly learns who you are and helps you land the right opportunities.
           </Text>
         </View>
 
@@ -123,14 +112,14 @@ export default function WelcomeScreen() {
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <Text style={[styles.buttonText, !buttonActive && styles.buttonTextDisabled]}>
-                Get my scores →
+                Get started
               </Text>
             )}
           </TouchableOpacity>
 
           {/* Fine print */}
           <Text style={styles.finePrint}>
-            Free to try · No credit card · .edu email required
+            Free to try. No credit card. .edu email required.
           </Text>
         </View>
       </ScrollView>
@@ -146,32 +135,6 @@ const styles = StyleSheet.create({
   },
   top: {
     paddingTop: 0,
-  },
-  glowContainer: {
-    position: 'absolute',
-    bottom: -80,
-    left: -60,
-    right: -60,
-    alignItems: 'center',
-    pointerEvents: 'none',
-  },
-  glow: {
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(201,168,76,0.06)',
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 80,
-  },
-  eyebrow: {
-    color: colors.gold,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 12,
   },
   headline: {
     fontFamily: 'PlayfairDisplay_900Black',

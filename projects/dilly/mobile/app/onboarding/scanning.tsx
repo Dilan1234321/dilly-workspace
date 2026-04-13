@@ -303,8 +303,6 @@ export default function ScanningScreen() {
         ]);
 
         // Guarantee interests are on the profile before the audit runs.
-        // interests.tsx fires a fire-and-forget PATCH that may not have settled yet
-        // (bad timing, flaky network). Re-saving here is idempotent and cheap.
         if (interestsRaw) {
           try {
             const interests = JSON.parse(interestsRaw);
@@ -366,11 +364,11 @@ export default function ScanningScreen() {
   // ── Step labels ─────────────────────────────────────────────────────────
 
   const stepLabels = [
-    'Extracting your experience',
+    'Reading your background',
     `${cohort || 'Your'} cohort confirmed`,
-    'Measuring your Grit score',
-    'Comparing to your peers',
-    'Building your recommendations',
+    'Analyzing your experience',
+    'Finding relevant opportunities',
+    'Building your profile',
   ];
 
   return (
@@ -380,9 +378,9 @@ export default function ScanningScreen() {
 
       {/* Title */}
       <Text style={s.heading}>
-        {firstName ? `Dilly is on it, ${firstName}.` : 'Dilly is on it.'}
+        {firstName ? `Building your profile, ${firstName}.` : 'Building your profile...'}
       </Text>
-      <Text style={s.sub}>Reading your resume against real hiring criteria.</Text>
+      <Text style={s.sub}>This takes just a moment.</Text>
 
       {/* Progress bar */}
       <ProgressFill pct={progress} />
@@ -396,8 +394,8 @@ export default function ScanningScreen() {
 
       {/* Commitment line */}
       <Text style={s.commitment}>
-        Every audit, every improvement  - {' '}
-        <Text style={s.commitmentBold}>saved to your profile forever.</Text>
+        Everything Dilly learns is{' '}
+        <Text style={s.commitmentBold}>saved to your profile.</Text>
       </Text>
     </View>
   );

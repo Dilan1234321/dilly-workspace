@@ -1,6 +1,6 @@
 /**
- * Profile setup -- onboarding for non-students.
- * Collects: name, career fields (-> cohorts), career target, photo.
+ * Profile setup - onboarding for general users (not students).
+ * Collects: name, career fields (-> cohorts), career target, photo (mandatory).
  * No school, major, minor, graduation year, pre-health/pre-law track.
  */
 
@@ -71,9 +71,16 @@ export default function ProfileProScreen() {
 
   // Derived
   const detectedCohorts = fieldToCohorts(selectedFields);
-  const canContinue = fullName.trim().length >= 2 && selectedFields.length >= 1;
+  const canContinue = fullName.trim().length >= 2 && selectedFields.length >= 1 && photo != null;
 
   async function handleContinue() {
+    if (!photo) {
+      Alert.alert(
+        'Profile photo required',
+        'Add a profile photo to continue. A professional headshot works best.',
+      );
+      return;
+    }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');
@@ -108,7 +115,7 @@ export default function ProfileProScreen() {
         ['dilly_onboarding_target', TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'new_role'],
       ]);
 
-      // Go to upload (optional for non-students)
+      // Go to upload (optional)
       router.push({
         pathname: '/onboarding/upload',
         params: { cohort: primaryCohort, name: fullName.trim().split(/\s+/)[0], optional: '1' },
@@ -142,7 +149,7 @@ export default function ProfileProScreen() {
           <Text style={s.subtitle}>This helps Dilly understand your career and match you with the right opportunities.</Text>
         </FadeInView>
 
-        {/* Photo */}
+        {/* Photo (mandatory) */}
         <FadeInView delay={60}>
           <TouchableOpacity style={s.photoWrap} onPress={pickPhoto}>
             {photo ? (
@@ -154,6 +161,7 @@ export default function ProfileProScreen() {
               </View>
             )}
           </TouchableOpacity>
+          <Text style={s.photoHint}>Use a professional photo, like one you'd put on LinkedIn.</Text>
         </FadeInView>
 
         {/* Name */}
@@ -175,7 +183,7 @@ export default function ProfileProScreen() {
         <FadeInView delay={140}>
           <View style={s.field}>
             <Text style={s.label}>What field are you in? <Text style={{ color: colors.coral }}>*</Text></Text>
-            <Text style={{ fontSize: 12, color: colors.t3, marginBottom: 8 }}>Select up to 3. This determines how Dilly scores and matches you.</Text>
+            <Text style={{ fontSize: 12, color: colors.t3, marginBottom: 8 }}>Select up to 3. This determines how Dilly matches you.</Text>
 
             <TextInput
               style={[s.input, { marginBottom: 8 }]}
@@ -285,6 +293,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.b1, alignItems: 'center', justifyContent: 'center',
   },
   photoText: { fontSize: 10, color: colors.t3, marginTop: 4 },
+  photoHint: { fontSize: 11, color: colors.t3, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 },
 
   field: { gap: 4 },
   label: { fontSize: 13, fontWeight: '600', color: colors.t1, marginBottom: 2 },

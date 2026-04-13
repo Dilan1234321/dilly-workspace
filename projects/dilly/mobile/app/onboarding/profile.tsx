@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,18 +31,18 @@ const PRE_PROF_OPTIONS = [
 ];
 
 // key is used for UI selection state; apiValue is sent to the API.
-// Year labels are dynamic so they don't go stale  -  previously hardcoded
+// Year labels are dynamic so they don't go stale - previously hardcoded
 // "Summer 2026" / "Fall 2026" would become incorrect on Jan 1, 2027.
 const _CURRENT_YEAR = new Date().getFullYear();
 const TARGET_OPTIONS = [
-  { key: 'internship_summer', label: `Internship · Summer ${_CURRENT_YEAR}`, apiValue: 'internship' },
-  { key: 'internship_fall',   label: `Internship · Fall ${_CURRENT_YEAR}`,   apiValue: 'internship' },
+  { key: 'internship_summer', label: `Internship - Summer ${_CURRENT_YEAR}`, apiValue: 'internship' },
+  { key: 'internship_fall',   label: `Internship - Fall ${_CURRENT_YEAR}`,   apiValue: 'internship' },
   { key: 'full_time',         label: 'Full-time job',                         apiValue: 'full_time'  },
   { key: 'exploring',         label: 'Just exploring',                        apiValue: 'exploring'  },
 ];
 
 // Dynamic graduation year range: current year through current year + 5.
-// Computed at module load so it rolls forward automatically each year  - 
+// Computed at module load so it rolls forward automatically each year -
 // never needs manual updating. Coach and leaderboard both read graduation_year,
 // so this must be set for every student before they finish onboarding.
 const GRADUATION_OPTIONS: number[] = (() => {
@@ -79,20 +80,6 @@ const PRE_PROF_TO_COHORT: Record<string, string> = {
   'Pre-Veterinary': 'Pre-Health', 'Pre-Physical Therapy': 'Pre-Health',
   'Pre-Occupational Therapy': 'Pre-Health', 'Pre-Physician Assistant': 'Pre-Health',
   'Pre-Law': 'Pre-Law',
-};
-
-const COHORT_COPY: Record<string, { label: string; description: string; emphasis: string }> = {
-  Tech:          { label: 'Tech cohort',                     description: 'Dilly scores you against Google, Meta, and Amazon criteria.',               emphasis: 'Your Build score carries the most weight.' },
-  Business:      { label: 'Business cohort',                 description: 'Dilly scores you against Goldman Sachs, Deloitte, and JP Morgan criteria.', emphasis: 'Your Grit score carries the most weight.' },
-  Science:       { label: 'Science cohort',                  description: 'Dilly scores you against NIH, top biotech, and research lab criteria.',     emphasis: 'Your Smart score carries the most weight.' },
-  Quantitative:  { label: 'Quantitative cohort',             description: 'Dilly scores you against top quant and analytical employer criteria.',      emphasis: "You'll choose your target industry next." },
-  Health:        { label: 'Health & Movement cohort',        description: 'Dilly scores you against top hospital and healthcare employer criteria.',   emphasis: 'Your Grit score carries the most weight.' },
-  'Social Science': { label: 'Social Science cohort',        description: 'Dilly scores you against top consulting, government, and nonprofit criteria.', emphasis: 'Your Grit score carries the most weight.' },
-  Humanities:    { label: 'Humanities & Communication cohort', description: 'Dilly scores you against top media, publishing, and education criteria.', emphasis: 'Your Build portfolio carries the most weight.' },
-  Sport:         { label: 'Sport & Recreation cohort',       description: 'Dilly scores you against ESPN, top sports agencies, and league criteria.',  emphasis: 'Your Grit score carries the most weight.' },
-  'Pre-Health':  { label: 'Pre-Health track',                description: 'Dilly scores you against Mayo Clinic, top med school, and clinical criteria.', emphasis: 'Your Smart score carries the most weight.' },
-  'Pre-Law':     { label: 'Pre-Law track',                   description: 'Dilly scores you against Skadden, top law school, and legal employer criteria.', emphasis: 'Your Smart score carries the most weight.' },
-  General:       { label: 'General cohort',                  description: 'Dilly scores you against top employer criteria across industries.',          emphasis: 'All three dimensions are equally weighted.' },
 };
 
 function detectCohort(majors: string[], preProf: string | null): string {
@@ -183,7 +170,7 @@ function TagPicker({
           {tags.map((t) => (
             <TouchableOpacity key={t} style={s.tag} onPress={() => onRemove(t)} activeOpacity={0.7}>
               <Text style={s.tagText}>{t}</Text>
-              <Text style={s.tagX}>×</Text>
+              <Text style={s.tagX}>x</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -273,9 +260,16 @@ export default function ProfileScreen() {
     ? detectCohorts(majors, minors, preProf)
     : [];
   const cohort         = detectedCohortNames[0] || '';
-  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null;
+  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null && photoUri != null;
 
   async function handleContinue() {
+    if (!photoUri) {
+      Alert.alert(
+        'Profile photo required',
+        'Add a profile photo to continue. A professional headshot works best.',
+      );
+      return;
+    }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');
@@ -296,7 +290,7 @@ export default function ProfileScreen() {
           application_target: TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'internship',
           track: resolvedCohort,
           cohort: resolvedCohort,
-          cohorts: detectedCohortNames, // Build-87: all detected cohorts
+          cohorts: detectedCohortNames,
           graduation_year: graduationYear,
           onboarding_complete: false,
         }),
@@ -319,12 +313,11 @@ export default function ProfileScreen() {
         ['dilly_onboarding_graduation_year', String(graduationYear ?? '')],
       ]);
 
-      // Build-88: skip interests page (replaced by cohort system).
-      // Go to industry-target for Quantitative/Data Science majors, otherwise straight to you-are-in.
+      // Route: industry-target for Quantitative/Data Science, otherwise upload
       const needsIndustry = resolvedCohort === 'Quantitative'
         || (majors.includes('Data Science') && resolvedCohort.includes('Data'));
       router.push({
-        pathname: needsIndustry ? '/onboarding/industry-target' : '/onboarding/you-are-in',
+        pathname: needsIndustry ? '/onboarding/industry-target' : '/onboarding/upload',
         params: { cohort: resolvedCohort, name: firstName, context: needsIndustry ? 'data-science' : undefined },
       });
     } catch (err: unknown) {
@@ -356,14 +349,14 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={s.header}>
-          <Text style={s.eyebrow}>Step 1 of 2 · Your profile</Text>
+          <Text style={s.eyebrow}>Step 1 of 2 - Your profile</Text>
           <Text style={s.heading}>Tell me about{'\n'}yourself.</Text>
           <Text style={s.sub}>
-            Dilly scores you against the right cohort and peers  -  he needs this to do it right.
+            Dilly needs this to understand your background and match you with the right opportunities.
           </Text>
         </View>
 
-        {/* Photo */}
+        {/* Photo (mandatory) */}
         <View style={s.photoSection}>
           <TouchableOpacity style={s.photoCircle} onPress={handlePickPhoto} activeOpacity={0.8}>
             {photoUri ? (
@@ -377,7 +370,7 @@ export default function ProfileScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <Text style={s.photoHint}>Add a photo (optional)</Text>
+          <Text style={s.photoHint}>Use a professional photo, like one you'd put on LinkedIn.</Text>
         </View>
 
         {/* Full name */}
@@ -417,7 +410,7 @@ export default function ProfileScreen() {
             onAdd={(v) => { if (!majors.includes(v) && majors.length < 3) setMajors((p) => [...p, v]); }}
             onRemove={(v) => setMajors((p) => p.filter((m) => m !== v))}
           />
-          {/* Cohort reveal card(s) — Build-87: show all detected cohorts */}
+          {/* Cohort reveal card(s) */}
           {detectedCohortNames.length > 0 && (
             <View style={s.cohortCard}>
               <View style={s.cohortDot} />
@@ -537,7 +530,7 @@ export default function ProfileScreen() {
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={[s.buttonText, !canContinue && s.buttonTextDisabled]}>
-              Continue →
+              Continue
             </Text>
           )}
         </TouchableOpacity>
@@ -583,9 +576,11 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   photoHint: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.t3,
     fontWeight: '500',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   backBtn: {
     flexDirection: 'row',
@@ -799,7 +794,7 @@ const s = StyleSheet.create({
     marginTop: spacing.md,
   },
   buttonActive: {
-    backgroundColor: colors.gold, // Dilly brand blue (#2B3A8E)
+    backgroundColor: colors.gold,
   },
   buttonDisabled: {
     backgroundColor: colors.s3,
@@ -813,7 +808,6 @@ const s = StyleSheet.create({
   buttonTextDisabled: {
     color: colors.t3,
   },
-  // blue for back button
   blue: {
     color: colors.blue,
   },
