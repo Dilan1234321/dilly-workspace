@@ -356,7 +356,7 @@ export default function JobsScreen() {
   const [tab, setTab] = useState<Tab>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [userCities, setUserCities] = useState<string[]>([]);
-  const [cityFilterEnabled, setCityFilterEnabled] = useState(false);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [tailoredResumes, setTailoredResumes] = useState<{ id: string; job_title: string; company: string }[]>([]);
   const [narrativeCache, setNarrativeCache] = useState<Record<string, FitNarrativeData>>({});
 
@@ -376,7 +376,7 @@ export default function JobsScreen() {
       // Load user's preferred cities for location filtering
       const cities: string[] = profileRes?.job_locations || [];
       setUserCities(cities);
-      setCityFilterEnabled(cities.length > 0);
+      setSelectedCities(cities);
 
       setListings(feedRes?.listings || []);
     } catch {}
@@ -403,9 +403,9 @@ export default function JobsScreen() {
       );
     }
 
-    // City filter
-    if (cityFilterEnabled && userCities.length > 0) {
-      const cityLower = userCities.map(c => c.toLowerCase().trim());
+    // City filter (multi-select)
+    if (selectedCities.length > 0) {
+      const cityLower = selectedCities.map(c => c.toLowerCase().trim());
       result = result.filter(l => {
         const loc = (l.location || l.location_city || '').toLowerCase();
         const mode = (l.work_mode || '').toLowerCase();
@@ -415,7 +415,7 @@ export default function JobsScreen() {
     }
 
     return result;
-  }, [listings, search, cityFilterEnabled, userCities]);
+  }, [listings, search, selectedCities]);
 
   if (loading) {
     return (
@@ -454,18 +454,35 @@ export default function JobsScreen() {
         </View>
       </View>
 
-      {/* City filter toggle */}
+      {/* City filter chips */}
       {userCities.length > 0 && (
-        <AnimatedPressable
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.lg, paddingBottom: 4 }}
-          onPress={() => setCityFilterEnabled(!cityFilterEnabled)}
-          scaleDown={0.97}
-        >
-          <Ionicons name={cityFilterEnabled ? 'location' : 'location-outline'} size={14} color={cityFilterEnabled ? COBALT : colors.t3} />
-          <Text style={{ fontSize: 11, color: cityFilterEnabled ? COBALT : colors.t3, fontWeight: '600' }}>
-            {cityFilterEnabled ? `Showing: ${userCities.slice(0, 2).join(', ')}${userCities.length > 2 ? ` +${userCities.length - 2}` : ''} + Remote` : 'All locations'}
-          </Text>
-        </AnimatedPressable>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, paddingBottom: 6 }}>
+          <AnimatedPressable
+            style={[s.cityChip, selectedCities.length === 0 && s.cityChipActive]}
+            onPress={() => setSelectedCities([])}
+            scaleDown={0.95}
+          >
+            <Text style={[s.cityChipText, selectedCities.length === 0 && s.cityChipTextActive]}>All</Text>
+          </AnimatedPressable>
+          {userCities.map(city => {
+            const active = selectedCities.includes(city);
+            return (
+              <AnimatedPressable
+                key={city}
+                style={[s.cityChip, active && s.cityChipActive]}
+                onPress={() => {
+                  setSelectedCities(prev =>
+                    prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]
+                  );
+                }}
+                scaleDown={0.95}
+              >
+                <Ionicons name="location" size={10} color={active ? '#fff' : colors.t3} />
+                <Text style={[s.cityChipText, active && s.cityChipTextActive]}>{city.replace(/,\s*\w{2}$/, '')}</Text>
+              </AnimatedPressable>
+            );
+          })}
+        </ScrollView>
       )}
 
       {/* Type tabs */}
@@ -564,6 +581,14 @@ const s = StyleSheet.create({
     backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
   },
   tabPillActive: { backgroundColor: colors.t1, borderColor: colors.t1 },
+  cityChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
+  },
+  cityChipActive: { backgroundColor: COBALT, borderColor: COBALT },
+  cityChipText: { fontSize: 11, fontWeight: '600', color: colors.t2 },
+  cityChipTextActive: { color: '#fff' },
   tabPillText: { fontSize: 11, fontWeight: '600', color: colors.t3 },
   tabPillTextActive: { color: colors.bg },
 
