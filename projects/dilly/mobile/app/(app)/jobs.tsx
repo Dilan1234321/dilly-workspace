@@ -565,7 +565,7 @@ const s = StyleSheet.create({
 
   // Filter pills (unified for job type + city)
   filterPill: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
+    paddingHorizontal: 10, height: 28, justifyContent: 'center', borderRadius: 14,
     backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
   },
   filterPillActive: { backgroundColor: colors.t1, borderColor: colors.t1 },
