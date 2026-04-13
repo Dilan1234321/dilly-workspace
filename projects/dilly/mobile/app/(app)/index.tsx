@@ -14,11 +14,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getToken } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { DillyFace } from '../../components/DillyFace';
-import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
+import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
-import DillyFooter from '../../components/DillyFooter';
 
 // -- Types --------------------------------------------------------------------
 
@@ -28,18 +27,9 @@ interface Profile {
   school?: string;
 }
 
-// -- Helpers ------------------------------------------------------------------
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 // -- Profile Photo ------------------------------------------------------------
 
-function ProfilePhoto({ name, photoUri, size = 40 }: { name: string; photoUri: string | null; size?: number }) {
+function ProfilePhoto({ name, photoUri, size = 32 }: { name: string; photoUri: string | null; size?: number }) {
   const initial = name ? name[0].toUpperCase() : '?';
   const r = size / 2;
 
@@ -52,7 +42,7 @@ function ProfilePhoto({ name, photoUri, size = 40 }: { name: string; photoUri: s
           height: size,
           borderRadius: r,
           borderWidth: 1.5,
-          borderColor: 'rgba(43,58,142,0.15)',
+          borderColor: 'rgba(201,168,76,0.3)',
         }}
       />
     );
@@ -60,12 +50,12 @@ function ProfilePhoto({ name, photoUri, size = 40 }: { name: string; photoUri: s
 
   return (
     <View style={[s.avatar, { width: size, height: size, borderRadius: r }]}>
-      <Text style={[s.avatarInitial, { fontSize: size * 0.38 }]}>{initial}</Text>
+      <Text style={[s.avatarInitial, { fontSize: size * 0.4 }]}>{initial}</Text>
     </View>
   );
 }
 
-// -- Skeleton -----------------------------------------------------------------
+// -- Screen -------------------------------------------------------------------
 
 function Skeleton({ width, height = 14, style }: { width: number | string; height?: number; style?: any }) {
   const opacity = useRef(new Animated.Value(0.3)).current;
@@ -78,28 +68,26 @@ function Skeleton({ width, height = 14, style }: { width: number | string; heigh
   return <Animated.View style={[{ width: width as any, height, borderRadius: 6, backgroundColor: '#E4E6F0', opacity }, style]} />;
 }
 
-// -- Screen -------------------------------------------------------------------
-
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [profile, setProfile]     = useState<Profile>({});
   const [loading, setLoading]     = useState(true);
   const [photoUri, setPhotoUri]   = useState<string | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
-  const [topJobs, setTopJobs]     = useState<any[]>([]);
+  const [topJobs, setTopJobs] = useState<any[]>([]);
   const [dillyTake, setDillyTake] = useState<string | null>(null);
-  const [appCount, setAppCount]   = useState(0);
-  const [factCount, setFactCount] = useState(0);
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // Auth guard
+  // Auth guard: if token is gone (sign-out), redirect away from app screens
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
         const token = await getToken();
-        if (!token && active) router.replace('/');
+        if (!token && active) {
+          router.replace('/');
+        }
       })();
       return () => { active = false; };
     }, [])
@@ -109,27 +97,29 @@ export default function HomeScreen() {
 
   useEffect(() => {
     (async () => {
+      // Don't even try fetching if there's no token
       const token = await getToken();
-      if (!token) { router.replace('/'); return; }
-
+      if (!token) {
+        router.replace('/');
+        return;
+      }
       try {
         const [profileRaw, auditRawRes] = await Promise.all([
           dilly.fetch('/profile'),
           dilly.fetch('/audit/latest'),
         ]);
-
+        // If API returns 401, token is invalid -- redirect to login
         if (profileRaw.status === 401 || profileRaw.status === 403) {
           await (await import('../../lib/auth')).clearAuth();
           router.replace('/');
           return;
         }
-
         const [profileRes, auditRaw] = await Promise.all([
           profileRaw.json(),
           auditRawRes.json(),
         ]);
 
-        // Onboarding redirect
+        // If onboarding not complete, redirect to appropriate step
         if (!profileRes?.onboarding_complete) {
           if (!profileRes?.name) {
             router.replace('/onboarding/profile');
@@ -141,16 +131,13 @@ export default function HomeScreen() {
 
         setProfile(profileRes ?? {});
 
-        // Dilly take
+        // Grab dilly_take from audit if available
         const latestAudit = profileRes?.latest_audit;
         const auditObj = latestAudit ?? auditRaw?.audit ?? auditRaw ?? {};
-        if (auditObj?.dilly_take) setDillyTake(auditObj.dilly_take);
+        if (auditObj?.dilly_take) {
+          setDillyTake(auditObj.dilly_take);
+        }
 
-        // Profile facts count
-        const facts = profileRes?.facts ?? profileRes?.profile_facts;
-        if (Array.isArray(facts)) setFactCount(facts.length);
-
-        // Photo
         const slug = profileRes?.profile_slug;
         if (slug) {
           try {
@@ -160,23 +147,21 @@ export default function HomeScreen() {
             } else {
               setPhotoUri(null);
             }
-          } catch { setPhotoUri(null); }
+          } catch {
+            setPhotoUri(null);
+          }
         }
 
-        // Top jobs (recent activity)
         dilly.get('/v2/internships/feed?readiness=ready&limit=3').then(data => {
           setTopJobs((data?.listings || []).slice(0, 3));
         }).catch(() => {});
-
-        // Application count
-        dilly.get('/applications').then(data => {
-          const list = data?.applications ?? data ?? [];
-          if (Array.isArray(list)) setAppCount(list.length);
-        }).catch(() => {});
-
       } catch {
+        // If fetch failed entirely (network error, no auth), redirect to login
         const stillHasToken = await getToken();
-        if (!stillHasToken) { router.replace('/'); return; }
+        if (!stillHasToken) {
+          router.replace('/');
+          return;
+        }
       } finally {
         setLoading(false);
       }
@@ -193,113 +178,151 @@ export default function HomeScreen() {
 
   const p = profile as any;
   const firstName = p.name?.trim().split(/\s+/)[0] || p.first_name || '';
-
-  // -- Loading state ----------------------------------------------------------
+  const cohort    = p.track || p.cohort || 'General';
+  const school    = p.school_name || p.school_id || '';
 
   if (loading) {
     return (
-      <View style={s.container}>
+      <View style={[s.container]}>
         <ScrollView contentContainerStyle={[s.scroll, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 40 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-            <Skeleton width={40} height={40} style={{ borderRadius: 20 }} />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Skeleton width={180} height={18} style={{ marginBottom: 6 }} />
+          {/* Header skeleton */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+            <Skeleton width={36} height={36} style={{ borderRadius: 18 }} />
+            <View style={{ marginLeft: 10, flex: 1 }}>
+              <Skeleton width={100} height={16} style={{ marginBottom: 6 }} />
+              <Skeleton width={160} height={12} />
             </View>
-            <Skeleton width={24} height={24} style={{ borderRadius: 12 }} />
           </View>
-          <Skeleton width="100%" height={100} style={{ borderRadius: radius.lg, marginBottom: 20 }} />
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-            <Skeleton width="31%" height={68} style={{ borderRadius: radius.md }} />
-            <Skeleton width="31%" height={68} style={{ borderRadius: radius.md }} />
-            <Skeleton width="31%" height={68} style={{ borderRadius: radius.md }} />
+          {/* AI card skeleton */}
+          <View style={{ backgroundColor: colors.s2, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.b1 }}>
+            <Skeleton width={90} height={10} style={{ marginBottom: 14 }} />
+            <Skeleton width="100%" height={40} style={{ borderRadius: 10 }} />
           </View>
-          <Skeleton width="100%" height={60} style={{ borderRadius: radius.md, marginBottom: 8 }} />
-          <Skeleton width="100%" height={60} style={{ borderRadius: radius.md }} />
+          {/* Grid tiles skeleton */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+            <Skeleton width="48%" height={80} style={{ borderRadius: 12 }} />
+          </View>
         </ScrollView>
       </View>
     );
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container]}>
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.indigo} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#2B3A8E" />}
       >
 
-        {/* -- 1. Header --------------------------------------------------- */}
+        {/* -- Header ---------------------------------------------------- */}
         <FadeInView delay={0}>
           <View style={s.header}>
-            <AnimatedPressable onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.92}>
-              <ProfilePhoto name={firstName} photoUri={photoUri} size={40} />
+            <AnimatedPressable onPress={() => router.push('/(app)/profile')} scaleDown={0.92}>
+              <ProfilePhoto name={firstName} photoUri={photoUri} size={36} />
             </AnimatedPressable>
-            <View style={s.headerCenter}>
-              <Text style={s.greeting}>Welcome, {firstName || 'there'}.</Text>
-              <Text style={s.greetingSub}>Welcome to your future.</Text>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={s.headerName}>{firstName || 'Welcome'}</Text>
+              {cohort ? (
+                <Text style={s.headerCohort}>{cohort} cohort{school ? ` / ${school}` : ''}</Text>
+              ) : null}
             </View>
             <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
-              <Ionicons name="settings-outline" size={22} color={colors.t3} />
+              <Ionicons name="settings-outline" size={20} color={colors.t3} />
             </AnimatedPressable>
           </View>
         </FadeInView>
 
-        {/* -- 2. Dilly's insight (conversational, no card) ---------------- */}
-        <FadeInView delay={80}>
-          <AnimatedPressable
-            onPress={() => openDillyOverlay({
-              name: firstName,
-              cohort: (p.track || p.cohort || 'General'),
-              isPaid: false,
-              initialMessage: dillyTake || undefined,
-            })}
-            scaleDown={0.99}
-          >
-            <Text style={s.dillyInsight}>
-              {dillyTake
-                ? `Hey ${firstName || 'there'}, ${dillyTake.charAt(0).toLowerCase()}${dillyTake.slice(1)}`
-                : `Hey ${firstName || 'there'}, tell me about yourself. The more I know, the more I can help you.`}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-              <Ionicons name="chatbubble" size={12} color={colors.indigo} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.indigo }}>Talk to Dilly</Text>
-            </View>
-          </AnimatedPressable>
-        </FadeInView>
 
-        {/* -- 3. Quick Stats Row ------------------------------------------ */}
-        <FadeInView delay={160}>
-          <View style={s.statsRow}>
-            <View style={s.statCard}>
-              <Text style={s.statNumber}>{topJobs.length}</Text>
-              <Text style={s.statLabel}>Jobs viewed</Text>
-            </View>
-            <View style={s.statCard}>
-              <Text style={s.statNumber}>{appCount}</Text>
-              <Text style={s.statLabel}>Applications</Text>
-            </View>
-            <View style={s.statCard}>
-              <Text style={s.statNumber}>{factCount}</Text>
-              <Text style={s.statLabel}>Profile facts</Text>
-            </View>
+        {/* -- A. AI Coach Card (HERO) ----------------------------------- */}
+        <FadeInView delay={80}>
+          <View style={s.aiCard}>
+            <AnimatedPressable
+              style={s.aiPrompt}
+              onPress={() => openDillyOverlay({
+                name: firstName, cohort,
+                isPaid: false,
+              })}
+              scaleDown={0.98}
+            >
+              <View style={s.aiPromptIcon}>
+                <DillyFace size={36} />
+              </View>
+              <Text style={s.aiPromptText}>Ask Dilly anything...</Text>
+              <View style={s.aiPromptArrow}>
+                <Ionicons name="arrow-forward-circle" size={28} color={colors.gold} />
+              </View>
+            </AnimatedPressable>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}>
+              {[
+                { label: 'What should I work on?', msg: 'What should I work on to stand out in my job search?' },
+                { label: 'Help with my resume', msg: 'Help me improve my resume. What are the biggest things I should fix?' },
+                { label: 'Where should I apply?', msg: 'Based on my profile, where should I apply this week?' },
+              ].map(chip => (
+                <AnimatedPressable
+                  key={chip.label}
+                  style={s.chip}
+                  onPress={() => openDillyOverlay({
+                    name: firstName, cohort,
+                    isPaid: false,
+                    initialMessage: chip.msg,
+                  })}
+                  scaleDown={0.95}
+                >
+                  <Text style={s.chipText}>{chip.label}</Text>
+                </AnimatedPressable>
+              ))}
+            </ScrollView>
           </View>
         </FadeInView>
 
-        {/* -- 4. Recent Activity ------------------------------------------ */}
+        {/* -- B. Insight Card ------------------------------------------- */}
+        <FadeInView delay={160}>
+          <View style={s.insightCard}>
+            <View style={s.insightHeader}>
+              <View style={s.insightDot}>
+                <DillyFace size={24} />
+              </View>
+              <Text style={s.insightLabel}>
+                {dillyTake ? 'DILLY SAYS' : 'GET STARTED'}
+              </Text>
+            </View>
+            <Text style={s.insightText}>
+              {dillyTake || 'Talk to Dilly about your goals, experience, and what you are looking for. The more Dilly knows, the better your recommendations.'}
+            </Text>
+            <AnimatedPressable
+              style={s.insightBtn}
+              onPress={() => openDillyOverlay({
+                name: firstName, cohort,
+                isPaid: false,
+              })}
+              scaleDown={0.97}
+            >
+              <Text style={s.insightBtnText}>{dillyTake ? 'Talk to Dilly' : 'Get started with Dilly'}</Text>
+            </AnimatedPressable>
+          </View>
+        </FadeInView>
+
+        {/* -- Top Matches ---------------------------------------------- */}
         {topJobs.length > 0 && (
           <FadeInView delay={240}>
-            <Text style={s.sectionTitle}>RECENT ACTIVITY</Text>
+            <Text style={s.jobsLabel}>TOP MATCHES</Text>
             {topJobs.map((job: any) => (
               <AnimatedPressable
                 key={job.id}
-                style={s.activityCard}
+                style={s.jobCard}
                 onPress={() => router.push('/(app)/jobs')}
                 scaleDown={0.98}
               >
-                <View style={s.activityDot} />
-                <View style={s.activityInfo}>
-                  <Text style={s.activityTitle} numberOfLines={1}>{job.title}</Text>
-                  <Text style={s.activityCompany} numberOfLines={1}>{job.company}</Text>
+                <View style={s.jobInfo}>
+                  <Text style={s.jobTitle} numberOfLines={1}>{job.title}</Text>
+                  <Text style={s.jobCompany} numberOfLines={1}>{job.company} / {job.location || 'Remote'}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color={colors.t3} />
               </AnimatedPressable>
@@ -307,16 +330,15 @@ export default function HomeScreen() {
           </FadeInView>
         )}
 
-        {/* -- 6. Tools Row ------------------------------------------------ */}
+        {/* -- D. Tools Row (compact horizontal) ------------------------- */}
         <FadeInView delay={320}>
-          <Text style={s.sectionTitle}>TOOLS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
             {[
-              { icon: 'sparkles' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
+              { icon: 'person' as const, color: colors.gold, label: 'Profile', onPress: () => router.push('/(app)/my-dilly-profile') },
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
-              { icon: 'chatbubbles' as const, color: colors.green, label: 'What We Think', onPress: () => router.push('/(app)/feedback') },
-              { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
+              { icon: 'briefcase' as const, color: colors.green, label: 'Jobs', onPress: () => router.push('/(app)/jobs') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar') },
+              { icon: 'document-text' as const, color: colors.indigo, label: 'Resume', onPress: () => router.push('/(app)/resume-editor') },
             ].map(tool => (
               <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>
                 <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
@@ -326,11 +348,6 @@ export default function HomeScreen() {
               </AnimatedPressable>
             ))}
           </ScrollView>
-        </FadeInView>
-
-        {/* -- 7. Footer --------------------------------------------------- */}
-        <FadeInView delay={400}>
-          <DillyFooter />
         </FadeInView>
 
       </ScrollView>
@@ -348,173 +365,62 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  headerCenter: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  greeting: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.t1,
-    letterSpacing: -0.3,
-  },
-  greetingSub: {
-    fontSize: 13,
-    color: colors.t3,
-    marginTop: 2,
+    marginBottom: 18,
   },
   avatar: {
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: colors.s3,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(43,58,142,0.15)',
+    borderColor: 'rgba(201,168,76,0.3)',
   },
-  avatarInitial: {
-    fontWeight: '700',
-    color: colors.t1,
-  },
+  avatarInitial: { fontSize: 13, fontWeight: '700', color: colors.t1 },
+  headerName:   { fontSize: 14, fontWeight: '700', color: colors.t1 },
+  headerCohort: { fontSize: 11, fontWeight: '600', color: colors.blue },
 
-  // Next Move card
-  dillyInsight: {
-    fontSize: 15,
-    color: colors.t1,
-    lineHeight: 22,
-    marginBottom: 4,
+  // AI Coach Card
+  aiCard: { marginBottom: 16 },
+  aiPrompt: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.s1, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: colors.goldbdr,
   },
-  nextMoveCard: {
-    backgroundColor: colors.s1,
-    borderRadius: radius.lg,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: colors.ibdr,
-    marginBottom: 20,
+  aiPromptIcon: { width: 36, height: 36 },
+  aiPromptText: { flex: 1, fontSize: 15, color: colors.t3 },
+  aiPromptArrow: {},
+  chipRow: { gap: 8, paddingTop: 10 },
+  chip: {
+    backgroundColor: colors.golddim, borderRadius: 8,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: colors.goldbdr,
   },
-  nextMoveHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  nextMoveLabel: {
-    fontFamily: 'Cinzel_700Bold',
-    fontSize: 9,
-    letterSpacing: 1.2,
-    color: colors.indigo,
-  },
-  nextMoveText: {
-    fontSize: 14,
-    color: colors.t1,
-    lineHeight: 21,
-    marginBottom: 14,
-  },
-  nextMoveFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  nextMoveCta: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.indigo,
-  },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.gold },
 
-  // Stats row
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.s1,
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.b1,
-  },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.t1,
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.t3,
-    textAlign: 'center',
-  },
+  // Job Recommendations
+  jobsLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3, marginBottom: 8 },
+  jobCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.s1, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.b1, marginBottom: 6 },
+  jobInfo: { flex: 1, marginRight: 8 },
+  jobTitle: { fontSize: 13, fontWeight: '600', color: colors.t1 },
+  jobCompany: { fontSize: 11, color: colors.t2, marginTop: 2 },
 
-  // Section titles
-  sectionTitle: {
-    fontFamily: 'Cinzel_700Bold',
-    fontSize: 9,
-    letterSpacing: 1.2,
-    color: colors.t3,
-    marginBottom: 10,
+  // Insight Card
+  insightCard: {
+    backgroundColor: colors.s1, borderRadius: 14, padding: 14,
+    borderWidth: 1, borderColor: colors.b1, marginBottom: 16,
   },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  insightDot: { width: 24, height: 24 },
+  insightLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3 },
+  insightText: { fontSize: 13, color: colors.t2, lineHeight: 19, marginBottom: 12 },
+  insightBtn: { backgroundColor: colors.gold, borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  insightBtnText: { fontFamily: 'Cinzel_700Bold', fontSize: 11, letterSpacing: 0.8, color: '#FFFFFF' },
 
-  // Activity cards
-  activityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.s1,
-    borderRadius: radius.md,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.b1,
-    marginBottom: 6,
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.indigo,
-    opacity: 0.4,
-    marginRight: 10,
-  },
-  activityInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  activityTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.t1,
-  },
-  activityCompany: {
-    fontSize: 11,
-    color: colors.t2,
-    marginTop: 1,
-  },
-
-  // Tools row
-  toolRow: {
-    gap: 16,
-    paddingVertical: 4,
-    marginBottom: 8,
-  },
-  toolItem: {
-    alignItems: 'center',
-    width: 60,
-  },
+  // Tools Row
+  toolRow: { gap: 16, paddingVertical: 4, marginBottom: 16 },
+  toolItem: { alignItems: 'center', width: 56 },
   toolIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
+    width: 44, height: 44, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
-  toolLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.t2,
-    textAlign: 'center',
-  },
+  toolLabel: { fontSize: 10, fontWeight: '600', color: colors.t2, textAlign: 'center' },
 });
