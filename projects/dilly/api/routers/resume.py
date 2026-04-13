@@ -25,7 +25,7 @@ if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
 from fastapi import APIRouter, Body, File, HTTPException, Request, UploadFile
-from fastapi.responses import StreamingResponse, Response
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
 
@@ -2485,6 +2485,39 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
 
     cohort = body.cohort or _detect_cohort_from_job(job_title, job_company)
 
+    # ------------------------------------------------------------------
+    # Look up the job's ATS system
+    # ------------------------------------------------------------------
+    job_ats = None
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            # Try matching by company name + title
+            cur.execute(
+                "SELECT source_ats FROM internships i JOIN companies c ON i.company_id = c.id "
+                "WHERE c.name ILIKE %s AND i.title ILIKE %s AND i.status = 'active' LIMIT 1",
+                (f"%{job_company}%", f"%{job_title}%")
+            )
+            row = cur.fetchone()
+            if row:
+                job_ats = row[0]
+            if not job_ats:
+                # Fallback: just match company
+                cur.execute(
+                    "SELECT source_ats FROM internships i JOIN companies c ON i.company_id = c.id "
+                    "WHERE c.name ILIKE %s AND i.status = 'active' AND source_ats IS NOT NULL LIMIT 1",
+                    (f"%{job_company}%",)
+                )
+                row = cur.fetchone()
+                if row:
+                    job_ats = row[0]
+    except Exception:
+        pass
+
+    if not job_ats:
+        job_ats = 'greenhouse'  # Safe default
+
     # Load existing resume (base variant or primary)
     base_sections = []
     if body.base_variant_id:
@@ -2534,6 +2567,42 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
     if len(base_resume_json) > 12000:
         base_resume_json = base_resume_json[:12000] + "..."
 
+    # ------------------------------------------------------------------
+    # Honesty check: evaluate if user is ready for this role
+    # ------------------------------------------------------------------
+    readiness = 'ready'  # ready | gaps | not_ready
+    gaps_detail = ''
+    check_data = {}
+    try:
+        import anthropic
+        client_check = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+        check_response = client_check.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            system="You evaluate if a candidate has enough in their profile to create an honest resume for a specific role. Return JSON only: {\"readiness\": \"ready\" | \"gaps\" | \"not_ready\", \"gaps\": [\"list of specific missing things\"], \"summary\": \"one sentence explanation\"}. ready = can build a strong resume. gaps = can build a resume but has notable gaps. not_ready = profile is too thin or mismatched for this role.",
+            messages=[{"role": "user", "content": f"Role: {job_title} at {job_company}\nJD: {job_description[:1500]}\nProfile: {profile_facts_text[:2000]}\nResume sections: {len(base_sections)} sections"}],
+        )
+        check_text = check_response.content[0].text
+        j_start = check_text.find('{')
+        j_end = check_text.rfind('}') + 1
+        if j_start >= 0:
+            check_data = json.loads(check_text[j_start:j_end])
+            readiness = check_data.get('readiness', 'ready')
+            gaps_detail = json.dumps(check_data.get('gaps', []))
+    except Exception:
+        readiness = 'ready'  # If check fails, proceed with generation
+
+    # ------------------------------------------------------------------
+    # If not_ready, return early without generating
+    # ------------------------------------------------------------------
+    if readiness == 'not_ready':
+        return JSONResponse({
+            "not_ready": True,
+            "summary": check_data.get('summary', 'Your profile does not have enough relevant experience for this role yet.'),
+            "gaps": check_data.get('gaps', []),
+            "ats": job_ats,
+        })
+
     # Finance company modifier for tech roles
     company_l = job_company.lower()
     is_finance_company = any(kw in company_l for kw in _COMPANY_FINANCE_KEYWORDS)
@@ -2568,6 +2637,16 @@ INSTRUCTIONS:
 8. Keep the resume to one page worth of content.
 9. Preserve the exact JSON structure of the input sections — same keys, same section types.
 
+ATS FORMATTING:
+{_get_ats_formatting(job_ats)}
+
+HONESTY RULES (NON-NEGOTIABLE):
+- NEVER invent experiences, companies, projects, skills, or metrics that are not in the profile or resume
+- NEVER fabricate GPAs, dates, titles, or certifications
+- If the profile is missing something the job wants, DO NOT add it. Leave it out.
+- You may reword existing experiences to highlight relevant aspects, but the underlying facts must be true
+- If there are notable gaps between what the job wants and what the user has, add a "gaps" field to the response
+
 Return ONLY valid JSON — a JSON array of resume section objects matching this exact schema:
 [
   {{"key": "contact", "label": "Contact", "contact": {{"name": "", "email": "", "phone": "", "location": "", "linkedin": ""}}}},
@@ -2578,22 +2657,98 @@ Return ONLY valid JSON — a JSON array of resume section objects matching this 
 ]
 Include only sections that have content. Do not include markdown, explanations, or any text outside the JSON array."""
 
-    async def stream_generate():
-        try:
-            import anthropic
-            client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
-            async with client.messages.stream(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=4096,
-                system=system_prompt,
-                messages=[{"role": "user", "content": f"Generate a tailored resume for {job_title} at {job_company}. Return only the JSON array."}],
-            ) as stream:
-                async for text in stream.text_stream:
-                    yield text
-        except Exception as e:
-            yield f"\n{{\"error\": \"{str(e)[:100]}\"}}"
+    # Add gaps instruction if applicable
+    if readiness == 'gaps':
+        system_prompt += f"\n\nNOTE: The candidate has gaps for this role: {gaps_detail}. Generate the best resume possible from what they have, but in a separate 'gaps' field, list what's missing."
 
-    return StreamingResponse(stream_generate(), media_type="text/plain")
+    # ------------------------------------------------------------------
+    # Non-streaming generation with ATS/gaps metadata wrapper
+    # ------------------------------------------------------------------
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[{"role": "user", "content": f"Generate a tailored resume for {job_title} at {job_company}. Return only the JSON array."}],
+        )
+        raw = response.content[0].text
+        # Parse the JSON array
+        j_start = raw.find('[')
+        j_end = raw.rfind(']') + 1
+        if j_start == -1:
+            raise ValueError("No JSON array in response")
+        sections = json.loads(raw[j_start:j_end])
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Resume generation failed: {str(e)[:100]}")
+
+    # Count matched keywords
+    jd_lower = job_description.lower()
+    keyword_matches = 0
+    for section in sections:
+        for exp in (section.get('experiences') or []) + (section.get('projects') or []):
+            for bullet in (exp.get('bullets') or []):
+                text = (bullet.get('text') or bullet if isinstance(bullet, str) else '').lower()
+                # Simple keyword check
+                for word in jd_lower.split():
+                    if len(word) > 4 and word in text:
+                        keyword_matches += 1
+                        break
+
+    return {
+        "sections": sections,
+        "ats": job_ats,
+        "ats_formatted": True,
+        "ats_label": f"Formatted for {job_ats.title()}",
+        "readiness": readiness,
+        "gaps": json.loads(gaps_detail) if gaps_detail else [],
+        "keyword_note": f"Optimized for {job_ats.title()} ATS",
+    }
+
+
+def _get_ats_formatting(ats: str) -> str:
+    """Return ATS-specific formatting instructions for the resume generator."""
+    rules = {
+        'greenhouse': (
+            "ATS: Greenhouse.\n"
+            "- Single column layout, no tables or columns\n"
+            "- Standard section headers: Education, Experience, Projects, Skills\n"
+            "- Bullet points with standard characters\n"
+            "- PDF-friendly formatting\n"
+            "- Include relevant keywords from the job description naturally in bullets"
+        ),
+        'lever': (
+            "ATS: Lever.\n"
+            "- Clean single column, similar to Greenhouse\n"
+            "- Standard section headers\n"
+            "- Lever parses well, focus on keyword matching\n"
+            "- Include relevant keywords from the JD in bullets and skills"
+        ),
+        'ashby': (
+            "ATS: Ashby.\n"
+            "- Modern ATS, handles most formatting\n"
+            "- Standard section headers preferred\n"
+            "- Focus on keyword relevance over formatting tricks"
+        ),
+        'workday': (
+            "ATS: Workday.\n"
+            "- VERY strict parsing. Use extremely simple formatting\n"
+            "- NO tables, NO columns, NO headers with special characters\n"
+            "- Section headers must be exact: Education, Work Experience, Skills\n"
+            "- Plain bullet points only (- or *)\n"
+            "- No graphics, icons, or fancy formatting\n"
+            "- Dates must be in MM/YYYY format"
+        ),
+        'taleo': (
+            "ATS: Taleo (Oracle).\n"
+            "- Very old ATS, needs plain text-like formatting\n"
+            "- Simple section headers, no special characters\n"
+            "- Standard date formats\n"
+            "- Avoid any complex formatting"
+        ),
+    }
+    return rules.get(ats, rules['greenhouse'])
 
 
 def _get_cohort_tip(cohort: str) -> str:
