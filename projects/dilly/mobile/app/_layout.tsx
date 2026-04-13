@@ -233,6 +233,7 @@ const ls = StyleSheet.create({
   logoImage: {
     width: 130,
     height: 45,
+    marginBottom: 16,
   },
   wordmark: {
     fontFamily:    'Cinzel_900Black',

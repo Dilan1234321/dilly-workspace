@@ -59,7 +59,7 @@ interface FitNarrativeData {
   fit_color: 'green' | 'amber' | 'red';
 }
 
-type Tab = 'all' | 'internship' | 'entry_level';
+type Tab = 'all' | 'internship' | 'entry_level' | 'full_time' | 'part_time' | 'other';
 
 // -- Helpers ----------------------------------------------------------------
 
@@ -486,20 +486,27 @@ export default function JobsScreen() {
       )}
 
       {/* Type tabs */}
-      <View style={s.tabRow}>
-        {(['all', 'internship', 'entry_level'] as Tab[]).map(t => (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabRow}>
+        {([
+          { key: 'all', label: 'All' },
+          { key: 'internship', label: 'Internships' },
+          { key: 'entry_level', label: 'Entry Level' },
+          { key: 'full_time', label: 'Full Time' },
+          { key: 'part_time', label: 'Part Time' },
+          { key: 'other', label: 'Other' },
+        ] as { key: Tab; label: string }[]).map(t => (
           <AnimatedPressable
-            key={t}
-            style={[s.tabPill, tab === t && s.tabPillActive]}
-            onPress={() => { setTab(t); setLoading(true); }}
+            key={t.key}
+            style={[s.tabPill, tab === t.key && s.tabPillActive]}
+            onPress={() => { setTab(t.key); setLoading(true); }}
             scaleDown={0.95}
           >
-            <Text style={[s.tabPillText, tab === t && s.tabPillTextActive]}>
-              {t === 'all' ? 'All' : t === 'internship' ? 'Internships' : 'Entry Level'}
+            <Text style={[s.tabPillText, tab === t.key && s.tabPillTextActive]}>
+              {t.label}
             </Text>
           </AnimatedPressable>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Job listings */}
       <ScrollView
@@ -582,12 +589,12 @@ const s = StyleSheet.create({
   },
   tabPillActive: { backgroundColor: colors.t1, borderColor: colors.t1 },
   cityChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 8, paddingVertical: 5, borderRadius: 6,
     backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
   },
   cityChipActive: { backgroundColor: COBALT, borderColor: COBALT },
-  cityChipText: { fontSize: 11, fontWeight: '600', color: colors.t2 },
+  cityChipText: { fontSize: 10, fontWeight: '600', color: colors.t2 },
   cityChipTextActive: { color: '#fff' },
   tabPillText: { fontSize: 11, fontWeight: '600', color: colors.t3 },
   tabPillTextActive: { color: colors.bg },

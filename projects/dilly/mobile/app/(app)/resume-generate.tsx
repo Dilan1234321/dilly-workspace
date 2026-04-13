@@ -16,6 +16,7 @@ import * as Sharing from 'expo-sharing';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
