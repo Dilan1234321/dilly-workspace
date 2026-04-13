@@ -455,7 +455,7 @@ export default function JobsScreen() {
       </View>
 
       {/* Filters: type + city in one row */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, paddingVertical: 6 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40, flexGrow: 0 }} contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, alignItems: 'center' }}>
         {/* Job type pills */}
         {([
           { key: 'all', label: 'All' },
