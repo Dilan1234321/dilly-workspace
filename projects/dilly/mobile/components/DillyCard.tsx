@@ -19,6 +19,7 @@ import {
 import InlineToastView, { useInlineToast } from './InlineToast';
 import { Ionicons } from '@expo/vector-icons';
 import { lightHaptic, mediumHaptic, successHaptic } from '../lib/haptics';
+import { dilly } from '../lib/dilly';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 // Lazy-load native modules to prevent crash if not properly linked
@@ -448,8 +449,16 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
     }).start(() => setShowBack(!showBack));
   }
 
+  const saveTaglineTimer = useRef<any>(null);
   function update(key: keyof CardData, value: string) {
     setData(prev => ({ ...prev, [key]: value }));
+    // Auto-save tagline to profile (debounced)
+    if (key === 'tagline') {
+      if (saveTaglineTimer.current) clearTimeout(saveTaglineTimer.current);
+      saveTaglineTimer.current = setTimeout(() => {
+        dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ profile_tagline: value.trim() }) }).catch(() => {});
+      }, 1000);
+    }
   }
 
   /** Build a friendly filename: "{Name} Dilly Card.png" */
