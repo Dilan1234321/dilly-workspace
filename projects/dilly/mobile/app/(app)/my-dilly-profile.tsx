@@ -158,6 +158,25 @@ function FactRow({ fact, color, onPress }: { fact: FactItem; color: string; onPr
   );
 }
 
+function SkillTag({ skill, conf, onPress }: { skill: FactItem; conf: number; onPress: (anchor: { x: number; y: number }) => void }) {
+  const tagRef = useRef<View>(null);
+  return (
+    <AnimatedPressable
+      style={[d.skillTag, { opacity: 0.5 + conf * 0.5 }]}
+      onPress={() => {
+        tagRef.current?.measureInWindow((x, y, w, h) => {
+          onPress({ x: x + w / 2, y: y + h });
+        });
+      }}
+      scaleDown={0.95}
+    >
+      <View ref={tagRef}>
+        <Text style={[d.skillTagText, { fontSize: 11 + conf * 3 }]}>{skill.label || skill.value}</Text>
+      </View>
+    </AnimatedPressable>
+  );
+}
+
 // ── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function MyDillyProfileScreen() {
@@ -804,9 +823,7 @@ export default function MyDillyProfileScreen() {
               {allSkills.slice(0, 20).map((skill, i) => {
                 const conf = skill.confidence === 'high' ? 1 : skill.confidence === 'medium' ? 0.7 : 0.4;
                 return (
-                  <View key={skill.id || i} style={[d.skillTag, { opacity: 0.5 + conf * 0.5 }]}>
-                    <Text style={[d.skillTagText, { fontSize: 11 + conf * 3 }]}>{skill.label || skill.value}</Text>
-                  </View>
+                  <SkillTag key={skill.id || i} skill={skill} conf={conf} onPress={(anchor) => setPopup({ visible: true, anchor, fact: skill })} />
                 );
               })}
             </View>
