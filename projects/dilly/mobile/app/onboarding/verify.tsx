@@ -135,7 +135,7 @@ export default function VerifyScreen() {
             const r2 = await fetch(`${API_BASE}/auth/send-verification-code`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: isReturning ? returningEmail.trim() : email }),
+              body: JSON.stringify({ email: isReturning ? returningEmail.trim() : email, user_type: userType === 'general' ? 'general' : undefined }),
             });
             const d2 = await r2.json();
             startResendCooldown();
@@ -174,11 +174,11 @@ export default function VerifyScreen() {
       const res = await fetch(`${API_BASE}/auth/send-verification-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToUse }),
+        body: JSON.stringify({ email: emailToUse, user_type: userType === 'general' ? 'general' : undefined }),
       });
       const data = await res.json();
       startResendCooldown();
-      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 200);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Couldn't resend. Try again.");
     }

@@ -71,16 +71,9 @@ export default function ProfileProScreen() {
 
   // Derived
   const detectedCohorts = fieldToCohorts(selectedFields);
-  const canContinue = fullName.trim().length >= 2 && selectedFields.length >= 1 && photo != null;
+  const canContinue = fullName.trim().length >= 2 && selectedFields.length >= 1;
 
   async function handleContinue() {
-    if (!photo) {
-      Alert.alert(
-        'Profile photo required',
-        'Add a profile photo to continue. A professional headshot works best.',
-      );
-      return;
-    }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');

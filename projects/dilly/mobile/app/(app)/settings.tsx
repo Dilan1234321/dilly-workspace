@@ -101,7 +101,7 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await clearAuth();
-          router.replace('/');
+          router.replace('/onboarding/choose-path');
         },
       },
     ]);
@@ -127,7 +127,7 @@ export default function SettingsScreen() {
                     await dilly.fetch('/profile/delete', { method: 'DELETE' });
                   } catch {}
                   await clearAuth();
-                  router.replace('/');
+                  router.replace('/onboarding/choose-path');
                 },
               },
             ]);

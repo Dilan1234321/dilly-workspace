@@ -260,16 +260,9 @@ export default function ProfileScreen() {
     ? detectCohorts(majors, minors, preProf)
     : [];
   const cohort         = detectedCohortNames[0] || '';
-  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null && photoUri != null;
+  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null;
 
   async function handleContinue() {
-    if (!photoUri) {
-      Alert.alert(
-        'Profile photo required',
-        'Add a profile photo to continue. A professional headshot works best.',
-      );
-      return;
-    }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');
