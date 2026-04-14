@@ -48,8 +48,17 @@ interface InsightsLetter {
 
 // ── Loading State ──────────────────────────────────────────────────────────
 
+const LOADING_TEXTS = [
+  'Taking a closer look at you...',
+  'Reading your profile...',
+  'Connecting the dots...',
+  'Finding patterns...',
+  'Almost there...',
+];
+
 function LoadingState() {
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const [textIdx, setTextIdx] = useState(0);
 
   useEffect(() => {
     Animated.loop(
@@ -58,15 +67,16 @@ function LoadingState() {
         Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
+    const interval = setInterval(() => setTextIdx(i => (i + 1) % LOADING_TEXTS.length), 2500);
+    return () => clearInterval(interval);
   }, [pulseAnim]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
       <DillyFace size={120} />
       <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: colors.t2, marginTop: 24, opacity: pulseAnim }}>
-        Taking a closer look at you...
+        {LOADING_TEXTS[textIdx]}
       </Animated.Text>
-      <Text style={{ fontSize: 12, color: colors.t3, marginTop: 8 }}>This takes a few seconds.</Text>
     </View>
   );
 }

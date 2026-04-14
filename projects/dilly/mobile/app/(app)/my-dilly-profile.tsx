@@ -365,6 +365,41 @@ export default function MyDillyProfileScreen() {
                 <Text style={d.editFieldLabel}>Tagline</Text>
                 <TextInput style={d.editFieldInput} value={editTagline} onChangeText={setEditTagline} placeholder="e.g. Aspiring Data Scientist" placeholderTextColor={colors.t3} maxLength={50} />
               </View>
+
+              {/* Career Fields (non-students only) */}
+              {(p.user_type === 'general' || p.user_type === 'professional') && (
+                <View style={d.editField}>
+                  <Text style={d.editFieldLabel}>Career Fields</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {(p.career_fields || []).map((field: string, i: number) => (
+                      <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.idim, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: colors.ibdr }}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.t1 }}>{field}</Text>
+                        <AnimatedPressable onPress={async () => {
+                          const updated = (p.career_fields || []).filter((_: string, j: number) => j !== i);
+                          setProfile((prev: any) => ({ ...prev, career_fields: updated }));
+                          await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ career_fields: updated }) }).catch(() => {});
+                        }} scaleDown={0.9} hitSlop={6}>
+                          <Ionicons name="close-circle" size={14} color={colors.t3} />
+                        </AnimatedPressable>
+                      </View>
+                    ))}
+                  </View>
+                  <TextInput
+                    style={[d.editFieldInput, { marginTop: 6 }]}
+                    placeholder="Add a field (e.g. Marketing)"
+                    placeholderTextColor={colors.t3}
+                    returnKeyType="done"
+                    onSubmitEditing={(e) => {
+                      const val = e.nativeEvent.text.trim();
+                      if (val) {
+                        const updated = [...(p.career_fields || []), val];
+                        setProfile((prev: any) => ({ ...prev, career_fields: updated }));
+                        dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ career_fields: updated }) }).catch(() => {});
+                      }
+                    }}
+                  />
+                </View>
+              )}
             </View>
           </FadeInView>
         )}

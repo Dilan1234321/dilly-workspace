@@ -21,6 +21,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import { DillyFace } from '../../components/DillyFace';
 
 const W = Dimensions.get('window').width;
 
@@ -148,6 +149,33 @@ function ActDivider({ number, title }: { number: string; title: string }) {
   );
 }
 
+// ── Loading State ────────────────────────────────────────────────────────────
+
+function ArenaLoadingState({ texts }: { texts: string[] }) {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const [textIdx, setTextIdx] = useState(0);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ).start();
+    const interval = setInterval(() => setTextIdx(i => (i + 1) % texts.length), 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
+      <DillyFace size={120} />
+      <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: TEXT, marginTop: 24, opacity: pulseAnim }}>
+        {texts[textIdx]}
+      </Animated.Text>
+    </View>
+  );
+}
+
 // ── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function AIArenaScreen() {
@@ -240,11 +268,14 @@ export default function AIArenaScreen() {
   const aiResistantSkills = shield?.ai_resistant_skills ?? [];
 
   if (loading) {
-    return (
-      <View style={[a.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={ACCENT} />
-      </View>
-    );
+    const ARENA_LOADING = [
+      'Scanning your AI readiness...',
+      'Analyzing your field...',
+      'Checking what AI can replace...',
+      'Finding your edge...',
+      'Building your playbook...',
+    ];
+    return <ArenaLoadingState texts={ARENA_LOADING} />;
   }
 
   return (

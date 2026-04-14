@@ -451,9 +451,9 @@ export default function InterviewPracticeScreen() {
               {/* Actions */}
               <View style={s.actionRow}>
                 <AnimatedPressable
-                  style={[s.submitBtn, currentAnswer.trim().length < 10 && { opacity: 0.4 }]}
+                  style={[s.submitBtn, currentAnswer.trim().length === 0 && { opacity: 0.4 }]}
                   onPress={submitAnswer}
-                  disabled={currentAnswer.trim().length < 10}
+                  disabled={currentAnswer.trim().length === 0}
                   scaleDown={0.97}
                 >
                   <Text style={s.submitBtnText}>
