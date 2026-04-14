@@ -32,6 +32,7 @@ type DemoCandidate = {
   experience: Array<{ company: string; role: string; date: string; bullets: string[]; matched?: boolean }>;
   location: string;
   avatar_color: string;
+  profile_facts: string[];
   ask_ai: Record<string, string>;
 };
 
@@ -106,6 +107,12 @@ const DEMO_CANDIDATES: DemoCandidate[] = [
         ],
       },
     ],
+    profile_facts: [
+      "When Stripe's feature store had no designated owner, Priya volunteered to own it — told Dilly: 'Unmaintained systems bother me more than hard problems.'",
+      "She taught herself Go by rewriting an internal Python service at Stripe for fun over a long weekend — 'I wanted to understand why the team chose Python over Go for this one.'",
+      "Explicitly not interested in management track — 'I want to be the person who actually builds the thing for a long time.'",
+      "Her CMU thesis was on distributed consensus under network partitions — she has strong opinions about CAP theorem tradeoffs in practice.",
+    ],
     ask_ai: {
       "How do they handle technical ambiguity?": "Priya's profile shows a consistent pattern of self-directed problem framing. When Stripe's ML feature store had no clear owner and no clear path forward, she proposed and led the re-architecture without being asked. She told Dilly: 'The old system was a black box. I spent two weeks understanding it before I wrote a single line of code.' She has a low tolerance for undefined systems — but rather than waiting for clarity, she generates it herself.",
       "What is the biggest risk in hiring this candidate?": "The honest risk is pace expectations. Priya works methodically — she builds deep understanding before shipping. At Stripe that is a feature, not a bug. In a startup moving fast without full requirements, she may need support calibrating urgency vs. thoroughness. She is not slow, but she is deliberate. If your environment rewards speed over correctness, she will need to consciously adapt.",
@@ -160,6 +167,12 @@ const DEMO_CANDIDATES: DemoCandidate[] = [
         ],
       },
     ],
+    profile_facts: [
+      "Told Dilly: 'I spend the first week of any new codebase just reading. I do not write a line until I understand what already exists.'",
+      "Has a public GitHub with 6 side projects — including a from-scratch Raft implementation and a distributed key-value store in Go.",
+      "Genuinely interested in performance engineering at the hardware level — reads CPU architecture papers for fun.",
+      "Not applying to Google or Meta on principle — 'I want to work somewhere small enough that my work is obviously mine.'",
+    ],
     ask_ai: {
       "How do they handle technical ambiguity?": "Marcus approaches ambiguity through first-principles research. When he joined the Cloudflare Workers runtime team, he spent two weeks reading the V8 internals docs before touching the codebase. He told Dilly: 'I need to understand the shape of a problem before I start moving parts.' His research background reinforces this — he is comfortable in systems with no clear answers, but he tends to over-architect before executing. That is manageable, but worth calibrating early.",
       "What is the biggest risk in hiring this candidate?": "The main risk is the gap between his ceiling and his current floor. Marcus has the raw ability for this role — his Cloudflare work shows that. But he has never owned a service end-to-end, never been on-call for a production system with a real SLA. He will need a structured ramp and a patient first manager. If you can give him that, the upside is significant. If you need someone who can run independently from day one, he is not ready yet.",
@@ -201,6 +214,11 @@ const DEMO_CANDIDATES: DemoCandidate[] = [
           "Shipped timezone normalization service used by 500K+ daily scheduling events",
         ],
       },
+    ],
+    profile_facts: [
+      "Told Dilly she is actively learning Kafka through a side project — building a real-time event tracker for her university's dining hall — 3 months in.",
+      "Her career goal is to be a technical co-founder within 5 years — she thinks about infrastructure from a business cost perspective, not just engineering.",
+      "She applied to this role knowing it was a stretch — 'I know I am not the obvious fit, but I learn fastest when I am a little over my head.'",
     ],
     ask_ai: {
       "How do they handle technical ambiguity?": "Aisha's profile shows strong execution instincts within a defined scope, but less evidence of owning ambiguous problems. At Calendly, her projects were well-specified before she started. She told Dilly: 'I prefer to have a clear objective before I start building.' That is not a red flag at this stage in her career — it is developmentally appropriate. For this infrastructure role though, requirements rarely arrive pre-specified. She would need coaching on how to operate in an environment where discovery and delivery happen simultaneously.",
@@ -640,6 +658,21 @@ function ProfileView({
       <div className="dr-profile-columns">
         {/* LEFT */}
         <div className="dr-profile-col-left">
+          {/* What Dilly knows — the living profile advantage */}
+          <section className="dr-profile-section">
+            <h2 className="dr-section-heading dr-section-heading--indigo">
+              What Dilly knows that the resume does not
+            </h2>
+            <p style={{ fontSize: "0.8rem", color: "var(--dr-text-muted)", marginBottom: "0.75rem", lineHeight: 1.5 }}>
+              From Dilly conversations. Not on any resume.
+            </p>
+            <ul className="dr-profile-facts">
+              {candidate.profile_facts.map((fact, i) => (
+                <li key={i} className="dr-profile-fact">{fact}</li>
+              ))}
+            </ul>
+          </section>
+
           {/* Why they fit */}
           <section className="dr-profile-section">
             <h2 className="dr-section-heading dr-section-heading--indigo">

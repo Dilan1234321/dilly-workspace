@@ -3140,3 +3140,60 @@
   font-size: 0.75rem;
   opacity: 0.6;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROFILE FACTS — "What Dilly knows that the resume does not"
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.recruiter-v2 .dr-profile-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.recruiter-v2 .dr-profile-fact {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--dr-text);
+  padding: 0.7rem 0.9rem;
+  background: rgba(43, 58, 142, 0.04);
+  border-left: 2.5px solid rgba(43, 58, 142, 0.3);
+  border-radius: 0 var(--dr-radius-sm) var(--dr-radius-sm) 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DEMO ENTRY BANNER (on main search page when no API key)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.recruiter-v2 .dr-demo-entry-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--dr-indigo);
+  background: rgba(43, 58, 142, 0.07);
+  border: 1px solid rgba(43, 58, 142, 0.2);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  text-decoration: none;
+  transition: background 0.13s ease;
+}
+
+.recruiter-v2 .dr-demo-entry-banner:hover {
+  background: rgba(43, 58, 142, 0.13);
+}
+
+.recruiter-v2 .dr-demo-entry-banner-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dr-indigo);
+  flex-shrink: 0;
+  animation: dr-live-pulse 2s ease-in-out infinite;
+}

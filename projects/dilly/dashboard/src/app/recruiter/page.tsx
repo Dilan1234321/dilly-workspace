@@ -413,6 +413,16 @@ export default function RecruiterPage() {
         <p className="dr-page-subtitle">
           Dilly reads the full profile, not just the resume.
         </p>
+        {!apiKey && (
+          <Link
+            href="/recruiter/demo"
+            className="dr-demo-entry-banner"
+          >
+            <span className="dr-demo-entry-banner-dot" />
+            No API key? Try the interactive demo first
+            <ChevronRight size={13} style={{ marginLeft: "0.2rem" }} />
+          </Link>
+        )}
       </div>
 
       {/* Search */}
