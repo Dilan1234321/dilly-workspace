@@ -1100,6 +1100,172 @@ async def get_public_profile_photo(slug: str):
 
 
 # ---------------------------------------------------------------------------
+# Public Web Profile (human-readable slug)
+# ---------------------------------------------------------------------------
+
+@router.get("/profile/web/{slug}")
+async def get_web_profile(slug: str):
+    """Public web profile data for hellodilly.com/s/ and /p/ pages.
+    Returns curated, privacy-safe data. No auth required.
+    """
+    from projects.dilly.api.profile_store import get_profile_by_readable_slug, get_profile_slug
+    from projects.dilly.api.memory_surface_store import get_memory_surface
+    from projects.dilly.api.schools import get_school_from_email, SCHOOLS
+
+    profile = get_profile_by_readable_slug(slug)
+    if not profile:
+        raise errors.not_found("Profile not found.")
+
+    email = (profile.get("email") or "").strip().lower()
+    if not email:
+        raise errors.not_found("Profile not found.")
+
+    # Check if user has opted out of public visibility
+    if profile.get("public_profile_visible") is False:
+        raise errors.not_found("Profile not found.")
+
+    # School info
+    school_id = (profile.get("school_id") or profile.get("schoolId") or "").strip().lower()
+    school_config = SCHOOLS.get(school_id) if school_id else get_school_from_email(email)
+    school_name = school_config.get("name") if school_config else profile.get("school") or None
+
+    # Majors/minors
+    majors = profile.get("majors") or []
+    if not majors and profile.get("major"):
+        majors = [profile.get("major")]
+    minors = [m for m in (profile.get("minors") or []) if m and str(m).strip().upper() not in ("N/A", "NA")]
+
+    # Memory surface for skills and career interests
+    surface = get_memory_surface(email)
+    facts = surface.get("items") or []
+
+    # Extract public-safe categories only
+    SAFE_CATEGORIES = frozenset({
+        "skill_unlisted", "soft_skill", "technical_skill", "skill",
+        "achievement", "project", "experience", "education",
+        "goal", "interest", "career_interest",
+    })
+    PRIVATE_CATEGORIES = frozenset({
+        "challenge", "concern", "weakness", "fear", "personal",
+        "contact", "phone", "email_address",
+    })
+
+    public_skills = []
+    career_interests = []
+    impact_statements = []
+    experience_items = []
+
+    for f in facts:
+        cat = (f.get("category") or "").lower()
+        if cat in PRIVATE_CATEGORIES:
+            continue
+        conf = f.get("confidence", "medium")
+        if cat in ("skill_unlisted", "soft_skill", "technical_skill", "skill"):
+            if conf in ("high", "medium"):
+                public_skills.append({
+                    "label": f.get("label") or f.get("value", ""),
+                    "confidence": conf,
+                })
+        elif cat in ("goal", "interest", "career_interest"):
+            career_interests.append(f.get("label") or f.get("value", ""))
+        elif cat in ("achievement", "project"):
+            val = f.get("value") or f.get("label") or ""
+            label = f.get("label") or ""
+            if val and len(val) > 10:
+                impact_statements.append({"label": label, "value": val})
+        elif cat == "experience":
+            impact_statements.append({
+                "label": f.get("label") or "",
+                "value": f.get("value") or "",
+            })
+
+    # Experience expansion (structured experience from profile)
+    experience_expansion = profile.get("experience_expansion") or []
+    for exp in experience_expansion[:8]:
+        if not isinstance(exp, dict):
+            continue
+        role = exp.get("role_label") or ""
+        org = exp.get("organization") or ""
+        if role or org:
+            experience_items.append({
+                "role": role,
+                "organization": org,
+                "skills": (exp.get("skills") or [])[:6],
+            })
+
+    # Determine user type
+    user_type = profile.get("user_type") or "student"
+    is_student = user_type not in ("general", "professional")
+    grad_year = profile.get("graduation_year") or profile.get("class_year") or ""
+
+    # Cities
+    cities = profile.get("job_locations") or []
+
+    # Career fields (for professionals)
+    career_fields = profile.get("career_fields") or []
+
+    out = {
+        "name": (profile.get("name") or "").strip(),
+        "slug": slug,
+        "user_type": user_type,
+        "is_student": is_student,
+        "tagline": (profile.get("profile_tagline") or profile.get("custom_tagline") or "").strip() or None,
+        "school": school_name,
+        "majors": majors,
+        "minors": minors,
+        "class_year": str(grad_year) if grad_year else None,
+        "cities": cities[:5],
+        "career_fields": career_fields[:5],
+        "career_interests": career_interests[:6],
+        "skills": public_skills[:20],
+        "impact_statements": impact_statements[:5],
+        "experience": experience_items[:8],
+        "photo_url": f"/profile/public/{get_profile_slug(email)}/photo",
+        "has_photo": bool(profile.get("profile_photo_b64") or False),
+    }
+
+    return JSONResponse(
+        content=out,
+        headers={
+            "Cache-Control": "public, max-age=300",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+@router.get("/profile/web/{slug}/photo")
+async def get_web_profile_photo(slug: str):
+    """Serve profile photo by readable slug. No auth."""
+    from projects.dilly.api.profile_store import get_profile_by_readable_slug, get_profile_photo_path
+    profile = get_profile_by_readable_slug(slug)
+    if not profile:
+        raise errors.not_found("Not found.")
+    email = (profile.get("email") or "").strip().lower()
+    path = get_profile_photo_path(email)
+    if not path or not os.path.isfile(path):
+        raise errors.not_found("No photo.")
+    ext = os.path.splitext(path)[1].lower()
+    media = {".png": "image/png", ".webp": "image/webp"}.get(ext, "image/jpeg")
+    return FileResponse(path, media_type=media, headers={"Cache-Control": "public, max-age=300"})
+
+
+@router.post("/profile/generate-slug")
+async def generate_slug_endpoint(request: Request):
+    """Generate or return the user's human-readable profile slug."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    from projects.dilly.api.profile_store import generate_readable_slug
+    slug = generate_readable_slug(email)
+    profile = get_profile(email) or {}
+    user_type = profile.get("user_type") or "student"
+    is_student = user_type not in ("general", "professional")
+    prefix = "s" if is_student else "p"
+    return {"slug": slug, "prefix": prefix, "url": f"https://hellodilly.com/{prefix}/{slug}"}
+
+
+# ---------------------------------------------------------------------------
 # Streak + Daily Check-In
 # ---------------------------------------------------------------------------
 

@@ -253,7 +253,7 @@ def get_profile_slug(email: str) -> str:
 def get_profile_by_slug(slug: str) -> dict | None:
     if not slug or len(slug) != 16:
         return None
-    # slug is sha256[:16] of email — need to scan (or store slug column)
+    # slug is sha256[:16] of email - need to scan (or store slug column)
     # Fall back to filesystem for now if not found via DB
     path = os.path.join(_PROFILES_DIR, slug, "profile.json")
     if os.path.isfile(path):
@@ -266,6 +266,89 @@ def get_profile_by_slug(slug: str) -> dict | None:
                 return get_profile(email)
         except Exception:
             pass
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Human-readable slug system (firstname-lastname, firstname-lastname2, etc.)
+# ---------------------------------------------------------------------------
+
+def _make_readable_slug(name: str) -> str:
+    """Convert 'John Smith' to 'john-smith'."""
+    import re as _re
+    slug = (name or "").strip().lower()
+    slug = _re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = _re.sub(r"\s+", "-", slug).strip("-")
+    return slug or "user"
+
+
+def generate_readable_slug(email: str) -> str:
+    """Generate or return cached human-readable slug for a user.
+
+    Format: firstname-lastname (students: s/firstname-lastname, pros: p/firstname-lastname)
+    Handles duplicates by appending a number: firstname-lastname2, firstname-lastname3, etc.
+    """
+    import psycopg2
+
+    profile = get_profile(email) or {}
+    existing = profile.get("readable_slug")
+    if existing:
+        return existing
+
+    name = profile.get("name") or profile.get("full_name") or ""
+    base = _make_readable_slug(name)
+    if not base or base == "user":
+        # Fallback to email prefix
+        base = _make_readable_slug(email.split("@")[0])
+
+    # Check for duplicates across all profiles by scanning
+    candidate = base
+    counter = 1
+    while True:
+        # Check if this slug is taken by another user
+        taken = False
+        for uid in os.listdir(_PROFILES_DIR):
+            ppath = os.path.join(_PROFILES_DIR, uid, "profile.json")
+            if not os.path.isfile(ppath):
+                continue
+            try:
+                import json as _json
+                with open(ppath) as f:
+                    p = _json.load(f)
+                if p.get("readable_slug") == candidate and p.get("email") != email:
+                    taken = True
+                    break
+            except Exception:
+                continue
+        if not taken:
+            break
+        counter += 1
+        candidate = f"{base}{counter}"
+
+    # Save the slug to profile
+    profile["readable_slug"] = candidate
+    save_profile(email, profile)
+    return candidate
+
+
+def get_profile_by_readable_slug(slug: str) -> dict | None:
+    """Look up a profile by human-readable slug (e.g. 'john-smith' or 'john-smith2')."""
+    if not slug:
+        return None
+    slug = slug.strip().lower()
+    for uid in os.listdir(_PROFILES_DIR):
+        ppath = os.path.join(_PROFILES_DIR, uid, "profile.json")
+        if not os.path.isfile(ppath):
+            continue
+        try:
+            import json as _json
+            with open(ppath) as f:
+                p = _json.load(f)
+            if p.get("readable_slug") == slug:
+                email = p.get("email", "")
+                return get_profile(email) if email else None
+        except Exception:
+            continue
     return None
 
 
