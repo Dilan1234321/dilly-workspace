@@ -341,17 +341,16 @@ function CardBack({ template = 'photo', username }: { template?: CardTemplate; u
   const color = isDark
     ? (template === 'navy' ? '#5A7FA0' : template === 'midnight' ? '#4A6A8A' : '#555555')
     : (template === 'sage' ? '#5C6B5C' : template === 'coral' ? '#E8705A' : '#6B7280');
-  const profileUrl = `hellodilly.com/p/${username || 'you'}`;
+  const dimColor = isDark ? color + '80' : LIGHT_GRAY;
 
   return (
-    <View style={[c.card, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center' }]}>
-      <Image source={require('../assets/logo.png')} style={{ width: 120, height: 40, tintColor: color }} resizeMode="contain" />
-      {QRCode ? (
-        <View style={{ marginTop: 10 }}>
-          <QRCode value={`https://${profileUrl}`} size={40} color={color} backgroundColor="transparent" />
-        </View>
-      ) : null}
-      <Text style={{ fontSize: 9, color, position: 'absolute', bottom: 12 }}>{profileUrl}</Text>
+    <View style={[c.card, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center', paddingVertical: 16 }]}>
+      <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34, tintColor: color }} resizeMode="contain" />
+      <Text style={{ fontSize: 9, color: dimColor, marginTop: 8, fontStyle: 'italic', textAlign: 'center' }}>
+        Your career, guided by AI.
+      </Text>
+      <View style={{ flex: 1 }} />
+      <Text style={{ fontSize: 10, fontWeight: '500', color, position: 'absolute', bottom: 12 }}>hellodilly.com</Text>
     </View>
   );
 }
