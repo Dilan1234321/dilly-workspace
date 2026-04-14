@@ -58,13 +58,13 @@ function ProfilePhoto({ name, photoUri, size = 32 }: { name: string; photoUri: s
 // -- Screen -------------------------------------------------------------------
 
 function Skeleton({ width, height = 14, style }: { width: number | string; height?: number; style?: any }) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
-  useEffect(() => {
-    Animated.loop(Animated.sequence([
-      Animated.timing(opacity, { toValue: 0.7, duration: 800, useNativeDriver: true }),
-      Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
-    ])).start();
-  }, []);
+  const opacity = useRef(new Animated.Value(1.0)).current;
+  {/* useEffect(() => { */}
+  {/*    Animated.loop(Animated.sequence([ */}
+    {/*      Animated.timing(opacity, { toValue: 0.7, duration: 800, useNativeDriver: true }), */}
+    {/*      Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }), */}
+  {/*    ])).start(); */}
+  {/*  }, []); */}
   return <Animated.View style={[{ width: width as any, height, borderRadius: 6, backgroundColor: '#E4E6F0', opacity }, style]} />;
 }
 
