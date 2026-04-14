@@ -1361,22 +1361,34 @@ async def get_web_profile_narratives(slug: str):
     profile_text = "\n".join(parts)
 
     # Call Claude
+    first_name = (profile.get("name") or "").strip().split()[0] if profile.get("name") else "this person"
+
     system_prompt = (
-        "You are writing the public profile page for someone. You have their full profile data. "
-        "Generate three things. Be specific. Cite real facts. Never invent. Never use em dashes.\n\n"
-        "1. IMPACT LINES: 3-4 one-sentence statements that make a recruiter say 'I need to talk to this person.' "
-        "Each line must cite a specific experience, project, skill, or result from their profile. "
-        "Not generic. Not 'passionate about technology.' Real, concrete, evidence-backed. "
-        "Format: short, punchy, one sentence max per line.\n\n"
-        "2. DIFFERENTIATOR: One paragraph (3 sentences max) explaining what genuinely sets this person apart. "
-        "Connect dots across their profile that they might not see themselves. "
-        "What combination of experiences/skills/interests makes them unique? Be honest, not flattering.\n\n"
-        "3. SKILLS WITH EVIDENCE: For their top 6-8 skills, pair each with a one-phrase proof point from their profile. "
+        "You are Dilly, writing a public profile page for a student you deeply know. "
+        "You have studied their entire profile. Your job: make anyone who reads this page "
+        "understand who this person really is. Not a resume. Not a list. A real introduction.\n\n"
+        "Never use em dashes. Never invent facts. Only cite things from their profile.\n\n"
+        "Generate four things:\n\n"
+        "1. INTRODUCTION: 2-3 short paragraphs that introduce this person like a mentor would. "
+        "Write in third person. Use their first name. This should read like the best "
+        "recommendation letter they have ever received, written by someone who actually knows them. "
+        "First paragraph: who they are and what they do (cite specific work, projects, roles). "
+        "Second paragraph: what makes them different from every other student in their field. "
+        "Connect dots across their experiences that reveal something non-obvious. "
+        "Third paragraph (optional, only if you have enough): where they are headed and why "
+        "you believe in them. Be honest, not flattering. Specific, not generic. "
+        "Each paragraph should be 2-3 sentences max.\n\n"
+        "2. IMPACT LINES: 3-4 one-sentence statements citing specific, concrete things from their profile. "
+        "Not 'passionate about technology.' Real evidence. 'Built X that did Y at Z.'\n\n"
+        "3. SKILLS WITH EVIDENCE: Top 6-8 skills, each paired with a short proof from their profile.\n"
         'Format: {"skill": "Python", "evidence": "built predictive models at [org]"}\n\n'
+        "4. HEADLINE: A single punchy line (under 10 words) that captures who this person is. "
+        "Not a job title. Something a recruiter remembers. Like a tagline for a person.\n\n"
         "Return JSON only:\n"
         "{\n"
+        f'  "introduction": "2-3 paragraphs about {first_name}",\n'
+        '  "headline": "short punchy line",\n'
         '  "impact_lines": ["line 1", "line 2", "line 3"],\n'
-        '  "differentiator": "paragraph text",\n'
         '  "skills_with_evidence": [{"skill": "...", "evidence": "..."}]\n'
         "}"
     )
@@ -1395,8 +1407,8 @@ async def get_web_profile_narratives(slug: str):
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=1000,
-            temperature=0.3,
+            max_tokens=1500,
+            temperature=0.35,
             system=system_prompt,
             messages=[{"role": "user", "content": f"---PROFILE---\n{profile_text}\n---END PROFILE---"}],
         )
@@ -1412,14 +1424,15 @@ async def get_web_profile_narratives(slug: str):
         parsed = _json.loads(raw)
 
         data = {
+            "introduction": parsed.get("introduction") or None,
+            "headline": parsed.get("headline") or None,
             "impact_lines": (parsed.get("impact_lines") or [])[:4],
-            "differentiator": parsed.get("differentiator") or None,
             "skills_with_evidence": (parsed.get("skills_with_evidence") or [])[:8],
         }
 
     except Exception as e:
         print(f"[WEB-NARRATIVES] Error: {e}", flush=True)
-        data = {"impact_lines": [], "differentiator": None, "skills_with_evidence": []}
+        data = {"introduction": None, "headline": None, "impact_lines": [], "skills_with_evidence": []}
 
     # Cache
     _NARRATIVE_WEB_CACHE[cache_key] = {"data": data, "ts": _time.time(), "hash": p_hash}
