@@ -346,19 +346,17 @@ function CardBack({ template = 'photo', username, showQr = false }: { template?:
   const profileUrl = `hellodilly.com/p/${username || 'you'}`;
 
   return (
-    <View style={[c.card, { backgroundColor: bg, alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20 }]}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34, tintColor: color }} resizeMode="contain" />
-        <Text style={{ fontSize: 9, color: dimColor, marginTop: 6, fontStyle: 'italic', textAlign: 'center' }}>
-          Your career, guided by AI.
-        </Text>
-        {showQr && QRCode ? (
-          <View style={{ marginTop: 10 }}>
-            <QRCode value={`https://${profileUrl}`} size={48} color={color} backgroundColor="transparent" />
-          </View>
-        ) : null}
-      </View>
-      <Text style={{ fontSize: 10, fontWeight: '500', color }}>hellodilly.com</Text>
+    <View style={[c.card, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20 }]}>
+      <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34, tintColor: color }} resizeMode="contain" />
+      <Text style={{ fontSize: 9, color, marginTop: 6, textAlign: 'center', fontWeight: '500' }}>
+        Your career, guided by AI.
+      </Text>
+      {showQr && QRCode ? (
+        <View style={{ marginTop: 10 }}>
+          <QRCode value={`https://${profileUrl}`} size={48} color={color} backgroundColor="transparent" />
+        </View>
+      ) : null}
+      <Text style={{ fontSize: 10, fontWeight: '500', color, position: 'absolute', bottom: 12 }}>hellodilly.com</Text>
     </View>
   );
 }

@@ -693,37 +693,62 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
               autoFocus
             />
 
-            {/* Date picker - quick options */}
+            {/* Date picker - mini calendar */}
             <View style={{ gap: 6 }}>
               <Text style={{ fontSize: 11, fontWeight: '600', color: colors.t2 }}>Date</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                {(() => {
-                  const today = new Date();
-                  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                  const label = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                  const options = [];
-                  for (let i = 0; i < 14; i++) {
-                    const d = new Date(today);
-                    d.setDate(d.getDate() + i);
-                    options.push({ key: fmt(d), label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : label(d) });
-                  }
-                  return options.map(opt => (
-                    <AnimatedPressable
-                      key={opt.key}
-                      style={{
-                        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
-                        backgroundColor: dateStr === opt.key ? colors.indigo : colors.s2,
-                        borderWidth: 1, borderColor: dateStr === opt.key ? colors.indigo : colors.b1,
-                      }}
-                      onPress={() => setDateStr(opt.key)}
-                      scaleDown={0.95}
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: dateStr === opt.key ? '#fff' : colors.t2 }}>{opt.label}</Text>
-                    </AnimatedPressable>
-                  ));
-                })()}
-              </ScrollView>
-              {dateStr ? <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>{dateStr}</Text> : null}
+              {(() => {
+                const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const selected = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+                const [pickerMonth, setPickerMonth] = React.useState(selected.getMonth());
+                const [pickerYear, setPickerYear] = React.useState(selected.getFullYear());
+
+                const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+                const firstDay = new Date(pickerYear, pickerMonth, 1).getDay();
+                const monthName = new Date(pickerYear, pickerMonth).toLocaleString('default', { month: 'long' });
+
+                return (
+                  <View style={{ backgroundColor: colors.s1, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, padding: 10 }}>
+                    {/* Month/Year nav */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <AnimatedPressable onPress={() => { if (pickerMonth === 0) { setPickerMonth(11); setPickerYear(pickerYear - 1); } else setPickerMonth(pickerMonth - 1); }} scaleDown={0.9} hitSlop={8}>
+                        <Ionicons name="chevron-back" size={18} color={colors.t2} />
+                      </AnimatedPressable>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>{monthName} {pickerYear}</Text>
+                      <AnimatedPressable onPress={() => { if (pickerMonth === 11) { setPickerMonth(0); setPickerYear(pickerYear + 1); } else setPickerMonth(pickerMonth + 1); }} scaleDown={0.9} hitSlop={8}>
+                        <Ionicons name="chevron-forward" size={18} color={colors.t2} />
+                      </AnimatedPressable>
+                    </View>
+                    {/* Day headers */}
+                    <View style={{ flexDirection: 'row' }}>
+                      {['S','M','T','W','T','F','S'].map((d, i) => (
+                        <Text key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: '600', color: colors.t3 }}>{d}</Text>
+                      ))}
+                    </View>
+                    {/* Day grid */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                      {Array.from({ length: firstDay }).map((_, i) => <View key={`e-${i}`} style={{ width: '14.28%', height: 32 }} />)}
+                      {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const day = i + 1;
+                        const key = fmt(new Date(pickerYear, pickerMonth, day));
+                        const isSelected = dateStr === key;
+                        return (
+                          <AnimatedPressable
+                            key={day}
+                            style={{ width: '14.28%', height: 32, alignItems: 'center', justifyContent: 'center' }}
+                            onPress={() => setDateStr(key)}
+                            scaleDown={0.9}
+                          >
+                            <View style={isSelected ? { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.indigo, alignItems: 'center', justifyContent: 'center' } : undefined}>
+                              <Text style={{ fontSize: 12, fontWeight: isSelected ? '700' : '400', color: isSelected ? '#fff' : colors.t1 }}>{day}</Text>
+                            </View>
+                          </AnimatedPressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })()}
+              {dateStr ? <Text style={{ fontSize: 11, color: colors.indigo, fontWeight: '600', marginTop: 4 }}>{dateStr}</Text> : null}
             </View>
 
             <TextInput

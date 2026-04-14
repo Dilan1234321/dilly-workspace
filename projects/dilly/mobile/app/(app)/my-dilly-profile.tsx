@@ -413,61 +413,69 @@ export default function MyDillyProfileScreen() {
                 <View key={i} style={d.cityChip}>
                   <Ionicons name="location" size={12} color={colors.indigo} />
                   <Text style={d.cityChipText}>{city}</Text>
-                  <AnimatedPressable
-                    onPress={async () => {
-                      const updated = (p.job_locations || []).filter((_: string, j: number) => j !== i);
-                      setProfile((prev: any) => ({ ...prev, job_locations: updated }));
-                      await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ job_locations: updated }) }).catch(() => {});
-                    }}
-                    scaleDown={0.9}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="close-circle" size={14} color={colors.t3} />
-                  </AnimatedPressable>
+                  {editMode && (
+                    <AnimatedPressable
+                      onPress={async () => {
+                        const updated = (p.job_locations || []).filter((_: string, j: number) => j !== i);
+                        setProfile((prev: any) => ({ ...prev, job_locations: updated }));
+                        await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ job_locations: updated }) }).catch(() => {});
+                      }}
+                      scaleDown={0.9}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="close-circle" size={14} color={colors.t3} />
+                    </AnimatedPressable>
+                  )}
                 </View>
               ))}
-            </View>
-            {/* City search input */}
-            <View style={d.cityInputRow}>
-              <TextInput
-                style={d.cityInput}
-                placeholder="Type a city (e.g. New York)"
-                placeholderTextColor={colors.t3}
-                value={citySearch}
-                onChangeText={(t) => { setCitySearch(t); setShowCityDropdown(t.length >= 2); }}
-                returnKeyType="done"
-                onSubmitEditing={() => {
-                  if (citySearch.trim().length >= 2) {
-                    addCity(citySearch.trim());
-                  }
-                }}
-              />
-              {citySearch.trim().length >= 2 && (
-                <AnimatedPressable
-                  style={d.cityAddBtn}
-                  onPress={() => addCity(citySearch.trim())}
-                  scaleDown={0.95}
-                >
-                  <Ionicons name="add" size={16} color="#fff" />
-                </AnimatedPressable>
+              {(p.job_locations || []).length === 0 && !editMode && (
+                <Text style={{ fontSize: 12, color: colors.t3 }}>Tap Edit to add cities</Text>
               )}
             </View>
-            {showCityDropdown && (
-              <View style={d.cityDropdown}>
-                {US_CANADA_CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).slice(0, 5).map((city, i) => (
-                  <AnimatedPressable
-                    key={i}
-                    style={d.cityDropdownItem}
-                    onPress={() => addCity(city)}
-                    scaleDown={0.98}
-                  >
-                    <Ionicons name="location-outline" size={14} color={colors.t2} />
-                    <Text style={d.cityDropdownText}>{city}</Text>
-                  </AnimatedPressable>
-                ))}
-              </View>
+            {/* City search input - only in edit mode */}
+            {editMode && (
+              <>
+                <View style={d.cityInputRow}>
+                  <TextInput
+                    style={d.cityInput}
+                    placeholder="Type a city (e.g. New York)"
+                    placeholderTextColor={colors.t3}
+                    value={citySearch}
+                    onChangeText={(t) => { setCitySearch(t); setShowCityDropdown(t.length >= 2); }}
+                    returnKeyType="done"
+                    onSubmitEditing={() => {
+                      if (citySearch.trim().length >= 2) {
+                        addCity(citySearch.trim());
+                      }
+                    }}
+                  />
+                  {citySearch.trim().length >= 2 && (
+                    <AnimatedPressable
+                      style={d.cityAddBtn}
+                      onPress={() => addCity(citySearch.trim())}
+                      scaleDown={0.95}
+                    >
+                      <Ionicons name="add" size={16} color="#fff" />
+                    </AnimatedPressable>
+                  )}
+                </View>
+                {showCityDropdown && (
+                  <View style={d.cityDropdown}>
+                    {US_CANADA_CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).slice(0, 5).map((city, i) => (
+                      <AnimatedPressable
+                        key={i}
+                        style={d.cityDropdownItem}
+                        onPress={() => addCity(city)}
+                        scaleDown={0.98}
+                      >
+                        <Ionicons name="location-outline" size={14} color={colors.t2} />
+                        <Text style={d.cityDropdownText}>{city}</Text>
+                      </AnimatedPressable>
+                    ))}
+                  </View>
+                )}
+              </>
             )}
-            <Text style={{ fontSize: 10, color: colors.t3, marginTop: 6 }}>Jobs will be filtered to these cities + remote roles.</Text>
           </View>
         </FadeInView>
 
