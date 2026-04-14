@@ -51,6 +51,8 @@ interface CardData {
   username: string;
   photoUri: string | null;
   city?: string;
+  readableSlug?: string;
+  profilePrefix?: string; // "s" for students, "p" for professionals
 }
 
 // ── Templates ────────────────────────────────────────────────────────────────
@@ -89,9 +91,16 @@ function PhotoCircle({ photoUri, initial, size, bgColor }: { photoUri: string | 
   );
 }
 
+/** Build profile URL from card data */
+function getProfileUrl(data: CardData): string {
+  const prefix = data.profilePrefix || 'p';
+  const slug = data.readableSlug || data.username || 'you';
+  return `hellodilly.com/${prefix}/${slug}`;
+}
+
 /** Minimal contact block: email, first phone, city, profile URL (no QR here) */
 function MinimalContact({ data, colors }: { data: CardData; colors: { email: string; phone: string; url: string } }) {
-  const profileUrl = `hellodilly.com/p/${data.username || 'you'}`;
+  const profileUrl = getProfileUrl(data);
   const firstPhone = (data.phones || []).find(p => p.number.replace(/\D/g, '').length >= 3);
   return (
     <>
@@ -106,8 +115,8 @@ function MinimalContact({ data, colors }: { data: CardData; colors: { email: str
 }
 
 /** QR code badge - positioned absolutely in bottom-right of card */
-function QrBadge({ username, color, size = 44 }: { username: string; color: string; size?: number }) {
-  const profileUrl = `hellodilly.com/p/${username || 'you'}`;
+function QrBadge({ data, color, size = 44 }: { data: CardData; color: string; size?: number }) {
+  const profileUrl = getProfileUrl(data);
   if (!QRCode) return null;
   return (
     <View style={{ position: 'absolute', bottom: 12, right: 14 }}>
@@ -139,7 +148,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         ) : null}
         <View style={{ flex: 1 }} />
         <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
-        {showQr && <QrBadge username={data.username} color="#9CA3AF" />}
+        {showQr && <QrBadge data={data} color="#9CA3AF" />}
       </View>
     );
   }
@@ -172,7 +181,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           <View style={{ flex: 1 }} />
           <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
         </View>
-        {showQr && <QrBadge username={data.username} color="#9CA3AF" />}
+        {showQr && <QrBadge data={data} color="#9CA3AF" />}
       </View>
     );
   }
@@ -195,7 +204,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         <View style={{ width: 30, height: 1, backgroundColor: '#FFFFFF', marginTop: 8 }} />
         <View style={{ flex: 1 }} />
         <MinimalContact data={data} colors={{ email: '#999999', phone: '#999999', url: '#555555' }} />
-        {showQr && <QrBadge username={data.username} color="#FFFFFF" />}
+        {showQr && <QrBadge data={data} color="#FFFFFF" />}
       </View>
     );
   }
@@ -234,7 +243,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         <View style={{ zIndex: 1 }}>
           <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
         </View>
-        {showQr && <QrBadge username={data.username} color="#1A1A2E" />}
+        {showQr && <QrBadge data={data} color="#1A1A2E" />}
       </View>
     );
   }
@@ -261,7 +270,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         </View>
         <View style={{ flex: 1 }} />
         <MinimalContact data={data} colors={{ email: '#8BA4C4', phone: '#8BA4C4', url: '#5A7FA0' }} />
-        {showQr && <QrBadge username={data.username} color="#8BA4C4" />}
+        {showQr && <QrBadge data={data} color="#8BA4C4" />}
       </View>
     );
   }
@@ -286,7 +295,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         ) : null}
         <View style={{ flex: 1 }} />
         <MinimalContact data={data} colors={{ email: '#5C6B5C', phone: '#5C6B5C', url: '#8A9B8A' }} />
-        {showQr && <QrBadge username={data.username} color="#5C6B5C" />}
+        {showQr && <QrBadge data={data} color="#5C6B5C" />}
       </View>
     );
   }
@@ -311,7 +320,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           <View style={{ flex: 1 }} />
           <MinimalContact data={data} colors={{ email: '#8B8B8B', phone: '#8B8B8B', url: '#BBBBBB' }} />
         </View>
-        {showQr && <QrBadge username={data.username} color="#E8705A" />}
+        {showQr && <QrBadge data={data} color="#E8705A" />}
       </View>
     );
   }
@@ -344,7 +353,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         )}
         {showQr && QRCode && (
           <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: '#0F172480', borderRadius: 6, padding: 4 }}>
-            <QRCode value={`https://hellodilly.com/p/${data.username || 'you'}`} size={34} color="#FFFFFF" backgroundColor="transparent" />
+            <QRCode value={`https://${getProfileUrl(data)}`} size={34} color="#FFFFFF" backgroundColor="transparent" />
           </View>
         )}
       </View>
@@ -363,8 +372,6 @@ function CardBack({ template = 'photo', username, showQr = false }: { template?:
     ? (template === 'navy' ? '#5A7FA0' : template === 'midnight' ? '#4A6A8A' : '#555555')
     : (template === 'sage' ? '#5C6B5C' : template === 'coral' ? '#E8705A' : '#6B7280');
   const dimColor = isDark ? color + '80' : LIGHT_GRAY;
-
-  const profileUrl = `hellodilly.com/p/${username || 'you'}`;
 
   return (
     <View style={[c.card, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20 }]}>
@@ -621,7 +628,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
       </View>
       <View style={c.field}>
         <Text style={c.fieldLabel}>Profile URL</Text>
-        <Text style={[c.fieldInput, { color: GRAY }]}>hellodilly.com/p/{data.username || 'you'}</Text>
+        <Text style={[c.fieldInput, { color: GRAY }]}>{getProfileUrl(data)}</Text>
       </View>
 
       </>)}

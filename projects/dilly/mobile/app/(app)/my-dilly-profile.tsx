@@ -204,6 +204,8 @@ export default function MyDillyProfileScreen() {
   const [majorSearch, setMajorSearch] = useState('');
   const [minorSearch, setMinorSearch] = useState('');
   const [editExtraCohorts, setEditExtraCohorts] = useState<string[]>([]);
+  const [readableSlug, setReadableSlug] = useState<string>('');
+  const [profilePrefix, setProfilePrefix] = useState<string>('s');
   const [cohortSearch, setCohortSearch] = useState('');
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
@@ -223,10 +225,11 @@ export default function MyDillyProfileScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [memRes, profileRes, resumesRes] = await Promise.all([
+      const [memRes, profileRes, resumesRes, slugRes] = await Promise.all([
         dilly.fetch('/memory').catch(() => null),
         dilly.get('/profile').catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
+        dilly.fetch('/profile/generate-slug', { method: 'POST' }).then(r => r?.ok ? r.json() : null).catch(() => null),
       ]);
       if (memRes?.ok) {
         const json = await memRes.json();
@@ -235,6 +238,10 @@ export default function MyDillyProfileScreen() {
       if (profileRes) setProfile(profileRes);
       if (Array.isArray(resumesRes)) setResumes(resumesRes);
       else if (resumesRes?.resumes) setResumes(resumesRes.resumes);
+      if (slugRes?.slug) {
+        setReadableSlug(slugRes.slug);
+        setProfilePrefix(slugRes.prefix || 's');
+      }
     } catch (e) { console.warn('[MyDilly] fetch error:', e); } finally { setLoading(false); }
   }, []);
 
@@ -717,6 +724,8 @@ export default function MyDillyProfileScreen() {
               username: p.profile_slug || '',
               photoUri: p.profile_slug ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo` : null,
               city: (p.job_locations || [])[0] || '',
+              readableSlug: readableSlug || '',
+              profilePrefix: profilePrefix,
             }}
             onSave={() => {}}
             userType={p.user_type}
