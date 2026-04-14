@@ -1310,7 +1310,7 @@ async def get_web_profile_narratives(slug: str):
     # Profile hash for cache
     fact_text = "|".join(f"{f.get('label','')}:{f.get('value','')}" for f in public_facts[:40])
     p_hash = _hashlib.md5(fact_text.encode()).hexdigest()[:12]
-    cache_key = f"webnarr:{slug}"
+    cache_key = f"webnarr2:{slug}"
 
     # Check cache
     cached = _NARRATIVE_WEB_CACHE.get(cache_key)
@@ -1369,15 +1369,15 @@ async def get_web_profile_narratives(slug: str):
         "understand who this person really is. Not a resume. Not a list. A real introduction.\n\n"
         "Never use em dashes. Never invent facts. Only cite things from their profile.\n\n"
         "Generate four things:\n\n"
-        "1. INTRODUCTION: 2-3 short paragraphs that introduce this person like a mentor would. "
+        "1. INTRODUCTION: Exactly 2-3 paragraphs SEPARATED BY \\n\\n (double newline). "
         "Write in third person. Use their first name. This should read like the best "
-        "recommendation letter they have ever received, written by someone who actually knows them. "
-        "First paragraph: who they are and what they do (cite specific work, projects, roles). "
-        "Second paragraph: what makes them different from every other student in their field. "
-        "Connect dots across their experiences that reveal something non-obvious. "
-        "Third paragraph (optional, only if you have enough): where they are headed and why "
-        "you believe in them. Be honest, not flattering. Specific, not generic. "
-        "Each paragraph should be 2-3 sentences max.\n\n"
+        "recommendation letter they have ever received, written by someone who actually knows them.\n"
+        "Paragraph 1: who they are and what they do. Cite specific work, projects, roles.\n"
+        "Paragraph 2: what makes them different from every other student in their field. "
+        "Connect dots across their experiences that reveal something non-obvious.\n"
+        "Paragraph 3 (optional): where they are headed and why you believe in them.\n"
+        "Each paragraph: 2-3 sentences max. Be honest, not flattering. Specific, not generic. "
+        "IMPORTANT: separate each paragraph with \\n\\n in the JSON string.\n\n"
         "2. IMPACT LINES: 3-4 one-sentence statements citing specific, concrete things from their profile. "
         "Not 'passionate about technology.' Real evidence. 'Built X that did Y at Z.'\n\n"
         "3. SKILLS WITH EVIDENCE: Top 6-8 skills, each paired with a short proof from their profile.\n"
