@@ -18,6 +18,9 @@ _DEFAULT_CORS_ORIGINS = [
     "http://127.0.0.1:3002",
     "https://trydilly.com",
     "https://www.trydilly.com",
+    "https://hellodilly.com",
+    "https://www.hellodilly.com",
+    "https://dilly-website-kochhardilan05-3550s-projects.vercel.app",
 ]
 
 
