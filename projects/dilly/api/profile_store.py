@@ -285,11 +285,10 @@ def _make_readable_slug(name: str) -> str:
 def generate_readable_slug(email: str) -> str:
     """Generate or return cached human-readable slug for a user.
 
-    Format: firstname-lastname (students: s/firstname-lastname, pros: p/firstname-lastname)
+    Format: firstname-lastname
     Handles duplicates by appending a number: firstname-lastname2, firstname-lastname3, etc.
+    Uses Postgres to check for duplicates (not filesystem).
     """
-    import psycopg2
-
     profile = get_profile(email) or {}
     existing = profile.get("readable_slug")
     if existing:
@@ -298,58 +297,46 @@ def generate_readable_slug(email: str) -> str:
     name = profile.get("name") or profile.get("full_name") or ""
     base = _make_readable_slug(name)
     if not base or base == "user":
-        # Fallback to email prefix
         base = _make_readable_slug(email.split("@")[0])
 
-    # Check for duplicates across all profiles by scanning
+    # Check for duplicates via Postgres
     candidate = base
     counter = 1
     while True:
-        # Check if this slug is taken by another user
-        taken = False
-        for uid in os.listdir(_PROFILES_DIR):
-            ppath = os.path.join(_PROFILES_DIR, uid, "profile.json")
-            if not os.path.isfile(ppath):
-                continue
-            try:
-                import json as _json
-                with open(ppath) as f:
-                    p = _json.load(f)
-                if p.get("readable_slug") == candidate and p.get("email") != email:
-                    taken = True
-                    break
-            except Exception:
-                continue
+        with get_db() as conn:
+            import psycopg2.extras
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                "SELECT email FROM users WHERE profile_json->>'readable_slug' = %s AND email != %s LIMIT 1",
+                (candidate, email),
+            )
+            taken = cur.fetchone() is not None
         if not taken:
             break
         counter += 1
         candidate = f"{base}{counter}"
 
     # Save the slug to profile
-    profile["readable_slug"] = candidate
-    save_profile(email, profile)
+    save_profile(email, {"readable_slug": candidate})
     return candidate
 
 
 def get_profile_by_readable_slug(slug: str) -> dict | None:
-    """Look up a profile by human-readable slug (e.g. 'john-smith' or 'john-smith2')."""
+    """Look up a profile by human-readable slug via Postgres."""
     if not slug:
         return None
     slug = slug.strip().lower()
-    for uid in os.listdir(_PROFILES_DIR):
-        ppath = os.path.join(_PROFILES_DIR, uid, "profile.json")
-        if not os.path.isfile(ppath):
-            continue
-        try:
-            import json as _json
-            with open(ppath) as f:
-                p = _json.load(f)
-            if p.get("readable_slug") == slug:
-                email = p.get("email", "")
-                return get_profile(email) if email else None
-        except Exception:
-            continue
-    return None
+    with get_db() as conn:
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            "SELECT email FROM users WHERE profile_json->>'readable_slug' = %s LIMIT 1",
+            (slug,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return get_profile(row["email"])
 
 
 # ── Profile photo helpers (unchanged — still filesystem) ───────────────────────
