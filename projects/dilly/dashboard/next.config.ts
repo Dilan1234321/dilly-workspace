@@ -1,15 +1,16 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@dilly/api'],
-  /** CI runs tsc --noEmit separately; skip duplicate type-check in build to avoid .next/types PageProps false positives. */
   typescript: { ignoreBuildErrors: true },
-  /** Monorepo: avoid inferring workspace root from a parent lockfile; keeps Turbopack + tsconfig stable. */
   turbopack: {
-    root: path.join(__dirname),
+    root: __dirname,
   },
-  /** Hide the Next.js "Compiling…" dev indicator from the app UI. */
   devIndicators: false,
 };
 
