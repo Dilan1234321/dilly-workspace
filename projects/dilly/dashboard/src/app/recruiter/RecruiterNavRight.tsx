@@ -21,7 +21,6 @@ export function RecruiterNavRight() {
   const [serverHint, setServerHint] = useState<string | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional
     setHasKey(!!getRecruiterKey());
     const onKeyChange = () => setHasKey(!!getRecruiterKey());
     window.addEventListener("recruiter-key-changed", onKeyChange);
@@ -56,21 +55,30 @@ export function RecruiterNavRight() {
   };
 
   return (
-    <div className="te-nav-right">
+    <div className="dr-nav-right">
       {serverConfigured === false && (
-        <span className="te-nav-server-hint" title={serverHint || "Add RECRUITER_API_KEY to .env at workspace root and restart the API"}>
+        <span
+          className="dr-nav-server-hint"
+          title={
+            serverHint ||
+            "Add RECRUITER_API_KEY to .env at workspace root and restart the API"
+          }
+        >
           Server: key not set
         </span>
       )}
       {serverConfigured === true && (
-        <span className="te-nav-server-ok" title="If you get 401, the key you paste must match RECRUITER_API_KEY exactly">
+        <span
+          className="dr-nav-server-ok"
+          title="If you get 401, the key you paste must match RECRUITER_API_KEY exactly"
+        >
           Server: key set
         </span>
       )}
-      <div className="te-nav-apikey">
+      <div className="dr-nav-apikey">
         <input
           type="password"
-          className="te-nav-apikey-input"
+          className="dr-nav-apikey-input"
           placeholder="API key (click Save)"
           value={keyInput}
           onChange={(e) => setKeyInput(e.target.value)}
@@ -79,7 +87,7 @@ export function RecruiterNavRight() {
         />
         <button
           type="button"
-          className="te-nav-apikey-btn"
+          className="dr-nav-apikey-btn"
           onClick={handleSaveKey}
           disabled={!keyInput.trim()}
         >
@@ -87,7 +95,7 @@ export function RecruiterNavRight() {
         </button>
       </div>
       {hasKey && (
-        <button type="button" className="te-nav-signout" onClick={handleSignOut}>
+        <button type="button" className="dr-nav-signout" onClick={handleSignOut}>
           Sign out
         </button>
       )}

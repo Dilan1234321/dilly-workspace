@@ -26,7 +26,7 @@ import { ChatMessageList } from "@/components/ui/chat-message-list";
 const QUICK_QUERIES = [
   "How do they handle technical ambiguity?",
   "What is the biggest risk in hiring this candidate for this JD?",
-  "Generate 3 custom interview questions based on their Build gaps.",
+  "Generate 3 interview questions based on their profile gaps.",
 ];
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -163,7 +163,7 @@ export function AskAIChat({ candidateId, candidateName, roleDescription = "" }: 
       <ExpandableChatHeader className="flex-col text-center justify-center recruiter-chat-header">
         <h1 className="text-xl font-semibold">Ask Dilly about {candidateName}</h1>
         <p className="text-sm text-muted-foreground">
-          Evidence-based analysis using Smart/Grit/Build scores and experience
+          Profile-based analysis — Dilly knows this candidate
         </p>
       </ExpandableChatHeader>
 

@@ -5,28 +5,22 @@ import { usePathname } from "next/navigation";
 
 export function RecruiterNavLeft() {
   const pathname = usePathname() ?? "";
-  const isCandidatePage = pathname.startsWith("/recruiter/candidates/") && pathname !== "/recruiter/candidates";
+  const isCandidatePage =
+    pathname.startsWith("/recruiter/candidates/") &&
+    pathname !== "/recruiter/candidates";
 
   return (
-    <div className="te-nav-left" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+    <div className="dr-nav-left">
       {isCandidatePage && (
         <Link
           href="/recruiter"
-          className="te-nav-back"
-          style={{
-            color: "var(--te-text-muted)",
-            fontSize: "1.25rem",
-            lineHeight: 1,
-            padding: "0.25rem",
-            display: "inline-flex",
-            textDecoration: "none",
-          }}
-          aria-label="Back to Recruiter"
+          className="dr-nav-back"
+          aria-label="Back to search"
         >
           ←
         </Link>
       )}
-      <Link href="/" className="te-logo">
+      <Link href="/recruiter" className="dr-logo">
         Dilly Recruiter
       </Link>
     </div>
