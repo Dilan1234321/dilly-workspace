@@ -693,14 +693,38 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
               autoFocus
             />
 
-            <TextInput
-              style={cs.modalInput}
-              value={dateStr}
-              onChangeText={setDateStr}
-              placeholder="Date (YYYY-MM-DD)"
-              placeholderTextColor={colors.t3}
-              keyboardType="numbers-and-punctuation"
-            />
+            {/* Date picker - quick options */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.t2 }}>Date</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                {(() => {
+                  const today = new Date();
+                  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                  const label = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                  const options = [];
+                  for (let i = 0; i < 14; i++) {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() + i);
+                    options.push({ key: fmt(d), label: i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : label(d) });
+                  }
+                  return options.map(opt => (
+                    <AnimatedPressable
+                      key={opt.key}
+                      style={{
+                        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
+                        backgroundColor: dateStr === opt.key ? colors.indigo : colors.s2,
+                        borderWidth: 1, borderColor: dateStr === opt.key ? colors.indigo : colors.b1,
+                      }}
+                      onPress={() => setDateStr(opt.key)}
+                      scaleDown={0.95}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: dateStr === opt.key ? '#fff' : colors.t2 }}>{opt.label}</Text>
+                    </AnimatedPressable>
+                  ));
+                })()}
+              </ScrollView>
+              {dateStr ? <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>{dateStr}</Text> : null}
+            </View>
 
             <TextInput
               style={[cs.modalInput, { minHeight: 60 }]}
