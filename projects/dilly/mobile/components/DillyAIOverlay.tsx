@@ -700,7 +700,7 @@ const s = StyleSheet.create({
   sendBtnDisabled: { opacity: 0.35 },
   suggestionWrap: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)' },
   suggestionRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  suggestionChip: { backgroundColor: colors.s2, borderRadius: 999, borderWidth: 1, borderColor: colors.b2, paddingHorizontal: 14, paddingVertical: 8 },
+  suggestionChip: { backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: colors.b2, paddingHorizontal: 14, paddingVertical: 8 },
   suggestionChipText: { color: colors.t1, fontSize: 13, fontWeight: '500' },
 
   // History overlay
