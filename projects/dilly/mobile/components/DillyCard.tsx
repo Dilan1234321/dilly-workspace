@@ -89,8 +89,8 @@ function PhotoCircle({ photoUri, initial, size, bgColor }: { photoUri: string | 
   );
 }
 
-/** Minimal contact block: email, first phone, city, profile URL */
-function MinimalContact({ data, colors }: { data: CardData; colors: { email: string; phone: string; url: string } }) {
+/** Minimal contact block: email, first phone, city, QR or profile URL */
+function MinimalContact({ data, colors, showQr = false }: { data: CardData; colors: { email: string; phone: string; url: string }; showQr?: boolean }) {
   const profileUrl = `hellodilly.com/p/${data.username || 'you'}`;
   const firstPhone = (data.phones || []).find(p => p.number.replace(/\D/g, '').length >= 3);
   return (
@@ -100,14 +100,20 @@ function MinimalContact({ data, colors }: { data: CardData; colors: { email: str
         <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{formatPhone(firstPhone.number)}</Text>
       ) : null}
       {data.city ? <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{data.city}</Text> : null}
-      <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>
+      {showQr && QRCode ? (
+        <View style={{ marginTop: 4 }}>
+          <QRCode value={`https://${profileUrl}`} size={36} color={colors.url} backgroundColor="transparent" />
+        </View>
+      ) : (
+        <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>
+      )}
     </>
   );
 }
 
 // ── Card Front ───────────────────────────────────────────────────────────────
 
-function CardFront({ data, template = 'photo' }: { data: CardData; template?: CardTemplate }) {
+function CardFront({ data, template = 'photo', showQr = false }: { data: CardData; template?: CardTemplate; showQr?: boolean }) {
   const initial = data.name ? data.name[0].toUpperCase() : '?';
   const photoWithCache = data.photoUri ? `${data.photoUri}${data.photoUri.includes('?') ? '&' : '?'}_t=${Date.now()}` : null;
 
@@ -127,7 +133,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
           <Text style={{ fontSize: 11, color: '#6B7280', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+        <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
       </View>
     );
   }
@@ -158,7 +164,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
             <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{data.tagline}</Text>
           ) : null}
           <View style={{ flex: 1 }} />
-          <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+          <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
         </View>
       </View>
     );
@@ -181,7 +187,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
         ) : null}
         <View style={{ width: 30, height: 1, backgroundColor: '#FFFFFF', marginTop: 8 }} />
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} colors={{ email: '#999999', phone: '#999999', url: '#555555' }} />
+        <MinimalContact data={data} showQr={showQr} colors={{ email: '#999999', phone: '#999999', url: '#555555' }} />
       </View>
     );
   }
@@ -218,7 +224,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
         ) : null}
         <View style={{ flex: 1 }} />
         <View style={{ zIndex: 1 }}>
-          <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+          <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
         </View>
       </View>
     );
@@ -246,7 +252,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
         </View>
         <View style={{ flex: 1 }} />
         <View style={{ alignItems: 'flex-end' }}>
-          <MinimalContact data={data} colors={{ email: '#8BA4C4', phone: '#8BA4C4', url: '#5A7FA0' }} />
+          <MinimalContact data={data} showQr={showQr} colors={{ email: '#8BA4C4', phone: '#8BA4C4', url: '#5A7FA0' }} />
         </View>
       </View>
     );
@@ -271,7 +277,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
           <Text style={{ fontSize: 11, color: '#5C6B5C', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} colors={{ email: '#5C6B5C', phone: '#5C6B5C', url: '#8A9B8A' }} />
+        <MinimalContact data={data} showQr={showQr} colors={{ email: '#5C6B5C', phone: '#5C6B5C', url: '#8A9B8A' }} />
       </View>
     );
   }
@@ -294,7 +300,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
             <Text style={{ fontSize: 11, color: '#E8705A', marginTop: 2 }}>{data.tagline}</Text>
           ) : null}
           <View style={{ flex: 1 }} />
-          <MinimalContact data={data} colors={{ email: '#8B8B8B', phone: '#8B8B8B', url: '#BBBBBB' }} />
+          <MinimalContact data={data} showQr={showQr} colors={{ email: '#8B8B8B', phone: '#8B8B8B', url: '#BBBBBB' }} />
         </View>
       </View>
     );
@@ -316,7 +322,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
           <Text style={{ fontSize: 10, color: '#6B8DB5', marginTop: 2 }}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} colors={{ email: '#6B8DB5', phone: '#6B8DB5', url: '#4A6A8A' }} />
+        <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B8DB5', phone: '#6B8DB5', url: '#4A6A8A' }} />
       </View>
       <View style={{ width: '40%', height: '100%' }}>
         {photoWithCache ? (
@@ -351,11 +357,6 @@ function CardBack({ template = 'photo', username, showQr = false }: { template?:
       <Text style={{ fontSize: 9, color, marginTop: 6, textAlign: 'center', fontWeight: '500' }}>
         Your career, guided by AI.
       </Text>
-      {showQr && QRCode ? (
-        <View style={{ marginTop: 10 }}>
-          <QRCode value={`https://${profileUrl}`} size={48} color={color} backgroundColor="transparent" />
-        </View>
-      ) : null}
       <Text style={{ fontSize: 10, fontWeight: '500', color, position: 'absolute', bottom: 12 }}>hellodilly.com</Text>
     </View>
   );
@@ -470,7 +471,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
       {/* Off-screen renders for capture (must be visible for react-native-view-shot) */}
       <View style={{ position: 'absolute', left: -9999, top: 0 }} pointerEvents="none">
         <View ref={frontRef} collapsable={false}>
-          <CardFront data={data} template={template} />
+          <CardFront data={data} template={template} showQr={showQr} />
         </View>
         <View ref={backRef} collapsable={false}>
           <CardBack template={template} username={data.username} showQr={showQr} />
@@ -484,7 +485,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
           position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
           transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }],
         }}>
-          <CardFront data={data} template={template} />
+          <CardFront data={data} template={template} showQr={showQr} />
         </Animated.View>
         {/* Back */}
         <Animated.View style={{
