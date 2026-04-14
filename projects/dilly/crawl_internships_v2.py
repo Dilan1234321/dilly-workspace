@@ -377,7 +377,7 @@ def classify_unclassified(conn, api_key=None):
     scored = 0
     for iid, title, desc, company in listings:
         try:
-            payload = json.dumps({'model':'claude-sonnet-4-20250514','max_tokens':300,'system':SYSTEM,
+            payload = json.dumps({'model':'claude-haiku-4-5-20251001','max_tokens':300,'system':SYSTEM,
                 'messages':[{'role':'user','content':f'Company:{company} Title:{title} Desc:{(desc or "")[:2000]}'}]}).encode()
             req = urllib.request.Request('https://api.anthropic.com/v1/messages', data=payload,
                 headers={'Content-Type':'application/json','x-api-key':api_key,'anthropic-version':'2023-06-01'}, method='POST')
