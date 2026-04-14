@@ -13,6 +13,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
+import { DillyFace } from '../../components/DillyFace';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
@@ -483,8 +484,9 @@ export default function InternshipTrackerScreen() {
 
   if (loading) {
     return (
-      <View style={[ts.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.t3, fontSize: 12 }}>Loading pipeline...</Text>
+      <View style={[ts.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }]}>
+        <DillyFace size={100} />
+        <Text style={{ color: colors.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your pipeline...</Text>
       </View>
     );
   }

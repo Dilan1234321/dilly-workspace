@@ -322,49 +322,8 @@ export default function HomeScreen() {
           </FadeInView>
         )}
 
-        {/* Pipeline tiles */}
-        {appCount > 0 && (
-          <FadeInView delay={showJourney ? 360 : 140}>
-            <Text style={[s.sectionLabel, { marginTop: 24 }]}>YOUR PIPELINE</Text>
-            <View style={s.pipeGrid}>
-              <PipelineTile icon="bookmark" count={appCount} label="Saved" color={colors.blue} onPress={() => router.push('/(app)/internship-tracker')} />
-              <PipelineTile icon="send" count={0} label="Applied" color={colors.indigo} onPress={() => router.push('/(app)/internship-tracker')} />
-              <PipelineTile icon="people" count={0} label="Interview" color="#AF52DE" onPress={() => router.push('/(app)/internship-tracker')} />
-              <PipelineTile icon="trophy" count={0} label="Offers" color={colors.green} onPress={() => router.push('/(app)/internship-tracker')} />
-            </View>
-          </FadeInView>
-        )}
-
-        {/* Activity feed */}
-        {activities.length > 0 && (
-          <FadeInView delay={showJourney ? 400 : 180}>
-            <Text style={[s.sectionLabel, { marginTop: 24 }]}>WHAT'S HAPPENING</Text>
-            <View style={{ gap: 6 }}>
-              {activities.map((a, i) => (
-                <ActivityCard key={i} {...a} />
-              ))}
-            </View>
-          </FadeInView>
-        )}
-
-        {/* Recent jobs */}
-        {topJobs.length > 0 && (
-          <FadeInView delay={showJourney ? 440 : 220}>
-            <Text style={[s.sectionLabel, { marginTop: 24 }]}>RECENT JOBS</Text>
-            {topJobs.map((job: any) => (
-              <AnimatedPressable key={job.id} style={s.jobCard} onPress={() => router.push('/(app)/jobs')} scaleDown={0.98}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={s.jobTitle} numberOfLines={1}>{job.title}</Text>
-                  <Text style={s.jobCompany} numberOfLines={1}>{job.company}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
-              </AnimatedPressable>
-            ))}
-          </FadeInView>
-        )}
-
-        {/* Quick Tools */}
-        <FadeInView delay={showJourney ? 480 : 260}>
+        {/* Quick Tools (moved above pipeline) */}
+        <FadeInView delay={showJourney ? 360 : 140}>
           <Text style={[s.sectionLabel, { marginTop: 24 }]}>QUICK TOOLS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
             {[
@@ -384,6 +343,47 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
         </FadeInView>
+
+        {/* Pipeline tiles */}
+        {appCount > 0 && (
+          <FadeInView delay={showJourney ? 400 : 180}>
+            <Text style={[s.sectionLabel, { marginTop: 24 }]}>YOUR PIPELINE</Text>
+            <View style={s.pipeGrid}>
+              <PipelineTile icon="bookmark" count={appCount} label="Saved" color={colors.blue} onPress={() => router.push('/(app)/internship-tracker')} />
+              <PipelineTile icon="send" count={0} label="Applied" color={colors.indigo} onPress={() => router.push('/(app)/internship-tracker')} />
+              <PipelineTile icon="people" count={0} label="Interview" color="#AF52DE" onPress={() => router.push('/(app)/internship-tracker')} />
+              <PipelineTile icon="trophy" count={0} label="Offers" color={colors.green} onPress={() => router.push('/(app)/internship-tracker')} />
+            </View>
+          </FadeInView>
+        )}
+
+        {/* Activity feed */}
+        {activities.length > 0 && (
+          <FadeInView delay={showJourney ? 440 : 220}>
+            <Text style={[s.sectionLabel, { marginTop: 24 }]}>WHAT'S HAPPENING</Text>
+            <View style={{ gap: 6 }}>
+              {activities.map((a, i) => (
+                <ActivityCard key={i} {...a} />
+              ))}
+            </View>
+          </FadeInView>
+        )}
+
+        {/* Recent jobs */}
+        {topJobs.length > 0 && (
+          <FadeInView delay={showJourney ? 480 : 260}>
+            <Text style={[s.sectionLabel, { marginTop: 24 }]}>RECENT JOBS</Text>
+            {topJobs.map((job: any) => (
+              <AnimatedPressable key={job.id} style={s.jobCard} onPress={() => router.push('/(app)/jobs')} scaleDown={0.98}>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={s.jobTitle} numberOfLines={1}>{job.title}</Text>
+                  <Text style={s.jobCompany} numberOfLines={1}>{job.company}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+              </AnimatedPressable>
+            ))}
+          </FadeInView>
+        )}
 
       </ScrollView>
     </View>
