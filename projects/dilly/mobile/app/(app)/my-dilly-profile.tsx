@@ -541,10 +541,15 @@ export default function MyDillyProfileScreen() {
               </View>
             )}
             {totalFacts === 0 && resumes.length === 0 && (
-              <View style={d.milestoneRow}>
-                <Ionicons name="ellipse-outline" size={16} color={colors.t3} />
-                <Text style={d.milestoneText}>Start telling Dilly about yourself to unlock milestones</Text>
-              </View>
+              <AnimatedPressable
+                style={d.milestoneRow}
+                onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'I just joined Dilly. Help me get started building my profile. Ask me about my experiences, skills, and goals.' })}
+                scaleDown={0.98}
+              >
+                <Ionicons name="chatbubble" size={16} color={colors.indigo} />
+                <Text style={[d.milestoneText, { color: colors.indigo }]}>Start telling Dilly about yourself to unlock milestones</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.indigo} />
+              </AnimatedPressable>
             )}
           </View>
         </FadeInView>
