@@ -79,7 +79,37 @@ export default function InterviewPracticeScreen() {
   const [feedback, setFeedback] = useState<InterviewFeedback | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
   const [jdTooShort, setJdTooShort] = useState(false);
+  const [jobUrl, setJobUrl] = useState('');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlError, setUrlError] = useState('');
   const scrollRef = useRef<ScrollView>(null);
+
+  async function handleUrlFetch() {
+    const url = jobUrl.trim();
+    if (!url || url.length < 10) return;
+    setUrlLoading(true);
+    setUrlError('');
+    try {
+      const res = await dilly.fetch('/jobs/fetch-jd', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) throw new Error('Could not fetch job details');
+      const data = await res.json();
+      if (data.job_title) setCompany(data.company || '');
+      if (data.job_title) setRole(data.job_title || '');
+      if (data.job_description && data.job_description.length > 50) {
+        setJobDescription(data.job_description);
+      }
+      if (!data.job_title && !data.job_description) {
+        setUrlError('Could not extract job details from this URL. Try entering manually.');
+      }
+    } catch {
+      setUrlError('Could not fetch from this URL. Try pasting the job description manually.');
+    } finally {
+      setUrlLoading(false);
+    }
+  }
 
   // Auto-load if company+role were passed as params
   useEffect(() => {
@@ -272,8 +302,32 @@ export default function InterviewPracticeScreen() {
                 </View>
                 <Text style={s.setupTitle}>Interview Practice</Text>
                 <Text style={s.setupSub}>
-                  Company-specific questions powered by AI. Paste the job description and Dilly will generate the exact questions you're likely to face.
+                  Paste a job URL or enter the details manually.
                 </Text>
+
+                {/* URL option */}
+                <Text style={s.inputLabel}>Job URL</Text>
+                <TextInput
+                  style={s.input}
+                  value={jobUrl}
+                  onChangeText={setJobUrl}
+                  placeholder="Paste a job listing URL"
+                  placeholderTextColor={colors.t3}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                  returnKeyType="go"
+                  onSubmitEditing={() => handleUrlFetch()}
+                />
+                {urlLoading && <ActivityIndicator size="small" color={PURPLE} style={{ marginTop: 8 }} />}
+                {urlError ? <Text style={{ fontSize: 12, color: '#FF453A', marginTop: 4 }}>{urlError}</Text> : null}
+
+                {/* Divider */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 12 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+                  <Text style={{ fontSize: 12, color: colors.t3 }}>or enter manually</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+                </View>
+
                 <Text style={s.inputLabel}>Company <Text style={{ color: '#FF453A' }}>*</Text></Text>
                 <TextInput
                   style={s.input}
