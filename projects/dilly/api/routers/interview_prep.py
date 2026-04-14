@@ -402,7 +402,7 @@ No markdown, no prose, just the JSON array."""
         import anthropic, json as _json
         client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
         msg = await client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+            model="claude-sonnet-4-5-20250514",
             max_tokens=1500,
             system=system,
             messages=[{"role": "user", "content": f"Generate the 8 interview questions for {role} at {company}."}],

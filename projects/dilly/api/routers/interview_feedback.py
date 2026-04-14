@@ -202,7 +202,7 @@ async def interview_feedback(req: InterviewFeedbackRequest, request: Request):
 
         client = anthropic.AsyncAnthropic(api_key=api_key)
         response = await client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+            model="claude-sonnet-4-5-20250514",
             max_tokens=2000,
             temperature=0.3,
             system=system_prompt,

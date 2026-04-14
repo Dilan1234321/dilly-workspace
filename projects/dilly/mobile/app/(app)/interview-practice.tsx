@@ -217,11 +217,11 @@ export default function InterviewPracticeScreen() {
     }
   }
 
-  async function requestFeedback(finalAnswers: string[]) {
+  async function requestFeedback(finalAnswers: string[], retryCount = 0) {
     setPhase('analyzing');
     try {
       const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 120_000);
+      const timeout = setTimeout(() => ctrl.abort(), 180_000); // 3 minute timeout
       const res = await dilly.fetch('/interview/feedback', {
         method: 'POST',
         body: JSON.stringify({
@@ -240,7 +240,7 @@ export default function InterviewPracticeScreen() {
 
       if (!res.ok) {
         const d = await res.json().catch(() => null);
-        throw new Error(d?.detail || 'Feedback generation failed.');
+        throw new Error(d?.detail || `Server error ${res.status}`);
       }
 
       const data: InterviewFeedback = await res.json();
@@ -248,10 +248,20 @@ export default function InterviewPracticeScreen() {
       setExpandedCards(new Set());
       setPhase('review');
     } catch (e: any) {
-      toast.show({ message: 'Could not generate feedback. Try again.' });
-      // Fall back to review without feedback
-      setFeedback(null);
-      setPhase('review');
+      // Auto-retry once before showing error
+      if (retryCount < 1) {
+        requestFeedback(finalAnswers, retryCount + 1);
+        return;
+      }
+      // Show error but let them retry
+      Alert.alert(
+        'Feedback took too long',
+        'Dilly could not generate feedback for this session. This can happen with long interviews. Want to try again?',
+        [
+          { text: 'Try Again', onPress: () => requestFeedback(finalAnswers, 0) },
+          { text: 'Skip Feedback', onPress: () => { setFeedback(null); setPhase('review'); } },
+        ],
+      );
     }
   }
 
