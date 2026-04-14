@@ -27,7 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
-import { colors, spacing, radius } from '../../lib/tokens';
+import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { mediumHaptic } from '../../lib/haptics';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -171,6 +171,10 @@ export default function MyDillyProfileScreen() {
   const [popup, setPopup] = useState<{ visible: boolean; anchor?: { x: number; y: number }; fact?: FactItem }>({ visible: false });
   const [editingFact, setEditingFact] = useState<{ fact: FactItem; label: string; value: string } | null>(null);
   const [resumes, setResumes] = useState<{ id: string; job_title: string; company: string; created_at: string }[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editTagline, setEditTagline] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const starterOpacity = useRef(new Animated.Value(1)).current;
@@ -273,7 +277,35 @@ export default function MyDillyProfileScreen() {
 
       {/* Header */}
       <View style={[d.header, { paddingTop: insets.top + 8 }]}>
-        <View style={{ width: 28 }} />
+        <AnimatedPressable onPress={async () => {
+          if (editMode) {
+            // Save changes
+            try {
+              await dilly.fetch('/profile', {
+                method: 'PATCH',
+                body: JSON.stringify({
+                  name: editName.trim() || undefined,
+                  profile_tagline: editTagline.trim() || undefined,
+                }),
+              });
+              setProfile((prev: any) => ({
+                ...prev,
+                name: editName.trim() || prev.name,
+                profile_tagline: editTagline.trim(),
+              }));
+              toast.show({ message: 'Profile updated!', type: 'success' });
+            } catch { toast.show({ message: 'Could not save.' }); }
+            setEditMode(false);
+          } else {
+            // Enter edit mode
+            setEditName(p.name || '');
+            setEditTagline(p.profile_tagline || p.custom_tagline || '');
+            setEditEmail(p.email || '');
+            setEditMode(true);
+          }
+        }} scaleDown={0.95} hitSlop={8}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: editMode ? colors.green : colors.indigo }}>{editMode ? 'Save' : 'Edit'}</Text>
+        </AnimatedPressable>
         <Text style={d.headerTitle}>My Dilly</Text>
         <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>
           <Ionicons name="settings-outline" size={20} color={colors.t3} />
@@ -285,6 +317,54 @@ export default function MyDillyProfileScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={GOLD} />}
       >
+
+        {/* ── Edit Profile Section ──────────────────────────── */}
+        {editMode && (
+          <FadeInView delay={0}>
+            <View style={d.editSection}>
+              {/* Photo */}
+              <AnimatedPressable
+                style={d.editPhotoBtn}
+                onPress={async () => {
+                  try {
+                    const ImagePicker = await import('expo-image-picker');
+                    const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+                    if (!result.canceled && result.assets?.[0]) {
+                      const asset = result.assets[0];
+                      const headers = await (await import('../../lib/auth')).authHeaders();
+                      const form = new FormData();
+                      form.append('file', { uri: asset.uri, name: 'photo.jpg', type: 'image/jpeg' } as any);
+                      await fetch(`${API_BASE}/profile/photo`, { method: 'POST', headers, body: form });
+                      toast.show({ message: 'Photo updated!', type: 'success' });
+                    }
+                  } catch { toast.show({ message: 'Could not update photo.' }); }
+                }}
+                scaleDown={0.95}
+              >
+                {p.profile_slug ? (
+                  <Image source={{ uri: `${API_BASE}/profile/public/${p.profile_slug}/photo?_t=${Date.now()}` }} style={d.editPhotoImg} />
+                ) : (
+                  <View style={d.editPhotoPlaceholder}>
+                    <Ionicons name="camera" size={24} color={colors.t3} />
+                  </View>
+                )}
+                <Text style={d.editPhotoLabel}>Change photo</Text>
+              </AnimatedPressable>
+
+              {/* Name */}
+              <View style={d.editField}>
+                <Text style={d.editFieldLabel}>Name</Text>
+                <TextInput style={d.editFieldInput} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={colors.t3} />
+              </View>
+
+              {/* Tagline */}
+              <View style={d.editField}>
+                <Text style={d.editFieldLabel}>Tagline</Text>
+                <TextInput style={d.editFieldInput} value={editTagline} onChangeText={setEditTagline} placeholder="e.g. Aspiring Data Scientist" placeholderTextColor={colors.t3} maxLength={50} />
+              </View>
+            </View>
+          </FadeInView>
+        )}
 
         {/* ── 0. Cities ──────────────────────────────────────── */}
         <FadeInView delay={0}>
@@ -832,6 +912,28 @@ const d = StyleSheet.create({
   activityText: { fontSize: 12, color: colors.t2, fontWeight: '500' },
 
   // Milestones
+  // Edit mode
+  editSection: {
+    backgroundColor: colors.s1, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.b1, padding: spacing.lg, gap: 16,
+    marginBottom: 8,
+  },
+  editPhotoBtn: { alignItems: 'center', gap: 8 },
+  editPhotoImg: { width: 80, height: 80, borderRadius: 40 },
+  editPhotoPlaceholder: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  editPhotoLabel: { fontSize: 12, fontWeight: '600', color: colors.indigo },
+  editField: { gap: 4 },
+  editFieldLabel: { fontSize: 11, fontWeight: '600', color: colors.t2 },
+  editFieldInput: {
+    backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    fontSize: 14, color: colors.t1,
+  },
+
   milestoneRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: colors.s1, borderRadius: 10, padding: 12,

@@ -162,8 +162,6 @@ export default function SettingsScreen() {
             <Row label="Name" value={name || 'Not set'} />
             <Divider />
             <Row label="Email" value={email || 'Not set'} />
-            <Divider />
-            <Row label="Edit profile" onPress={() => router.push('/(app)/my-dilly-profile')} />
           </View>
         </FadeInView>
 
