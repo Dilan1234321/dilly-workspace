@@ -333,7 +333,6 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         ) : null}
         <View style={{ flex: 1 }} />
         <MinimalContact data={data} colors={{ email: '#6B8DB5', phone: '#6B8DB5', url: '#4A6A8A' }} />
-        {showQr && <QrBadge username={data.username} color="#6B8DB5" size={38} />}
       </View>
       <View style={{ width: '40%', height: '100%' }}>
         {photoWithCache ? (
@@ -341,6 +340,11 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         ) : (
           <View style={{ width: '100%', height: '100%', backgroundColor: '#1A2A3E', justifyContent: 'center', alignItems: 'center' }}>
             <Text style={{ fontSize: 36, fontWeight: '800', color: '#3A5A7A' }}>{initial}</Text>
+          </View>
+        )}
+        {showQr && QRCode && (
+          <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: '#0F172480', borderRadius: 6, padding: 4 }}>
+            <QRCode value={`https://hellodilly.com/p/${data.username || 'you'}`} size={34} color="#FFFFFF" backgroundColor="transparent" />
           </View>
         )}
       </View>
