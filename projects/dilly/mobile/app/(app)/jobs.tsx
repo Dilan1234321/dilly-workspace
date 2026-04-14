@@ -159,20 +159,56 @@ function FitNarrative({ listing }: { listing: Listing }) {
 
   if (!data) return null;
 
-  const sections: { label: string; text: string; color: string }[] = [
-    { label: 'WHAT YOU HAVE', text: data.what_you_have, color: GREEN },
-    { label: "WHAT'S MISSING", text: data.whats_missing, color: data.whats_missing.toLowerCase().startsWith('nothing major') ? GREEN : AMBER },
-    { label: 'WHAT TO DO', text: data.what_to_do, color: BLUE },
-  ];
+  // Split paragraphs into bullet points
+  const toBullets = (text: string): string[] => {
+    // If already has bullet markers, split on those
+    if (text.includes('- ') || text.includes('* ')) {
+      return text.split(/[-*]\s+/).map(s => s.trim()).filter(s => s.length > 0);
+    }
+    // Split by sentences
+    return text.split(/\.\s+/).map(s => s.trim().replace(/\.$/, '')).filter(s => s.length > 5);
+  };
+
+  const haveBullets = toBullets(data.what_you_have).slice(0, 3);
+  const missingBullets = toBullets(data.whats_missing).slice(0, 3);
+  const nothingMissing = data.whats_missing.toLowerCase().startsWith('nothing major');
 
   return (
     <Animated.View style={[s.narrativeWrap, { opacity: fadeAnim }]}>
-      {sections.map((sec, i) => (
-        <View key={i} style={s.narrativeSection}>
-          <Text style={[s.narrativeLabel, { color: sec.color }]}>{sec.label}</Text>
-          <Text style={s.narrativeText}>{sec.text}</Text>
+      <View style={s.narrativeColumns}>
+        {/* Left column: What you have */}
+        <View style={s.narrativeCol}>
+          <Text style={[s.narrativeLabel, { color: GREEN }]}>WHAT YOU HAVE</Text>
+          {haveBullets.map((b, i) => (
+            <View key={i} style={s.narrativeBulletRow}>
+              <Ionicons name="checkmark-circle" size={12} color={GREEN} style={{ marginTop: 2 }} />
+              <Text style={s.narrativeBulletText}>{b}</Text>
+            </View>
+          ))}
         </View>
-      ))}
+
+        {/* Right column: What's missing */}
+        <View style={s.narrativeCol}>
+          <Text style={[s.narrativeLabel, { color: nothingMissing ? GREEN : AMBER }]}>WHAT'S MISSING</Text>
+          {nothingMissing ? (
+            <View style={s.narrativeBulletRow}>
+              <Ionicons name="checkmark-circle" size={12} color={GREEN} style={{ marginTop: 2 }} />
+              <Text style={s.narrativeBulletText}>Nothing major</Text>
+            </View>
+          ) : missingBullets.map((b, i) => (
+            <View key={i} style={s.narrativeBulletRow}>
+              <Ionicons name="alert-circle" size={12} color={AMBER} style={{ marginTop: 2 }} />
+              <Text style={s.narrativeBulletText}>{b}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* What to do - full width below */}
+      <View style={{ marginTop: 8 }}>
+        <Text style={[s.narrativeLabel, { color: COBALT }]}>WHAT TO DO</Text>
+        <Text style={[s.narrativeBulletText, { marginTop: 2 }]}>{data.what_to_do}</Text>
+      </View>
     </Animated.View>
   );
 }
@@ -606,10 +642,12 @@ const s = StyleSheet.create({
   expandedSection: { gap: 12, marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.b1 },
 
   // Fit Narrative
-  narrativeWrap: { padding: 12, gap: 12 },
-  narrativeSection: { gap: 4 },
-  narrativeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-  narrativeText: { fontSize: 13, color: colors.t1, lineHeight: 19 },
+  narrativeWrap: { padding: 12, gap: 8 },
+  narrativeColumns: { flexDirection: 'row', gap: 12 },
+  narrativeCol: { flex: 1, gap: 6 },
+  narrativeLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8, marginBottom: 2 },
+  narrativeBulletRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
+  narrativeBulletText: { flex: 1, fontSize: 11, color: colors.t1, lineHeight: 16 },
   skeletonLine: { height: 12, borderRadius: 6, backgroundColor: colors.s3 },
 
   // Quick Glance
