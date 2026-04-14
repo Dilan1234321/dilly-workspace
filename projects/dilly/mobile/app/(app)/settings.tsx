@@ -155,10 +155,32 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await fetchProfile(); setRefreshing(false); }} />}
       >
-        {/* Account */}
+        {/* Edit Profile (always visible) */}
         <FadeInView delay={0}>
-          <SectionLabel text="ACCOUNT" />
           <View style={s.card}>
+            {/* Photo */}
+            <AnimatedPressable
+              style={{ alignItems: 'center', gap: 6, paddingVertical: 12 }}
+              onPress={async () => {
+                try {
+                  const ImagePicker = await import('expo-image-picker');
+                  const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+                  if (!result.canceled && result.assets?.[0]) {
+                    const { authHeaders } = await import('../../lib/auth');
+                    const headers = await authHeaders();
+                    const form = new FormData();
+                    form.append('file', { uri: result.assets[0].uri, name: 'photo.jpg', type: 'image/jpeg' } as any);
+                    const { API_BASE } = await import('../../lib/tokens');
+                    await fetch(`${API_BASE}/profile/photo`, { method: 'POST', headers, body: form });
+                  }
+                } catch {}
+              }}
+              scaleDown={0.95}
+            >
+              <Ionicons name="camera" size={24} color={colors.t3} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.indigo }}>Change photo</Text>
+            </AnimatedPressable>
+            <Divider />
             <Row label="Name" value={name || 'Not set'} />
             <Divider />
             <Row label="Email" value={email || 'Not set'} />
@@ -221,11 +243,11 @@ export default function SettingsScreen() {
         <FadeInView delay={120}>
           <SectionLabel text="ABOUT" />
           <View style={s.card}>
-            <Row label="Terms of Service" onPress={() => Linking.openURL('https://hellodilly.com/terms')} />
+            <Row label="Terms of Service" onPress={() => Alert.alert('Terms of Service', 'By using Dilly, you agree to the following:\n\n1. Dilly is a career guidance platform. It is not a guarantee of employment.\n2. AI-generated content (fit narratives, resumes, interview feedback) may not always be accurate. Verify important information independently.\n3. Your Dilly Profile data is stored securely and used to provide personalized career guidance.\n4. You may delete your account and all data at any time from Settings.\n5. Dilly is not a substitute for professional career counseling.\n6. We reserve the right to modify features and pricing with notice.\n7. Misuse of the platform (fake profiles, spam, harassment) will result in account termination.\n\nQuestions? Email ceo@hellodilly.com')} />
             <Divider />
-            <Row label="Privacy Policy" onPress={() => Linking.openURL('https://hellodilly.com/privacy')} />
+            <Row label="Privacy Policy" onPress={() => Alert.alert('Privacy Policy', 'Your privacy matters to us.\n\n1. We collect: email, name, profile information you provide, and conversation history with Dilly AI.\n2. We use this data to: build your Dilly Profile, generate fit narratives, tailor resumes, and improve our service.\n3. We do NOT sell your data to third parties.\n4. We use Anthropic (Claude) for AI features. Your conversations are processed by their API but not used to train their models.\n5. We use Resend for email delivery and Railway for hosting.\n6. You can delete all your data at any time from Settings > Delete Account.\n7. We may use anonymized, aggregated data for product improvement.\n8. We use cookies and local storage for authentication only.\n\nQuestions? Email ceo@hellodilly.com')} />
             <Divider />
-            <Row label="Contact us" onPress={() => Linking.openURL('mailto:hello@trydilly.com')} />
+            <Row label="Contact us" onPress={() => Linking.openURL('mailto:ceo@hellodilly.com')} />
           </View>
           <Text style={s.versionText}>Dilly v{APP_VERSION}</Text>
         </FadeInView>
