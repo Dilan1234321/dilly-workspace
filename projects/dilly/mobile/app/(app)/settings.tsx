@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl,
+  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -137,7 +137,7 @@ export default function SettingsScreen() {
     );
   }
 
-  const planLabel = plan === 'pro' ? 'Dilly Pro' : plan === 'dilly' ? 'Dilly' : 'Starter';
+  const planLabel = plan === 'pro' ? 'Dilly Pro' : plan === 'dilly' ? 'Dilly' : 'Dilly Starter';
 
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
@@ -177,7 +177,13 @@ export default function SettingsScreen() {
               }}
               scaleDown={0.95}
             >
-              <Ionicons name="camera" size={24} color={colors.t3} />
+              {email ? (
+                <Image source={{ uri: `https://api.trydilly.com/profile/public/${email.split('@')[0]}/photo?_t=${Date.now()}` }} style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.s2 }} />
+              ) : (
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="camera" size={24} color={colors.t3} />
+                </View>
+              )}
               <Text style={{ fontSize: 12, fontWeight: '600', color: colors.indigo }}>Change photo</Text>
             </AnimatedPressable>
             <Divider />
