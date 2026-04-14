@@ -20,9 +20,9 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   LayoutAnimation, RefreshControl, Animated, Easing,
-  Dimensions, Image, TextInput, Keyboard,
+  Dimensions, Image, TextInput, Keyboard, Alert,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
@@ -211,6 +211,9 @@ export default function MyDillyProfileScreen() {
   }, []);
 
   useEffect(() => { fetchData(); }, []);
+
+  // Re-fetch when tab becomes active (after AI conversation adds new facts)
+  useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
 
   // Rotate conversation starters
   useEffect(() => {
@@ -689,9 +692,18 @@ export default function MyDillyProfileScreen() {
           {
             label: 'Delete',
             destructive: true,
-            onPress: async () => {
+            onPress: () => {
               if (!popup.fact) return;
               const factId = popup.fact.id;
+              Alert.alert(
+                'Dilly will forget this',
+                'This information will be permanently removed from your Dilly Profile. Dilly will no longer know this about you.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
               try {
                 await dilly.fetch(`/memory/items/${factId}`, { method: 'DELETE' });
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -706,6 +718,10 @@ export default function MyDillyProfileScreen() {
                   return { ...prev, items, grouped };
                 });
               } catch {}
+                    },
+                  },
+                ],
+              );
             },
           },
         ]}
