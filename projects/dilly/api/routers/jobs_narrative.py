@@ -257,7 +257,9 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
     facts = surface.get("items") or []
 
     # Check plan limits
-    plan = profile.get("plan") or "starter"
+    # NOTE: No plan column in DB yet (Stripe/RevenueCat not wired).
+    # Default to "dilly" (250/month) until payment system is live.
+    plan = profile.get("plan") or "dilly"
     limit = _get_plan_limit(plan)
     count, reset_date = _get_narrative_usage(email)
 

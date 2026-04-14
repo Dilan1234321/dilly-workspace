@@ -89,8 +89,8 @@ function PhotoCircle({ photoUri, initial, size, bgColor }: { photoUri: string | 
   );
 }
 
-/** Minimal contact block: email, first phone, city, QR or profile URL */
-function MinimalContact({ data, colors, showQr = false }: { data: CardData; colors: { email: string; phone: string; url: string }; showQr?: boolean }) {
+/** Minimal contact block: email, first phone, city, profile URL (no QR here) */
+function MinimalContact({ data, colors }: { data: CardData; colors: { email: string; phone: string; url: string } }) {
   const profileUrl = `hellodilly.com/p/${data.username || 'you'}`;
   const firstPhone = (data.phones || []).find(p => p.number.replace(/\D/g, '').length >= 3);
   return (
@@ -100,14 +100,19 @@ function MinimalContact({ data, colors, showQr = false }: { data: CardData; colo
         <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{formatPhone(firstPhone.number)}</Text>
       ) : null}
       {data.city ? <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{data.city}</Text> : null}
-      {showQr && QRCode ? (
-        <View style={{ marginTop: 4 }}>
-          <QRCode value={`https://${profileUrl}`} size={36} color={colors.url} backgroundColor="transparent" />
-        </View>
-      ) : (
-        <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>
-      )}
+      <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>
     </>
+  );
+}
+
+/** QR code badge - positioned absolutely in bottom-right of card */
+function QrBadge({ username, color, size = 44 }: { username: string; color: string; size?: number }) {
+  const profileUrl = `hellodilly.com/p/${username || 'you'}`;
+  if (!QRCode) return null;
+  return (
+    <View style={{ position: 'absolute', bottom: 12, right: 14 }}>
+      <QRCode value={`https://${profileUrl}`} size={size} color={color} backgroundColor="transparent" />
+    </View>
   );
 }
 
@@ -133,7 +138,8 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           <Text style={{ fontSize: 11, color: '#6B7280', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+        <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+        {showQr && <QrBadge username={data.username} color="#9CA3AF" />}
       </View>
     );
   }
@@ -164,8 +170,9 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
             <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{data.tagline}</Text>
           ) : null}
           <View style={{ flex: 1 }} />
-          <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+          <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
         </View>
+        {showQr && <QrBadge username={data.username} color="#9CA3AF" />}
       </View>
     );
   }
@@ -187,7 +194,8 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         ) : null}
         <View style={{ width: 30, height: 1, backgroundColor: '#FFFFFF', marginTop: 8 }} />
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} showQr={showQr} colors={{ email: '#999999', phone: '#999999', url: '#555555' }} />
+        <MinimalContact data={data} colors={{ email: '#999999', phone: '#999999', url: '#555555' }} />
+        {showQr && <QrBadge username={data.username} color="#FFFFFF" />}
       </View>
     );
   }
@@ -224,8 +232,9 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         ) : null}
         <View style={{ flex: 1 }} />
         <View style={{ zIndex: 1 }}>
-          <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
+          <MinimalContact data={data} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
         </View>
+        {showQr && <QrBadge username={data.username} color="#1A1A2E" />}
       </View>
     );
   }
@@ -251,9 +260,8 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           </View>
         </View>
         <View style={{ flex: 1 }} />
-        <View style={{ alignItems: 'flex-end' }}>
-          <MinimalContact data={data} showQr={showQr} colors={{ email: '#8BA4C4', phone: '#8BA4C4', url: '#5A7FA0' }} />
-        </View>
+        <MinimalContact data={data} colors={{ email: '#8BA4C4', phone: '#8BA4C4', url: '#5A7FA0' }} />
+        {showQr && <QrBadge username={data.username} color="#8BA4C4" />}
       </View>
     );
   }
@@ -277,7 +285,8 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           <Text style={{ fontSize: 11, color: '#5C6B5C', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} showQr={showQr} colors={{ email: '#5C6B5C', phone: '#5C6B5C', url: '#8A9B8A' }} />
+        <MinimalContact data={data} colors={{ email: '#5C6B5C', phone: '#5C6B5C', url: '#8A9B8A' }} />
+        {showQr && <QrBadge username={data.username} color="#5C6B5C" />}
       </View>
     );
   }
@@ -300,8 +309,9 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
             <Text style={{ fontSize: 11, color: '#E8705A', marginTop: 2 }}>{data.tagline}</Text>
           ) : null}
           <View style={{ flex: 1 }} />
-          <MinimalContact data={data} showQr={showQr} colors={{ email: '#8B8B8B', phone: '#8B8B8B', url: '#BBBBBB' }} />
+          <MinimalContact data={data} colors={{ email: '#8B8B8B', phone: '#8B8B8B', url: '#BBBBBB' }} />
         </View>
+        {showQr && <QrBadge username={data.username} color="#E8705A" />}
       </View>
     );
   }
@@ -322,7 +332,8 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           <Text style={{ fontSize: 10, color: '#6B8DB5', marginTop: 2 }}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} showQr={showQr} colors={{ email: '#6B8DB5', phone: '#6B8DB5', url: '#4A6A8A' }} />
+        <MinimalContact data={data} colors={{ email: '#6B8DB5', phone: '#6B8DB5', url: '#4A6A8A' }} />
+        {showQr && <QrBadge username={data.username} color="#6B8DB5" size={38} />}
       </View>
       <View style={{ width: '40%', height: '100%' }}>
         {photoWithCache ? (
