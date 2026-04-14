@@ -23,6 +23,20 @@ export function RecruiterNavLeft() {
       <Link href="/recruiter" className="dr-logo">
         Dilly Recruiter
       </Link>
+      <nav className="dr-nav-links">
+        <Link
+          href="/recruiter/demo"
+          className={`dr-nav-link ${pathname === "/recruiter/demo" ? "dr-nav-link--active" : ""}`}
+        >
+          Demo
+        </Link>
+        <Link
+          href="/recruiter/about"
+          className={`dr-nav-link ${pathname === "/recruiter/about" ? "dr-nav-link--active" : ""}`}
+        >
+          About
+        </Link>
+      </nav>
     </div>
   );
 }

@@ -10,6 +10,90 @@ import { AskAIChat } from "@/components/recruiter/AskAIChat";
 
 const RECRUITER_SEARCH_STATE_KEY = "dilly_recruiter_search_state";
 
+// ─── Similar Candidates ────────────────────────────────────────────────────
+
+type SimilarCandidate = {
+  candidate_id: string;
+  name: string;
+  major?: string;
+  school?: string;
+  similarity_score?: number;
+  match_score?: number;
+};
+
+function SimilarCandidates({
+  candidateId,
+  roleDescription,
+}: {
+  candidateId: string;
+  roleDescription: string;
+}) {
+  const [similar, setSimilar] = useState<SimilarCandidate[]>([]);
+  const [imgFailed, setImgFailed] = useState<Record<string, boolean>>({});
+  const _bust = Math.floor(Date.now() / 60000);
+
+  useEffect(() => {
+    if (!candidateId) return;
+    const key = getRecruiterKey();
+    const headers: Record<string, string> = {};
+    if (key) {
+      headers["X-Recruiter-API-Key"] = key;
+      headers["Authorization"] = `Bearer ${key}`;
+    }
+    const url = new URL(`${API_BASE}/recruiter/candidates/${encodeURIComponent(candidateId)}/similar`);
+    if (roleDescription.trim()) url.searchParams.set("role_description", roleDescription.trim().slice(0, 400));
+    url.searchParams.set("limit", "5");
+    fetch(url.toString(), { headers })
+      .then(r => r.ok ? r.json() : { candidates: [] })
+      .then(d => setSimilar((d.candidates ?? []).slice(0, 5)))
+      .catch(() => setSimilar([]));
+  }, [candidateId, roleDescription]);
+
+  if (!similar.length) return null;
+
+  return (
+    <div className="dr-similar-section">
+      <p className="dr-similar-heading">Similar candidates</p>
+      <div className="dr-similar-list">
+        {similar.map(s => {
+          const ini = initial(s.name || "?");
+          const score = s.match_score ?? s.similarity_score;
+          return (
+            <a
+              key={s.candidate_id}
+              href={`/recruiter/candidates/${s.candidate_id}`}
+              className="dr-similar-card"
+            >
+              <div className="dr-similar-avatar">
+                {!imgFailed[s.candidate_id] ? (
+                  <img
+                    src={`${API_BASE}/profile/public/${s.candidate_id}/photo?_b=${_bust}`}
+                    alt=""
+                    onError={() => setImgFailed(prev => ({ ...prev, [s.candidate_id]: true }))}
+                  />
+                ) : (
+                  <span>{ini}</span>
+                )}
+              </div>
+              <div className="dr-similar-info">
+                <div className="dr-similar-name">{s.name || "Candidate"}</div>
+                {(s.major || s.school) && (
+                  <div className="dr-similar-meta">
+                    {[s.major, s.school].filter(Boolean).join(" · ")}
+                  </div>
+                )}
+              </div>
+              {score != null && (
+                <span className="dr-similar-score">{Math.round(score)}%</span>
+              )}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function initial(name: string): string {
@@ -78,8 +162,8 @@ function fitLevelClass(level: string | undefined): string {
   const l = level.toLowerCase().replace(/\s+/g, "-");
   if (l === "standout") return "dr-fit-badge--green";
   if (l === "strong-fit" || l === "strong") return "dr-fit-badge--green";
-  if (l === "good-fit" || l === "good") return "dr-fit-badge--amber";
-  if (l === "weak-fit" || l === "weak" || l === "not-a-fit") return "dr-fit-badge--red";
+  if (l === "moderate-fit" || l === "moderate" || l === "good-fit" || l === "good" || l === "partial-fit") return "dr-fit-badge--amber";
+  if (l === "developing" || l === "weak-fit" || l === "weak" || l === "not-a-fit") return "dr-fit-badge--red";
   return "dr-fit-badge--amber";
 }
 
@@ -1004,6 +1088,12 @@ export default function RecruiterCandidatePage() {
                 roleDescription={roleDescription}
               />
             </section>
+
+            {/* Similar candidates */}
+            <SimilarCandidates
+              candidateId={candidate.candidate_id}
+              roleDescription={roleDescription}
+            />
           </motion.div>
         </motion.div>
 

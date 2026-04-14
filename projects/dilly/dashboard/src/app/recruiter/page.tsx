@@ -9,7 +9,7 @@ import { Search, Bookmark, BookmarkCheck, ChevronRight, GraduationCap, MapPin, S
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FitLevel = "Standout" | "Strong fit" | "Good fit" | "Partial fit" | "Weak fit" | string;
+type FitLevel = "Standout" | "Strong fit" | "Moderate fit" | "Developing" | "Good fit" | "Partial fit" | "Weak fit" | string;
 
 type Candidate = {
   candidate_id: string;
@@ -32,11 +32,15 @@ type Candidate = {
 type FitFilter = "all" | "green" | "amber" | "red";
 
 const FIT_LEVEL_COLOR: Record<string, FitFilter> = {
-  "Standout":    "green",
-  "Strong fit":  "green",
-  "Good fit":    "amber",
-  "Partial fit": "amber",
-  "Weak fit":    "red",
+  "Standout":      "green",
+  "Strong fit":    "green",
+  "Moderate fit":  "amber",
+  "Developing":    "red",
+  // legacy labels — kept for backward compat
+  "Good fit":      "amber",
+  "Partial fit":   "amber",
+  "Weak fit":      "red",
+  "Not a fit":     "red",
 };
 
 function fitColor(level?: FitLevel | null): FitFilter {
@@ -570,16 +574,35 @@ export default function RecruiterPage() {
           )}
 
           {/* Empty — no search yet */}
-          {!loading && candidates.length === 0 && !error && (
+          {!loading && candidates.length === 0 && !error && !submittedRole && (
             <div className="dr-empty">
               <div className="dr-empty-icon">
                 <Search size={22} />
               </div>
               <p className="dr-empty-title">Describe the role to get started</p>
               <p className="dr-empty-body">
-                Paste a job description, a sentence about what you need, or just a job title.
-                Dilly reads every candidate's full profile and surfaces who actually fits.
+                Paste a job description, a sentence, or just a job title.
+                Dilly reads every candidate&apos;s full living profile and surfaces who actually fits.
               </p>
+              <div className="dr-empty-examples">
+                {[
+                  "Senior backend engineer with Kafka experience",
+                  "Product manager for a B2B SaaS company",
+                  "Early-stage startup generalist — technical founder type",
+                ].map((ex, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="dr-empty-example-chip"
+                    onClick={() => {
+                      setRoleDescription(ex);
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    {ex}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
