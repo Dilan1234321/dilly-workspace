@@ -333,7 +333,7 @@ function CardFront({ data, template = 'photo' }: { data: CardData; template?: Ca
 
 // ── Card Back ────────────────────────────────────────────────────────────────
 
-function CardBack({ template = 'photo', username }: { template?: CardTemplate; username?: string }) {
+function CardBack({ template = 'photo', username, showQr = false }: { template?: CardTemplate; username?: string; showQr?: boolean }) {
   const isDark = template === 'dark' || template === 'navy' || template === 'midnight';
   const bg = isDark
     ? (template === 'navy' ? '#1B2838' : template === 'midnight' ? '#0F1724' : '#111111')
@@ -343,14 +343,22 @@ function CardBack({ template = 'photo', username }: { template?: CardTemplate; u
     : (template === 'sage' ? '#5C6B5C' : template === 'coral' ? '#E8705A' : '#6B7280');
   const dimColor = isDark ? color + '80' : LIGHT_GRAY;
 
+  const profileUrl = `hellodilly.com/p/${username || 'you'}`;
+
   return (
-    <View style={[c.card, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center', paddingVertical: 16 }]}>
-      <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34, tintColor: color }} resizeMode="contain" />
-      <Text style={{ fontSize: 9, color: dimColor, marginTop: 8, fontStyle: 'italic', textAlign: 'center' }}>
-        Your career, guided by AI.
-      </Text>
-      <View style={{ flex: 1 }} />
-      <Text style={{ fontSize: 10, fontWeight: '500', color, position: 'absolute', bottom: 12 }}>hellodilly.com</Text>
+    <View style={[c.card, { backgroundColor: bg, alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20 }]}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34, tintColor: color }} resizeMode="contain" />
+        <Text style={{ fontSize: 9, color: dimColor, marginTop: 6, fontStyle: 'italic', textAlign: 'center' }}>
+          Your career, guided by AI.
+        </Text>
+        {showQr && QRCode ? (
+          <View style={{ marginTop: 10 }}>
+            <QRCode value={`https://${profileUrl}`} size={48} color={color} backgroundColor="transparent" />
+          </View>
+        ) : null}
+      </View>
+      <Text style={{ fontSize: 10, fontWeight: '500', color }}>hellodilly.com</Text>
     </View>
   );
 }
@@ -402,6 +410,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   const [showBack, setShowBack] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [template, setTemplate] = useState<CardTemplate>('photo');
+  const [showQr, setShowQr] = useState(false);
   const frontRef = useRef<any>(null);
   const backRef = useRef<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -466,7 +475,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
           <CardFront data={data} template={template} />
         </View>
         <View ref={backRef} collapsable={false}>
-          <CardBack template={template} username={data.username} />
+          <CardBack template={template} username={data.username} showQr={showQr} />
         </View>
       </View>
 
@@ -484,15 +493,25 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
           position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
           transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] }) }],
         }}>
-          <CardBack template={template} username={data.username} />
+          <CardBack template={template} username={data.username} showQr={showQr} />
         </Animated.View>
       </TouchableOpacity>
       <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
         Tap card to flip
       </Text>
 
-      {/* Template picker - always visible */}
+      {/* Template picker + QR toggle */}
       <TemplatePicker selected={template} onSelect={setTemplate} />
+      <TouchableOpacity
+        onPress={() => setShowQr(!showQr)}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 6 }}
+        activeOpacity={0.7}
+      >
+        <Ionicons name={showQr ? 'qr-code' : 'qr-code-outline'} size={14} color={showQr ? DILLY_BLUE : GRAY} />
+        <Text style={{ fontSize: 11, fontWeight: '600', color: showQr ? DILLY_BLUE : GRAY }}>
+          {showQr ? 'QR code on' : 'Add QR code'}
+        </Text>
+      </TouchableOpacity>
 
       {/* Editor toggle */}
       <TouchableOpacity
