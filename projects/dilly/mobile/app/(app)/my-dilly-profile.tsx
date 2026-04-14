@@ -28,7 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
-import { CAREER_FIELDS as CAREER_FIELD_OPTIONS } from '../../lib/cohorts';
+import { CAREER_FIELDS as CAREER_FIELD_OPTIONS, ALL_COHORTS, MAJOR_TO_COHORTS, detectCohorts } from '../../lib/cohorts';
 import { mediumHaptic } from '../../lib/haptics';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -178,6 +178,14 @@ export default function MyDillyProfileScreen() {
   const [editEmail, setEditEmail] = useState('');
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [editingMajor, setEditingMajor] = useState(false);
+  const [editingMinor, setEditingMinor] = useState(false);
+  const [editMajors, setEditMajors] = useState<string[]>([]);
+  const [editMinors, setEditMinors] = useState<string[]>([]);
+  const [majorSearch, setMajorSearch] = useState('');
+  const [minorSearch, setMinorSearch] = useState('');
+  const [editExtraCohorts, setEditExtraCohorts] = useState<string[]>([]);
+  const [cohortSearch, setCohortSearch] = useState('');
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
   async function addCity(city: string) {
@@ -285,17 +293,32 @@ export default function MyDillyProfileScreen() {
           if (editMode) {
             // Save changes
             try {
+              const patch: any = {
+                name: editName.trim() || undefined,
+                profile_tagline: editTagline.trim() || undefined,
+              };
+              // Include majors/minors if they were edited
+              if (editingMajor) patch.majors = editMajors;
+              if (editingMinor) patch.minors = editMinors;
+              // Always save extra_cohorts
+              patch.extra_cohorts = editExtraCohorts;
+              // Recompute cohorts from majors + minors + extras
+              const newCohorts = detectCohorts(editMajors, editMinors, p.pre_professional_track || '');
+              const allCohorts = [...new Set([...newCohorts, ...editExtraCohorts])];
+              patch.cohorts = allCohorts;
+
               await dilly.fetch('/profile', {
                 method: 'PATCH',
-                body: JSON.stringify({
-                  name: editName.trim() || undefined,
-                  profile_tagline: editTagline.trim() || undefined,
-                }),
+                body: JSON.stringify(patch),
               });
               setProfile((prev: any) => ({
                 ...prev,
                 name: editName.trim() || prev.name,
                 profile_tagline: editTagline.trim(),
+                ...(editingMajor ? { majors: editMajors } : {}),
+                ...(editingMinor ? { minors: editMinors } : {}),
+                extra_cohorts: editExtraCohorts,
+                cohorts: allCohorts,
               }));
               toast.show({ message: 'Profile updated!', type: 'success' });
             } catch { toast.show({ message: 'Could not save.' }); }
@@ -305,6 +328,11 @@ export default function MyDillyProfileScreen() {
             setEditName(p.name || '');
             setEditTagline(p.profile_tagline || p.custom_tagline || '');
             setEditEmail(p.email || '');
+            setEditMajors(p.majors || (p.major ? [p.major] : []));
+            setEditMinors(p.minors || []);
+            setEditExtraCohorts(p.extra_cohorts || []);
+            setEditingMajor(false);
+            setEditingMinor(false);
             setEditMode(true);
           }
         }} scaleDown={0.95} hitSlop={8}>
@@ -360,6 +388,192 @@ export default function MyDillyProfileScreen() {
                 <Text style={d.editFieldLabel}>Name</Text>
                 <TextInput style={d.editFieldInput} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={colors.t3} />
               </View>
+
+              {/* Majors & Minors (students only) */}
+              {p.user_type !== 'general' && p.user_type !== 'professional' && (
+                <>
+                  {/* Major */}
+                  <View style={d.editField}>
+                    <Text style={d.editFieldLabel}>Major</Text>
+                    {!editingMajor ? (
+                      <View style={{ gap: 6 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                          {(editMajors.length > 0 ? editMajors : ['No major set']).map((m, i) => (
+                            <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.s2 }}>
+                              <Text style={{ fontSize: 12, color: colors.t1 }}>{m}</Text>
+                            </View>
+                          ))}
+                        </View>
+                        <AnimatedPressable onPress={() => setEditingMajor(true)} scaleDown={0.95}>
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: colors.indigo }}>Changed major?</Text>
+                        </AnimatedPressable>
+                      </View>
+                    ) : (
+                      <View style={{ gap: 6 }}>
+                        <TextInput
+                          style={d.editFieldInput}
+                          value={majorSearch}
+                          onChangeText={setMajorSearch}
+                          placeholder="Search majors..."
+                          placeholderTextColor={colors.t3}
+                        />
+                        {majorSearch.length > 1 && (
+                          <View style={{ maxHeight: 120, backgroundColor: colors.s1, borderRadius: 8, borderWidth: 1, borderColor: colors.b1 }}>
+                            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                              {Object.keys(MAJOR_TO_COHORTS)
+                                .filter(m => m.toLowerCase().includes(majorSearch.toLowerCase()))
+                                .slice(0, 8)
+                                .map(m => (
+                                  <TouchableOpacity
+                                    key={m}
+                                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 0.5, borderColor: colors.b1 }}
+                                    onPress={() => {
+                                      if (!editMajors.includes(m)) setEditMajors([...editMajors, m]);
+                                      setMajorSearch('');
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 12, color: colors.t1 }}>{m}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                          </View>
+                        )}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                          {editMajors.map((m, i) => (
+                            <AnimatedPressable
+                              key={i}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.indigo }}
+                              onPress={() => setEditMajors(editMajors.filter((_, idx) => idx !== i))}
+                              scaleDown={0.95}
+                            >
+                              <Text style={{ fontSize: 11, color: '#fff' }}>{m}</Text>
+                              <Ionicons name="close-circle" size={12} color="#fff" />
+                            </AnimatedPressable>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Minor */}
+                  <View style={d.editField}>
+                    <Text style={d.editFieldLabel}>Minor</Text>
+                    {!editingMinor ? (
+                      <View style={{ gap: 6 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                          {(editMinors.length > 0 ? editMinors : ['No minor']).map((m, i) => (
+                            <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.s2 }}>
+                              <Text style={{ fontSize: 12, color: colors.t2 }}>{m}</Text>
+                            </View>
+                          ))}
+                        </View>
+                        <AnimatedPressable onPress={() => setEditingMinor(true)} scaleDown={0.95}>
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: colors.indigo }}>Changed minor?</Text>
+                        </AnimatedPressable>
+                      </View>
+                    ) : (
+                      <View style={{ gap: 6 }}>
+                        <TextInput
+                          style={d.editFieldInput}
+                          value={minorSearch}
+                          onChangeText={setMinorSearch}
+                          placeholder="Search minors..."
+                          placeholderTextColor={colors.t3}
+                        />
+                        {minorSearch.length > 1 && (
+                          <View style={{ maxHeight: 120, backgroundColor: colors.s1, borderRadius: 8, borderWidth: 1, borderColor: colors.b1 }}>
+                            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                              {Object.keys(MAJOR_TO_COHORTS)
+                                .filter(m => m.toLowerCase().includes(minorSearch.toLowerCase()))
+                                .slice(0, 8)
+                                .map(m => (
+                                  <TouchableOpacity
+                                    key={m}
+                                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 0.5, borderColor: colors.b1 }}
+                                    onPress={() => {
+                                      if (!editMinors.includes(m)) setEditMinors([...editMinors, m]);
+                                      setMinorSearch('');
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 12, color: colors.t1 }}>{m}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                          </View>
+                        )}
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                          {editMinors.map((m, i) => (
+                            <AnimatedPressable
+                              key={i}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.indigo }}
+                              onPress={() => setEditMinors(editMinors.filter((_, idx) => idx !== i))}
+                              scaleDown={0.95}
+                            >
+                              <Text style={{ fontSize: 11, color: '#fff' }}>{m}</Text>
+                              <Ionicons name="close-circle" size={12} color="#fff" />
+                            </AnimatedPressable>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Extra Cohorts - see more jobs */}
+                  <View style={d.editField}>
+                    <Text style={d.editFieldLabel}>See More Jobs In</Text>
+                    <Text style={{ fontSize: 10, color: colors.t3, marginTop: 1 }}>Add up to 3 extra fields to see more jobs</Text>
+                    <View style={{ gap: 6, marginTop: 6 }}>
+                      <TextInput
+                        style={d.editFieldInput}
+                        value={cohortSearch}
+                        onChangeText={setCohortSearch}
+                        placeholder="Search fields..."
+                        placeholderTextColor={colors.t3}
+                      />
+                      {cohortSearch.length > 1 && (
+                        <View style={{ maxHeight: 140, backgroundColor: colors.s1, borderRadius: 8, borderWidth: 1, borderColor: colors.b1 }}>
+                          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                            {ALL_COHORTS
+                              .filter(c => c.toLowerCase().includes(cohortSearch.toLowerCase()))
+                              .filter(c => !editExtraCohorts.includes(c))
+                              .slice(0, 8)
+                              .map(c => (
+                                <TouchableOpacity
+                                  key={c}
+                                  style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 0.5, borderColor: colors.b1 }}
+                                  onPress={() => {
+                                    if (editExtraCohorts.length < 3) {
+                                      setEditExtraCohorts([...editExtraCohorts, c]);
+                                      setCohortSearch('');
+                                    }
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 12, color: colors.t1 }}>{c}</Text>
+                                </TouchableOpacity>
+                              ))}
+                          </ScrollView>
+                        </View>
+                      )}
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                        {editExtraCohorts.map((c, i) => (
+                          <AnimatedPressable
+                            key={i}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#1652F0' }}
+                            onPress={() => setEditExtraCohorts(editExtraCohorts.filter((_, idx) => idx !== i))}
+                            scaleDown={0.95}
+                          >
+                            <Text style={{ fontSize: 11, color: '#fff' }}>{c}</Text>
+                            <Ionicons name="close-circle" size={12} color="#fff" />
+                          </AnimatedPressable>
+                        ))}
+                        {editExtraCohorts.length === 0 && (
+                          <Text style={{ fontSize: 11, color: colors.t3, fontStyle: 'italic' }}>None added yet</Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                </>
+              )}
 
               {/* Career Fields (non-students only) */}
               {(p.user_type === 'general' || p.user_type === 'professional') && (
