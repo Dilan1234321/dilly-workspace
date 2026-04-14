@@ -1266,6 +1266,174 @@ async def generate_slug_endpoint(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Public Profile Narratives (AI-generated, cached)
+# ---------------------------------------------------------------------------
+
+import hashlib as _hashlib
+import time as _time
+from collections import OrderedDict as _OrderedDict
+
+_NARRATIVE_WEB_CACHE: _OrderedDict[str, dict] = _OrderedDict()
+_NARRATIVE_WEB_TTL = 7 * 86400  # 7 days
+_NARRATIVE_WEB_MAX = 500
+
+
+@router.get("/profile/web/{slug}/narratives")
+async def get_web_profile_narratives(slug: str):
+    """AI-generated narrative sections for the public profile page.
+    Cached per user, regenerated when profile changes. No auth.
+    """
+    from projects.dilly.api.profile_store import get_profile_by_readable_slug
+    from projects.dilly.api.memory_surface_store import get_memory_surface
+
+    profile = get_profile_by_readable_slug(slug)
+    if not profile:
+        raise errors.not_found("Profile not found.")
+    email = (profile.get("email") or "").strip().lower()
+    if not email:
+        raise errors.not_found("Profile not found.")
+
+    # Build profile text for the LLM
+    surface = get_memory_surface(email)
+    facts = surface.get("items") or []
+
+    # Filter out private categories
+    PRIVATE = frozenset({"challenge", "concern", "weakness", "fear", "personal", "contact", "phone", "email_address"})
+    public_facts = [f for f in facts if (f.get("category") or "").lower() not in PRIVATE]
+
+    if len(public_facts) < 3:
+        return JSONResponse(
+            content={"impact_lines": [], "differentiator": None, "skills_with_evidence": []},
+            headers={"Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*"},
+        )
+
+    # Profile hash for cache
+    fact_text = "|".join(f"{f.get('label','')}:{f.get('value','')}" for f in public_facts[:40])
+    p_hash = _hashlib.md5(fact_text.encode()).hexdigest()[:12]
+    cache_key = f"webnarr:{slug}"
+
+    # Check cache
+    cached = _NARRATIVE_WEB_CACHE.get(cache_key)
+    if cached and _time.time() - cached["ts"] < _NARRATIVE_WEB_TTL and cached.get("hash") == p_hash:
+        _NARRATIVE_WEB_CACHE.move_to_end(cache_key)
+        return JSONResponse(
+            content=cached["data"],
+            headers={"Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*"},
+        )
+
+    # Build profile context
+    name = profile.get("name") or ""
+    school = profile.get("school") or ""
+    majors = profile.get("majors") or []
+    experience_expansion = profile.get("experience_expansion") or []
+
+    parts = [f"Name: {name}"]
+    if school:
+        parts.append(f"School: {school}")
+    if majors:
+        parts.append(f"Majors: {', '.join(majors)}")
+
+    for f in public_facts[:30]:
+        cat = f.get("category", "")
+        label = f.get("label", "")
+        value = f.get("value", "")
+        if label or value:
+            parts.append(f"[{cat}] {label}: {value}")
+
+    for exp in experience_expansion[:8]:
+        if not isinstance(exp, dict):
+            continue
+        role = exp.get("role_label", "")
+        org = exp.get("organization", "")
+        skills = exp.get("skills") or []
+        tools = exp.get("tools_used") or []
+        omitted = exp.get("omitted") or []
+        if role or org:
+            line = f"[EXPERIENCE] {role} at {org}"
+            if skills:
+                line += f" | Skills: {', '.join(skills[:8])}"
+            if tools:
+                line += f" | Tools: {', '.join(tools[:6])}"
+            if omitted:
+                line += f" | Also did: {'; '.join(omitted[:3])}"
+            parts.append(line)
+
+    profile_text = "\n".join(parts)
+
+    # Call Claude
+    system_prompt = (
+        "You are writing the public profile page for someone. You have their full profile data. "
+        "Generate three things. Be specific. Cite real facts. Never invent. Never use em dashes.\n\n"
+        "1. IMPACT LINES: 3-4 one-sentence statements that make a recruiter say 'I need to talk to this person.' "
+        "Each line must cite a specific experience, project, skill, or result from their profile. "
+        "Not generic. Not 'passionate about technology.' Real, concrete, evidence-backed. "
+        "Format: short, punchy, one sentence max per line.\n\n"
+        "2. DIFFERENTIATOR: One paragraph (3 sentences max) explaining what genuinely sets this person apart. "
+        "Connect dots across their profile that they might not see themselves. "
+        "What combination of experiences/skills/interests makes them unique? Be honest, not flattering.\n\n"
+        "3. SKILLS WITH EVIDENCE: For their top 6-8 skills, pair each with a one-phrase proof point from their profile. "
+        'Format: {"skill": "Python", "evidence": "built predictive models at [org]"}\n\n'
+        "Return JSON only:\n"
+        "{\n"
+        '  "impact_lines": ["line 1", "line 2", "line 3"],\n'
+        '  "differentiator": "paragraph text",\n'
+        '  "skills_with_evidence": [{"skill": "...", "evidence": "..."}]\n'
+        "}"
+    )
+
+    try:
+        import anthropic
+        import json as _json
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if not api_key:
+            return JSONResponse(
+                content={"impact_lines": [], "differentiator": None, "skills_with_evidence": []},
+                headers={"Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*"},
+            )
+
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            temperature=0.3,
+            system=system_prompt,
+            messages=[{"role": "user", "content": f"---PROFILE---\n{profile_text}\n---END PROFILE---"}],
+        )
+
+        raw = response.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3].strip()
+        if raw.startswith("json"):
+            raw = raw[4:].strip()
+
+        parsed = _json.loads(raw)
+
+        data = {
+            "impact_lines": (parsed.get("impact_lines") or [])[:4],
+            "differentiator": parsed.get("differentiator") or None,
+            "skills_with_evidence": (parsed.get("skills_with_evidence") or [])[:8],
+        }
+
+    except Exception as e:
+        print(f"[WEB-NARRATIVES] Error: {e}", flush=True)
+        data = {"impact_lines": [], "differentiator": None, "skills_with_evidence": []}
+
+    # Cache
+    _NARRATIVE_WEB_CACHE[cache_key] = {"data": data, "ts": _time.time(), "hash": p_hash}
+    _NARRATIVE_WEB_CACHE.move_to_end(cache_key)
+    while len(_NARRATIVE_WEB_CACHE) > _NARRATIVE_WEB_MAX:
+        _NARRATIVE_WEB_CACHE.popitem(last=False)
+
+    return JSONResponse(
+        content=data,
+        headers={"Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*"},
+    )
+
+
+# ---------------------------------------------------------------------------
 # Streak + Daily Check-In
 # ---------------------------------------------------------------------------
 
