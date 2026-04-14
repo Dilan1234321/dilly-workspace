@@ -117,12 +117,22 @@ export default function VerifyScreen() {
         if (isReturning) {
           router.replace('/(app)');
         } else {
-          const isNewUser = data.is_new_user !== false;
-          if (isNewUser) {
-            router.replace(userType === 'general' || userType === 'professional' ? '/onboarding/profile-pro' : '/onboarding/profile');
-          } else {
-            router.replace('/(app)');
-          }
+          // Check if user already has a profile (returning user who signed out)
+          try {
+            const profileCheck = await fetch(`${API_BASE}/profile`, {
+              headers: { Authorization: `Bearer ${data.token}` },
+            });
+            if (profileCheck.ok) {
+              const profileData = await profileCheck.json();
+              if (profileData?.onboarding_complete || profileData?.name) {
+                // Existing user, go straight to app
+                router.replace('/(app)');
+                return;
+              }
+            }
+          } catch {}
+          // New user, go to profile setup
+          router.replace(userType === 'general' || userType === 'professional' ? '/onboarding/profile-pro' : '/onboarding/profile');
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Something went wrong.';
