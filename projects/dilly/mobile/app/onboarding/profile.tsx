@@ -289,9 +289,12 @@ export default function ProfileScreen() {
         }),
       });
       if (!res.ok) {
-        const d = await res.json();
+        const d = await res.json().catch(() => null);
         const detail = d?.detail;
-        const msg = typeof detail === 'string' ? detail : detail?.message || 'Something went wrong.';
+        const msg = typeof detail === 'string' ? detail
+          : typeof detail === 'object' && detail?.message ? detail.message
+          : `Server error ${res.status}`;
+        console.warn('[Profile] PATCH failed:', res.status, JSON.stringify(d));
         throw new Error(msg);
       }
 

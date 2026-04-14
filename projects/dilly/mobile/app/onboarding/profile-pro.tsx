@@ -96,8 +96,12 @@ export default function ProfileProScreen() {
         }),
       });
       if (!res.ok) {
-        const d = await res.json();
-        throw new Error(typeof d?.detail === 'string' ? d.detail : 'Something went wrong.');
+        const d = await res.json().catch(() => null);
+        const detail = d?.detail;
+        const msg = typeof detail === 'string' ? detail
+          : typeof detail === 'object' && detail?.message ? detail.message
+          : `Server error ${res.status}`;
+        throw new Error(msg);
       }
 
       // Persist for scanning screen
@@ -114,7 +118,9 @@ export default function ProfileProScreen() {
         params: { cohort: primaryCohort, name: fullName.trim().split(/\s+/)[0], optional: '1' },
       });
     } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : 'Something went wrong.');
+      const msg = err instanceof Error ? err.message : 'Something went wrong.';
+      console.warn('[ProfilePro] Error:', msg);
+      setSubmitError(msg);
     } finally {
       setLoading(false);
     }
