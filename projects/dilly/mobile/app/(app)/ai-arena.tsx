@@ -96,13 +96,10 @@ function ShieldRing({ score, size = 160 }: { score: number; size?: number }) {
 
 // ── Signal Card ──────────────────────────────────────────────────────────────
 
-function SignalCard({ signal, reason, accentColor }: { signal: string; reason: string; accentColor: string }) {
+function SignalCard({ signal, accentColor }: { signal: string; accentColor: string }) {
   return (
     <View style={[a.signalCard, { borderLeftColor: accentColor }]}>
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text style={a.signalText}>{signal}</Text>
-        <Text style={a.signalReason}>{reason}</Text>
-      </View>
+      <Text style={a.signalText}>{signal}</Text>
     </View>
   );
 }
@@ -328,7 +325,6 @@ export default function AIArenaScreen() {
             <FadeInView key={`v-${i}`} delay={160 + i * 30}>
               <SignalCard
                 signal={typeof sig === 'string' ? sig : sig.signal || sig.text || ''}
-                reason={typeof sig === 'string' ? 'AI tools can automate or replicate this skill today.' : sig.reason || sig.why || 'AI tools can automate or replicate this skill today.'}
                 accentColor={AMBER}
               />
             </FadeInView>
@@ -362,7 +358,6 @@ export default function AIArenaScreen() {
             <FadeInView key={`r-${i}`} delay={240 + i * 30}>
               <SignalCard
                 signal={typeof sig === 'string' ? sig : sig.signal || sig.text || ''}
-                reason={typeof sig === 'string' ? 'This requires human judgment, creativity, or relationships that AI cannot replicate.' : sig.reason || sig.why || 'This requires human judgment, creativity, or relationships that AI cannot replicate.'}
                 accentColor={GREEN}
               />
             </FadeInView>
@@ -798,26 +793,18 @@ const a = StyleSheet.create({
 
   // Signal cards
   signalCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     backgroundColor: CARD,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
     borderColor: BORDER,
     borderLeftWidth: 4,
-    gap: 10,
   },
   signalText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: TEXT,
-    lineHeight: 18,
-  },
-  signalReason: {
-    fontSize: 11,
-    color: DIM,
-    lineHeight: 16,
+    lineHeight: 20,
   },
 
   // Empty state

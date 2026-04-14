@@ -136,9 +136,9 @@ AI-vulnerable skills: {', '.join(disruption.get('ai_vulnerable_skills', []))}
 Read the profile below and return JSON:
 {{
   "ai_readiness": number 0-100 (how AI-proof they are - higher is better),
-  "resistant_signals": ["up to 5 specific things from their profile that AI cannot replace"],
-  "vulnerable_signals": ["up to 5 things that AI could automate or replace"],
-  "recommendation": "One sentence of actionable advice to become more AI-proof. No em dashes."
+  "resistant_signals": ["up to 5 SHORT phrases (max 8 words each) of things AI cannot replace"],
+  "vulnerable_signals": ["up to 5 SHORT phrases (max 8 words each) of things AI could automate"],
+  "recommendation": "One sentence of actionable advice. Max 15 words. No em dashes."
 }}
 
 Only use evidence from the profile. If the profile is thin, score lower and say what's missing."""

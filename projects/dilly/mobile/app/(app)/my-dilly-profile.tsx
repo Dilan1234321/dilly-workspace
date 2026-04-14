@@ -103,12 +103,12 @@ const CORE_CATEGORIES = [
 
 // Rotating conversation starters
 const CONVERSATION_STARTERS = [
-  { prompt: 'Tell me about a project you are proud of', icon: 'construct' },
-  { prompt: 'What kind of company culture do you thrive in?', icon: 'storefront' },
-  { prompt: 'What is a skill you have that Dilly does not know about yet?', icon: 'code-slash' },
-  { prompt: 'What are you most passionate about in your career?', icon: 'heart' },
-  { prompt: 'Describe your biggest professional achievement', icon: 'trophy' },
-  { prompt: 'What does your ideal first job look like?', icon: 'business' },
+  { display: 'Tell me about a project you are proud of', prompt: 'Help me describe a project I am proud of. Ask me about it.', icon: 'construct' },
+  { display: 'What kind of company culture do you thrive in?', prompt: 'Help me figure out what kind of company culture I thrive in. Ask me questions.', icon: 'storefront' },
+  { display: 'What is a skill Dilly does not know about yet?', prompt: 'I have a skill you do not know about yet. Ask me about it so you can add it to my profile.', icon: 'code-slash' },
+  { display: 'What are you most passionate about in your career?', prompt: 'Help me articulate what I am most passionate about in my career. Ask me questions.', icon: 'heart' },
+  { display: 'Describe your biggest professional achievement', prompt: 'Help me describe my biggest professional achievement. Ask me what happened.', icon: 'trophy' },
+  { display: 'What does your ideal first job look like?', prompt: 'Help me describe what my ideal first job looks like. Ask me what matters to me.', icon: 'business' },
 ];
 
 // ── Strength Ring ────────────────────────────────────────────────────────────
@@ -496,7 +496,7 @@ export default function MyDillyProfileScreen() {
             style={d.talkCard}
             onPress={() => openDillyOverlay({
               isPaid: true,
-              initialMessage: `I want to tell you more about myself. ${starter.prompt}`,
+              initialMessage: starter.prompt,
             })}
             scaleDown={0.98}
           >
@@ -505,7 +505,7 @@ export default function MyDillyProfileScreen() {
                 <Ionicons name={starter.icon as any} size={18} color={COBALT} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={d.talkPrompt}>{starter.prompt}</Text>
+                <Text style={d.talkPrompt}>{starter.display}</Text>
                 <Text style={d.talkHint}>Tap to tell Dilly</Text>
               </View>
               <Ionicons name="chatbubble-ellipses" size={20} color={COBALT} />
@@ -532,7 +532,7 @@ export default function MyDillyProfileScreen() {
                       } else {
                         openDillyOverlay({
                           isPaid: true,
-                          initialMessage: `I want to tell you about ${cfg.label.toLowerCase()}. Ask me a specific question to get started.`,
+                          initialMessage: `Help me add ${cfg.label.toLowerCase()} to my profile. Ask me a specific question to get started.`,
                         });
                       }
                     }}
@@ -604,30 +604,30 @@ export default function MyDillyProfileScreen() {
           <Text style={d.sectionLabel}>HELP DILLY HELP YOU</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {[
-              { icon: 'people', text: 'Tell Dilly about a leadership role you held', color: colors.indigo },
-              { icon: 'rocket', text: 'Share a project you are proud of', color: colors.green },
-              { icon: 'briefcase', text: 'Tell Dilly about an internship experience', color: colors.amber },
-              { icon: 'compass', text: 'Share your career goals', color: COBALT },
-              { icon: 'build', text: 'Tell Dilly about a skill you are developing', color: colors.coral },
-              { icon: 'heart', text: 'Share a challenge you overcame', color: '#E040FB' },
-              { icon: 'hand-left', text: 'Tell Dilly about volunteer work', color: colors.green },
-              { icon: 'school', text: 'Share your GPA or academic honors', color: colors.indigo },
-              { icon: 'flag', text: 'Tell Dilly about a club or organization', color: colors.amber },
-              { icon: 'globe', text: 'Share what industries interest you', color: COBALT },
-              { icon: 'star', text: 'Tell Dilly about your dream companies', color: GOLD },
-              { icon: 'chatbubbles', text: 'Describe a time you worked on a team', color: colors.coral },
+              { icon: 'people', text: 'A leadership role you held', prompt: 'Help me describe a leadership role I held. Ask me about it.', color: colors.indigo },
+              { icon: 'rocket', text: 'A project you are proud of', prompt: 'Help me talk about a project I am proud of. Ask me what I built.', color: colors.green },
+              { icon: 'briefcase', text: 'An internship experience', prompt: 'Help me describe an internship I did. Ask me about the role.', color: colors.amber },
+              { icon: 'compass', text: 'Your career goals', prompt: 'Help me articulate my career goals. Ask me what I want to do.', color: COBALT },
+              { icon: 'build', text: 'A skill you are developing', prompt: 'Help me describe a skill I am developing. Ask me about it.', color: colors.coral },
+              { icon: 'heart', text: 'A challenge you overcame', prompt: 'Help me talk about a challenge I overcame. Ask me what happened.', color: '#E040FB' },
+              { icon: 'hand-left', text: 'Volunteer work', prompt: 'Help me describe my volunteer work. Ask me about the experience.', color: colors.green },
+              { icon: 'school', text: 'Academic honors or GPA', prompt: 'Help me add my academic achievements to my profile. Ask me about them.', color: colors.indigo },
+              { icon: 'flag', text: 'A club or organization', prompt: 'Help me describe a club or organization I was involved in. Ask me about my role.', color: colors.amber },
+              { icon: 'globe', text: 'Industries that interest you', prompt: 'Help me figure out which industries interest me. Ask me what excites me.', color: COBALT },
+              { icon: 'star', text: 'Your dream companies', prompt: 'Help me think about my dream companies. Ask me what I am looking for.', color: GOLD },
+              { icon: 'chatbubbles', text: 'A time you worked on a team', prompt: 'Help me describe a time I worked on a team. Ask me about it.', color: colors.coral },
             ].slice((totalFacts % 8), (totalFacts % 8) + 4).concat(
-              [{ icon: 'people', text: 'Tell Dilly about a leadership role', color: colors.indigo },
-               { icon: 'rocket', text: 'Share a project you are proud of', color: colors.green },
-               { icon: 'briefcase', text: 'Tell Dilly about an internship', color: colors.amber },
-               { icon: 'compass', text: 'Share your career goals', color: COBALT }]
+              [{ icon: 'people', text: 'A leadership role', prompt: 'Help me describe a leadership role I held. Ask me about it.', color: colors.indigo },
+               { icon: 'rocket', text: 'A project you are proud of', prompt: 'Help me talk about a project I am proud of. Ask me what I built.', color: colors.green },
+               { icon: 'briefcase', text: 'An internship', prompt: 'Help me describe an internship I did. Ask me about the role.', color: colors.amber },
+               { icon: 'compass', text: 'Your career goals', prompt: 'Help me articulate my career goals. Ask me what I want to do.', color: COBALT }]
             ).slice(0, 4).map((item, i) => (
               <AnimatedPressable
                 key={i}
                 style={d.nudgeCard}
                 onPress={() => openDillyOverlay({
                   isPaid: true,
-                  initialMessage: `${item.text}. Ask me a specific question to get started.`,
+                  initialMessage: item.prompt,
                 })}
                 scaleDown={0.97}
               >
