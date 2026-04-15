@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, Image, Modal, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, Animated, Easing, Dimensions, KeyboardAvoidingView, Platform,
+  StyleSheet, Animated, Easing, Dimensions, KeyboardAvoidingView, Platform, Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -171,6 +171,17 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   const userScrolledUp = useRef(false);
   const streamRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutsRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Auto-scroll to bottom when keyboard opens
+  useEffect(() => {
+    const sub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      }
+    );
+    return () => sub.remove();
+  }, []);
 
   function startTypingDots() {
     dotLoopsRef.current.forEach(l => l?.stop());
