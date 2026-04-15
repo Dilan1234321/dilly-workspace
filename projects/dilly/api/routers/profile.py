@@ -1135,7 +1135,11 @@ async def get_web_profile(slug: str):
 
     # Check if user has opted out of public visibility
     if profile.get("public_profile_visible") is False:
-        raise errors.not_found("Profile not found.")
+        return JSONResponse(
+            status_code=403,
+            content={"private": True, "name": (profile.get("name") or "").split()[0] if profile.get("name") else None},
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
 
     # School info
     school_id = (profile.get("school_id") or profile.get("schoolId") or "").strip().lower()
