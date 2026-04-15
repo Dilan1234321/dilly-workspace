@@ -12,6 +12,24 @@ logger = logging.getLogger(__name__)
 DEFAULT_FROM = "Dilly <noreply@trydilly.com>"
 
 
+def send_email(to_email: str, subject: str, body_text: str) -> bool:
+    """Send a plain text email via Resend. Returns True if sent."""
+    api_key = os.environ.get("RESEND_API_KEY", "").strip()
+    from_addr = os.environ.get("DILLY_EMAIL_FROM") or DEFAULT_FROM
+    if not api_key:
+        logger.warning("RESEND_API_KEY not set; skipping send_email to %s", to_email)
+        return False
+    try:
+        import resend
+        resend.api_key = api_key
+        html = body_text.replace("\n", "<br>")
+        resend.Emails.send({"from": from_addr, "to": [to_email], "subject": subject, "html": html})
+        return True
+    except Exception as e:
+        logger.warning("send_email failed: %s", e, exc_info=True)
+        return False
+
+
 def send_verification_email(to_email: str, code: str, school: dict | None) -> tuple[bool, str | None]:
     """
     Send school-themed verification email to to_email.
