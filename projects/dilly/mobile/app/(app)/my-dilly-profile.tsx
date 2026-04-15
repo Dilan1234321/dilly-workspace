@@ -967,6 +967,13 @@ export default function MyDillyProfileScreen() {
           </FadeInView>
         )}
 
+        {/* Refresh reminder */}
+        <View style={{ paddingHorizontal: 20, paddingVertical: 16, alignItems: 'center' }}>
+          <Text style={{ fontSize: 12, color: colors.t3, textAlign: 'center', lineHeight: 17 }}>
+            Talked to Dilly? Pull down to refresh and see new things on your profile.
+          </Text>
+        </View>
+
         <DillyFooter />
       </ScrollView>
 
