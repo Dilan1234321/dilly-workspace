@@ -124,7 +124,7 @@ export default function SettingsScreen() {
                 style: 'destructive',
                 onPress: async () => {
                   try {
-                    await dilly.fetch('/profile/delete', { method: 'DELETE' });
+                    await dilly.fetch('/account/delete', { method: 'POST' });
                   } catch {}
                   await clearAuth();
                   router.replace('/onboarding/choose-path');

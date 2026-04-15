@@ -908,8 +908,13 @@ async def delete_account(request: Request):
             cur = conn.cursor()
             cur.execute("DELETE FROM profile_facts WHERE LOWER(email) = LOWER(%s)", (email,))
             cur.execute("DELETE FROM students WHERE LOWER(email) = LOWER(%s)", (email,))
+            cur.execute("DELETE FROM users WHERE LOWER(email) = LOWER(%s)", (email,))
             try:
                 cur.execute("DELETE FROM push_tokens WHERE LOWER(email) = LOWER(%s)", (email,))
+            except Exception:
+                pass
+            try:
+                cur.execute("DELETE FROM web_profile_connections WHERE LOWER(user_email) = LOWER(%s)", (email,))
             except Exception:
                 pass
     except Exception:
