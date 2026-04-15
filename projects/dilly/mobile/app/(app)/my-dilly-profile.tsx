@@ -576,6 +576,18 @@ export default function MyDillyProfileScreen() {
 
                   {/* Extra Cohorts - see more jobs */}
                   <View style={d.editField}>
+                    <Text style={d.editFieldLabel}>Your Cohorts</Text>
+                    {(p.cohorts || []).length > 0 ? (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4, marginBottom: 8 }}>
+                        {(p.cohorts || []).map((c: string, i: number) => (
+                          <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.indigo + '15', borderWidth: 1, borderColor: colors.indigo + '30' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '600', color: colors.indigo }}>{c}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2, marginBottom: 8 }}>Based on your major</Text>
+                    )}
                     <Text style={d.editFieldLabel}>See More Jobs In</Text>
                     <Text style={{ fontSize: 10, color: colors.t3, marginTop: 1 }}>Add up to 3 extra fields to see more jobs</Text>
                     <View style={{ gap: 6, marginTop: 6 }}>
