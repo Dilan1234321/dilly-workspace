@@ -94,8 +94,12 @@ function PhotoCircle({ photoUri, initial, size, bgColor }: { photoUri: string | 
 
 /** Build profile URL from card data */
 function getProfileUrl(data: CardData): string {
-  const prefix = data.profilePrefix || 'p';
-  const slug = data.readableSlug || data.username || 'you';
+  const prefix = data.profilePrefix || 's';
+  let slug = data.readableSlug;
+  if (!slug) {
+    // Construct from name as fallback
+    slug = (data.name || 'you').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').trim() || 'you';
+  }
   return `hellodilly.com/${prefix}/${slug}`;
 }
 
