@@ -158,9 +158,10 @@ export default function VerifyScreen() {
         setErrorType(type);
         setDigits('');
         triggerShake();
-        inputRef.current?.focus();
       } finally {
         setLoading(false);
+        // Re-focus after loading is false so editable={!loading} allows input
+        setTimeout(() => inputRef.current?.focus(), 100);
       }
     },
     [email, returningEmail, isReturning, loading]
