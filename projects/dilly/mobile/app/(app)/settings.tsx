@@ -142,6 +142,12 @@ export default function SettingsScreen() {
                     await dilly.fetch('/account/delete', { method: 'POST' });
                   } catch {}
                   await clearAuth();
+                  // Clear all onboarding state so they get the fresh choose-path screen
+                  const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+                  await AsyncStorage.multiRemove([
+                    'dilly_has_onboarded', 'dilly_visited_jobs', 'dilly_visited_arena',
+                    'dilly_done_interview', 'dilly_pending_upload',
+                  ]).catch(() => {});
                   router.replace('/onboarding/choose-path');
                 },
               },
@@ -265,13 +271,13 @@ export default function SettingsScreen() {
           <SectionLabel text="WEB PROFILE" />
           <View style={s.card}>
             {(() => {
-              const slug = webSlug || name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').trim() || 'you';
+              const slug = webSlug;
               const profileUrl = `https://hellodilly.com/${webPrefix}/${slug}`;
               return (
                 <>
                   <ToggleRow
                     label="Public profile"
-                    hint={webProfileOn ? `hellodilly.com/${webPrefix}/${slug}` : 'Your profile is hidden'}
+                    hint={webProfileOn ? (slug ? `hellodilly.com/${webPrefix}/${slug}` : 'Setting up...') : 'Your profile is hidden'}
                     value={webProfileOn}
                     onToggle={v => {
                       setWebProfileOn(v);
@@ -300,16 +306,20 @@ export default function SettingsScreen() {
                         </View>
                         {taglineSaving && <Text style={{ fontSize: 10, color: colors.t3 }}>Saving...</Text>}
                       </View>
-                      <Divider />
-                      <Row
-                        label="Preview profile"
-                        onPress={() => Linking.openURL(profileUrl)}
-                      />
-                      <Divider />
-                      <Row
-                        label="Share link"
-                        onPress={() => Share.share({ message: profileUrl })}
-                      />
+                      {slug ? (
+                        <>
+                          <Divider />
+                          <Row
+                            label="Preview profile"
+                            onPress={() => Linking.openURL(profileUrl)}
+                          />
+                          <Divider />
+                          <Row
+                            label="Share link"
+                            onPress={() => Share.share({ message: profileUrl })}
+                          />
+                        </>
+                      ) : null}
                     </>
                   )}
                 </>

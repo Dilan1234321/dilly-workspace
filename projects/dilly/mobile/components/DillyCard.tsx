@@ -93,14 +93,10 @@ function PhotoCircle({ photoUri, initial, size, bgColor }: { photoUri: string | 
 }
 
 /** Build profile URL from card data */
-function getProfileUrl(data: CardData): string {
+function getProfileUrl(data: CardData): string | null {
+  if (!data.readableSlug) return null;
   const prefix = data.profilePrefix || 's';
-  let slug = data.readableSlug;
-  if (!slug) {
-    // Construct from name as fallback
-    slug = (data.name || 'you').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').trim() || 'you';
-  }
-  return `hellodilly.com/${prefix}/${slug}`;
+  return `hellodilly.com/${prefix}/${data.readableSlug}`;
 }
 
 /** Minimal contact block: email, first phone, city, profile URL (hidden when QR is on) */
@@ -114,7 +110,7 @@ function MinimalContact({ data, colors, hideLink = false }: { data: CardData; co
         <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{formatPhone(firstPhone.number)}</Text>
       ) : null}
       {data.city ? <Text style={{ fontSize: 10, color: colors.phone, marginTop: 1 }}>{data.city}</Text> : null}
-      {!hideLink && <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>}
+      {!hideLink && profileUrl && <Text style={{ fontSize: 9, color: colors.url, marginTop: 4 }}>{profileUrl}</Text>}
     </>
   );
 }
@@ -122,7 +118,7 @@ function MinimalContact({ data, colors, hideLink = false }: { data: CardData; co
 /** QR code badge - positioned absolutely in bottom-right of card */
 function QrBadge({ data, color, size = 44 }: { data: CardData; color: string; size?: number }) {
   const profileUrl = getProfileUrl(data);
-  if (!QRCode) return null;
+  if (!QRCode || !profileUrl) return null;
   return (
     <View style={{ position: 'absolute', bottom: 12, right: 14 }}>
       <QRCode value={`https://${profileUrl}`} size={size} color={color} backgroundColor="transparent" />
@@ -356,7 +352,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
             <Text style={{ fontSize: 36, fontWeight: '800', color: '#3A5A7A' }}>{initial}</Text>
           </View>
         )}
-        {showQr && QRCode && (
+        {showQr && QRCode && getProfileUrl(data) && (
           <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: '#0F172480', borderRadius: 6, padding: 4 }}>
             <QRCode value={`https://${getProfileUrl(data)}`} size={34} color="#FFFFFF" backgroundColor="transparent" />
           </View>
@@ -641,7 +637,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
       </View>
       <View style={c.field}>
         <Text style={c.fieldLabel}>Profile URL</Text>
-        <Text style={[c.fieldInput, { color: GRAY }]}>{getProfileUrl(data)}</Text>
+        <Text style={[c.fieldInput, { color: GRAY }]}>{getProfileUrl(data) || 'Loading...'}</Text>
       </View>
 
       </>)}
