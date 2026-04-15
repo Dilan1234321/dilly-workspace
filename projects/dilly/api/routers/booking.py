@@ -28,11 +28,17 @@ def _load_availability(email: str) -> dict:
     from projects.dilly.api.profile_store import get_profile
     profile = get_profile(email) or {}
     return profile.get("booking_availability") or {
-        "enabled": False,
+        "enabled": True,
         "timezone": "America/New_York",
-        "windows": [],  # [{ day: 0-6 (Sun-Sat), start: "09:00", end: "17:00" }]
-        "slot_duration": 30,  # minutes
-        "buffer": 15,  # minutes between slots
+        "windows": [
+            {"day": 1, "start": "09:00", "end": "17:00"},
+            {"day": 2, "start": "09:00", "end": "17:00"},
+            {"day": 3, "start": "09:00", "end": "17:00"},
+            {"day": 4, "start": "09:00", "end": "17:00"},
+            {"day": 5, "start": "09:00", "end": "17:00"},
+        ],
+        "slot_duration": 30,
+        "buffer": 15,
         "max_days_ahead": 14,
     }
 
