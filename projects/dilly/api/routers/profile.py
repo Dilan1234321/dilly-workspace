@@ -897,28 +897,34 @@ async def delete_account(request: Request):
     if not email:
         raise errors.validation_error("Email required.")
 
-    # 1. Delete profile folder (profile.json, audits, applications, photos, resume)
-    from projects.dilly.api.profile_store import delete_account_data
-    delete_account_data(email)
-
-    # 2. Delete from PostgreSQL (profile_facts, students, push_tokens)
+    # 1. Delete ALL data from every table
     try:
         from projects.dilly.api.database import get_db
         with get_db() as conn:
             cur = conn.cursor()
-            cur.execute("DELETE FROM profile_facts WHERE LOWER(email) = LOWER(%s)", (email,))
-            cur.execute("DELETE FROM students WHERE LOWER(email) = LOWER(%s)", (email,))
-            cur.execute("DELETE FROM users WHERE LOWER(email) = LOWER(%s)", (email,))
-            try:
-                cur.execute("DELETE FROM push_tokens WHERE LOWER(email) = LOWER(%s)", (email,))
-            except Exception:
-                pass
-            try:
-                cur.execute("DELETE FROM web_profile_connections WHERE LOWER(user_email) = LOWER(%s)", (email,))
-            except Exception:
-                pass
+            # Every table that stores user data
+            tables_with_email = [
+                "profile_facts", "students", "users", "push_tokens",
+                "sessions", "verification_codes",
+            ]
+            for table in tables_with_email:
+                try:
+                    cur.execute(f"DELETE FROM {table} WHERE LOWER(email) = LOWER(%s)", (email,))
+                    print(f"[DELETE-ACCOUNT] {table}: {cur.rowcount} rows", flush=True)
+                except Exception as te:
+                    print(f"[DELETE-ACCOUNT] {table} error: {te}", flush=True)
+            # Tables with user_email column
+            for table in ["web_profile_connections"]:
+                try:
+                    cur.execute(f"DELETE FROM {table} WHERE LOWER(user_email) = LOWER(%s)", (email,))
+                except Exception:
+                    pass
     except Exception:
         traceback.print_exc()
+
+    # 2. Delete profile folder (photos, resume files)
+    from projects.dilly.api.profile_store import delete_account_data
+    delete_account_data(email)
 
     # 3. Delete parsed resume text files
     try:
@@ -938,9 +944,11 @@ async def delete_account(request: Request):
     except Exception:
         traceback.print_exc()
 
-    # 4. Delete auth: user record + all sessions
+    # 4. Delete auth records
     from projects.dilly.api.auth_store import delete_user_and_sessions
     delete_user_and_sessions(email)
+
+    print(f"[DELETE-ACCOUNT] Fully deleted: {email}", flush=True)
 
     return {"ok": True, "deleted": email}
 
