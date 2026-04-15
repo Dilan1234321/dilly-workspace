@@ -1326,8 +1326,8 @@ async def generate_slug_endpoint(request: Request):
 # ---------------------------------------------------------------------------
 
 @router.post("/profile/web/{slug}/connect")
-async def web_profile_connect(slug: str, request: Request):
-    """Visitor sends a connection request to a Dilly user via their web profile."""
+async def web_profile_connect(slug: str, request: Request, prefix: str | None = None):
+    """Visitor sends a connection request to a Dilly user via their web profile. Never exposes user email."""
     from projects.dilly.api.profile_store import get_profile_by_readable_slug
 
     profile = get_profile_by_readable_slug(slug, user_type_prefix=prefix)
@@ -1372,8 +1372,26 @@ async def web_profile_connect(slug: str, request: Request):
     except Exception as e:
         print(f"[WEB-CONNECT] Error storing connection: {e}", flush=True)
 
+    # Send email notification to the profile owner (never expose their email to visitor)
+    try:
+        from projects.dilly.api.email_sender import send_email
+        user_name = (profile.get("name") or "").split()[0] or "there"
+        subject = f"Someone wants to connect with you on Dilly"
+        body_text = (
+            f"Hey {user_name},\n\n"
+            f"{visitor_name}"
+            + (f" from {visitor_company}" if visitor_company else "")
+            + f" ({visitor_email}) wants to connect with you.\n\n"
+            + (f'They said: "{message}"\n\n' if message else "")
+            + "You can reply to them directly at their email address above.\n\n"
+            + "- Dilly"
+        )
+        send_email(email, subject, body_text)
+    except Exception as e:
+        print(f"[WEB-CONNECT] Email notification failed: {e}", flush=True)
+
     return JSONResponse(
-        content={"ok": True, "message": f"Message sent! {profile.get('name', 'They')} will get back to you through Dilly."},
+        content={"ok": True, "message": f"Message sent! {profile.get('name', 'They').split()[0]} will get back to you."},
         headers={"Access-Control-Allow-Origin": "*"},
     )
 
