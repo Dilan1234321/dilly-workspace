@@ -16,13 +16,8 @@ export default function Index() {
         return;
       }
 
-      const hasOnboarded = await AsyncStorage.getItem('dilly_has_onboarded');
-
-      if (hasOnboarded === 'true') {
-        router.replace('/onboarding/verify?returning=true');
-      } else {
-        router.replace('/onboarding/choose-path');
-      }
+      // Always go to choose-path when not logged in
+      router.replace('/onboarding/choose-path');
     }
     checkAuth();
   }, []);
