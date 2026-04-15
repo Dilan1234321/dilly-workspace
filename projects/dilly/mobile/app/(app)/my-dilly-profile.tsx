@@ -250,6 +250,18 @@ export default function MyDillyProfileScreen() {
   // Re-fetch when tab becomes active (after AI conversation adds new facts)
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
 
+  // Auto-retry if profile has zero facts (resume extraction may still be running)
+  const retryRef = useRef(0);
+  useEffect(() => {
+    if (!loading && data && (data.items || []).length === 0 && retryRef.current < 3) {
+      const timer = setTimeout(() => {
+        retryRef.current += 1;
+        fetchData();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, data]);
+
   // Rotate conversation starters
   useEffect(() => {
     const interval = setInterval(() => {
