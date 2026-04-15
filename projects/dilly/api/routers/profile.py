@@ -1277,7 +1277,7 @@ async def get_web_profile(slug: str):
     return JSONResponse(
         content=out,
         headers={
-            "Cache-Control": "public, max-age=300",
+            "Cache-Control": "no-cache",
             "Access-Control-Allow-Origin": "*",
         },
     )
@@ -1411,7 +1411,7 @@ async def get_web_profile_narratives(slug: str):
     if len(public_facts) < 3:
         return JSONResponse(
             content={"impact_lines": [], "differentiator": None, "skills_with_evidence": []},
-            headers={"Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*"},
+            headers={"Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*"},
         )
 
     # Profile hash for cache
@@ -1425,7 +1425,7 @@ async def get_web_profile_narratives(slug: str):
         _NARRATIVE_WEB_CACHE.move_to_end(cache_key)
         return JSONResponse(
             content=cached["data"],
-            headers={"Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*"},
+            headers={"Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*"},
         )
 
     # Build profile context
@@ -1549,7 +1549,7 @@ async def get_web_profile_narratives(slug: str):
 
     return JSONResponse(
         content=data,
-        headers={"Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*"},
+        headers={"Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*"},
     )
 
 
