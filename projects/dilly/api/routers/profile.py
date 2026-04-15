@@ -897,30 +897,30 @@ async def delete_account(request: Request):
     if not email:
         raise errors.validation_error("Email required.")
 
-    # 1. Delete ALL data from every table
+    # 1. Delete ALL data from every table (each in its own transaction)
+    from projects.dilly.api.database import get_db
+    delete_queries = [
+        ("profile_facts", "DELETE FROM profile_facts WHERE LOWER(email) = LOWER(%s)"),
+        ("students", "DELETE FROM students WHERE LOWER(email) = LOWER(%s)"),
+        ("users", "DELETE FROM users WHERE LOWER(email) = LOWER(%s)"),
+        ("push_tokens", "DELETE FROM push_tokens WHERE LOWER(email) = LOWER(%s)"),
+        ("verification_codes", "DELETE FROM verification_codes WHERE LOWER(email) = LOWER(%s)"),
+    ]
+    for table, query in delete_queries:
+        try:
+            with get_db() as conn:
+                cur = conn.cursor()
+                cur.execute(query, (email,))
+                print(f"[DELETE-ACCOUNT] {table}: {cur.rowcount} rows deleted", flush=True)
+        except Exception as te:
+            print(f"[DELETE-ACCOUNT] {table} error: {te}", flush=True)
+    # web_profile_connections uses user_email
     try:
-        from projects.dilly.api.database import get_db
         with get_db() as conn:
             cur = conn.cursor()
-            # Every table that stores user data
-            tables_with_email = [
-                "profile_facts", "students", "users", "push_tokens",
-                "sessions", "verification_codes",
-            ]
-            for table in tables_with_email:
-                try:
-                    cur.execute(f"DELETE FROM {table} WHERE LOWER(email) = LOWER(%s)", (email,))
-                    print(f"[DELETE-ACCOUNT] {table}: {cur.rowcount} rows", flush=True)
-                except Exception as te:
-                    print(f"[DELETE-ACCOUNT] {table} error: {te}", flush=True)
-            # Tables with user_email column
-            for table in ["web_profile_connections"]:
-                try:
-                    cur.execute(f"DELETE FROM {table} WHERE LOWER(user_email) = LOWER(%s)", (email,))
-                except Exception:
-                    pass
+            cur.execute("DELETE FROM web_profile_connections WHERE LOWER(user_email) = LOWER(%s)", (email,))
     except Exception:
-        traceback.print_exc()
+        pass
 
     # 2. Delete profile folder (photos, resume files)
     from projects.dilly.api.profile_store import delete_account_data
