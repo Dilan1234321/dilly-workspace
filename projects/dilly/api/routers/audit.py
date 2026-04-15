@@ -1347,6 +1347,65 @@ async def _audit_resume_v2_impl(
             except Exception:
                 pass
             response = response.model_copy(update={"id": audit_id}) if hasattr(response, "model_copy") else response
+
+            # Background: extract profile facts from resume text so the Dilly Profile
+            # is populated immediately after onboarding (user doesn't have to talk to Dilly first).
+            is_first_run = getattr(request.state, "first_run_bypass", False)
+            if is_first_run and email and text:
+                import threading as _threading
+                _extract_email = email
+                _extract_text = text[:8000]
+                _extract_name = candidate_name or ""
+                def _seed_profile_facts_bg():
+                    try:
+                        import anthropic, json as _j
+                        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+                        if not api_key:
+                            return
+                        client = anthropic.Anthropic(api_key=api_key)
+                        resp = client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=2000,
+                            temperature=0.2,
+                            system=(
+                                "Extract profile facts from this resume. Return JSON array of objects. "
+                                "Each object: {\"category\": \"...\", \"label\": \"short title\", \"value\": \"detail\", \"confidence\": \"high\" or \"medium\"}. "
+                                "Categories: skill_unlisted (technical skills), soft_skill (interpersonal), "
+                                "achievement (accomplishments with impact), experience (roles held), "
+                                "project_detail (projects built), education (degrees/certs), goal (career goals). "
+                                "Extract 15-25 facts. Be specific. Cite real details from the resume. "
+                                "Never use em dashes. JSON array only, no markdown."
+                            ),
+                            messages=[{"role": "user", "content": f"Resume for {_extract_name}:\n\n{_extract_text}"}],
+                        )
+                        raw = resp.content[0].text.strip()
+                        if raw.startswith("```"):
+                            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+                        if raw.endswith("```"):
+                            raw = raw[:-3].strip()
+                        if raw.startswith("json"):
+                            raw = raw[4:].strip()
+                        facts = _j.loads(raw)
+                        if not isinstance(facts, list):
+                            return
+                        from projects.dilly.api.memory_surface_store import save_memory_surface
+                        items = []
+                        for f in facts[:30]:
+                            if not isinstance(f, dict) or not f.get("label"):
+                                continue
+                            items.append({
+                                "category": f.get("category", "skill_unlisted"),
+                                "label": str(f.get("label", ""))[:100],
+                                "value": str(f.get("value", ""))[:500],
+                                "confidence": f.get("confidence", "medium"),
+                                "source": "resume",
+                            })
+                        if items:
+                            save_memory_surface(_extract_email, items=items)
+                            print(f"[SEED-FACTS] Extracted {len(items)} facts from resume for {_extract_email}", flush=True)
+                    except Exception as e:
+                        print(f"[SEED-FACTS] Error: {e}", flush=True)
+                _threading.Thread(target=_seed_profile_facts_bg, daemon=True).start()
         except Exception:
             pass
         return response
