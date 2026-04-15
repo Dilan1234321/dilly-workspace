@@ -9,6 +9,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Share } from 'react-native';
 import { clearAuth } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
@@ -263,53 +264,57 @@ export default function SettingsScreen() {
         <FadeInView delay={120}>
           <SectionLabel text="WEB PROFILE" />
           <View style={s.card}>
-            <ToggleRow
-              label="Public profile"
-              hint={webProfileOn ? `hellodilly.com/${webPrefix}/${webSlug || 'you'}` : 'Your profile is hidden'}
-              value={webProfileOn}
-              onToggle={v => {
-                setWebProfileOn(v);
-                savePref('public_profile_visible', v);
-              }}
-            />
-            {webProfileOn && (
-              <>
-                <Divider />
-                <View style={s.row}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.rowLabel}>Tagline</Text>
-                    <TextInput
-                      style={{ fontSize: 13, color: colors.t2, marginTop: 4, padding: 0 }}
-                      value={webTagline}
-                      onChangeText={setWebTagline}
-                      onEndEditing={() => {
-                        setTaglineSaving(true);
-                        savePref('profile_tagline', webTagline.trim()).then(() => setTaglineSaving(false));
-                      }}
-                      placeholder="e.g. Data Science Student | Builder"
-                      placeholderTextColor={colors.t3}
-                      maxLength={80}
-                      returnKeyType="done"
-                    />
-                  </View>
-                  {taglineSaving && <Text style={{ fontSize: 10, color: colors.t3 }}>Saving...</Text>}
-                </View>
-                <Divider />
-                <Row
-                  label="Preview profile"
-                  onPress={() => Linking.openURL(`https://hellodilly.com/${webPrefix}/${webSlug || 'you'}`)}
-                />
-                <Divider />
-                <Row
-                  label="Copy link"
-                  onPress={async () => {
-                    const { default: Clipboard } = await import('expo-clipboard');
-                    await Clipboard.setStringAsync(`https://hellodilly.com/${webPrefix}/${webSlug || 'you'}`);
-                    Alert.alert('Copied!', 'Your profile link has been copied.');
-                  }}
-                />
-              </>
-            )}
+            {(() => {
+              const slug = webSlug || name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').trim() || 'you';
+              const profileUrl = `https://hellodilly.com/${webPrefix}/${slug}`;
+              return (
+                <>
+                  <ToggleRow
+                    label="Public profile"
+                    hint={webProfileOn ? `hellodilly.com/${webPrefix}/${slug}` : 'Your profile is hidden'}
+                    value={webProfileOn}
+                    onToggle={v => {
+                      setWebProfileOn(v);
+                      savePref('public_profile_visible', v);
+                    }}
+                  />
+                  {webProfileOn && (
+                    <>
+                      <Divider />
+                      <View style={s.row}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.rowLabel}>Tagline</Text>
+                          <TextInput
+                            style={{ fontSize: 13, color: colors.t2, marginTop: 4, padding: 0 }}
+                            value={webTagline}
+                            onChangeText={setWebTagline}
+                            onEndEditing={() => {
+                              setTaglineSaving(true);
+                              savePref('profile_tagline', webTagline.trim()).then(() => setTaglineSaving(false));
+                            }}
+                            placeholder="e.g. Data Science Student | Builder"
+                            placeholderTextColor={colors.t3}
+                            maxLength={80}
+                            returnKeyType="done"
+                          />
+                        </View>
+                        {taglineSaving && <Text style={{ fontSize: 10, color: colors.t3 }}>Saving...</Text>}
+                      </View>
+                      <Divider />
+                      <Row
+                        label="Preview profile"
+                        onPress={() => Linking.openURL(profileUrl)}
+                      />
+                      <Divider />
+                      <Row
+                        label="Share link"
+                        onPress={() => Share.share({ message: profileUrl })}
+                      />
+                    </>
+                  )}
+                </>
+              );
+            })()}
           </View>
         </FadeInView>
 
