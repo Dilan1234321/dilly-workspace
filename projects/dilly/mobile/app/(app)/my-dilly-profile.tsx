@@ -20,7 +20,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   LayoutAnimation, RefreshControl, Animated, Easing,
-  Dimensions, Image, TextInput, Keyboard, Alert,
+  Dimensions, Image, TextInput, Keyboard, Alert, Switch,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -210,6 +210,10 @@ export default function MyDillyProfileScreen() {
   const [webBio, setWebBio] = useState('');
   const [webBioSaving, setWebBioSaving] = useState(false);
   const [showWebProfile, setShowWebProfile] = useState(false);
+  const [webSections, setWebSections] = useState<Record<string, boolean>>({
+    strengths: true, skills: true, experience: true, projects: true, looking_for: true, education: true,
+  });
+  const [showFactToggles, setShowFactToggles] = useState(false);
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
   async function addCity(city: string) {
@@ -247,6 +251,7 @@ export default function MyDillyProfileScreen() {
         // Use readable_slug from profile if available
         if (profileRes.readable_slug) setReadableSlug(profileRes.readable_slug);
         setWebBio(profileRes.profile_bio || '');
+        if (profileRes.web_profile_settings?.sections) setWebSections(profileRes.web_profile_settings.sections);
       }
       if (Array.isArray(resumesRes)) setResumes(resumesRes);
       else if (resumesRes?.resumes) setResumes(resumesRes.resumes);
@@ -807,6 +812,84 @@ export default function MyDillyProfileScreen() {
               <View>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>TAGLINE</Text>
                 <Text style={{ fontSize: 13, color: colors.t2 }}>{p.profile_tagline || p.custom_tagline || 'Set in your business card editor'}</Text>
+              </View>
+
+              {/* Section toggles */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 8 }}>VISIBLE SECTIONS</Text>
+                {[
+                  { key: 'strengths', label: 'What I Bring' },
+                  { key: 'skills', label: 'Skills' },
+                  { key: 'experience', label: 'Experience' },
+                  { key: 'projects', label: 'Projects' },
+                  { key: 'looking_for', label: 'What I\'m Looking For' },
+                  { key: 'education', label: 'Education' },
+                ].map(sec => (
+                  <View key={sec.key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 0.5, borderColor: colors.b1 }}>
+                    <Text style={{ fontSize: 14, color: colors.t1 }}>{sec.label}</Text>
+                    <Switch
+                      value={webSections[sec.key] !== false}
+                      onValueChange={v => {
+                        const updated = { ...webSections, [sec.key]: v };
+                        setWebSections(updated);
+                        dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ web_profile_settings: { sections: updated } }) }).catch(() => {});
+                      }}
+                      trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
+                      thumbColor={webSections[sec.key] !== false ? colors.indigo : '#f4f3f4'}
+                    />
+                  </View>
+                ))}
+              </View>
+
+              {/* Per-fact toggles */}
+              <View>
+                <AnimatedPressable
+                  onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setShowFactToggles(!showFactToggles); }}
+                  scaleDown={0.98}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1 }}>MANAGE FACTS</Text>
+                  <Ionicons name={showFactToggles ? 'chevron-up' : 'chevron-down'} size={14} color={colors.t3} />
+                </AnimatedPressable>
+                {showFactToggles && data?.items && (
+                  <View style={{ marginTop: 6 }}>
+                    {data.items.slice(0, 30).map((fact: any, i: number) => {
+                      const cat = (fact.category || '').toLowerCase();
+                      const isPrivate = ['challenge', 'concern', 'weakness', 'fear', 'personal', 'contact', 'phone', 'email_address', 'areas_for_improvement', 'life_context'].includes(cat);
+                      if (isPrivate) return null;
+                      const isPublic = fact.is_web_public !== false;
+                      return (
+                        <View key={fact.id || i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 0.5, borderColor: colors.b1 }}>
+                          <View style={{ flex: 1, marginRight: 12 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.t1 }} numberOfLines={1}>{fact.label || fact.value}</Text>
+                            <Text style={{ fontSize: 10, color: colors.t3 }}>{fact.category}</Text>
+                          </View>
+                          <Switch
+                            value={isPublic}
+                            onValueChange={v => {
+                              // Update the fact's web visibility
+                              const updated = { ...fact, is_web_public: v };
+                              setData((prev: any) => {
+                                if (!prev) return prev;
+                                const items = prev.items.map((f: any) => f.id === fact.id ? updated : f);
+                                return { ...prev, items };
+                              });
+                              // Save to API
+                              if (fact.id) {
+                                dilly.fetch(`/memory/items/${fact.id}`, { method: 'PATCH', body: JSON.stringify({ is_web_public: v }) }).catch(() => {});
+                              }
+                            }}
+                            trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
+                            thumbColor={isPublic ? colors.indigo : '#f4f3f4'}
+                          />
+                        </View>
+                      );
+                    })}
+                    <Text style={{ fontSize: 10, color: colors.t3, marginTop: 8, textAlign: 'center' }}>
+                      Private facts (challenges, concerns, weaknesses) are never shown publicly.
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* View + Share */}
