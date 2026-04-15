@@ -20,6 +20,7 @@ import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calen
 import { remindDeadline, remindInterview, remindMeLater } from '../../lib/reminders';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { DillyFace } from '../../components/DillyFace';
 import { TouchableOpacity } from 'react-native';
 
 const GOLD  = '#2B3A8E';
@@ -796,7 +797,10 @@ export default function CalendarScreen() {
     try {
       const [profileRes, appsRes] = await Promise.all([
         dilly.fetch('/profile').then(r => r.json()).catch(() => ({})),
-        dilly.get('/applications').catch(() => ({ applications: [] })),
+        dilly.get('/applications').then(r => {
+          if (Array.isArray(r)) return { applications: r };
+          return r || { applications: [] };
+        }).catch(() => ({ applications: [] })),
       ]);
 
       // 1. Map profile deadlines (existing behavior)
@@ -1039,8 +1043,9 @@ export default function CalendarScreen() {
 
   if (loading) {
     return (
-      <View style={[cs.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.t3, fontSize: 12 }}>Loading...</Text>
+      <View style={[cs.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }]}>
+        <DillyFace size={100} />
+        <Text style={{ color: colors.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your calendar...</Text>
       </View>
     );
   }
