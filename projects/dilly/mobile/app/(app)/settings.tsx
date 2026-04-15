@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl, Image,
+  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl, Image, TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,10 +67,18 @@ export default function SettingsScreen() {
   const [plan, setPlan] = useState('starter');
   const [pushEnabled, setPushEnabled] = useState(true);
   const [deadlineReminders, setDeadlineReminders] = useState(true);
+  const [webProfileOn, setWebProfileOn] = useState(true);
+  const [webSlug, setWebSlug] = useState('');
+  const [webPrefix, setWebPrefix] = useState('s');
+  const [webTagline, setWebTagline] = useState('');
+  const [taglineSaving, setTaglineSaving] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
-      const p = await dilly.get('/profile');
+      const [p, slugRes] = await Promise.all([
+        dilly.get('/profile'),
+        dilly.fetch('/profile/generate-slug', { method: 'POST' }).then(r => r?.ok ? r.json() : null).catch(() => null),
+      ]);
       if (p) {
         setName(p.name || '');
         setEmail(p.email || '');
@@ -78,6 +86,12 @@ export default function SettingsScreen() {
         const prefs = p.notification_prefs || {};
         setPushEnabled(prefs.enabled !== false);
         setDeadlineReminders(prefs.deadline_reminders !== false);
+        setWebProfileOn(p.public_profile_visible !== false);
+        setWebTagline(p.profile_tagline || '');
+      }
+      if (slugRes?.slug) {
+        setWebSlug(slugRes.slug);
+        setWebPrefix(slugRes.prefix || 's');
       }
     } catch {}
   }, []);
@@ -245,8 +259,62 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* About */}
+        {/* Web Profile */}
         <FadeInView delay={120}>
+          <SectionLabel text="WEB PROFILE" />
+          <View style={s.card}>
+            <ToggleRow
+              label="Public profile"
+              hint={webProfileOn ? `hellodilly.com/${webPrefix}/${webSlug || 'you'}` : 'Your profile is hidden'}
+              value={webProfileOn}
+              onToggle={v => {
+                setWebProfileOn(v);
+                savePref('public_profile_visible', v);
+              }}
+            />
+            {webProfileOn && (
+              <>
+                <Divider />
+                <View style={s.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.rowLabel}>Tagline</Text>
+                    <TextInput
+                      style={{ fontSize: 13, color: colors.t2, marginTop: 4, padding: 0 }}
+                      value={webTagline}
+                      onChangeText={setWebTagline}
+                      onEndEditing={() => {
+                        setTaglineSaving(true);
+                        savePref('profile_tagline', webTagline.trim()).then(() => setTaglineSaving(false));
+                      }}
+                      placeholder="e.g. Data Science Student | Builder"
+                      placeholderTextColor={colors.t3}
+                      maxLength={80}
+                      returnKeyType="done"
+                    />
+                  </View>
+                  {taglineSaving && <Text style={{ fontSize: 10, color: colors.t3 }}>Saving...</Text>}
+                </View>
+                <Divider />
+                <Row
+                  label="Preview profile"
+                  onPress={() => Linking.openURL(`https://hellodilly.com/${webPrefix}/${webSlug || 'you'}`)}
+                />
+                <Divider />
+                <Row
+                  label="Copy link"
+                  onPress={async () => {
+                    const { default: Clipboard } = await import('expo-clipboard');
+                    await Clipboard.setStringAsync(`https://hellodilly.com/${webPrefix}/${webSlug || 'you'}`);
+                    Alert.alert('Copied!', 'Your profile link has been copied.');
+                  }}
+                />
+              </>
+            )}
+          </View>
+        </FadeInView>
+
+        {/* About */}
+        <FadeInView delay={160}>
           <SectionLabel text="ABOUT" />
           <View style={s.card}>
             <Row label="Terms of Service" onPress={() => Alert.alert('Terms of Service', 'By using Dilly, you agree to the following:\n\n1. Dilly is a career guidance platform. It is not a guarantee of employment.\n2. AI-generated content (fit narratives, resumes, interview feedback) may not always be accurate. Verify important information independently.\n3. Your Dilly Profile data is stored securely and used to provide personalized career guidance.\n4. You may delete your account and all data at any time from Settings.\n5. Dilly is not a substitute for professional career counseling.\n6. We reserve the right to modify features and pricing with notice.\n7. Misuse of the platform (fake profiles, spam, harassment) will result in account termination.\n\nQuestions? Email ceo@hellodilly.com')} />
@@ -259,7 +327,7 @@ export default function SettingsScreen() {
         </FadeInView>
 
         {/* Sign out */}
-        <FadeInView delay={160}>
+        <FadeInView delay={200}>
           <AnimatedPressable style={s.signOutBtn} onPress={handleSignOut} scaleDown={0.97}>
             <Ionicons name="log-out-outline" size={16} color="#FF453A" />
             <Text style={s.signOutText}>Sign out</Text>
@@ -267,7 +335,7 @@ export default function SettingsScreen() {
         </FadeInView>
 
         {/* Delete */}
-        <FadeInView delay={200}>
+        <FadeInView delay={240}>
           <AnimatedPressable style={s.deleteBtn} onPress={handleDeleteAccount} scaleDown={0.97}>
             <Ionicons name="trash-outline" size={12} color={colors.t3} />
             <Text style={s.deleteText}>Delete account</Text>
