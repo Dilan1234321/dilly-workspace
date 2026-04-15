@@ -1117,15 +1117,16 @@ async def get_public_profile_photo(slug: str):
 # ---------------------------------------------------------------------------
 
 @router.get("/profile/web/{slug}")
-async def get_web_profile(slug: str):
+async def get_web_profile(slug: str, prefix: str | None = None):
     """Public web profile data for hellodilly.com/s/ and /p/ pages.
     Returns curated, privacy-safe data. No auth required.
+    prefix: 's' for student, 'p' for professional. Filters when same slug exists for both.
     """
     from projects.dilly.api.profile_store import get_profile_by_readable_slug, get_profile_slug
     from projects.dilly.api.memory_surface_store import get_memory_surface
     from projects.dilly.api.schools import get_school_from_email, SCHOOLS
 
-    profile = get_profile_by_readable_slug(slug)
+    profile = get_profile_by_readable_slug(slug, user_type_prefix=prefix)
     if not profile:
         raise errors.not_found("Profile not found.")
 
@@ -1288,10 +1289,10 @@ async def get_web_profile(slug: str):
 
 
 @router.get("/profile/web/{slug}/photo")
-async def get_web_profile_photo(slug: str):
+async def get_web_profile_photo(slug: str, prefix: str | None = None):
     """Serve profile photo by readable slug. No auth."""
     from projects.dilly.api.profile_store import get_profile_by_readable_slug, get_profile_photo_path
-    profile = get_profile_by_readable_slug(slug)
+    profile = get_profile_by_readable_slug(slug, user_type_prefix=prefix)
     if not profile:
         raise errors.not_found("Not found.")
     email = (profile.get("email") or "").strip().lower()
@@ -1328,7 +1329,7 @@ async def web_profile_connect(slug: str, request: Request):
     """Visitor sends a connection request to a Dilly user via their web profile."""
     from projects.dilly.api.profile_store import get_profile_by_readable_slug
 
-    profile = get_profile_by_readable_slug(slug)
+    profile = get_profile_by_readable_slug(slug, user_type_prefix=prefix)
     if not profile:
         raise errors.not_found("Profile not found.")
     email = (profile.get("email") or "").strip().lower()
@@ -1390,14 +1391,14 @@ _NARRATIVE_WEB_MAX = 500
 
 
 @router.get("/profile/web/{slug}/narratives")
-async def get_web_profile_narratives(slug: str):
+async def get_web_profile_narratives(slug: str, prefix: str | None = None):
     """AI-generated narrative sections for the public profile page.
     Cached per user, regenerated when profile changes. No auth.
     """
     from projects.dilly.api.profile_store import get_profile_by_readable_slug
     from projects.dilly.api.memory_surface_store import get_memory_surface
 
-    profile = get_profile_by_readable_slug(slug)
+    profile = get_profile_by_readable_slug(slug, user_type_prefix=prefix)
     if not profile:
         raise errors.not_found("Profile not found.")
     email = (profile.get("email") or "").strip().lower()

@@ -321,8 +321,12 @@ def generate_readable_slug(email: str) -> str:
     return candidate
 
 
-def get_profile_by_readable_slug(slug: str) -> dict | None:
-    """Look up a profile by human-readable slug via Postgres."""
+def get_profile_by_readable_slug(slug: str, user_type_prefix: str | None = None) -> dict | None:
+    """Look up a profile by human-readable slug via Postgres.
+
+    user_type_prefix: 's' for students, 'p' for professionals/general.
+    If provided, only returns profiles matching that type.
+    """
     if not slug:
         return None
     slug = slug.strip().lower()
@@ -330,13 +334,29 @@ def get_profile_by_readable_slug(slug: str) -> dict | None:
         import psycopg2.extras
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            "SELECT email FROM users WHERE profile_json->>'readable_slug' = %s LIMIT 1",
+            "SELECT email, profile_json FROM users WHERE profile_json->>'readable_slug' = %s",
             (slug,),
         )
-        row = cur.fetchone()
-        if not row:
+        rows = cur.fetchall()
+        if not rows:
             return None
-        return get_profile(row["email"])
+        # If no prefix filter, return first match
+        if not user_type_prefix:
+            return get_profile(rows[0]["email"])
+        # Filter by user type based on prefix
+        for row in rows:
+            pj = row.get("profile_json") or {}
+            if isinstance(pj, str):
+                import json as _json
+                pj = _json.loads(pj)
+            ut = pj.get("user_type") or "student"
+            is_student = ut not in ("general", "professional")
+            if user_type_prefix == "s" and is_student:
+                return get_profile(row["email"])
+            if user_type_prefix == "p" and not is_student:
+                return get_profile(row["email"])
+        # No match for this prefix, return first result as fallback
+        return get_profile(rows[0]["email"])
 
 
 # ── Profile photo helpers (unchanged — still filesystem) ───────────────────────
