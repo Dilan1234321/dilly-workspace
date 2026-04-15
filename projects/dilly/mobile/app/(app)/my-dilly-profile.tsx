@@ -1332,10 +1332,10 @@ export default function MyDillyProfileScreen() {
       )}
 
       {/* QR Code Fullscreen */}
-      <Modal visible={showQrFullscreen} animationType="fade" transparent={false}>
-        <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
+      <Modal visible={showQrFullscreen} animationType="slide" presentationStyle="fullScreen" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
           <TouchableOpacity
-            style={{ position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' }}
+            style={{ position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
             onPress={() => setShowQrFullscreen(false)}
           >
             <Ionicons name="close" size={20} color={colors.t1} />
