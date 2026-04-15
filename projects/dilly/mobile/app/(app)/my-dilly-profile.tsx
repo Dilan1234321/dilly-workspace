@@ -907,6 +907,43 @@ export default function MyDillyProfileScreen() {
                 )}
               </View>
 
+              {/* Book a Chat setup */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 8 }}>BOOK A CHAT</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, color: colors.t1 }}>Allow visitors to book a chat</Text>
+                    <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>People who visit your profile can pick a time to talk</Text>
+                  </View>
+                  <Switch
+                    value={p.booking_availability?.enabled || false}
+                    onValueChange={v => {
+                      const current = p.booking_availability || { enabled: false, timezone: 'America/New_York', windows: [], slot_duration: 30, buffer: 15, max_days_ahead: 14 };
+                      const updated = { ...current, enabled: v };
+                      // If enabling for the first time with no windows, add default weekday 9-5
+                      if (v && (!updated.windows || updated.windows.length === 0)) {
+                        updated.windows = [
+                          { day: 1, start: '09:00', end: '17:00' },
+                          { day: 2, start: '09:00', end: '17:00' },
+                          { day: 3, start: '09:00', end: '17:00' },
+                          { day: 4, start: '09:00', end: '17:00' },
+                          { day: 5, start: '09:00', end: '17:00' },
+                        ];
+                      }
+                      setProfile((prev: any) => ({ ...prev, booking_availability: updated }));
+                      dilly.fetch('/booking/availability', { method: 'PATCH', body: JSON.stringify(updated) }).catch(() => {});
+                    }}
+                    trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
+                    thumbColor={p.booking_availability?.enabled ? colors.indigo : '#f4f3f4'}
+                  />
+                </View>
+                {p.booking_availability?.enabled && (
+                  <Text style={{ fontSize: 11, color: colors.green, marginTop: 4 }}>
+                    Weekdays 9am - 5pm, 30 min slots. Visitors can book up to 14 days ahead.
+                  </Text>
+                )}
+              </View>
+
               {/* View + Share + QR */}
               {readableSlug ? (
                 <View style={{ gap: 10 }}>
