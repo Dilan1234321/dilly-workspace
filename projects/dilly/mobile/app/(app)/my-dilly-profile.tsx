@@ -20,7 +20,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   LayoutAnimation, RefreshControl, Animated, Easing,
-  Dimensions, Image, TextInput, Keyboard, Alert, Switch,
+  Dimensions, Image, TextInput, Keyboard, Alert, Switch, Modal,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -210,6 +210,7 @@ export default function MyDillyProfileScreen() {
   const [webBio, setWebBio] = useState('');
   const [webBioSaving, setWebBioSaving] = useState(false);
   const [showWebProfile, setShowWebProfile] = useState(false);
+  const [showQrFullscreen, setShowQrFullscreen] = useState(false);
   const [webSections, setWebSections] = useState<Record<string, boolean>>({
     strengths: true, skills: true, experience: true, projects: true, looking_for: true, education: true,
   });
@@ -906,30 +907,40 @@ export default function MyDillyProfileScreen() {
                 )}
               </View>
 
-              {/* View + Share */}
+              {/* View + Share + QR */}
               {readableSlug ? (
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ gap: 10 }}>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <AnimatedPressable
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.indigo, paddingVertical: 12, borderRadius: 10 }}
+                      onPress={() => {
+                        const { Linking } = require('react-native');
+                        Linking.openURL(`https://hellodilly.com/${profilePrefix}/${readableSlug}`);
+                      }}
+                      scaleDown={0.97}
+                    >
+                      <Ionicons name="open-outline" size={14} color="#fff" />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>View</Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.s2, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1 }}
+                      onPress={() => {
+                        const { Share } = require('react-native');
+                        Share.share({ message: `https://hellodilly.com/${profilePrefix}/${readableSlug}` });
+                      }}
+                      scaleDown={0.97}
+                    >
+                      <Ionicons name="share-outline" size={14} color={colors.t1} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>Share</Text>
+                    </AnimatedPressable>
+                  </View>
                   <AnimatedPressable
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.indigo, paddingVertical: 12, borderRadius: 10 }}
-                    onPress={() => {
-                      const { Linking } = require('react-native');
-                      Linking.openURL(`https://hellodilly.com/${profilePrefix}/${readableSlug}`);
-                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.s2, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1 }}
+                    onPress={() => setShowQrFullscreen(true)}
                     scaleDown={0.97}
                   >
-                    <Ionicons name="open-outline" size={14} color="#fff" />
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>View</Text>
-                  </AnimatedPressable>
-                  <AnimatedPressable
-                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.s2, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1 }}
-                    onPress={() => {
-                      const { Share } = require('react-native');
-                      Share.share({ message: `https://hellodilly.com/${profilePrefix}/${readableSlug}` });
-                    }}
-                    scaleDown={0.97}
-                  >
-                    <Ionicons name="share-outline" size={14} color={colors.t1} />
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>Share</Text>
+                    <Ionicons name="qr-code" size={14} color={colors.t1} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>Show QR Code</Text>
                   </AnimatedPressable>
                 </View>
               ) : (
@@ -1282,6 +1293,52 @@ export default function MyDillyProfileScreen() {
           </View>
         </View>
       )}
+
+      {/* QR Code Fullscreen */}
+      <Modal visible={showQrFullscreen} animationType="fade" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' }}
+            onPress={() => setShowQrFullscreen(false)}
+          >
+            <Ionicons name="close" size={20} color={colors.t1} />
+          </TouchableOpacity>
+
+          {readableSlug ? (
+            <>
+              {(() => {
+                let QRCode: any = null;
+                try { QRCode = require('react-native-qrcode-svg').default; } catch {}
+                if (!QRCode) return <Text style={{ color: colors.t3 }}>QR not available</Text>;
+                return (
+                  <QRCode
+                    value={`https://hellodilly.com/${profilePrefix}/${readableSlug}`}
+                    size={220}
+                    color="#1e293b"
+                    backgroundColor="#ffffff"
+                    logo={require('../../assets/logo.png')}
+                    logoSize={44}
+                    logoBackgroundColor="#ffffff"
+                    logoBorderRadius={8}
+                    logoMargin={6}
+                  />
+                );
+              })()}
+              <Text style={{ fontSize: 22, fontWeight: '900', color: '#0f172a', marginTop: 28 }}>
+                {p.name || 'Your Profile'}
+              </Text>
+              <Text style={{ fontSize: 14, color: '#64748b', marginTop: 6 }}>
+                hellodilly.com/{profilePrefix}/{readableSlug}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 20, textAlign: 'center' }}>
+                Scan to view profile
+              </Text>
+            </>
+          ) : (
+            <Text style={{ color: colors.t3 }}>Setting up your profile link...</Text>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }

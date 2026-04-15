@@ -18,6 +18,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { DillyFace } from '../../components/DillyFace';
 import DillyFooter from '../../components/DillyFooter';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
@@ -544,9 +545,9 @@ export default function JobsScreen() {
 
   if (loading) {
     return (
-      <View style={[s.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={COBALT} />
-        <Text style={s.loadingText}>Finding jobs for you...</Text>
+      <View style={[s.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }]}>
+        <DillyFace size={100} />
+        <Text style={{ color: colors.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Finding jobs for you...</Text>
       </View>
     );
   }

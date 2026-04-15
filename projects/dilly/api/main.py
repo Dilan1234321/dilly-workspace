@@ -127,6 +127,7 @@ from projects.dilly.api.routers import cron as cron_router
 from projects.dilly.api.routers import family as family_router
 from projects.dilly.api.routers import resume as resume_router
 from projects.dilly.api.routers import applications as applications_router
+from projects.dilly.api.routers import booking as booking_router
 from projects.dilly.api.routers import companies as companies_router
 from projects.dilly.api.routers import tracks as tracks_router
 from projects.dilly.api.routers import templates as templates_router
@@ -172,6 +173,7 @@ app.include_router(cron_router.router)
 app.include_router(family_router.router)
 app.include_router(resume_router.router)
 app.include_router(applications_router.router)
+app.include_router(booking_router.router)
 app.include_router(companies_router.router)
 app.include_router(tracks_router.router)
 app.include_router(templates_router.router)
