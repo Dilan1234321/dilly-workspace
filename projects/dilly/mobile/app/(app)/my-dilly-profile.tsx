@@ -860,7 +860,7 @@ export default function MyDillyProfileScreen() {
                   scaleDown={0.98}
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1 }}>MANAGE FACTS</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1 }}>MANAGE VISIBLE FACTS</Text>
                   <Ionicons name={showFactToggles ? 'chevron-up' : 'chevron-down'} size={14} color={colors.t3} />
                 </AnimatedPressable>
                 {showFactToggles && data?.items && (
@@ -874,7 +874,9 @@ export default function MyDillyProfileScreen() {
                         <View key={fact.id || i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 0.5, borderColor: colors.b1 }}>
                           <View style={{ flex: 1, marginRight: 12 }}>
                             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.t1 }} numberOfLines={1}>{fact.label || fact.value}</Text>
-                            <Text style={{ fontSize: 10, color: colors.t3 }}>{fact.category}</Text>
+                            <Text style={{ fontSize: 10, color: colors.t3 }}>{
+                              ({ skill_unlisted: 'Technical Skill', soft_skill: 'Soft Skill', technical_skill: 'Technical Skill', skill: 'Skill', achievement: 'Achievement', project_detail: 'Project', project: 'Project', experience: 'Experience', education: 'Education', goal: 'Goal', interest: 'Interest', career_interest: 'Career Interest', strength: 'Strength', personality: 'Personality' } as any)[fact.category] || fact.category
+                            }</Text>
                           </View>
                           <Switch
                             value={isPublic}

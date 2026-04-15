@@ -1238,11 +1238,14 @@ async def get_web_profile(slug: str, prefix: str | None = None):
     cities = profile.get("job_locations") or []
     career_fields = profile.get("career_fields") or []
 
-    # Web profile settings
+    # Web profile settings - section visibility
     web_settings = profile.get("web_profile_settings") or {}
+    sections_vis = web_settings.get("sections") or {}
     template = web_settings.get("template") or profile.get("card_template") or "default"
     headline = web_settings.get("headline") or profile.get("web_headline") or None
-    show_looking_for = web_settings.get("show_looking_for", True)
+
+    def sec_on(key: str) -> bool:
+        return sections_vis.get(key, True) is not False
 
     # Combine looking_for with target roles and cities
     target_roles = []
@@ -1264,18 +1267,19 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         "class_year": str(grad_year) if grad_year else None,
         "cities": cities[:5],
         "career_fields": career_fields[:5],
-        # Sections
-        "strengths": strengths[:8],
-        "skills_technical": skills_technical[:12],
-        "skills_soft": skills_soft[:8],
+        # Sections (respect toggle visibility)
+        "strengths": strengths[:8] if sec_on("strengths") else [],
+        "skills_technical": skills_technical[:12] if sec_on("skills") else [],
+        "skills_soft": skills_soft[:8] if sec_on("skills") else [],
         "career_interests": career_interests[:6],
         "looking_for": {
             "roles": target_roles,
             "locations": cities[:4],
             "preferences": looking_for[:4],
-        } if show_looking_for else None,
-        "experience": experience_items[:5],
-        "projects": project_facts[:5],
+        } if sec_on("looking_for") else None,
+        "experience": experience_items[:5] if sec_on("experience") else [],
+        "projects": project_facts[:5] if sec_on("projects") else [],
+        "education_visible": sec_on("education"),
         "photo_url": f"/profile/public/{get_profile_slug(email)}/photo",
         "has_photo": bool(profile.get("profile_photo_b64") or False),
     }
