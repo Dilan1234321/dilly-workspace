@@ -384,7 +384,7 @@ export default function VerifyScreen() {
               setDigits('');
               setError(null);
             } else {
-              router.replace('/onboarding/welcome');
+              router.replace('/onboarding/choose-path');
             }
           }}>
             <Text style={styles.link}>Different email</Text>
