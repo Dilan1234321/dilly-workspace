@@ -316,7 +316,7 @@ export default function SettingsScreen() {
                         <>
                           <Divider />
                           <Row
-                            label="Preview profile"
+                            label="View profile"
                             onPress={() => Linking.openURL(profileUrl)}
                           />
                           <Divider />
