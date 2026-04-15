@@ -73,7 +73,16 @@ export default function ProfileProScreen() {
   const detectedCohorts = fieldToCohorts(selectedFields);
   const canContinue = fullName.trim().length >= 2 && selectedFields.length >= 1 && !!photo;
 
+  function getMissing(): string | null {
+    if (!photo) return 'Add a profile photo to continue.';
+    if (fullName.trim().length < 2) return 'Enter your full name.';
+    if (selectedFields.length < 1) return 'Select at least one career field.';
+    return null;
+  }
+
   async function handleContinue() {
+    const missing = getMissing();
+    if (missing) { Alert.alert('Almost there', missing); return; }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');

@@ -262,7 +262,17 @@ export default function ProfileScreen() {
   const cohort         = detectedCohortNames[0] || '';
   const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null && !!photoUri;
 
+  function getMissing(): string | null {
+    if (!photoUri) return 'Add a profile photo to continue.';
+    if (fullName.trim().length < 2) return 'Enter your full name.';
+    if (majors.length < 1) return 'Select at least one major.';
+    if (graduationYear == null) return 'Select your graduation year.';
+    return null;
+  }
+
   async function handleContinue() {
+    const missing = getMissing();
+    if (missing) { Alert.alert('Almost there', missing); return; }
     if (!canContinue || loading) return;
     setLoading(true);
     setSubmitError('');

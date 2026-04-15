@@ -559,7 +559,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
         <Text style={c.fieldLabel}>Full Name</Text>
         <TextInput style={c.fieldInput} value={data.name} onChangeText={v => update('name', v)} placeholder="Your name" placeholderTextColor={LIGHT_GRAY} />
       </View>
-      {userType !== 'professional' && (
+      {userType !== 'general' && userType !== 'professional' && (
         <>
           <View style={c.field}>
             <Text style={c.fieldLabel}>School</Text>
@@ -577,7 +577,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
           </View>
         </>
       )}
-      {userType === 'professional' && (
+      {(userType === 'general' || userType === 'professional') && (
         <View style={c.field}>
           <Text style={c.fieldLabel}>Field</Text>
           <TextInput style={c.fieldInput} value={data.major} onChangeText={v => update('major', v)} placeholder="Your career field" placeholderTextColor={LIGHT_GRAY} />
