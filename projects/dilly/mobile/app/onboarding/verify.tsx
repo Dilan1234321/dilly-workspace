@@ -138,18 +138,21 @@ export default function VerifyScreen() {
         const msg = err instanceof Error ? err.message : 'Something went wrong.';
         let friendly = "That code isn't right. Try again.";
         let type = 'invalid_code';
-        if (msg.toLowerCase().includes('expired')) {
-          friendly = 'That code expired. We sent you a new one.';
+        if (msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('invalid')) {
+          friendly = 'That code expired. Check your email for a new one.';
           type = 'expired_code';
-          try {
-            const r2 = await fetch(`${API_BASE}/auth/send-verification-code`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: isReturning ? returningEmail.trim() : email, user_type: userType === 'general' ? 'general' : undefined }),
-            });
-            const d2 = await r2.json();
-            startResendCooldown();
-          } catch { /* ignore */ }
+          // Only auto-resend if not already on cooldown
+          if (resendCooldown <= 0) {
+            try {
+              await fetch(`${API_BASE}/auth/send-verification-code`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: isReturning ? returningEmail.trim() : email, user_type: userType === 'general' ? 'general' : undefined }),
+              });
+              startResendCooldown();
+              friendly = 'New code sent. Check your email for the latest one.';
+            } catch { /* ignore */ }
+          }
         } else if (msg.toLowerCase().includes('too many') || msg.toLowerCase().includes('attempts')) {
           friendly = 'Too many attempts. Try again in an hour.';
           type = 'too_many';
