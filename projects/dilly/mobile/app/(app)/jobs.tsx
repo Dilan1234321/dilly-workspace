@@ -555,18 +555,8 @@ export default function JobsScreen() {
     <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Your Matches</Text>
-          <Text style={s.headerSub}>Matched to your profile. Tap to see your fit.</Text>
-        </View>
-        <AnimatedPressable onPress={() => setShowCollections(true)} scaleDown={0.9} hitSlop={10}>
-          <Ionicons name="bookmark" size={22} color={COBALT} />
-          {collections.length > 0 && (
-            <View style={{ position: 'absolute', top: -4, right: -6, backgroundColor: COBALT, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>{collections.length}</Text>
-            </View>
-          )}
-        </AnimatedPressable>
+        <Text style={s.headerTitle}>Your Matches</Text>
+        <Text style={s.headerSub}>Matched to your profile. Tap to see your fit.</Text>
       </View>
 
       {/* Search */}
@@ -589,8 +579,14 @@ export default function JobsScreen() {
         </View>
       </View>
 
-      {/* Filters: type + city in one row */}
+      {/* Filters: bookmark + type + city in one row */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40, flexGrow: 0 }} contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, alignItems: 'center' }}>
+        {/* Collections bookmark */}
+        <AnimatedPressable onPress={() => setShowCollections(true)} scaleDown={0.9} hitSlop={6}
+          style={{ width: 32, height: 28, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="bookmark" size={18} color={COBALT} />
+        </AnimatedPressable>
+
         {/* Job type pills */}
         {([
           { key: 'all', label: 'All' },
@@ -678,7 +674,7 @@ export default function JobsScreen() {
 
       {/* ── Collection Picker Modal (when bookmark tapped on a job) ── */}
       <Modal visible={!!showCollectionPicker} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+        <View style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, maxHeight: '70%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 17, fontWeight: '800', color: colors.t1 }}>Save to Collection</Text>
@@ -742,7 +738,7 @@ export default function JobsScreen() {
 
       {/* ── Collections List Modal (header button) ── */}
       <Modal visible={showCollections} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+        <View style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, maxHeight: '80%' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 17, fontWeight: '800', color: colors.t1 }}>My Collections</Text>

@@ -198,8 +198,8 @@ export default function SettingsScreen() {
               }}
               scaleDown={0.95}
             >
-              {email ? (
-                <Image source={{ uri: `https://api.trydilly.com/profile/public/${email.split('@')[0]}/photo?_t=${Date.now()}` }} style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.s2 }} />
+              {webSlug ? (
+                <Image source={{ uri: `https://api.trydilly.com/profile/web/${webSlug}/photo?_t=${Date.now()}` }} style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.s2 }} />
               ) : (
                 <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="camera" size={24} color={colors.t3} />
