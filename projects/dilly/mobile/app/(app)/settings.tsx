@@ -89,10 +89,16 @@ export default function SettingsScreen() {
         setDeadlineReminders(prefs.deadline_reminders !== false);
         setWebProfileOn(p.public_profile_visible !== false);
         setWebTagline(p.profile_tagline || '');
+        // Read slug and prefix from profile data
+        const ut = p.user_type || 'student';
+        const pfx = (ut === 'general' || ut === 'professional') ? 'p' : 's';
+        setWebPrefix(pfx);
+        if (p.readable_slug) setWebSlug(p.readable_slug);
       }
+      // API slug overrides profile value
       if (slugRes?.slug) {
         setWebSlug(slugRes.slug);
-        setWebPrefix(slugRes.prefix || 's');
+        if (slugRes.prefix) setWebPrefix(slugRes.prefix);
       }
     } catch {}
   }, []);

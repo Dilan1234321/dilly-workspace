@@ -235,12 +235,21 @@ export default function MyDillyProfileScreen() {
         const json = await memRes.json();
         setData(json);
       }
-      if (profileRes) setProfile(profileRes);
+      if (profileRes) {
+        setProfile(profileRes);
+        // Set prefix from profile user_type
+        const ut = profileRes.user_type || 'student';
+        const pfx = (ut === 'general' || ut === 'professional') ? 'p' : 's';
+        setProfilePrefix(pfx);
+        // Use readable_slug from profile if available
+        if (profileRes.readable_slug) setReadableSlug(profileRes.readable_slug);
+      }
       if (Array.isArray(resumesRes)) setResumes(resumesRes);
       else if (resumesRes?.resumes) setResumes(resumesRes.resumes);
+      // Slug from API overrides profile value
       if (slugRes?.slug) {
         setReadableSlug(slugRes.slug);
-        setProfilePrefix(slugRes.prefix || 's');
+        if (slugRes.prefix) setProfilePrefix(slugRes.prefix);
       }
     } catch (e) { console.warn('[MyDilly] fetch error:', e); } finally { setLoading(false); }
   }, []);
