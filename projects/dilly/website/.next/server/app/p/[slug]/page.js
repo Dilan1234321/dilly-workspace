@@ -1,0 +1,13 @@
+var R=require("../../../chunks/ssr/[turbopack]_runtime.js")("server/app/p/[slug]/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__092ms2-._.js")
+R.c("server/chunks/ssr/02c1_next_dist_esm_build_templates_app-page_04plhsw.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0b2zcq_._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0-2net1._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__0j4ocdm._.js")
+R.c("server/chunks/ssr/02c1_next_dist_client_components_01iy44i._.js")
+R.c("server/chunks/ssr/02c1_next_dist_client_components_builtin_forbidden_0io-74g.js")
+R.c("server/chunks/ssr/02c1_next_dist_client_components_builtin_unauthorized_0pnpp~a.js")
+R.c("server/chunks/ssr/02c1_next_dist_client_components_builtin_global-error_0p__bh0.js")
+R.c("server/chunks/ssr/08.t_projects_dilly_website__next-internal_server_app_p_[slug]_page_actions_0mv0_0q.js")
+R.m(92004)
+module.exports=R.m(92004).exports

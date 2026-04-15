@@ -8,7 +8,6 @@ import { useDillyOverlayState } from '../../hooks/useDillyOverlay';
 import { SubscriptionProvider, useSubscription } from '../../hooks/useSubscription';
 import DillyGate from '../../components/DillyGate';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import ScoringMigrationModal from '../../components/ScoringMigrationModal';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -192,7 +191,6 @@ export default function AppLayout() {
     </Tabs>
     <DillyAIOverlayWrapper />
     <DillyGateWrapper />
-    <ScoringMigrationModal />
   </>
   </ErrorBoundary>
   </SubscriptionProvider>
