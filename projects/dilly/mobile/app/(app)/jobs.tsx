@@ -8,7 +8,8 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
-  Linking, RefreshControl, LayoutAnimation, Animated, Image,
+  Linking, RefreshControl, LayoutAnimation, Animated, Image, Modal,
+  TouchableOpacity, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -60,6 +61,9 @@ interface FitNarrativeData {
 }
 
 type Tab = 'all' | 'internship' | 'entry_level' | 'full_time' | 'part_time' | 'other';
+
+interface CollectionJob { job_id: string; title: string; company: string; url?: string; added_at?: string; }
+interface Collection { id: string; name: string; jobs: CollectionJob[]; created_at?: string; updated_at?: string; }
 
 // -- Helpers ----------------------------------------------------------------
 
@@ -215,13 +219,15 @@ function FitNarrative({ listing }: { listing: Listing }) {
 
 // -- Job Card Component -----------------------------------------------------
 
-function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache, onNarrativeLoaded }: {
+function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache, onNarrativeLoaded, onBookmark, isSaved }: {
   listing: Listing;
   expanded: boolean;
   onToggle: () => void;
   tailoredResumeId?: string | null;
   narrativeCache?: FitNarrativeData | null;
   onNarrativeLoaded?: (jobId: string, data: FitNarrativeData) => void;
+  onBookmark?: (listing: Listing) => void;
+  isSaved?: boolean;
 }) {
   const toast = useInlineToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
@@ -284,7 +290,16 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
             <Text style={s.jobTitle} numberOfLines={2}>{listing.title}</Text>
             <Text style={s.jobCompany}>{listing.company}</Text>
           </View>
-          {dotColor && <View style={[s.fitDot, { backgroundColor: dotColor }]} />}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {dotColor && <View style={[s.fitDot, { backgroundColor: dotColor }]} />}
+            <AnimatedPressable
+              onPress={(e: any) => { e?.stopPropagation?.(); onBookmark?.(listing); }}
+              scaleDown={0.85}
+              hitSlop={10}
+            >
+              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={18} color={isSaved ? COBALT : colors.t3} />
+            </AnimatedPressable>
+          </View>
         </View>
 
         {/* Meta */}
@@ -395,6 +410,10 @@ export default function JobsScreen() {
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [tailoredResumes, setTailoredResumes] = useState<{ id: string; job_title: string; company: string }[]>([]);
   const [narrativeCache, setNarrativeCache] = useState<Record<string, FitNarrativeData>>({});
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [showCollections, setShowCollections] = useState(false);
+  const [showCollectionPicker, setShowCollectionPicker] = useState<Listing | null>(null);
+  const [newCollectionName, setNewCollectionName] = useState('');
 
   const handleNarrativeLoaded = useCallback((jobId: string, data: FitNarrativeData) => {
     setNarrativeCache(prev => ({ ...prev, [jobId]: data }));
@@ -402,12 +421,14 @@ export default function JobsScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, feedRes, resumesRes] = await Promise.all([
+      const [profileRes, feedRes, resumesRes, collectionsRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
         dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank`).catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
+        dilly.get('/collections').catch(() => null),
       ]);
       setTailoredResumes(Array.isArray(resumesRes) ? resumesRes : resumesRes?.resumes || []);
+      setCollections(collectionsRes?.collections || []);
 
       // Load user's preferred cities for location filtering
       const cities: string[] = profileRes?.job_locations || [];
@@ -453,6 +474,74 @@ export default function JobsScreen() {
     return result;
   }, [listings, search, selectedCities]);
 
+  // Check if a job is in any collection
+  const savedJobIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const c of collections) for (const j of c.jobs || []) ids.add(j.job_id);
+    return ids;
+  }, [collections]);
+
+  async function createCollection(name: string) {
+    try {
+      const res = await dilly.fetch('/collections', { method: 'POST', body: JSON.stringify({ name }) });
+      if (res.ok) {
+        const data = await res.json();
+        setCollections(prev => [...prev, data.collection]);
+        return data.collection as Collection;
+      }
+    } catch {}
+    return null;
+  }
+
+  async function addToCollection(collectionId: string, listing: Listing) {
+    try {
+      await dilly.fetch(`/collections/${collectionId}/jobs`, {
+        method: 'POST',
+        body: JSON.stringify({ job_id: listing.id, title: listing.title, company: listing.company, url: listing.url || '' }),
+      });
+      setCollections(prev => prev.map(c =>
+        c.id === collectionId
+          ? { ...c, jobs: [...c.jobs, { job_id: listing.id, title: listing.title, company: listing.company, url: listing.url }] }
+          : c
+      ));
+    } catch {}
+  }
+
+  async function removeFromCollection(collectionId: string, jobId: string) {
+    try {
+      await dilly.fetch(`/collections/${collectionId}/jobs/${jobId}`, { method: 'DELETE' });
+      setCollections(prev => prev.map(c =>
+        c.id === collectionId ? { ...c, jobs: c.jobs.filter(j => j.job_id !== jobId) } : c
+      ));
+    } catch {}
+  }
+
+  async function deleteCollection(collectionId: string) {
+    Alert.alert('Delete collection?', 'The jobs inside will not be deleted.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          await dilly.fetch(`/collections/${collectionId}`, { method: 'DELETE' });
+          setCollections(prev => prev.filter(c => c.id !== collectionId));
+        } catch {}
+      }},
+    ]);
+  }
+
+  async function renameCollection(collectionId: string) {
+    const col = collections.find(c => c.id === collectionId);
+    Alert.prompt?.('Rename collection', '', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Save', onPress: async (name?: string) => {
+        if (!name?.trim()) return;
+        try {
+          await dilly.fetch(`/collections/${collectionId}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) });
+          setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, name: name.trim() } : c));
+        } catch {}
+      }},
+    ], 'plain-text', col?.name || '');
+  }
+
   if (loading) {
     return (
       <View style={[s.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
@@ -466,8 +555,18 @@ export default function JobsScreen() {
     <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>Your Matches</Text>
-        <Text style={s.headerSub}>Matched to your profile. Tap to see your fit.</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.headerTitle}>Your Matches</Text>
+          <Text style={s.headerSub}>Matched to your profile. Tap to see your fit.</Text>
+        </View>
+        <AnimatedPressable onPress={() => setShowCollections(true)} scaleDown={0.9} hitSlop={10}>
+          <Ionicons name="bookmark" size={22} color={COBALT} />
+          {collections.length > 0 && (
+            <View style={{ position: 'absolute', top: -4, right: -6, backgroundColor: COBALT, borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>{collections.length}</Text>
+            </View>
+          )}
+        </AnimatedPressable>
       </View>
 
       {/* Search */}
@@ -569,11 +668,146 @@ export default function JobsScreen() {
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 setExpandedId(expandedId === listing.id ? null : listing.id);
               }}
+              onBookmark={(l) => setShowCollectionPicker(l)}
+              isSaved={savedJobIds.has(listing.id)}
             />
           </FadeInView>
         ))}
         <DillyFooter />
       </ScrollView>
+
+      {/* ── Collection Picker Modal (when bookmark tapped on a job) ── */}
+      <Modal visible={!!showCollectionPicker} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, maxHeight: '70%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 17, fontWeight: '800', color: colors.t1 }}>Save to Collection</Text>
+              <TouchableOpacity onPress={() => setShowCollectionPicker(null)} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.t3} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {collections.map(c => {
+                const isIn = c.jobs?.some(j => j.job_id === showCollectionPicker?.id);
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 0.5, borderColor: colors.b1 }}
+                    onPress={() => {
+                      if (!showCollectionPicker) return;
+                      if (isIn) removeFromCollection(c.id, showCollectionPicker.id);
+                      else addToCollection(c.id, showCollectionPicker);
+                    }}
+                  >
+                    <Ionicons name={isIn ? 'checkbox' : 'square-outline'} size={20} color={isIn ? COBALT : colors.t3} />
+                    <Text style={{ flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '600', color: colors.t1 }}>{c.name}</Text>
+                    <Text style={{ fontSize: 12, color: colors.t3 }}>{c.jobs?.length || 0}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* New collection */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}>
+                <TextInput
+                  style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, fontSize: 14, color: colors.t1, backgroundColor: colors.s1 }}
+                  value={newCollectionName}
+                  onChangeText={setNewCollectionName}
+                  placeholder="New collection name"
+                  placeholderTextColor={colors.t3}
+                  returnKeyType="done"
+                  onSubmitEditing={async () => {
+                    if (!newCollectionName.trim()) return;
+                    const col = await createCollection(newCollectionName.trim());
+                    setNewCollectionName('');
+                    if (col && showCollectionPicker) addToCollection(col.id, showCollectionPicker);
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!newCollectionName.trim()) return;
+                    const col = await createCollection(newCollectionName.trim());
+                    setNewCollectionName('');
+                    if (col && showCollectionPicker) addToCollection(col.id, showCollectionPicker);
+                  }}
+                  style={{ backgroundColor: COBALT, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 }}
+                >
+                  <Ionicons name="add" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Collections List Modal (header button) ── */}
+      <Modal visible={showCollections} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40, maxHeight: '80%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 17, fontWeight: '800', color: colors.t1 }}>My Collections</Text>
+              <TouchableOpacity onPress={() => setShowCollections(false)} hitSlop={12}>
+                <Ionicons name="close" size={22} color={colors.t3} />
+              </TouchableOpacity>
+            </View>
+
+            {collections.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                <Ionicons name="bookmark-outline" size={36} color={colors.t3} />
+                <Text style={{ fontSize: 14, color: colors.t3, marginTop: 8 }}>No collections yet</Text>
+                <Text style={{ fontSize: 12, color: colors.t3, marginTop: 4 }}>Tap the bookmark icon on any job to start saving</Text>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {collections.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 0.5, borderColor: colors.b1 }}
+                    onPress={() => renameCollection(c.id)}
+                    onLongPress={() => deleteCollection(c.id)}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: COBALT + '10', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="bookmark" size={16} color={COBALT} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: colors.t1 }}>{c.name}</Text>
+                      <Text style={{ fontSize: 12, color: colors.t3, marginTop: 2 }}>{c.jobs?.length || 0} job{(c.jobs?.length || 0) !== 1 ? 's' : ''}</Text>
+                    </View>
+                    <Ionicons name="ellipsis-horizontal" size={16} color={colors.t3} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* Create new */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}>
+              <TextInput
+                style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, fontSize: 14, color: colors.t1, backgroundColor: colors.s1 }}
+                value={newCollectionName}
+                onChangeText={setNewCollectionName}
+                placeholder="Create new collection"
+                placeholderTextColor={colors.t3}
+                returnKeyType="done"
+                onSubmitEditing={async () => {
+                  if (!newCollectionName.trim()) return;
+                  await createCollection(newCollectionName.trim());
+                  setNewCollectionName('');
+                }}
+              />
+              <TouchableOpacity
+                onPress={async () => {
+                  if (!newCollectionName.trim()) return;
+                  await createCollection(newCollectionName.trim());
+                  setNewCollectionName('');
+                }}
+                style={{ backgroundColor: COBALT, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 }}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
