@@ -71,7 +71,7 @@ export default function ProfileProScreen() {
 
   // Derived
   const detectedCohorts = fieldToCohorts(selectedFields);
-  const canContinue = fullName.trim().length >= 2 && selectedFields.length >= 1;
+  const canContinue = fullName.trim().length >= 2 && selectedFields.length >= 1 && !!photo;
 
   async function handleContinue() {
     if (!canContinue || loading) return;

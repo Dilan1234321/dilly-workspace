@@ -260,7 +260,7 @@ export default function ProfileScreen() {
     ? detectCohorts(majors, minors, preProf)
     : [];
   const cohort         = detectedCohortNames[0] || '';
-  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null;
+  const canContinue    = fullName.trim().length >= 2 && majors.length >= 1 && graduationYear != null && !!photoUri;
 
   async function handleContinue() {
     if (!canContinue || loading) return;
