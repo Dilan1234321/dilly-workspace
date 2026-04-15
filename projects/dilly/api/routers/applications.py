@@ -260,3 +260,127 @@ async def delete_application(request: Request, app_id: str):
         raise errors.internal("Could not delete application.")
 
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Job Collections
+# ---------------------------------------------------------------------------
+
+def _load_collections(email: str) -> list[dict]:
+    from projects.dilly.api.profile_store import get_profile
+    profile = get_profile(email) or {}
+    return profile.get("collections") or []
+
+
+def _save_collections(email: str, collections: list[dict]) -> None:
+    from projects.dilly.api.profile_store import save_profile
+    save_profile(email, {"collections": collections})
+
+
+@router.get("/collections")
+async def list_collections(request: Request):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    return {"collections": _load_collections(email)}
+
+
+@router.post("/collections")
+async def create_collection(request: Request, body: dict = Body(...)):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    name = (body.get("name") or "").strip()[:100]
+    if not name:
+        raise errors.validation_error("Collection name is required.")
+    collections = _load_collections(email)
+    collection = {
+        "id": _uuid.uuid4().hex[:12],
+        "name": name,
+        "jobs": [],
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    collections.append(collection)
+    _save_collections(email, collections)
+    return {"ok": True, "collection": collection}
+
+
+@router.patch("/collections/{collection_id}")
+async def update_collection(request: Request, collection_id: str, body: dict = Body(...)):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    collections = _load_collections(email)
+    target = next((c for c in collections if c.get("id") == collection_id), None)
+    if not target:
+        raise errors.not_found("Collection not found.")
+    name = (body.get("name") or "").strip()[:100]
+    if name:
+        target["name"] = name
+    target["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _save_collections(email, collections)
+    return {"ok": True, "collection": target}
+
+
+@router.delete("/collections/{collection_id}")
+async def delete_collection(request: Request, collection_id: str):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    collections = _load_collections(email)
+    before = len(collections)
+    collections = [c for c in collections if c.get("id") != collection_id]
+    if len(collections) == before:
+        raise errors.not_found("Collection not found.")
+    _save_collections(email, collections)
+    return {"ok": True}
+
+
+@router.post("/collections/{collection_id}/jobs")
+async def add_job_to_collection(request: Request, collection_id: str, body: dict = Body(...)):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    collections = _load_collections(email)
+    target = next((c for c in collections if c.get("id") == collection_id), None)
+    if not target:
+        raise errors.not_found("Collection not found.")
+    job_id = body.get("job_id") or ""
+    if not job_id:
+        raise errors.validation_error("job_id is required.")
+    # Don't add duplicates
+    if any(j.get("job_id") == job_id for j in target.get("jobs", [])):
+        return {"ok": True, "already_exists": True}
+    target.setdefault("jobs", []).append({
+        "job_id": job_id,
+        "title": (body.get("title") or "")[:200],
+        "company": (body.get("company") or "")[:200],
+        "url": (body.get("url") or "")[:500],
+        "added_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+    target["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _save_collections(email, collections)
+    return {"ok": True}
+
+
+@router.delete("/collections/{collection_id}/jobs/{job_id}")
+async def remove_job_from_collection(request: Request, collection_id: str, job_id: str):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    collections = _load_collections(email)
+    target = next((c for c in collections if c.get("id") == collection_id), None)
+    if not target:
+        raise errors.not_found("Collection not found.")
+    jobs = target.get("jobs", [])
+    target["jobs"] = [j for j in jobs if j.get("job_id") != job_id]
+    target["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _save_collections(email, collections)
+    return {"ok": True}
