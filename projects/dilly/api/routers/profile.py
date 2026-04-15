@@ -1150,38 +1150,57 @@ async def get_web_profile(slug: str):
         "contact", "phone", "email_address",
     })
 
-    public_skills = []
+    # Categorize facts for the web profile
+    PRIVATE_ALWAYS = frozenset({
+        "challenge", "concern", "weakness", "fear", "personal",
+        "contact", "phone", "email_address", "areas_for_improvement",
+        "life_context",
+    })
+    STRENGTH_CATS = frozenset({"strength", "achievement", "soft_skill", "personality"})
+    SKILL_CATS = frozenset({"skill_unlisted", "soft_skill", "technical_skill", "skill"})
+
+    strengths = []
+    skills_technical = []
+    skills_soft = []
     career_interests = []
-    impact_statements = []
-    experience_items = []
+    experience_facts = []
+    project_facts = []
+    looking_for = []
+
+    SOFT_KEYWORDS = {"leadership", "communication", "teamwork", "collaboration", "problem solving",
+                     "adaptability", "creativity", "time management", "mentoring", "public speaking",
+                     "negotiation", "empathy", "management", "planning", "interpersonal", "coaching",
+                     "writing", "presentation", "organization", "conflict resolution"}
 
     for f in facts:
         cat = (f.get("category") or "").lower()
-        if cat in PRIVATE_CATEGORIES:
+        if cat in PRIVATE_ALWAYS:
+            continue
+        # Respect per-fact web visibility toggle (default: public for safe categories)
+        if f.get("is_web_public") is False:
             continue
         conf = f.get("confidence", "medium")
-        if cat in ("skill_unlisted", "soft_skill", "technical_skill", "skill"):
-            if conf in ("high", "medium"):
-                public_skills.append({
-                    "label": f.get("label") or f.get("value", ""),
-                    "confidence": conf,
-                })
-        elif cat in ("goal", "interest", "career_interest"):
-            career_interests.append(f.get("label") or f.get("value", ""))
-        elif cat in ("achievement", "project"):
-            val = f.get("value") or f.get("label") or ""
-            label = f.get("label") or ""
-            if val and len(val) > 10:
-                impact_statements.append({"label": label, "value": val})
-        elif cat == "experience":
-            impact_statements.append({
-                "label": f.get("label") or "",
-                "value": f.get("value") or "",
-            })
+        label = f.get("label") or f.get("value", "")
+        value = f.get("value") or ""
 
-    # Experience expansion (structured experience from profile)
-    experience_expansion = profile.get("experience_expansion") or []
-    for exp in experience_expansion[:8]:
+        if cat in STRENGTH_CATS:
+            strengths.append({"label": label, "description": value, "category": cat})
+        if cat in SKILL_CATS and conf in ("high", "medium"):
+            is_soft = any(kw in label.lower() for kw in SOFT_KEYWORDS)
+            target = skills_soft if is_soft else skills_technical
+            target.append({"label": label, "confidence": conf})
+        if cat in ("goal", "interest", "career_interest"):
+            career_interests.append(label)
+        if cat in ("target_company", "company_culture_pref"):
+            looking_for.append(label)
+        if cat in ("achievement", "project", "project_detail"):
+            project_facts.append({"label": label, "value": value})
+        if cat == "experience":
+            experience_facts.append({"label": label, "value": value})
+
+    # Experience expansion (structured)
+    experience_items = []
+    for exp in (profile.get("experience_expansion") or [])[:8]:
         if not isinstance(exp, dict):
             continue
         role = exp.get("role_label") or ""
@@ -1191,18 +1210,26 @@ async def get_web_profile(slug: str):
                 "role": role,
                 "organization": org,
                 "skills": (exp.get("skills") or [])[:6],
+                "description": "; ".join((exp.get("omitted") or [])[:2]) or None,
             })
 
     # Determine user type
     user_type = profile.get("user_type") or "student"
     is_student = user_type not in ("general", "professional")
     grad_year = profile.get("graduation_year") or profile.get("class_year") or ""
-
-    # Cities
     cities = profile.get("job_locations") or []
-
-    # Career fields (for professionals)
     career_fields = profile.get("career_fields") or []
+
+    # Web profile settings
+    web_settings = profile.get("web_profile_settings") or {}
+    template = web_settings.get("template") or profile.get("card_template") or "default"
+    headline = web_settings.get("headline") or profile.get("web_headline") or None
+    show_looking_for = web_settings.get("show_looking_for", True)
+
+    # Combine looking_for with target roles and cities
+    target_roles = []
+    if career_interests:
+        target_roles = [c for c in career_interests if "role" in c.lower() or "internship" in c.lower()][:3]
 
     out = {
         "name": (profile.get("name") or "").strip(),
@@ -1210,16 +1237,26 @@ async def get_web_profile(slug: str):
         "user_type": user_type,
         "is_student": is_student,
         "tagline": (profile.get("profile_tagline") or profile.get("custom_tagline") or "").strip() or None,
+        "headline": headline,
+        "template": template,
         "school": school_name,
         "majors": majors,
         "minors": minors,
         "class_year": str(grad_year) if grad_year else None,
         "cities": cities[:5],
         "career_fields": career_fields[:5],
+        # Sections
+        "strengths": strengths[:8],
+        "skills_technical": skills_technical[:12],
+        "skills_soft": skills_soft[:8],
         "career_interests": career_interests[:6],
-        "skills": public_skills[:20],
-        "impact_statements": impact_statements[:5],
-        "experience": experience_items[:8],
+        "looking_for": {
+            "roles": target_roles,
+            "locations": cities[:4],
+            "preferences": looking_for[:4],
+        } if show_looking_for else None,
+        "experience": experience_items[:5],
+        "projects": project_facts[:5],
         "photo_url": f"/profile/public/{get_profile_slug(email)}/photo",
         "has_photo": bool(profile.get("profile_photo_b64") or False),
     }
@@ -1263,6 +1300,63 @@ async def generate_slug_endpoint(request: Request):
     is_student = user_type not in ("general", "professional")
     prefix = "s" if is_student else "p"
     return {"slug": slug, "prefix": prefix, "url": f"https://hellodilly.com/{prefix}/{slug}"}
+
+
+# ---------------------------------------------------------------------------
+# Web Profile Connect (visitor wants to connect with the user)
+# ---------------------------------------------------------------------------
+
+@router.post("/profile/web/{slug}/connect")
+async def web_profile_connect(slug: str, request: Request):
+    """Visitor sends a connection request to a Dilly user via their web profile."""
+    from projects.dilly.api.profile_store import get_profile_by_readable_slug
+
+    profile = get_profile_by_readable_slug(slug)
+    if not profile:
+        raise errors.not_found("Profile not found.")
+    email = (profile.get("email") or "").strip().lower()
+    if not email:
+        raise errors.not_found("Profile not found.")
+
+    body = await request.json()
+    visitor_name = (body.get("name") or "").strip()[:100]
+    visitor_email = (body.get("email") or "").strip()[:200]
+    visitor_company = (body.get("company") or "").strip()[:100]
+    message = (body.get("message") or "").strip()[:200]
+
+    if not visitor_name or not visitor_email:
+        raise HTTPException(status_code=400, detail="Name and email are required.")
+
+    # Store in DB
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS web_profile_connections (
+                    id SERIAL PRIMARY KEY,
+                    user_email TEXT NOT NULL,
+                    visitor_name TEXT NOT NULL,
+                    visitor_email TEXT NOT NULL,
+                    visitor_company TEXT,
+                    message TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    status TEXT DEFAULT 'pending'
+                )
+            """)
+            cur.execute(
+                """INSERT INTO web_profile_connections (user_email, visitor_name, visitor_email, visitor_company, message)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (email, visitor_name, visitor_email, visitor_company, message),
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"[WEB-CONNECT] Error storing connection: {e}", flush=True)
+
+    return JSONResponse(
+        content={"ok": True, "message": f"Message sent! {profile.get('name', 'They')} will get back to you through Dilly."},
+        headers={"Access-Control-Allow-Origin": "*"},
+    )
 
 
 # ---------------------------------------------------------------------------
