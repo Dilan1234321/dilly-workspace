@@ -207,6 +207,9 @@ export default function MyDillyProfileScreen() {
   const [readableSlug, setReadableSlug] = useState<string>('');
   const [profilePrefix, setProfilePrefix] = useState<string>('s');
   const [cohortSearch, setCohortSearch] = useState('');
+  const [webBio, setWebBio] = useState('');
+  const [webBioSaving, setWebBioSaving] = useState(false);
+  const [showWebProfile, setShowWebProfile] = useState(false);
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
   async function addCity(city: string) {
@@ -243,6 +246,7 @@ export default function MyDillyProfileScreen() {
         setProfilePrefix(pfx);
         // Use readable_slug from profile if available
         if (profileRes.readable_slug) setReadableSlug(profileRes.readable_slug);
+        setWebBio(profileRes.profile_bio || '');
       }
       if (Array.isArray(resumesRes)) setResumes(resumesRes);
       else if (resumesRes?.resumes) setResumes(resumesRes.resumes);
@@ -751,6 +755,91 @@ export default function MyDillyProfileScreen() {
             onSave={() => {}}
             userType={p.user_type}
           />
+        </FadeInView>
+
+        {/* ── 1b. Your Public Profile ──────────────────────────── */}
+        <FadeInView delay={40}>
+          <AnimatedPressable
+            style={{ backgroundColor: colors.s1, borderRadius: 14, borderWidth: 1, borderColor: colors.b1, padding: 16, marginBottom: 4 }}
+            onPress={() => setShowWebProfile(!showWebProfile)}
+            scaleDown={0.98}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Ionicons name="globe-outline" size={18} color={colors.indigo} />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.t1 }}>Your Public Profile</Text>
+              </View>
+              <Ionicons name={showWebProfile ? 'chevron-up' : 'chevron-down'} size={16} color={colors.t3} />
+            </View>
+            {readableSlug ? (
+              <Text style={{ fontSize: 11, color: colors.t3, marginTop: 4, marginLeft: 28 }}>
+                hellodilly.com/{profilePrefix}/{readableSlug}
+              </Text>
+            ) : null}
+          </AnimatedPressable>
+
+          {showWebProfile && (
+            <View style={{ backgroundColor: colors.s1, borderRadius: 14, borderWidth: 1, borderColor: colors.b1, padding: 16, gap: 14 }}>
+              {/* Bio */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>BIO</Text>
+                <TextInput
+                  style={{ fontSize: 14, color: colors.t1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, backgroundColor: colors.s2, minHeight: 60 }}
+                  value={webBio}
+                  onChangeText={setWebBio}
+                  onEndEditing={() => {
+                    setWebBioSaving(true);
+                    dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ profile_bio: webBio.trim() }) })
+                      .then(() => setWebBioSaving(false))
+                      .catch(() => setWebBioSaving(false));
+                  }}
+                  placeholder="A short line about you (max 160 chars)"
+                  placeholderTextColor={colors.t3}
+                  maxLength={160}
+                  multiline
+                  returnKeyType="done"
+                  blurOnSubmit
+                />
+                {webBioSaving && <Text style={{ fontSize: 10, color: colors.t3, marginTop: 2 }}>Saving...</Text>}
+              </View>
+
+              {/* Tagline */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>TAGLINE</Text>
+                <Text style={{ fontSize: 13, color: colors.t2 }}>{p.profile_tagline || p.custom_tagline || 'Set in your business card editor'}</Text>
+              </View>
+
+              {/* View + Share */}
+              {readableSlug ? (
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <AnimatedPressable
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.indigo, paddingVertical: 12, borderRadius: 10 }}
+                    onPress={() => {
+                      const { Linking } = require('react-native');
+                      Linking.openURL(`https://hellodilly.com/${profilePrefix}/${readableSlug}`);
+                    }}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="open-outline" size={14} color="#fff" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>View</Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.s2, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1 }}
+                    onPress={() => {
+                      const { Share } = require('react-native');
+                      Share.share({ message: `https://hellodilly.com/${profilePrefix}/${readableSlug}` });
+                    }}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="share-outline" size={14} color={colors.t1} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>Share</Text>
+                  </AnimatedPressable>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 12, color: colors.t3, fontStyle: 'italic' }}>Setting up your profile link...</Text>
+              )}
+            </View>
+          )}
         </FadeInView>
 
         {/* ── 2. Talk to Dilly (rotating prompt) ───────────────── */}

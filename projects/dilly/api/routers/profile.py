@@ -1255,6 +1255,7 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         "user_type": user_type,
         "is_student": is_student,
         "tagline": (profile.get("profile_tagline") or profile.get("custom_tagline") or "").strip() or None,
+        "bio": (profile.get("profile_bio") or "").strip() or None,
         "headline": headline,
         "template": template,
         "school": school_name,
