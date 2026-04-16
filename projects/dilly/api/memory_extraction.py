@@ -118,10 +118,12 @@ Conversation to analyze:
 {chr(10).join(convo)}
 
 Extract new memory items now. Return JSON array only."""
+    # Haiku 4.5 handles structured JSON extraction at full quality and ~1/3 the cost
+    # of Sonnet. This runs after every chat message — the single biggest line item.
     raw = get_chat_completion(
         system,
         user_prompt,
-        model="claude-sonnet-4-20250514",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1200,
         temperature=0.2,
     )
@@ -201,10 +203,11 @@ Memory items:
 {memory_lines}
 
 Write the narrative now. 3-5 sentences, specific, no hollow phrases."""
+    # Short narrative summary — Haiku is plenty for 3–5 sentences.
     raw = get_chat_completion(
         system,
         user_prompt,
-        model="claude-sonnet-4-20250514",
+        model="claude-haiku-4-5-20251001",
         max_tokens=200,
         temperature=0.3,
     )

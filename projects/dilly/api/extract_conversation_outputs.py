@@ -147,7 +147,7 @@ Extract only meaningful items."""
     raw = get_chat_completion(
         system,
         user_prompt,
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1200,
         temperature=0.2,
     )

@@ -284,7 +284,7 @@ async def audit_profile_score(request: Request, body: dict = Body(default={})):
         import anthropic
         client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=2000,
             temperature=0.2,
             system=PROFILE_SCORE_PROMPT,

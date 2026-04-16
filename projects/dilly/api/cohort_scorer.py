@@ -269,7 +269,7 @@ Return ONLY valid JSON array (no markdown, no explanation):
 
     client = anthropic.Anthropic()
     resp = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1200,
         messages=[{"role": "user", "content": prompt}],
     )

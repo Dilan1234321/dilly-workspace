@@ -119,7 +119,7 @@ Only include medium/high confidence intents."""
         },
         ensure_ascii=True,
     )
-    raw = get_chat_completion(sys_prompt, user_prompt, model="claude-sonnet-4-20250514", max_tokens=600, temperature=0.1)
+    raw = get_chat_completion(sys_prompt, user_prompt, model="claude-sonnet-4-6", max_tokens=600, temperature=0.1)
     if not raw:
         return []
     try:

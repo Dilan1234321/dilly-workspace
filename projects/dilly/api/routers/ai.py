@@ -731,9 +731,21 @@ async def ai_chat(request: Request, body: ChatRequest):
     if not messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
+    # Plan-aware model routing: free tier gets Haiku, paid gets Sonnet 4.6.
+    # Saves ~$0.011/chat for free users (5x cheaper) without quality loss for
+    # most career questions. Pro could be wired to Opus later if we add it.
+    try:
+        from projects.dilly.api.profile_store import get_profile as _get_profile_for_plan
+        _user_profile = _get_profile_for_plan(email) or {}
+        _plan = (_user_profile.get("plan") or "starter").lower().strip()
+    except Exception:
+        _plan = "starter"
+    _is_paid = _plan in ("dilly", "pro")
+    _chat_model = "claude-sonnet-4-6" if _is_paid else "claude-haiku-4-5-20251001"
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(model=DILLY_MODEL_API, max_tokens=400, system=system, messages=messages)
+        response = client.messages.create(model=_chat_model, max_tokens=400, system=system, messages=messages)
         content = response.content[0].text if response.content else ""
 
         # ── Background profile extraction ────────────────────────────

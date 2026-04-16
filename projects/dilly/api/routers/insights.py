@@ -233,7 +233,7 @@ async def insights_letter(request: Request):
 
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=1500,
             temperature=0.4,
             system=system_prompt,
