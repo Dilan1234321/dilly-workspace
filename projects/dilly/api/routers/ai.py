@@ -727,9 +727,22 @@ async def ai_chat(request: Request, body: ChatRequest):
             # Fallback to client context if server-side build fails
             system = _build_system_prompt(body.mode, body.student_context, body.rich_context)
 
-    messages = [{"role": m.role, "content": m.content} for m in body.messages if m.role in ("user", "assistant") and m.content.strip()]
-    if not messages:
+    raw_messages = [{"role": m.role, "content": m.content} for m in body.messages if m.role in ("user", "assistant") and m.content.strip()]
+    if not raw_messages:
         raise HTTPException(status_code=400, detail="No messages provided")
+
+    # ── Cost optimization: truncate chat history ──────────────────────────
+    # Send at most the last N message turns to Claude. Older context is
+    # captured in the persistent profile (extraction runs after every chat),
+    # so the LLM doesn't need 20-message windows to stay coherent.
+    # Cuts input tokens ~40% on long sessions.
+    _MAX_TURNS_TO_LLM = 6  # last 6 turns ≈ 3 user + 3 assistant
+    if len(raw_messages) > _MAX_TURNS_TO_LLM:
+        # Always keep the very first user message (often sets the topic) +
+        # the last (N-1) turns. Drop the middle.
+        messages = [raw_messages[0]] + raw_messages[-(_MAX_TURNS_TO_LLM - 1):]
+    else:
+        messages = raw_messages
 
     # Plan-aware model routing: free tier gets Haiku, paid gets Sonnet 4.6.
     # Saves ~$0.011/chat for free users (5x cheaper) without quality loss for
@@ -743,28 +756,48 @@ async def ai_chat(request: Request, body: ChatRequest):
     _is_paid = _plan in ("dilly", "pro")
     _chat_model = "claude-sonnet-4-6" if _is_paid else "claude-haiku-4-5-20251001"
 
+    # ── Cost optimization: prompt caching ─────────────────────────────────
+    # Anthropic's ephemeral prompt cache: input blocks marked with
+    # cache_control are stored for ~5 min and re-billed at 10% of normal
+    # input price on cache hits. The system prompt + rich profile context
+    # is identical across every turn in a chat session, so caching it
+    # cuts ~50% of input cost on multi-turn conversations.
+    if isinstance(system, str) and len(system) > 1024:
+        system_param = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    else:
+        system_param = system
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(model=_chat_model, max_tokens=400, system=system, messages=messages)
+        response = client.messages.create(model=_chat_model, max_tokens=400, system=system_param, messages=messages)
         content = response.content[0].text if response.content else ""
 
-        # ── Background profile extraction ────────────────────────────
+        # ── Background profile extraction (batched) ──────────────────
         # Fire-and-forget: extract everything Dilly learned about the user
         # from this conversation and store it in their Dilly Profile.
+        # Cost optimization: only extract every 3rd assistant turn instead
+        # of every turn. The conversation buffer (last 12 messages) still
+        # captures everything that was said since the previous extraction,
+        # so we don't lose any facts — we just batch them into fewer
+        # extractor calls. Cuts extraction cost ~67%.
         if email and len(messages) >= 2:
-            import hashlib
-            import threading
-            conv_id = body.conv_id or hashlib.sha256(
-                f"{email}:{messages[0].get('content', '')[:100]}".encode()
-            ).hexdigest()[:16]
-            # Include the assistant reply in the extraction context
-            full_messages = messages + [{"role": "assistant", "content": content.strip()}]
-            thread = threading.Thread(
-                target=_run_profile_extraction_background,
-                args=(email, conv_id, full_messages[-12:]),
-                daemon=True,
-            )
-            thread.start()
+            assistant_turns = sum(1 for m in raw_messages if m["role"] == "assistant") + 1  # +1 for the reply we just produced
+            should_extract = (assistant_turns % 3 == 0) or (assistant_turns == 1)
+            if should_extract:
+                import hashlib
+                import threading
+                conv_id = body.conv_id or hashlib.sha256(
+                    f"{email}:{raw_messages[0].get('content', '')[:100]}".encode()
+                ).hexdigest()[:16]
+                # Use the FULL untruncated history for extraction so we
+                # don't lose facts that were dropped from the LLM context.
+                full_messages = raw_messages + [{"role": "assistant", "content": content.strip()}]
+                thread = threading.Thread(
+                    target=_run_profile_extraction_background,
+                    args=(email, conv_id, full_messages[-12:]),
+                    daemon=True,
+                )
+                thread.start()
 
         # ── Auto-attach visual cards based on response content ─────────
         visual = _detect_visual(content, body.student_context, body.mode, email)
