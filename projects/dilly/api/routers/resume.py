@@ -43,25 +43,64 @@ def _resume_plan_limit(plan: str) -> int:
     return _RESUME_PLAN_LIMITS.get((plan or "starter").lower().strip(), 2)
 
 
+_RESUME_COLUMNS_ENSURED = False
+
+def _ensure_resume_columns() -> None:
+    """Idempotently create resume_count_month / _reset_date columns on the
+    users table if they're missing. Runs at most once per process.
+
+    Belt-and-suspenders: the cron.py bootstrap creates these, but if the
+    endpoint is hit before /cron/setup-users-table has run (e.g. first
+    deploy of this feature), the SELECT crashes with UndefinedColumn and
+    the whole generate endpoint returns 500 'Generation Failed'. This
+    guards against that."""
+    global _RESUME_COLUMNS_ENSURED
+    if _RESUME_COLUMNS_ENSURED:
+        return
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS resume_count_month INTEGER DEFAULT 0"
+            )
+            cur.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS resume_count_reset_date TEXT DEFAULT ''"
+            )
+        _RESUME_COLUMNS_ENSURED = True
+    except Exception as _e:
+        # Never block the endpoint on a migration failure.
+        import sys as _s
+        _s.stderr.write(f"[_ensure_resume_columns] failed: {_e}\n")
+
+
 def _get_resume_usage(email: str) -> tuple[int, str]:
-    """Return (count_this_month, reset_iso). Resets on month rollover."""
+    """Return (count_this_month, reset_iso). Resets on month rollover.
+    Safe to call even if the resume-counter columns don't exist yet."""
     import datetime as _dt
     from projects.dilly.api.database import get_db
     today = _dt.date.today()
     month_start = today.replace(day=1).isoformat()
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT resume_count_month, resume_count_reset_date FROM users WHERE email = %s",
-            (email,),
-        )
-        row = cur.fetchone()
-        if not row:
-            return 0, month_start
-        count, reset = row
-        if not reset or str(reset) < month_start:
-            return 0, month_start
-        return int(count or 0), str(reset)
+    _ensure_resume_columns()
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT resume_count_month, resume_count_reset_date FROM users WHERE email = %s",
+                (email,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return 0, month_start
+            count, reset = row
+            if not reset or str(reset) < month_start:
+                return 0, month_start
+            return int(count or 0), str(reset)
+    except Exception as _e:
+        # Column missing, transient DB error, etc. — fail open (no cap).
+        import sys as _s
+        _s.stderr.write(f"[_get_resume_usage] {type(_e).__name__}: {_e}\n")
+        return 0, month_start
 
 
 def _increment_resume_count(email: str) -> int:
@@ -69,14 +108,19 @@ def _increment_resume_count(email: str) -> int:
     from projects.dilly.api.database import get_db
     today = _dt.date.today()
     month_start = today.replace(day=1).isoformat()
+    _ensure_resume_columns()
     used, _reset = _get_resume_usage(email)
     new_count = used + 1
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "UPDATE users SET resume_count_month = %s, resume_count_reset_date = %s WHERE email = %s",
-            (new_count, month_start, email),
-        )
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE users SET resume_count_month = %s, resume_count_reset_date = %s WHERE email = %s",
+                (new_count, month_start, email),
+            )
+    except Exception as _e:
+        import sys as _s
+        _s.stderr.write(f"[_increment_resume_count] {type(_e).__name__}: {_e}\n")
     return new_count
 
 
@@ -2927,8 +2971,15 @@ Include only sections that have content. Do not include markdown, explanations, 
         if j_start == -1:
             raise ValueError("No JSON array in response")
         sections = json.loads(raw[j_start:j_end])
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Resume generation failed: {str(e)[:100]}")
+        import traceback as _tb
+        _tb.print_exc()
+        raise HTTPException(
+            status_code=502,
+            detail=f"Resume generation failed: {type(e).__name__}: {str(e)[:200]}",
+        )
 
     # Count matched keywords
     jd_lower = job_description.lower()

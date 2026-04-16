@@ -71,28 +71,64 @@ async def save_generated_resume(request: Request, body: SaveResumeRequest):
 
     ats = (body.ats_system or "greenhouse").lower().strip() or "greenhouse"
 
+    # Ensure the extended columns exist before we try to INSERT into them.
+    # Idempotent; silently no-ops on repeat.
+    try:
+        conn0 = _get_db()
+        with conn0.cursor() as cur0:
+            cur0.execute(
+                "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS ats_system TEXT DEFAULT 'greenhouse'"
+            )
+            cur0.execute(
+                "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS ats_parse_score INTEGER DEFAULT 0"
+            )
+            cur0.execute(
+                "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS keyword_coverage_pct INTEGER DEFAULT 0"
+            )
+        conn0.commit()
+        conn0.close()
+    except Exception as _e:
+        import sys as _s
+        _s.stderr.write(f"[save_generated_resume ensure columns] {type(_e).__name__}: {_e}\n")
+
     conn = _get_db()
     try:
         with conn.cursor() as cur:
-            # Insert with verification fields. Columns are created via
-            # migrations in cron.py; if they don't exist yet (old DB) the
-            # caller's insert without those columns still works because
-            # they all have DEFAULTs.
-            cur.execute(
-                """INSERT INTO generated_resumes
-                   (student_id, job_title, company, job_description,
-                    sections, cohort, ats_system, ats_parse_score,
-                    keyword_coverage_pct)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                   RETURNING id, created_at""",
-                (
-                    student_id, body.job_title, body.company, body.job_description,
-                    json.dumps(body.sections), body.cohort, ats,
-                    int(body.ats_parse_score or 0),
-                    int(body.keyword_coverage_pct or 0),
-                ),
-            )
-            row = cur.fetchone()
+            # Try the full INSERT with verification fields first. If it
+            # fails (e.g. ancient DB shard with none of the new columns),
+            # fall back to the legacy insert so we never break saving.
+            try:
+                cur.execute(
+                    """INSERT INTO generated_resumes
+                       (student_id, job_title, company, job_description,
+                        sections, cohort, ats_system, ats_parse_score,
+                        keyword_coverage_pct)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                       RETURNING id, created_at""",
+                    (
+                        student_id, body.job_title, body.company, body.job_description,
+                        json.dumps(body.sections), body.cohort, ats,
+                        int(body.ats_parse_score or 0),
+                        int(body.keyword_coverage_pct or 0),
+                    ),
+                )
+                row = cur.fetchone()
+            except Exception as _ie:
+                conn.rollback()
+                import sys as _s
+                _s.stderr.write(f"[save_generated_resume full insert failed, falling back] {type(_ie).__name__}: {_ie}\n")
+                cur.execute(
+                    """INSERT INTO generated_resumes
+                       (student_id, job_title, company, job_description,
+                        sections, cohort)
+                       VALUES (%s, %s, %s, %s, %s, %s)
+                       RETURNING id, created_at""",
+                    (
+                        student_id, body.job_title, body.company, body.job_description,
+                        json.dumps(body.sections), body.cohort,
+                    ),
+                )
+                row = cur.fetchone()
             conn.commit()
             return {
                 "id": str(row[0]),

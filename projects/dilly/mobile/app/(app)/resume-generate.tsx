@@ -78,6 +78,9 @@ export default function ResumeGenerateScreen() {
   const insets = useSafeAreaInsets();
   const { jobTitle: paramTitle, company: paramCompany, jd: paramJd, viewId } = useLocalSearchParams<{ jobTitle?: string; company?: string; jd?: string; viewId?: string }>();
   const [stage, setStage] = useState<Stage>(viewId ? 'done' : 'idle');
+  // Captures the server's actual error detail so the user sees something
+  // more useful than a generic "Generation Failed" screen.
+  const [generateError, setGenerateError] = useState<string>('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
   const [jd, setJd] = useState('');
@@ -252,6 +255,7 @@ export default function ResumeGenerateScreen() {
     setSections([]);
     setVariantId(null);
     setSaved(false);
+    setGenerateError('');
     progressAnim.value = 0;
 
     // Animate through steps
@@ -304,7 +308,13 @@ export default function ResumeGenerateScreen() {
           );
           return;
         }
-        throw new Error(`Server error ${res.status}`);
+        // Extract the real server detail so the error screen can show why.
+        let serverDetail = '';
+        try {
+          const d = await res.json();
+          serverDetail = d?.detail?.message || d?.detail || d?.error || JSON.stringify(d).slice(0, 300);
+        } catch {}
+        throw new Error(serverDetail || `Server error ${res.status}`);
       }
 
       const data = await res.json();
@@ -344,6 +354,12 @@ export default function ResumeGenerateScreen() {
         clearInterval(stepTimer.current);
         stepTimer.current = null;
       }
+      // Surface the real reason on the error screen — massively improves
+      // debuggability for users and for us reading support threads.
+      const detail = String(err?.message || err?.toString?.() || 'Unknown error').slice(0, 400);
+      setGenerateError(detail);
+      // eslint-disable-next-line no-console
+      console.warn('[resume/generate failed]', detail, err);
       setStage('error');
     }
   }
@@ -783,8 +799,32 @@ export default function ResumeGenerateScreen() {
               <Ionicons name="alert-circle" size={36} color={AMBER} />
               <Text style={styles.errorTitle}>Generation Failed</Text>
               <Text style={styles.errorSub}>
-                Something went wrong. Check your connection and try again.
+                Something went wrong on our end. Try again in a moment.
               </Text>
+              {!!generateError && (
+                <View style={{
+                  marginTop: 10,
+                  padding: 10,
+                  borderRadius: 8,
+                  backgroundColor: colors.s1,
+                  borderWidth: 1,
+                  borderColor: colors.b1,
+                  width: '100%',
+                }}>
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '700',
+                    color: colors.t3,
+                    letterSpacing: 0.5,
+                    marginBottom: 4,
+                  }}>
+                    ERROR DETAIL
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.t2, fontFamily: 'Menlo' }} selectable>
+                    {generateError}
+                  </Text>
+                </View>
+              )}
             </View>
             <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={handleReset}>
               <Ionicons name="refresh" size={18} color="#fff" />

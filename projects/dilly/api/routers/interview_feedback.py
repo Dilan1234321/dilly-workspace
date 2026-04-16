@@ -32,25 +32,55 @@ def _interview_plan_limit(plan: str) -> int:
     return _INTERVIEW_PLAN_LIMITS.get((plan or "starter").lower().strip(), 0)
 
 
+_INTERVIEW_COLUMNS_ENSURED = False
+
+def _ensure_interview_columns() -> None:
+    """Idempotently create interview counter columns if missing."""
+    global _INTERVIEW_COLUMNS_ENSURED
+    if _INTERVIEW_COLUMNS_ENSURED:
+        return
+    try:
+        from projects.dilly.api.database import get_db
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS interview_count_month INTEGER DEFAULT 0"
+            )
+            cur.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS interview_count_reset_date TEXT DEFAULT ''"
+            )
+        _INTERVIEW_COLUMNS_ENSURED = True
+    except Exception as _e:
+        import sys as _s
+        _s.stderr.write(f"[_ensure_interview_columns] failed: {_e}\n")
+
+
 def _get_interview_usage(email: str) -> tuple[int, str]:
-    """Return (count_this_month, reset_iso). Resets on month rollover."""
+    """Return (count_this_month, reset_iso). Resets on month rollover.
+    Safe even if interview counter columns haven't been created yet."""
     import datetime as _dt
     from projects.dilly.api.database import get_db
     today = _dt.date.today()
     month_start = today.replace(day=1).isoformat()
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT interview_count_month, interview_count_reset_date FROM users WHERE email = %s",
-            (email,),
-        )
-        row = cur.fetchone()
-        if not row:
-            return 0, month_start
-        count, reset = row
-        if not reset or str(reset) < month_start:
-            return 0, month_start
-        return int(count or 0), str(reset)
+    _ensure_interview_columns()
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT interview_count_month, interview_count_reset_date FROM users WHERE email = %s",
+                (email,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return 0, month_start
+            count, reset = row
+            if not reset or str(reset) < month_start:
+                return 0, month_start
+            return int(count or 0), str(reset)
+    except Exception as _e:
+        import sys as _s
+        _s.stderr.write(f"[_get_interview_usage] {type(_e).__name__}: {_e}\n")
+        return 0, month_start
 
 
 def _increment_interview_count(email: str) -> int:
@@ -58,15 +88,20 @@ def _increment_interview_count(email: str) -> int:
     from projects.dilly.api.database import get_db
     today = _dt.date.today()
     month_start = today.replace(day=1).isoformat()
+    _ensure_interview_columns()
     used, _reset = _get_interview_usage(email)
     new_count = used + 1
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute(
-            """UPDATE users SET interview_count_month = %s, interview_count_reset_date = %s
-               WHERE email = %s""",
-            (new_count, month_start, email),
-        )
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """UPDATE users SET interview_count_month = %s, interview_count_reset_date = %s
+                   WHERE email = %s""",
+                (new_count, month_start, email),
+            )
+    except Exception as _e:
+        import sys as _s
+        _s.stderr.write(f"[_increment_interview_count] {type(_e).__name__}: {_e}\n")
     return new_count
 
 
