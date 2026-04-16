@@ -209,6 +209,8 @@ export default function MyDillyProfileScreen() {
   const [cohortSearch, setCohortSearch] = useState('');
   const [webBio, setWebBio] = useState('');
   const [webBioSaving, setWebBioSaving] = useState(false);
+  const [webTagline, setWebTagline] = useState('');
+  const [webTaglineSaving, setWebTaglineSaving] = useState(false);
   const [showWebProfile, setShowWebProfile] = useState(false);
   const [showQrFullscreen, setShowQrFullscreen] = useState(false);
   const qrCaptureRef = useRef<View>(null);
@@ -262,6 +264,7 @@ export default function MyDillyProfileScreen() {
         // Use readable_slug from profile if available
         if (profileRes.readable_slug) setReadableSlug(profileRes.readable_slug);
         setWebBio(profileRes.profile_bio || '');
+        setWebTagline(profileRes.profile_tagline || profileRes.custom_tagline || '');
         if (profileRes.web_profile_settings?.sections) setWebSections(profileRes.web_profile_settings.sections);
         if (Array.isArray(profileRes.web_profile_settings?.hidden_fact_ids)) {
           setHiddenFactIds(profileRes.web_profile_settings.hidden_fact_ids);
@@ -821,6 +824,30 @@ export default function MyDillyProfileScreen() {
 
           {showWebProfile && (
             <View style={{ backgroundColor: colors.s1, borderRadius: 14, borderWidth: 1, borderColor: colors.b1, padding: 16, gap: 14 }}>
+              {/* Tagline */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>TAGLINE</Text>
+                <TextInput
+                  style={{ fontSize: 14, color: colors.t1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, backgroundColor: colors.s2 }}
+                  value={webTagline}
+                  onChangeText={setWebTagline}
+                  onEndEditing={() => {
+                    const next = webTagline.trim();
+                    setWebTaglineSaving(true);
+                    // Keep the rest of the UI in sync so other spots reading profile_tagline update too
+                    setProfile((prev: any) => ({ ...prev, profile_tagline: next, custom_tagline: next }));
+                    dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ profile_tagline: next }) })
+                      .then(() => setWebTaglineSaving(false))
+                      .catch(() => setWebTaglineSaving(false));
+                  }}
+                  placeholder="Your tagline (e.g. Data Scientist at Tampa)"
+                  placeholderTextColor={colors.t3}
+                  maxLength={80}
+                  returnKeyType="done"
+                />
+                {webTaglineSaving && <Text style={{ fontSize: 10, color: colors.t3, marginTop: 2 }}>Saving...</Text>}
+              </View>
+
               {/* Bio */}
               <View>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>BIO</Text>
@@ -842,12 +869,6 @@ export default function MyDillyProfileScreen() {
                   blurOnSubmit
                 />
                 {webBioSaving && <Text style={{ fontSize: 10, color: colors.t3, marginTop: 2 }}>Saving...</Text>}
-              </View>
-
-              {/* Tagline */}
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>TAGLINE</Text>
-                <Text style={{ fontSize: 13, color: colors.t2 }}>{p.profile_tagline || p.custom_tagline || 'Set in your business card editor'}</Text>
               </View>
 
               {/* Section toggles */}
