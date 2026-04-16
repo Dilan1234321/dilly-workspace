@@ -1290,6 +1290,11 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         "show_refer_button": profile.get("show_refer_button") is not False,
         "photo_url": f"/profile/public/{get_profile_slug(email)}/photo",
         "has_photo": bool(profile.get("profile_photo_b64") or False),
+        # DEBUG: diagnose per-fact visibility toggle. Remove after verified.
+        "_debug_hidden_count": len(hidden_fact_ids),
+        "_debug_facts_total": len(facts),
+        "_debug_fact_id_sample": [str(f.get("id") or "")[:8] for f in facts[:3]],
+        "_debug_hidden_id_sample": [str(x)[:8] for x in list(hidden_fact_ids)[:3]],
     }
 
     return JSONResponse(
