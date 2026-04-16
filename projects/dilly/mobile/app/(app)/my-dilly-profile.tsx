@@ -214,6 +214,7 @@ export default function MyDillyProfileScreen() {
   const [webSections, setWebSections] = useState<Record<string, boolean>>({
     strengths: true, skills: true, experience: true, projects: true, looking_for: true, education: true,
   });
+  const [hiddenFactIds, setHiddenFactIds] = useState<string[]>([]);
   const [showFactToggles, setShowFactToggles] = useState(false);
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
@@ -253,6 +254,9 @@ export default function MyDillyProfileScreen() {
         if (profileRes.readable_slug) setReadableSlug(profileRes.readable_slug);
         setWebBio(profileRes.profile_bio || '');
         if (profileRes.web_profile_settings?.sections) setWebSections(profileRes.web_profile_settings.sections);
+        if (Array.isArray(profileRes.web_profile_settings?.hidden_fact_ids)) {
+          setHiddenFactIds(profileRes.web_profile_settings.hidden_fact_ids);
+        }
       }
       if (Array.isArray(resumesRes)) setResumes(resumesRes);
       else if (resumesRes?.resumes) setResumes(resumesRes.resumes);
@@ -845,7 +849,7 @@ export default function MyDillyProfileScreen() {
                       onValueChange={v => {
                         const updated = { ...webSections, [sec.key]: v };
                         setWebSections(updated);
-                        dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ web_profile_settings: { sections: updated } }) }).catch(() => {});
+                        dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ web_profile_settings: { sections: updated, hidden_fact_ids: hiddenFactIds } }) }).catch(() => {});
                       }}
                       trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
                       thumbColor={webSections[sec.key] !== false ? colors.indigo : '#f4f3f4'}
@@ -870,7 +874,7 @@ export default function MyDillyProfileScreen() {
                       const cat = (fact.category || '').toLowerCase();
                       const isPrivate = ['challenge', 'concern', 'weakness', 'fear', 'personal', 'contact', 'phone', 'email_address', 'areas_for_improvement', 'life_context'].includes(cat);
                       if (isPrivate) return null;
-                      const isPublic = fact.is_web_public !== false;
+                      const isPublic = !hiddenFactIds.includes(fact.id);
                       return (
                         <View key={fact.id || i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 0.5, borderColor: colors.b1 }}>
                           <View style={{ flex: 1, marginRight: 12 }}>
@@ -882,17 +886,16 @@ export default function MyDillyProfileScreen() {
                           <Switch
                             value={isPublic}
                             onValueChange={v => {
-                              // Update the fact's web visibility
-                              const updated = { ...fact, is_web_public: v };
-                              setData((prev: any) => {
-                                if (!prev) return prev;
-                                const items = prev.items.map((f: any) => f.id === fact.id ? updated : f);
-                                return { ...prev, items };
-                              });
-                              // Save to API
-                              if (fact.id) {
-                                dilly.fetch(`/memory/items/${fact.id}`, { method: 'PATCH', body: JSON.stringify({ is_web_public: v }) }).catch(() => {});
-                              }
+                              if (!fact.id) return;
+                              const updated = v
+                                ? hiddenFactIds.filter(id => id !== fact.id)
+                                : [...hiddenFactIds.filter(id => id !== fact.id), fact.id];
+                              setHiddenFactIds(updated);
+                              // Merge with existing sections so we don't clobber section toggles
+                              dilly.fetch('/profile', {
+                                method: 'PATCH',
+                                body: JSON.stringify({ web_profile_settings: { sections: webSections, hidden_fact_ids: updated } }),
+                              }).catch(() => {});
                             }}
                             trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
                             thumbColor={isPublic ? colors.indigo : '#f4f3f4'}
@@ -907,20 +910,21 @@ export default function MyDillyProfileScreen() {
                 )}
               </View>
 
-              {/* Book a Chat setup */}
+              {/* Profile action buttons */}
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 8 }}>BOOK A CHAT</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 8 }}>PROFILE BUTTONS</Text>
+
+                {/* Book a Chat */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, color: colors.t1 }}>Allow visitors to book a chat</Text>
-                    <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>People who visit your profile can pick a time to talk</Text>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={{ fontSize: 14, color: colors.t1 }}>Book a Chat</Text>
+                    <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>Visitors can pick a time to talk with you</Text>
                   </View>
                   <Switch
                     value={p.booking_availability?.enabled || false}
                     onValueChange={v => {
                       const current = p.booking_availability || { enabled: false, timezone: 'America/New_York', windows: [], slot_duration: 30, buffer: 15, max_days_ahead: 14 };
                       const updated = { ...current, enabled: v };
-                      // If enabling for the first time with no windows, add default weekday 9-5
                       if (v && (!updated.windows || updated.windows.length === 0)) {
                         updated.windows = [
                           { day: 1, start: '09:00', end: '17:00' },
@@ -937,11 +941,40 @@ export default function MyDillyProfileScreen() {
                     thumbColor={p.booking_availability?.enabled ? colors.indigo : '#f4f3f4'}
                   />
                 </View>
-                {p.booking_availability?.enabled && (
-                  <Text style={{ fontSize: 11, color: colors.green, marginTop: 4 }}>
-                    Weekdays 9am - 5pm, 30 min slots. Visitors can book up to 14 days ahead.
-                  </Text>
-                )}
+
+                {/* QR button */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 0.5, borderColor: colors.b1 }}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={{ fontSize: 14, color: colors.t1 }}>Show QR code</Text>
+                    <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>Visitors can scan a QR to save your profile</Text>
+                  </View>
+                  <Switch
+                    value={p.show_qr_button !== false}
+                    onValueChange={v => {
+                      setProfile((prev: any) => ({ ...prev, show_qr_button: v }));
+                      dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ show_qr_button: v }) }).catch(() => {});
+                    }}
+                    trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
+                    thumbColor={p.show_qr_button !== false ? colors.indigo : '#f4f3f4'}
+                  />
+                </View>
+
+                {/* Refer button */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 0.5, borderColor: colors.b1 }}>
+                  <View style={{ flex: 1, marginRight: 12 }}>
+                    <Text style={{ fontSize: 14, color: colors.t1 }}>Show Refer</Text>
+                    <Text style={{ fontSize: 11, color: colors.t3, marginTop: 2 }}>Visitors can share your profile with others</Text>
+                  </View>
+                  <Switch
+                    value={p.show_refer_button !== false}
+                    onValueChange={v => {
+                      setProfile((prev: any) => ({ ...prev, show_refer_button: v }));
+                      dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ show_refer_button: v }) }).catch(() => {});
+                    }}
+                    trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
+                    thumbColor={p.show_refer_button !== false ? colors.indigo : '#f4f3f4'}
+                  />
+                </View>
               </View>
 
               {/* View + Share + QR */}
@@ -1347,18 +1380,40 @@ export default function MyDillyProfileScreen() {
                 let QRCode: any = null;
                 try { QRCode = require('react-native-qrcode-svg').default; } catch {}
                 if (!QRCode) return <Text style={{ color: colors.t3 }}>QR not available</Text>;
+                // Match the web profile QR: dark code + rectangular dark Dilly wordmark
+                // centered on a white rounded cutout. High error correction keeps it scannable.
+                const QR_SIZE = 260;
+                const LOGO_W = 96;
+                const LOGO_H = Math.round(LOGO_W * (140 / 258));
+                const CUTOUT_PAD = 10;
                 return (
-                  <QRCode
-                    value={`https://hellodilly.com/${profilePrefix}/${readableSlug}`}
-                    size={220}
-                    color="#1e293b"
-                    backgroundColor="#ffffff"
-                    logo={require('../../assets/logo.png')}
-                    logoSize={44}
-                    logoBackgroundColor="#ffffff"
-                    logoBorderRadius={8}
-                    logoMargin={6}
-                  />
+                  <View style={{ width: QR_SIZE, height: QR_SIZE, alignItems: 'center', justifyContent: 'center' }}>
+                    <QRCode
+                      value={`https://hellodilly.com/${profilePrefix}/${readableSlug}`}
+                      size={QR_SIZE}
+                      color="#1e293b"
+                      backgroundColor="#ffffff"
+                      ecl="H"
+                    />
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: 'absolute',
+                        width: LOGO_W + CUTOUT_PAD * 2,
+                        height: LOGO_H + CUTOUT_PAD * 2,
+                        backgroundColor: '#ffffff',
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Image
+                        source={require('../../assets/dilly-wordmark.png')}
+                        style={{ width: LOGO_W, height: LOGO_H, tintColor: '#1e293b' }}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  </View>
                 );
               })()}
               <Text style={{ fontSize: 22, fontWeight: '900', color: '#0f172a', marginTop: 28 }}>

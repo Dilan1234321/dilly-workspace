@@ -367,7 +367,7 @@ async def update_profile(request: Request, body: dict = Body(...)):
     """Update current user's profile. Merges with existing. Only allowed fields are updated."""
     user = deps.require_auth(request)
     email = user.get("email") or ""
-    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "cohorts", "career_fields", "user_type", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year", "plan", "public_profile_visible", "web_profile_settings", "web_headline", "card_template", "readable_slug", "extra_cohorts", "booking_availability", "bookings"}
+    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "cohorts", "career_fields", "user_type", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year", "plan", "public_profile_visible", "web_profile_settings", "web_headline", "card_template", "readable_slug", "extra_cohorts", "booking_availability", "bookings", "show_qr_button", "show_refer_button"}
     data = {k: v for k, v in (body or {}).items() if k in allowed}
     # Validate plan field: only accept known tier values.
     if "plan" in data and data["plan"] not in ("starter", "dilly", "pro"):
@@ -1190,12 +1190,17 @@ async def get_web_profile(slug: str, prefix: str | None = None):
                      "negotiation", "empathy", "management", "planning", "interpersonal", "coaching",
                      "writing", "presentation", "organization", "conflict resolution"}
 
+    # Per-fact web visibility: user-toggleable hide list stored on profile.
+    # Stored on web_profile_settings.hidden_fact_ids (same blob as sections toggle).
+    _web_settings_for_facts = profile.get("web_profile_settings") or {}
+    hidden_fact_ids = set(_web_settings_for_facts.get("hidden_fact_ids") or [])
+
     for f in facts:
         cat = (f.get("category") or "").lower()
         if cat in PRIVATE_ALWAYS:
             continue
         # Respect per-fact web visibility toggle (default: public for safe categories)
-        if f.get("is_web_public") is False:
+        if f.get("id") and f.get("id") in hidden_fact_ids:
             continue
         conf = f.get("confidence", "medium")
         label = f.get("label") or f.get("value", "")
@@ -1280,6 +1285,9 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         "experience": experience_items[:5] if sec_on("experience") else [],
         "projects": project_facts[:5] if sec_on("projects") else [],
         "education_visible": sec_on("education"),
+        "booking_enabled": bool((profile.get("booking_availability") or {}).get("enabled")),
+        "show_qr_button": profile.get("show_qr_button") is not False,
+        "show_refer_button": profile.get("show_refer_button") is not False,
         "photo_url": f"/profile/public/{get_profile_slug(email)}/photo",
         "has_photo": bool(profile.get("profile_photo_b64") or False),
     }
@@ -1432,9 +1440,17 @@ async def get_web_profile_narratives(slug: str, prefix: str | None = None):
     surface = get_memory_surface(email)
     facts = surface.get("items") or []
 
-    # Filter out private categories
+    # Respect per-fact web visibility (same source as /profile/web/{slug} aggregator)
+    _web_settings = profile.get("web_profile_settings") or {}
+    hidden_fact_ids = set(_web_settings.get("hidden_fact_ids") or [])
+
+    # Filter out private categories + user-hidden facts
     PRIVATE = frozenset({"challenge", "concern", "weakness", "fear", "personal", "contact", "phone", "email_address"})
-    public_facts = [f for f in facts if (f.get("category") or "").lower() not in PRIVATE]
+    public_facts = [
+        f for f in facts
+        if (f.get("category") or "").lower() not in PRIVATE
+        and (f.get("id") or "") not in hidden_fact_ids
+    ]
 
     if len(public_facts) < 3:
         return JSONResponse(
@@ -1442,9 +1458,10 @@ async def get_web_profile_narratives(slug: str, prefix: str | None = None):
             headers={"Cache-Control": "no-cache", "Access-Control-Allow-Origin": "*"},
         )
 
-    # Profile hash for cache
+    # Profile hash for cache — include hidden_fact_ids so hiding a fact invalidates cache
     fact_text = "|".join(f"{f.get('label','')}:{f.get('value','')}" for f in public_facts[:40])
-    p_hash = _hashlib.md5(fact_text.encode()).hexdigest()[:12]
+    hidden_text = ",".join(sorted(hidden_fact_ids))
+    p_hash = _hashlib.md5(f"{fact_text}#{hidden_text}".encode()).hexdigest()[:12]
     cache_key = f"webnarr2:{slug}"
 
     # Check cache
