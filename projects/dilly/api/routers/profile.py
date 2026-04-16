@@ -1339,59 +1339,67 @@ async def generate_slug_endpoint(request: Request):
 # these just mutate the hidden_fact_ids list in place and return it.
 # ---------------------------------------------------------------------------
 
-@router.post("/profile/web/hide-fact")
-async def hide_web_fact(request: Request, body: dict = Body(...)):
-    print(f"[hide-fact] called, body={body}", flush=True)
-    user = deps.require_auth(request)
-    email = (user.get("email") or "").strip().lower()
-    print(f"[hide-fact] email={email}", flush=True)
-    if not email:
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    fact_id = str(body.get("fact_id") or "").strip()
-    if not fact_id:
-        raise HTTPException(status_code=400, detail="fact_id required.")
-    from projects.dilly.api.profile_store import save_profile
-    profile = get_profile(email) or {}
-    web_settings = dict(profile.get("web_profile_settings") or {})
-    hidden = list(web_settings.get("hidden_fact_ids") or [])
-    if fact_id not in hidden:
-        hidden.append(fact_id)
-    web_settings["hidden_fact_ids"] = hidden
+def _toggle_fact_visibility(request: Request, body: dict, hide: bool) -> dict:
+    """Shared logic for hide/show-fact. Wraps everything so any exception
+    surfaces the real error type in the 500 detail, and every step logs."""
+    tag = "[hide-fact]" if hide else "[show-fact]"
     try:
+        print(f"{tag} called, body={body}", flush=True)
+        user = deps.require_auth(request)
+        email = (user.get("email") or "").strip().lower()
+        print(f"{tag} email={email}", flush=True)
+        if not email:
+            raise HTTPException(status_code=401, detail="Not authenticated.")
+        fact_id = str(body.get("fact_id") or "").strip()
+        if not fact_id:
+            raise HTTPException(status_code=400, detail="fact_id required.")
+        from projects.dilly.api.profile_store import save_profile
+        print(f"{tag} reading profile…", flush=True)
+        profile = get_profile(email) or {}
+        print(f"{tag} profile keys={list(profile.keys())[:10]} web_settings_type={type(profile.get('web_profile_settings')).__name__}", flush=True)
+        web_settings_raw = profile.get("web_profile_settings") or {}
+        # Defensive: if someone ever saved this as a string, coerce back to dict.
+        if isinstance(web_settings_raw, str):
+            import json as _json
+            try:
+                web_settings_raw = _json.loads(web_settings_raw)
+            except Exception:
+                web_settings_raw = {}
+        if not isinstance(web_settings_raw, dict):
+            web_settings_raw = {}
+        web_settings = dict(web_settings_raw)
+        existing = web_settings.get("hidden_fact_ids")
+        if not isinstance(existing, list):
+            existing = []
+        if hide:
+            hidden = list(existing)
+            if fact_id not in hidden:
+                hidden.append(fact_id)
+        else:
+            hidden = [x for x in existing if x != fact_id]
+        web_settings["hidden_fact_ids"] = hidden
+        print(f"{tag} saving hidden count={len(hidden)}…", flush=True)
         save_profile(email, {"web_profile_settings": web_settings})
+        print(f"{tag} OK email={email} fact_id={fact_id} count={len(hidden)}", flush=True)
+        return {"hidden_fact_ids": hidden, "count": len(hidden)}
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
-        print(f"[hide-fact] save_profile FAILED: {e}", flush=True)
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Save failed: {type(e).__name__}")
-    print(f"[hide-fact] OK email={email} fact_id={fact_id} count={len(hidden)}", flush=True)
-    return {"hidden_fact_ids": hidden, "count": len(hidden)}
+        err_msg = f"{type(e).__name__}: {str(e)[:200]}"
+        print(f"{tag} UNEXPECTED ERROR: {err_msg}", flush=True)
+        raise HTTPException(status_code=500, detail=err_msg)
+
+
+@router.post("/profile/web/hide-fact")
+async def hide_web_fact(request: Request, body: dict = Body(...)):
+    return _toggle_fact_visibility(request, body, hide=True)
 
 
 @router.post("/profile/web/show-fact")
 async def show_web_fact(request: Request, body: dict = Body(...)):
-    print(f"[show-fact] called, body={body}", flush=True)
-    user = deps.require_auth(request)
-    email = (user.get("email") or "").strip().lower()
-    if not email:
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    fact_id = str(body.get("fact_id") or "").strip()
-    if not fact_id:
-        raise HTTPException(status_code=400, detail="fact_id required.")
-    from projects.dilly.api.profile_store import save_profile
-    profile = get_profile(email) or {}
-    web_settings = dict(profile.get("web_profile_settings") or {})
-    hidden = [x for x in (web_settings.get("hidden_fact_ids") or []) if x != fact_id]
-    web_settings["hidden_fact_ids"] = hidden
-    try:
-        save_profile(email, {"web_profile_settings": web_settings})
-    except Exception as e:
-        import traceback
-        print(f"[show-fact] save_profile FAILED: {e}", flush=True)
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Save failed: {type(e).__name__}")
-    print(f"[show-fact] OK email={email} fact_id={fact_id} count={len(hidden)}", flush=True)
-    return {"hidden_fact_ids": hidden, "count": len(hidden)}
+    return _toggle_fact_visibility(request, body, hide=False)
 
 
 # ---------------------------------------------------------------------------
