@@ -13,11 +13,13 @@ _WORKSPACE = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "..", ".."))
 if _WORKSPACE not in sys.path:
     sys.path.insert(0, _WORKSPACE)
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 import psycopg2
 import psycopg2.extras
+import re
 
 from projects.dilly.api import deps
 
@@ -54,6 +56,9 @@ class SaveResumeRequest(BaseModel):
     job_description: Optional[str] = None
     sections: list
     cohort: Optional[str] = None
+    ats_system: Optional[str] = None  # e.g. greenhouse, lever, ashby, workday
+    ats_parse_score: Optional[int] = None
+    keyword_coverage_pct: Optional[int] = None
 
 
 @router.post("/generated-resumes")
@@ -64,19 +69,36 @@ async def save_generated_resume(request: Request, body: SaveResumeRequest):
     if not student_id:
         raise HTTPException(status_code=404, detail="Student not found")
 
+    ats = (body.ats_system or "greenhouse").lower().strip() or "greenhouse"
+
     conn = _get_db()
     try:
         with conn.cursor() as cur:
+            # Insert with verification fields. Columns are created via
+            # migrations in cron.py; if they don't exist yet (old DB) the
+            # caller's insert without those columns still works because
+            # they all have DEFAULTs.
             cur.execute(
-                """INSERT INTO generated_resumes (student_id, job_title, company, job_description, sections, cohort)
-                   VALUES (%s, %s, %s, %s, %s, %s)
+                """INSERT INTO generated_resumes
+                   (student_id, job_title, company, job_description,
+                    sections, cohort, ats_system, ats_parse_score,
+                    keyword_coverage_pct)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                    RETURNING id, created_at""",
-                (student_id, body.job_title, body.company, body.job_description,
-                 json.dumps(body.sections), body.cohort)
+                (
+                    student_id, body.job_title, body.company, body.job_description,
+                    json.dumps(body.sections), body.cohort, ats,
+                    int(body.ats_parse_score or 0),
+                    int(body.keyword_coverage_pct or 0),
+                ),
             )
             row = cur.fetchone()
             conn.commit()
-            return {"id": str(row[0]), "created_at": row[1].isoformat()}
+            return {
+                "id": str(row[0]),
+                "created_at": row[1].isoformat(),
+                "ats_system": ats,
+            }
     finally:
         conn.close()
 
@@ -123,13 +145,30 @@ async def get_generated_resume(request: Request, resume_id: str):
     conn = _get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                """SELECT id, job_title, company, job_description, sections, cohort, created_at
-                   FROM generated_resumes
-                   WHERE id = %s AND student_id = %s""",
-                (resume_id, student_id)
-            )
-            row = cur.fetchone()
+            # Defensive SELECT: some older rows may not have the new
+            # columns populated if the migration hasn't run on their
+            # DB shard yet. Use COALESCE-by-try pattern: attempt the
+            # rich query first, fall back to the legacy column set.
+            try:
+                cur.execute(
+                    """SELECT id, job_title, company, job_description, sections,
+                              cohort, ats_system, ats_parse_score,
+                              keyword_coverage_pct, created_at
+                       FROM generated_resumes
+                       WHERE id = %s AND student_id = %s""",
+                    (resume_id, student_id),
+                )
+                row = cur.fetchone()
+            except Exception:
+                conn.rollback()
+                cur.execute(
+                    """SELECT id, job_title, company, job_description, sections,
+                              cohort, created_at
+                       FROM generated_resumes
+                       WHERE id = %s AND student_id = %s""",
+                    (resume_id, student_id),
+                )
+                row = cur.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Resume not found")
             return {
@@ -139,10 +178,114 @@ async def get_generated_resume(request: Request, resume_id: str):
                 "job_description": row["job_description"],
                 "sections": row["sections"],
                 "cohort": row["cohort"],
+                "ats_system": row.get("ats_system") or "greenhouse",
+                "ats_parse_score": row.get("ats_parse_score") or 0,
+                "keyword_coverage_pct": row.get("keyword_coverage_pct") or 0,
                 "created_at": row["created_at"].isoformat(),
             }
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Download as real PDF or DOCX
+# ---------------------------------------------------------------------------
+def _safe_filename(name: str) -> str:
+    s = re.sub(r"[^A-Za-z0-9 _.-]+", "", name or "").strip()
+    return re.sub(r"\s+", "_", s) or "Resume"
+
+
+@router.get("/generated-resumes/{resume_id}/file")
+async def download_generated_resume(
+    request: Request,
+    resume_id: str,
+    format: str = Query("pdf", description="pdf or docx"),
+):
+    """Serve a real text-layer PDF or DOCX rendered from the stored sections.
+    No more PNG screenshots — ATS parsers need actual text bytes."""
+    user = deps.require_auth(request)
+    email = user.get("email", "")
+    student_id = _get_student_id(email)
+    if not student_id:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    fmt = (format or "pdf").lower().strip()
+    if fmt not in ("pdf", "docx"):
+        raise HTTPException(status_code=400, detail="format must be pdf or docx")
+
+    conn = _get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            try:
+                cur.execute(
+                    """SELECT job_title, company, sections, ats_system
+                       FROM generated_resumes
+                       WHERE id = %s AND student_id = %s""",
+                    (resume_id, student_id),
+                )
+                row = cur.fetchone()
+            except Exception:
+                conn.rollback()
+                cur.execute(
+                    """SELECT job_title, company, sections
+                       FROM generated_resumes
+                       WHERE id = %s AND student_id = %s""",
+                    (resume_id, student_id),
+                )
+                row = cur.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    sections = row["sections"]
+    if isinstance(sections, str):
+        try:
+            sections = json.loads(sections)
+        except Exception:
+            sections = []
+    ats = (row.get("ats_system") if isinstance(row, dict) else None) or "greenhouse"
+
+    # Candidate name for the filename — pull from the contact section
+    candidate_name = "Resume"
+    try:
+        for s in sections or []:
+            if isinstance(s, dict) and s.get("key") == "contact":
+                nm = ((s.get("contact") or {}).get("name") or "").strip()
+                if nm:
+                    candidate_name = nm
+                break
+    except Exception:
+        pass
+
+    safe_name = _safe_filename(candidate_name)
+    safe_company = _safe_filename(row["company"] or "Company")
+    base = f"{safe_name}_{safe_company}_Resume"
+
+    if fmt == "pdf":
+        from projects.dilly.api.ats_resume_builder import build_ats_pdf
+        pdf_bytes = build_ats_pdf(sections, ats)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{base}.pdf"',
+            },
+        )
+    else:
+        from projects.dilly.api.ats_resume_docx import build_ats_docx
+        docx_bytes = build_ats_docx(sections, ats)
+        return Response(
+            content=docx_bytes,
+            media_type=(
+                "application/vnd.openxmlformats-officedocument."
+                "wordprocessingml.document"
+            ),
+            headers={
+                "Content-Disposition": f'attachment; filename="{base}.docx"',
+            },
+        )
 
 
 @router.delete("/generated-resumes/{resume_id}")

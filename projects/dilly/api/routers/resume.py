@@ -2618,35 +2618,133 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
         if existing:
             base_sections = existing.get("sections") or []
 
-    # Load Dilly Profile facts
+    # Load Dilly Profile facts with two-pass relevance ranking.
+    # Pass 1 (Haiku): given the full fact set and the JD, pick the ~60 most
+    # relevant facts. This is how Dilly actually uses a user's depth —
+    # students with 3000 facts don't get truncated by insertion order, they
+    # get their 60 best-matching facts selected by the model.
+    # Pass 2 (main Sonnet call below): uses only those top-ranked facts as
+    # ground truth.
     profile_facts_text = ""
+    selected_facts: list[dict] = []
+    narrative = ""
     try:
         from projects.dilly.api.memory_surface_store import get_memory_surface
         surface = await asyncio.to_thread(get_memory_surface, email)
-        facts = surface.get("items") or []
+        all_facts = surface.get("items") or []
         narrative = (surface.get("narrative") or "").strip()
-        if facts:
-            cat_labels = {
-                "achievement": "Achievements", "goal": "Goals", "target_company": "Target Companies",
-                "skill_unlisted": "Unlisted Skills (not currently on resume, CAN be added)",
-                "project_detail": "Additional Projects (not currently on resume, CAN be added)",
-                "motivation": "Motivations", "personality": "Personality",
-                "soft_skill": "Soft Skills", "hobby": "Interests",
-                "life_context": "Background", "company_culture_pref": "Work Style Preferences",
-                "strength": "Strengths", "weakness": "Growth Areas",
-            }
-            lines = []
+
+        # Filter out always-private categories before ranking.
+        PRIVATE = frozenset({
+            "challenge", "concern", "weakness", "fear", "personal",
+            "contact", "phone", "email_address", "life_context",
+            "areas_for_improvement",
+        })
+        candidate_facts = [
+            f for f in all_facts
+            if (f.get("category") or "").lower() not in PRIVATE
+        ]
+
+        MAX_FACTS_TO_LLM = 60
+        if len(candidate_facts) <= MAX_FACTS_TO_LLM:
+            # User has few enough facts — no ranking needed.
+            selected_facts = candidate_facts
+        else:
+            # Rank facts by JD relevance with Haiku (cheap, fast).
+            try:
+                import anthropic as _anth_rank
+                _client_rank = _anth_rank.Anthropic(
+                    api_key=os.environ.get("ANTHROPIC_API_KEY", "")
+                )
+                numbered = "\n".join(
+                    f"[{i}] {(f.get('category') or 'other')}: "
+                    f"{(f.get('label') or '').strip()} — "
+                    f"{(f.get('value') or '').strip()[:220]}"
+                    for i, f in enumerate(candidate_facts[:300])  # cap context at 300
+                )
+                rank_system = (
+                    "You are a relevance ranker for a resume generator. Given "
+                    "a job description and a numbered list of candidate facts "
+                    "about a student, return the indices of the most relevant "
+                    "facts ONLY — the ones that would strengthen a resume for "
+                    "this specific job. Return valid JSON: "
+                    "{\"indices\": [int, int, ...]} sorted by relevance desc. "
+                    "Limit to 60. Do not invent. Do not explain."
+                )
+                rank_user = (
+                    f"JOB: {job_title} at {job_company}\n"
+                    f"JD: {job_description[:2500] or '(none)'}\n\n"
+                    f"CANDIDATE FACTS:\n{numbered}\n\n"
+                    "Return JSON now."
+                )
+                rank_res = _client_rank.messages.create(
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=600,
+                    system=rank_system,
+                    messages=[{"role": "user", "content": rank_user}],
+                )
+                rank_text = rank_res.content[0].text if rank_res.content else ""
+                js = rank_text.find("{")
+                je = rank_text.rfind("}") + 1
+                parsed = json.loads(rank_text[js:je]) if js >= 0 else {}
+                idxs = parsed.get("indices") or []
+                picked: list[dict] = []
+                seen: set[int] = set()
+                for i in idxs:
+                    if isinstance(i, int) and 0 <= i < len(candidate_facts) and i not in seen:
+                        picked.append(candidate_facts[i])
+                        seen.add(i)
+                    if len(picked) >= MAX_FACTS_TO_LLM:
+                        break
+                # Fallback: if ranking returned <15 facts, pad with recency.
+                if len(picked) < 15:
+                    for f in candidate_facts:
+                        if f not in picked:
+                            picked.append(f)
+                        if len(picked) >= MAX_FACTS_TO_LLM:
+                            break
+                selected_facts = picked or candidate_facts[:MAX_FACTS_TO_LLM]
+            except Exception:
+                # Ranker failed — fall back to top-N by default ordering.
+                selected_facts = candidate_facts[:MAX_FACTS_TO_LLM]
+
+        # Render selected facts for the Sonnet prompt, grouped by category
+        # so the LLM can see the shape of the profile.
+        cat_labels = {
+            "achievement": "Achievements", "goal": "Goals",
+            "target_company": "Target Companies",
+            "skill_unlisted": "Skills (not yet on resume, CAN be added)",
+            "skill": "Skills", "technical_skill": "Technical Skills",
+            "project_detail": "Additional Projects (CAN be added)",
+            "project": "Projects",
+            "motivation": "Motivations", "personality": "Personality",
+            "soft_skill": "Soft Skills", "hobby": "Interests",
+            "company_culture_pref": "Work Style Preferences",
+            "strength": "Strengths",
+            "experience": "Experience details",
+            "education": "Education details",
+            "career_interest": "Career Interests",
+            "interest": "Interests",
+        }
+        if selected_facts:
             grouped: dict[str, list] = {}
-            for f in facts:
-                cat = f.get("category", "other")
-                grouped.setdefault(cat, []).append(f)
+            for f in selected_facts:
+                grouped.setdefault(f.get("category", "other"), []).append(f)
+            lines = []
             for cat, items in grouped.items():
                 label = cat_labels.get(cat, cat.replace("_", " ").title())
-                entries = "; ".join(f"{i['label']}: {i['value']}" for i in items[:6])
+                entries = "; ".join(
+                    f"{(i.get('label') or '').strip()}: {(i.get('value') or '').strip()}"
+                    for i in items
+                )
                 lines.append(f"  {label}: {entries}")
             profile_facts_text = "\n".join(lines)
             if narrative:
-                profile_facts_text = f"NARRATIVE: {narrative}\n\nFACTS:\n{profile_facts_text}"
+                profile_facts_text = (
+                    f"NARRATIVE: {narrative}\n\nRELEVANT FACTS ("
+                    f"{len(selected_facts)} of {len(candidate_facts)} "
+                    f"ranked by job relevance):\n{profile_facts_text}"
+                )
     except Exception:
         pass
 
@@ -2682,14 +2780,32 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
         readiness = 'ready'  # If check fails, proceed with generation
 
     # ------------------------------------------------------------------
-    # If not_ready, return early without generating
+    # If not_ready, return early without generating. The mobile UI shows
+    # a "Tell Dilly more" screen that routes to the AI overlay with the
+    # specific gaps as starter prompts, so the user can fill them in and
+    # regenerate when they have enough in their profile. Dilly never
+    # invents — if the profile is too thin, we ask for more, we don't
+    # bluff.
     # ------------------------------------------------------------------
     if readiness == 'not_ready':
+        gaps_list = check_data.get('gaps') or []
         return JSONResponse({
             "not_ready": True,
-            "summary": check_data.get('summary', 'Your profile does not have enough relevant experience for this role yet.'),
-            "gaps": check_data.get('gaps', []),
+            "summary": check_data.get(
+                'summary',
+                "Your profile doesn't have enough relevant experience for this "
+                "role yet. Tell Dilly more about what you've done and we'll "
+                "try again.",
+            ),
+            "gaps": gaps_list,
             "ats": job_ats,
+            # Starter prompts the mobile UI can use to open the AI overlay
+            # with one specific gap at a time.
+            "tell_dilly_prompts": [
+                f"Help me add details about {g} to my Dilly profile."
+                for g in gaps_list[:5]
+            ],
+            "facts_available": len(selected_facts) if selected_facts else 0,
         })
 
     # Finance company modifier for tech roles
@@ -2699,7 +2815,7 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
     if cohort == "Tech" and is_finance_company:
         finance_note = f"\nNOTE: {job_company} is a finance/banking firm. Even though this is a tech role, include GPA if ≥3.5, use a slightly more formal tone, and highlight any finance-domain knowledge."
 
-    system_prompt = f"""You are Dilly's resume generation AI. Your job is to create a tailored resume in structured JSON format.
+    system_prompt = f"""You are Dilly's resume generation AI. Your single job is to turn a student's verified profile into a tailored resume that (a) is 100% true to the profile and (b) passes the target company's ATS.
 
 TARGET JOB:
   Title: {job_title}
@@ -2709,32 +2825,74 @@ TARGET JOB:
 JOB DESCRIPTION:
 {job_description[:4000] if job_description else "(Not provided — tailor based on job title and company reputation.)"}
 
-STUDENT'S DILLY PROFILE:
+STUDENT'S DILLY PROFILE (pre-ranked for relevance to this JD):
 {profile_facts_text or "(No profile facts available — use base resume only)"}
 
 STUDENT'S CURRENT RESUME (structured JSON):
 {base_resume_json}
 
-INSTRUCTIONS:
-1. Rewrite the resume sections to be tailored specifically for this job at {job_company}.
-2. Match keywords from the job description in bullets where truthful.
-3. Reorder and emphasize experiences most relevant to this role.
-4. You MAY incorporate "Unlisted Skills" and "Additional Projects" from the Dilly Profile if they are relevant to this job.
-5. Keep ALL factual information accurate — do not invent companies, dates, degrees, or GPAs.
-6. Every bullet must start with a strong action verb and include a metric where possible.
-7. Use the {cohort} template conventions: {_get_cohort_tip(cohort)}
-8. Keep the resume to one page worth of content.
-9. Preserve the exact JSON structure of the input sections — same keys, same section types.
+═══════════════════════════════════════════════════════════════════════
+CORE DOCTRINE — VIOLATING ANY OF THESE IS A FAILURE:
 
-ATS FORMATTING:
+1. NEVER INVENT. Every fact, metric, tool, title, date, GPA, company,
+   school, project, and bullet must trace back to something in the profile
+   or base resume above. If the JD asks for something the profile lacks,
+   either bridge (see rule 3) or leave it out. NEVER write a bullet that
+   claims experience the user does not have.
+
+2. BULLET = EVIDENCE + OUTCOME. Every bullet starts with a past-tense
+   action verb, describes something the user actually did (from the
+   profile or base resume), and quantifies the result where possible.
+   If the profile says "built a sentiment model that processed 10K
+   tweets", the bullet can say exactly that. It can't say "built a
+   production-grade model serving 1M requests/day" unless that number
+   is in the profile.
+
+3. KEYWORD BRIDGING (this is how Dilly wins ATS filters without lying).
+   When the JD wants X and the profile has Y that's adjacent to X, use
+   bridge language that is literally true AND earns keyword credit:
+
+     JD asks "Kubernetes", profile has "Docker" →
+       BAD:   "Deployed services with Kubernetes."
+       GOOD:  "Built containerized services using Docker (container
+               orchestration)."
+
+     JD asks "PyTorch", profile has "TensorFlow" →
+       BAD:   "Trained deep learning models with PyTorch."
+       GOOD:  "Trained deep learning models with TensorFlow (deep
+               learning framework)."
+
+     JD asks "AWS", profile has "GCP" →
+       BAD:   "Deployed on AWS."
+       GOOD:  "Deployed on Google Cloud (cloud infrastructure)."
+
+   The adjacent concept can appear in parentheses, or woven in as a
+   general category ("cloud infrastructure", "container orchestration",
+   "deep learning framework"). The *real* tool is what the user did;
+   the parenthetical is the ATS-visible concept match.
+
+4. WEAVE JD KEYWORDS FROM THE PROFILE. Scan the profile for any
+   technology, method, or domain term that matches the JD literally
+   and surface it (in the Skills section AND inside a relevant bullet).
+   A keyword in BOTH places parses much stronger.
+
+5. REORDER. Put the most JD-relevant experience first within each
+   section. Cut experiences that are entirely irrelevant if doing so
+   keeps the resume to one page.
+
+6. YOU MAY promote "Unlisted Skills" and "Additional Projects" from the
+   Dilly Profile onto the resume if relevant. They're in the profile,
+   so they're true. That's what the profile is for.
+
+7. PRESERVE SCHEMA. Same keys, same section types, same JSON shape as
+   the input. The downstream PDF generator depends on it.
+
+═══════════════════════════════════════════════════════════════════════
+ATS FORMATTING (specific to this company's parser):
+
 {_get_ats_formatting(job_ats)}
 
-HONESTY RULES (NON-NEGOTIABLE):
-- NEVER invent experiences, companies, projects, skills, or metrics that are not in the profile or resume
-- NEVER fabricate GPAs, dates, titles, or certifications
-- If the profile is missing something the job wants, DO NOT add it. Leave it out.
-- You may reword existing experiences to highlight relevant aspects, but the underlying facts must be true
-- If there are notable gaps between what the job wants and what the user has, add a "gaps" field to the response
+═══════════════════════════════════════════════════════════════════════
 
 Return ONLY valid JSON — a JSON array of resume section objects matching this exact schema:
 [
@@ -2785,6 +2943,40 @@ Include only sections that have content. Do not include markdown, explanations, 
                         keyword_matches += 1
                         break
 
+    # ── Post-generation verification ─────────────────────────────────────
+    # Two checks:
+    #   a) ATS PDF compatibility: build the PDF, extract text back out,
+    #      confirm section headers + content survived.
+    #   b) Keyword coverage: does the resume actually address the JD's
+    #      demand keywords? If coverage < 50%, return a warning so the
+    #      mobile UI can show "you may get filtered out" and suggest
+    #      the user tell Dilly more about the missing skills.
+    ats_parse_score = 0
+    ats_parse_issues: list[str] = []
+    keyword_coverage_pct = 0
+    keyword_warning: str | None = None
+    missing_keywords: list[str] = []
+    try:
+        from projects.dilly.api.ats_resume_builder import (
+            build_ats_pdf, verify_ats_compatibility,
+        )
+        from projects.dilly.api.resume_keyword_check import check_keyword_coverage
+        # Build the real text-layer PDF
+        pdf_bytes = await asyncio.to_thread(build_ats_pdf, sections, job_ats)
+        # Verify it survived rendering
+        verify = await asyncio.to_thread(verify_ats_compatibility, pdf_bytes, sections)
+        ats_parse_score = int(verify.get("score") or 0)
+        ats_parse_issues = list(verify.get("issues") or [])
+        # Check JD keyword coverage (keyword bridging is counted)
+        cov = check_keyword_coverage(sections, job_description or "")
+        keyword_coverage_pct = int(cov.get("coverage_pct") or 0)
+        missing_keywords = list(cov.get("missing_keywords") or [])
+        keyword_warning = cov.get("warning")
+    except Exception as _e:
+        # Never block the response on a verification failure.
+        import traceback as _tb
+        _tb.print_exc()
+
     # Charge one tailored resume against the user's monthly cap (only on success)
     new_resume_count = _increment_resume_count(email)
     resume_remaining = -1 if _resume_limit < 0 else max(0, _resume_limit - new_resume_count)
@@ -2797,6 +2989,15 @@ Include only sections that have content. Do not include markdown, explanations, 
         "readiness": readiness,
         "gaps": json.loads(gaps_detail) if gaps_detail else [],
         "keyword_note": f"Optimized for {job_ats.title()} ATS",
+        # Post-gen verification fields for the mobile UI
+        "ats_parse_score": ats_parse_score,
+        "ats_parse_issues": ats_parse_issues,
+        "keyword_coverage_pct": keyword_coverage_pct,
+        "missing_keywords": missing_keywords,
+        "keyword_warning": keyword_warning,
+        # Tell the mobile how many facts Dilly actually used for this resume,
+        # so the UI can show "built from 47 of your 312 profile facts"
+        "facts_used": len(selected_facts) if selected_facts else 0,
         "plan": _resume_plan,
         "resumes_used": new_resume_count,
         "resumes_remaining": resume_remaining,
@@ -2804,47 +3005,198 @@ Include only sections that have content. Do not include markdown, explanations, 
 
 
 def _get_ats_formatting(ats: str) -> str:
-    """Return ATS-specific formatting instructions for the resume generator."""
+    """Return ATS-specific formatting instructions for the resume generator.
+
+    Rules are grounded in each vendor's documented parser behavior (Sovren,
+    Textkernel, HireAbility, Daxtra, and each ATS's own) plus observed
+    real-world parsing failures. The layer that actually enforces most of
+    this is projects/dilly/api/ats_resume_builder.py (ReportLab single-
+    column, text-layer PDF). These content-level rules are the belt to that
+    engine's suspenders.
+
+    Every rule set follows the same structure:
+      - Primary parser in use
+      - Section headers that parse as section breaks
+      - Date format that parses without ambiguity
+      - Bullet character parser-safe glyphs
+      - Keyword strategy
+      - What to AVOID (specific to this vendor)
+    """
+    # Shared baseline that applies to every modern parser. Content-level
+    # rules only — the PDF builder guarantees single-column, text-layer,
+    # no tables/images/columns regardless of what the model says.
+    BASELINE = (
+        "- Section headers from: Education, Experience, Work Experience, "
+        "Projects, Skills, Leadership, Research Experience, Certifications, "
+        "Honors & Awards, Publications, Relevant Coursework.\n"
+        "- Dates: 'Mon YYYY' (e.g. 'Aug 2024') or 'MM/YYYY'. Use 'Present' for ongoing.\n"
+        "- Bullets: start every bullet with a strong past-tense action verb, "
+        "then quantified outcome. Do NOT use unicode decorative bullet glyphs "
+        "— the PDF builder renders clean '-' bullets.\n"
+        "- Phone: (XXX) XXX-XXXX. Email: plain text only, never hyperlinked text "
+        "that differs from the URL.\n"
+        "- No emojis, no icons, no graphics. No colored text. Plain encoded glyphs.\n"
+        "- Every skill named as a noun phrase ('Python', 'Data Visualization'), "
+        "not sentence fragments."
+    )
+
     rules = {
+        # ── Greenhouse (Sovren parser) ────────────────────────────────
+        # Greenhouse uses Sovren's parser. Sovren is keyword-tolerant and
+        # handles most resume layouts well. Strongest on clean PDFs with
+        # explicit section headers. Tolerates mixed date formats.
         'greenhouse': (
-            "ATS: Greenhouse.\n"
-            "- Single column layout, no tables or columns\n"
-            "- Standard section headers: Education, Experience, Projects, Skills\n"
-            "- Bullet points with standard characters\n"
-            "- PDF-friendly formatting\n"
-            "- Include relevant keywords from the job description naturally in bullets"
+            "ATS: Greenhouse (Sovren parser).\n"
+            + BASELINE + "\n"
+            "- KEYWORD STRATEGY: Sovren weights Skills section + experience "
+            "bullets equally. Repeat every JD keyword in at least two places "
+            "(Skills list AND inside a bullet) to maximize match score.\n"
+            "- AVOID: ALL CAPS section headers that include special chars "
+            "(e.g. '★ EXPERIENCE ★' — Sovren drops these)."
         ),
+
+        # ── Lever (Lever's own parser) ───────────────────────────────
+        # Lever uses its own internal parser. Handles standard formats
+        # cleanly. Quite forgiving. Pays attention to job title strings
+        # and company names — those must be in a predictable shape.
         'lever': (
-            "ATS: Lever.\n"
-            "- Clean single column, similar to Greenhouse\n"
-            "- Standard section headers\n"
-            "- Lever parses well, focus on keyword matching\n"
-            "- Include relevant keywords from the JD in bullets and skills"
+            "ATS: Lever (proprietary parser).\n"
+            + BASELINE + "\n"
+            "- Format each experience entry as: 'Company Name — Role Title' "
+            "on one line. Lever's parser looks for this em-dash/hyphen pattern.\n"
+            "- KEYWORD STRATEGY: Lever favors bullet-level keyword match over "
+            "Skills list stuffing. Put the most important JD keywords inside "
+            "the bullets for your most recent role."
         ),
+
+        # ── Ashby (modern startup ATS) ───────────────────────────────
+        # Ashby uses a modern parser (primarily HireAbility/Textkernel hybrid)
+        # and is the most tolerant of the bunch. Stylistic variation is fine;
+        # what matters is content.
         'ashby': (
-            "ATS: Ashby.\n"
-            "- Modern ATS, handles most formatting\n"
-            "- Standard section headers preferred\n"
-            "- Focus on keyword relevance over formatting tricks"
+            "ATS: Ashby (modern parser, high tolerance).\n"
+            + BASELINE + "\n"
+            "- Ashby extracts well from any clean single-column layout.\n"
+            "- KEYWORD STRATEGY: Ashby candidate-ranking models compare JD to "
+            "resume semantically, so bridge language is valuable. If the JD "
+            "asks for Kubernetes and you have Docker, write 'container "
+            "orchestration with Docker' — it matches conceptually."
         ),
+
+        # ── SmartRecruiters (Textkernel parser) ──────────────────────
+        # SmartRecruiters uses Textkernel. Very strong parser but strict
+        # about date ranges — malformed dates can drop an entire role.
+        'smartrecruiters': (
+            "ATS: SmartRecruiters (Textkernel parser).\n"
+            + BASELINE + "\n"
+            "- Textkernel is strict about date ranges. Use 'Aug 2024 – May 2025' "
+            "(en-dash or plain hyphen, space-separated). A role without "
+            "parseable dates is dropped entirely.\n"
+            "- Company and role MUST be on the same line separated by comma, "
+            "pipe, or em-dash.\n"
+            "- KEYWORD STRATEGY: Textkernel normalizes skill aliases (SQL = "
+            "Structured Query Language, JS = JavaScript). Use the most common "
+            "form of each skill."
+        ),
+
+        # ── Workday (Workday Resume Parser) ──────────────────────────
+        # The hardest target. Workday's parser is notoriously brittle with
+        # anything non-trivial. Rules below come from observed parse failures.
         'workday': (
-            "ATS: Workday.\n"
-            "- VERY strict parsing. Use extremely simple formatting\n"
-            "- NO tables, NO columns, NO headers with special characters\n"
-            "- Section headers must be exact: Education, Work Experience, Skills\n"
-            "- Plain bullet points only (- or *)\n"
-            "- No graphics, icons, or fancy formatting\n"
-            "- Dates must be in MM/YYYY format"
+            "ATS: Workday (native parser — STRICT).\n"
+            + BASELINE + "\n"
+            "- Section headers must be EXACTLY: 'Education', 'Work Experience', "
+            "'Skills', 'Projects'. Not 'Professional Experience', not 'Employment'.\n"
+            "- DATES: MM/YYYY format only. 'August 2024' parses as plain text, "
+            "not a date. Write '08/2024 - 05/2025'.\n"
+            "- Workday auto-fills application fields from the parsed resume. "
+            "If your company/role/date line is unclear, the user will have to "
+            "re-enter everything manually. Format:\n"
+            "    Company Name\n"
+            "    Role Title | MM/YYYY - MM/YYYY | City, ST\n"
+            "- Use a plain '-' for bullets. Workday mangles any other glyph.\n"
+            "- AVOID: role on the same line as company, multiple dates per role, "
+            "parenthetical notes after a date."
         ),
+
+        # ── Taleo / Oracle Recruiting Cloud (legacy) ─────────────────
+        # Taleo is ancient but still widely used at large enterprises.
+        # Treat as plain-text parser. Any PDF styling is a liability.
         'taleo': (
-            "ATS: Taleo (Oracle).\n"
-            "- Very old ATS, needs plain text-like formatting\n"
-            "- Simple section headers, no special characters\n"
-            "- Standard date formats\n"
-            "- Avoid any complex formatting"
+            "ATS: Taleo / Oracle Recruiting Cloud (legacy, text-first parser).\n"
+            + BASELINE + "\n"
+            "- Treat as if the parser is reading plain text. No typography, "
+            "no font variations, no headers larger than body.\n"
+            "- Dates: 'MM/YYYY' or 'YYYY' only.\n"
+            "- Every section header on its own line, uppercase, plain (e.g. EDUCATION).\n"
+            "- KEYWORD STRATEGY: Taleo is keyword-count dominant. Put a dense "
+            "comma-separated Skills section near the top with every tool/"
+            "language/framework from the JD that the candidate legitimately has.\n"
+            "- AVOID: tables, columns, special Unicode, hyperlinks styled as "
+            "colored text."
+        ),
+
+        # ── iCIMS (native parser with Sovren fallback) ───────────────
+        'icims': (
+            "ATS: iCIMS (native parser).\n"
+            + BASELINE + "\n"
+            "- iCIMS is strict about section headers. Use 'Experience' (not "
+            "'Professional Experience'), 'Education', 'Skills', 'Projects'.\n"
+            "- KEYWORD STRATEGY: iCIMS scoring heavily weights the Skills "
+            "section. Make it exhaustive with every JD keyword the candidate "
+            "truly has.\n"
+            "- AVOID: multi-line role headers. Keep company/role/date on one "
+            "or two lines max."
+        ),
+
+        # ── Jobvite (Sovren parser) ──────────────────────────────────
+        'jobvite': (
+            "ATS: Jobvite (Sovren parser).\n"
+            + BASELINE + "\n"
+            "- Same parser as Greenhouse. Follow Greenhouse rules.\n"
+            "- KEYWORD STRATEGY: JD keywords in Skills + in bullets."
+        ),
+
+        # ── BambooHR (native, lenient) ───────────────────────────────
+        'bamboohr': (
+            "ATS: BambooHR (native parser, high tolerance).\n"
+            + BASELINE + "\n"
+            "- Lenient parser, mostly used at small companies.\n"
+            "- KEYWORD STRATEGY: Humans often review alongside the parser. "
+            "Write for readability first, keyword density second."
+        ),
+
+        # ── USAJobs (federal, unique format) ─────────────────────────
+        # Federal resumes are a different beast. Much longer, detailed
+        # responsibilities, GS-grade anchoring.
+        'usajobs': (
+            "ATS: USAJobs (federal application system).\n"
+            "- Federal resume format: longer than private-sector (2–5 pages OK).\n"
+            "- Include for every role: dates (MM/YYYY), hours/week, supervisor "
+            "name + phone, may-contact permission, and GS-grade equivalent.\n"
+            "- Section headers: Work Experience, Education, Training, "
+            "Certifications, Awards.\n"
+            "- KEYWORD STRATEGY: Mirror the announcement's 'Specialized "
+            "Experience' language verbatim — federal HR reviewers search for "
+            "exact phrases.\n"
+            "- AVOID: brevity. Federal HR grades on demonstrated experience "
+            "against the announcement. Over-include, do not under-include."
+        ),
+
+        # ── NSF REU (academic, human review) ─────────────────────────
+        'nsf_reu': (
+            "ATS: NSF REU application (academic, human-reviewed).\n"
+            + BASELINE + "\n"
+            "- Human faculty reviewer. Parser is secondary.\n"
+            "- Emphasize: Research Experience, Relevant Coursework, technical "
+            "skills, publications if any.\n"
+            "- Include a Research Interests line near the top if the user "
+            "has articulated them."
         ),
     }
-    return rules.get(ats, rules['greenhouse'])
+    # Default to Greenhouse rules — safe because ~94% of Dilly's jobs are
+    # on Greenhouse-parsed systems (Greenhouse + Jobvite use Sovren).
+    return rules.get((ats or '').lower().strip(), rules['greenhouse'])
 
 
 def _get_cohort_tip(cohort: str) -> str:

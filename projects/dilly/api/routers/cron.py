@@ -64,6 +64,10 @@ def setup_users_table(token: str = ""):
             # Resume generation monthly cap (Free=2, Dilly=30, Pro=unlimited)
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS resume_count_month INTEGER DEFAULT 0",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS resume_count_reset_date TEXT DEFAULT ''",
+            # generated_resumes: ATS system the resume was formatted for + verification score
+            "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS ats_system TEXT DEFAULT 'greenhouse'",
+            "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS ats_parse_score INTEGER DEFAULT 0",
+            "ALTER TABLE generated_resumes ADD COLUMN IF NOT EXISTS keyword_coverage_pct INTEGER DEFAULT 0",
         ]:
             cur.execute(stmt)
         # -- Sessions table (auth_store) --
