@@ -29,21 +29,97 @@ from projects.dilly.api import deps, errors
 router = APIRouter(tags=["ai-arena"])
 
 
+def _require_paid_for_arena_tool(email: str, tool_name: str) -> None:
+    """Block free-tier users from AI Arena tools (scan / replace-test / simulate).
+    Returns nothing on success; raises 402 on free tier with a friendly message."""
+    try:
+        from projects.dilly.api.profile_store import get_profile as _gp
+        plan = ((_gp(email) or {}).get("plan") or "starter").lower().strip()
+    except Exception:
+        plan = "starter"
+    if plan not in ("dilly", "pro"):
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "PLAN_REQUIRED",
+                "message": f"{tool_name} is a Dilly feature. Upgrade to use AI Arena tools.",
+                "required_plan": "dilly",
+            },
+        )
+
+
+# ── Tiered Shield Cache ───────────────────────────────────────────────────────
+# AI Arena's LLM scoring is the second-most-expensive call after resume gen
+# (~$0.02/call). Cache aggressively per-tier:
+#   Free tier: refresh once a month (unix time bucket)
+#   Dilly:     refresh once a week (Monday morning local)
+#   Pro:       always fresh, no cache
+# Cache lives in the user's profile_json.ai_arena_cache so it survives
+# restarts and is per-user.
+import time as _time
+import datetime as _dt
+from collections import OrderedDict
+from typing import Any
+
+_FREE_REFRESH_DAYS = 30
+_DILLY_REFRESH_DAYS = 7
+
+def _refresh_period_for_plan(plan: str) -> int | None:
+    """Return refresh window in seconds, or None for unlimited (Pro)."""
+    p = (plan or "starter").lower().strip()
+    if p == "pro":
+        return None  # always fresh
+    if p == "dilly":
+        return _DILLY_REFRESH_DAYS * 86400
+    return _FREE_REFRESH_DAYS * 86400  # starter / unknown
+
+def _next_refresh_label(plan: str, last_ts: float) -> str:
+    """Human-readable 'come back' message."""
+    p = (plan or "starter").lower().strip()
+    if p == "pro":
+        return ""
+    period = _refresh_period_for_plan(p) or 0
+    next_ts = last_ts + period
+    next_dt = _dt.datetime.fromtimestamp(next_ts)
+    if p == "dilly":
+        return f"Refreshes Monday {next_dt.strftime('%b %-d')}"
+    return f"Updates again {next_dt.strftime('%b %-d')}"
+
+
 # ── Shield Score ──────────────────────────────────────────────────────────────
 
 @router.get("/ai-arena/shield")
 async def get_shield_score(request: Request):
-    """Get the user's overall AI readiness shield score."""
+    """Get the user's overall AI readiness shield score, tier-cached."""
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
 
     # Load profile text from multiple sources (Dilly Profile first, resume as fallback)
     resume_text = ""
     cohort = "General"
+    plan = "starter"
+    profile: dict = {}
     try:
-        from projects.dilly.api.profile_store import get_profile
+        from projects.dilly.api.profile_store import get_profile, save_profile
         profile = get_profile(email) or {}
         cohort = profile.get("cohort") or profile.get("track") or "General"
+        plan = (profile.get("plan") or "starter").lower().strip()
+
+        # Tier cache check — if within refresh window, return the cached payload
+        # plus a "next_refresh" hint so the mobile UI can render the
+        # "come back next month" / "refreshes Monday" copy.
+        period = _refresh_period_for_plan(plan)
+        cached = profile.get("ai_arena_cache") or {}
+        cached_ts = float(cached.get("ts") or 0)
+        cached_payload = cached.get("payload")
+        if period is not None and cached_payload and (_time.time() - cached_ts) < period:
+            return {
+                **cached_payload,
+                "plan": plan,
+                "cached": True,
+                "next_refresh": _next_refresh_label(plan, cached_ts),
+                "tools_unlocked": plan in ("dilly", "pro"),
+            }
 
         # Source 1: Dilly Profile memory surface (preferred — this is the Dilly Profile)
         try:
@@ -133,7 +209,7 @@ async def get_shield_score(request: Request):
     else:
         label = "Vulnerable"
 
-    return {
+    payload = {
         "shield_score": shield,
         "shield_label": label,
         "cracks": cracks,
@@ -151,6 +227,21 @@ async def get_shield_score(request: Request):
         "recommendation": readiness.get("recommendation", ""),
     }
 
+    # Persist to per-user cache so we don't re-compute until the tier window expires
+    try:
+        if _refresh_period_for_plan(plan) is not None:
+            save_profile(email, {"ai_arena_cache": {"ts": _time.time(), "payload": payload}})
+    except Exception:
+        pass
+
+    return {
+        **payload,
+        "plan": plan,
+        "cached": False,
+        "next_refresh": _next_refresh_label(plan, _time.time()) if _refresh_period_for_plan(plan) is not None else "",
+        "tools_unlocked": plan in ("dilly", "pro"),
+    }
+
 
 # ── Bullet Scan ───────────────────────────────────────────────────────────────
 
@@ -163,6 +254,7 @@ async def scan_bullets(request: Request, body: ScanRequest):
     """Scan each resume bullet for AI vulnerability. Rule-based, instant."""
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
+    _require_paid_for_arena_tool(email, "Threat Scanner")
 
     bullets = body.bullets or []
 
@@ -264,6 +356,7 @@ async def replace_me_test(request: Request, body: ReplaceRequest):
     compares quality. This is the "wow" feature.
     """
     user = deps.require_auth(request)
+    _require_paid_for_arena_tool((user.get("email") or "").strip().lower(), "Replace Me")
 
     bullet = body.bullet.strip()
     if not bullet or len(bullet) < 10:
@@ -334,6 +427,7 @@ async def simulate_career(request: Request, body: SimulateRequest):
     """
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
+    _require_paid_for_arena_tool(email, "Career Simulator")
 
     job_title = body.job_title.strip()
     company = (body.company or "a leading company").strip()

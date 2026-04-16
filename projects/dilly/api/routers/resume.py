@@ -34,6 +34,69 @@ from projects.dilly.api.profile_store import get_profile_folder_path, ensure_pro
 
 router = APIRouter(tags=["resume"])
 
+# ---------------------------------------------------------------------------
+# Resume generation plan limits (per calendar month)
+# ---------------------------------------------------------------------------
+_RESUME_PLAN_LIMITS = {"starter": 2, "dilly": 30, "pro": -1}
+
+def _resume_plan_limit(plan: str) -> int:
+    return _RESUME_PLAN_LIMITS.get((plan or "starter").lower().strip(), 2)
+
+
+def _get_resume_usage(email: str) -> tuple[int, str]:
+    """Return (count_this_month, reset_iso). Resets on month rollover."""
+    import datetime as _dt
+    from projects.dilly.api.database import get_db
+    today = _dt.date.today()
+    month_start = today.replace(day=1).isoformat()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT resume_count_month, resume_count_reset_date FROM users WHERE email = %s",
+            (email,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return 0, month_start
+        count, reset = row
+        if not reset or str(reset) < month_start:
+            return 0, month_start
+        return int(count or 0), str(reset)
+
+
+def _increment_resume_count(email: str) -> int:
+    import datetime as _dt
+    from projects.dilly.api.database import get_db
+    today = _dt.date.today()
+    month_start = today.replace(day=1).isoformat()
+    used, _reset = _get_resume_usage(email)
+    new_count = used + 1
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE users SET resume_count_month = %s, resume_count_reset_date = %s WHERE email = %s",
+            (new_count, month_start, email),
+        )
+    return new_count
+
+
+@router.get("/resume/generate/usage")
+async def resume_generate_usage(request: Request):
+    """Read-only ticker for the resume page header."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    from projects.dilly.api.profile_store import get_profile as _gp
+    plan = ((_gp(email) or {}).get("plan") or "starter").lower().strip()
+    limit = _resume_plan_limit(plan)
+    used, _ = _get_resume_usage(email)
+    return {
+        "plan": plan,
+        "used": used,
+        "limit": limit,
+        "remaining": -1 if limit < 0 else max(0, limit - used),
+        "unlimited": limit < 0,
+    }
+
 _RESUME_EDITED_FILENAME = "resume_edited.json"
 _VARIANTS_MANIFEST_FILENAME = "resume_variants.json"
 _MAX_BULLET_LEN = 600
@@ -2483,6 +2546,32 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
     if not job_title or not job_company:
         raise errors.validation_error("job_title and job_company are required.")
 
+    # ── Plan gate: monthly resume gen limits ──────────────────────────────
+    # Resume generation is the most expensive call (~$0.07 each). Strict caps:
+    #   starter: 2 / month, then upgrade to Dilly
+    #   dilly:   30 / month, then upgrade to Pro
+    #   pro:     unlimited
+    from projects.dilly.api.profile_store import get_profile as _gp_for_plan
+    _profile_for_plan = _gp_for_plan(email) or {}
+    _resume_plan = (_profile_for_plan.get("plan") or "starter").lower().strip()
+    _resume_limit = _resume_plan_limit(_resume_plan)
+    _resume_used, _ = _get_resume_usage(email)
+    if 0 < _resume_limit <= _resume_used:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "PLAN_LIMIT_REACHED",
+                "message": (
+                    "You've used both free resume generations this month. Upgrade to Dilly for 30 / month."
+                    if _resume_plan == "starter"
+                    else f"You've used all {_resume_limit} tailored resumes this month. Upgrade to Dilly Pro for unlimited."
+                ),
+                "required_plan": "dilly" if _resume_plan == "starter" else "pro",
+                "used": _resume_used,
+                "limit": _resume_limit,
+            },
+        )
+
     cohort = body.cohort or _detect_cohort_from_job(job_title, job_company)
 
     # ------------------------------------------------------------------
@@ -2696,6 +2785,10 @@ Include only sections that have content. Do not include markdown, explanations, 
                         keyword_matches += 1
                         break
 
+    # Charge one tailored resume against the user's monthly cap (only on success)
+    new_resume_count = _increment_resume_count(email)
+    resume_remaining = -1 if _resume_limit < 0 else max(0, _resume_limit - new_resume_count)
+
     return {
         "sections": sections,
         "ats": job_ats,
@@ -2704,6 +2797,9 @@ Include only sections that have content. Do not include markdown, explanations, 
         "readiness": readiness,
         "gaps": json.loads(gaps_detail) if gaps_detail else [],
         "keyword_note": f"Optimized for {job_ats.title()} ATS",
+        "plan": _resume_plan,
+        "resumes_used": new_resume_count,
+        "resumes_remaining": resume_remaining,
     }
 
 

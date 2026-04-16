@@ -55,8 +55,8 @@ def _cache_set(key: str, response: dict, profile_hash: str) -> None:
 # Plan limits
 # ---------------------------------------------------------------------------
 _PLAN_LIMITS = {
-    "starter": 10,
-    "dilly": 250,
+    "starter": 20,
+    "dilly": 100,
     "pro": -1,  # unlimited
 }
 
@@ -232,6 +232,29 @@ def _load_job(job_id: str) -> dict | None:
 # ---------------------------------------------------------------------------
 # Endpoint
 # ---------------------------------------------------------------------------
+@router.get("/jobs/fit-narrative/usage")
+async def fit_narrative_usage(request: Request):
+    """Read-only ticker endpoint: how many narratives the user has used this month
+    + their plan limit. Used by the Jobs page header to show 'X / Y this month'."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    try:
+        from projects.dilly.api.profile_store import get_profile as _gp
+        plan = ((_gp(email) or {}).get("plan") or "starter").lower().strip()
+    except Exception:
+        plan = "starter"
+    limit = _get_plan_limit(plan)
+    used, _reset = _get_narrative_usage(email)
+    remaining = -1 if limit < 0 else max(0, limit - used)
+    return {
+        "plan": plan,
+        "used": used,
+        "limit": limit,
+        "remaining": remaining,
+        "unlimited": limit < 0,
+    }
+
+
 @router.post("/jobs/fit-narrative")
 async def fit_narrative(request: Request, body: dict = Body(...)):
     """Generate a personalized fit narrative for a specific job.

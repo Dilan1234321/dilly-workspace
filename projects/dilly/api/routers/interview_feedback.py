@@ -20,6 +20,55 @@ from projects.dilly.api import deps
 
 router = APIRouter(tags=["interview_prep"])
 
+# ---------------------------------------------------------------------------
+# Plan limits (per calendar month)
+#   starter (free): blocked entirely — interview feedback is a paid feature
+#   dilly:          10 / month, then upgrade-to-pro gate
+#   pro:            unlimited
+# ---------------------------------------------------------------------------
+_INTERVIEW_PLAN_LIMITS = {"starter": 0, "dilly": 10, "pro": -1}
+
+def _interview_plan_limit(plan: str) -> int:
+    return _INTERVIEW_PLAN_LIMITS.get((plan or "starter").lower().strip(), 0)
+
+
+def _get_interview_usage(email: str) -> tuple[int, str]:
+    """Return (count_this_month, reset_iso). Resets on month rollover."""
+    import datetime as _dt
+    from projects.dilly.api.database import get_db
+    today = _dt.date.today()
+    month_start = today.replace(day=1).isoformat()
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT interview_count_month, interview_count_reset_date FROM users WHERE email = %s",
+            (email,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return 0, month_start
+        count, reset = row
+        if not reset or str(reset) < month_start:
+            return 0, month_start
+        return int(count or 0), str(reset)
+
+
+def _increment_interview_count(email: str) -> int:
+    import datetime as _dt
+    from projects.dilly.api.database import get_db
+    today = _dt.date.today()
+    month_start = today.replace(day=1).isoformat()
+    used, _reset = _get_interview_usage(email)
+    new_count = used + 1
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """UPDATE users SET interview_count_month = %s, interview_count_reset_date = %s
+               WHERE email = %s""",
+            (new_count, month_start, email),
+        )
+    return new_count
+
 
 # ---------------------------------------------------------------------------
 # Profile text builder (same pattern as jobs_narrative.py)
@@ -138,6 +187,32 @@ async def interview_feedback(req: InterviewFeedbackRequest, request: Request):
     from projects.dilly.api.memory_surface_store import get_memory_surface
 
     profile = get_profile(email) or {}
+
+    # ── Plan gate ────────────────────────────────────────────────────────
+    plan = (profile.get("plan") or "starter").lower().strip()
+    limit = _interview_plan_limit(plan)
+    if limit == 0:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "PLAN_REQUIRED",
+                "message": "Interview practice feedback is part of Dilly. Upgrade to unlock 10 interview reviews per month.",
+                "required_plan": "dilly",
+            },
+        )
+    used, _reset = _get_interview_usage(email)
+    if 0 < limit <= used:
+        # Dilly tier hit cap — push to Pro for unlimited
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "PLAN_LIMIT_REACHED",
+                "message": f"You've used all {limit} interview reviews this month. Upgrade to Dilly Pro for unlimited.",
+                "required_plan": "pro",
+                "used": used,
+                "limit": limit,
+            },
+        )
     surface = get_memory_surface(email)
     facts = surface.get("items") or []
 
@@ -268,6 +343,10 @@ async def interview_feedback(req: InterviewFeedbackRequest, request: Request):
         action_items = []
     action_items = [str(a) for a in action_items[:3]]
 
+    # Charge the user one interview review against their monthly cap
+    new_count = _increment_interview_count(email)
+    remaining = -1 if limit < 0 else max(0, limit - new_count)
+
     return {
         "verdict": verdict,
         "overall": parsed.get("overall", ""),
@@ -275,4 +354,7 @@ async def interview_feedback(req: InterviewFeedbackRequest, request: Request):
         "priority_fix": parsed.get("priority_fix", ""),
         "per_question": validated_pq,
         "action_items": action_items,
+        "plan": plan,
+        "interviews_used": new_count,
+        "interviews_remaining": remaining,
     }
