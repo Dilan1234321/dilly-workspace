@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../lib/tokens';
@@ -49,10 +49,11 @@ function DillyTabIcon({ focused }: { focused: boolean }) {
 
 export default function AppLayout() {
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
 
   return (
     <SubscriptionProvider>
-    <ErrorBoundary surface="this page">
+    <ErrorBoundary surface="this page" resetKey={pathname}>
     <>
     <Tabs
       screenOptions={{

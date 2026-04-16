@@ -58,7 +58,7 @@ interface CardData {
 
 // ── Templates ────────────────────────────────────────────────────────────────
 
-export type CardTemplate = 'photo' | 'clean' | 'dark' | 'statement' | 'navy' | 'sage' | 'coral' | 'midnight';
+export type CardTemplate = 'photo' | 'clean' | 'dark' | 'statement' | 'navy' | 'sage' | 'coral' | 'midnight' | 'gold' | 'terracotta' | 'slate' | 'pearl';
 
 export const CARD_TEMPLATES: { id: CardTemplate; label: string }[] = [
   { id: 'photo', label: 'Default' },
@@ -69,6 +69,10 @@ export const CARD_TEMPLATES: { id: CardTemplate; label: string }[] = [
   { id: 'sage', label: 'Sage' },
   { id: 'coral', label: 'Coral' },
   { id: 'midnight', label: 'Midnight' },
+  { id: 'gold', label: 'Gold' },
+  { id: 'terracotta', label: 'Terracotta' },
+  { id: 'slate', label: 'Slate' },
+  { id: 'pearl', label: 'Pearl' },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -327,6 +331,110 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
     );
   }
 
+  // ── Gold: cream paper with deep emerald accent + small photo top-left ──
+  if (template === 'gold') {
+    return (
+      <View style={[c.card, { backgroundColor: '#FAF6EE', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={44} bgColor="#0E3B2E" />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{ fontSize: 17, fontWeight: '700', color: '#0E3B2E', letterSpacing: 0.2 }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {data.name || 'Your Name'}
+            </Text>
+            {data.tagline ? (
+              <Text style={{ fontSize: 11, color: '#A47A2E', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
+            ) : null}
+          </View>
+        </View>
+        <View style={{ height: 1, backgroundColor: '#D9C9A1', marginTop: 12 }} />
+        <View style={{ flex: 1 }} />
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#5C4A2E', phone: '#5C4A2E', url: '#A47A2E' }} />
+        {showQr && <QrBadge data={data} color="#0E3B2E" />}
+      </View>
+    );
+  }
+
+  // ── Terracotta: warm clay block, photo circle right ──
+  if (template === 'terracotta') {
+    return (
+      <View style={[c.card, { backgroundColor: '#F2DCC9', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
+        <View style={{ position: 'absolute', top: 14, right: 16 }}>
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={44} bgColor="#A0432B" />
+        </View>
+        <Text
+          style={{ fontSize: 18, fontWeight: '800', color: '#3B1B0F', paddingRight: 56 }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {data.name || 'Your Name'}
+        </Text>
+        {data.tagline ? (
+          <Text style={{ fontSize: 11, color: '#A0432B', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
+        ) : null}
+        <View style={{ flex: 1 }} />
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#5C2D1B', phone: '#5C2D1B', url: '#A0432B' }} />
+        {showQr && <QrBadge data={data} color="#3B1B0F" />}
+      </View>
+    );
+  }
+
+  // ── Slate: charcoal background with teal accent bar on the left ──
+  if (template === 'slate') {
+    return (
+      <View style={[c.card, { backgroundColor: '#1F2933', flexDirection: 'row', overflow: 'hidden' }]}>
+        <View style={{ width: 4, height: '100%', backgroundColor: '#52A9A4' }} />
+        <View style={{ flex: 1, paddingHorizontal: 18, paddingTop: 16, paddingBottom: 14, flexDirection: 'column' }}>
+          <Text
+            style={{ fontSize: 18, fontWeight: '700', color: '#F2F4F7' }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          >
+            {data.name || 'Your Name'}
+          </Text>
+          {data.tagline ? (
+            <Text style={{ fontSize: 11, color: '#52A9A4', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
+          ) : null}
+          <View style={{ flex: 1 }} />
+          <MinimalContact data={data} hideLink={showQr} colors={{ email: '#A8B3BD', phone: '#A8B3BD', url: '#52A9A4' }} />
+        </View>
+        {showQr && <QrBadge data={data} color="#52A9A4" />}
+      </View>
+    );
+  }
+
+  // ── Pearl: soft off-white with lavender accent, photo top-right ──
+  if (template === 'pearl') {
+    return (
+      <View style={[c.card, { backgroundColor: '#F6F4F9', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
+        <View style={{ position: 'absolute', top: 14, right: 16 }}>
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={44} bgColor="#6B5B95" />
+        </View>
+        <Text
+          style={{ fontSize: 18, fontWeight: '700', color: '#2A2240', paddingRight: 56 }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+        >
+          {data.name || 'Your Name'}
+        </Text>
+        {data.tagline ? (
+          <Text style={{ fontSize: 11, color: '#6B5B95', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
+        ) : null}
+        <View style={{ height: 1, backgroundColor: '#E2DCEF', marginTop: 12 }} />
+        <View style={{ flex: 1 }} />
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#5A4F75', phone: '#5A4F75', url: '#9385B8' }} />
+        {showQr && <QrBadge data={data} color="#6B5B95" />}
+      </View>
+    );
+  }
+
   // ── Midnight: photo on right 40%, dark cinematic ──
   return (
     <View style={[c.card, { backgroundColor: '#0F1724', flexDirection: 'row', overflow: 'hidden' }]}>
@@ -366,13 +474,23 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
 // ── Card Back ────────────────────────────────────────────────────────────────
 
 function CardBack({ template = 'photo', username, showQr = false }: { template?: CardTemplate; username?: string; showQr?: boolean }) {
-  const isDark = template === 'dark' || template === 'navy' || template === 'midnight';
+  const isDark = template === 'dark' || template === 'navy' || template === 'midnight' || template === 'slate';
   const bg = isDark
-    ? (template === 'navy' ? '#1B2838' : template === 'midnight' ? '#0F1724' : '#111111')
-    : (template === 'sage' ? '#F5F7F4' : template === 'coral' ? '#FFF5F3' : '#FFFFFF');
+    ? (template === 'navy' ? '#1B2838' : template === 'midnight' ? '#0F1724' : template === 'slate' ? '#1F2933' : '#111111')
+    : (template === 'sage' ? '#F5F7F4'
+      : template === 'coral' ? '#FFF5F3'
+      : template === 'gold' ? '#FAF6EE'
+      : template === 'terracotta' ? '#F2DCC9'
+      : template === 'pearl' ? '#F6F4F9'
+      : '#FFFFFF');
   const color = isDark
-    ? (template === 'navy' ? '#5A7FA0' : template === 'midnight' ? '#4A6A8A' : '#555555')
-    : (template === 'sage' ? '#5C6B5C' : template === 'coral' ? '#E8705A' : '#6B7280');
+    ? (template === 'navy' ? '#5A7FA0' : template === 'midnight' ? '#4A6A8A' : template === 'slate' ? '#52A9A4' : '#555555')
+    : (template === 'sage' ? '#5C6B5C'
+      : template === 'coral' ? '#E8705A'
+      : template === 'gold' ? '#A47A2E'
+      : template === 'terracotta' ? '#A0432B'
+      : template === 'pearl' ? '#6B5B95'
+      : '#6B7280');
   const dimColor = isDark ? color + '80' : LIGHT_GRAY;
 
   return (
@@ -389,12 +507,31 @@ function CardBack({ template = 'photo', username, showQr = false }: { template?:
 // ── Template Picker ─────────────────────────────────────────────────────────
 
 function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSelect: (t: CardTemplate) => void }) {
+  // Scroll progress 0..1 — drives the indicator track + thumb width.
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [thumbWidthPct, setThumbWidthPct] = useState(0.35);
+
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={{ fontSize: 13, fontWeight: '700', color: DARK }}>Choose a style</Text>
+        <Text style={{ fontSize: 11, color: GRAY }}>{CARD_TEMPLATES.length} styles</Text>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          const scrollable = Math.max(1, contentSize.width - layoutMeasurement.width);
+          const pct = Math.min(1, Math.max(0, contentOffset.x / scrollable));
+          setScrollProgress(pct);
+          // Thumb width represents what fraction of total content is visible.
+          const visiblePct = Math.min(1, layoutMeasurement.width / Math.max(1, contentSize.width));
+          setThumbWidthPct(Math.max(0.18, visiblePct));
+        }}
+        contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+      >
         {CARD_TEMPLATES.map((t) => {
           const active = t.id === selected;
           return (
@@ -415,6 +552,20 @@ function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSele
           );
         })}
       </ScrollView>
+      {/* Scroll indicator: a track with a thumb that moves as the carousel scrolls */}
+      <View style={{ height: 3, backgroundColor: '#EEF0F3', borderRadius: 2, marginHorizontal: 4, overflow: 'hidden' }}>
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            width: `${thumbWidthPct * 100}%`,
+            left: `${scrollProgress * (1 - thumbWidthPct) * 100}%`,
+            backgroundColor: DILLY_BLUE,
+            borderRadius: 2,
+          }}
+        />
+      </View>
     </View>
   );
 }

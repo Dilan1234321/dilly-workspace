@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -125,6 +125,10 @@ export default function RootLayout() {
   });
 
   const { expoPushToken } = usePushNotifications();
+  // Used as ErrorBoundary resetKey so the boundary auto-clears on
+  // route change. Otherwise a single render crash leaves a permanent
+  // sad-Dilly screen even after the user navigates elsewhere.
+  const pathname = usePathname();
   const [phase,       setPhase]       = useState<Phase>('loading');
   const [isReturning, setIsReturning] = useState(false);
   const [checkedAuth, setCheckedAuth] = useState(false);
@@ -215,7 +219,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <ErrorBoundary surface="Dilly">
+      <ErrorBoundary surface="Dilly" resetKey={pathname}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="onboarding" />

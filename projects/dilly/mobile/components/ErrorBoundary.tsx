@@ -15,6 +15,10 @@ const CORAL = '#FF453A';
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   surface?: string;
+  /** When this changes, the boundary auto-clears its error state.
+   * Pass the current route name to clear when the user navigates away
+   * from a crashed screen. */
+  resetKey?: string | number;
 }
 
 interface ErrorBoundaryState {
@@ -61,6 +65,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    // Auto-reset when the resetKey changes (e.g. user navigates to a
+    // different route). This stops a crash on one screen from
+    // permanently nuking the rest of the app behind a white-or-error
+    // screen until the user kills and reopens the app.
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
   }
 
   handleReset = () => {
