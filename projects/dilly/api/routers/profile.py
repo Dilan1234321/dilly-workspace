@@ -1290,11 +1290,6 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         "show_refer_button": profile.get("show_refer_button") is not False,
         "photo_url": f"/profile/public/{get_profile_slug(email)}/photo",
         "has_photo": bool(profile.get("profile_photo_b64") or False),
-        # DEBUG: diagnose per-fact visibility toggle. Remove after verified.
-        "_debug_hidden_count": len(hidden_fact_ids),
-        "_debug_facts_total": len(facts),
-        "_debug_fact_id_sample": [str(f.get("id") or "")[:8] for f in facts[:3]],
-        "_debug_hidden_id_sample": [str(x)[:8] for x in list(hidden_fact_ids)[:3]],
     }
 
     return JSONResponse(
@@ -1336,6 +1331,50 @@ async def generate_slug_endpoint(request: Request):
     is_student = user_type not in ("general", "professional")
     prefix = "s" if is_student else "p"
     return {"slug": slug, "prefix": prefix, "url": f"https://hellodilly.com/{prefix}/{slug}"}
+
+
+# ---------------------------------------------------------------------------
+# Per-fact web visibility: atomic hide/show endpoints
+# Safer than PATCH /profile with the whole web_profile_settings blob because
+# these just mutate the hidden_fact_ids list in place and return it.
+# ---------------------------------------------------------------------------
+
+@router.post("/profile/web/hide-fact")
+async def hide_web_fact(request: Request, body: dict = Body(...)):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    fact_id = str(body.get("fact_id") or "").strip()
+    if not fact_id:
+        raise HTTPException(status_code=400, detail="fact_id required.")
+    from projects.dilly.api.profile_store import save_profile
+    profile = get_profile(email) or {}
+    web_settings = dict(profile.get("web_profile_settings") or {})
+    hidden = list(web_settings.get("hidden_fact_ids") or [])
+    if fact_id not in hidden:
+        hidden.append(fact_id)
+    web_settings["hidden_fact_ids"] = hidden
+    save_profile(email, {"web_profile_settings": web_settings})
+    return {"hidden_fact_ids": hidden, "count": len(hidden)}
+
+
+@router.post("/profile/web/show-fact")
+async def show_web_fact(request: Request, body: dict = Body(...)):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    fact_id = str(body.get("fact_id") or "").strip()
+    if not fact_id:
+        raise HTTPException(status_code=400, detail="fact_id required.")
+    from projects.dilly.api.profile_store import save_profile
+    profile = get_profile(email) or {}
+    web_settings = dict(profile.get("web_profile_settings") or {})
+    hidden = [x for x in (web_settings.get("hidden_fact_ids") or []) if x != fact_id]
+    web_settings["hidden_fact_ids"] = hidden
+    save_profile(email, {"web_profile_settings": web_settings})
+    return {"hidden_fact_ids": hidden, "count": len(hidden)}
 
 
 # ---------------------------------------------------------------------------

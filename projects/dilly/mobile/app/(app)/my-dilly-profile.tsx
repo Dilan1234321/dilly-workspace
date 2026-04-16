@@ -400,9 +400,19 @@ export default function MyDillyProfileScreen() {
           <Text style={{ fontSize: 13, fontWeight: '600', color: editMode ? colors.green : colors.indigo }}>{editMode ? 'Save' : 'Edit'}</Text>
         </AnimatedPressable>
         <Text style={d.headerTitle}>My Dilly</Text>
-        <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>
-          <Ionicons name="settings-outline" size={20} color={colors.t3} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <TouchableOpacity
+            onPress={() => setShowQrFullscreen(true)}
+            hitSlop={12}
+            disabled={!readableSlug}
+            style={{ opacity: readableSlug ? 1 : 0.35 }}
+          >
+            <Ionicons name="qr-code" size={20} color={colors.indigo} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>
+            <Ionicons name="settings-outline" size={20} color={colors.t3} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -885,17 +895,27 @@ export default function MyDillyProfileScreen() {
                           </View>
                           <Switch
                             value={isPublic}
-                            onValueChange={v => {
+                            onValueChange={async v => {
                               if (!fact.id) return;
-                              const updated = v
+                              // Optimistic UI update
+                              const optimistic = v
                                 ? hiddenFactIds.filter(id => id !== fact.id)
                                 : [...hiddenFactIds.filter(id => id !== fact.id), fact.id];
-                              setHiddenFactIds(updated);
-                              // Merge with existing sections so we don't clobber section toggles
-                              dilly.fetch('/profile', {
-                                method: 'PATCH',
-                                body: JSON.stringify({ web_profile_settings: { sections: webSections, hidden_fact_ids: updated } }),
-                              }).catch(() => {});
+                              setHiddenFactIds(optimistic);
+                              // Atomic server update (throws on error)
+                              try {
+                                const res: any = await dilly.post(
+                                  v ? '/profile/web/show-fact' : '/profile/web/hide-fact',
+                                  { fact_id: fact.id },
+                                );
+                                if (Array.isArray(res?.hidden_fact_ids)) {
+                                  setHiddenFactIds(res.hidden_fact_ids);
+                                }
+                              } catch {
+                                // Revert on failure
+                                setHiddenFactIds(hiddenFactIds);
+                                toast.show({ message: 'Could not update visibility.' });
+                              }
                             }}
                             trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
                             thumbColor={isPublic ? colors.indigo : '#f4f3f4'}
@@ -1004,14 +1024,6 @@ export default function MyDillyProfileScreen() {
                       <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>Share</Text>
                     </AnimatedPressable>
                   </View>
-                  <AnimatedPressable
-                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.s2, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1 }}
-                    onPress={() => setShowQrFullscreen(true)}
-                    scaleDown={0.97}
-                  >
-                    <Ionicons name="qr-code" size={14} color={colors.t1} />
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>Show QR Code</Text>
-                  </AnimatedPressable>
                 </View>
               ) : (
                 <Text style={{ fontSize: 12, color: colors.t3, fontStyle: 'italic' }}>Setting up your profile link...</Text>
@@ -1382,10 +1394,11 @@ export default function MyDillyProfileScreen() {
                 if (!QRCode) return <Text style={{ color: colors.t3 }}>QR not available</Text>;
                 // Match the web profile QR: dark code + rectangular dark Dilly wordmark
                 // centered on a white rounded cutout. High error correction keeps it scannable.
-                const QR_SIZE = 260;
-                const LOGO_W = 96;
+                // LOGO_W up to ~50% of QR width is safe with ECL=H (30% area tolerance).
+                const QR_SIZE = 300;
+                const LOGO_W = 150;
                 const LOGO_H = Math.round(LOGO_W * (140 / 258));
-                const CUTOUT_PAD = 10;
+                const CUTOUT_PAD = 14;
                 return (
                   <View style={{ width: QR_SIZE, height: QR_SIZE, alignItems: 'center', justifyContent: 'center' }}>
                     <QRCode
