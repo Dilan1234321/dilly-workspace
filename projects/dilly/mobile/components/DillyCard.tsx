@@ -214,15 +214,16 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
   if (template === 'statement') {
     return (
       <View style={[c.card, { backgroundColor: '#FFFFFF', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, overflow: 'hidden' }]}>
+        {/* Giant watermark name sits in the middle band, below the real name+tagline and above contacts */}
         <Text
           style={{
             position: 'absolute',
-            top: '15%',
+            top: '38%',
             left: 10,
             right: -10,
             fontSize: 36,
             fontWeight: '900',
-            color: '#E8E8E8',
+            color: '#EEEEEE',
             lineHeight: 40,
           }}
           numberOfLines={2}
@@ -238,7 +239,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           {data.name || 'Your Name'}
         </Text>
         {data.tagline ? (
-          <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2, zIndex: 1 }}>{data.tagline}</Text>
+          <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2, zIndex: 1 }} numberOfLines={2}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
         <View style={{ zIndex: 1 }}>
@@ -432,7 +433,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   const [showBack, setShowBack] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [template, setTemplate] = useState<CardTemplate>('photo');
-  const [showQr, setShowQr] = useState(false);
+  const [showQr, setShowQr] = useState(true);
   const frontRef = useRef<any>(null);
   const backRef = useRef<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;

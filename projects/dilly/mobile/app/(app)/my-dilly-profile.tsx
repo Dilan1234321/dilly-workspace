@@ -22,7 +22,7 @@ import {
   LayoutAnimation, RefreshControl, Animated, Easing,
   Dimensions, Image, TextInput, Keyboard, Alert, Switch, Modal,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
@@ -211,6 +211,15 @@ export default function MyDillyProfileScreen() {
   const [webBioSaving, setWebBioSaving] = useState(false);
   const [showWebProfile, setShowWebProfile] = useState(false);
   const [showQrFullscreen, setShowQrFullscreen] = useState(false);
+  const qrCaptureRef = useRef<View>(null);
+  const searchParams = useLocalSearchParams<{ openQr?: string }>();
+  useEffect(() => {
+    if (searchParams?.openQr === '1') {
+      setShowQrFullscreen(true);
+      // Clear the param so back-nav then re-opening Career Center doesn't reopen the modal
+      try { router.setParams({ openQr: undefined as any }); } catch {}
+    }
+  }, [searchParams?.openQr]);
   const [webSections, setWebSections] = useState<Record<string, boolean>>({
     strengths: true, skills: true, experience: true, projects: true, looking_for: true, education: true,
   });
@@ -1392,65 +1401,93 @@ export default function MyDillyProfileScreen() {
 
           {readableSlug ? (
             <>
-              {(() => {
-                let QRCode: any = null;
-                try { QRCode = require('react-native-qrcode-svg').default; } catch {}
-                if (!QRCode) return <Text style={{ color: colors.t3 }}>QR not available</Text>;
-                // Match the web profile QR: dark code + rectangular dark Dilly wordmark
-                // centered on a rounded white cutout. High error correction keeps it scannable.
-                const QR_SIZE = 300;
-                const LOGO_W = 96;
-                const LOGO_H = Math.round(LOGO_W * (140 / 258));
-                const CUTOUT_PAD = 7;
-                return (
-                  <View style={{ width: QR_SIZE, height: QR_SIZE, alignItems: 'center', justifyContent: 'center' }}>
-                    <QRCode
-                      value={`https://hellodilly.com/${profilePrefix}/${readableSlug}`}
-                      size={QR_SIZE}
-                      color="#1e293b"
-                      backgroundColor="#ffffff"
-                      ecl="H"
-                    />
-                    <View
-                      pointerEvents="none"
-                      style={{
-                        position: 'absolute',
-                        width: LOGO_W + CUTOUT_PAD * 2,
-                        height: LOGO_H + CUTOUT_PAD * 2,
-                        backgroundColor: '#ffffff',
-                        borderRadius: 10,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Image
-                        source={require('../../assets/dilly-wordmark.png')}
-                        style={{ width: LOGO_W, height: LOGO_H, tintColor: '#1e293b' }}
-                        resizeMode="contain"
+              <View ref={qrCaptureRef} collapsable={false} style={{ padding: 24, backgroundColor: '#ffffff', alignItems: 'center' }}>
+                {(() => {
+                  let QRCode: any = null;
+                  try { QRCode = require('react-native-qrcode-svg').default; } catch {}
+                  if (!QRCode) return <Text style={{ color: colors.t3 }}>QR not available</Text>;
+                  // Match the web profile QR: dark code + rectangular dark Dilly wordmark
+                  // centered on a rounded white cutout. ECL=H keeps it scannable.
+                  const QR_SIZE = 300;
+                  const LOGO_W = 96;
+                  const LOGO_H = Math.round(LOGO_W * (140 / 258));
+                  const CUTOUT_PAD = 7;
+                  return (
+                    <View style={{ width: QR_SIZE, height: QR_SIZE, alignItems: 'center', justifyContent: 'center' }}>
+                      <QRCode
+                        value={`https://hellodilly.com/${profilePrefix}/${readableSlug}`}
+                        size={QR_SIZE}
+                        color="#1e293b"
+                        backgroundColor="#ffffff"
+                        ecl="H"
                       />
+                      <View
+                        pointerEvents="none"
+                        style={{
+                          position: 'absolute',
+                          width: LOGO_W + CUTOUT_PAD * 2,
+                          height: LOGO_H + CUTOUT_PAD * 2,
+                          backgroundColor: '#ffffff',
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Image
+                          source={require('../../assets/dilly-wordmark.png')}
+                          style={{ width: LOGO_W, height: LOGO_H, tintColor: '#1e293b' }}
+                          resizeMode="contain"
+                        />
+                      </View>
                     </View>
-                  </View>
-                );
-              })()}
-              <Text style={{ fontSize: 22, fontWeight: '900', color: '#0f172a', marginTop: 28 }}>
-                {p.name || 'Your Profile'}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#64748b', marginTop: 6 }}>
-                hellodilly.com/{profilePrefix}/{readableSlug}
-              </Text>
-              <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 20, textAlign: 'center' }}>
+                  );
+                })()}
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginTop: 14 }}>
+                  {p.name || 'Your Profile'}
+                </Text>
+                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                  hellodilly.com/{profilePrefix}/{readableSlug}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 16, textAlign: 'center' }}>
                 Scan to view profile
               </Text>
               <AnimatedPressable
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 28, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.indigo }}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.indigo }}
                 onPress={async () => {
                   try {
-                    const { Share } = require('react-native');
-                    await Share.share({
-                      message: `https://hellodilly.com/${profilePrefix}/${readableSlug}`,
-                      url: `https://hellodilly.com/${profilePrefix}/${readableSlug}`,
+                    let captureRef: any = null;
+                    try { captureRef = require('react-native-view-shot').captureRef; } catch {}
+                    let Sharing: any = null;
+                    try { Sharing = require('expo-sharing'); } catch {}
+                    if (!captureRef || !qrCaptureRef.current) {
+                      // Fallback: share the link only
+                      const { Share } = require('react-native');
+                      await Share.share({
+                        message: `https://hellodilly.com/${profilePrefix}/${readableSlug}`,
+                        url: `https://hellodilly.com/${profilePrefix}/${readableSlug}`,
+                      });
+                      return;
+                    }
+                    const uri = await captureRef(qrCaptureRef.current, {
+                      format: 'png',
+                      quality: 1,
+                      result: 'tmpfile',
                     });
-                  } catch {}
+                    if (!uri) return;
+                    if (Sharing?.isAvailableAsync && (await Sharing.isAvailableAsync())) {
+                      await Sharing.shareAsync(uri, {
+                        mimeType: 'image/png',
+                        UTI: 'public.png',
+                        dialogTitle: `${p.name || 'Dilly'} QR Code`,
+                      });
+                    } else {
+                      const { Share } = require('react-native');
+                      await Share.share({ url: uri, message: `https://hellodilly.com/${profilePrefix}/${readableSlug}` });
+                    }
+                  } catch (e) {
+                    toast.show({ message: 'Could not share QR.' });
+                  }
                 }}
                 scaleDown={0.97}
               >

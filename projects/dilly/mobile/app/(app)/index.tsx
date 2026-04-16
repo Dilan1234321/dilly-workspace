@@ -268,9 +268,18 @@ export default function HomeScreen() {
               <Text style={s.headerName}>Welcome, {firstName || 'there'}.</Text>
               <Text style={s.headerSub}>Your career center.</Text>
             </View>
-            <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
-              <Ionicons name="settings-outline" size={20} color={colors.t3} />
-            </AnimatedPressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <AnimatedPressable
+                onPress={() => router.push({ pathname: '/(app)/my-dilly-profile', params: { openQr: '1' } })}
+                scaleDown={0.9}
+                hitSlop={10}
+              >
+                <Ionicons name="qr-code" size={20} color={colors.indigo} />
+              </AnimatedPressable>
+              <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
+                <Ionicons name="settings-outline" size={20} color={colors.t3} />
+              </AnimatedPressable>
+            </View>
           </View>
         </FadeInView>
 
