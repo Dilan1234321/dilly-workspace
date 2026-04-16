@@ -911,10 +911,14 @@ export default function MyDillyProfileScreen() {
                                 if (Array.isArray(res?.hidden_fact_ids)) {
                                   setHiddenFactIds(res.hidden_fact_ids);
                                 }
-                              } catch {
+                              } catch (e: any) {
                                 // Revert on failure
                                 setHiddenFactIds(hiddenFactIds);
-                                toast.show({ message: 'Could not update visibility.' });
+                                const status = e?.status || e?.response?.status;
+                                const reason = e?.message || e?.code || 'unknown';
+                                // eslint-disable-next-line no-console
+                                console.warn('[hide/show-fact failed]', { status, reason, fact_id: fact.id, err: e });
+                                toast.show({ message: `Could not update: ${status || ''} ${reason}`.trim() });
                               }
                             }}
                             trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
@@ -1393,12 +1397,11 @@ export default function MyDillyProfileScreen() {
                 try { QRCode = require('react-native-qrcode-svg').default; } catch {}
                 if (!QRCode) return <Text style={{ color: colors.t3 }}>QR not available</Text>;
                 // Match the web profile QR: dark code + rectangular dark Dilly wordmark
-                // centered on a white rounded cutout. High error correction keeps it scannable.
-                // LOGO_W up to ~50% of QR width is safe with ECL=H (30% area tolerance).
+                // centered on a rounded white cutout. High error correction keeps it scannable.
                 const QR_SIZE = 300;
-                const LOGO_W = 150;
+                const LOGO_W = 96;
                 const LOGO_H = Math.round(LOGO_W * (140 / 258));
-                const CUTOUT_PAD = 14;
+                const CUTOUT_PAD = 7;
                 return (
                   <View style={{ width: QR_SIZE, height: QR_SIZE, alignItems: 'center', justifyContent: 'center' }}>
                     <QRCode
@@ -1438,6 +1441,22 @@ export default function MyDillyProfileScreen() {
               <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 20, textAlign: 'center' }}>
                 Scan to view profile
               </Text>
+              <AnimatedPressable
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 28, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.indigo }}
+                onPress={async () => {
+                  try {
+                    const { Share } = require('react-native');
+                    await Share.share({
+                      message: `https://hellodilly.com/${profilePrefix}/${readableSlug}`,
+                      url: `https://hellodilly.com/${profilePrefix}/${readableSlug}`,
+                    });
+                  } catch {}
+                }}
+                scaleDown={0.97}
+              >
+                <Ionicons name="share-outline" size={15} color="#fff" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Share QR</Text>
+              </AnimatedPressable>
             </>
           ) : (
             <Text style={{ color: colors.t3 }}>Setting up your profile link...</Text>

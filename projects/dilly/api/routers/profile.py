@@ -1341,8 +1341,10 @@ async def generate_slug_endpoint(request: Request):
 
 @router.post("/profile/web/hide-fact")
 async def hide_web_fact(request: Request, body: dict = Body(...)):
+    print(f"[hide-fact] called, body={body}", flush=True)
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
+    print(f"[hide-fact] email={email}", flush=True)
     if not email:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     fact_id = str(body.get("fact_id") or "").strip()
@@ -1355,12 +1357,20 @@ async def hide_web_fact(request: Request, body: dict = Body(...)):
     if fact_id not in hidden:
         hidden.append(fact_id)
     web_settings["hidden_fact_ids"] = hidden
-    save_profile(email, {"web_profile_settings": web_settings})
+    try:
+        save_profile(email, {"web_profile_settings": web_settings})
+    except Exception as e:
+        import traceback
+        print(f"[hide-fact] save_profile FAILED: {e}", flush=True)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Save failed: {type(e).__name__}")
+    print(f"[hide-fact] OK email={email} fact_id={fact_id} count={len(hidden)}", flush=True)
     return {"hidden_fact_ids": hidden, "count": len(hidden)}
 
 
 @router.post("/profile/web/show-fact")
 async def show_web_fact(request: Request, body: dict = Body(...)):
+    print(f"[show-fact] called, body={body}", flush=True)
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     if not email:
@@ -1373,7 +1383,14 @@ async def show_web_fact(request: Request, body: dict = Body(...)):
     web_settings = dict(profile.get("web_profile_settings") or {})
     hidden = [x for x in (web_settings.get("hidden_fact_ids") or []) if x != fact_id]
     web_settings["hidden_fact_ids"] = hidden
-    save_profile(email, {"web_profile_settings": web_settings})
+    try:
+        save_profile(email, {"web_profile_settings": web_settings})
+    except Exception as e:
+        import traceback
+        print(f"[show-fact] save_profile FAILED: {e}", flush=True)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Save failed: {type(e).__name__}")
+    print(f"[show-fact] OK email={email} fact_id={fact_id} count={len(hidden)}", flush=True)
     return {"hidden_fact_ids": hidden, "count": len(hidden)}
 
 
