@@ -16,7 +16,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
@@ -31,81 +31,102 @@ type Situation = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
-// Ordered by breadth of appeal first, then specificity. Dropout and
-// career-switcher live at the top because they're the most common
-// non-.edu paths. Specialized paths follow.
-const OPTIONS: Situation[] = [
+// Unified list — the very first thing anyone sees when they open Dilly.
+// Majority paths at the top, specialized below.
+// 'needsEdu' marks paths that route to the .edu email input.
+const OPTIONS: (Situation & { needsEdu: boolean })[] = [
+  // ── Majority paths (most common) ──
+  {
+    id: 'student',
+    title: 'I\'m a college student',
+    sub: 'In school, looking for internships or your first role.',
+    icon: 'school',
+    needsEdu: true,
+  },
   {
     id: 'career_switch',
     title: 'I\'m switching careers',
-    sub: 'You have work experience in one field and want to move into another.',
+    sub: 'Experience in one field, pivoting into another.',
     icon: 'swap-horizontal',
+    needsEdu: false,
   },
   {
-    id: 'dropout',
-    title: 'I\'m building without a degree',
-    sub: 'You left school or never went. Self-taught, bootcamp, or on-the-job.',
-    icon: 'hammer',
+    id: 'exploring',
+    title: 'I\'m looking for my next opportunity',
+    sub: 'Actively job hunting or figuring out what\'s next.',
+    icon: 'search',
+    needsEdu: false,
   },
+  // ── Specific situations ──
   {
-    id: 'senior_reset',
-    title: 'I\'m starting a next chapter',
-    sub: 'Senior professional between roles. Laid off or ready for something new.',
-    icon: 'compass',
-  },
-  {
-    id: 'parent_returning',
-    title: 'I\'m returning to work',
-    sub: 'Stepping back in after time raising family or caregiving.',
-    icon: 'home',
-  },
-  {
-    id: 'veteran',
-    title: 'I\'m transitioning from the military',
-    sub: 'Translating service experience into civilian career language.',
-    icon: 'shield',
+    id: 'first_gen_college',
+    title: 'I\'m first in my family to go to college',
+    sub: 'Nobody at home can tell you the unwritten rules. Dilly can.',
+    icon: 'trophy',
+    needsEdu: true,
   },
   {
     id: 'international_grad',
     title: 'I\'m on a student visa',
     sub: 'F-1 / OPT, targeting US employment with sponsorship.',
     icon: 'airplane',
+    needsEdu: true,
+  },
+  {
+    id: 'dropout',
+    title: 'I\'m building without a degree',
+    sub: 'Left school or never went. Self-taught, bootcamp, or on-the-job.',
+    icon: 'hammer',
+    needsEdu: false,
+  },
+  {
+    id: 'senior_reset',
+    title: 'I\'m starting a next chapter',
+    sub: 'Senior professional between roles. Laid off or ready for something new.',
+    icon: 'compass',
+    needsEdu: false,
+  },
+  {
+    id: 'parent_returning',
+    title: 'I\'m returning to work',
+    sub: 'Stepping back in after time raising family or caregiving.',
+    icon: 'home',
+    needsEdu: false,
+  },
+  {
+    id: 'veteran',
+    title: 'I\'m transitioning from the military',
+    sub: 'Translating service experience into civilian career language.',
+    icon: 'shield',
+    needsEdu: false,
   },
   {
     id: 'trades_to_white_collar',
     title: 'I\'m moving from trades to office roles',
-    sub: 'Electrician, welder, HVAC, construction — pivoting into office work.',
+    sub: 'Electrician, welder, HVAC, construction. Pivoting into office work.',
     icon: 'construct',
-  },
-  {
-    id: 'first_gen_college',
-    title: 'I\'m first in my family to do this',
-    sub: 'Nobody at home can tell you the unwritten rules. Dilly can.',
-    icon: 'trophy',
+    needsEdu: false,
   },
   {
     id: 'formerly_incarcerated',
     title: 'I\'m a returning citizen',
     sub: 'Re-entering the workforce. Fair-chance employers welcome you here.',
     icon: 'key',
+    needsEdu: false,
   },
   {
     id: 'neurodivergent',
     title: 'I think a little differently',
-    sub: 'ADHD, autism, dyslexia — career tools assume typical cognition. This one adapts.',
+    sub: 'ADHD, autism, dyslexia. Dilly adapts to how you think.',
     icon: 'bulb',
+    needsEdu: false,
   },
   {
     id: 'disabled_professional',
     title: 'I have a disability',
-    sub: 'Filter for inclusive employers. We don\'t make you disclose on your resume.',
+    sub: 'Filter for inclusive employers. No disclosure on your resume.',
     icon: 'accessibility',
-  },
-  {
-    id: 'exploring',
-    title: 'I\'m just exploring',
-    sub: 'Figuring out where to go. No specific path locked in yet.',
-    icon: 'telescope',
+    needsEdu: false,
   },
 ];
 
@@ -117,24 +138,29 @@ export default function ChooseSituationScreen() {
   async function handleContinue() {
     if (!selected) return;
     setSaving(true);
+
+    // Find whether this path needs a .edu email
+    const opt = OPTIONS.find(o => o.id === selected);
+    const needsEdu = opt?.needsEdu ?? false;
+
+    // Save user_path to AsyncStorage so we can persist it to the
+    // profile after they verify their email (can't PATCH profile yet
+    // because the user hasn't authenticated at this point).
     try {
-      // Save user_path to profile. Dropout path also gets the $9.99
-      // 'building' plan pre-set — they can see the "built for me" price
-      // immediately on the plan screen later.
-      const patch: Record<string, any> = { user_path: selected };
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.setItem('dilly_pending_user_path', selected);
       if (selected === 'dropout') {
-        // Dropout tier is $9.99 — same as student pricing, gated by path
-        // instead of .edu domain.
-        patch.plan = 'building';
+        await AsyncStorage.setItem('dilly_pending_plan', 'building');
       }
-      await dilly.fetch('/profile', {
-        method: 'PATCH',
-        body: JSON.stringify(patch),
-      });
-    } catch {
-      // Non-fatal — they can still continue; path defaults to exploring.
-    }
-    router.replace('/onboarding/profile-pro');
+    } catch {}
+
+    // Route to choose-path with a hint about which email section to
+    // focus on. The choose-path screen shows both inputs but we can
+    // auto-scroll or highlight the right one.
+    router.replace({
+      pathname: '/onboarding/choose-path',
+      params: { situationId: selected, needsEdu: needsEdu ? '1' : '0' },
+    });
   }
 
   return (

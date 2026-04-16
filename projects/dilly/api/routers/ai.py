@@ -761,7 +761,26 @@ STYLE RULES (non-negotiable):
 - Never use em dashes. Use commas, periods, or hyphens.
 - Never say 'Great question!' or 'That is a good point.' Just answer.
 - Sound like a friend who happens to be an expert, not a corporate advisor.
-- If the user deleted something from their profile, stop referencing it immediately.""".strip()
+- If the user deleted something from their profile, stop referencing it immediately.
+
+CONVERSATION RULES (what separates Dilly from every other career AI):
+- THIS IS NOT AN INTERVIEW. Do NOT ask question after question. It must feel
+  like a natural back-and-forth conversation where Dilly slowly learns about
+  the user through it.
+- REACT BEFORE ASKING. When the user tells you something, RESPOND to what they
+  said before asking anything else. Show you heard them. "That project is
+  strong" or "Most people in your field don't have that" or "That's going to
+  stand out." THEN, if you need more, ask a follow-up that builds on what
+  they just said. Never change the subject after they answer.
+- BE HONEST. Do not glaze. If something on their profile is weak, say so
+  directly. If a gap is real, name it. If a job is a reach, call it a reach.
+  The user hired Dilly to tell them the truth, not to make them feel good.
+  You can be warm AND honest at the same time. "This project is solid but it
+  won't stand out at Google without a deployed version" is both kind and true.
+- NEVER SAY "I'd love to help you with that" or "Let's dive into that" or
+  "Absolutely!" Just do it.
+- The conversation should feel like talking to a smart friend who happens to
+  know a lot about careers, not like filling out a form.""".strip()
 
 
 def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: Optional[dict] = None) -> str:
@@ -831,6 +850,45 @@ async def get_ai_context(request: Request):
         raise errors.unauthorized()
     try:
         ctx = _build_rich_context(email)
+
+        # Generate a proactive first message based on the user's path
+        # and what Dilly already knows. This fires when the user opens
+        # the AI overlay without typing anything — Dilly speaks first.
+        name = (ctx.get("name") or "").split()[0] if ctx.get("name") else "there"
+        path = (ctx.get("user_path") or "").strip().lower()
+        fact_count = len((ctx.get("profile_facts_text") or "").split("\n"))
+
+        if fact_count > 10:
+            # Dilly already knows them — pick up where we left off
+            msg = f"Hey {name}. What are you working on today?"
+        elif path == "student":
+            msg = f"Hey {name}. I already know a bit about you from your profile. What's the one thing you've done that you're most proud of, school or not?"
+        elif path == "dropout":
+            msg = f"Hey {name}. You're building without a degree, which honestly takes more guts than most people have. What are you working on right now?"
+        elif path == "senior_reset":
+            msg = f"Hey {name}. I know you've been doing this a long time. Before we get into the job search stuff, what's the thing you were best at in your last role?"
+        elif path == "veteran":
+            msg = f"Hey {name}. Thank you for your service. Let's translate what you did into something civilian recruiters understand. What was your role and what did you actually do day to day?"
+        elif path == "parent_returning":
+            msg = f"Hey {name}. Stepping back in is a big move. What kind of work are you looking to get back into?"
+        elif path == "career_switch":
+            msg = f"Hey {name}. Switching fields takes real conviction. What are you pivoting from and what are you pivoting toward?"
+        elif path == "first_gen_college":
+            msg = f"Hey {name}. You're figuring out a lot of this on your own, and that's actually a strength. What are you studying and what are you hoping to do with it?"
+        elif path == "international_grad":
+            msg = f"Hey {name}. The visa clock is real and I get it. What field are you targeting and what's your OPT timeline?"
+        elif path == "formerly_incarcerated":
+            msg = f"Hey {name}. I'm glad you're here. What kind of work are you looking for and what skills have you built?"
+        elif path == "neurodivergent":
+            msg = f"Hey {name}. I'll keep things direct and concrete. What kind of role are you looking for?"
+        elif path == "trades_to_white_collar":
+            msg = f"Hey {name}. You've been solving real problems every day. What trade are you coming from and where do you want to go?"
+        elif path == "disabled_professional":
+            msg = f"Hey {name}. What kind of role are you looking for? We'll find the ones that fit."
+        else:
+            msg = f"Hey {name}. Tell me a bit about yourself and what you're looking for. I'll take it from there."
+
+        ctx["proactive_message"] = msg
         return ctx
     except Exception as e:
         import traceback

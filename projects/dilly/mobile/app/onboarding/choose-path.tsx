@@ -6,18 +6,34 @@
  * 2. Student (below) -- .edu email
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import FadeInView from '../../components/FadeInView';
 
 export default function ChoosePathScreen() {
   const insets = useSafeAreaInsets();
+  const { needsEdu, situationId } = useLocalSearchParams<{ needsEdu?: string; situationId?: string }>();
+  const showStudentFirst = needsEdu === '1';
+  const eduInputRef = useRef<TextInput>(null);
+  const generalInputRef = useRef<TextInput>(null);
+
+  // Auto-focus the right input based on the situation they picked
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (showStudentFirst) {
+        eduInputRef.current?.focus();
+      } else {
+        generalInputRef.current?.focus();
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [showStudentFirst]);
 
   // General email state
   const [generalEmail, setGeneralEmail] = useState('');
@@ -108,40 +124,81 @@ export default function ChoosePathScreen() {
           </Text>
         </FadeInView>
 
-        {/* Section 1: General / non-student (primary, on top) */}
+        {/* Email sections — order flips based on whether the user's
+            situation needs a .edu email. Student paths see .edu first,
+            non-student paths see regular first. */}
+
+        {/* Primary section (shows first) */}
         <FadeInView delay={100}>
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>Get started</Text>
-            <View style={s.inputWrapper}>
-              <TextInput
-                style={[s.input, generalEmail.length > 0 && s.inputActive]}
-                placeholder="you@email.com"
-                placeholderTextColor={colors.t3}
-                value={generalEmail}
-                onChangeText={v => { setGeneralEmail(v); setGeneralError(''); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                editable={!generalLoading}
-                returnKeyType="go"
-                onSubmitEditing={handleGeneralSubmit}
-              />
-              {generalError ? <Text style={s.errorText}>{generalError}</Text> : null}
+          {showStudentFirst ? (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>Enter your .edu email</Text>
+              <View style={s.inputWrapper}>
+                <TextInput
+                  ref={eduInputRef}
+                  style={[s.input, studentEmail.length > 0 && s.inputActive]}
+                  placeholder="you@school.edu"
+                  placeholderTextColor={colors.t3}
+                  value={studentEmail}
+                  onChangeText={v => { setStudentEmail(v); setStudentError(''); }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  editable={!studentLoading}
+                  returnKeyType="go"
+                  onSubmitEditing={handleStudentSubmit}
+                />
+                {studentError ? <Text style={s.errorText}>{studentError}</Text> : null}
+              </View>
+              <TouchableOpacity
+                style={[s.button, studentActive ? s.buttonActive : s.buttonDisabled]}
+                onPress={handleStudentSubmit}
+                disabled={!studentActive}
+                activeOpacity={0.9}
+              >
+                {studentLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={s.buttonText}>Continue</Text>
+                )}
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[s.button, generalActive ? s.buttonActive : s.buttonDisabled]}
-              onPress={handleGeneralSubmit}
-              disabled={!generalActive}
-              activeOpacity={0.9}
-            >
-              {generalLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={s.buttonText}>Continue</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          ) : (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>Enter your email</Text>
+              <View style={s.inputWrapper}>
+                <TextInput
+                  ref={generalInputRef}
+                  style={[s.input, generalEmail.length > 0 && s.inputActive]}
+                  placeholder="you@email.com"
+                  placeholderTextColor={colors.t3}
+                  value={generalEmail}
+                  onChangeText={v => { setGeneralEmail(v); setGeneralError(''); }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  editable={!generalLoading}
+                  returnKeyType="go"
+                  onSubmitEditing={handleGeneralSubmit}
+                />
+                {generalError ? <Text style={s.errorText}>{generalError}</Text> : null}
+              </View>
+              <TouchableOpacity
+                style={[s.button, generalActive ? s.buttonActive : s.buttonDisabled]}
+                onPress={handleGeneralSubmit}
+                disabled={!generalActive}
+                activeOpacity={0.9}
+              >
+                {generalLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={s.buttonText}>Continue</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </FadeInView>
 
         {/* Divider */}
@@ -153,40 +210,77 @@ export default function ChoosePathScreen() {
           </View>
         </FadeInView>
 
-        {/* Section 2: Student (.edu) */}
+        {/* Secondary section (shows second) */}
         <FadeInView delay={200}>
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>College student? Use your .edu email</Text>
-            <View style={s.inputWrapper}>
-              <TextInput
-                style={[s.input, studentEmail.length > 0 && s.inputActive]}
-                placeholder="you@school.edu"
-                placeholderTextColor={colors.t3}
-                value={studentEmail}
-                onChangeText={v => { setStudentEmail(v); setStudentError(''); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                editable={!studentLoading}
-                returnKeyType="go"
-                onSubmitEditing={handleStudentSubmit}
-              />
-              {studentError ? <Text style={s.errorText}>{studentError}</Text> : null}
+          {showStudentFirst ? (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>Not a student? Use any email</Text>
+              <View style={s.inputWrapper}>
+                <TextInput
+                  ref={generalInputRef}
+                  style={[s.input, generalEmail.length > 0 && s.inputActive]}
+                  placeholder="you@email.com"
+                  placeholderTextColor={colors.t3}
+                  value={generalEmail}
+                  onChangeText={v => { setGeneralEmail(v); setGeneralError(''); }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  editable={!generalLoading}
+                  returnKeyType="go"
+                  onSubmitEditing={handleGeneralSubmit}
+                />
+                {generalError ? <Text style={s.errorText}>{generalError}</Text> : null}
+              </View>
+              <TouchableOpacity
+                style={[s.button, generalActive ? s.buttonActive : s.buttonDisabled]}
+                onPress={handleGeneralSubmit}
+                disabled={!generalActive}
+                activeOpacity={0.9}
+              >
+                {generalLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={s.buttonText}>Continue</Text>
+                )}
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[s.button, studentActive ? s.buttonActive : s.buttonDisabled]}
-              onPress={handleStudentSubmit}
-              disabled={!studentActive}
-              activeOpacity={0.9}
-            >
-              {studentLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={s.buttonText}>Continue</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          ) : (
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>College student? Use your .edu email</Text>
+              <View style={s.inputWrapper}>
+                <TextInput
+                  ref={eduInputRef}
+                  style={[s.input, studentEmail.length > 0 && s.inputActive]}
+                  placeholder="you@school.edu"
+                  placeholderTextColor={colors.t3}
+                  value={studentEmail}
+                  onChangeText={v => { setStudentEmail(v); setStudentError(''); }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  editable={!studentLoading}
+                  returnKeyType="go"
+                  onSubmitEditing={handleStudentSubmit}
+                />
+                {studentError ? <Text style={s.errorText}>{studentError}</Text> : null}
+              </View>
+              <TouchableOpacity
+                style={[s.button, studentActive ? s.buttonActive : s.buttonDisabled]}
+                onPress={handleStudentSubmit}
+                disabled={!studentActive}
+                activeOpacity={0.9}
+              >
+                {studentLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={s.buttonText}>Continue</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
         </FadeInView>
 
         {/* Footer */}

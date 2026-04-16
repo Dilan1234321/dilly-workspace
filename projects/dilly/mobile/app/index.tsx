@@ -16,8 +16,10 @@ export default function Index() {
         return;
       }
 
-      // Always go to choose-path when not logged in
-      router.replace('/onboarding/choose-path');
+      // Situation first — the user picks who they are, then we route
+      // them to the right email input (.edu for students, regular for
+      // everyone else). This is the very first thing anyone sees.
+      router.replace('/onboarding/choose-situation');
     }
     checkAuth();
   }, []);

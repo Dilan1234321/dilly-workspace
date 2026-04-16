@@ -131,12 +131,29 @@ export default function VerifyScreen() {
               }
             }
           } catch {}
-          // New user, go to profile setup. Non-student users take a
-          // quick 'which best fits?' path screen first so Dilly can tune
-          // the entire app (tone, resume shape, filters) to who they are.
-          // .edu users skip this — they get the standard student flow.
+          // The user already picked their situation on the very first
+          // screen (choose-situation). Read the pending path from
+          // AsyncStorage and save it to their freshly-authenticated
+          // profile now.
+          try {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            const pendingPath = await AsyncStorage.getItem('dilly_pending_user_path');
+            const pendingPlan = await AsyncStorage.getItem('dilly_pending_plan');
+            if (pendingPath) {
+              const patch: Record<string, string> = { user_path: pendingPath };
+              if (pendingPlan) patch.plan = pendingPlan;
+              await dilly.fetch('/profile', {
+                method: 'PATCH',
+                body: JSON.stringify(patch),
+              }).catch(() => {});
+              await AsyncStorage.removeItem('dilly_pending_user_path');
+              await AsyncStorage.removeItem('dilly_pending_plan');
+            }
+          } catch {}
+
+          // Route to the right profile setup based on email type
           if (userType === 'general' || userType === 'professional') {
-            router.replace('/onboarding/choose-situation');
+            router.replace('/onboarding/profile-pro');
           } else {
             router.replace('/onboarding/profile');
           }

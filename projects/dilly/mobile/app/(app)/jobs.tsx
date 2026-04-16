@@ -405,7 +405,7 @@ export default function JobsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<Tab>('all');
+  const [tabs, setTabs] = useState<Set<Tab>>(new Set(['all']));
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [userCities, setUserCities] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -434,7 +434,9 @@ export default function JobsScreen() {
       const ndParam = noDegreeFilter ? '&no_degree=true' : '';
       const [profileRes, feedRes, resumesRes, collectionsRes, usageRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
-        dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank${ndParam}`).catch(() => null),
+        // When multiple types are selected, fetch all and filter client-side.
+        // When only one non-'all' type is selected, pass it to the server for efficiency.
+        dilly.get(`/v2/internships/feed?tab=${tabs.has('all') || tabs.size > 1 ? 'all' : [...tabs][0] || 'all'}&limit=50&sort=rank${ndParam}`).catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
         dilly.get('/collections').catch(() => null),
         dilly.get('/jobs/fit-narrative/usage').catch(() => null),
@@ -462,7 +464,7 @@ export default function JobsScreen() {
       setListings(feedRes?.listings || []);
     } catch {}
     finally { setLoading(false); }
-  }, [tab, noDegreeFilter]);
+  }, [tabs, noDegreeFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -484,6 +486,14 @@ export default function JobsScreen() {
       );
     }
 
+    // Job type multi-select filter (client-side when we fetched tab=all)
+    if (!tabs.has('all') && tabs.size >= 1) {
+      result = result.filter(l => {
+        const jt = (l.job_type || '').toLowerCase();
+        return tabs.has(jt as Tab);
+      });
+    }
+
     // City filter (multi-select)
     if (selectedCities.length > 0) {
       const cityLower = selectedCities.map(c => c.toLowerCase().trim());
@@ -496,7 +506,7 @@ export default function JobsScreen() {
     }
 
     return result;
-  }, [listings, search, selectedCities]);
+  }, [listings, search, selectedCities, tabs]);
 
   // Check if a job is in any collection
   const savedJobIds = useMemo(() => {
@@ -633,26 +643,8 @@ export default function JobsScreen() {
           <Ionicons name="bookmark" size={18} color={COBALT} />
         </AnimatedPressable>
 
-        {/* Job type pills */}
-        {([
-          { key: 'all', label: 'All' },
-          { key: 'internship', label: 'Internships' },
-          { key: 'entry_level', label: 'Entry Level' },
-          { key: 'full_time', label: 'Full Time' },
-          { key: 'part_time', label: 'Part Time' },
-        ] as { key: Tab; label: string }[]).map(t => (
-          <AnimatedPressable
-            key={t.key}
-            style={[s.filterPill, tab === t.key && s.filterPillActive]}
-            onPress={() => { setTab(t.key); setLoading(true); }}
-            scaleDown={0.95}
-          >
-            <Text style={[s.filterPillText, tab === t.key && s.filterPillTextActive]}>{t.label}</Text>
-          </AnimatedPressable>
-        ))}
-
-        {/* Dropout-only 'No degree required' pill. Filters the feed down
-            to jobs that explicitly welcome candidates without a degree. */}
+        {/* Dropout-only 'No degree required' pill — FIRST, most visible.
+            This is the #1 thing a dropout wants when they open the jobs page. */}
         {userPath === 'dropout' && (
           <AnimatedPressable
             style={[s.filterPill, noDegreeFilter && s.filterPillActive]}
@@ -662,6 +654,48 @@ export default function JobsScreen() {
             <Text style={[s.filterPillText, noDegreeFilter && s.filterPillTextActive]}>No degree required</Text>
           </AnimatedPressable>
         )}
+
+        {/* Job type pills — multi-select. Tapping 'All' clears other
+            selections. Tapping a specific type toggles it; if all specific
+            types are deselected, falls back to 'All'. */}
+        {([
+          { key: 'all', label: 'All' },
+          { key: 'internship', label: 'Internships' },
+          { key: 'entry_level', label: 'Entry Level' },
+          { key: 'full_time', label: 'Full Time' },
+          { key: 'part_time', label: 'Part Time' },
+        ] as { key: Tab; label: string }[]).map(t => {
+          const active = tabs.has(t.key);
+          return (
+            <AnimatedPressable
+              key={t.key}
+              style={[s.filterPill, active && s.filterPillActive]}
+              onPress={() => {
+                setTabs(prev => {
+                  const next = new Set(prev);
+                  if (t.key === 'all') {
+                    // Tapping All clears everything and selects only All
+                    return new Set(['all'] as Tab[]);
+                  }
+                  // Toggle the specific type
+                  next.delete('all');
+                  if (next.has(t.key)) {
+                    next.delete(t.key);
+                  } else {
+                    next.add(t.key);
+                  }
+                  // If nothing left, fall back to All
+                  if (next.size === 0) return new Set(['all'] as Tab[]);
+                  return next;
+                });
+                setLoading(true);
+              }}
+              scaleDown={0.95}
+            >
+              <Text style={[s.filterPillText, active && s.filterPillTextActive]}>{t.label}</Text>
+            </AnimatedPressable>
+          );
+        })}
 
         {/* Divider */}
         {userCities.length > 0 && <View style={{ width: 1, backgroundColor: colors.b1, marginHorizontal: 2 }} />}
