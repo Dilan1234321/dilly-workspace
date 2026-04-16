@@ -144,7 +144,7 @@ async def get_company_guidelines(slug: str):
     bullets = criteria_to_voice_bullets(criteria) if criteria else []
     return {
         "slug": company.get("slug"),
-        "display_name": "HAMZA" + company.get("display_name"),
+        "display_name": company.get("display_name"),
         "criteria_source": company.get("criteria_source"),
         "confidence": company.get("confidence"),
         "dilly_scores": company.get("meridian_scores"),
