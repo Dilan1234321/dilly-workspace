@@ -124,32 +124,85 @@ export default function ResumeGenerateScreen() {
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumePreviewRef = useRef<View>(null);
 
-  async function handleDownload() {
+  // Downloads real text-layer PDF / DOCX from the server (NOT a PNG
+  // screenshot — ATS parsers need real text bytes to extract). We still
+  // need the variant to be saved first, because the download endpoint
+  // pulls from the stored sections row.
+  async function handleDownloadFormat(format: 'pdf' | 'docx') {
     try {
-      let captureRef: any = null;
-      try { captureRef = require('react-native-view-shot').captureRef; } catch {}
-      if (!captureRef || !resumePreviewRef.current) {
-        Alert.alert('Cannot capture', 'Resume capture is not available.');
+      if (!variantId) {
+        Alert.alert(
+          'Saving resume…',
+          'Give it a second and tap Download again. Dilly is saving this version.',
+        );
         return;
       }
-      const uri = await captureRef(resumePreviewRef.current, {
-        format: 'png',
-        quality: 1,
-        result: 'tmpfile',
-      });
-      if (!uri) return;
+      const fileSystemMod: any = require('expo-file-system');
+      const FileSystem = fileSystemMod?.default ?? fileSystemMod;
+
+      const token = await dilly.tokenProvider.getToken();
       const name = (profile.name || 'Resume').replace(/[^a-zA-Z0-9 ]/g, '').trim();
-      const filename = `${name} ${jobTitle} at ${company} Resume.png`;
+      const safeCompany = company.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Company';
+      const filename = `${name}_${safeCompany}_Resume.${format}`;
+      const destPath = (FileSystem?.cacheDirectory || FileSystem?.documentDirectory || '') + filename;
+
+      const url = `${(require('../../lib/tokens') as any).API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
+
+      // Use downloadAsync — handles redirects, auth headers, and writes straight to disk.
+      const res = await FileSystem.downloadAsync(url, destPath, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res?.uri) {
+        throw new Error('Download failed');
+      }
+
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'image/png',
-          UTI: 'public.png',
-          dialogTitle: filename.replace('.png', ''),
+        await Sharing.shareAsync(res.uri, {
+          mimeType: format === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          UTI: format === 'pdf' ? 'com.adobe.pdf' : 'org.openxmlformats.wordprocessingml.document',
+          dialogTitle: filename,
         });
+      } else {
+        Alert.alert('Saved', `Saved to ${res.uri}`);
       }
     } catch (e: any) {
-      Alert.alert('Error', 'Could not download resume.');
+      Alert.alert('Download failed', e?.message || 'Could not download resume.');
     }
+  }
+
+  // Offer the user PDF or DOCX via an iOS action sheet
+  function handleDownload() {
+    // Newer Expo apps have ActionSheetIOS available on iOS for this native feel.
+    if (Platform.OS === 'ios') {
+      try {
+        const { ActionSheetIOS } = require('react-native');
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            title: 'Download resume',
+            message: 'Choose a format. PDF is best for most companies. DOCX is best for older ATS like Taleo or some Workday portals.',
+            options: ['Cancel', 'PDF', 'Word (DOCX)'],
+            cancelButtonIndex: 0,
+          },
+          (idx: number) => {
+            if (idx === 1) handleDownloadFormat('pdf');
+            else if (idx === 2) handleDownloadFormat('docx');
+          },
+        );
+        return;
+      } catch {}
+    }
+    // Fallback: plain Alert picker
+    Alert.alert(
+      'Download resume',
+      'Choose a format',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'PDF', onPress: () => handleDownloadFormat('pdf') },
+        { text: 'Word (DOCX)', onPress: () => handleDownloadFormat('docx') },
+      ],
+    );
   }
 
   const progressAnim = useSharedValue(0);
@@ -297,11 +350,17 @@ export default function ResumeGenerateScreen() {
 
   async function saveVariant(sectionsToSave: GeneratedSection[]) {
     try {
+      // Persist the verification fields alongside the resume so the
+      // download endpoint can render the right per-ATS formatting and
+      // the history view can show the parse score later.
       const res = await dilly.post('/generated-resumes', {
         job_title: jobTitle.trim(),
         company: company.trim(),
         job_description: jd.trim() || undefined,
         sections: sectionsToSave,
+        ats_system: atsInfo?.ats || 'greenhouse',
+        ats_parse_score: atsInfo?.ats_parse_score || 0,
+        keyword_coverage_pct: atsInfo?.keyword_coverage_pct || 0,
       });
       const id = res?.id;
       if (id) setVariantId(id);
@@ -475,6 +534,69 @@ export default function ResumeGenerateScreen() {
                 </View>
               )}
 
+              {/* Verification chips — parse score + keyword coverage + facts used */}
+              {(atsInfo?.ats_parse_score || atsInfo?.keyword_coverage_pct || atsInfo?.facts_used) ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  {typeof atsInfo?.ats_parse_score === 'number' && atsInfo.ats_parse_score > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.s2, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <Ionicons name="scan" size={10} color={colors.t2} />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.t2 }}>
+                        {atsInfo.ats_parse_score}/100 ATS parse
+                      </Text>
+                    </View>
+                  )}
+                  {typeof atsInfo?.keyword_coverage_pct === 'number' && atsInfo.keyword_coverage_pct > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: atsInfo.keyword_coverage_pct >= 70 ? '#F0FFF4' : '#FFFBEB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <Ionicons name="key" size={10} color={atsInfo.keyword_coverage_pct >= 70 ? GREEN : AMBER} />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: atsInfo.keyword_coverage_pct >= 70 ? GREEN : AMBER }}>
+                        {atsInfo.keyword_coverage_pct}% keyword match
+                      </Text>
+                    </View>
+                  )}
+                  {typeof atsInfo?.facts_used === 'number' && atsInfo.facts_used > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.s2, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <Ionicons name="sparkles" size={10} color={colors.t2} />
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.t2 }}>
+                        Built from {atsInfo.facts_used} of your facts
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : null}
+
+              {/* Keyword coverage warning — shown when the JD asks for things
+                  the profile doesn't know about. This is the "you may get
+                  filtered out" banner. Tapping opens Dilly AI with a
+                  concrete starter message. */}
+              {atsInfo?.keyword_warning && Array.isArray(atsInfo.missing_keywords) && atsInfo.missing_keywords.length > 0 && (
+                <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#FDE68A', marginTop: 8, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="warning" size={14} color={AMBER} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: AMBER }}>
+                      Low keyword match ({atsInfo.keyword_coverage_pct}%)
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: colors.t2, lineHeight: 17 }}>
+                    The JD asks for things like{' '}
+                    <Text style={{ fontWeight: '700', color: colors.t1 }}>
+                      {(atsInfo.missing_keywords as string[]).slice(0, 4).join(', ')}
+                    </Text>{' '}
+                    that aren't clearly in your profile. If you actually have experience with these, tell Dilly and we'll weave them in.
+                  </Text>
+                  <AnimatedPressable
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}
+                    onPress={() => openDillyOverlay({
+                      isPaid: true,
+                      initialMessage: `For my ${jobTitle} resume at ${company}, Dilly doesn't have enough about me for: ${(atsInfo.missing_keywords as string[]).slice(0, 5).join(', ')}. Ask me about each one so you can add them to my profile.`,
+                    })}
+                    scaleDown={0.97}
+                  >
+                    <Ionicons name="chatbubble" size={11} color={colors.indigo} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.indigo }}>Tell Dilly about these</Text>
+                  </AnimatedPressable>
+                </View>
+              )}
+
               {/* Gaps warning */}
               {atsInfo?.readiness === 'gaps' && Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
                 <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#FDE68A', marginTop: 8, gap: 6 }}>
@@ -583,18 +705,20 @@ export default function ResumeGenerateScreen() {
           </FadeInView>
         )}
 
-        {/* Not Ready */}
+        {/* Not Ready — Dilly never invents. When the profile is too thin for
+            this role, we surface the gaps and route each gap into a one-tap
+            "Tell Dilly about X" prompt. Fill them in, come back, regenerate. */}
         {stage === 'not_ready' && atsInfo && (
           <FadeInView>
             <View style={[styles.errorCard, { borderColor: colors.ibdr, backgroundColor: colors.idim }]}>
               <Ionicons name="hand-left" size={36} color={colors.indigo} />
-              <Text style={styles.errorTitle}>You're not ready for this one yet.</Text>
+              <Text style={styles.errorTitle}>Tell Dilly more first.</Text>
               <Text style={styles.errorSub}>
-                {atsInfo.summary || 'Your profile does not have enough relevant experience for this role.'}
+                {atsInfo.summary || "Dilly doesn't know enough about you to build an honest resume for this role yet."}
               </Text>
               {Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
                 <View style={{ marginTop: 12, gap: 6, width: '100%' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t1 }}>What you need:</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t1 }}>What Dilly is missing:</Text>
                   {atsInfo.gaps.map((g: string, i: number) => (
                     <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                       <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.indigo, marginTop: 6 }} />
@@ -604,15 +728,47 @@ export default function ResumeGenerateScreen() {
                 </View>
               )}
             </View>
+
+            {/* One-tap "tell Dilly about this" chips — one per specific gap */}
+            {Array.isArray(atsInfo.tell_dilly_prompts) && atsInfo.tell_dilly_prompts.length > 0 && (
+              <View style={{ gap: 8, marginTop: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 0.5, paddingHorizontal: 2 }}>
+                  FASTEST WAY TO FIX
+                </Text>
+                {(atsInfo.tell_dilly_prompts as string[]).slice(0, 5).map((prompt, i) => (
+                  <AnimatedPressable
+                    key={i}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      backgroundColor: colors.s1,
+                      borderWidth: 1,
+                      borderColor: colors.b1,
+                    }}
+                    onPress={() => openDillyOverlay({ isPaid: true, initialMessage: prompt })}
+                    scaleDown={0.98}
+                  >
+                    <Ionicons name="chatbubble" size={14} color={colors.indigo} />
+                    <Text style={{ fontSize: 13, color: colors.t1, flex: 1 }}>{prompt}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                  </AnimatedPressable>
+                ))}
+              </View>
+            )}
+
             <AnimatedPressable
-              style={[styles.actionBtn, styles.actionBtnPrimary]}
+              style={[styles.actionBtn, styles.actionBtnSecondary]}
               onPress={() => openDillyOverlay({
                 isPaid: true,
-                initialMessage: `I tried to generate a resume for ${jobTitle} at ${company} but I'm not ready yet. Help me figure out what I need to do to become competitive for this role.`,
+                initialMessage: `I tried to generate a resume for ${jobTitle} at ${company} but I'm not ready yet. Walk me through each gap one by one so I can tell you about them and build out my profile.`,
               })}
             >
-              <Ionicons name="chatbubble" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Ask Dilly for help</Text>
+              <Ionicons name="chatbubble" size={16} color={INDIGO} />
+              <Text style={[styles.actionBtnText, { color: INDIGO }]}>Talk it through with Dilly</Text>
             </AnimatedPressable>
             <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
               <Ionicons name="refresh" size={18} color={INDIGO} />
