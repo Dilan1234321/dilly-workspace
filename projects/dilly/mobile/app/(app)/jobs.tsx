@@ -417,6 +417,10 @@ export default function JobsScreen() {
   const [newCollectionName, setNewCollectionName] = useState('');
   // Fit-narrative usage ticker (X / Y this month). null while loading.
   const [narrativeUsage, setNarrativeUsage] = useState<{ used: number; limit: number; plan: string; unlimited: boolean } | null>(null);
+  // User's chosen onboarding path — drives which extra filters show
+  // (e.g. 'No degree required' appears only for dropouts).
+  const [userPath, setUserPath] = useState<string>('');
+  const [noDegreeFilter, setNoDegreeFilter] = useState<boolean>(false);
 
   const handleNarrativeLoaded = useCallback((jobId: string, data: FitNarrativeData) => {
     setNarrativeCache(prev => ({ ...prev, [jobId]: data }));
@@ -424,9 +428,13 @@ export default function JobsScreen() {
 
   const fetchData = useCallback(async () => {
     try {
+      // When the 'no degree' filter pill is active (dropouts only), pass
+      // no_degree=true to the feed so the server filters to jobs that
+      // welcome candidates without a degree.
+      const ndParam = noDegreeFilter ? '&no_degree=true' : '';
       const [profileRes, feedRes, resumesRes, collectionsRes, usageRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
-        dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank`).catch(() => null),
+        dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank${ndParam}`).catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
         dilly.get('/collections').catch(() => null),
         dilly.get('/jobs/fit-narrative/usage').catch(() => null),
@@ -447,10 +455,14 @@ export default function JobsScreen() {
       setUserCities(cities);
       setSelectedCities(cities);
 
+      // Save the user's onboarding path so we can conditionally render
+      // path-specific filters (like "No degree required" for dropouts).
+      setUserPath(((profileRes as any)?.user_path || '').toString().toLowerCase());
+
       setListings(feedRes?.listings || []);
     } catch {}
     finally { setLoading(false); }
-  }, [tab]);
+  }, [tab, noDegreeFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -638,6 +650,18 @@ export default function JobsScreen() {
             <Text style={[s.filterPillText, tab === t.key && s.filterPillTextActive]}>{t.label}</Text>
           </AnimatedPressable>
         ))}
+
+        {/* Dropout-only 'No degree required' pill. Filters the feed down
+            to jobs that explicitly welcome candidates without a degree. */}
+        {userPath === 'dropout' && (
+          <AnimatedPressable
+            style={[s.filterPill, noDegreeFilter && s.filterPillActive]}
+            onPress={() => { setNoDegreeFilter(v => !v); setLoading(true); }}
+            scaleDown={0.95}
+          >
+            <Text style={[s.filterPillText, noDegreeFilter && s.filterPillTextActive]}>No degree required</Text>
+          </AnimatedPressable>
+        )}
 
         {/* Divider */}
         {userCities.length > 0 && <View style={{ width: 1, backgroundColor: colors.b1, marginHorizontal: 2 }} />}

@@ -2859,7 +2859,254 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
     if cohort == "Tech" and is_finance_company:
         finance_note = f"\nNOTE: {job_company} is a finance/banking firm. Even though this is a tech role, include GPA if ≥3.5, use a slightly more formal tone, and highlight any finance-domain knowledge."
 
+    # ── Path-specific resume template ──────────────────────────────────
+    # The resume's shape changes based on who the user is. A college
+    # dropout doesn't have a GPA or a graduation year — and including them
+    # would leave blanks that signal "no degree" to a recruiter. A 20-year
+    # senior's resume runs two pages and leads with Experience, not school.
+    # A career-switcher's Skills section needs to bridge their old field
+    # to their new one. These are NOT cohort decisions (tech/finance/
+    # healthcare) — they're path decisions that sit on top of cohort.
+    _user_path = ""
+    _field_focus = ""
+    try:
+        _profile_for_path = get_profile(email) or {}
+        _user_path = (_profile_for_path.get("user_path") or "").strip().lower()
+        _career_fields = _profile_for_path.get("career_fields") or []
+        if _career_fields:
+            _field_focus = str(_career_fields[0])
+    except Exception:
+        pass
+
+    # Field-specific tailoring for EVERYONE: whoever they are, the resume
+    # leans into the field they've picked (Data Science, Product, etc.)
+    _field_tailor_block = (
+        f"FIELD FOCUS: {_field_focus}. Tailor every bullet's language, skill "
+        f"ordering, and terminology to how recruiters in {_field_focus} read "
+        f"resumes. Use the vocabulary of that field. Lead with the metrics "
+        f"and accomplishments that that field cares about."
+        if _field_focus else
+        "FIELD FOCUS: (not set). Fall back to the job title + JD to pick the "
+        "vocabulary and framing."
+    )
+
+    _path_block = {
+        "dropout": (
+            "CANDIDATE PROFILE: No college degree. They are BUILDING without "
+            "a degree and that is a feature, not a bug.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- DO NOT include an Education section with a university name. If "
+            "  the profile has no university, omit Education entirely and add "
+            "  a 'Training & Credentials' section that lists bootcamps, "
+            "  online courses, certifications, and self-taught skills.\n"
+            "- DO NOT include GPA, graduation year, school location, or honors.\n"
+            "- Skills section should be front and center with a dense list of "
+            "  tools the candidate has real working experience with.\n"
+            "- Projects section is MANDATORY — self-directed work is their "
+            "  strongest proof of ability. Lead with one killer project if "
+            "  they have one.\n"
+            "- Experience bullets should emphasize outcomes and metrics over "
+            "  credentials. They earned every skill through doing."
+        ),
+        "senior_reset": (
+            "CANDIDATE PROFILE: Senior professional, 10+ years of experience, "
+            "currently between roles.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- TWO PAGES OK. Do not cram into one page. Seniors need room to "
+            "  show depth.\n"
+            "- Lead with Work Experience section, reverse-chronological. Not "
+            "  Education. Not Skills. Experience first.\n"
+            "- GPA: OMIT. Graduation year: OMIT unless within the last 10 "
+            "  years. Age signaling is real and this candidate has enough "
+            "  other signals without it.\n"
+            "- Every recent role should have 5-7 bullets showing scope, "
+            "  scale, and outcomes. Team size led, budget managed, revenue "
+            "  delivered, systems built.\n"
+            "- Include a LEADERSHIP & IMPACT section if the profile has "
+            "  management experience that doesn't fit cleanly under a "
+            "  specific role.\n"
+            "- Optional sections to include if data supports them: "
+            "  Publications, Patents, Board Memberships, Speaking "
+            "  Engagements. Credibility markers.\n"
+            "- No Projects section unless they're relevant to the target "
+            "  role (most seniors don't need one).\n"
+            "- Skills section is a dense cluster of tools, methodologies, "
+            "  and domain expertise. Not a list of buzzwords."
+        ),
+        "career_switch": (
+            "CANDIDATE PROFILE: Switching careers. Real work experience in "
+            "ONE field, pivoting into ANOTHER.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- Open with a TRANSFERABLE SKILLS section at the top (under "
+            "  contact) that bridges their old field to the new one. Pick "
+            "  3-5 cross-applicable strengths with proof bullets.\n"
+            "- Work Experience reverse-chronological, but every bullet "
+            "  should be rewritten to emphasize what's relevant to the "
+            "  target field. Drop context that's irrelevant to where they "
+            "  are going.\n"
+            "- Projects section if they have any self-initiated work in "
+            "  the new field — this is critical proof that the pivot is "
+            "  real, not theoretical.\n"
+            "- Skills section should front-load new-field tools they've "
+            "  picked up, with old-field skills listed only if relevant.\n"
+            "- GPA and graduation year: OMIT unless highly relevant."
+        ),
+        "veteran": (
+            "CANDIDATE PROFILE: Military veteran transitioning to civilian work.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- TRANSLATE every military term into civilian language. 'Squad "
+            "  leader' -> 'managed team of 10.' 'E-5 Sergeant' -> 'mid-level "
+            "  leadership role.' 'Operated under combat conditions' -> 'made "
+            "  high-stakes decisions under extreme pressure.' Rank names and "
+            "  MOS codes should not appear in bullets.\n"
+            "- Lead with Experience, reverse-chronological. Include branch "
+            "  and years of service as a credibility marker only.\n"
+            "- Skills section should emphasize the civilian-translated "
+            "  skills: leadership, logistics, project management, budget "
+            "  management, technical specialty.\n"
+            "- Security clearance: include it prominently (Top Secret, "
+            "  Secret, etc.) because it's a huge hiring advantage in many "
+            "  sectors.\n"
+            "- GI Bill education: include as Education if applicable."
+        ),
+        "parent_returning": (
+            "CANDIDATE PROFILE: Returning to work after a multi-year break "
+            "raising children.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- Address the gap directly but positively. Include a one-line "
+            "  'Family Leadership, YYYY–YYYY' entry in the Experience "
+            "  section if they want (user's call — default YES if they "
+            "  don't specify). This stops ATSes from thinking the gap is "
+            "  unexplained.\n"
+            "- Lead with a SUMMARY section (3 lines) that states years of "
+            "  prior experience and the role they're targeting. This "
+            "  anchors the recruiter before they hit the gap.\n"
+            "- Work Experience reverse-chronological. Pre-gap roles stay "
+            "  with full detail — those skills haven't expired.\n"
+            "- Include recent freelance, volunteer, board, PTA leadership, "
+            "  or certifications earned during the break. All real work.\n"
+            "- GPA: OMIT (too far back). Graduation year: OPTIONAL.\n"
+            "- Skills section should front-load the target field's tools, "
+            "  including any they've kept current during the gap."
+        ),
+        "formerly_incarcerated": (
+            "CANDIDATE PROFILE: Returning citizen re-entering the workforce.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- DO NOT mention incarceration, conviction, release date, or "
+            "  anything that could trigger bias. The resume is to get them "
+            "  to the interview; disclosure is for the interview stage.\n"
+            "- Dates: use YEAR-ONLY format (2020, not 2020-03-15). Year-"
+            "  only dates are standard and don't draw attention to gaps.\n"
+            "- Education: include any programs completed inside (GED, "
+            "  vocational, certifications, degrees via prison-college) "
+            "  WITHOUT the prison context. These are real credentials.\n"
+            "- Work experience: include any jobs done during or after "
+            "  incarceration (work release, halfway house jobs, post-"
+            "  release employment). Frame as normal employment.\n"
+            "- Emphasize skills built and certifications earned. Focus on "
+            "  what they CAN do, not timeline gaps.\n"
+            "- Projects or volunteer work: include. Big signal of initiative."
+        ),
+        "international_grad": (
+            "CANDIDATE PROFILE: International student or recent grad on "
+            "F-1 / OPT visa, targeting US employment.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- US CONVENTIONS: no photo, one page for early career (two "
+            "  if they have 5+ years), reverse-chronological, no marital "
+            "  status, no date of birth, no nationality. Many international "
+            "  candidates have photo/bio resumes from home — strip those.\n"
+            "- Include citizenship/work authorization line only if it helps. "
+            "  'Work authorization: F-1 OPT through MM/YYYY, eligible for "
+            "  H-1B sponsorship' signals clearly to recruiters who sponsor.\n"
+            "- Keep Education section (recent grad) but US format: school "
+            "  name, degree, major, graduation month/year.\n"
+            "- Skills section is critical — international grads often have "
+            "  strong technical skills that their resume buries. Surface "
+            "  every tool, language, framework with recent project evidence.\n"
+            "- Bullets: quantify aggressively. Numbers translate across "
+            "  cultures; soft descriptions don't."
+        ),
+        "neurodivergent": (
+            "CANDIDATE PROFILE: Neurodivergent candidate (ADHD, autism, "
+            "dyslexia, etc.).\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- Lead with a concise SKILLS section: clusters of concrete "
+            "  tools and systems. No fluff adjectives. No 'passionate.'\n"
+            "- Experience bullets: direct, literal, specific. 'Built X '\n"
+            "  'that did Y, measured by Z.' No metaphors, no jargon the "
+            "  candidate isn't comfortable defending in an interview.\n"
+            "- Emphasize depth and systems thinking. Pattern recognition, "
+            "  technical accuracy, attention to detail — these are "
+            "  neurodivergent strengths.\n"
+            "- Projects section valuable — long-deep-focus work is where "
+            "  many neurodivergent candidates shine.\n"
+            "- Tone: crisp, factual, zero performative. Every bullet "
+            "  should be something the candidate can speak about confidently."
+        ),
+        "first_gen_college": (
+            "CANDIDATE PROFILE: First in their family to attend college.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- Treat like a strong student resume with extra emphasis on "
+            "  the work-to-pay-tuition angle. Part-time jobs held during "
+            "  college belong in the main Experience section, not buried.\n"
+            "- Include any scholarships, awards, or first-gen programs "
+            "  participated in — these are hard-won markers.\n"
+            "- Emphasize WORK experience alongside school projects. Many "
+            "  first-gen students have more real work experience than "
+            "  traditional peers; it should be front and center.\n"
+            "- Skills section prominent.\n"
+            "- Standard student resume otherwise (Education near top, "
+            "  GPA if strong, one page)."
+        ),
+        "disabled_professional": (
+            "CANDIDATE PROFILE: Professional with a disability.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- DO NOT mention the disability on the resume. Disclosure is "
+            "  the candidate's choice and belongs later in the process.\n"
+            "- Standard resume format matching their experience level.\n"
+            "- If they have experience with disability-inclusion work, "
+            "  advocacy, or accommodation design, include it as a real "
+            "  professional accomplishment (with their consent)."
+        ),
+        "trades_to_white_collar": (
+            "CANDIDATE PROFILE: Skilled trade worker pivoting into an "
+            "office, tech, or management role.\n"
+            "RESUME SHAPE CHANGES:\n"
+            "- TRANSLATE trade work into professional language: 'read "
+            "  blueprints' -> 'interpreted technical specifications,' "
+            "  'trained apprentices' -> 'onboarded and mentored junior "
+            "  team members,' 'maintained safety record' -> 'managed "
+            "  compliance in a regulated environment.'\n"
+            "- Open with a SUMMARY that names years of hands-on experience "
+            "  plus the specific white-collar role being pivoted to.\n"
+            "- Work Experience reverse-chronological. Keep trade company "
+            "  names; they're real businesses.\n"
+            "- Skills section: translated skills (project management, "
+            "  customer service, safety compliance, team leadership, "
+            "  technical reading) front, trade-specific tools in "
+            "  Technical Skills sub-section below.\n"
+            "- Certifications section (OSHA, licenses, apprenticeship "
+            "  completion) — these are credentials and belong up top.\n"
+            "- GPA / school year: OMIT unless they have recent coursework "
+            "  relevant to the target role."
+        ),
+        "exploring": (
+            "CANDIDATE PROFILE: Exploring, figuring out direction. Still "
+            "building signal.\n"
+            "Use standard template conventions. Include what they have, "
+            "present it honestly, skip anything speculative."
+        ),
+    }.get(_user_path, (
+        "CANDIDATE PROFILE: Student / early career. Use standard student "
+        "resume conventions: Education section near the top with GPA "
+        "(if ≥3.5), one page, Projects required, Skills prominent."
+    ))
+
     system_prompt = f"""You are Dilly's resume generation AI. Your single job is to turn a student's verified profile into a tailored resume that (a) is 100% true to the profile and (b) passes the target company's ATS.
+
+{_path_block}
+
+{_field_tailor_block}
 
 TARGET JOB:
   Title: {job_title}
@@ -2931,6 +3178,11 @@ CORE DOCTRINE — VIOLATING ANY OF THESE IS A FAILURE:
 7. PRESERVE SCHEMA. Same keys, same section types, same JSON shape as
    the input. The downstream PDF generator depends on it.
 
+8. NEVER USE EM DASHES. Do not use any em-dash glyph. Use commas, periods,
+   or plain hyphens only. Apparently trivial but it's a Dilly brand rule:
+   em dashes are a tell of AI-generated writing and the resume must not
+   look AI-written. This applies to every string in the output.
+
 ═══════════════════════════════════════════════════════════════════════
 ATS FORMATTING (specific to this company's parser):
 
@@ -2971,6 +3223,17 @@ Include only sections that have content. Do not include markdown, explanations, 
         if j_start == -1:
             raise ValueError("No JSON array in response")
         sections = json.loads(raw[j_start:j_end])
+        # Post-gen em-dash strip — brand rule, applied defensively even
+        # if the model forgot.
+        def _strip_em(v):
+            if isinstance(v, str):
+                return v.replace("\u2014", ", ").replace("\u2013", "-")
+            if isinstance(v, list):
+                return [_strip_em(x) for x in v]
+            if isinstance(v, dict):
+                return {k: _strip_em(val) for k, val in v.items()}
+            return v
+        sections = _strip_em(sections)
     except HTTPException:
         raise
     except Exception as e:

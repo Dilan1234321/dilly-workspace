@@ -286,6 +286,7 @@ def _fallback_feed(
     cohort_filter: Optional[str],
     sort: str, limit: int, offset: int,
     s_cohort_scores: dict | None = None,
+    no_degree: Optional[bool] = None,
 ):
     """Serve the feed using on-the-fly scoring (no match_scores rows needed)."""
     where = ["i.status = 'active'", "i.description IS NOT NULL", "length(i.description) > 100"]
@@ -317,6 +318,23 @@ def _fallback_feed(
     if cohort_filter:
         where.append("i.cohort_requirements::text ILIKE %s")
         params.append(f"%{cohort_filter}%")
+
+    # no_degree heuristic filter (same logic as the precomputed path).
+    if no_degree:
+        where.append("""(
+            i.description ILIKE '%no degree required%'
+            OR i.description ILIKE '%or equivalent experience%'
+            OR i.description ILIKE '%without a degree%'
+            OR i.description ILIKE '%degree preferred, not required%'
+            OR i.description ILIKE '%self-taught%'
+            OR i.description ILIKE '%equivalent work experience%'
+        ) AND NOT (
+            i.description ILIKE '%bachelor''s degree required%'
+            OR i.description ILIKE '%bachelor''s required%'
+            OR i.description ILIKE '%master''s degree required%'
+            OR i.description ILIKE '%master''s required%'
+            OR i.description ILIKE '%phd required%'
+        )""")
 
     where_sql = " AND ".join(where)
 
@@ -464,6 +482,7 @@ async def get_internship_feed(
     sort: str = Query("rank"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    no_degree: Optional[bool] = Query(None, description="If true, only return jobs that do not require a degree."),
 ):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
@@ -543,6 +562,7 @@ async def get_internship_feed(
             tab, readiness, company, search_term, cohort,
             sort, limit, offset,
             s_cohort_scores=s_cohort_scores,
+            no_degree=no_degree,
         )
         conn.close()
         return {**result, "tab": tab,
@@ -590,6 +610,29 @@ async def get_internship_feed(
     if cohort:
         where.append("m.cohort_readiness::text ILIKE %s")
         params.append(f"%{cohort}%")
+
+    # "no_degree" heuristic filter: prefer jobs that explicitly welcome
+    # candidates without a degree. We don't have a reliable structured
+    # column for this, so we text-match the description: positive keywords
+    # (equivalent experience, no degree required, self-taught ok) must
+    # appear AND standard-degree-required phrasing must NOT appear.
+    # This is intentionally a strict filter so a dropout sees high-quality
+    # no-degree-required jobs, not everything-with-a-maybe.
+    if no_degree:
+        where.append("""(
+            i.description ILIKE '%no degree required%'
+            OR i.description ILIKE '%or equivalent experience%'
+            OR i.description ILIKE '%without a degree%'
+            OR i.description ILIKE '%degree preferred, not required%'
+            OR i.description ILIKE '%self-taught%'
+            OR i.description ILIKE '%equivalent work experience%'
+        ) AND NOT (
+            i.description ILIKE '%bachelor''s degree required%'
+            OR i.description ILIKE '%bachelor''s required%'
+            OR i.description ILIKE '%master''s degree required%'
+            OR i.description ILIKE '%master''s required%'
+            OR i.description ILIKE '%phd required%'
+        )""")
 
     where_sql = " AND ".join(where)
     order = "m.rank_score DESC"

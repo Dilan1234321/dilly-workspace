@@ -131,8 +131,15 @@ export default function VerifyScreen() {
               }
             }
           } catch {}
-          // New user, go to profile setup
-          router.replace(userType === 'general' || userType === 'professional' ? '/onboarding/profile-pro' : '/onboarding/profile');
+          // New user, go to profile setup. Non-student users take a
+          // quick 'which best fits?' path screen first so Dilly can tune
+          // the entire app (tone, resume shape, filters) to who they are.
+          // .edu users skip this — they get the standard student flow.
+          if (userType === 'general' || userType === 'professional') {
+            router.replace('/onboarding/choose-situation');
+          } else {
+            router.replace('/onboarding/profile');
+          }
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Something went wrong.';
