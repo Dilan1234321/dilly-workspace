@@ -101,6 +101,26 @@ export default function ResumeGenerateScreen() {
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [atsInfo, setAtsInfo] = useState<any>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  // Resume generation usage ticker for the header
+  const [resumeUsage, setResumeUsage] = useState<{ used: number; limit: number; plan: string; unlimited: boolean } | null>(null);
+
+  // Fetch usage on mount + after each generation
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = await dilly.get('/resume/generate/usage');
+        if (cancelled || !u) return;
+        setResumeUsage({
+          used: Number((u as any).used) || 0,
+          limit: Number((u as any).limit) || 0,
+          plan: String((u as any).plan || 'starter'),
+          unlimited: !!(u as any).unlimited,
+        });
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [stage]);
   const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const resumePreviewRef = useRef<View>(null);
 
@@ -213,6 +233,24 @@ export default function ResumeGenerateScreen() {
       }
 
       if (!res.ok) {
+        // Plan gate: surface upgrade path instead of generic error
+        if (res.status === 402) {
+          const d = await res.json().catch(() => null);
+          const code = d?.detail?.code || d?.code;
+          const msg = d?.detail?.message || d?.message || 'Monthly resume limit reached.';
+          const requiredPlan = d?.detail?.required_plan || d?.required_plan || 'dilly';
+          if (stepTimer.current) { clearInterval(stepTimer.current); stepTimer.current = null; }
+          setStage('idle');
+          Alert.alert(
+            code === 'PLAN_LIMIT_REACHED' ? 'Monthly limit reached' : 'Upgrade to generate',
+            msg,
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: requiredPlan === 'pro' ? 'Upgrade to Pro' : 'Upgrade to Dilly', onPress: () => router.push('/(app)/settings') },
+            ],
+          );
+          return;
+        }
         throw new Error(`Server error ${res.status}`);
       }
 
@@ -291,7 +329,24 @@ export default function ResumeGenerateScreen() {
           <Ionicons name="chevron-back" size={22} color={colors.t1} />
         </AnimatedPressable>
         <Text style={styles.headerTitle}>Generate Resume</Text>
-        <View style={{ width: 36 }} />
+        {resumeUsage && !resumeUsage.unlimited ? (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+            backgroundColor: (resumeUsage.limit - resumeUsage.used) <= 1 ? '#FEF3C7' : colors.s2,
+            minWidth: 36, justifyContent: 'center',
+          }}>
+            <Text style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: (resumeUsage.limit - resumeUsage.used) <= 1 ? '#92400E' : colors.t2,
+            }}>
+              {Math.max(0, resumeUsage.limit - resumeUsage.used)} left
+            </Text>
+          </View>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
       <ScrollView

@@ -457,9 +457,64 @@ export default function AIArenaScreen() {
           <Text style={a.toolsSectionHeader}>AI TOOLS</Text>
         </FadeInView>
 
+        {shield && shield.tools_unlocked === false ? (
+          /* Free tier — show locked-tools message + "come back" copy */
+          <FadeInView delay={460}>
+            <View style={{
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: '#33415588',
+              backgroundColor: '#11182780',
+              padding: 18,
+              gap: 10,
+              marginBottom: 12,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="lock-closed" size={16} color={ACCENT} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#F8FAFC', letterSpacing: 0.5 }}>
+                  AI TOOLS LOCKED
+                </Text>
+              </View>
+              <Text style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 19 }}>
+                Threat Scanner, Replace Me, and Career Sim are part of Dilly. Your shield score is free — {shield.next_refresh ? `come back ${shield.next_refresh.toLowerCase()} for an updated score.` : 'check back next month for an updated score.'}
+              </Text>
+              <AnimatedPressable
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, paddingVertical: 11, borderRadius: 10, backgroundColor: ACCENT,
+                  marginTop: 4,
+                }}
+                onPress={() => router.push('/(app)/settings')}
+                scaleDown={0.97}
+              >
+                <Ionicons name="sparkles" size={14} color="#0B1426" />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#0B1426' }}>Unlock with Dilly</Text>
+              </AnimatedPressable>
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* Dilly tier — gentle "refreshes Monday" copy above the tools */}
+        {shield && shield.tools_unlocked === true && shield.next_refresh ? (
+          <FadeInView delay={460}>
+            <Text style={{
+              fontSize: 11, color: '#94A3B8', textAlign: 'center', marginBottom: 12, letterSpacing: 0.3,
+            }}>
+              {shield.next_refresh}
+            </Text>
+          </FadeInView>
+        ) : null}
+
         {/* 1. Threat Scanner */}
         <FadeInView delay={460}>
-          <ToolRow icon="scan" title="Threat Scanner" sub="See which bullets AI can replace" color={ACCENT} onPress={() => toggleFeature('scan')} active={activeFeature === 'scan'} />
+          <ToolRow
+            icon="scan"
+            title="Threat Scanner"
+            sub={shield?.tools_unlocked === false ? "Locked — upgrade to scan" : "See which bullets AI can replace"}
+            color={ACCENT}
+            onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('scan'); }}
+            active={activeFeature === 'scan'}
+          />
         </FadeInView>
 
         {activeFeature === 'scan' && (
@@ -519,7 +574,14 @@ export default function AIArenaScreen() {
 
         {/* 2. Replace Me */}
         <FadeInView delay={480}>
-          <ToolRow icon="swap-horizontal" title="Replace Me" sub="Can AI do what you do?" color={AMBER} onPress={() => toggleFeature('replace')} active={activeFeature === 'replace'} />
+          <ToolRow
+            icon="swap-horizontal"
+            title="Replace Me"
+            sub={shield?.tools_unlocked === false ? "Locked — upgrade to test" : "Can AI do what you do?"}
+            color={AMBER}
+            onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('replace'); }}
+            active={activeFeature === 'replace'}
+          />
         </FadeInView>
 
         {activeFeature === 'replace' && (
@@ -570,7 +632,14 @@ export default function AIArenaScreen() {
 
         {/* 3. Career Sim */}
         <FadeInView delay={500}>
-          <ToolRow icon="rocket" title="Career Sim" sub="See how AI reshapes your career over 5 years" color={AMBER} onPress={() => toggleFeature('simulate')} active={activeFeature === 'simulate'} />
+          <ToolRow
+            icon="rocket"
+            title="Career Sim"
+            sub={shield?.tools_unlocked === false ? "Locked — upgrade to simulate" : "See how AI reshapes your career over 5 years"}
+            color={AMBER}
+            onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('simulate'); }}
+            active={activeFeature === 'simulate'}
+          />
         </FadeInView>
 
         {activeFeature === 'simulate' && (

@@ -415,6 +415,8 @@ export default function JobsScreen() {
   const [showCollections, setShowCollections] = useState(false);
   const [showCollectionPicker, setShowCollectionPicker] = useState<Listing | null>(null);
   const [newCollectionName, setNewCollectionName] = useState('');
+  // Fit-narrative usage ticker (X / Y this month). null while loading.
+  const [narrativeUsage, setNarrativeUsage] = useState<{ used: number; limit: number; plan: string; unlimited: boolean } | null>(null);
 
   const handleNarrativeLoaded = useCallback((jobId: string, data: FitNarrativeData) => {
     setNarrativeCache(prev => ({ ...prev, [jobId]: data }));
@@ -422,14 +424,23 @@ export default function JobsScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [profileRes, feedRes, resumesRes, collectionsRes] = await Promise.all([
+      const [profileRes, feedRes, resumesRes, collectionsRes, usageRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
         dilly.get(`/v2/internships/feed?tab=${tab}&limit=50&sort=rank`).catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
         dilly.get('/collections').catch(() => null),
+        dilly.get('/jobs/fit-narrative/usage').catch(() => null),
       ]);
       setTailoredResumes(Array.isArray(resumesRes) ? resumesRes : resumesRes?.resumes || []);
       setCollections(collectionsRes?.collections || []);
+      if (usageRes && typeof usageRes === 'object') {
+        setNarrativeUsage({
+          used: Number((usageRes as any).used) || 0,
+          limit: Number((usageRes as any).limit) || 0,
+          plan: String((usageRes as any).plan || 'starter'),
+          unlimited: !!(usageRes as any).unlimited,
+        });
+      }
 
       // Load user's preferred cities for location filtering
       const cities: string[] = profileRes?.job_locations || [];
@@ -556,7 +567,29 @@ export default function JobsScreen() {
     <View style={[s.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>Your Matches</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <Text style={s.headerTitle}>Your Matches</Text>
+          {narrativeUsage && !narrativeUsage.unlimited && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+              backgroundColor: (narrativeUsage.limit - narrativeUsage.used) <= 3 ? '#FEF3C7' : colors.s2,
+            }}>
+              <Ionicons
+                name="sparkles"
+                size={11}
+                color={(narrativeUsage.limit - narrativeUsage.used) <= 3 ? '#92400E' : colors.t3}
+              />
+              <Text style={{
+                fontSize: 11,
+                fontWeight: '700',
+                color: (narrativeUsage.limit - narrativeUsage.used) <= 3 ? '#92400E' : colors.t2,
+              }}>
+                {Math.max(0, narrativeUsage.limit - narrativeUsage.used)} fits left
+              </Text>
+            </View>
+          )}
+        </View>
         <Text style={s.headerSub}>Matched to your profile. Tap to see your fit.</Text>
       </View>
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform,
-  LayoutAnimation, UIManager,
+  LayoutAnimation, UIManager, Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -240,6 +240,22 @@ export default function InterviewPracticeScreen() {
 
       if (!res.ok) {
         const d = await res.json().catch(() => null);
+        // Plan gates: surface a clear upgrade path instead of a generic error
+        if (res.status === 402) {
+          const code = d?.detail?.code || d?.code;
+          const msg = d?.detail?.message || d?.message || 'Upgrade required.';
+          const requiredPlan = d?.detail?.required_plan || d?.required_plan || 'dilly';
+          setPhase('setup');
+          Alert.alert(
+            code === 'PLAN_LIMIT_REACHED' ? 'Monthly limit reached' : 'Upgrade to use this',
+            msg,
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: requiredPlan === 'pro' ? 'Upgrade to Pro' : 'Upgrade to Dilly', onPress: () => router.push('/(app)/settings') },
+            ],
+          );
+          return;
+        }
         throw new Error(d?.detail || `Server error ${res.status}`);
       }
 
