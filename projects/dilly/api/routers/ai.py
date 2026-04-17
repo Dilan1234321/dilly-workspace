@@ -351,6 +351,25 @@ def _build_rich_system_prompt(r: dict) -> str:
     industry = r.get("industry_target", "")
     target_companies = r.get("target_companies", [])
 
+    # Resolve user path + app mode up front so blocks defined below
+    # can branch on them. Path comes from profile.user_path (set during
+    # onboarding); mode is either the explicit profile.app_mode override
+    # (set from Settings or the holder onboarding path) or derived from
+    # user_path. Keeping this mirror of the logic below was a bug, so
+    # hoisting it to the top of the function.
+    _user_path = (r.get("user_path") or "").strip().lower() or (
+        "student" if r.get("is_student") else "exploring"
+    )
+    _explicit_mode = (r.get("app_mode") or "").strip().lower()
+    if _explicit_mode in ("holder", "seeker", "student"):
+        _app_mode = _explicit_mode
+    elif _user_path == "i_have_a_job":
+        _app_mode = "holder"
+    elif _user_path == "student":
+        _app_mode = "student"
+    else:
+        _app_mode = "seeker"
+
     score_block = ""
     if score is not None:
         score_block = f"CURRENT SCORE: {int(score)}/100\nDimensions: Smart {int(smart)}, Grit {int(grit)}, Build {int(build)}\nCohort bar ({ref_company}): {int(bar)}/100\n"
@@ -365,24 +384,30 @@ def _build_rich_system_prompt(r: dict) -> str:
     else:
         score_block = "NO SCORE YET. Student has not run their first audit.\n"
 
+    # Holders aren't tracking applications — suppress the pipeline and
+    # deadline blocks so the model isn't primed to ask about interview
+    # status or "the next application." For seekers/students we keep
+    # the full context.
     apps_block = ""
-    if total_apps > 0:
-        apps_block = f"APPLICATION PIPELINE: {total_apps} total\nSaved: {apps.get('saved',0)} | Applied: {apps.get('applied',0)} | Interviewing: {apps.get('interviewing',0)} | Offers: {apps.get('offer',0)} | Rejected: {apps.get('rejected',0)}\n"
-        if interviewing: apps_block += f"Currently interviewing at: {', '.join(interviewing)}\n"
-        if silent: apps_block += f"WARNING: No response from {', '.join(silent[:3])} in 2+ weeks.\n"
-    else:
-        apps_block = "APPLICATION PIPELINE: Empty. Student hasn't started tracking applications.\n"
+    if _app_mode != "holder":
+        if total_apps > 0:
+            apps_block = f"APPLICATION PIPELINE: {total_apps} total\nSaved: {apps.get('saved',0)} | Applied: {apps.get('applied',0)} | Interviewing: {apps.get('interviewing',0)} | Offers: {apps.get('offer',0)} | Rejected: {apps.get('rejected',0)}\n"
+            if interviewing: apps_block += f"Currently interviewing at: {', '.join(interviewing)}\n"
+            if silent: apps_block += f"WARNING: No response from {', '.join(silent[:3])} in 2+ weeks.\n"
+        else:
+            apps_block = "APPLICATION PIPELINE: Empty. Student hasn't started tracking applications.\n"
 
     deadline_block = ""
-    if deadlines:
-        dl_lines = []
-        for dl in deadlines[:5]:
-            days = dl["days_until"]
-            urgency = "TODAY" if days == 0 else "TOMORROW" if days == 1 else f"in {days} days"
-            dl_lines.append(f"  - {dl['label']} ({urgency}, {dl['date']})")
-        deadline_block = "UPCOMING DEADLINES:\n" + "\n".join(dl_lines) + "\n"
-    else:
-        deadline_block = "UPCOMING DEADLINES: None scheduled.\n"
+    if _app_mode != "holder":
+        if deadlines:
+            dl_lines = []
+            for dl in deadlines[:5]:
+                days = dl["days_until"]
+                urgency = "TODAY" if days == 0 else "TOMORROW" if days == 1 else f"in {days} days"
+                dl_lines.append(f"  - {dl['label']} ({urgency}, {dl['date']})")
+            deadline_block = "UPCOMING DEADLINES:\n" + "\n".join(dl_lines) + "\n"
+        else:
+            deadline_block = "UPCOMING DEADLINES: None scheduled.\n"
 
     # CAREER TARGETS block — only relevant for seekers and students.
     # Holders don't have "target companies"; they have a company they
@@ -558,25 +583,10 @@ def _build_rich_system_prompt(r: dict) -> str:
 
     # ── Path-specific tone (student / dropout / career-switch / senior / exploring)
     # This adapts Dilly's conversational register to who the user actually is.
-    # A 47-year-old who just got laid off needs a different voice than a
-    # 19-year-old freshman. Same Dilly, different read.
-    _user_path = (r.get("user_path") or "").strip().lower() or (
-        "student" if r.get("is_student") else "exploring"
-    )
-
-    # Mode-aware persona layer. An explicit profile.app_mode overrides
-    # the derived mode (matches mobile lib/appMode.ts). This sits BEFORE
-    # the per-path tone block so the mode framing is dominant and the
-    # path tone adds flavor on top.
-    _explicit_mode = (r.get("app_mode") or "").strip().lower()
-    if _explicit_mode in ("holder", "seeker", "student"):
-        _app_mode = _explicit_mode
-    elif _user_path == "i_have_a_job":
-        _app_mode = "holder"
-    elif _user_path == "student":
-        _app_mode = "student"
-    else:
-        _app_mode = "seeker"
+    # _user_path + _app_mode are resolved at the top of this function so the
+    # earlier blocks (apps_block, deadline_block, target_block) can branch
+    # on them. The per-mode persona block + per-path tone block below layer
+    # on top — mode framing first, path flavor second.
 
     _mode_block = {
         "holder": (
@@ -868,6 +878,69 @@ def _build_rich_system_prompt(r: dict) -> str:
     _today = _dt.utcnow().strftime("%Y-%m-%d")
     _today_human = _dt.utcnow().strftime("%A, %B %d, %Y")
 
+    # Mode-aware surface description. For holders we hide the whole
+    # seeker apparatus (Tracker, Tailor Resume, Interview Practice, fit
+    # narratives, What We Think) because they're not hunting and
+    # mentioning those surfaces makes Dilly sound off-register. For
+    # everyone else, the seeker/student surfaces stay in. Keep the
+    # universal rules (no scores, no audits, no leaderboard) constant.
+    if _app_mode == "holder":
+        _what_dilly_is_block = (
+            "WHAT DILLY IS (you must know this):\n"
+            "- Dilly builds a deep profile of each user through conversations. "
+            "Everything they tell you gets saved automatically.\n"
+            "- Dilly does NOT score users. No Smart/Grit/Build scores. No "
+            "numbers. No audits. No leaderboard. No score detail page.\n"
+            "- For this user Dilly is a career strategist, not a job-hunt tool. "
+            "They are not applying to anything. The app shows them what their "
+            "field is doing, what their market value looks like, and what "
+            "to do this quarter.\n"
+            "- The app has (for this user): Career Center (home — weekly "
+            "pulse + field threat), Field (AI field intelligence, quarterly "
+            "plays, your moat), The Market (their role's comp benchmark + "
+            "role ladder + active listings count — NOT for applying), "
+            "My Career (trajectory, skills, market position, tenure), "
+            "Calendar.\n"
+            "- NEVER mention scores, Smart/Grit/Build, audits, resume "
+            "scanning, resume editor, leaderboard, fit narratives, Tailor "
+            "Resume, Interview Practice, Tracker, What We Think. None of "
+            "those are surfaces this user sees or should be pushed toward."
+        )
+        _app_features_block = (
+            "APP FEATURES (only reference these):\n"
+            "- Career Center: the weekly pulse card + this month's moves + "
+            "your trajectory snapshot. Home tab.\n"
+            "- Field: AI's effect on their role, what's shifting, their "
+            "moat, this quarter's plays, 2-year forecast.\n"
+            "- The Market: estimated market value at their YOE (BLS OES "
+            "data), role ladder with comp deltas (step-up, pivot, "
+            "adjacent), active listings count for their role. Quiet "
+            "browsing, not applying.\n"
+            "- My Career: trajectory timeline, current role + tenure, "
+            "skills arsenal, market position.\n"
+            "- Calendar: personal deadlines, work events, industry dates."
+        )
+    else:
+        _what_dilly_is_block = (
+            "WHAT DILLY IS (you must know this):\n"
+            "- Dilly builds a deep profile of each user through conversations. Everything they tell you gets saved to their Dilly Profile automatically.\n"
+            "- Dilly does NOT score users. There are no Smart/Grit/Build scores. No numbers. No audits. No resume editor. No leaderboard. No score detail page.\n"
+            "- When users look at jobs, Dilly writes a personal fit narrative: what they have, what is missing, what to do.\n"
+            "- Dilly generates tailored resumes from the user's profile, formatted for the specific ATS the company uses.\n"
+            "- The app has: Career Center (home), Jobs (with fit narratives), AI Arena (AI readiness), My Dilly (profile), What We Think (insights letter).\n"
+            "- NEVER mention scores, Smart/Grit/Build, audits, resume scanning, resume editor, leaderboard, or score detail. These do not exist."
+        )
+        _app_features_block = (
+            "APP FEATURES (only reference these):\n"
+            "- Jobs: Browse matched jobs. Tap to see fit narrative and tailor a resume.\n"
+            "- Tailor Resume: Dilly builds an ATS-optimized resume from the profile for a specific job.\n"
+            "- Interview Practice: Company-specific mock interviews with AI feedback.\n"
+            "- Tracker: Track applications (Saved, Applied, Interviewing, Offer, Rejected).\n"
+            "- Calendar: Deadlines, interviews, career events.\n"
+            "- My Dilly: The user's profile, everything Dilly knows about them.\n"
+            "- What We Think: Dilly's personal insights letter about the user."
+        )
+
     return f"""You are Dilly, a career advisor who talks like a sharp, caring friend. You can see this person's full profile.
 
 TODAY IS {_today_human} ({_today}). Use this as the anchor for any relative dates
@@ -901,22 +974,9 @@ Name: {name}
 {pref_block}
 {cohort_expertise_block}
 
-WHAT DILLY IS (you must know this):
-- Dilly builds a deep profile of each user through conversations. Everything they tell you gets saved to their Dilly Profile automatically.
-- Dilly does NOT score users. There are no Smart/Grit/Build scores. No numbers. No audits. No resume editor. No leaderboard. No score detail page.
-- When users look at jobs, Dilly writes a personal fit narrative: what they have, what is missing, what to do.
-- Dilly generates tailored resumes from the user's profile, formatted for the specific ATS the company uses.
-- The app has: Career Center (home), Jobs (with fit narratives), AI Arena (AI readiness), My Dilly (profile), What We Think (insights letter).
-- NEVER mention scores, Smart/Grit/Build, audits, resume scanning, resume editor, leaderboard, or score detail. These do not exist.
+{_what_dilly_is_block}
 
-APP FEATURES (only reference these):
-- Jobs: Browse matched jobs. Tap to see fit narrative and tailor a resume.
-- Tailor Resume: Dilly builds an ATS-optimized resume from the profile for a specific job.
-- Interview Practice: Company-specific mock interviews with AI feedback.
-- Tracker: Track applications (Saved, Applied, Interviewing, Offer, Rejected).
-- Calendar: Deadlines, interviews, career events.
-- My Dilly: The user's profile, everything Dilly knows about them.
-- What We Think: Dilly's personal insights letter about the user.
+{_app_features_block}
 
 STYLE RULES (non-negotiable):
 - Talk like a real conversation. Short sentences. No walls of text.
