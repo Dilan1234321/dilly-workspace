@@ -184,6 +184,15 @@ export default function VerifyScreen() {
               await AsyncStorage.removeItem('dilly_pending_user_path');
               await AsyncStorage.removeItem('dilly_pending_plan');
             }
+            // Fresh signup signal: pendingPath means the user just
+            // came from choose-situation. Always reset the tutorial
+            // flag here so new accounts on this device see the
+            // 5-card intro — without this, a signout + new signup
+            // inherits the previous user's 'already saw it' flag.
+            // Returning logins (no pendingPath) keep their flag.
+            if (pendingPath) {
+              await AsyncStorage.removeItem('dilly_tutorial_shown').catch(() => {});
+            }
           } catch {}
 
           // Route to the right profile setup based on situation path.

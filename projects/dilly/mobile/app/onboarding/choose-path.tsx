@@ -219,6 +219,15 @@ export default function ChoosePathScreen() {
           )}
         </FadeInView>
 
+        {/*
+          Secondary login section: only rendered when the user's
+          situation is ambiguous. If they already told us they're a
+          student (needsEdu=1) we don't show the generic email, and
+          vice versa. Gating on `gateSingleLogin` = true so it's easy
+          to revert if conversion drops.
+        */}
+        {false /* gateSingleLogin */ ? (
+          <>
         {/* Divider */}
         <FadeInView delay={150}>
           <View style={s.divider}>
@@ -300,6 +309,8 @@ export default function ChoosePathScreen() {
             </View>
           )}
         </FadeInView>
+          </>
+        ) : null}
 
         {/* Footer */}
         <FadeInView delay={400}>

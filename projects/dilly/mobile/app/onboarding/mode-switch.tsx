@@ -16,7 +16,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated, Easing,
-  ActivityIndicator, KeyboardAvoidingView, Platform,
+  ActivityIndicator, KeyboardAvoidingView, Platform, TextInput,
+  ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +54,12 @@ export default function ModeSwitchScreen() {
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  // When switching TO holder, capture the new role + company up front
+  // so the Career Center, My Career comp card, and Market Radar have
+  // something to work with on the very first render. Skipped for
+  // seeker (layoff) direction — no job to describe.
+  const [newRole, setNewRole] = useState('');
+  const [newCompany, setNewCompany] = useState('');
 
   // Soft fade-in on mount. The face settles, text breathes in, CTA
   // appears last. Keeps the moment from feeling like a pop-up.
@@ -68,14 +75,31 @@ export default function ModeSwitchScreen() {
     ]).start();
   }, [fadeFace, fadeText, fadeCta]);
 
+  // Holder CTA is disabled until role + company are typed — we need
+  // them to populate the comp benchmark + trajectory without a
+  // second round-trip. Seeker direction has no gating.
+  const canContinue =
+    direction === 'seeker'
+      ? true
+      : newRole.trim().length >= 2 && newCompany.trim().length >= 1;
+
   async function handleContinue() {
-    if (saving) return;
+    if (saving || !canContinue) return;
     setSaving(true);
     setErr('');
     try {
+      const patchBody: Record<string, unknown> = { app_mode: direction };
+      if (direction === 'holder') {
+        patchBody.current_role    = newRole.trim();
+        patchBody.current_company = newCompany.trim();
+        // user_path shift so the rest of the app treats them as a
+        // jobholder for downstream prompts / filters. Matches the
+        // holder onboarding path setter.
+        patchBody.user_path       = 'i_have_a_job';
+      }
       await dilly.fetch('/profile', {
         method: 'PATCH',
-        body: JSON.stringify({ app_mode: direction }),
+        body: JSON.stringify(patchBody),
       });
       // Land back in the app. The tab bar will pick up the new mode
       // and reshape on next mount.
@@ -115,6 +139,42 @@ export default function ModeSwitchScreen() {
             <Text style={s.body}>{copy.body}</Text>
           </Animated.View>
 
+          {/* Holder-only form — captures role + company before the
+              mode flip so Career Center / My Career / Market Radar
+              show real data the moment we land in the app. */}
+          {direction === 'holder' ? (
+            <Animated.View style={{ opacity: fadeText, gap: 10, marginTop: 26 }}>
+              <View>
+                <Text style={s.fieldLabel}>What's your new role?</Text>
+                <TextInput
+                  style={s.input}
+                  value={newRole}
+                  onChangeText={setNewRole}
+                  placeholder="e.g. Senior Product Manager"
+                  placeholderTextColor={colors.t3}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  maxLength={80}
+                />
+              </View>
+              <View>
+                <Text style={s.fieldLabel}>Where?</Text>
+                <TextInput
+                  style={s.input}
+                  value={newCompany}
+                  onChangeText={setNewCompany}
+                  placeholder="Company name"
+                  placeholderTextColor={colors.t3}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  maxLength={80}
+                />
+              </View>
+            </Animated.View>
+          ) : null}
+
           {err ? <Text style={s.err}>{err}</Text> : null}
         </View>
 
@@ -129,8 +189,8 @@ export default function ModeSwitchScreen() {
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleContinue}
-            disabled={saving}
-            style={[s.cta, saving && { opacity: 0.7 }]}
+            disabled={saving || !canContinue}
+            style={[s.cta, (saving || !canContinue) && { opacity: 0.5 }]}
           >
             {saving ? (
               <ActivityIndicator color="#fff" size="small" />
@@ -169,6 +229,16 @@ const s = StyleSheet.create({
   },
   err: {
     fontSize: 13, color: '#DC2626', textAlign: 'center', marginTop: 16,
+  },
+  fieldLabel: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1.2,
+    color: colors.t3, marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, color: colors.t1,
+    backgroundColor: '#fff',
   },
   cta: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,

@@ -1675,8 +1675,7 @@ function HolderCareer() {
   const insets = useSafeAreaInsets();
   // Session-cached: renders instantly from the prior fetch on remount
   // (tab switches, mode flips), revalidates in background only if the
-  // cached copy is older than 60s. Cuts the network-fetch load that
-  // made the app feel slow during screen-share.
+  // cached copy is older than 60s.
   const { data, loading, refreshing, refresh } = useCachedFetch<any>(
     'holder:career-dashboard',
     async () => {
@@ -1685,7 +1684,16 @@ function HolderCareer() {
     },
     { ttlMs: 60_000 },
   );
-  const onRefresh = refresh;
+  // Full profile (for the DillyCard and link-out surface). Cached
+  // separately so other screens that read /profile share the same
+  // session entry and don't duplicate the network call.
+  const profileQ = useCachedFetch<any>(
+    'profile:full',
+    async () => await dilly.get('/profile').catch(() => null),
+    { ttlMs: 60_000 },
+  );
+  const p = profileQ.data || {};
+  const onRefresh = async () => { await Promise.all([refresh(), profileQ.refresh()]); };
 
   const identity  = data?.identity  || {};
   const comp      = data?.comp_benchmark;
@@ -1748,6 +1756,42 @@ function HolderCareer() {
             </View>
           )}
         </View>
+
+        {/* DillyCard — reused from the seeker profile, mapped to
+            role/company/YOE so the front shows the jobholder's
+            actual identity. Card back + template picker work the
+            same. */}
+        <FadeInView delay={20}>
+          <DillyCardEditor
+            initialData={{
+              name: identity.name || p.name || '',
+              // Repurpose "school" slot for the company (line 1 on the card)
+              school: identity.current_company || '',
+              // "major" slot becomes their role
+              major: identity.current_role || '',
+              // "classYear" slot becomes tenure or YOE
+              classYear:
+                identity.tenure_months && identity.tenure_months >= 12
+                  ? `since ${new Date().getFullYear() - Math.floor(identity.tenure_months / 12)}`
+                  : identity.years_experience
+                    ? `${identity.years_experience} yrs experience`
+                    : '',
+              tagline: p.profile_tagline || p.custom_tagline || '',
+              email: p.email || '',
+              phones: p.phones || [{ label: 'Cell', number: '' }],
+              username: p.profile_slug || '',
+              photoUri:
+                p.profile_slug
+                  ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo`
+                  : null,
+              city: (p.job_locations || [])[0] || '',
+              readableSlug: p.readable_slug || '',
+              profilePrefix: 'p',
+            }}
+            onSave={() => {}}
+            userType={p.user_type || 'professional'}
+          />
+        </FadeInView>
 
         {/* Comp benchmark — the money shot */}
         {comp ? (
@@ -1838,8 +1882,86 @@ function HolderCareer() {
           </FadeInView>
         ) : null}
 
+        {/* Tenure insights — quick read on how long they've been in
+            the current role. Uses trajectory + tenure_months from
+            the dashboard; computes a median-tenure note only when
+            we have something reasonable to say. */}
+        {identity.tenure_months && identity.tenure_months >= 1 ? (
+          <FadeInView delay={140}>
+            <Text style={hc.sectionLabel}>TENURE READ</Text>
+            <View style={hc.tenureCard}>
+              <View style={hc.tenureRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={hc.tenureNum}>
+                    {identity.tenure_months >= 12
+                      ? `${(identity.tenure_months / 12).toFixed(1)} yrs`
+                      : `${identity.tenure_months} mo`}
+                  </Text>
+                  <Text style={hc.tenureLabel}>
+                    in {identity.current_role || 'your current role'}
+                  </Text>
+                </View>
+                <View style={hc.tenureRight}>
+                  <Text style={hc.tenureRightPct}>
+                    {/* Rough read: people who stay 3+ yrs are "sticky",
+                        18-36 mo is "typical", under 18 mo is "early".
+                        These anchor the coaching tone, not precision. */}
+                    {identity.tenure_months >= 36 ? 'STICKY'
+                      : identity.tenure_months >= 18 ? 'TYPICAL'
+                      : 'EARLY'}
+                  </Text>
+                  <Text style={hc.tenureRightSub}>
+                    {identity.tenure_months >= 36 ? 'promotion or move worth a look'
+                      : identity.tenure_months >= 18 ? 'on track for this role'
+                      : 'building credibility here'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* What's Next — three tap-to-Dilly starter prompts tailored
+            for holders. Kills the "nothing's here" feeling on fresh
+            accounts and teaches what Dilly is actually for. */}
+        <FadeInView delay={180}>
+          <Text style={hc.sectionLabel}>WHAT TO ASK DILLY</Text>
+          <View style={{ gap: 8 }}>
+            {[
+              {
+                icon: 'trending-up' as const,
+                title: 'Should I ask for a raise?',
+                seed: `I'm a ${identity.current_role || 'professional'} with ${identity.years_experience || 'some'} years of experience${identity.current_company ? ` at ${identity.current_company}` : ''}. I've been in this role ${identity.tenure_months ? `${Math.round(identity.tenure_months)} months` : 'for a while'}. Walk me through whether it's time to ask for a raise, and what number to ask for.`,
+              },
+              {
+                icon: 'git-branch' as const,
+                title: 'What should I learn this quarter?',
+                seed: `I'm a ${identity.current_role || 'professional'}. My field is shifting fast with AI. What are the 2-3 things I should actually learn this quarter to stay valuable and future-proof my career?`,
+              },
+              {
+                icon: 'compass' as const,
+                title: 'Is it time to move on?',
+                seed: `I'm a ${identity.current_role || 'professional'}${identity.current_company ? ` at ${identity.current_company}` : ''}, ${identity.tenure_months ? `${Math.round(identity.tenure_months)} months in` : 'been here a while'}. Help me think through whether it's time to start looking for something new. Push back on me.`,
+              },
+            ].map(prompt => (
+              <AnimatedPressable
+                key={prompt.title}
+                style={hc.promptCard}
+                scaleDown={0.98}
+                onPress={() => openDillyOverlay({ isPaid: true, initialMessage: prompt.seed })}
+              >
+                <View style={hc.promptIcon}>
+                  <Ionicons name={prompt.icon} size={16} color={HOLDER_ACCENT} />
+                </View>
+                <Text style={hc.promptText}>{prompt.title}</Text>
+                <Ionicons name="arrow-forward" size={14} color={colors.t3} />
+              </AnimatedPressable>
+            ))}
+          </View>
+        </FadeInView>
+
         {/* Ask Dilly */}
-        <FadeInView delay={160}>
+        <FadeInView delay={220}>
           <AnimatedPressable
             style={hc.askCard}
             scaleDown={0.98}
@@ -1955,6 +2077,37 @@ const hc = StyleSheet.create({
     borderWidth: 1, borderColor: HOLDER_ACCENT + '25',
   },
   skillText: { fontSize: 12, fontWeight: '600', color: HOLDER_ACCENT },
+
+  // Tenure read card
+  tenureCard: {
+    backgroundColor: '#FAFAFC',
+    borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 14, padding: 14,
+  },
+  tenureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  tenureNum: { fontSize: 22, fontWeight: '800', color: colors.t1, letterSpacing: -0.4 },
+  tenureLabel: { fontSize: 12, color: colors.t3, marginTop: 2 },
+  tenureRight: { alignItems: 'flex-end', maxWidth: '55%' },
+  tenureRightPct: {
+    fontSize: 10, fontWeight: '800', letterSpacing: 1.4,
+    color: HOLDER_ACCENT,
+  },
+  tenureRightSub: { fontSize: 11, color: colors.t2, marginTop: 3, textAlign: 'right' },
+
+  // What to ask Dilly prompt cards
+  promptCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12, paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  promptIcon: {
+    width: 28, height: 28, borderRadius: 8,
+    backgroundColor: HOLDER_ACCENT + '12',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  promptText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.t1 },
 
   // Ask Dilly
   askCard: {

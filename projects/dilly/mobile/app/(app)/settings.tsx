@@ -170,12 +170,19 @@ export default function SettingsScreen() {
           // inherit this user's mode, dashboard, or market radar.
           await clearAppModeCache();
           clearSessionCache();
-          // Clear onboarding state so they see the situation options again
+          // Clear onboarding state so they see the situation options again.
+          // IMPORTANT: dilly_tutorial_shown MUST be cleared here so the
+          // next account that signs in on this device sees the tutorial.
+          // Without it a fresh signup inherits the previous user's flag
+          // and gets routed straight to /(app), skipping the 5-card
+          // intro. That was a real bug users hit — never ship signout
+          // without wiping this key.
           try {
             const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
             await AsyncStorage.multiRemove([
               'dilly_has_onboarded', 'dilly_pending_user_path', 'dilly_pending_plan',
               'dilly_visited_jobs', 'dilly_visited_arena', 'dilly_done_interview',
+              'dilly_tutorial_shown',
             ]).catch(() => {});
           } catch {}
           router.replace('/onboarding/choose-situation');

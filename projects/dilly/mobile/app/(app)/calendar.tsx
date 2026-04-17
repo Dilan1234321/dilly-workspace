@@ -700,8 +700,8 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
               {(() => {
                 const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
                 const selected = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
-                const [pickerMonth, setPickerMonth] = React.useState(selected.getMonth());
-                const [pickerYear, setPickerYear] = React.useState(selected.getFullYear());
+                const [pickerMonth, setPickerMonth] = useState(selected.getMonth());
+                const [pickerYear, setPickerYear] = useState(selected.getFullYear());
 
                 const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
                 const firstDay = new Date(pickerYear, pickerMonth, 1).getDay();
