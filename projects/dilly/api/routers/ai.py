@@ -706,6 +706,63 @@ def _build_rich_system_prompt(r: dict) -> str:
             "for regulated industries. Never talk down. Help them see how "
             "much leadership experience they already have."
         ),
+        "lgbtq": (
+            "WHO THEY ARE:\n"
+            "LGBTQ+ professional looking for workplaces where being out is safe "
+            "and normal. Every career tool they've used has ignored this filter "
+            "entirely.\n"
+            "TALK TO THEM like someone who gets that workplace culture is part "
+            "of the job, not a bonus. Surface employers with real track records "
+            "on inclusion (HRC Corporate Equality Index perfect scorers, ERGs, "
+            "non-discrimination policies including gender identity). Never "
+            "force them to disclose on a resume. When they ask about inclusive "
+            "employers in a city, answer with specifics. Direct, warm, never "
+            "performative."
+        ),
+        "rural_remote_only": (
+            "WHO THEY ARE:\n"
+            "Can't relocate for work. Living rural, small-town, or "
+            "family-anchored. Most job platforms won't filter remote-only "
+            "properly and they spend hours scrolling past in-office roles.\n"
+            "TALK TO THEM with respect for their constraint. 'Remote-only' "
+            "isn't a weakness, it's a filter. Many companies are "
+            "fully-distributed now. Help them target companies that are "
+            "remote-first, not 'hybrid with three days in the office.' Be "
+            "direct about which roles are realistic for remote and which "
+            "aren't. Don't push them toward relocation if they've said they "
+            "can't."
+        ),
+        "refugee": (
+            "WHO THEY ARE:\n"
+            "Refugee or asylum seeker. New to working in a system that looks "
+            "nothing like their home country's. English might be their second "
+            "or third language. Credentials from their home country may not "
+            "transfer. They have real experience but no resume that "
+            "a US recruiter can read.\n"
+            "TALK TO THEM with warmth and respect. Keep language simple, "
+            "concrete, and jargon-free. Never assume they know US workplace "
+            "conventions (networking, LinkedIn, follow-up emails, interview "
+            "small talk) — explain each thing the first time. Help them "
+            "translate prior experience: 'assistant to the mayor' maps to "
+            "'government operations staff.' Surface employers known for "
+            "hiring refugees (Tent Coalition partners, Upwardly Global, "
+            "Tysons Corner-type regional employers)."
+        ),
+        "ex_founder": (
+            "WHO THEY ARE:\n"
+            "Former founder or long-time freelancer/solopreneur returning to "
+            "employment. They ran a business, hired people, made hard calls, "
+            "sold things, shipped things. Their resume looks like a gap "
+            "because it wasn't a W-2.\n"
+            "TALK TO THEM like a peer, not a candidate. They've done more than "
+            "most hiring managers have. Help them reframe founder work as real "
+            "experience: 'bootstrapped a 3-person team,' 'grew revenue from "
+            "$0 to $X,' 'shipped product used by Y customers.' Surface "
+            "companies that value operator DNA (early stage startups, PM roles "
+            "at scale-ups, ops leadership). Be direct about which roles want "
+            "founders vs. which will be suspicious of them — some big cos are "
+            "wary of ex-founders as 'flight risks.'"
+        ),
         "exploring": (
             "WHO THEY ARE:\n"
             "Figuring out what they want. No specific path locked in yet. Curious, "
@@ -842,6 +899,90 @@ def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: 
     )
 
 
+def _pick_opening_fact(email: str) -> dict | None:
+    """Pick ONE specific, name-able fact from the user's profile for the
+    AI's opening line. Preference order: concrete projects > achievements
+    > unlisted skills > goals. Returns None if nothing good exists.
+
+    Why this matters: the whole 'first 10 minutes valuable' thing hinges
+    on the user feeling like Dilly already knows them. A generic 'what
+    are you working on' greeting is the same as every other AI. A
+    greeting like 'I saw you built a sentiment analysis tool' is the
+    thing that makes them go oh, this actually read my resume."""
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        surface = get_memory_surface(email)
+    except Exception:
+        return None
+    items = (surface or {}).get("items") or []
+    # Exclude the always-private stuff so we never open with a vulnerability.
+    PRIVATE = {"weakness", "fear", "challenge", "concern",
+               "life_context", "areas_for_improvement",
+               "personal", "contact", "phone", "email_address"}
+    # Priority order: most concrete / most-impressive-sounding first.
+    # project_detail and achievement almost always have a specific value
+    # the user would recognize. skill_unlisted is only useful if the
+    # label looks like a real tech name (not a vague 'strong skills').
+    PRIORITY = [
+        "project_detail", "project",
+        "achievement",
+        "experience",
+        "skill_unlisted", "technical_skill", "skill",
+        "goal",
+        "target_company",
+        "strength",
+    ]
+    by_cat: dict[str, list[dict]] = {}
+    for it in items:
+        cat = (it.get("category") or "").lower()
+        if cat in PRIVATE:
+            continue
+        label = (it.get("label") or "").strip()
+        value = (it.get("value") or "").strip()
+        if not label and not value:
+            continue
+        by_cat.setdefault(cat, []).append(it)
+    for cat in PRIORITY:
+        bucket = by_cat.get(cat) or []
+        # Sort within bucket: longest value wins (proxy for "most specific").
+        bucket.sort(key=lambda i: len((i.get("value") or "")), reverse=True)
+        for it in bucket:
+            label = (it.get("label") or "").strip()
+            value = (it.get("value") or "").strip()
+            # Skip anything too vague to reference.
+            if len(label) < 3 and len(value) < 5:
+                continue
+            return {"category": cat, "label": label, "value": value}
+    return None
+
+
+def _opening_phrase_for_fact(fact: dict) -> str:
+    """Turn a picked fact into a short, natural sentence Dilly can open
+    with. Phrasing depends on the category so it reads like a person
+    noticing, not a bot reciting."""
+    cat = (fact.get("category") or "").lower()
+    label = (fact.get("label") or "").strip()
+    value = (fact.get("value") or "").strip()
+    # Prefer the label when it's the concrete thing; fall back to a short
+    # clipped value. Never dump a paragraph.
+    subject = label or value[:60]
+    if cat in ("project_detail", "project"):
+        return f"I saw you worked on {subject}"
+    if cat == "achievement":
+        return f"I saw you {subject.lower()}" if subject and subject[0].isupper() else f"I saw you {subject}"
+    if cat == "experience":
+        return f"I saw {subject}"
+    if cat in ("skill_unlisted", "technical_skill", "skill"):
+        return f"I saw you've been working with {subject}"
+    if cat == "goal":
+        return f"I saw your goal is {subject.lower()}" if subject else ""
+    if cat == "target_company":
+        return f"I saw you're aiming for {subject}"
+    if cat == "strength":
+        return f"I saw one of your strengths is {subject.lower()}" if subject else ""
+    return f"I saw {subject}"
+
+
 @router.get("/ai/context")
 async def get_ai_context(request: Request):
     user = deps.require_auth(request)
@@ -857,10 +998,54 @@ async def get_ai_context(request: Request):
         name = (ctx.get("name") or "").split()[0] if ctx.get("name") else "there"
         path = (ctx.get("user_path") or "").strip().lower()
         fact_count = len((ctx.get("profile_facts_text") or "").split("\n"))
+        opening_fact = _pick_opening_fact(email)
+
+        # If we have a specific, interesting fact from their profile
+        # (likely extracted from their resume), open with it. This is
+        # the "first 10 minutes valuable" moment — Dilly proves it
+        # actually read them before saying anything else.
+        fact_phrase = ""
+        if opening_fact:
+            phrase = _opening_phrase_for_fact(opening_fact)
+            if phrase:
+                fact_phrase = phrase
 
         if fact_count > 10:
             # Dilly already knows them — pick up where we left off
-            msg = f"Hey {name}. What are you working on today?"
+            if fact_phrase:
+                msg = f"Hey {name}. {fact_phrase}. What are you working on today?"
+            else:
+                msg = f"Hey {name}. What are you working on today?"
+        elif fact_phrase and path in ("student", "dropout", "senior_reset", "veteran",
+                                       "parent_returning", "career_switch", "first_gen_college",
+                                       "international_grad", "neurodivergent",
+                                       "trades_to_white_collar", "ex_founder"):
+            # Resume facts present AND a concrete path: lead with the fact,
+            # follow with a path-appropriate invitation.
+            if path == "student":
+                msg = f"Hey {name}. {fact_phrase}. Tell me what you were proudest of about that."
+            elif path == "dropout":
+                msg = f"Hey {name}. {fact_phrase}. What's the hardest part of that you solved on your own?"
+            elif path == "senior_reset":
+                msg = f"Hey {name}. {fact_phrase}. What was the biggest lesson from that chapter?"
+            elif path == "veteran":
+                msg = f"Hey {name}. {fact_phrase}. Let's translate that for civilian recruiters. What did the day-to-day actually look like?"
+            elif path == "parent_returning":
+                msg = f"Hey {name}. {fact_phrase}. Take me through what you did there, so we can bring those skills forward."
+            elif path == "career_switch":
+                msg = f"Hey {name}. {fact_phrase}. What part of that are you trying to carry into your new field?"
+            elif path == "first_gen_college":
+                msg = f"Hey {name}. {fact_phrase}. That's real work. Tell me how you pulled it off."
+            elif path == "international_grad":
+                msg = f"Hey {name}. {fact_phrase}. Walk me through it. Details help me match you to sponsoring employers."
+            elif path == "neurodivergent":
+                msg = f"Hey {name}. {fact_phrase}. Tell me what you actually did. Specific wins."
+            elif path == "trades_to_white_collar":
+                msg = f"Hey {name}. {fact_phrase}. What part of that skill set do you want to carry into an office role?"
+            elif path == "ex_founder":
+                msg = f"Hey {name}. {fact_phrase}. Walk me through what that taught you about operations."
+            else:
+                msg = f"Hey {name}. {fact_phrase}. Tell me more about it."
         elif path == "student":
             msg = f"Hey {name}. I already know a bit about you from your profile. What's the one thing you've done that you're most proud of, school or not?"
         elif path == "dropout":
@@ -885,6 +1070,14 @@ async def get_ai_context(request: Request):
             msg = f"Hey {name}. You've been solving real problems every day. What trade are you coming from and where do you want to go?"
         elif path == "disabled_professional":
             msg = f"Hey {name}. What kind of role are you looking for? We'll find the ones that fit."
+        elif path == "lgbtq":
+            msg = f"Hey {name}. I'll surface companies with real inclusion track records, not just logos. What field are you in?"
+        elif path == "rural_remote_only":
+            msg = f"Hey {name}. Remote-only is a filter, not a weakness. Tons of companies are fully distributed now. What kind of work are you looking for?"
+        elif path == "refugee":
+            msg = f"Hey {name}. Welcome. Tell me what you did in your home country or what you've been doing since arriving, and I'll help translate it into US resume language."
+        elif path == "ex_founder":
+            msg = f"Hey {name}. Running your own thing is real experience, not a gap. What were you building and what are you looking for now?"
         else:
             msg = f"Hey {name}. Tell me a bit about yourself and what you're looking for. I'll take it from there."
 

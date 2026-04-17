@@ -113,12 +113,28 @@ async def get_shield_score(request: Request):
         cached_ts = float(cached.get("ts") or 0)
         cached_payload = cached.get("payload")
         if period is not None and cached_payload and (_time.time() - cached_ts) < period:
+            # Pull delta info from history so cached returns also render
+            # the "your score changed" indicator correctly.
+            _hist = cached.get("history") or [] if isinstance(cached, dict) else []
+            _prev_score = None
+            _delta = None
+            try:
+                if isinstance(_hist, list) and len(_hist) >= 2:
+                    _prev_score = int(_hist[-2].get("score") or 0) or None
+                    _curr = int(_hist[-1].get("score") or 0) or None
+                    if _prev_score is not None and _curr is not None:
+                        _delta = _curr - _prev_score
+            except Exception:
+                pass
             return {
                 **cached_payload,
                 "plan": plan,
                 "cached": True,
                 "next_refresh": _next_refresh_label(plan, cached_ts),
                 "tools_unlocked": plan in ("dilly", "pro"),
+                "previous_score": _prev_score,
+                "score_delta": _delta,
+                "history": _hist if isinstance(_hist, list) else [],
             }
 
         # Source 1: Dilly Profile memory surface (preferred — this is the Dilly Profile)
@@ -227,10 +243,49 @@ async def get_shield_score(request: Request):
         "recommendation": readiness.get("recommendation", ""),
     }
 
+    # ── Delta tracking ────────────────────────────────────────────────
+    # Compare this score to the previous one so the mobile UI can show a
+    # "Your score changed" indicator. Keeps a rolling history of the last
+    # 12 scores (≈ a year at monthly refresh, ≈ 3 months at weekly).
+    previous_score: int | None = None
+    previous_ts: float | None = None
+    delta: int | None = None
+    try:
+        history_raw = (cached.get("history") if isinstance(cached, dict) else None) or []
+        if isinstance(history_raw, list) and history_raw:
+            last = history_raw[-1]
+            if isinstance(last, dict):
+                previous_score = int(last.get("score") or 0) or None
+                previous_ts = float(last.get("ts") or 0) or None
+        if previous_score is not None and shield is not None:
+            delta = int(shield) - int(previous_score)
+    except Exception:
+        pass
+
+    # Build the new history array (cap at 12 entries)
+    try:
+        prev_history = (cached.get("history") if isinstance(cached, dict) else None) or []
+        if not isinstance(prev_history, list):
+            prev_history = []
+        new_history = list(prev_history) + [{
+            "ts": _time.time(),
+            "score": int(shield),
+            "label": label,
+        }]
+        new_history = new_history[-12:]
+    except Exception:
+        new_history = []
+
     # Persist to per-user cache so we don't re-compute until the tier window expires
     try:
         if _refresh_period_for_plan(plan) is not None:
-            save_profile(email, {"ai_arena_cache": {"ts": _time.time(), "payload": payload}})
+            save_profile(email, {
+                "ai_arena_cache": {
+                    "ts": _time.time(),
+                    "payload": payload,
+                    "history": new_history,
+                },
+            })
     except Exception:
         pass
 
@@ -240,6 +295,10 @@ async def get_shield_score(request: Request):
         "cached": False,
         "next_refresh": _next_refresh_label(plan, _time.time()) if _refresh_period_for_plan(plan) is not None else "",
         "tools_unlocked": plan in ("dilly", "pro"),
+        # Delta info so the mobile can show "Your score went up 4 points since last refresh"
+        "previous_score": previous_score,
+        "score_delta": delta,
+        "history": new_history,
     }
 
 

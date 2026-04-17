@@ -156,6 +156,7 @@ from projects.dilly.api.routers import calendar_feed as calendar_feed_router
 from projects.dilly.api.routers import interview_prep as interview_prep_router
 from projects.dilly.api.routers import interview_feedback as interview_feedback_router
 from projects.dilly.api.routers import insights as insights_router
+from projects.dilly.api.routers import weekly_brief as weekly_brief_router
 from projects.dilly.api.routers import cron_jobs_cleanup
 app.include_router(cron_jobs_cleanup.router)
 app.include_router(auth_router.router)
@@ -204,6 +205,7 @@ app.include_router(calendar_feed_router.router)
 app.include_router(interview_prep_router.router)
 app.include_router(interview_feedback_router.router)
 app.include_router(insights_router.router)
+app.include_router(weekly_brief_router.router)
 
 benchmarks = Benchmarks()
 

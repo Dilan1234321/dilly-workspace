@@ -116,14 +116,23 @@ function SkeletonLines() {
 
 // -- Fit Narrative Component ------------------------------------------------
 
-function FitNarrative({ listing }: { listing: Listing }) {
-  const [data, setData] = useState<FitNarrativeData | null>(null);
-  const [loading, setLoading] = useState(true);
+function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: FitNarrativeData | null }) {
+  const [data, setData] = useState<FitNarrativeData | null>(preloaded || null);
+  const [loading, setLoading] = useState(!preloaded);
   const [error, setError] = useState<string | null>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const fetched = useRef(false);
+  const fadeAnim = useRef(new Animated.Value(preloaded ? 1 : 0)).current;
+  const fetched = useRef(!!preloaded);
 
   useEffect(() => {
+    // If a preloaded narrative was provided by the parent (warmed cache
+    // on Jobs tab mount for the top 3 jobs), skip the fetch entirely —
+    // the card expands with content already visible.
+    if (preloaded) {
+      setData(preloaded);
+      setLoading(false);
+      fetched.current = true;
+      return;
+    }
     if (fetched.current) return;
     fetched.current = true;
 
@@ -150,7 +159,7 @@ function FitNarrative({ listing }: { listing: Listing }) {
         setLoading(false);
       }
     })();
-  }, [listing.id, fadeAnim]);
+  }, [listing.id, fadeAnim, preloaded]);
 
   if (loading) return <SkeletonLines />;
 
@@ -331,7 +340,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
         {expanded && (
           <View style={s.expandedSection}>
             {/* Fit Narrative */}
-            <FitNarrative listing={listing} />
+            <FitNarrative listing={listing} preloaded={narrativeCache} />
 
             {/* Quick Glance bullets */}
             {listing.quick_glance && listing.quick_glance.length > 0 && (
@@ -467,6 +476,32 @@ export default function JobsScreen() {
   }, [tabs, noDegreeFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Pre-load fit narratives for the top 3 jobs on first session visit.
+  // This makes the Jobs tab feel instantly useful — the user doesn't see
+  // "expand a card and wait" as their first interaction, they see a job
+  // card already showing the fit narrative. Runs once per session; uses
+  // the server's per-user cache on repeat visits for free.
+  const preloadedRef = useRef(false);
+  useEffect(() => {
+    if (preloadedRef.current) return;
+    if (listings.length === 0) return;
+    preloadedRef.current = true;
+    const top = listings.slice(0, 3);
+    // Fire in parallel, but silently — any failure just falls back to
+    // on-demand loading when the card is expanded.
+    top.forEach(async (listing) => {
+      try {
+        const res = await dilly.fetch('/jobs/fit-narrative', {
+          method: 'POST',
+          body: JSON.stringify({ job_id: listing.id }),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        setNarrativeCache(prev => ({ ...prev, [listing.id]: json }));
+      } catch {}
+    });
+  }, [listings]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

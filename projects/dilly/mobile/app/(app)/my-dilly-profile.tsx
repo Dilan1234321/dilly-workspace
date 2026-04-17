@@ -704,6 +704,55 @@ export default function MyDillyProfileScreen() {
           </FadeInView>
         )}
 
+        {/* ── Profile Growth Meter ───────────────────────────────
+            THE retention lever. Every chat adds facts; every fact makes
+            Dilly sharper; sharper Dilly = better guidance. This meter
+            makes the loop visible. No streaks (streaks punish the people
+            who need a day off) — just a growth number + a clear target
+            + context for where they stand.
+
+            States:
+              0-9 facts   → "Dilly is just starting to know you"
+              10-39 facts → "Dilly is learning you"
+              40-79 facts → "Dilly knows you well"
+              80+ facts   → "Dilly knows you deeply"
+            At 80+ we stop showing the meter — they've internalized
+            the behavior, no need to nag. */}
+        {!editMode && totalFacts < 80 && (
+          <FadeInView delay={0}>
+            <View style={d.growthCard}>
+              <View style={d.growthHeader}>
+                <Text style={d.growthLabel}>DILLY KNOWS</Text>
+                <Text style={d.growthCount}>
+                  <Text style={d.growthCountNum}>{totalFacts}</Text>
+                  <Text style={d.growthCountUnit}> {totalFacts === 1 ? 'thing' : 'things'}</Text>
+                </Text>
+              </View>
+              {/* Progress bar — tops out at 80 */}
+              <View style={d.growthTrack}>
+                <View style={[d.growthFill, { width: `${Math.min(100, (totalFacts / 80) * 100)}%` }]} />
+              </View>
+              <Text style={d.growthSub}>
+                {totalFacts === 0
+                  ? "Tell Dilly anything about your career. It all sharpens your fit narratives and resumes."
+                  : totalFacts < 10
+                    ? "Just getting started. The average person who lands their target role has 80+ things in their profile."
+                    : totalFacts < 40
+                      ? `${totalFacts} is a real start. The average person who lands their role has 80+.`
+                      : `${totalFacts} is strong. A few more conversations and Dilly will know you better than most recruiters.`}
+              </Text>
+              <AnimatedPressable
+                style={d.growthCta}
+                onPress={() => openDillyOverlay({ name: firstName, isPaid: false })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="chatbubble" size={13} color="#fff" />
+                <Text style={d.growthCtaText}>Tell Dilly one more thing</Text>
+              </AnimatedPressable>
+            </View>
+          </FadeInView>
+        )}
+
         {/* ── 0. Cities ──────────────────────────────────────── */}
         <FadeInView delay={0}>
           <View style={d.citySection}>
@@ -1571,6 +1620,74 @@ const d = StyleSheet.create({
   // Section label
   sectionLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, color: colors.t3, marginBottom: 4 },
   citySection: { gap: 8 },
+
+  // Profile growth meter — retention lever. Hidden once user hits 80+ facts.
+  growthCard: {
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: colors.indigo + '0a',
+    borderWidth: 1,
+    borderColor: colors.indigo + '33',
+  },
+  growthHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  growthLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    color: colors.indigo,
+  },
+  growthCount: {},
+  growthCountNum: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.t1,
+    letterSpacing: -0.5,
+  },
+  growthCountUnit: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.t3,
+  },
+  growthTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.indigo + '1a',
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  growthFill: {
+    height: '100%',
+    backgroundColor: colors.indigo,
+    borderRadius: 3,
+  },
+  growthSub: {
+    fontSize: 12,
+    color: colors.t2,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  growthCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.indigo,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  growthCtaText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
   cityChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.idim, borderRadius: 8,
