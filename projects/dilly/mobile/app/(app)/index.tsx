@@ -1042,6 +1042,52 @@ function SeekerHome() {
           </View>
         </FadeInView>
 
+        {/* ── Situation hero card ─────────────────────────────
+            Per-path, cohort-specific action block rendered above
+            every other home block. One concrete thing the user can
+            do in 10 seconds that's shaped for their situation. Null
+            for holder + senior_reset (they have their own bespoke
+            homes) and rendered for the other 16 paths. */}
+        {situationCopy.hero ? (
+          <FadeInView delay={20}>
+            <AnimatedPressable
+              style={[
+                s.heroCard,
+                {
+                  borderColor: (situationCopy.accent || colors.indigo) + '40',
+                  shadowColor: situationCopy.accent || colors.indigo,
+                },
+              ]}
+              scaleDown={0.98}
+              onPress={() => openDillyOverlay({
+                name: firstName,
+                isPaid: false,
+                initialMessage: situationCopy.hero!.chat_seed,
+              })}
+            >
+              <Text style={[s.heroEyebrow, { color: situationCopy.accent || colors.indigo }]}>
+                {situationCopy.hero.eyebrow}
+              </Text>
+              <Text style={s.heroHeadline}>
+                {situationCopy.hero.headline}
+              </Text>
+              <Text style={s.heroBody}>
+                {situationCopy.hero.body}
+              </Text>
+              <View style={s.heroCtaRow}>
+                <Text style={[s.heroCtaText, { color: situationCopy.accent || colors.indigo }]}>
+                  {situationCopy.hero.cta_label}
+                </Text>
+                <Ionicons
+                  name="arrow-forward"
+                  size={14}
+                  color={situationCopy.accent || colors.indigo}
+                />
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        ) : null}
+
         {/* ── Weekly Brief ──────────────────────────────────────
             Personalized card for the Monday-morning moment. Server
             generates this once per ISO week per user; pure derivation
@@ -1513,6 +1559,40 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: colors.t2,
     lineHeight: 16,
+  },
+
+  // Situation hero card. per-path, cohort-specific action block
+  // rendered at the very top of the seeker home. Soft accent-tinted
+  // border with low-opacity shadow; the cohort's accent color fills
+  // the eyebrow + CTA. One card across 16 paths. Pure copy swap.
+  heroCard: {
+    marginTop: 8,
+    padding: 18,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 10,
+  },
+  heroEyebrow: {
+    fontSize: 10, fontWeight: '900', letterSpacing: 1.8,
+  },
+  heroHeadline: {
+    fontSize: 20, fontWeight: '800',
+    color: colors.t1, letterSpacing: -0.4, lineHeight: 26,
+  },
+  heroBody: {
+    fontSize: 13, color: colors.t2, lineHeight: 20,
+  },
+  heroCtaRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 4,
+  },
+  heroCtaText: {
+    fontSize: 13, fontWeight: '800',
   },
 
   // Weekly brief. the "reason to open Dilly every Monday" card

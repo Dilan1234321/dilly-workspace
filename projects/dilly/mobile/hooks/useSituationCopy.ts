@@ -14,6 +14,14 @@
 
 import { getCached } from '../lib/sessionCache';
 
+export interface HeroCard {
+  eyebrow:   string;
+  headline:  string;
+  body:      string;
+  cta_label: string;
+  chat_seed: string;
+}
+
 export interface SituationCopy {
   eyebrow:         string;
   greeting:        string;   // may include {first_name}
@@ -23,6 +31,7 @@ export interface SituationCopy {
   empty_jobs:      string;
   empty_facts:     string;
   accent:          string;
+  hero:            HeroCard | null;
 }
 
 const DEFAULT_COPY: SituationCopy = {
@@ -34,6 +43,7 @@ const DEFAULT_COPY: SituationCopy = {
   empty_jobs:      'Still loading the feed.',
   empty_facts:     'Tell Dilly more and this page gets sharper.',
   accent:          '#4F46E5',
+  hero:            null,
 };
 
 export function useSituationCopy(firstName: string = ''): SituationCopy & {
@@ -50,6 +60,7 @@ export function useSituationCopy(firstName: string = ''): SituationCopy & {
     empty_jobs:      raw.empty_jobs      || DEFAULT_COPY.empty_jobs,
     empty_facts:     raw.empty_facts     || DEFAULT_COPY.empty_facts,
     accent:          raw.accent          || DEFAULT_COPY.accent,
+    hero:            raw.hero            ?? null,
   };
   const resolvedFirst = (firstName || 'there').trim() || 'there';
   const greetingResolved = copy.greeting.replace(/\{first_name\}/g, resolvedFirst);
