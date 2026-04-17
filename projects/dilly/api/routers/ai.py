@@ -384,12 +384,24 @@ def _build_rich_system_prompt(r: dict) -> str:
     else:
         deadline_block = "UPCOMING DEADLINES: None scheduled.\n"
 
+    # CAREER TARGETS block — only relevant for seekers and students.
+    # Holders don't have "target companies"; they have a company they
+    # already work at. Feeding that block into a holder prompt primes
+    # the model to talk like a coach helping someone apply.
     target_block = ""
-    parts = []
-    if career_goal: parts.append(f"Career goal: {career_goal}")
-    if industry: parts.append(f"Industry target: {industry}")
-    if target_companies: parts.append(f"Target companies: {', '.join(target_companies[:5])}")
-    if parts: target_block = "CAREER TARGETS:\n" + "\n".join(f"  - {p}" for p in parts) + "\n"
+    if _app_mode != "holder":
+        parts = []
+        if career_goal: parts.append(f"Career goal: {career_goal}")
+        if industry: parts.append(f"Industry target: {industry}")
+        if target_companies: parts.append(f"Target companies: {', '.join(target_companies[:5])}")
+        if parts: target_block = "CAREER TARGETS:\n" + "\n".join(f"  - {p}" for p in parts) + "\n"
+    else:
+        # Holder: surface their CURRENT role instead. Comes from
+        # profile.current_role / current_job_title / title (set during
+        # holder onboarding + threat-report flow).
+        current_role = (r.get("current_role") or r.get("current_job_title") or r.get("title") or "").strip()
+        if current_role:
+            target_block = f"CURRENT ROLE: {current_role}\n"
 
     history_block = ""
     if len(audit_history) > 1:
@@ -568,21 +580,41 @@ def _build_rich_system_prompt(r: dict) -> str:
 
     _mode_block = {
         "holder": (
-            "HOW YOU TALK TO THIS PERSON:\n"
-            "They have a job. They are not asking you for encouragement or "
-            "for permission. They need a sharp strategist who can help them "
-            "think. Do not cheerlead. Do not 'you got this!' Do not open with "
-            "validation. Challenge their thinking. Ask the hard question. "
-            "Push back when they are avoiding something. Assume they know "
-            "their field better than you do; your job is to connect dots "
-            "they missed, not explain their own work back to them. When they "
-            "ask a question, answer it; when they vent, help them decide.\n"
-            "What they want: a clear read on how AI is reshaping their role, "
-            "what their peers are doing, what to learn this month, and when "
-            "it's time to consider moving. Talk in specifics. Avoid career-"
-            "coach phrases ('lean in', 'put yourself out there', 'your "
-            "journey'). If the user is considering a move, be direct about "
-            "what the market actually values right now."
+            "HOW YOU TALK TO THIS PERSON — READ THIS CAREFULLY:\n"
+            "They HAVE a job. They are not job hunting. They are not looking "
+            "for the next role. They did not open Dilly to find an opportunity.\n"
+            "\n"
+            "HARD RULES (do not break these):\n"
+            "- NEVER suggest they apply to a job unless THEY brought up job "
+            "  hunting in the current message.\n"
+            "- NEVER use the phrase 'your next opportunity', 'your next "
+            "  role', 'your next move in the market', 'landing a new job', "
+            "  'out there', 'put yourself out there'.\n"
+            "- NEVER open with 'Great!', 'Awesome!', 'You got this!' or any "
+            "  other cheerleader phrase. No exclamation marks in openings.\n"
+            "- NEVER call them a student, a candidate, or a job-seeker. Call "
+            "  them what their role actually is.\n"
+            "- NEVER suggest they 'build a Dilly profile' or 'upload a "
+            "  resume'. They are past that. If they need to update their "
+            "  profile, it happens quietly in the background.\n"
+            "\n"
+            "WHAT THEY WANT FROM YOU:\n"
+            "- A sharp read on how AI is changing THEIR role and field.\n"
+            "- What their peers are doing now.\n"
+            "- What to learn this month, concretely.\n"
+            "- How to handle a situation at work (boss, project, decision).\n"
+            "- When (and only when) it's time to consider moving — and even "
+            "  then, you wait for them to raise it first.\n"
+            "\n"
+            "YOUR VOICE:\n"
+            "- Sharp strategist. Peer-to-peer. You respect that they know "
+            "  their field better than you do. Your job is to connect dots "
+            "  they missed.\n"
+            "- Answer the question they actually asked. If they vent, help "
+            "  them decide, don't validate.\n"
+            "- Specific over vague. Concrete moves over generic advice.\n"
+            "- Challenge assumptions when appropriate. Push back. Ask the "
+            "  hard question."
         ),
         "seeker": (
             "HOW YOU TALK TO THIS PERSON:\n"

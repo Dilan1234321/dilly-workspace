@@ -288,54 +288,86 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* ── Career Mode ─────────────────────────────────────────────
-            One account, three experiences. Switches the tab bar, home
-            screen, default language, and AI tone. See lib/appMode.ts. */}
-        <FadeInView delay={100}>
-          <SectionLabel text="CAREER MODE" />
-          <View style={s.card}>
-            <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
-              <Text style={{ fontSize: 12, color: colors.t3, lineHeight: 17 }}>
-                {modeDescription(appMode)}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 6, padding: 12 }}>
-              {/* Student mode is hidden from the toggle because it's a
-                  different pricing tier. A user who's on the student
-                  plan got there via the situation screen and the
-                  billing flow; they shouldn't be able to slide into
-                  it (or out of it) via a switch in settings. */}
-              {ALL_MODES.filter((m) => m !== 'student').map((m) => {
-                const isActive = appMode === m;
-                return (
-                  <AnimatedPressable
-                    key={m}
-                    scaleDown={0.97}
-                    disabled={appModeSaving}
-                    onPress={() => handleModeSwitch(m)}
-                    style={[
-                      {
-                        flex: 1,
-                        paddingVertical: 10,
+        {/* ── Career Status ───────────────────────────────────────────
+            Direction-aware prompt instead of a mode toggle. Asks the
+            user a human question that matches their current mode.
+            Students are left alone entirely (they stay students until
+            their path/plan flips through billing, not a button here). */}
+        {appMode !== 'student' && (
+          <FadeInView delay={100}>
+            <SectionLabel text="CAREER STATUS" />
+            <View style={s.card}>
+              {appMode === 'holder' ? (
+                <>
+                  <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 4 }}>
+                      Did you get laid off?
+                    </Text>
+                    <Text style={{ fontSize: 12, color: colors.t3, lineHeight: 17 }}>
+                      Switch to Job Search and Dilly reshapes the app for
+                      finding your next role. You can switch back any time.
+                    </Text>
+                  </View>
+                  <View style={{ padding: 12, paddingTop: 0 }}>
+                    <AnimatedPressable
+                      scaleDown={0.97}
+                      disabled={appModeSaving}
+                      onPress={() => handleModeSwitch('seeker')}
+                      style={{
+                        paddingVertical: 12,
                         borderRadius: 10,
                         borderWidth: 1,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: isActive ? INDIGO : colors.s2,
-                        borderColor: isActive ? INDIGO : colors.b1,
-                        opacity: appModeSaving && !isActive ? 0.5 : 1,
-                      },
-                    ]}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#fff' : colors.t1 }}>
-                      {modeLabel(m)}
+                        backgroundColor: '#FEF3C7',
+                        borderColor: '#F59E0B',
+                        opacity: appModeSaving ? 0.6 : 1,
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E' }}>
+                        I got laid off. Switch to Job Search.
+                      </Text>
+                    </AnimatedPressable>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 4 }}>
+                      Did you land a job?
                     </Text>
-                  </AnimatedPressable>
-                );
-              })}
+                    <Text style={{ fontSize: 12, color: colors.t3, lineHeight: 17 }}>
+                      Switch to Career Watch and Dilly shifts into staying
+                      ahead of AI, market signals, and what to learn in
+                      your new role. You can switch back any time.
+                    </Text>
+                  </View>
+                  <View style={{ padding: 12, paddingTop: 0 }}>
+                    <AnimatedPressable
+                      scaleDown={0.97}
+                      disabled={appModeSaving}
+                      onPress={() => handleModeSwitch('holder')}
+                      style={{
+                        paddingVertical: 12,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#D1FAE5',
+                        borderColor: '#16A34A',
+                        opacity: appModeSaving ? 0.6 : 1,
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#065F46' }}>
+                        I got a new job. Switch to Career Watch.
+                      </Text>
+                    </AnimatedPressable>
+                  </View>
+                </>
+              )}
             </View>
-          </View>
-        </FadeInView>
+          </FadeInView>
+        )}
 
         {/* Notifications */}
         <FadeInView delay={80}>

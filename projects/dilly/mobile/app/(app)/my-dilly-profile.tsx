@@ -303,13 +303,35 @@ export default function MyDillyProfileScreen() {
     await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ job_locations: updated }) }).catch(() => {});
   }
 
+  // Fetch slug with retry. New accounts occasionally race: the profile
+  // is created before the slug endpoint can read it back, or the
+  // endpoint itself is still cold on Railway. One extra attempt with a
+  // 1.5s delay covers the window without blocking the UI noticeably.
+  async function resolveSlugWithRetry(): Promise<{ slug?: string; prefix?: string } | null> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await dilly.fetch('/profile/generate-slug', { method: 'POST' });
+        if (r?.ok) {
+          const j = await r.json();
+          if (j?.slug) return j;
+        } else {
+          console.warn('[MyDilly] generate-slug non-OK:', r?.status);
+        }
+      } catch (e: any) {
+        console.warn('[MyDilly] generate-slug error:', e?.message || e);
+      }
+      if (attempt === 0) await new Promise(res => setTimeout(res, 1500));
+    }
+    return null;
+  }
+
   const fetchData = useCallback(async () => {
     try {
       const [memRes, profileRes, resumesRes, slugRes] = await Promise.all([
         dilly.fetch('/memory').catch(() => null),
         dilly.get('/profile').catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
-        dilly.fetch('/profile/generate-slug', { method: 'POST' }).then(r => r?.ok ? r.json() : null).catch(() => null),
+        resolveSlugWithRetry(),
       ]);
       if (memRes?.ok) {
         const json = await memRes.json();

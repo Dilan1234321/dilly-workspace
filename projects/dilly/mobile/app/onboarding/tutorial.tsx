@@ -173,7 +173,7 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
             </View>
           </View>
           <Text style={il.bigPct}>48%</Text>
-          <Text style={il.headlineDark}>AI closes books in hours. You own the judgment.</Text>
+          <Text style={il.headlineDark}>Your role is changing. Here is what is shifting and what to do about it.</Text>
           <View style={il.chip}><Text style={il.chipText}>MOST AT RISK</Text></View>
           <View style={il.line} />
           <View style={il.line} />
@@ -187,11 +187,11 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
             <View style={il.livePulse} />
             <Text style={il.pulseText}>THIS WEEK IN YOUR FIELD</Text>
           </View>
-          <Text style={[il.headlineDark, { fontSize: 15, lineHeight: 20 }]}>GitHub Copilot Agent now handles 34% of merged PRs.</Text>
-          <Text style={il.source}>Stack Overflow Developer Survey · April 2026</Text>
+          <Text style={[il.headlineDark, { fontSize: 15, lineHeight: 20 }]}>One real shift in your industry, every week.</Text>
+          <Text style={il.source}>Hand-picked. Not a feed, not a newsletter.</Text>
           <View style={[il.moveBox, { borderTopColor: '#22D3EE' }]}>
             <Text style={[il.moveLabel, { color: '#22D3EE' }]}>YOUR MOVE</Text>
-            <Text style={il.moveText}>Ship a side project that requires architectural judgment.</Text>
+            <Text style={il.moveText}>One thing to do about it. Specific to your role.</Text>
           </View>
         </View>
       );
@@ -229,7 +229,7 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
             </View>
           </View>
           <View style={il.tagRow}>
-            {['Python', 'SQL', 'team lead', 'fintech'].map((t, i) => (
+            {['your wins', 'your decisions', 'your skills', 'your goals'].map((t, i) => (
               <View key={i} style={il.tag}><Text style={il.tagText}>{t}</Text></View>
             ))}
           </View>
@@ -266,11 +266,11 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
             <View style={il.livePulse} />
             <Text style={il.pulseText}>TOP MATCH FOR YOU</Text>
           </View>
-          <Text style={il.headlineDark}>Product Designer, Series B Fintech</Text>
-          <Text style={il.source}>Stripe · San Francisco or Remote</Text>
+          <Text style={il.headlineDark}>A role Dilly ranked high for your profile.</Text>
+          <Text style={il.source}>Ranked by fit. Not by keywords.</Text>
           <View style={[il.moveBox, { borderTopColor: VIOLET, marginTop: 10 }]}>
             <Text style={[il.moveLabel, { color: VIOLET }]}>DILLY'S READ</Text>
-            <Text style={il.moveText}>Your Figma + motion work + 2 yrs fintech map directly.</Text>
+            <Text style={il.moveText}>One sentence on why this job actually fits you.</Text>
           </View>
         </View>
       );
@@ -278,16 +278,16 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
       return (
         <View style={[il.card, { backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 }]}>
           <Text style={[il.eyebrow, { color: VIOLET }]}>WHAT YOU HAVE</Text>
-          <View style={il.bulletRow}><View style={[il.dot, { backgroundColor: VIOLET }]} /><Text style={il.bulletText}>2 years fintech product work</Text></View>
-          <View style={il.bulletRow}><View style={[il.dot, { backgroundColor: VIOLET }]} /><Text style={il.bulletText}>Motion + Figma deep</Text></View>
+          <View style={il.bulletRow}><View style={[il.dot, { backgroundColor: VIOLET }]} /><Text style={il.bulletText}>What you bring to this role</Text></View>
+          <View style={il.bulletRow}><View style={[il.dot, { backgroundColor: VIOLET }]} /><Text style={il.bulletText}>Skills that directly apply</Text></View>
           <Text style={[il.eyebrow, { color: VIOLET, marginTop: 10 }]}>WHAT IS MISSING</Text>
-          <View style={il.bulletRow}><View style={[il.dot, { backgroundColor: VIOLET }]} /><Text style={il.bulletText}>One B2B case study</Text></View>
+          <View style={il.bulletRow}><View style={[il.dot, { backgroundColor: VIOLET }]} /><Text style={il.bulletText}>One thing to work on this week</Text></View>
         </View>
       );
     case 'resume':
       return (
         <View style={[il.card, { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.b1, gap: 6 }]}>
-          <Text style={[il.headlineLight, { fontSize: 16 }]}>Tailored for Stripe</Text>
+          <Text style={[il.headlineLight, { fontSize: 16 }]}>Tailored for this role</Text>
           <View style={[il.line, { width: '90%' }]} />
           <View style={[il.line, { width: '82%' }]} />
           <View style={[il.line, { width: '74%' }]} />
@@ -305,22 +305,22 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
             <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: VIOLET + '20', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="mic" size={16} color={VIOLET} />
             </View>
-            <Text style={[il.headlineLight, { fontSize: 15 }]}>Mock: Stripe behavioral</Text>
+            <Text style={[il.headlineLight, { fontSize: 15 }]}>Mock interview in progress</Text>
           </View>
-          <Text style={il.subtle}>"Tell me about a time you shipped something users actually paid for."</Text>
+          <Text style={il.subtle}>"Tell me about a time you solved something hard."</Text>
           <View style={[il.moveBox, { borderTopColor: VIOLET, marginTop: 10 }]}>
             <Text style={[il.moveLabel, { color: VIOLET }]}>DILLY'S FEEDBACK</Text>
-            <Text style={il.moveText}>Start with the outcome, not the setup. Cut 30 seconds.</Text>
+            <Text style={il.moveText}>Start with the outcome, not the setup. Trim the intro.</Text>
           </View>
         </View>
       );
     case 'apply':
       return (
         <View style={[il.card, { backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1, gap: 8 }]}>
-          <View style={il.applyRow}><Ionicons name="checkmark-circle" size={18} color="#16A34A" /><Text style={il.applyText}>Stripe · Applied · Follow up Thu</Text></View>
-          <View style={il.applyRow}><Ionicons name="chatbubble" size={18} color={INDIGO} /><Text style={il.applyText}>Vercel · Interview Tuesday</Text></View>
-          <View style={il.applyRow}><Ionicons name="bookmark" size={18} color={VIOLET} /><Text style={il.applyText}>Linear · Saved · Tailor resume</Text></View>
-          <View style={il.applyRow}><Ionicons name="time" size={18} color={colors.t3} /><Text style={il.applyText}>Retool · Waiting 9 days</Text></View>
+          <View style={il.applyRow}><Ionicons name="checkmark-circle" size={18} color="#16A34A" /><Text style={il.applyText}>Applied · Follow up Thursday</Text></View>
+          <View style={il.applyRow}><Ionicons name="chatbubble" size={18} color={INDIGO} /><Text style={il.applyText}>Interview on Tuesday</Text></View>
+          <View style={il.applyRow}><Ionicons name="bookmark" size={18} color={VIOLET} /><Text style={il.applyText}>Saved · Tailor resume</Text></View>
+          <View style={il.applyRow}><Ionicons name="time" size={18} color={colors.t3} /><Text style={il.applyText}>Waiting · 9 days silent</Text></View>
         </View>
       );
     case 'journey':
@@ -338,10 +338,10 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
       return (
         <View style={[il.card, { backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1 }]}>
           <Text style={il.eyebrow}>INTERNSHIPS THIS WEEK</Text>
-          <Text style={il.headlineLight}>12 new, matched to you.</Text>
-          <View style={il.applyRow}><View style={[il.checkDot, { backgroundColor: INDIGO }]}><Text style={{ color: '#fff', fontWeight: '700', fontSize: 10 }}>S</Text></View><Text style={il.applyText}>Summer 2026 · Software Engineer</Text></View>
-          <View style={il.applyRow}><View style={[il.checkDot, { backgroundColor: VIOLET }]}><Text style={{ color: '#fff', fontWeight: '700', fontSize: 10 }}>R</Text></View><Text style={il.applyText}>Return offer track · Product</Text></View>
-          <View style={il.applyRow}><View style={[il.checkDot, { backgroundColor: '#F59E0B' }]}><Text style={{ color: '#fff', fontWeight: '700', fontSize: 10 }}>D</Text></View><Text style={il.applyText}>Data Science · fall co-op</Text></View>
+          <Text style={il.headlineLight}>New roles, matched to you.</Text>
+          <View style={il.applyRow}><View style={[il.checkDot, { backgroundColor: INDIGO }]}><Ionicons name="briefcase" size={10} color="#fff" /></View><Text style={il.applyText}>Summer internship · in your field</Text></View>
+          <View style={il.applyRow}><View style={[il.checkDot, { backgroundColor: VIOLET }]}><Ionicons name="school" size={10} color="#fff" /></View><Text style={il.applyText}>Junior-year program · paid</Text></View>
+          <View style={il.applyRow}><View style={[il.checkDot, { backgroundColor: '#F59E0B' }]}><Ionicons name="time" size={10} color="#fff" /></View><Text style={il.applyText}>Fall opportunity · remote OK</Text></View>
         </View>
       );
     case 'resumes_student':
@@ -352,10 +352,10 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
           <View style={[il.line, { width: '88%' }]} />
           <View style={[il.line, { width: '62%' }]} />
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-            <View style={il.tag}><Text style={il.tagText}>DS 3000</Text></View>
-            <View style={il.tag}><Text style={il.tagText}>Capstone</Text></View>
-            <View style={il.tag}><Text style={il.tagText}>Hackathon</Text></View>
-            <View style={il.tag}><Text style={il.tagText}>TA</Text></View>
+            <View style={il.tag}><Text style={il.tagText}>Courses</Text></View>
+            <View style={il.tag}><Text style={il.tagText}>Projects</Text></View>
+            <View style={il.tag}><Text style={il.tagText}>Clubs</Text></View>
+            <View style={il.tag}><Text style={il.tagText}>Jobs</Text></View>
           </View>
         </View>
       );
@@ -364,9 +364,9 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
         <View style={[il.card, { backgroundColor: INK }]}>
           <Text style={[il.eyebrow, { color: '#22D3EE' }]}>AI ARENA</Text>
           <Text style={il.headlineDark}>Safe skills vs vanishing skills.</Text>
-          <View style={il.bulletRow}><Ionicons name="checkmark-circle" size={13} color="#16A34A" /><Text style={[il.moveText, { color: '#BBF7D0' }]}>System design · growing</Text></View>
-          <View style={il.bulletRow}><Ionicons name="checkmark-circle" size={13} color="#16A34A" /><Text style={[il.moveText, { color: '#BBF7D0' }]}>Stakeholder work · growing</Text></View>
-          <View style={il.bulletRow}><Ionicons name="warning" size={13} color="#EA580C" /><Text style={[il.moveText, { color: '#FED7AA' }]}>Boilerplate CRUD · vanishing</Text></View>
+          <View style={il.bulletRow}><Ionicons name="checkmark-circle" size={13} color="#16A34A" /><Text style={[il.moveText, { color: '#BBF7D0' }]}>Judgment and decision-making · growing</Text></View>
+          <View style={il.bulletRow}><Ionicons name="checkmark-circle" size={13} color="#16A34A" /><Text style={[il.moveText, { color: '#BBF7D0' }]}>Communicating with people · growing</Text></View>
+          <View style={il.bulletRow}><Ionicons name="warning" size={13} color="#EA580C" /><Text style={[il.moveText, { color: '#FED7AA' }]}>Tasks AI does in seconds · vanishing</Text></View>
         </View>
       );
     case 'first_job':
@@ -442,19 +442,39 @@ export default function TutorialScreen() {
     return <View style={s.container} />;
   }
 
+  // Progress bar fills proportionally: 50% done => bar halfway across.
+  // Uses an animated width so advancing feels smooth instead of jumping.
+  const progressFraction = (idx + 1) / total;
+  const progressAnim = useRef(new Animated.Value(progressFraction)).current;
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progressFraction,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progressFraction, progressAnim]);
+
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
-      {/* Top row: skip + progress dots */}
+      {/* Top row: full-width progress bar + skip. Bar spans the screen
+          (minus horizontal padding) so users feel their way through the
+          tutorial instead of counting dots. */}
       <View style={s.topRow}>
-        <View style={s.dots}>
-          {cards.map((_, i) => (
-            <View
-              key={i}
-              style={[s.dot, i === idx && s.dotActive, i < idx && s.dotDone]}
-            />
-          ))}
+        <View style={s.progressTrack}>
+          <Animated.View
+            style={[
+              s.progressFill,
+              {
+                width: progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%'],
+                }),
+              },
+            ]}
+          />
         </View>
-        <TouchableOpacity onPress={finish} hitSlop={14}>
+        <TouchableOpacity onPress={finish} hitSlop={14} style={{ paddingLeft: 12 }}>
           <Text style={s.skipText}>Skip</Text>
         </TouchableOpacity>
       </View>
@@ -502,13 +522,24 @@ export default function TutorialScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   topRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingTop: 8, paddingBottom: 12,
   },
-  dots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 22, height: 3, borderRadius: 2, backgroundColor: colors.b1 },
-  dotActive: { backgroundColor: INDIGO, width: 28 },
-  dotDone: { backgroundColor: INDIGO + '80' },
+  // Progress track fills the row minus the Skip button. Height 4 so
+  // the bar is thick enough to read progress at a glance without
+  // fighting the content below for attention.
+  progressTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.b1,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: INDIGO,
+    borderRadius: 2,
+  },
   skipText: { fontSize: 13, fontWeight: '600', color: colors.t3 },
 
   page: {
