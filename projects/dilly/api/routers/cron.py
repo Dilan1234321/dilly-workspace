@@ -314,19 +314,46 @@ async def migrate_profile(request: Request, token: str = ""):
 
 
 @router.get("/crawl-internships", summary="Scrape internships + classify new listings")
-def crawl_internships(token: str = ""):
+def crawl_internships(token: str = "", sync: bool = False):
     """Scrape all ATS sources (Greenhouse, Lever, Ashby, SmartRecruiters) into
     the internships table, then run Claude classification on any new listings
     that are missing cohort_requirements.
-    Call with ?token=CRON_SECRET. Intended to run once per day."""
+
+    By default runs ASYNC in a background thread and returns immediately
+    so Railway's HTTP gateway doesn't kill the request. Pass ?sync=true
+    to wait for the whole crawl to finish (useful for the daily cron
+    runner which doesn't have an HTTP timeout in the way).
+    """
     _require_cron_secret(token)
     from projects.dilly.crawl_internships_v2 import crawl_all, classify_unclassified, get_db
-    crawl_all()
-    conn = get_db()
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    classified = classify_unclassified(conn, api_key)
-    conn.close()
-    return {"ok": True, "classified": classified}
+
+    if sync:
+        crawl_all()
+        conn = get_db()
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        classified = classify_unclassified(conn, api_key)
+        conn.close()
+        return {"ok": True, "classified": classified, "mode": "sync"}
+
+    # Async path: spawn a thread, return immediately. The crawler
+    # commits to Postgres incrementally, so partial progress is always
+    # preserved even if Railway restarts the worker mid-crawl.
+    import threading
+    def _run_crawl_bg():
+        try:
+            crawl_all()
+        except Exception as e:
+            print(f"[cron.crawl_internships] crawl_all error: {e}", flush=True)
+        try:
+            conn = get_db()
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+            classify_unclassified(conn, api_key)
+            conn.close()
+        except Exception as e:
+            print(f"[cron.crawl_internships] classify error: {e}", flush=True)
+
+    threading.Thread(target=_run_crawl_bg, daemon=True).start()
+    return {"ok": True, "mode": "async", "message": "Crawl running in background. Check job counts via /v2/internships/feed or wait ~15 min."}
 
 
 @router.get("/crawl-niche-sources", summary="Scrape NSF REU + USAJobs into internships table")
@@ -452,9 +479,12 @@ def daily_pipeline(token: str = ""):
     _require_cron_secret(token)
     results = {}
 
-    # 1. Scrape
+    # 1. Scrape. Run sync here — the daily-pipeline endpoint itself is
+    # called from APScheduler inside the FastAPI process and doesn't
+    # route through the Railway HTTP gateway, so there's no request
+    # timeout to dodge.
     try:
-        r = crawl_internships(token=token)
+        r = crawl_internships(token=token, sync=True)
         results["crawl"] = r
     except Exception as e:
         results["crawl"] = {"error": str(e)}
