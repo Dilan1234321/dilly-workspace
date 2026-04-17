@@ -35,6 +35,7 @@ import DillyFooter from '../../components/DillyFooter';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useAppMode } from '../../hooks/useAppMode';
+import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const COBALT = '#1652F0';
@@ -975,6 +976,8 @@ export default function JobsScreen() {
   // classic apply-focused feed.
   const appMode = useAppMode();
   const isHolder = appMode === 'holder';
+  // Per-situation copy for the empty-state message when no jobs match.
+  const situationCopy = useSituationCopy();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1497,7 +1500,7 @@ export default function JobsScreen() {
               <Text style={s.emptyTitle}>
                 {search.trim()
                   ? `No jobs matching "${search}"`
-                  : 'No jobs found for this filter'}
+                  : situationCopy.empty_jobs}
               </Text>
               <Text style={s.emptySub}>
                 We are adding more jobs daily. Try a different filter or check back soon.

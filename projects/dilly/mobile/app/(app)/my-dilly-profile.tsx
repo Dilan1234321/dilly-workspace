@@ -31,6 +31,7 @@ import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { CAREER_FIELDS as CAREER_FIELD_OPTIONS, ALL_COHORTS, MAJOR_TO_COHORTS, detectCohorts } from '../../lib/cohorts';
 import { mediumHaptic } from '../../lib/haptics';
 import { useAppMode } from '../../hooks/useAppMode';
+import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch } from '../../lib/sessionCache';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -242,6 +243,9 @@ function SeekerProfileScreen() {
   // 'My Dilly' + the existing identity framing.
   const appMode = useAppMode();
   const isHolder = appMode === 'holder';
+  // Per-situation copy for CTAs + chat seeds on this tab. Zero-cost
+  // lookup from the cached /profile; reshapes tone per user_path.
+  const situationCopy = useSituationCopy();
   const toast = useInlineToast();
   const [data, setData] = useState<MemorySurface | null>(null);
   const [loading, setLoading] = useState(true);
@@ -819,11 +823,15 @@ function SeekerProfileScreen() {
               </Text>
               <AnimatedPressable
                 style={d.growthCta}
-                onPress={() => openDillyOverlay({ name: firstName, isPaid: false })}
+                onPress={() => openDillyOverlay({
+                  name: firstName,
+                  isPaid: false,
+                  initialMessage: situationCopy.empty_chat_seed,
+                })}
                 scaleDown={0.97}
               >
                 <Ionicons name="chatbubble" size={13} color="#fff" />
-                <Text style={d.growthCtaText}>Tell Dilly one more thing</Text>
+                <Text style={d.growthCtaText}>{situationCopy.talk_cta}</Text>
               </AnimatedPressable>
             </View>
           </FadeInView>
