@@ -106,7 +106,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="ai-arena"
         options={{
-          title: isHolder ? 'Arena' : 'AI Arena',
+          title: isHolder ? 'Field' : 'AI Arena',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'shield' : 'shield-outline'}

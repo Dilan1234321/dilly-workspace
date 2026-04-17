@@ -23,6 +23,7 @@ import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { DillyFace } from '../../components/DillyFace';
+import { useAppMode } from '../../hooks/useAppMode';
 
 const W = Dimensions.get('window').width;
 
@@ -178,6 +179,12 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
 
 export default function AIArenaScreen() {
   const insets = useSafeAreaInsets();
+  // Holders get a calmer, coach-style tone — "field intelligence" and
+  // "this quarter's play" instead of "threat" and "replace". Seekers/
+  // students keep the existing arena/anxiety framing that powers
+  // onboarding engagement.
+  const appMode = useAppMode();
+  const isHolder = appMode === 'holder';
   const [shield, setShield] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -348,13 +355,19 @@ export default function AIArenaScreen() {
           <View style={{ paddingTop: 8, paddingBottom: 18 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT }} />
-              <Text style={{ fontSize: 10, fontWeight: '900', color: ACCENT, letterSpacing: 1.8 }}>AI ARENA · LIVE</Text>
+              <Text style={{ fontSize: 10, fontWeight: '900', color: ACCENT, letterSpacing: 1.8 }}>
+                {isHolder ? 'FIELD INTELLIGENCE · LIVE' : 'AI ARENA · LIVE'}
+              </Text>
             </View>
             <Text style={{ fontSize: 26, fontWeight: '900', color: TEXT, lineHeight: 32, letterSpacing: -0.6 }}>
-              Your career intelligence, updated live.
+              {isHolder
+                ? 'Where your field is going.'
+                : 'Your career intelligence, updated live.'}
             </Text>
             <Text style={{ fontSize: 13, color: SUB, marginTop: 6, lineHeight: 19 }}>
-              What AI is doing to your role, what it isn't, and exactly what to do this month.
+              {isHolder
+                ? "What's shifting, what to invest in this quarter, and where your moat is."
+                : "What AI is doing to your role, what it isn't, and exactly what to do this month."}
             </Text>
           </View>
         </FadeInView>
@@ -371,7 +384,7 @@ export default function AIArenaScreen() {
               {/* Top: role + threat level */}
               <View style={threatCard.topRow}>
                 <View>
-                  <Text style={threatCard.eyebrow}>AI THREAT REPORT</Text>
+                  <Text style={threatCard.eyebrow}>{isHolder ? 'FIELD REPORT' : 'AI THREAT REPORT'}</Text>
                   <Text style={threatCard.role}>{threatReport.display}</Text>
                 </View>
                 <View style={[threatCard.levelBadge, {
@@ -414,7 +427,7 @@ export default function AIArenaScreen() {
               </View>
 
               {/* Vulnerable tasks */}
-              <Text style={threatCard.sectionLabel}>MOST AT RISK</Text>
+              <Text style={threatCard.sectionLabel}>{isHolder ? "WHAT'S SHIFTING" : 'MOST AT RISK'}</Text>
               {(threatReport.vulnerable_tasks || []).slice(0, 4).map((t: string, i: number) => (
                 <View key={`v${i}`} style={threatCard.bulletRow}>
                   <View style={[threatCard.bulletDot, { backgroundColor: '#EA580C' }]} />
@@ -423,7 +436,7 @@ export default function AIArenaScreen() {
               ))}
 
               {/* Safe tasks */}
-              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>WHERE YOU'RE SAFE</Text>
+              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>{isHolder ? 'YOUR MOAT' : "WHERE YOU'RE SAFE"}</Text>
               {(threatReport.safe_tasks || []).slice(0, 4).map((t: string, i: number) => (
                 <View key={`s${i}`} style={threatCard.bulletRow}>
                   <View style={[threatCard.bulletDot, { backgroundColor: '#16A34A' }]} />
@@ -432,7 +445,7 @@ export default function AIArenaScreen() {
               ))}
 
               {/* What to learn */}
-              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>WHAT TO LEARN NEXT</Text>
+              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>{isHolder ? "THIS QUARTER'S PLAYS" : 'WHAT TO LEARN NEXT'}</Text>
               {(threatReport.what_to_learn || []).slice(0, 3).map((t: string, i: number) => (
                 <View key={`l${i}`} style={threatCard.bulletRow}>
                   <View style={[threatCard.bulletDot, { backgroundColor: ACCENT }]} />
@@ -456,12 +469,16 @@ export default function AIArenaScreen() {
                 style={threatCard.ctaBtn}
                 onPress={() => openDillyOverlay({
                   isPaid: false,
-                  initialMessage: `My AI threat level is ${threatReport.threat_level} (${threatReport.threat_pct}%). I'm a ${threatReport.display}. What specific moves should I make this month to become harder to replace?`,
+                  initialMessage: isHolder
+                    ? `I'm a ${threatReport.display}. My field's AI shift is ${threatReport.threat_level} (${threatReport.threat_pct}%). Given where I am in my career, what's the smartest move for me this quarter?`
+                    : `My AI threat level is ${threatReport.threat_level} (${threatReport.threat_pct}%). I'm a ${threatReport.display}. What specific moves should I make this month to become harder to replace?`,
                 })}
                 scaleDown={0.97}
               >
                 <Ionicons name="chatbubbles" size={14} color="#0B1426" />
-                <Text style={threatCard.ctaBtnText}>Ask Dilly what to do about this</Text>
+                <Text style={threatCard.ctaBtnText}>
+                  {isHolder ? "Talk to Dilly about this quarter" : 'Ask Dilly what to do about this'}
+                </Text>
               </AnimatedPressable>
             </View>
           </FadeInView>
@@ -756,8 +773,14 @@ export default function AIArenaScreen() {
         <FadeInView delay={460}>
           <ToolRow
             icon="scan"
-            title="Threat Scanner"
-            sub={shield?.tools_unlocked === false ? "Locked. Upgrade to scan" : "See which bullets AI can replace"}
+            title={isHolder ? "Skill Scanner" : "Threat Scanner"}
+            sub={
+              shield?.tools_unlocked === false
+                ? 'Locked. Upgrade to scan'
+                : isHolder
+                  ? 'Map which skills AI is eating vs. which it amplifies'
+                  : 'See which bullets AI can replace'
+            }
             color={ACCENT}
             onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('scan'); }}
             active={activeFeature === 'scan'}
