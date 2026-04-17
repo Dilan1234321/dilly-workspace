@@ -24,7 +24,11 @@ export default function ResultsScreen() {
     try { await dilly.patch('/profile', { onboarding_complete: true }); } catch {}
     await AsyncStorage.setItem('dilly_has_onboarded', 'true');
     await AsyncStorage.removeItem('dilly_audit_result');
-    router.replace('/(app)');
+    // New signups see the tutorial once. The tutorial screen itself
+    // checks `dilly_tutorial_shown` and redirects straight to /(app)
+    // if somehow a non-new user lands here, so this is safe to route
+    // unconditionally for the results → app transition.
+    router.replace('/onboarding/tutorial');
   }
 
   return (
