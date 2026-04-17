@@ -443,10 +443,9 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         {data.tagline ? (
           <Text style={{ fontSize: 12, color: '#4A3F65', marginTop: 2, paddingRight: 72 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
-        {/* Divider clears the 56pt photo (top:14 + 56 = 70pt). Without a
-            tagline, the name block ends around 38pt so we push the divider
-            down to 58pt so it sits under the photo, not through it. */}
-        <View style={{ height: 1, backgroundColor: '#C7BCE0', marginTop: data.tagline ? 12 : 42 }} />
+        {/* No divider — user asked for the pearl variant clean, without
+            the horizontal line running across the card. The name and
+            tagline stand on their own against the off-white background. */}
         <View style={{ flex: 1 }} />
         <MinimalContact data={data} hideLink={showQr} colors={{ email: '#3A2F55', phone: '#3A2F55', url: '#6B5B95' }} />
         {showQr && <QrBadge data={data} color="#6B5B95" />}

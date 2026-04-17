@@ -29,17 +29,46 @@ type Situation = {
   sub: string;
   icon: keyof typeof Ionicons.glyphMap;
   // Accent color used for this path's icon gradient + selected border.
-  // Gives each path a distinct visual identity — "Dilly looks like me."
+  // Gives each path a distinct visual identity.
   color: string;
   // 3 concrete things Dilly does for this path. Shown when the card is
   // selected. This is the promise, not marketing fluff.
   perks: string[];
   // Optional badge above the card (e.g. "$9.99 Building tier").
   badge?: string;
+  // When true the card gets the hero treatment: larger, more prominent,
+  // visually distinct. Currently reserved for i_have_a_job.
+  hero?: boolean;
+  // Optional 1-line closing pitch shown in the expanded perks section,
+  // used to seal the deal on hero-tier cards.
+  pitch?: string;
   needsEdu: boolean;
 };
 
 const OPTIONS: Situation[] = [
+  // ── HERO: people who already have a job ──
+  // This is the biggest, first card. Dilly is the ONLY career app that
+  // speaks to people who already have a job. The promise here has to
+  // convince someone with a stable, AI-resistant role that they still
+  // need this app — because their role is changing whether they move
+  // or not.
+  {
+    id: 'i_have_a_job',
+    title: "I have a job",
+    sub: "My role is changing. I want to stay ahead of it.",
+    icon: 'rocket',
+    color: '#2563EB',
+    hero: true,
+    perks: [
+      "See what AI is doing to your role this week, not 'someday'",
+      "Know how people with your job are adapting right now",
+      "Three specific moves each month, picked for your role",
+      "If you ever want to leave, Dilly already knows your field cold",
+      "Works even if your job is 'safe'. Because the work inside it is still shifting.",
+    ],
+    pitch: "Your company has a plan for AI. Now you need one too.",
+    needsEdu: false,
+  },
   // ── Majority paths ──
   {
     id: 'student',
@@ -164,7 +193,7 @@ const OPTIONS: Situation[] = [
   {
     id: 'trades_to_white_collar',
     title: "I'm moving from trades to office roles",
-    sub: 'Electrician, welder, HVAC, construction → office work.',
+    sub: 'Electrician, welder, HVAC, construction. Moving to office work.',
     icon: 'construct',
     color: '#b45309',
     perks: [
@@ -324,10 +353,14 @@ export default function ChooseSituationScreen() {
               style={styles.heroLogo}
               resizeMode="contain"
             />
-            <Text style={styles.title}>Who are you, right now?</Text>
+            <Text style={styles.title}>
+              The first career app built for everyone.
+            </Text>
             <Text style={styles.sub}>
-              Everything in Dilly adapts to this. AI tone, resume format, job filters, pricing.
-              Pick what fits today. You can change it later.
+              College freshman. CEO. Truck driver. Nurse. Dropout. Returning parent. Refugee. Founder reset. You.
+            </Text>
+            <Text style={styles.subBold}>
+              Every path here is its own app. Not a filter. Pick yours.
             </Text>
           </View>
         </FadeInView>
@@ -336,40 +369,51 @@ export default function ChooseSituationScreen() {
 
         {OPTIONS.map((opt, i) => {
           const isSelected = selected === opt.id;
+          const isHero = !!opt.hero;
           return (
             <FadeInView key={opt.id} delay={30 + i * 18}>
               <AnimatedPressable
                 scaleDown={0.98}
                 onPress={() => setSelected(opt.id === selected ? null : opt.id)}
                 style={[
-                  styles.card,
+                  isHero ? styles.cardHero : styles.card,
                   isSelected && {
                     borderColor: opt.color,
-                    backgroundColor: opt.color + '08',
+                    backgroundColor: opt.color + '0A',
                     shadowColor: opt.color,
-                    shadowOpacity: 0.2,
-                    shadowRadius: 14,
+                    shadowOpacity: isHero ? 0.28 : 0.2,
+                    shadowRadius: isHero ? 20 : 14,
                     shadowOffset: { width: 0, height: 6 },
                     elevation: 3,
                   },
                 ]}
               >
+                {/* Hero-only marker above the title — makes clear which
+                    card is the "this is made for you" option. */}
+                {isHero && (
+                  <View style={styles.heroMarkerRow}>
+                    <View style={[styles.heroMarkerDot, { backgroundColor: opt.color }]} />
+                    <Text style={[styles.heroMarkerText, { color: opt.color }]}>
+                      BUILT FOR YOU
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.cardTop}>
                   <View style={[
-                    styles.iconWrap,
+                    isHero ? styles.iconWrapHero : styles.iconWrap,
                     { backgroundColor: opt.color + '18' },
                     isSelected && { backgroundColor: opt.color },
                   ]}>
                     <Ionicons
                       name={opt.icon}
-                      size={20}
+                      size={isHero ? 26 : 20}
                       color={isSelected ? '#fff' : opt.color}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <Text style={[
-                        styles.cardTitle,
+                        isHero ? styles.cardTitleHero : styles.cardTitle,
                         isSelected && { color: opt.color },
                       ]}>
                         {opt.title}
@@ -380,12 +424,12 @@ export default function ChooseSituationScreen() {
                         </View>
                       ) : null}
                     </View>
-                    <Text style={styles.cardSub}>{opt.sub}</Text>
+                    <Text style={isHero ? styles.cardSubHero : styles.cardSub}>{opt.sub}</Text>
                   </View>
                   {isSelected ? (
-                    <Ionicons name="checkmark-circle" size={22} color={opt.color} />
+                    <Ionicons name="checkmark-circle" size={isHero ? 26 : 22} color={opt.color} />
                   ) : (
-                    <Ionicons name="chevron-forward" size={18} color={colors.t3} />
+                    <Ionicons name="chevron-forward" size={isHero ? 22 : 18} color={colors.t3} />
                   )}
                 </View>
 
@@ -410,6 +454,15 @@ export default function ChooseSituationScreen() {
                         <Text style={styles.perkText}>{perk}</Text>
                       </View>
                     ))}
+                    {/* Pitch line — hero cards get a closing bold line
+                        that seals the deal. Not every path has one. */}
+                    {opt.pitch ? (
+                      <View style={[styles.pitchBox, { borderColor: opt.color + '35', backgroundColor: opt.color + '10' }]}>
+                        <Text style={[styles.pitchText, { color: opt.color }]}>
+                          {opt.pitch}
+                        </Text>
+                      </View>
+                    ) : null}
                   </Animated.View>
                 )}
               </AnimatedPressable>
@@ -452,10 +505,12 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   heroWrap: { alignItems: 'flex-start' },
   heroLogo: {
-    width: 110,
-    height: 38,
-    marginBottom: 18,
-    marginLeft: -4,
+    // Subtler than the original — small enough that it reads as a brand
+    // mark, not a hero image. Matches the settings/onboarding density.
+    width: 78,
+    height: 26,
+    marginBottom: 14,
+    marginLeft: -2,
   },
   title: {
     fontSize: 28,
@@ -470,6 +525,16 @@ const styles = StyleSheet.create({
     color: colors.t2,
     lineHeight: 21,
   },
+  // Bold subtitle — used for the pitch line under the main sub,
+  // e.g. "Every path here is its own app."
+  subBold: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.t1,
+    lineHeight: 21,
+    marginTop: 10,
+    letterSpacing: -0.1,
+  },
 
   card: {
     paddingHorizontal: 16,
@@ -479,6 +544,77 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.b1,
     marginBottom: 12,
+  },
+  // Hero card — the jobholder option. Bigger padding, stronger border,
+  // subtle shadow. Designed to grab attention as the first card below
+  // the hero copy.
+  cardHero: {
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    borderRadius: radius.xl,
+    backgroundColor: colors.s1,
+    borderWidth: 1.5,
+    borderColor: '#2563EB' + '35',
+    marginBottom: 18,
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  // Small badge above the hero card title signaling this is the primary
+  // choice the user should consider.
+  heroMarkerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 10,
+  },
+  heroMarkerDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  heroMarkerText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.8,
+  },
+  // Hero icon wrap — larger than the regular 40pt version.
+  iconWrapHero: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitleHero: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.t1,
+    marginBottom: 2,
+    letterSpacing: -0.3,
+  },
+  cardSubHero: {
+    fontSize: 13,
+    color: colors.t2,
+    lineHeight: 18,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  // The "pitch" closing line shown in the expanded hero card's perks
+  // section. Framed as a call-out to match the weight of the pitch.
+  pitchBox: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  pitchText: {
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
+    letterSpacing: -0.1,
   },
   cardTop: {
     flexDirection: 'row',

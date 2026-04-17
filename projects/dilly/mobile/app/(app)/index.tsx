@@ -584,7 +584,7 @@ export default function HomeScreen() {
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
               { icon: 'chatbubbles' as const, color: colors.green, label: 'What We Think', onPress: () => router.push('/(app)/feedback') },
               { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
-              { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/calendar' as any) },
+              { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar' as any) },
               { icon: 'shield-checkmark' as const, color: '#00C853', label: 'AI Arena', onPress: () => router.push('/(app)/ai-arena') },
             ].map(tool => (
               <AnimatedPressable key={tool.label} style={s.toolItem} onPress={tool.onPress} scaleDown={0.92}>

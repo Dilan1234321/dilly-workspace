@@ -95,6 +95,66 @@ function daysAgo(dateStr: string): string {
   return `${Math.floor(diff / 30)}mo ago`;
 }
 
+/**
+ * Build a best-effort logo URL from a company name. Uses Clearbit's public
+ * logo API, which resolves company names → domain → logo without auth.
+ * Falls back to the initial-letter placeholder if the image fails to load.
+ *
+ * The scraper doesn't currently populate companies.logo_url on the server,
+ * so 99% of listings arrive with null logos. This client-side fallback
+ * means we get real logos for any company Clearbit knows without a single
+ * backend change.
+ */
+function companyLogoUrl(companyName: string | undefined, fallbackUrl: string | null | undefined): string | null {
+  if (fallbackUrl) return fallbackUrl;
+  if (!companyName) return null;
+  // Clearbit accepts a domain. Best guess: lowercase, strip spaces + punctuation,
+  // add .com. Works for the 80%+ of companies whose name maps 1:1 to their domain.
+  const slug = companyName
+    .toLowerCase()
+    .replace(/\binc\.?|\bllc\.?|\bco\.?|\bcorp\.?|\bltd\.?/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+  if (!slug) return null;
+  return `https://logo.clearbit.com/${slug}.com`;
+}
+
+/** Company logo with graceful fallback. Tries the server-provided URL
+ *  first, then Clearbit, then the initial-letter tile. */
+function CompanyLogo({ companyName, logoUrl, size, borderRadius, initialColor, initialBg, initialBorder }: {
+  companyName: string | undefined;
+  logoUrl: string | null | undefined;
+  size: number;
+  borderRadius?: number;
+  initialColor?: string;
+  initialBg?: string;
+  initialBorder?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const url = companyLogoUrl(companyName, logoUrl);
+  const radius = borderRadius ?? Math.round(size / 5);
+  const initial = (companyName?.[0] || '?').toUpperCase();
+  if (url && !failed) {
+    return (
+      <Image
+        source={{ uri: url }}
+        style={{ width: size, height: size, borderRadius: radius, backgroundColor: colors.s2 }}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <View style={{
+      width: size, height: size, borderRadius: radius,
+      backgroundColor: initialBg || VIOLET + '12',
+      borderWidth: 1, borderColor: initialBorder || VIOLET + '25',
+      alignItems: 'center', justifyContent: 'center',
+    }}>
+      <Text style={{ fontSize: Math.round(size * 0.42), fontWeight: '800', color: initialColor || VIOLET }}>{initial}</Text>
+    </View>
+  );
+}
+
 function fitColorHex(c?: string): string {
   if (c === 'green') return GREEN;
   if (c === 'amber') return AMBER;
@@ -435,15 +495,15 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
 
         {/* Title + company */}
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginTop: 14 }}>
-          {listing.company_logo ? (
-            <Image source={{ uri: listing.company_logo }} style={hero.logo} />
-          ) : (
-            <View style={[hero.logo, { backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }]}>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: '#fff' }}>
-                {(listing.company?.[0] || '?').toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <CompanyLogo
+            companyName={listing.company}
+            logoUrl={listing.company_logo}
+            size={48}
+            borderRadius={12}
+            initialColor="#fff"
+            initialBg="rgba(255,255,255,0.12)"
+            initialBorder="rgba(255,255,255,0.22)"
+          />
           <View style={{ flex: 1 }}>
             <Text style={hero.title} numberOfLines={2}>{listing.title}</Text>
             <Text style={hero.company} numberOfLines={1}>{listing.company}</Text>
@@ -548,13 +608,12 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
       <View style={s.jobContent}>
         {/* Header: logo + title/company + bookmark */}
         <View style={s.jobHeader}>
-          {listing.company_logo ? (
-            <Image source={{ uri: listing.company_logo }} style={s.companyLogo} />
-          ) : (
-            <View style={[s.companyLogoPlaceholder, { backgroundColor: VIOLET + '12', borderColor: VIOLET + '25', borderWidth: 1 }]}>
-              <Text style={[s.companyLogoInitial, { color: VIOLET }]}>{listing.company?.[0]?.toUpperCase() || '?'}</Text>
-            </View>
-          )}
+          <CompanyLogo
+            companyName={listing.company}
+            logoUrl={listing.company_logo}
+            size={44}
+            borderRadius={10}
+          />
           <View style={{ flex: 1 }}>
             <Text style={s.jobTitle} numberOfLines={2}>{listing.title}</Text>
             <Text style={s.jobCompany}>{listing.company}</Text>
@@ -1411,7 +1470,10 @@ const s = StyleSheet.create({
   filterPillTextActive: { color: '#fff' },
 
   // List
-  listContent: { paddingHorizontal: spacing.lg, gap: 8, paddingTop: 2 },
+  // Breathing room between the cities filter row and the first job card.
+  // Previously jobs bumped up against the filter chips, making the layout
+  // feel cramped.
+  listContent: { paddingHorizontal: spacing.lg, gap: 8, paddingTop: 18 },
 
   // Job Card — now has a colored rail on the left representing fit.
   jobCard: {

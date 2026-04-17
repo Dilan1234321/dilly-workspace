@@ -327,11 +327,20 @@ export default function AIArenaScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ACCENT} progressBackgroundColor={BG} />}
       >
 
-        {/* Header */}
+        {/* Header — command-center framing. Works for students AND people
+            who already have a job: it's the same question either way. */}
         <FadeInView delay={0}>
-          <View style={{ paddingTop: 8, paddingBottom: 16 }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: TEXT, lineHeight: 28 }}>Let's see how AI will impact your career.</Text>
-            <Text style={{ fontSize: 14, color: SUB, marginTop: 6 }}>Don't worry. We know exactly how to help you.</Text>
+          <View style={{ paddingTop: 8, paddingBottom: 18 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT }} />
+              <Text style={{ fontSize: 10, fontWeight: '900', color: ACCENT, letterSpacing: 1.8 }}>AI ARENA · LIVE</Text>
+            </View>
+            <Text style={{ fontSize: 26, fontWeight: '900', color: TEXT, lineHeight: 32, letterSpacing: -0.6 }}>
+              Your career intelligence, updated live.
+            </Text>
+            <Text style={{ fontSize: 13, color: SUB, marginTop: 6, lineHeight: 19 }}>
+              What AI is doing to your role, what it isn't, and exactly what to do this month.
+            </Text>
           </View>
         </FadeInView>
 
