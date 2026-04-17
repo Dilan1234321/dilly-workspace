@@ -1,5 +1,5 @@
 /**
- * InlineToast — small floating error/info message near where the user tapped.
+ * InlineToast. small floating error/info message near where the user tapped.
  * Auto-dismisses after a few seconds. Replaces Alert.alert for error messages.
  *
  * Usage:

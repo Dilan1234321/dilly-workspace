@@ -207,7 +207,7 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
 
 export default function AIArenaScreen() {
   const insets = useSafeAreaInsets();
-  // Holders get a calmer, coach-style tone — "field intelligence" and
+  // Holders get a calmer, coach-style tone. "field intelligence" and
   // "this quarter's play" instead of "threat" and "replace". Seekers/
   // students keep the existing arena/anxiety framing that powers
   // onboarding engagement.
@@ -230,12 +230,12 @@ export default function AIArenaScreen() {
   const [simResult, setSimResult] = useState<any>(null);
   const [simLoading, setSimLoading] = useState(false);
 
-  // Threat report — role-based, zero-LLM. Speaks to everyone, not just
+  // Threat report. role-based, zero-LLM. Speaks to everyone, not just
   // students with a resume. Loads in parallel with the shield score.
   const [threatReport, setThreatReport] = useState<any>(null);
   const [threatRoleInput, setThreatRoleInput] = useState<string>('');
   const [threatSaving, setThreatSaving] = useState(false);
-  // Weekly signal — hand-curated content block describing this
+  // Weekly signal. hand-curated content block describing this
   // week's biggest move in the user's field. Zero-LLM.
   const [weeklySignal, setWeeklySignal] = useState<any>(null);
 
@@ -377,7 +377,7 @@ export default function AIArenaScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ACCENT} progressBackgroundColor={BG} />}
       >
 
-        {/* Header — command-center framing. Works for students AND people
+        {/* Header. command-center framing. Works for students AND people
             who already have a job: it's the same question either way. */}
         <FadeInView delay={0}>
           <View style={{ paddingTop: 8, paddingBottom: 18 }}>
@@ -401,7 +401,7 @@ export default function AIArenaScreen() {
         </FadeInView>
 
         {/* ════════════════════════════════════════════════════════
-            THREAT REPORT — the painkiller card for EVERYONE.
+            THREAT REPORT. the painkiller card for EVERYONE.
             Zero LLM cost. Works whether or not user has a resume.
             Shows role-based AI threat data with actionable next moves.
             ════════════════════════════════════════════════════════ */}
@@ -448,7 +448,7 @@ export default function AIArenaScreen() {
                 <Text style={threatCard.headline}>{threatReport.headline}</Text>
               </View>
 
-              {/* Recent signal — the scary news point */}
+              {/* Recent signal. the scary news point */}
               <View style={threatCard.signalBox}>
                 <Ionicons name="newspaper-outline" size={12} color={ACCENT} />
                 <Text style={threatCard.signalText}>{threatReport.recent_signal}</Text>
@@ -511,14 +511,14 @@ export default function AIArenaScreen() {
             </View>
           </FadeInView>
         ) : (
-          /* No role resolved — show a prompt to tell us what you do */
+          /* No role resolved. show a prompt to tell us what you do */
           <FadeInView delay={20}>
             <View style={threatCard.promptCard}>
               <Text style={threatCard.promptEyebrow}>GET YOUR AI THREAT REPORT</Text>
               <Text style={threatCard.promptTitle}>What do you do right now?</Text>
               <Text style={threatCard.promptSub}>
                 Tell Dilly your role (or the one you're aiming for). You'll get a personalized
-                read on how AI is reshaping it — what's at risk, what's safe, what to learn.
+                read on how AI is reshaping it. what's at risk, what's safe, what to learn.
               </Text>
               <TextInput
                 style={threatCard.promptInput}
@@ -546,7 +546,7 @@ export default function AIArenaScreen() {
         )}
 
         {/* ════════════════════════════════════════════════════════
-            THIS WEEK IN YOUR FIELD — hand-curated signal. Zero LLM.
+            THIS WEEK IN YOUR FIELD. hand-curated signal. Zero LLM.
             Gives people a reason to open the Arena every week, even
             when they're stable and their threat report hasn't changed.
             ════════════════════════════════════════════════════════ */}
@@ -591,7 +591,7 @@ export default function AIArenaScreen() {
           <ActDivider number="I" title="THE THREAT" />
         </FadeInView>
 
-        {/* Shield Score Ring — seekers/students only. Holders
+        {/* Shield Score Ring. seekers/students only. Holders
             explicitly don't want a score calculated. For them, the
             Field Report threat_pct above carries the quantitative
             load and the vulnerable/moat cards below carry the
@@ -606,7 +606,7 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* Disruption stat — seeker framing ("entry-level roles")
+        {/* Disruption stat. seeker framing ("entry-level roles")
             doesn't apply to holders. Skip for them. */}
         {!isHolder && (
           <FadeInView delay={100}>
@@ -664,7 +664,7 @@ export default function AIArenaScreen() {
 
         <FadeInView delay={220}>
           <Text style={a.actSectionHeader}>
-            {isHolder ? "YOUR MOAT — WHAT AI CAN'T TOUCH" : "WHAT AI CAN'T TOUCH"}
+            {isHolder ? "YOUR MOAT. WHAT AI CAN'T TOUCH" : "WHAT AI CAN'T TOUCH"}
           </Text>
         </FadeInView>
 
@@ -721,7 +721,7 @@ export default function AIArenaScreen() {
 
 
         {/* ════════════════════════════════════════════════════════
-            ACT 3: YOUR PLAYBOOK — seeker/student only. Holders get
+            ACT 3: YOUR PLAYBOOK. seeker/student only. Holders get
             the Field Report's WHAT'S SHIFTING / YOUR MOAT /
             THIS QUARTER'S PLAYS sections up top, which cover the
             same ground without the score framing.
@@ -782,7 +782,7 @@ export default function AIArenaScreen() {
 
 
         {/* ════════════════════════════════════════════════════════
-            TOOLS SECTION — seeker/student only. Every tool below
+            TOOLS SECTION. seeker/student only. Every tool below
             (Threat Scanner / Replace Me / Career Sim / Firewall /
             Vault / Index) is resume- and skill-scan-flavored. For
             holders we end the page at the moat card above.
@@ -795,7 +795,7 @@ export default function AIArenaScreen() {
         )}
 
         {shield && shield.tools_unlocked === false ? (
-          /* Free tier — show locked-tools message + "come back" copy */
+          /* Free tier. show locked-tools message + "come back" copy */
           <FadeInView delay={460}>
             <View style={{
               borderRadius: 14,
@@ -813,7 +813,7 @@ export default function AIArenaScreen() {
                 </Text>
               </View>
               <Text style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 19 }}>
-                Threat Scanner, Replace Me, and Career Sim are part of Dilly. Your shield score is free — {shield.next_refresh ? `come back ${shield.next_refresh.toLowerCase()} for an updated score.` : 'check back next month for an updated score.'}
+                Threat Scanner, Replace Me, and Career Sim are part of Dilly. Your shield score is free. {shield.next_refresh ? `come back ${shield.next_refresh.toLowerCase()} for an updated score.` : 'check back next month for an updated score.'}
               </Text>
               <AnimatedPressable
                 style={{
@@ -831,7 +831,7 @@ export default function AIArenaScreen() {
           </FadeInView>
         ) : null}
 
-        {/* Dilly tier — gentle "refreshes Monday" copy above the tools */}
+        {/* Dilly tier. gentle "refreshes Monday" copy above the tools */}
         {shield && shield.tools_unlocked === true && shield.next_refresh ? (
           <FadeInView delay={460}>
             <Text style={{
@@ -1128,7 +1128,7 @@ export default function AIArenaScreen() {
   );
 }
 
-// ── HolderImpactCard styles — scoped to avoid collisions with `a`.
+// ── HolderImpactCard styles. scoped to avoid collisions with `a`.
 const h = StyleSheet.create({
   impactCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,

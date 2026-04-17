@@ -330,6 +330,29 @@ async def update_profile(request: Request, body: dict = Body(...)):
     email = user.get("email") or ""
     allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "cohorts", "career_fields", "user_type", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year", "plan", "public_profile_visible", "web_profile_settings", "web_headline", "card_template", "readable_slug", "extra_cohorts", "booking_availability", "bookings", "show_qr_button", "show_refer_button", "user_path", "years_experience", "most_recent_role", "most_recent_industry", "willing_industries", "self_taught_skills", "current_role", "current_job_title", "title", "field", "app_mode"}
     data = {k: v for k, v in (body or {}).items() if k in allowed}
+
+    # Life event append: used by the "I got laid off" / "I got a new job"
+    # mode-switch flow to record the event on the profile so Dilly's
+    # coach and memory system are aware of it. Private — never
+    # surfaced on the public web profile (filtered out in
+    # get_web_profile). Append-only; the frontend sends one event
+    # at a time; server maintains the list capped at the last 20.
+    _life_evt = (body or {}).get("life_events_append")
+    if isinstance(_life_evt, dict) and _life_evt.get("kind") in ("layoff", "new_job"):
+        try:
+            from projects.dilly.api.profile_store import get_profile as _get_profile  # type: ignore
+            _existing = _get_profile(email) or {}
+            _events = list(_existing.get("life_events") or [])
+            _events.append({
+                "kind":    _life_evt.get("kind"),
+                "at":      str(_life_evt.get("at") or ""),
+                "role":    (_life_evt.get("role") or None),
+                "company": (_life_evt.get("company") or None),
+            })
+            data["life_events"] = _events[-20:]
+        except Exception:
+            pass
+
     # Validate plan field: only accept known tier values.
     if "plan" in data and data["plan"] not in ("starter", "dilly", "pro", "building"):
         data.pop("plan", None)
@@ -1321,6 +1344,54 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         else:
             dilly_take = "Career story in progress."
 
+    # ── Situation-aware PUBLIC personalization ────────────────────
+    # The public web profile should adapt to who the user IS, but
+    # should NEVER surface stigma-risk signals. We keep a curated
+    # allow-list of situation → public framing overrides.
+    # Off-list sensitive situations (dropout, refugee, formerly
+    # incarcerated, neurodivergent, disabled, lgbtq, parent_returning,
+    # first_gen_college, trades_to_white_collar, career_switch,
+    # senior_reset) map to an EMPTY override. nothing situation-
+    # specific leaks onto the public page. Only the generic profile
+    # fields show.
+    _user_path_for_web = (profile.get("user_path") or "").strip().lower()
+    _positive_framings: dict[str, dict] = {
+        "i_have_a_job": {
+            "identity_tag":  "ACTIVE PROFESSIONAL",
+            "accent_color":  "#2563EB",
+        },
+        "student": {
+            "identity_tag":  "COLLEGE STUDENT",
+            "accent_color":  "#4F46E5",
+        },
+        "international_grad": {
+            # Visa users are VERY vulnerable to bias if status is
+            # disclosed on a public page. Show nothing situation-
+            # specific. Sponsorship targeting stays in the app only.
+            "identity_tag":  None,
+            "accent_color":  None,
+        },
+        "veteran": {
+            # Veterans typically want their service acknowledged
+            # publicly. Opt-in at signup; shown as a positive tag.
+            "identity_tag":  "VETERAN",
+            "accent_color":  "#15803D",
+        },
+        "ex_founder": {
+            # Founder DNA is a badge, not a liability.
+            "identity_tag":  "FOUNDER",
+            "accent_color":  "#CA8A04",
+        },
+        "exploring": {
+            # "Open to opportunities" framing, no signal about why.
+            "identity_tag":  "OPEN TO WORK",
+            "accent_color":  "#7C3AED",
+        },
+    }
+    _situation_public = _positive_framings.get(_user_path_for_web, {
+        "identity_tag": None, "accent_color": None,
+    })
+
     out = {
         "name": (profile.get("name") or "").strip(),
         "slug": slug,
@@ -1360,6 +1431,11 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         # exists).
         "skill_groups": skill_groups,
         "dilly_take":   dilly_take,
+        # Situation-aware, always-positive framing. Sensitive paths
+        # (dropout, refugee, disabled, etc.) resolve to null here, so
+        # the public page never leaks stigma.
+        "identity_tag":        _situation_public.get("identity_tag"),
+        "identity_accent":     _situation_public.get("accent_color"),
         # Mission statement — user-owned, lives on profile fields.
         # We surface whichever is populated. Never auto-generated by
         # an LLM during a view.

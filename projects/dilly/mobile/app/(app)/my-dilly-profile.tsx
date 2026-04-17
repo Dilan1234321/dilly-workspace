@@ -1,8 +1,8 @@
 /**
- * MY DILLY — Your Career DNA.
+ * MY DILLY. Your Career DNA.
  *
  * Not a settings page. Not a list of facts. A living, breathing
- * representation of who you are professionally — everything Dilly
+ * representation of who you are professionally. everything Dilly
  * knows, visualized beautifully.
  *
  * Sections:
@@ -181,8 +181,8 @@ function SkillTag({ skill, conf, onPress }: { skill: FactItem; conf: number; onP
 }
 
 // ── Loading State ────────────────────────────────────────────────────────────
-// Matches the "What We Think" loading experience — animated DillyFace with
-// rotating status lines — but with text tuned to what My Dilly actually
+// Matches the "What We Think" loading experience. animated DillyFace with
+// rotating status lines. but with text tuned to what My Dilly actually
 // shows (the user's identity, facts, story).
 
 const MY_DILLY_LOADING_TEXTS = [
@@ -237,7 +237,7 @@ function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
 
 function SeekerProfileScreen() {
   const insets = useSafeAreaInsets();
-  // Holder mode reframes this tab as 'My Career' — a trajectory
+  // Holder mode reframes this tab as 'My Career'. a trajectory
   // tracker rather than an identity builder. Seekers/students keep
   // 'My Dilly' + the existing identity framing.
   const appMode = useAppMode();
@@ -430,7 +430,7 @@ function SeekerProfileScreen() {
 
   return (
     <View style={d.container}>
-      {/* Toast overlay — absolute, top-most z-index */}
+      {/* Toast overlay. absolute, top-most z-index */}
       <InlineToastView
         {...toast.props}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9999 }}
@@ -784,7 +784,7 @@ function SeekerProfileScreen() {
             THE retention lever. Every chat adds facts; every fact makes
             Dilly sharper; sharper Dilly = better guidance. This meter
             makes the loop visible. No streaks (streaks punish the people
-            who need a day off) — just a growth number + a clear target
+            who need a day off). just a growth number + a clear target
             + context for where they stand.
 
             States:
@@ -792,7 +792,7 @@ function SeekerProfileScreen() {
               10-39 facts → "Dilly is learning you"
               40-79 facts → "Dilly knows you well"
               80+ facts   → "Dilly knows you deeply"
-            At 80+ we stop showing the meter — they've internalized
+            At 80+ we stop showing the meter. they've internalized
             the behavior, no need to nag. */}
         {!editMode && totalFacts < 80 && (
           <FadeInView delay={0}>
@@ -804,7 +804,7 @@ function SeekerProfileScreen() {
                   <Text style={d.growthCountUnit}> {totalFacts === 1 ? 'thing' : 'things'}</Text>
                 </Text>
               </View>
-              {/* Progress bar — tops out at 80 */}
+              {/* Progress bar. tops out at 80 */}
               <View style={d.growthTrack}>
                 <View style={[d.growthFill, { width: `${Math.min(100, (totalFacts / 80) * 100)}%` }]} />
               </View>
@@ -1651,7 +1651,7 @@ function SeekerProfileScreen() {
 }
 
 // ── Holder "My Career" ────────────────────────────────────────────────────────
-// Jobholders don't want a facts list — they want a career dashboard:
+// Jobholders don't want a facts list. they want a career dashboard:
 // trajectory, skills arsenal, and a real market-position block powered
 // by BLS OES wage percentiles (dilly_core/bls_wages.py). Zero-LLM.
 
@@ -1773,7 +1773,7 @@ function HolderCareer() {
           )}
         </View>
 
-        {/* DillyCard — reused from the seeker profile, mapped to
+        {/* DillyCard. reused from the seeker profile, mapped to
             role/company/YOE so the front shows the jobholder's
             actual identity. Card back + template picker work the
             same. */}
@@ -1823,7 +1823,7 @@ function HolderCareer() {
           />
         </FadeInView>
 
-        {/* Comp benchmark — the money shot */}
+        {/* Comp benchmark. the money shot */}
         {comp ? (
           <FadeInView delay={40}>
             <View style={hc.compCard}>
@@ -1860,7 +1860,7 @@ function HolderCareer() {
                 ))}
               </View>
 
-              {/* Company premium badge — only rendered when we had a
+              {/* Company premium badge. only rendered when we had a
                   curated multiplier for this user's company. Keeps
                   the claim honest ("adjusted for {Company}") instead
                   of silently inflating the number. Below-1.0 mults
@@ -1926,7 +1926,7 @@ function HolderCareer() {
         ) : null}
 
         {/* Power duo: Raise Brief + Escape Hatch. These are the two
-            holder-killer tools — one prepares for the conversation
+            holder-killer tools. one prepares for the conversation
             you want to have, the other quietly reads the market for
             the conversation you might need later. Sit-above-skills
             placement: after trajectory so they always appear in the
@@ -1958,6 +1958,21 @@ function HolderCareer() {
           </View>
         </FadeInView>
 
+        {/* Life event switch. "I got laid off" surfaced outside
+            Settings so users actually find it. Buried in Settings
+            they miss it; 90% of users who actually do get laid off
+            never tap it and get stuck with the wrong app. */}
+        <FadeInView delay={110}>
+          <AnimatedPressable
+            style={hc.layoffBtn}
+            scaleDown={0.98}
+            onPress={() => router.push('/onboarding/mode-switch?to=seeker' as any)}
+          >
+            <Ionicons name="sync-outline" size={14} color="#B45309" />
+            <Text style={hc.layoffBtnText}>I got laid off. switch to Job Search</Text>
+          </AnimatedPressable>
+        </FadeInView>
+
         {/* Skills arsenal */}
         {skills.length > 0 ? (
           <FadeInView delay={120}>
@@ -1972,7 +1987,7 @@ function HolderCareer() {
           </FadeInView>
         ) : null}
 
-        {/* Tenure insights — quick read on how long they've been in
+        {/* Tenure insights. quick read on how long they've been in
             the current role. Uses trajectory + tenure_months from
             the dashboard; computes a median-tenure note only when
             we have something reasonable to say. */}
@@ -2011,7 +2026,7 @@ function HolderCareer() {
           </FadeInView>
         ) : null}
 
-        {/* What's Next — three tap-to-Dilly starter prompts tailored
+        {/* What's Next. three tap-to-Dilly starter prompts tailored
             for holders. Kills the "nothing's here" feeling on fresh
             accounts and teaches what Dilly is actually for. */}
         <FadeInView delay={180}>
@@ -2072,7 +2087,7 @@ function HolderCareer() {
   );
 }
 
-// Holder My-Career stylesheet — scoped to avoid collisions with `d`.
+// Holder My-Career stylesheet. scoped to avoid collisions with `d`.
 const hc = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { padding: spacing.lg, gap: 20 },
@@ -2116,7 +2131,7 @@ const hc = StyleSheet.create({
   pctTrack: {
     position: 'relative',
     height: 8, borderRadius: 4, backgroundColor: '#21262D',
-    // Was marginTop: 18 — the absolutely-positioned P-marker above
+    // Was marginTop: 18. the absolutely-positioned P-marker above
     // (top: -26) overlapped the 'Your estimated market value' line.
     // Bumped to 42 so the marker floats fully above the bar with
     // breathing room.
@@ -2180,6 +2195,15 @@ const hc = StyleSheet.create({
     borderWidth: 1, borderColor: HOLDER_ACCENT + '25',
   },
   skillText: { fontSize: 12, fontWeight: '600', color: HOLDER_ACCENT },
+
+  // Layoff switch
+  layoffBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1, borderColor: '#FCD34D',
+  },
+  layoffBtnText: { fontSize: 12, fontWeight: '700', color: '#78350F' },
 
   // Power duo (Raise Brief + Escape Hatch)
   powerDuo: { flexDirection: 'row', gap: 10 },
@@ -2245,7 +2269,7 @@ const hc = StyleSheet.create({
   askSub:   { fontSize: 12, color: colors.t2, marginTop: 2 },
 });
 
-// Dispatcher — isHolder gets the career dashboard, everyone else the
+// Dispatcher. isHolder gets the career dashboard, everyone else the
 // original identity-facts profile. Keeping the two bodies in separate
 // components preserves hook order when the mode flips mid-session.
 export default function MyDillyProfileScreen() {
@@ -2301,7 +2325,7 @@ const d = StyleSheet.create({
   sectionLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1.5, color: colors.t3, marginBottom: 4 },
   citySection: { gap: 8 },
 
-  // Profile growth meter — retention lever. Hidden once user hits 80+ facts.
+  // Profile growth meter. retention lever. Hidden once user hits 80+ facts.
   growthCard: {
     marginBottom: 20,
     padding: 16,
@@ -2417,7 +2441,7 @@ const d = StyleSheet.create({
   strengthBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   strengthBadgeText: { fontSize: 10, fontWeight: '700' },
 
-  // Expanded facts — marginTop keeps the category-grid chip and the
+  // Expanded facts. marginTop keeps the category-grid chip and the
   // fact list visually distinct instead of mashed together.
   expandedFacts: {
     marginTop: 12,

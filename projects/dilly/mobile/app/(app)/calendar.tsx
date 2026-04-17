@@ -1001,7 +1001,7 @@ export default function CalendarScreen() {
   // Generate prep deck
   const handleViewPrepDeck = useCallback(async (event: CalendarEvent) => {
     if (!event.company) {
-      // No company info — just navigate to interview practice
+      // No company info. just navigate to interview practice
       router.push('/(app)/interview-practice');
       return;
     }

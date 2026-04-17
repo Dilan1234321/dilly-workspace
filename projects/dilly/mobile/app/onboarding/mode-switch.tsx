@@ -1,11 +1,11 @@
 /**
- * Mode switch — the human moment between being a jobholder and being
+ * Mode switch. the human moment between being a jobholder and being
  * a jobseeker (or vice versa). Reached when the user taps the
  * "I got laid off" / "I got a new job" button in Settings.
  *
  * This is NOT a settings toggle. It's a full-screen beat: DillyFace,
  * warm pre-written message, single CTA. The PATCH happens when the
- * user confirms the CTA, not when they open this screen — so they
+ * user confirms the CTA, not when they open this screen. so they
  * can back out if they tapped by accident.
  *
  * Query params:
@@ -57,7 +57,7 @@ export default function ModeSwitchScreen() {
   // When switching TO holder, capture the new role + company up front
   // so the Career Center, My Career comp card, and Market Radar have
   // something to work with on the very first render. Skipped for
-  // seeker (layoff) direction — no job to describe.
+  // seeker (layoff) direction. no job to describe.
   const [newRole, setNewRole] = useState('');
   const [newCompany, setNewCompany] = useState('');
 
@@ -75,7 +75,7 @@ export default function ModeSwitchScreen() {
     ]).start();
   }, [fadeFace, fadeText, fadeCta]);
 
-  // Holder CTA is disabled until role + company are typed — we need
+  // Holder CTA is disabled until role + company are typed. we need
   // them to populate the comp benchmark + trajectory without a
   // second round-trip. Seeker direction has no gating.
   const canContinue =
@@ -97,13 +97,44 @@ export default function ModeSwitchScreen() {
         // holder onboarding path setter.
         patchBody.user_path       = 'i_have_a_job';
       }
+      // Record the life-event on the profile so Dilly's chat +
+      // memory system know this was a pivot, not a random toggle.
+      // 'layoff_event' for seeker direction, 'new_job_event' for
+      // holder. Stored with an ISO timestamp. Never surfaced on the
+      // public web profile. filtered out server-side alongside
+      // other private categories. Lives on profile.life_events[].
+      const nowIso = new Date().toISOString();
+      patchBody.life_events_append = {
+        kind: direction === 'holder' ? 'new_job' : 'layoff',
+        at:   nowIso,
+        role:    direction === 'holder' ? newRole.trim()    : undefined,
+        company: direction === 'holder' ? newCompany.trim() : undefined,
+      };
+
       await dilly.fetch('/profile', {
         method: 'PATCH',
         body: JSON.stringify(patchBody),
       });
-      // Land back in the app. The tab bar will pick up the new mode
-      // and reshape on next mount.
-      router.replace('/(app)');
+      // Reset the tutorial flag so the mode-specific 5-card intro
+      // runs for the new identity. Layoff users see the seeker
+      // onboarding deck; just-got-hired users see the holder deck.
+      // Without this, switching mode silently skipped the tutorial
+      // because the flag was already "true" from the previous mode.
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.removeItem('dilly_tutorial_shown').catch(() => {});
+      } catch {}
+      // Push the new mode into useAppMode's in-memory + disk cache
+      // so the tab bar / dispatchers flip instantly on the next
+      // screen. Without this, they'd start rendering the OLD mode
+      // while /profile refetches.
+      try {
+        const { primeAppMode } = await import('../../hooks/useAppMode');
+        await primeAppMode(direction);
+      } catch {}
+      // Route into the tutorial, not directly to the app. Tutorial
+      // picks its own mode-specific deck via profile fetch.
+      router.replace('/onboarding/tutorial');
     } catch (e: any) {
       setErr(e?.message || 'Something went wrong.');
       setSaving(false);
@@ -121,7 +152,7 @@ export default function ModeSwitchScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[s.container, { paddingTop: insets.top + 6 }]}>
-        {/* Top-right close — lets the user back out without doing the switch */}
+        {/* Top-right close. lets the user back out without doing the switch */}
         <View style={s.topRow}>
           <TouchableOpacity onPress={handleDismiss} hitSlop={14}>
             <Ionicons name="close" size={22} color={colors.t3} />
@@ -139,7 +170,7 @@ export default function ModeSwitchScreen() {
             <Text style={s.body}>{copy.body}</Text>
           </Animated.View>
 
-          {/* Holder-only form — captures role + company before the
+          {/* Holder-only form. captures role + company before the
               mode flip so Career Center / My Career / Market Radar
               show real data the moment we land in the app. */}
           {direction === 'holder' ? (

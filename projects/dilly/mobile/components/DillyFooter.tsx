@@ -1,5 +1,5 @@
 /**
- * DillyFooter — subtle logo at the very bottom of scroll content.
+ * DillyFooter. subtle logo at the very bottom of scroll content.
  * Only visible when you scroll past all content.
  */
 

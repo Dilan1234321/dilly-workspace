@@ -113,7 +113,7 @@ export default function ChoosePathScreen() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Back button — lets users who tapped the wrong situation go back. */}
+      {/* Back button. lets users who tapped the wrong situation go back. */}
       <View style={{ paddingTop: insets.top + 8, paddingHorizontal: spacing.xl }}>
         <AnimatedPressable
           onPress={() => {
@@ -142,7 +142,7 @@ export default function ChoosePathScreen() {
           </Text>
         </FadeInView>
 
-        {/* Email sections — order flips based on whether the user's
+        {/* Email sections. order flips based on whether the user's
             situation needs a .edu email. Student paths see .edu first,
             non-student paths see regular first. */}
 

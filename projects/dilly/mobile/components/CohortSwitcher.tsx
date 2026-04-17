@@ -1,5 +1,5 @@
 /**
- * CohortSwitcher — reusable segmented pill for switching between cohort scores.
+ * CohortSwitcher. reusable segmented pill for switching between cohort scores.
  * Hidden when the user has only 1 cohort. iOS-native segmented control feel.
  */
 

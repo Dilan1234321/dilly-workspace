@@ -1,5 +1,5 @@
 /**
- * InlinePopup — small floating action panel that appears near where the user tapped.
+ * InlinePopup. small floating action panel that appears near where the user tapped.
  * Replaces traditional Alert.alert with an in-app panel styled to match Dilly.
  *
  * Usage:
@@ -77,7 +77,7 @@ export default function InlinePopup({ visible, anchor, title, message, actions, 
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* Backdrop — tapping dismisses */}
+      {/* Backdrop. tapping dismisses */}
       <Pressable style={s.backdrop} onPress={onClose} />
 
       {/* Panel */}

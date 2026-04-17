@@ -263,7 +263,7 @@ export default function ProfileScreen() {
   const targetCompanies = p.target_companies || [];
   const initial   = fullName[0]?.toUpperCase() || '?';
 
-  // Cohort add/remove handler — patches server + updates local state
+  // Cohort add/remove handler. patches server + updates local state
   async function handleCohortToggle(cohortId: string, added: boolean) {
     const updated = added
       ? [...userCohorts.filter(c => c !== cohortId), cohortId]
@@ -394,7 +394,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {/* My Cohorts section — view only, add/remove on New Audit page */}
+        {/* My Cohorts section. view only, add/remove on New Audit page */}
         <View style={ps.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <Text style={ps.sectionEyebrow}>MY COHORTS</Text>

@@ -278,7 +278,7 @@ function HolderHome() {
             >
               <Text style={h.statEyebrow}>AI THREAT</Text>
               <Text style={[h.statBig, { color: threatColor }]}>
-                {threat?.threat_pct != null ? `${threat.threat_pct}%` : '—'}
+                {threat?.threat_pct != null ? `${threat.threat_pct}%` : '-'}
               </Text>
               <Text style={h.statLabel}>
                 {threat?.threat_level ? threat.threat_level.toUpperCase() : 'Open Arena'}
@@ -291,7 +291,7 @@ function HolderHome() {
             >
               <Text style={h.statEyebrow}>MARKET · YOUR ROLE</Text>
               <Text style={[h.statBig, { color: colors.t1 }]}>
-                {marketCount != null ? marketCount.toLocaleString() : '—'}
+                {marketCount != null ? marketCount.toLocaleString() : '-'}
               </Text>
               <Text style={h.statLabel}>hiring now</Text>
             </AnimatedPressable>
@@ -392,7 +392,7 @@ function HolderHome() {
   );
 }
 
-// ── HolderHome styles — scoped so they can't collide with the
+// ── HolderHome styles. scoped so they can't collide with the
 // seeker Career Center's stylesheet below. ────────────────────────────
 const h = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
@@ -498,7 +498,7 @@ function SeekerHome() {
   const [factCount, setFactCount] = useState(0);
   const [topFacts, setTopFacts] = useState<Array<{ category: string; label: string; value: string }>>([]);
   const [appCount, setAppCount] = useState(0);
-  // Weekly brief — personalized Monday-morning card with a headline +
+  // Weekly brief. personalized Monday-morning card with a headline +
   // 3 bullets + deep links. Fetched on mount, cached server-side per
   // ISO week. Cheap to fetch (no LLM call).
   const [weeklyBrief, setWeeklyBrief] = useState<{
@@ -555,7 +555,7 @@ function SeekerHome() {
         if (auditObj?.dilly_take) setDillyTake(auditObj.dilly_take);
 
         // Facts count + sample (for the "Dilly sees" card when profile
-        // is still thin — gives the app a useful empty state).
+        // is still thin. gives the app a useful empty state).
         if (memRes?.ok) {
           const mem = await memRes.json();
           const items = (mem?.items || []) as Array<{ category: string; label: string; value: string }>;
@@ -593,7 +593,7 @@ function SeekerHome() {
           setTopJobs((data?.listings || []).slice(0, 3));
         }).catch(() => {});
 
-        // Weekly brief — server-cached per ISO week so this is ~free.
+        // Weekly brief. server-cached per ISO week so this is ~free.
         // Gives Career Center a reason-to-open-every-Monday.
         dilly.get('/brief/weekly').then((data: any) => {
           if (data?.headline) setWeeklyBrief(data);
@@ -717,7 +717,7 @@ function SeekerHome() {
             that makes opening Dilly feel like checking your career
             inbox.
 
-            Each bullet has a deep_link — tapping jumps to the
+            Each bullet has a deep_link. tapping jumps to the
             relevant tab with context (e.g. Jobs tab with ?weekly=1
             shows the jobs that match). */}
         {weeklyBrief && (weeklyBrief.new_jobs_count > 0 || (weeklyBrief.bullets?.length ?? 0) > 0) && (
@@ -786,7 +786,7 @@ function SeekerHome() {
           </AnimatedPressable>
         </FadeInView>
 
-        {/* "Dilly sees" card — shown when the profile is still thin (≤12
+        {/* "Dilly sees" card. shown when the profile is still thin (≤12
             facts). Makes the empty state feel like progress. Lists the
             concrete things Dilly learned from resume/onboarding + an
             explicit ask to add one more. Tapping opens Dilly AI. */}
@@ -1032,7 +1032,7 @@ function SeekerHome() {
 }
 
 // Dispatcher: picks the right Home based on app mode. Kept minimal so
-// hook order stays stable for each variant — SeekerHome's hooks never
+// hook order stays stable for each variant. SeekerHome's hooks never
 // live next to HolderHome's hooks at the call site.
 export default function HomeScreen() {
   const appMode = useAppMode();
@@ -1054,7 +1054,7 @@ const s = StyleSheet.create({
   talkBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.indigo, paddingVertical: 14, borderRadius: 12, marginTop: 20 },
   talkBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
-  // "Dilly sees" card — shown when profile is still thin
+  // "Dilly sees" card. shown when profile is still thin
   dillySeesCard: {
     marginTop: 18,
     padding: 16,
@@ -1131,7 +1131,7 @@ const s = StyleSheet.create({
     color: colors.indigo,
   },
 
-  // Life event card — real moments in the user's timeline
+  // Life event card. real moments in the user's timeline
   lifeCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1163,7 +1163,7 @@ const s = StyleSheet.create({
     lineHeight: 16,
   },
 
-  // Weekly brief — the "reason to open Dilly every Monday" card
+  // Weekly brief. the "reason to open Dilly every Monday" card
   briefCard: {
     marginTop: 8,
     padding: 16,

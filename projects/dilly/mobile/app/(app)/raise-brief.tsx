@@ -1,16 +1,16 @@
 /**
- * Raise Brief — pre-rendered page a holder reads 10 minutes before
+ * Raise Brief. pre-rendered page a holder reads 10 minutes before
  * walking into a comp conversation. Zero-LLM: everything comes from
  * /holder/raise-brief, which aggregates profile + memory + BLS wage
  * curve + company premium.
  *
  * Structure:
- *   1. Header — role + company + YOE + tenure
- *   2. THE ASK — three numbers (min / target / stretch), the money shot
- *   3. MARKET POSITION — percentile + p25/p50/p75 + optional company chip
- *   4. WINS — up to 4 achievement facts pulled from memory
- *   5. WHY NOW — three reasons computed from what we know
- *   6. YOUR OPENER — one-line script, copy-to-clipboard
+ *   1. Header. role + company + YOE + tenure
+ *   2. THE ASK. three numbers (min / target / stretch), the money shot
+ *   3. MARKET POSITION. percentile + p25/p50/p75 + optional company chip
+ *   4. WINS. up to 4 achievement facts pulled from memory
+ *   5. WHY NOW. three reasons computed from what we know
+ *   6. YOUR OPENER. one-line script, copy-to-clipboard
  *
  * Cached via sessionCache so opening the page on a remount is instant.
  */
@@ -50,7 +50,7 @@ type Brief = {
 };
 
 function fmtUsd(n: number | null | undefined): string {
-  if (n == null) return '—';
+  if (n == null) return '-';
   if (n >= 1000) return '$' + Math.round(n / 1000).toLocaleString() + 'K';
   return '$' + n.toLocaleString();
 }
@@ -76,7 +76,7 @@ export default function RaiseBriefScreen() {
   const onShare = useCallback(async () => {
     if (!data) return;
     const msg = [
-      `Raise Brief — ${data.you.role || 'role'}`,
+      `Raise Brief. ${data.you.role || 'role'}`,
       data.you.company ? `@ ${data.you.company}` : '',
       '',
       data.market.your_estimated_wage
@@ -154,7 +154,7 @@ export default function RaiseBriefScreen() {
           ) : null}
         </FadeInView>
 
-        {/* THE ASK — the money shot */}
+        {/* THE ASK. the money shot */}
         <FadeInView delay={40}>
           <View style={s.askCard}>
             <Text style={s.askEyebrow}>THE ASK</Text>
@@ -225,7 +225,7 @@ export default function RaiseBriefScreen() {
               scaleDown={0.98}
               onPress={() => openDillyOverlay({
                 isPaid: true,
-                initialMessage: `I'm prepping for a raise conversation. Help me name 3 concrete wins from my current role — specific outcomes, not vague descriptions. I'm a ${d.you.role || 'professional'}${d.you.company ? ` at ${d.you.company}` : ''}.`,
+                initialMessage: `I'm prepping for a raise conversation. Help me name 3 concrete wins from my current role. specific outcomes, not vague descriptions. I'm a ${d.you.role || 'professional'}${d.you.company ? ` at ${d.you.company}` : ''}.`,
               })}
             >
               <Ionicons name="sparkles" size={16} color={INDIGO} />
@@ -263,7 +263,7 @@ export default function RaiseBriefScreen() {
             scaleDown={0.97}
             onPress={() => openDillyOverlay({
               isPaid: true,
-              initialMessage: `I'm about to go into a raise conversation. I'm a ${d.you.role || 'professional'}${d.you.company ? ` at ${d.you.company}` : ''}${d.you.tenure_months ? `, ${Math.round(d.you.tenure_months)} months in` : ''}. My target number is ${fmtUsd(d.the_ask.target)}. Role-play this with me — you be the manager. Push back hard.`,
+              initialMessage: `I'm about to go into a raise conversation. I'm a ${d.you.role || 'professional'}${d.you.company ? ` at ${d.you.company}` : ''}${d.you.tenure_months ? `, ${Math.round(d.you.tenure_months)} months in` : ''}. My target number is ${fmtUsd(d.the_ask.target)}. Role-play this with me. you be the manager. Push back hard.`,
             })}
           >
             <View style={s.coachIcon}>

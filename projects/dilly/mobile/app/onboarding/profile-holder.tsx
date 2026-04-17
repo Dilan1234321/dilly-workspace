@@ -1,5 +1,5 @@
 /**
- * Profile setup — onboarding for jobholders (user_path === 'i_have_a_job').
+ * Profile setup. onboarding for jobholders (user_path === 'i_have_a_job').
  *
  * Three modes, three onboardings. This is the shortest of the three
  * because holders don't need a resume, cities, or target companies to
@@ -11,8 +11,8 @@
  *
  * Total: ~45 seconds. Then we route to results → tutorial → app.
  *
- * Everything else about them — wins, decisions, specific skills,
- * concerns — gets extracted from chat over time via memory_extraction
+ * Everything else about them. wins, decisions, specific skills,
+ * concerns. gets extracted from chat over time via memory_extraction
  * on the server.
  */
 
@@ -37,7 +37,7 @@ type Step = 0 | 1 | 2 | 3 | 4;
 
 // Quick-pick role suggestions. The user can type anything; these just
 // seed the field with common roles the threat-report classifier
-// already has content for. Kept universal — no specific industries.
+// already has content for. Kept universal. no specific industries.
 const ROLE_SUGGESTIONS = [
   'Software Engineer',
   'Marketing Manager',
@@ -80,7 +80,7 @@ export default function ProfileHolderScreen() {
   // seniority curve downstream can read the real value instead of
   // a rounded bucket.
   const [exactYears, setExactYears] = useState<string>('');
-  // Company name — captured in the same step as the role so we don't
+  // Company name. captured in the same step as the role so we don't
   // renumber everything. Required because Market Radar + My Career
   // benchmarks lean on this for holder-shaped framing.
   const [company, setCompany] = useState<string>('');
@@ -112,7 +112,7 @@ export default function ProfileHolderScreen() {
         form.append('file', { uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
         await fetch(`${API_BASE}/profile/photo`, { method: 'POST', headers, body: form });
       } catch (e) {
-        setErr("Couldn't upload the photo — tap to try again.");
+        setErr("Couldn't upload the photo. tap to try again.");
       } finally {
         setPhotoUploading(false);
       }
@@ -121,7 +121,7 @@ export default function ProfileHolderScreen() {
     }
   }
 
-  // Progress bar — fills as user advances. Same visual as the tutorial.
+  // Progress bar. fills as user advances. Same visual as the tutorial.
   const progressAnim = useRef(new Animated.Value(1 / TOTAL_STEPS)).current;
   function animateProgress(toStep: Step) {
     Animated.timing(progressAnim, {
@@ -214,7 +214,7 @@ export default function ProfileHolderScreen() {
         ['dilly_onboarding_target', 'growth'],
       ]);
 
-      // Offer the resume upload as optional — it only helps Dilly's
+      // Offer the resume upload as optional. it only helps Dilly's
       // AI learn about them faster. The upload screen has a "Skip for
       // now" CTA so holders can still get to the app in seconds.
       router.replace({
@@ -265,7 +265,7 @@ export default function ProfileHolderScreen() {
               <Text style={s.eyebrow}>FIRST, YOUR FACE</Text>
               <Text style={s.title}>Add a professional photo.</Text>
               <Text style={s.sub}>
-                Use something you'd put on LinkedIn — clear headshot,
+                Use something you'd put on LinkedIn. clear headshot,
                 good lighting, looking at the camera. Shows up on your
                 Dilly card and profile page.
               </Text>
@@ -340,7 +340,7 @@ export default function ProfileHolderScreen() {
                 autoFocus
                 returnKeyType="next"
               />
-              {/* Quick-pick suggestions — tap to fill the input. */}
+              {/* Quick-pick suggestions. tap to fill the input. */}
               <View style={s.suggestionRow}>
                 {ROLE_SUGGESTIONS.map(r => (
                   <TouchableOpacity
@@ -361,7 +361,7 @@ export default function ProfileHolderScreen() {
                 ))}
               </View>
 
-              {/* Company — captured alongside role so the Market
+              {/* Company. captured alongside role so the Market
                   Radar comp benchmark, Career Center trajectory,
                   and chat prompt ("at {company}") all have it from
                   the jump. */}
@@ -392,7 +392,7 @@ export default function ProfileHolderScreen() {
                 your comp precisely. A rough bucket works too.
               </Text>
 
-              {/* Exact-years input — takes priority over the buckets
+              {/* Exact-years input. takes priority over the buckets
                   below. Keyboard is numeric so users don't fight
                   autocorrect; maxLength guards against gag inputs. */}
               <View style={{ marginTop: 6 }}>

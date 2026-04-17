@@ -113,7 +113,7 @@ export default function ScoreDetailScreen() {
     build: new Animated.Value(0),
   }).current;
 
-  // pillScrollRef removed — cohort badges now use flex-wrap View
+  // pillScrollRef removed. cohort badges now use flex-wrap View
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 

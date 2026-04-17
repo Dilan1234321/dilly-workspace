@@ -1,11 +1,11 @@
 /**
- * Escape Hatch — a quiet read on "what you'd walk into if you left."
- * Holder-only. Zero apply pressure by design — there's no save-job,
+ * Escape Hatch. a quiet read on "what you'd walk into if you left."
+ * Holder-only. Zero apply pressure by design. there's no save-job,
  * no "apply" CTA at the top, no pipeline. Just the doors, the comp
  * deltas, and 1-3 concrete listings per door so they see this is
  * real, not a vibe.
  *
- * This is the wedge feature — nobody else serves "I have a job but I
+ * This is the wedge feature. nobody else serves "I have a job but I
  * want to know what's out there without applying."
  */
 
@@ -42,7 +42,7 @@ type Data = {
 };
 
 function fmtUsd(n: number | null | undefined): string {
-  if (n == null) return '—';
+  if (n == null) return '-';
   if (n >= 1000) return '$' + Math.round(n / 1000).toLocaleString() + 'K';
   return '$' + n.toLocaleString();
 }
@@ -60,7 +60,7 @@ export default function EscapeHatchScreen() {
       const res = await dilly.fetch('/holder/escape-hatch');
       return res?.ok ? await res.json() : null;
     },
-    { ttlMs: 120_000 },   // 2 min — market doesn't move fast
+    { ttlMs: 120_000 },   // 2 min. market doesn't move fast
   );
 
   if (loading) {
@@ -100,7 +100,7 @@ export default function EscapeHatchScreen() {
           <Text style={s.title}>What you'd walk into.</Text>
           <Text style={s.sub}>
             No applications, no alerts. Just a read on what's out there
-            for someone like you — open it any time.
+            for someone like you. open it any time.
           </Text>
         </FadeInView>
 

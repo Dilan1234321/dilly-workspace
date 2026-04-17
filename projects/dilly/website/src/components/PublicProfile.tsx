@@ -57,6 +57,8 @@ interface ProfileData {
   career_interests: string[];
   current_role: string | null;
   current_company: string | null;
+  identity_tag:    string | null;    // positive situation framing, null for sensitive paths
+  identity_accent: string | null;
   skills_technical: { label: string; confidence: string }[];
   skills_soft: { label: string; confidence: string }[];
   skill_groups: SkillGroup[];
@@ -335,6 +337,20 @@ export default function PublicProfile({ slug, prefix }: { slug: string; prefix: 
                 </h1>
                 {subtitle ? (
                   <p className="text-sm text-slate-500 mt-1 truncate">{subtitle}</p>
+                ) : null}
+                {p.identity_tag ? (
+                  <span
+                    className="inline-block mt-2 text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full"
+                    style={{
+                      color:           p.identity_accent || "#6366f1",
+                      backgroundColor: (p.identity_accent || "#6366f1") + "15",
+                      borderWidth:     1,
+                      borderStyle:     "solid",
+                      borderColor:     (p.identity_accent || "#6366f1") + "33",
+                    }}
+                  >
+                    {p.identity_tag}
+                  </span>
                 ) : null}
               </div>
             </div>

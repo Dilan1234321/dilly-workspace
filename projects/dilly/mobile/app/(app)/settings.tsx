@@ -76,7 +76,7 @@ export default function SettingsScreen() {
   const [webPrefix, setWebPrefix] = useState('s');
   const [webTagline, setWebTagline] = useState('');
   const [taglineSaving, setTaglineSaving] = useState(false);
-  // Career Mode — reshapes the whole app. See lib/appMode.ts.
+  // Career Mode. reshapes the whole app. See lib/appMode.ts.
   // Stored as an optional override on the profile; when null, mode is
   // derived from user_path.
   const [appMode, setAppMode] = useState<AppMode>('seeker');
@@ -138,7 +138,7 @@ export default function SettingsScreen() {
     // every other consumer of useAppMode (tab bar, dispatchers in
     // HomeScreen / MyDillyProfileScreen / JobsScreen) flips to the
     // new mode on its next render. Session data caches are left
-    // intact so switching feels instant — the other mode's cached
+    // intact so switching feels instant. the other mode's cached
     // data is still there when the user flips back.
     await primeAppMode(nextMode);
     try {
@@ -175,7 +175,7 @@ export default function SettingsScreen() {
           // next account that signs in on this device sees the tutorial.
           // Without it a fresh signup inherits the previous user's flag
           // and gets routed straight to /(app), skipping the 5-card
-          // intro. That was a real bug users hit — never ship signout
+          // intro. That was a real bug users hit. never ship signout
           // without wiping this key.
           try {
             const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;

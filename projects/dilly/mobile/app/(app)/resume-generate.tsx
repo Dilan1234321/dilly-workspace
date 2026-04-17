@@ -128,7 +128,7 @@ export default function ResumeGenerateScreen() {
   const resumePreviewRef = useRef<View>(null);
 
   // Downloads real text-layer PDF / DOCX from the server (NOT a PNG
-  // screenshot — ATS parsers need real text bytes to extract). We still
+  // screenshot. ATS parsers need real text bytes to extract). We still
   // need the variant to be saved first, because the download endpoint
   // pulls from the stored sections row.
   async function handleDownloadFormat(format: 'pdf' | 'docx') {
@@ -151,7 +151,7 @@ export default function ResumeGenerateScreen() {
 
       const url = `${(require('../../lib/tokens') as any).API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
 
-      // Use downloadAsync — handles redirects, auth headers, and writes straight to disk.
+      // Use downloadAsync. handles redirects, auth headers, and writes straight to disk.
       const res = await FileSystem.downloadAsync(url, destPath, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -354,7 +354,7 @@ export default function ResumeGenerateScreen() {
         clearInterval(stepTimer.current);
         stepTimer.current = null;
       }
-      // Surface the real reason on the error screen — massively improves
+      // Surface the real reason on the error screen. massively improves
       // debuggability for users and for us reading support threads.
       const detail = String(err?.message || err?.toString?.() || 'Unknown error').slice(0, 400);
       setGenerateError(detail);
@@ -382,7 +382,7 @@ export default function ResumeGenerateScreen() {
       if (id) setVariantId(id);
       setSaved(true);
     } catch {
-      // Saving failed silently — not blocking
+      // Saving failed silently. not blocking
     }
   }
 
@@ -550,7 +550,7 @@ export default function ResumeGenerateScreen() {
                 </View>
               )}
 
-              {/* Verification chips — parse score + keyword coverage + facts used */}
+              {/* Verification chips. parse score + keyword coverage + facts used */}
               {(atsInfo?.ats_parse_score || atsInfo?.keyword_coverage_pct || atsInfo?.facts_used) ? (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                   {typeof atsInfo?.ats_parse_score === 'number' && atsInfo.ats_parse_score > 0 && (
@@ -580,7 +580,7 @@ export default function ResumeGenerateScreen() {
                 </View>
               ) : null}
 
-              {/* Keyword coverage warning — shown when the JD asks for things
+              {/* Keyword coverage warning. shown when the JD asks for things
                   the profile doesn't know about. This is the "you may get
                   filtered out" banner. Tapping opens Dilly AI with a
                   concrete starter message. */}
@@ -721,7 +721,7 @@ export default function ResumeGenerateScreen() {
           </FadeInView>
         )}
 
-        {/* Not Ready — Dilly never invents. When the profile is too thin for
+        {/* Not Ready. Dilly never invents. When the profile is too thin for
             this role, we surface the gaps and route each gap into a one-tap
             "Tell Dilly about X" prompt. Fill them in, come back, regenerate. */}
         {stage === 'not_ready' && atsInfo && (
@@ -745,7 +745,7 @@ export default function ResumeGenerateScreen() {
               )}
             </View>
 
-            {/* One-tap "tell Dilly about this" chips — one per specific gap */}
+            {/* One-tap "tell Dilly about this" chips. one per specific gap */}
             {Array.isArray(atsInfo.tell_dilly_prompts) && atsInfo.tell_dilly_prompts.length > 0 && (
               <View style={{ gap: 8, marginTop: 8 }}>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 0.5, paddingHorizontal: 2 }}>

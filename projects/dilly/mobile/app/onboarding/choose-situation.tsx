@@ -1,8 +1,8 @@
 /**
- * Choose Situation — the first screen anyone sees in Dilly.
+ * Choose Situation. the first screen anyone sees in Dilly.
  *
  * This is the "wow" moment. The user picks who they are, and each card
- * expands to show a specific promise — the concrete things Dilly does
+ * expands to show a specific promise. the concrete things Dilly does
  * differently for THEIR situation. This screen is where a dropout /
  * veteran / parent / senior sees "oh, this app is actually built for me"
  * for the first time. That's the acquisition moment.
@@ -50,7 +50,7 @@ const OPTIONS: Situation[] = [
   // This is the biggest, first card. Dilly is the ONLY career app that
   // speaks to people who already have a job. The promise here has to
   // convince someone with a stable, AI-resistant role that they still
-  // need this app — because their role is changing whether they move
+  // need this app. because their role is changing whether they move
   // or not.
   {
     id: 'i_have_a_job',
@@ -69,33 +69,10 @@ const OPTIONS: Situation[] = [
     pitch: "Your company has a plan for AI. Now you need one too.",
     needsEdu: false,
   },
-  // ── Majority paths ──
-  {
-    id: 'student',
-    title: "I'm a college student",
-    sub: 'In school, looking for internships or your first role.',
-    icon: 'school',
-    color: '#4f46e5',
-    perks: [
-      'Matched to internships tagged for your major + cohort',
-      'Fit narratives in every job card showing what you have and what to build',
-      'Resumes formatted for each company\'s ATS, with GPA when it helps',
-    ],
-    needsEdu: true,
-  },
-  {
-    id: 'career_switch',
-    title: "I'm switching careers",
-    sub: 'Experience in one field, pivoting into another.',
-    icon: 'swap-horizontal',
-    color: '#0891b2',
-    perks: [
-      'Transferable skills pulled to the top of every resume',
-      'Bullets reframed for your target field\'s vocabulary',
-      'Honest read on what gaps to close and what\'s already covered',
-    ],
-    needsEdu: false,
-  },
+  // ── Top-of-list: highest-signal paths the user will see first.
+  // Order locked by product: i_have_a_job > exploring > student >
+  // visa > dropout > senior_reset. The other seeker/switcher paths
+  // live below.
   {
     id: 'exploring',
     title: "I'm looking for my next opportunity",
@@ -109,17 +86,16 @@ const OPTIONS: Situation[] = [
     ],
     needsEdu: false,
   },
-  // ── Student-specific ──
   {
-    id: 'first_gen_college',
-    title: "I'm first in my family to go to college",
-    sub: 'Nobody at home can tell you the unwritten rules.',
-    icon: 'trophy',
-    color: '#f59e0b',
+    id: 'student',
+    title: "I'm a college student",
+    sub: 'In school, looking for internships or your first role.',
+    icon: 'school',
+    color: '#4f46e5',
     perks: [
-      'The mentor conversation you never had, on demand',
-      'Unwritten rules made explicit (networking, thank-yous, what business casual actually means)',
-      'Work-during-school hours treated as real resume material',
+      'Matched to internships tagged for your major + cohort',
+      'Fit narratives in every job card showing what you have and what to build',
+      'Resumes formatted for each company\'s ATS, with GPA when it helps',
     ],
     needsEdu: true,
   },
@@ -137,11 +113,10 @@ const OPTIONS: Situation[] = [
     ],
     needsEdu: true,
   },
-  // ── Non-student specialized ──
   {
     id: 'dropout',
-    title: "I'm building without a degree",
-    sub: 'Left school or never went. Self-taught, bootcamp, or on-the-job.',
+    title: "Dropped out of college? Never went?",
+    sub: "Self-taught, bootcamp, or on-the-job. The path doesn't need the piece of paper.",
     icon: 'hammer',
     color: '#059669',
     badge: 'Dilly Building. $9.99/mo',
@@ -154,8 +129,8 @@ const OPTIONS: Situation[] = [
   },
   {
     id: 'senior_reset',
-    title: "I'm starting a next chapter",
-    sub: 'Senior professional between roles. Laid off or ready for new.',
+    title: "Laid off after years in my field",
+    sub: "Senior professional between roles. Everything you built is still yours.",
     icon: 'compass',
     color: '#0f766e',
     perks: [
@@ -164,6 +139,33 @@ const OPTIONS: Situation[] = [
       'Warm, confident tone. Not the new-grad cheerleading',
     ],
     needsEdu: false,
+  },
+  // ── Other seeker / switcher paths ──
+  {
+    id: 'career_switch',
+    title: "I'm switching careers",
+    sub: 'Experience in one field, pivoting into another.',
+    icon: 'swap-horizontal',
+    color: '#0891b2',
+    perks: [
+      'Transferable skills pulled to the top of every resume',
+      'Bullets reframed for your target field\'s vocabulary',
+      'Honest read on what gaps to close and what\'s already covered',
+    ],
+    needsEdu: false,
+  },
+  {
+    id: 'first_gen_college',
+    title: "I'm first in my family to go to college",
+    sub: 'Nobody at home can tell you the unwritten rules.',
+    icon: 'trophy',
+    color: '#f59e0b',
+    perks: [
+      'The mentor conversation you never had, on demand',
+      'Unwritten rules made explicit (networking, thank-yous, what business casual actually means)',
+      'Work-during-school hours treated as real resume material',
+    ],
+    needsEdu: true,
   },
   {
     id: 'parent_returning',
@@ -302,7 +304,7 @@ export default function ChooseSituationScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Expand animation — when a card is selected, its perks section
+  // Expand animation. when a card is selected, its perks section
   // animates from 0 → full height with opacity fade.
   const expandAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -321,7 +323,7 @@ export default function ChooseSituationScreen() {
     const opt = OPTIONS.find(o => o.id === selected);
     const needsEdu = opt?.needsEdu ?? false;
 
-    // Save to AsyncStorage — profile PATCH happens post-auth in verify.tsx
+    // Save to AsyncStorage. profile PATCH happens post-auth in verify.tsx
     try {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       await AsyncStorage.setItem('dilly_pending_user_path', selected);
@@ -349,11 +351,14 @@ export default function ChooseSituationScreen() {
       >
         <FadeInView>
           <View style={styles.heroWrap}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.heroLogo}
-              resizeMode="contain"
-            />
+            <View style={styles.logoRow}>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.heroLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.logoTagline}>Your career, guided by AI</Text>
+            </View>
             <Text style={styles.title}>
               The first career app built for everyone.
             </Text>
@@ -361,7 +366,7 @@ export default function ChooseSituationScreen() {
               College freshman. CEO. Truck driver. Nurse. Dropout. Returning parent. Refugee. Founder reset. You.
             </Text>
             <Text style={styles.subBold}>
-              Every path here is its own app. Not a filter. Pick yours.
+              Every path here is its own app. Pick yours.
             </Text>
           </View>
         </FadeInView>
@@ -389,7 +394,7 @@ export default function ChooseSituationScreen() {
                   },
                 ]}
               >
-                {/* Hero card: no "BUILT FOR YOU" label — the prominence of
+                {/* Hero card: no "BUILT FOR YOU" label. the prominence of
                     the card (size, border, shadow) communicates the
                     intent without a heavy-handed label. */}
                 <View style={styles.cardTop}>
@@ -427,7 +432,7 @@ export default function ChooseSituationScreen() {
                   )}
                 </View>
 
-                {/* Expanded preview — the "wow" moment. Shows 3 concrete
+                {/* Expanded preview. the "wow" moment. Shows 3 concrete
                     things Dilly does differently for this path. */}
                 {isSelected && (
                   <Animated.View
@@ -448,7 +453,7 @@ export default function ChooseSituationScreen() {
                         <Text style={styles.perkText}>{perk}</Text>
                       </View>
                     ))}
-                    {/* Pitch line — hero cards get a closing bold line
+                    {/* Pitch line. hero cards get a closing bold line
                         that seals the deal. Not every path has one. */}
                     {opt.pitch ? (
                       <View style={[styles.pitchBox, { borderColor: opt.color + '35', backgroundColor: opt.color + '10' }]}>
@@ -465,7 +470,7 @@ export default function ChooseSituationScreen() {
         })}
       </ScrollView>
 
-      {/* Sticky continue button — picks up the selected card's accent color
+      {/* Sticky continue button. picks up the selected card's accent color
           so the action feels connected to the choice. */}
       <View style={[styles.ctaWrap, { paddingBottom: insets.bottom + 16 }]}>
         <AnimatedPressable
@@ -499,12 +504,26 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   heroWrap: { alignItems: 'flex-start' },
   heroLogo: {
-    // Subtler than the original — small enough that it reads as a brand
+    // Subtler than the original. small enough that it reads as a brand
     // mark, not a hero image. Matches the settings/onboarding density.
     width: 78,
     height: 26,
-    marginBottom: 14,
     marginLeft: -2,
+  },
+  // Logo row: wordmark + tagline side-by-side. Tagline baseline-
+  // aligned to the logo so the two read as a single brand unit.
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  logoTagline: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.t2,
+    letterSpacing: 0.2,
+    paddingBottom: 2,
   },
   title: {
     fontSize: 28,
@@ -519,7 +538,7 @@ const styles = StyleSheet.create({
     color: colors.t2,
     lineHeight: 21,
   },
-  // Bold subtitle — used for the pitch line under the main sub,
+  // Bold subtitle. used for the pitch line under the main sub,
   // e.g. "Every path here is its own app."
   subBold: {
     fontSize: 14,
@@ -539,7 +558,7 @@ const styles = StyleSheet.create({
     borderColor: colors.b1,
     marginBottom: 12,
   },
-  // Hero card — the jobholder option. Bigger padding, stronger border,
+  // Hero card. the jobholder option. Bigger padding, stronger border,
   // subtle shadow. Designed to grab attention as the first card below
   // the hero copy.
   cardHero: {
@@ -574,7 +593,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1.8,
   },
-  // Hero icon wrap — larger than the regular 40pt version.
+  // Hero icon wrap. larger than the regular 40pt version.
   iconWrapHero: {
     width: 52,
     height: 52,

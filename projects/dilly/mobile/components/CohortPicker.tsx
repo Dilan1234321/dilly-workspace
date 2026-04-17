@@ -1,5 +1,5 @@
 /**
- * CohortPicker — full-screen bottom sheet for adding/removing cohorts.
+ * CohortPicker. full-screen bottom sheet for adding/removing cohorts.
  * Shows all available cohorts from COHORT_META with search, descriptions,
  * and add/remove toggles. Used on the Profile page and New Audit page.
  */

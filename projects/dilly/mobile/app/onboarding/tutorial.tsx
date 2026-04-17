@@ -1,5 +1,5 @@
 /**
- * Tutorial — a 5-card intro shown once after a new user completes
+ * Tutorial. a 5-card intro shown once after a new user completes
  * sign-up + profile setup. Content is entirely hand-written (no API
  * calls, no LLM) so this costs nothing to render. Each mode gets its
  * own 5-card script.
@@ -48,7 +48,7 @@ const CARDS: Record<AppMode, CardSpec[]> = {
     {
       eyebrow: 'YOU HAVE A JOB',
       headline: "AI is reshaping your field\nwhether you move or not.",
-      body: 'Dilly watches your industry for you. What is changing, what is safe, what to learn next — for your exact role.',
+      body: 'Dilly watches your industry for you. What is changing, what is safe, what to learn next. for your exact role.',
       cta: "Show me what's next",
       illustration: 'arena',
     },
@@ -69,7 +69,7 @@ const CARDS: Record<AppMode, CardSpec[]> = {
     {
       eyebrow: 'PRIVATE TO YOU',
       headline: 'Dilly learns you\nwith every chat.',
-      body: 'Your wins, your decisions, your thinking — all tracked privately so Dilly gets sharper about you over time.',
+      body: 'Your wins, your decisions, your thinking. all tracked privately so Dilly gets sharper about you over time.',
       cta: 'Next',
       illustration: 'profile',
     },
@@ -122,14 +122,14 @@ const CARDS: Record<AppMode, CardSpec[]> = {
     {
       eyebrow: 'DILLY FOR STUDENTS',
       headline: "A career coach\nin your pocket.",
-      body: 'Dilly knows you — your major, your clubs, your coursework — and guides you through the job market for people like you.',
+      body: 'Dilly knows you. your major, your clubs, your coursework. and guides you through the job market for people like you.',
       cta: 'Show me',
       illustration: 'journey',
     },
     {
       eyebrow: 'INTERNSHIPS THAT FIT',
       headline: 'Matched to your cohort\nand your story.',
-      body: 'Not every internship posting. The ones recruiters in your field actually hire from — filtered and ranked.',
+      body: 'Not every internship posting. The ones recruiters in your field actually hire from. filtered and ranked.',
       cta: 'Next',
       illustration: 'internships',
     },

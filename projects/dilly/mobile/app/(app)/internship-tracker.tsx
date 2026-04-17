@@ -500,7 +500,7 @@ export default function InternshipTrackerScreen() {
           <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={colors.t1} />
           </AnimatedPressable>
-          <Text style={ts.navTitle}>Internship Tracker</Text>
+          <Text style={ts.navTitle}>Tracker</Text>
           <AnimatedPressable onPress={() => setShowAdd(true)} scaleDown={0.9} hitSlop={12}>
             <View style={ts.addBtn}>
               <Ionicons name="add" size={18} color={GOLD} />

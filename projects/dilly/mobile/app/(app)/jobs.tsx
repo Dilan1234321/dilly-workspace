@@ -1,5 +1,5 @@
 /**
- * Jobs Page — revolutionary, AI-first job discovery UI.
+ * Jobs Page. revolutionary, AI-first job discovery UI.
  *
  * Replaces the boring list with a layered, cinematic experience:
  *   1. "Dilly is scanning" live-activity pulse (convinces the user the AI is
@@ -102,7 +102,7 @@ function daysAgo(dateStr: string): string {
 
 /**
  * Build a best-effort logo URL. Priority order:
- *   1. Server-provided logo_url (most reliable — scraper captured it)
+ *   1. Server-provided logo_url (most reliable. scraper captured it)
  *   2. Server-provided website → extract domain → Google favicon
  *   3. Guess from company name → domain → Google favicon (messiest fallback)
  *
@@ -113,7 +113,7 @@ function daysAgo(dateStr: string): string {
  * returns at most 128x128 which is plenty for our 28-48px icon slots.
  *
  * The <Image> falls back to an initial tile if the URL 404s, so a broken
- * guess just degrades to the placeholder — no crash, no broken image.
+ * guess just degrades to the placeholder. no crash, no broken image.
  */
 function _domainToFaviconUrl(domain: string): string {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
@@ -235,7 +235,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
 
   useEffect(() => {
     // If a preloaded narrative was provided by the parent (warmed cache
-    // on Jobs tab mount for the top 3 jobs), skip the fetch entirely —
+    // on Jobs tab mount for the top 3 jobs), skip the fetch entirely -
     // the card expands with content already visible.
     if (preloaded) {
       setData(preloaded);
@@ -297,7 +297,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   const missingBullets = toBullets(data.whats_missing).slice(0, 3);
   const nothingMissing = data.whats_missing.toLowerCase().startsWith('nothing major');
 
-  // Colors for the narrative are NEUTRAL — no green/amber/red signal.
+  // Colors for the narrative are NEUTRAL. no green/amber/red signal.
   // "What you have" / "What's missing" are just the structure of the
   // read, not a readiness verdict.
   const LABEL_COLOR = VIOLET;
@@ -334,7 +334,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
         </View>
       </View>
 
-      {/* What to do — full width */}
+      {/* What to do. full width */}
       <View style={{ marginTop: 8 }}>
         <Text style={[s.narrativeLabel, { color: LABEL_COLOR }]}>WHAT TO DO</Text>
         <Text style={[s.narrativeBulletText, { marginTop: 2 }]}>{data.what_to_do}</Text>
@@ -345,7 +345,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
 
 // -- Dilly Scan Pulse -------------------------------------------------------
 // Shows "Dilly is scanning for you" with a live-activity ring. Signals that
-// the system is actively working on the user's behalf — not a static list.
+// the system is actively working on the user's behalf. not a static list.
 
 function DillyScanPulse({ totalJobs, matchesFound, title, sub }: {
   totalJobs: number;
@@ -396,7 +396,7 @@ function DillyScanPulse({ totalJobs, matchesFound, title, sub }: {
 // The job card now speaks for itself via Dilly's single-line read.
 
 // -- Why Matched Chips ------------------------------------------------------
-// Surfaces the top 2-3 reasons the job matched — built from job metadata and
+// Surfaces the top 2-3 reasons the job matched. built from job metadata and
 // the user's profile. Immediate "oh, this makes sense" signal.
 
 function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; userCities: string[]; userPath: string }) {
@@ -447,7 +447,7 @@ function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; 
   );
 }
 
-// Dilly's read — ONE powerful sentence. Never cut off, never truncated.
+// Dilly's read. ONE powerful sentence. Never cut off, never truncated.
 // Pull the sharpest single sentence out of the fit narrative. If nothing
 // useful has come back yet (narrative still loading), show a stable
 // placeholder that doesn't promise anything Dilly hasn't earned.
@@ -456,7 +456,7 @@ function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: L
   if (!narrative) {
     return `Tap to see why ${listing.company || 'this role'} could work for you.`;
   }
-  // Prefer what_you_have — the sharpest "you have X" sentence is the
+  // Prefer what_you_have. the sharpest "you have X" sentence is the
   // most powerful for the user to see first. Fall back to what_to_do.
   const pickSentence = (text: string | undefined): string => {
     if (!text) return '';
@@ -520,7 +520,7 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
   return (
     <Animated.View style={{ opacity, transform: [{ scale: scaleIn }] }}>
       <TouchableOpacity activeOpacity={0.95} onPress={onPress} style={hero.card}>
-        {/* Gradient aura — pure Dilly brand color, not a fit indicator. */}
+        {/* Gradient aura. pure Dilly brand color, not a fit indicator. */}
         <View style={[hero.aura, { backgroundColor: VIOLET + '20' }]} />
         <View style={[hero.auraInner, { backgroundColor: VIOLET + '30' }]} />
 
@@ -578,7 +578,7 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
           </Text>
         </View>
 
-        {/* CTA row — mode-aware. Holders see "Save to Watch" + "See
+        {/* CTA row. mode-aware. Holders see "Save to Watch" + "See
             what they want" (benchmarking). Seekers see the classic
             "Apply now" + "See full fit" (applying). */}
         <View style={hero.ctaRow}>
@@ -621,7 +621,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
   userCities: string[];
   userPath: string;
   index: number;
-  // Holder mode hides the Apply button — they're benchmarking, not
+  // Holder mode hides the Apply button. they're benchmarking, not
   // applying. A Save to Watch (bookmark) covers the "I'm tracking
   // this" intent instead.
   isHolder?: boolean;
@@ -671,7 +671,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
   return (
     <>
     <AnimatedPressable style={[s.jobCard, expanded && s.jobCardExpanded]} onPress={onToggle} scaleDown={0.985}>
-      {/* No colored fit rail — Dilly doesn't rank jobs as ready/stretch
+      {/* No colored fit rail. Dilly doesn't rank jobs as ready/stretch
           anymore. Card layout is clean, one-line read carries the signal. */}
       <View style={s.jobContent}>
         {/* Header: logo + title/company + bookmark */}
@@ -699,7 +699,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
               </View>
             ) : null}
           </View>
-          {/* Bookmark only. No fit ring, no ready/stretch label — Dilly
+          {/* Bookmark only. No fit ring, no ready/stretch label. Dilly
               doesn't tell users if they're "ready" for a job anymore.
               The one-line read below does all the work. */}
           <AnimatedPressable
@@ -726,7 +726,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
           <View style={s.expandedSection}>
             {/* Fit Narrative */}
             {/* FitNarrative is a "how you match this job" explainer.
-                For holders we skip it entirely — they're scanning the
+                For holders we skip it entirely. they're scanning the
                 market, not being sold on fit. The rest of the expanded
                 section (full description, action row) still renders. */}
             {!isHolder && <FitNarrative listing={listing} preloaded={narrativeCache} />}
@@ -816,7 +816,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
 // adjacent roles with comp deltas vs where they are today.
 
 function formatUsdRadar(n: number | null | undefined): string {
-  if (n == null || !isFinite(n as number)) return '—';
+  if (n == null || !isFinite(n as number)) return '-';
   const v = Number(n);
   if (v >= 1000) return '$' + Math.round(v / 1000).toLocaleString() + 'K';
   return '$' + v.toLocaleString();
@@ -841,7 +841,7 @@ function MarketRadarCard({ radar }: {
   const ladder = Array.isArray(radar.ladder) ? radar.ladder : [];
   const active = radar.active_market?.total;
 
-  // Nothing useful to show — caller should skip, but guard anyway.
+  // Nothing useful to show. caller should skip, but guard anyway.
   if (!cur.role && ladder.length === 0 && active == null) return null;
 
   return (
@@ -991,7 +991,7 @@ export default function JobsScreen() {
   const [newCollectionName, setNewCollectionName] = useState('');
   // Fit-narrative usage ticker (X / Y this month). null while loading.
   const [narrativeUsage, setNarrativeUsage] = useState<{ used: number; limit: number; plan: string; unlimited: boolean } | null>(null);
-  // User's chosen onboarding path — drives which extra filters show
+  // User's chosen onboarding path. drives which extra filters show
   // (e.g. 'No degree required' appears only for dropouts).
   const [userPath, setUserPath] = useState<string>('');
   const [noDegreeFilter, setNoDegreeFilter] = useState<boolean>(false);
@@ -999,7 +999,7 @@ export default function JobsScreen() {
   // fair-chance (formerly_incarcerated). Opt-in, default off.
   const [h1bFilter, setH1bFilter] = useState<boolean>(false);
   const [fairChanceFilter, setFairChanceFilter] = useState<boolean>(false);
-  // Remote-only filter — universal (anyone can tap) AND pre-selected
+  // Remote-only filter. universal (anyone can tap) AND pre-selected
   // for users on the rural_remote_only path.
   const [remoteOnlyFilter, setRemoteOnlyFilter] = useState<boolean>(false);
   // Holder-only: the Market Radar card (role ladder + comp deltas).
@@ -1067,7 +1067,7 @@ export default function JobsScreen() {
       }
 
       // Load user's preferred cities for location filtering. Cities are
-      // shown as tappable chips but DEFAULT TO UNSELECTED — users can
+      // shown as tappable chips but DEFAULT TO UNSELECTED. users can
       // opt in rather than having their feed silently narrowed. This
       // was a common confusion point: "why are there only jobs in NYC?"
       const cities: string[] = profileRes?.job_locations || [];
@@ -1094,7 +1094,7 @@ export default function JobsScreen() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Pre-load fit narratives for the top 3 jobs on first session visit.
-  // This makes the Jobs tab feel instantly useful — the user doesn't see
+  // This makes the Jobs tab feel instantly useful. the user doesn't see
   // "expand a card and wait" as their first interaction, they see a job
   // card already showing the fit narrative. Runs once per session; uses
   // the server's per-user cache on repeat visits for free.
@@ -1104,7 +1104,7 @@ export default function JobsScreen() {
     if (listings.length === 0) return;
     preloadedRef.current = true;
     const top = listings.slice(0, 3);
-    // Fire in parallel, but silently — any failure just falls back to
+    // Fire in parallel, but silently. any failure just falls back to
     // on-demand loading when the card is expanded.
     top.forEach(async (listing) => {
       try {
@@ -1259,13 +1259,13 @@ export default function JobsScreen() {
     );
   }
 
-  // Top match and the rest — hero card + stacked cards pattern.
+  // Top match and the rest. hero card + stacked cards pattern.
   const topMatch = filtered[0];
   const restMatches = filtered.slice(1);
 
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
-      {/* Header — mode-aware framing. Holders see a market benchmark
+      {/* Header. mode-aware framing. Holders see a market benchmark
           ("The Market"), seekers see the classic "your next move" feed. */}
       <View style={s.header}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -1305,7 +1305,7 @@ export default function JobsScreen() {
         </View>
       </View>
 
-      {/* Dilly scanning pulse — convinces the user the AI is actively
+      {/* Dilly scanning pulse. convinces the user the AI is actively
           working the market for them in real time. Extra bottom padding
           gives breathing room between the pulse and the search bar. */}
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: 6, paddingBottom: 14 }}>
@@ -1353,7 +1353,7 @@ export default function JobsScreen() {
           <Ionicons name="bookmark" size={18} color={COBALT} />
         </AnimatedPressable>
 
-        {/* Dropout-only 'No degree required' pill — FIRST, most visible.
+        {/* Dropout-only 'No degree required' pill. FIRST, most visible.
             This is the #1 thing a dropout wants when they open the jobs page. */}
         {userPath === 'dropout' && (
           <AnimatedPressable
@@ -1365,7 +1365,7 @@ export default function JobsScreen() {
           </AnimatedPressable>
         )}
 
-        {/* International grad — H-1B sponsor filter. Same "#1 thing they
+        {/* International grad. H-1B sponsor filter. Same "#1 thing they
             open the app for" priority as the dropout pill. */}
         {userPath === 'international_grad' && (
           <AnimatedPressable
@@ -1377,7 +1377,7 @@ export default function JobsScreen() {
           </AnimatedPressable>
         )}
 
-        {/* Formerly incarcerated + refugee — fair-chance filter.
+        {/* Formerly incarcerated + refugee. fair-chance filter.
             Showing it for refugees too since many refugee-hire programs
             overlap with fair-chance employer lists. */}
         {(userPath === 'formerly_incarcerated' || userPath === 'refugee') && (
@@ -1390,7 +1390,7 @@ export default function JobsScreen() {
           </AnimatedPressable>
         )}
 
-        {/* Remote only — universal pill. Anyone can use it, pre-selected
+        {/* Remote only. universal pill. Anyone can use it, pre-selected
             for rural_remote_only users on their first load. */}
         <AnimatedPressable
           style={[s.filterPill, remoteOnlyFilter && s.filterPillActive]}
@@ -1400,7 +1400,7 @@ export default function JobsScreen() {
           <Text style={[s.filterPillText, remoteOnlyFilter && s.filterPillTextActive]}>Remote only</Text>
         </AnimatedPressable>
 
-        {/* Job type pills — multi-select. Tapping 'All' clears other
+        {/* Job type pills. multi-select. Tapping 'All' clears other
             selections. Tapping a specific type toggles it; if all specific
             types are deselected, falls back to 'All'. */}
         {([
@@ -1444,7 +1444,7 @@ export default function JobsScreen() {
 
       </ScrollView>
 
-      {/* CITIES — dedicated second row so users clearly see they can
+      {/* CITIES. dedicated second row so users clearly see they can
           narrow by city, and defaults to NONE selected so the feed is
           never silently capped to a city the user doesn't realize is
           active. Add-city affordance routes to profile where locations
@@ -1506,13 +1506,13 @@ export default function JobsScreen() {
           </FadeInView>
         )}
 
-        {/* Holder-only Market Radar — comp benchmark + role ladder at
+        {/* Holder-only Market Radar. comp benchmark + role ladder at
             the top of the list. Hidden for seekers/students. Fails
             silent when the endpoint is still warming up (empty state
             returns null above). */}
         {isHolder && marketRadar && <MarketRadarCard radar={marketRadar} />}
 
-        {/* Hero spotlight — the #1 match gets cinematic treatment. This
+        {/* Hero spotlight. the #1 match gets cinematic treatment. This
             is the first thing the user sees after the header: a poster,
             not a list item. */}
         {topMatch && (
@@ -1533,7 +1533,7 @@ export default function JobsScreen() {
                 setExpandedId(expandedId === topMatch.id ? null : topMatch.id);
               }}
             />
-            {/* Expanded hero view — full fit narrative inline. Holders
+            {/* Expanded hero view. full fit narrative inline. Holders
                 don't see this (benchmarking, not matching); the tap
                 still expands the card, it just won't render the
                 fit-breakdown component. */}
@@ -1549,7 +1549,7 @@ export default function JobsScreen() {
           </View>
         )}
 
-        {/* "Up next for you" rail separator — signals the hierarchy */}
+        {/* "Up next for you" rail separator. signals the hierarchy */}
         {restMatches.length > 0 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
@@ -1620,7 +1620,7 @@ export default function JobsScreen() {
                 );
               })}
 
-              {/* New collection — instant create + save + close.
+              {/* New collection. instant create + save + close.
                   Tapping Add immediately closes the modal, creates the
                   collection, and saves the current job into it. No lingering
                   popup, no "created! now tap it to save" dance. */}
@@ -1776,7 +1776,7 @@ const s = StyleSheet.create({
   // feel cramped.
   listContent: { paddingHorizontal: spacing.lg, gap: 8, paddingTop: 18 },
 
-  // Job Card — now has a colored rail on the left representing fit.
+  // Job Card. now has a colored rail on the left representing fit.
   jobCard: {
     flexDirection: 'row', borderRadius: radius.lg,
     backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,

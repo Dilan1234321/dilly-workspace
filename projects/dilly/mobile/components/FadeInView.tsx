@@ -1,5 +1,5 @@
 /**
- * FadeInView — wraps children in a smooth fade + slide-up + subtle scale entrance.
+ * FadeInView. wraps children in a smooth fade + slide-up + subtle scale entrance.
  *
  * Build 123: improved with cubic easing and micro-scale for professional feel.
  *

@@ -327,6 +327,13 @@ def _build_rich_context(email: str) -> dict:
         "current_company":      profile.get("current_company") or "",
         "current_job_title":    profile.get("current_job_title") or "",
         "title":                profile.get("title") or "",
+        # Life events — the user clicked "I got laid off" / "I got a
+        # new job" from Settings. Captured by mode-switch.tsx. Pass
+        # through to the system prompt so the coach opens context-
+        # aware ("congratulations on the new role at X" / "I'm sorry
+        # you were let go, let's plan") rather than pretending the
+        # pivot didn't happen. Kept out of the public web profile.
+        "life_events":          profile.get("life_events") or [],
     }
 
 

@@ -187,7 +187,7 @@ export default function VerifyScreen() {
             // Fresh signup signal: pendingPath means the user just
             // came from choose-situation. Always reset the tutorial
             // flag here so new accounts on this device see the
-            // 5-card intro — without this, a signout + new signup
+            // 5-card intro. without this, a signout + new signup
             // inherits the previous user's 'already saw it' flag.
             // Returning logins (no pendingPath) keep their flag.
             if (pendingPath) {

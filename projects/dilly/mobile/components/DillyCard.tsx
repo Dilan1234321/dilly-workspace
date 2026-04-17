@@ -371,7 +371,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
   // ── Terracotta: warm clay block, photo circle right ──
   // Photo 44→58pt; stronger contrast tones throughout. On terracotta, red-
   // green colorblind users perceive the background and accent as the same
-  // hue — we deepen the text and keep the divider shape-distinct.
+  // hue. we deepen the text and keep the divider shape-distinct.
   if (template === 'terracotta') {
     return (
       <View style={[c.card, { backgroundColor: '#F2DCC9', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
@@ -443,7 +443,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
         {data.tagline ? (
           <Text style={{ fontSize: 12, color: '#4A3F65', marginTop: 2, paddingRight: 72 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
-        {/* No divider — user asked for the pearl variant clean, without
+        {/* No divider. user asked for the pearl variant clean, without
             the horizontal line running across the card. The name and
             tagline stand on their own against the off-white background. */}
         <View style={{ flex: 1 }} />
@@ -527,7 +527,7 @@ function CardBack({ template = 'photo', username, showQr = false }: { template?:
 // ── Template Picker ─────────────────────────────────────────────────────────
 
 function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSelect: (t: CardTemplate) => void }) {
-  // Scroll progress 0..1 — drives the indicator track + thumb width.
+  // Scroll progress 0..1. drives the indicator track + thumb width.
   const [scrollProgress, setScrollProgress] = useState(0);
   const [thumbWidthPct, setThumbWidthPct] = useState(0.35);
 
