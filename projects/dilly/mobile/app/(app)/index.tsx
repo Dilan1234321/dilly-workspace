@@ -14,6 +14,7 @@ import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { useAppMode } from '../../hooks/useAppMode';
 
 const W = Dimensions.get('window').width;
 const INDIGO = '#1B3FA0';
@@ -100,7 +101,385 @@ function PipelineTile({ icon, count, label, color, onPress }: {
 
 // -- Main Screen --------------------------------------------------------------
 
+// ── Holder Career Center ─────────────────────────────────────────────
+// Completely different home for people who already have a job. They
+// don't want journey steps, pipeline tiles, or "3 jobs to apply to."
+// They want: is my career on track, what's changing in my field, what
+// should I do this week.
+//
+// Data flow:
+//   /profile               -> current_role, name, trajectory facts
+//   /ai-arena/threat-report/infer -> role-level threat % and moves
+//   /ai-arena/weekly-signal -> this week's hand-curated news
+//   /memory                -> fact count + top 4 facts (trajectory card)
+//   /v2/internships/feed   -> market demand count only (no listings fetch)
+//
+// Every block is zero-LLM. Static content + profile aggregation.
+
+function HolderHome() {
+  const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [name, setName] = useState<string>('');
+  const [currentRole, setCurrentRole] = useState<string>('');
+  const [yearsExperience, setYearsExperience] = useState<string>('');
+  const [threat, setThreat] = useState<any>(null);
+  const [weekly, setWeekly] = useState<any>(null);
+  const [marketCount, setMarketCount] = useState<number | null>(null);
+  const [trajectoryFacts, setTrajectoryFacts] = useState<
+    Array<{ category: string; label: string; value: string }>
+  >([]);
+  const [factCount, setFactCount] = useState(0);
+
+  const fetchAll = useCallback(async () => {
+    try {
+      const [profileRes, threatRes, weeklyRes, feedRes, memRes] = await Promise.all([
+        dilly.get('/profile').catch(() => null),
+        dilly.fetch('/ai-arena/threat-report/infer').then(r => r?.ok ? r.json() : null).catch(() => null),
+        dilly.fetch('/ai-arena/weekly-signal').then(r => r?.ok ? r.json() : null).catch(() => null),
+        dilly.get('/v2/internships/feed?limit=1&sort=rank').catch(() => null),
+        dilly.fetch('/memory').then(r => r?.ok ? r.json() : null).catch(() => null),
+      ]);
+
+      if (profileRes) {
+        setName((profileRes.name || '').trim());
+        setCurrentRole(
+          (profileRes.current_role || profileRes.current_job_title || profileRes.title || '').trim()
+        );
+        setYearsExperience((profileRes.years_experience || '').trim());
+      }
+      if (threatRes?.report) setThreat(threatRes.report);
+      if (weeklyRes?.signal) setWeekly(weeklyRes.signal);
+      if (feedRes && typeof feedRes === 'object') {
+        // Feed returns {total}; treat as the market size after hard filters.
+        const t = (feedRes as any).total;
+        if (typeof t === 'number') setMarketCount(t);
+      }
+
+      if (memRes?.items && Array.isArray(memRes.items)) {
+        const facts = memRes.items as any[];
+        setFactCount(facts.length);
+        // Grab the 4 most-recent high-confidence facts for the
+        // trajectory block. Sorted by the API by recency already.
+        const highConf = facts
+          .filter(f => (f.confidence || 'medium') !== 'low')
+          .slice(0, 4)
+          .map(f => ({
+            category: String(f.category || ''),
+            label: String(f.label || ''),
+            value: String(f.value || ''),
+          }));
+        setTrajectoryFacts(highConf);
+      }
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchAll(); }, []);
+
+  useFocusEffect(useCallback(() => { fetchAll(); }, [fetchAll]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchAll();
+    setRefreshing(false);
+  }, [fetchAll]);
+
+  const firstName = (name || '').split(/\s+/)[0] || 'there';
+
+  // Threat-level color for the hero pulse ring. Defaults to violet when
+  // we haven't resolved a role yet so the card still looks alive.
+  const threatColor = threat?.threat_level === 'severe' ? '#DC2626'
+    : threat?.threat_level === 'high' ? '#EA580C'
+    : threat?.threat_level === 'moderate' ? '#D97706'
+    : threat?.threat_level === 'low' ? '#16A34A'
+    : '#6C5CE7';
+
+  if (loading) {
+    return (
+      <View style={[h.container, { paddingTop: insets.top }]}>
+        <View style={{ padding: spacing.xl }}>
+          <Skeleton width="40%" height={12} style={{ marginBottom: 12 }} />
+          <Skeleton width="90%" height={28} />
+          <Skeleton width="70%" height={28} style={{ marginTop: 6 }} />
+          <View style={{ height: 20 }} />
+          <Skeleton width="100%" height={140} />
+          <View style={{ height: 16 }} />
+          <Skeleton width="100%" height={96} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[h.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={[h.scroll, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={INDIGO} />}
+      >
+        {/* Greeting + settings */}
+        <View style={h.greetRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={h.eyebrow}>CAREER WATCH</Text>
+            <Text style={h.greeting}>Welcome back, {firstName}.</Text>
+            {currentRole ? (
+              <Text style={h.roleLine}>{currentRole}{yearsExperience ? ` · ${yearsExperience}` : ''}</Text>
+            ) : null}
+          </View>
+          <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} scaleDown={0.9} hitSlop={10}>
+            <Ionicons name="settings-outline" size={20} color={colors.t3} />
+          </AnimatedPressable>
+        </View>
+
+        {/* ── 1. Weekly pulse hero ───────────────────────────────── */}
+        <FadeInView delay={40}>
+          <AnimatedPressable
+            scaleDown={0.98}
+            onPress={() => router.push('/(app)/ai-arena' as any)}
+            style={[h.heroCard, { borderColor: threatColor + '30', shadowColor: threatColor }]}
+          >
+            <View style={h.heroPulse}>
+              <View style={[h.pulseDot, { backgroundColor: threatColor }]} />
+              <Text style={[h.pulseLabel, { color: threatColor }]}>THIS WEEK · LIVE</Text>
+            </View>
+            <Text style={h.heroHeadline} numberOfLines={2}>
+              {weekly?.headline || 'Your field is shifting. Dilly is tracking it for you.'}
+            </Text>
+            {weekly?.source ? (
+              <Text style={h.heroSource} numberOfLines={1}>{weekly.source}</Text>
+            ) : null}
+            <View style={h.heroCtaRow}>
+              <Text style={h.heroCtaText}>Open this week's briefing</Text>
+              <Ionicons name="arrow-forward" size={15} color={INDIGO} />
+            </View>
+          </AnimatedPressable>
+        </FadeInView>
+
+        {/* ── 2. Two stat tiles ──────────────────────────────────── */}
+        <FadeInView delay={80}>
+          <View style={h.statRow}>
+            <AnimatedPressable
+              style={[h.statCard, { borderColor: threatColor + '30' }]}
+              onPress={() => router.push('/(app)/ai-arena' as any)}
+              scaleDown={0.97}
+            >
+              <Text style={h.statEyebrow}>AI THREAT</Text>
+              <Text style={[h.statBig, { color: threatColor }]}>
+                {threat?.threat_pct != null ? `${threat.threat_pct}%` : '—'}
+              </Text>
+              <Text style={h.statLabel}>
+                {threat?.threat_level ? threat.threat_level.toUpperCase() : 'Open Arena'}
+              </Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={h.statCard}
+              onPress={() => router.push('/(app)/jobs' as any)}
+              scaleDown={0.97}
+            >
+              <Text style={h.statEyebrow}>MARKET · YOUR ROLE</Text>
+              <Text style={[h.statBig, { color: colors.t1 }]}>
+                {marketCount != null ? marketCount.toLocaleString() : '—'}
+              </Text>
+              <Text style={h.statLabel}>hiring now</Text>
+            </AnimatedPressable>
+          </View>
+        </FadeInView>
+
+        {/* ── 3. This week's moves ───────────────────────────────── */}
+        {threat?.what_to_learn && threat.what_to_learn.length > 0 && (
+          <FadeInView delay={120}>
+            <Text style={h.sectionLabel}>THIS MONTH'S MOVES</Text>
+            <View style={{ gap: 8 }}>
+              {threat.what_to_learn.slice(0, 3).map((move: string, i: number) => (
+                <AnimatedPressable
+                  key={i}
+                  style={h.moveCard}
+                  onPress={() => openDillyOverlay({
+                    isPaid: false,
+                    initialMessage: `Help me make this move: "${move}". I'm a ${threat.display || currentRole}. What should I actually do this week to start?`,
+                  })}
+                  scaleDown={0.98}
+                >
+                  <View style={h.moveNum}>
+                    <Text style={h.moveNumText}>{i + 1}</Text>
+                  </View>
+                  <Text style={h.moveText}>{move}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                </AnimatedPressable>
+              ))}
+            </View>
+          </FadeInView>
+        )}
+
+        {/* ── 4. Your trajectory ─────────────────────────────────── */}
+        <FadeInView delay={160}>
+          <Text style={h.sectionLabel}>YOUR TRAJECTORY</Text>
+          <AnimatedPressable
+            style={h.trajCard}
+            onPress={() => router.push('/(app)/my-dilly-profile' as any)}
+            scaleDown={0.98}
+          >
+            <View style={h.trajHeader}>
+              <View style={{ flex: 1 }}>
+                {currentRole ? (
+                  <Text style={h.trajRole}>{currentRole}</Text>
+                ) : (
+                  <Text style={h.trajRole}>Your career, tracked</Text>
+                )}
+                <Text style={h.trajMeta}>
+                  {yearsExperience ? `${yearsExperience} · ` : ''}
+                  Dilly knows {factCount} {factCount === 1 ? 'thing' : 'things'} about you
+                </Text>
+              </View>
+              <Ionicons name="analytics-outline" size={24} color={INDIGO} />
+            </View>
+            {trajectoryFacts.length > 0 && (
+              <View style={h.tagRow}>
+                {trajectoryFacts.map((f, i) => (
+                  <View key={i} style={h.tag}>
+                    <Text style={h.tagText} numberOfLines={1}>
+                      {(f.label || f.value || '').slice(0, 32)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <View style={h.trajCtaRow}>
+              <Text style={h.trajCtaText}>Open My Career</Text>
+              <Ionicons name="arrow-forward" size={13} color={INDIGO} />
+            </View>
+          </AnimatedPressable>
+        </FadeInView>
+
+        {/* ── 5. Quick tools (holder-relevant only) ──────────────── */}
+        <FadeInView delay={200}>
+          <Text style={h.sectionLabel}>QUICK TOOLS</Text>
+          <View style={h.toolsRow}>
+            {[
+              { icon: 'chatbubbles' as const, color: INDIGO, label: 'Ask Dilly',
+                onPress: () => openDillyOverlay({ isPaid: true }) },
+              { icon: 'shield-checkmark' as const, color: '#00C853', label: 'Threat',
+                onPress: () => router.push('/(app)/ai-arena' as any) },
+              { icon: 'trending-up' as const, color: colors.blue, label: 'Market',
+                onPress: () => router.push('/(app)/jobs' as any) },
+              { icon: 'calendar' as const, color: colors.gold, label: 'Calendar',
+                onPress: () => router.push('/(app)/calendar' as any) },
+            ].map(t => (
+              <AnimatedPressable key={t.label} style={h.toolItem} onPress={t.onPress} scaleDown={0.92}>
+                <View style={[h.toolIcon, { backgroundColor: t.color + '10' }]}>
+                  <Ionicons name={t.icon} size={20} color={t.color} />
+                </View>
+                <Text style={h.toolLabel}>{t.label}</Text>
+              </AnimatedPressable>
+            ))}
+          </View>
+        </FadeInView>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ── HolderHome styles — scoped so they can't collide with the
+// seeker Career Center's stylesheet below. ────────────────────────────
+const h = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { padding: spacing.xl, paddingTop: 8, gap: 22 },
+
+  greetRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  eyebrow: { fontSize: 10, fontWeight: '900', color: INDIGO, letterSpacing: 1.6 },
+  greeting: { fontSize: 24, fontWeight: '900', color: colors.t1, letterSpacing: -0.5, marginTop: 2 },
+  roleLine: { fontSize: 13, color: colors.t3, marginTop: 4, fontWeight: '600' },
+
+  // Hero
+  heroCard: {
+    backgroundColor: colors.s1,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  heroPulse: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  pulseDot: { width: 6, height: 6, borderRadius: 3 },
+  pulseLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  heroHeadline: { fontSize: 18, fontWeight: '800', color: colors.t1, lineHeight: 24, letterSpacing: -0.2 },
+  heroSource: { fontSize: 11, color: colors.t3, fontStyle: 'italic' },
+  heroCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  heroCtaText: { fontSize: 13, fontWeight: '700', color: INDIGO },
+
+  // Stat tiles
+  statRow: { flexDirection: 'row', gap: 10 },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.s1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.b1,
+    padding: 14,
+  },
+  statEyebrow: { fontSize: 9, fontWeight: '900', color: colors.t3, letterSpacing: 1.1 },
+  statBig: { fontSize: 28, fontWeight: '900', letterSpacing: -1, marginTop: 6 },
+  statLabel: { fontSize: 11, fontWeight: '600', color: colors.t2, marginTop: 2 },
+
+  sectionLabel: {
+    fontSize: 10, fontWeight: '900', color: colors.t3, letterSpacing: 1.4, marginBottom: 10,
+  },
+
+  // Moves
+  moveCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.s1, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 14,
+  },
+  moveNum: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: INDIGO + '18',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  moveNumText: { fontSize: 11, fontWeight: '900', color: INDIGO },
+  moveText: { flex: 1, fontSize: 13, color: colors.t1, fontWeight: '600', lineHeight: 18 },
+
+  // Trajectory
+  trajCard: {
+    backgroundColor: colors.s1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.b1,
+    padding: 14,
+    gap: 10,
+  },
+  trajHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  trajRole: { fontSize: 15, fontWeight: '800', color: colors.t1, letterSpacing: -0.2 },
+  trajMeta: { fontSize: 11, color: colors.t3, marginTop: 3, fontWeight: '500' },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tag: {
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
+  },
+  tagText: { fontSize: 10, color: colors.t2, fontWeight: '600' },
+  trajCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  trajCtaText: { fontSize: 12, fontWeight: '700', color: INDIGO },
+
+  // Tools
+  toolsRow: { flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
+  toolItem: { alignItems: 'center', gap: 6, flex: 1 },
+  toolIcon: {
+    width: 48, height: 48, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  toolLabel: { fontSize: 11, fontWeight: '700', color: colors.t2 },
+});
+
+
 export default function HomeScreen() {
+  const appMode = useAppMode();
+  if (appMode === 'holder') return <HolderHome />;
+
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<any>({});
   const [loading, setLoading] = useState(true);
