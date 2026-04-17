@@ -339,6 +339,97 @@ def adjacencies_for(wage: Wage) -> list[dict]:
     return ROLE_ADJACENCIES.get(key, [])
 
 
+# ── Company premium multipliers ────────────────────────────────────────
+# BLS OES is a national cross-industry median. For well-known companies
+# where comp visibly differs from the market floor (FAANG, top banks,
+# prestige consulting, etc.), applying a curated multiplier gets the
+# headline number much closer to what the user actually sees in real
+# offers. Still a rough model — real tools like levels.fyi beat this
+# per-level — but the experience of opening the app and seeing a
+# number that's obviously ignoring where you work is much worse than
+# this approximation.
+#
+# Source: rough consensus from public comp data (levels.fyi, Glassdoor)
+# for the engineering tracks at each company in early 2026. We only
+# carry whole-company multipliers — level-specific adjustments would
+# need per-role coverage we don't have.
+COMPANY_PREMIUMS: dict[str, float] = {
+    # Tier 1 — widely-quoted top of market for their sector
+    "google":      1.45,
+    "meta":        1.50,
+    "facebook":    1.50,
+    "apple":       1.35,
+    "amazon":      1.30,
+    "microsoft":   1.30,
+    "netflix":     1.60,
+    "openai":      1.70,
+    "anthropic":   1.65,
+    "stripe":      1.45,
+    "databricks":  1.50,
+    "snowflake":   1.35,
+    "nvidia":      1.45,
+
+    # Tier 1.5 — high-paying but not quite FAANG-frontier
+    "uber":        1.30,
+    "airbnb":      1.35,
+    "pinterest":   1.25,
+    "linkedin":    1.30,
+    "coinbase":    1.30,
+    "doordash":    1.25,
+    "shopify":     1.20,
+    "robinhood":   1.25,
+    "tesla":       1.20,
+    "palantir":    1.30,
+    "ramp":        1.25,
+    "brex":        1.20,
+    "notion":      1.25,
+    "figma":       1.30,
+    "canva":       1.20,
+
+    # Elite finance
+    "goldman sachs":  1.35,
+    "morgan stanley": 1.30,
+    "jp morgan":      1.25,
+    "jpmorgan":       1.25,
+    "citadel":        1.60,
+    "jane street":    1.70,
+    "two sigma":      1.55,
+    "hudson river":   1.50,
+    "de shaw":        1.55,
+
+    # Elite consulting
+    "mckinsey":    1.30,
+    "bain":        1.30,
+    "bcg":         1.30,
+    "deloitte":    1.10,
+    "accenture":   1.05,
+
+    # Below-median — yes, some brand-name places pay below the BLS
+    # median despite high prestige. Better to tell the user than to
+    # silently overstate.
+    "nonprofit":   0.80,
+}
+
+
+def company_premium(company_name: str) -> tuple[float, str | None]:
+    """
+    Return (multiplier, matched_key) for a company name, or (1.0, None)
+    if no curated premium is known. Fuzzy-matches by containment so
+    "Google LLC" or "Google Cloud" both match "google".
+    """
+    if not company_name or not company_name.strip():
+        return (1.0, None)
+    q = company_name.strip().lower()
+    # Exact hit first
+    if q in COMPANY_PREMIUMS:
+        return (COMPANY_PREMIUMS[q], q)
+    # Substring match (company key appears in the user's string)
+    for key, mult in COMPANY_PREMIUMS.items():
+        if key in q:
+            return (mult, key)
+    return (1.0, None)
+
+
 def percentile_from_estimate(wage: Wage, estimate: int) -> int:
     """
     Given our YOE-derived wage estimate, return the approximate

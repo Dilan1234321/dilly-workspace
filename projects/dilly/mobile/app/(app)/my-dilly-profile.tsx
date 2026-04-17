@@ -1860,8 +1860,33 @@ function HolderCareer() {
                 ))}
               </View>
 
+              {/* Company premium badge — only rendered when we had a
+                  curated multiplier for this user's company. Keeps
+                  the claim honest ("adjusted for {Company}") instead
+                  of silently inflating the number. Below-1.0 mults
+                  (nonprofits etc.) show the same badge with a minus
+                  framing. */}
+              {comp.company_multiplier && comp.company_multiplier !== 1 ? (
+                <View style={hc.companyPremiumRow}>
+                  <Ionicons
+                    name={comp.company_multiplier > 1 ? 'trending-up' : 'trending-down'}
+                    size={12}
+                    color={comp.company_multiplier > 1 ? '#4ADE80' : '#F87171'}
+                  />
+                  <Text style={hc.companyPremiumText}>
+                    Adjusted for {String(comp.company_match || '').replace(/\b\w/g, c => c.toUpperCase())}
+                    {'  '}
+                    <Text style={{ color: comp.company_multiplier > 1 ? '#4ADE80' : '#F87171' }}>
+                      {comp.company_multiplier > 1 ? '+' : ''}
+                      {Math.round((comp.company_multiplier - 1) * 100)}%
+                    </Text>
+                  </Text>
+                </View>
+              ) : null}
+
               <Text style={hc.compFoot}>
-                {comp.source} · national, cross-industry · excludes geo + company premium
+                {comp.source} · national, cross-industry
+                {comp.company_multiplier && comp.company_multiplier !== 1 ? '' : ' · excludes geo + company premium'}
               </Text>
             </View>
           </FadeInView>
@@ -1899,6 +1924,39 @@ function HolderCareer() {
             </View>
           </FadeInView>
         ) : null}
+
+        {/* Power duo: Raise Brief + Escape Hatch. These are the two
+            holder-killer tools — one prepares for the conversation
+            you want to have, the other quietly reads the market for
+            the conversation you might need later. Sit-above-skills
+            placement: after trajectory so they always appear in the
+            top half of the scroll, never buried. */}
+        <FadeInView delay={100}>
+          <View style={hc.powerDuo}>
+            <AnimatedPressable
+              style={[hc.powerCard, hc.powerCardLeft]}
+              scaleDown={0.97}
+              onPress={() => router.push('/(app)/raise-brief' as any)}
+            >
+              <View style={[hc.powerIcon, { backgroundColor: '#FACC15' + '22' }]}>
+                <Ionicons name="trending-up" size={18} color="#CA8A04" />
+              </View>
+              <Text style={hc.powerLabel}>RAISE BRIEF</Text>
+              <Text style={hc.powerSub}>Your pre-meeting playbook.</Text>
+            </AnimatedPressable>
+            <AnimatedPressable
+              style={[hc.powerCard, hc.powerCardRight]}
+              scaleDown={0.97}
+              onPress={() => router.push('/(app)/escape-hatch' as any)}
+            >
+              <View style={[hc.powerIcon, { backgroundColor: '#60A5FA' + '22' }]}>
+                <Ionicons name="compass" size={18} color="#2563EB" />
+              </View>
+              <Text style={hc.powerLabel}>ESCAPE HATCH</Text>
+              <Text style={hc.powerSub}>Quiet read on what's out there.</Text>
+            </AnimatedPressable>
+          </View>
+        </FadeInView>
 
         {/* Skills arsenal */}
         {skills.length > 0 ? (
@@ -2081,6 +2139,15 @@ const hc = StyleSheet.create({
   pctTickVal: { fontSize: 10, fontWeight: '600', color: '#C9D1D9', marginTop: 1 },
 
   compFoot: { fontSize: 10, color: '#6B7280', marginTop: 12, textAlign: 'right' },
+  companyPremiumRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, alignSelf: 'flex-start',
+    backgroundColor: 'rgba(74, 222, 128, 0.08)',
+    borderWidth: 1, borderColor: 'rgba(74, 222, 128, 0.25)',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 999,
+  },
+  companyPremiumText: { fontSize: 11, fontWeight: '700', color: '#C9D1D9' },
 
   // Sections
   sectionLabel: {
@@ -2113,6 +2180,23 @@ const hc = StyleSheet.create({
     borderWidth: 1, borderColor: HOLDER_ACCENT + '25',
   },
   skillText: { fontSize: 12, fontWeight: '600', color: HOLDER_ACCENT },
+
+  // Power duo (Raise Brief + Escape Hatch)
+  powerDuo: { flexDirection: 'row', gap: 10 },
+  powerCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 14, padding: 14, gap: 8,
+  },
+  powerCardLeft:  {},
+  powerCardRight: {},
+  powerIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  powerLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4, color: colors.t1 },
+  powerSub:   { fontSize: 12, color: colors.t2, lineHeight: 17 },
 
   // Tenure read card
   tenureCard: {
