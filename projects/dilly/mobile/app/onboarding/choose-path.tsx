@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import FadeInView from '../../components/FadeInView';
+import AnimatedPressable from '../../components/AnimatedPressable';
 
 export default function ChoosePathScreen() {
   const insets = useSafeAreaInsets();
@@ -111,8 +113,24 @@ export default function ChoosePathScreen() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Back button — lets users who tapped the wrong situation go back. */}
+      <View style={{ paddingTop: insets.top + 8, paddingHorizontal: spacing.xl }}>
+        <AnimatedPressable
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/onboarding/choose-situation');
+          }}
+          scaleDown={0.9}
+          hitSlop={14}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6 }}
+        >
+          <Ionicons name="chevron-back" size={20} color={colors.t2} />
+          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.t2 }}>Back</Text>
+        </AnimatedPressable>
+      </View>
+
       <ScrollView
-        contentContainerStyle={[s.scroll, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[s.scroll, { paddingTop: 20, paddingBottom: insets.bottom + 20 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

@@ -122,7 +122,15 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await clearAuth();
-          router.replace('/onboarding/choose-path');
+          // Clear onboarding state so they see the situation options again
+          try {
+            const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+            await AsyncStorage.multiRemove([
+              'dilly_has_onboarded', 'dilly_pending_user_path', 'dilly_pending_plan',
+              'dilly_visited_jobs', 'dilly_visited_arena', 'dilly_done_interview',
+            ]).catch(() => {});
+          } catch {}
+          router.replace('/onboarding/choose-situation');
         },
       },
     ]);
@@ -153,8 +161,9 @@ export default function SettingsScreen() {
                   await AsyncStorage.multiRemove([
                     'dilly_has_onboarded', 'dilly_visited_jobs', 'dilly_visited_arena',
                     'dilly_done_interview', 'dilly_pending_upload',
+                    'dilly_pending_user_path', 'dilly_pending_plan',
                   ]).catch(() => {});
-                  router.replace('/onboarding/choose-path');
+                  router.replace('/onboarding/choose-situation');
                 },
               },
             ]);

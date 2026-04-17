@@ -14,7 +14,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, Animated, Easing,
+  ActivityIndicator, Animated, Easing, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -319,9 +319,11 @@ export default function ChooseSituationScreen() {
       >
         <FadeInView>
           <View style={styles.heroWrap}>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>DILLY</Text>
-            </View>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.heroLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Who are you, right now?</Text>
             <Text style={styles.sub}>
               Everything in Dilly adapts to this. AI tone, resume format, job filters, pricing.
@@ -449,18 +451,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   heroWrap: { alignItems: 'flex-start' },
-  heroBadge: {
-    backgroundColor: colors.indigo + '14',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginBottom: 14,
-  },
-  heroBadgeText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: colors.indigo,
-    letterSpacing: 1.5,
+  heroLogo: {
+    width: 110,
+    height: 38,
+    marginBottom: 18,
+    marginLeft: -4,
   },
   title: {
     fontSize: 28,

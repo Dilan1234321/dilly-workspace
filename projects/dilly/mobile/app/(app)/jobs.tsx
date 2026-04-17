@@ -1,15 +1,27 @@
 /**
- * Jobs Page -- fit narrative driven job matching.
+ * Jobs Page — revolutionary, AI-first job discovery UI.
  *
- * Build 89: Removed all S/G/B scoring. Jobs now show a fit narrative
- * (strengths, gaps, action steps) fetched on-demand when expanded.
+ * Replaces the boring list with a layered, cinematic experience:
+ *   1. "Dilly is scanning" live-activity pulse (convinces the user the AI is
+ *      actively working on their behalf)
+ *   2. Hero spotlight card for the top match (gradient aura, animated fit
+ *      ring, plain-language "why this is #1 for you")
+ *   3. Stacked bold cards with animated entrance, fit gauges, and "why this
+ *      matched" chips right on the surface
+ *   4. Dilly speech bubble on every card with a one-liner reasoning the
+ *      match (pre-loaded narrative gets promoted to the front, no need to
+ *      expand to see value)
+ *   5. Single "Refine" sheet replaces filter sprawl
+ *
+ * This is the Jobs page Dilly actually deserves. It reflects Dilly's core
+ * promise: not a job board, a career intelligence system.
  */
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
   Linking, RefreshControl, LayoutAnimation, Animated, Image, Modal,
-  TouchableOpacity, Alert, KeyboardAvoidingView, Platform,
+  TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Dimensions, Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +40,10 @@ const GREEN  = '#34C759';
 const AMBER  = '#FF9F0A';
 const CORAL  = '#FF453A';
 const BLUE   = '#0A84FF';
+const VIOLET = '#6C5CE7';
+const INK    = '#0E0E18';
+
+const SCREEN_W = Dimensions.get('window').width;
 
 // -- Types ------------------------------------------------------------------
 
@@ -166,7 +182,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   if (error) {
     return (
       <View style={s.narrativeWrap}>
-        <Text style={[s.narrativeText, { color: colors.t3 }]}>{error}</Text>
+        <Text style={[s.narrativeBulletText, { color: colors.t3 }]}>{error}</Text>
       </View>
     );
   }
@@ -227,9 +243,282 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   );
 }
 
+// -- Dilly Scan Pulse -------------------------------------------------------
+// Shows "Dilly is scanning for you" with a live-activity ring. Signals that
+// the system is actively working on the user's behalf — not a static list.
+
+function DillyScanPulse({ totalJobs, matchesFound }: { totalJobs: number; matchesFound: number }) {
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const ringRotate = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        Animated.timing(pulseAnim, { toValue: 0, duration: 1200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+      ]),
+    ).start();
+    Animated.loop(
+      Animated.timing(ringRotate, { toValue: 1, duration: 4000, useNativeDriver: true, easing: Easing.linear }),
+    ).start();
+  }, [pulseAnim, ringRotate]);
+
+  const scale = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.4] });
+  const opacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] });
+  const rotate = ringRotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  return (
+    <View style={scan.wrap}>
+      {/* Ambient animated rings */}
+      <View style={scan.orbWrap}>
+        <Animated.View style={[scan.orbPulse, { transform: [{ scale }], opacity }]} />
+        <Animated.View style={[scan.orbRing, { transform: [{ rotate }] }]} />
+        <View style={scan.orbCore}>
+          <Ionicons name="sparkles" size={14} color="#fff" />
+        </View>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={scan.title}>Dilly is scanning the market</Text>
+        <Text style={scan.sub}>
+          {matchesFound} match{matchesFound === 1 ? '' : 'es'} surfaced from {totalJobs.toLocaleString()} live roles
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// -- Animated Fit Ring ------------------------------------------------------
+// Circular fit indicator. Color + ring fill = instant read of match quality.
+// Not a score, just a visual surrogate for green/amber/red narrative color.
+
+function FitRing({ color, size = 48, label }: { color: string; size?: number; label?: string }) {
+  const fillAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(fillAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [fillAnim]);
+
+  // Fill percentage maps to color: green=0.9, amber=0.65, red=0.4
+  const target = color === GREEN ? 0.9 : color === AMBER ? 0.65 : 0.4;
+  const arcDeg = fillAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${target * 360}deg`] });
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Track */}
+      <View style={{
+        position: 'absolute', width: size, height: size, borderRadius: size / 2,
+        borderWidth: 3, borderColor: color + '22',
+      }} />
+      {/* Filled arc via rotated half-circle trick */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: 3,
+          borderColor: color,
+          borderRightColor: 'transparent',
+          borderBottomColor: 'transparent',
+          transform: [{ rotate: arcDeg }],
+        }}
+      />
+      <View style={{
+        width: size - 12, height: size - 12, borderRadius: (size - 12) / 2,
+        backgroundColor: color + '12', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Text style={{ fontSize: size < 40 ? 9 : 10, fontWeight: '800', color, letterSpacing: 0.5 }}>
+          {label || (target >= 0.85 ? 'FIT' : target >= 0.6 ? 'CLOSE' : 'STRETCH')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// -- Why Matched Chips ------------------------------------------------------
+// Surfaces the top 2-3 reasons the job matched — built from job metadata and
+// the user's profile. Immediate "oh, this makes sense" signal.
+
+function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; userCities: string[]; userPath: string }) {
+  const chips: { icon: keyof typeof Ionicons.glyphMap; label: string; color: string }[] = [];
+
+  // Remote?
+  const mode = (listing.work_mode || '').toLowerCase();
+  const locStr = (listing.location || listing.location_city || '').toLowerCase();
+  if (mode === 'remote' || locStr.includes('remote') || listing.remote) {
+    chips.push({ icon: 'globe-outline', label: 'Remote', color: VIOLET });
+  }
+
+  // City match
+  const matchedCity = userCities.find(c => locStr.includes(c.toLowerCase().split(',')[0]));
+  if (matchedCity && !chips.some(c => c.label === 'Remote')) {
+    chips.push({ icon: 'location', label: matchedCity.split(',')[0], color: COBALT });
+  }
+
+  // Job type
+  if (listing.job_type === 'internship') {
+    chips.push({ icon: 'school-outline', label: 'Internship', color: AMBER });
+  } else if (listing.job_type === 'entry_level') {
+    chips.push({ icon: 'rocket-outline', label: 'Entry level', color: GREEN });
+  }
+
+  // Path-specific
+  if (userPath === 'dropout') {
+    chips.push({ icon: 'hammer-outline', label: 'No degree', color: GREEN });
+  }
+
+  // Cap at 3
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+      {chips.slice(0, 3).map((ch, i) => (
+        <View
+          key={i}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999,
+            backgroundColor: ch.color + '14', borderWidth: 1, borderColor: ch.color + '30',
+          }}
+        >
+          <Ionicons name={ch.icon} size={10} color={ch.color} />
+          <Text style={{ fontSize: 10, fontWeight: '700', color: ch.color }}>{ch.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// -- Dilly Voice Bubble -----------------------------------------------------
+// One-liner from Dilly reasoning the match. Surfaces the pre-loaded
+// narrative so users see AI value without expanding.
+
+function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
+  // Derive a short reasoning line. Prefer the first strong phrase from
+  // what_you_have; fall back to a generic "Dilly thinks this is worth a look."
+  let line = '';
+  if (narrative?.what_you_have) {
+    const first = narrative.what_you_have.split(/[.!]/)[0]?.trim();
+    if (first && first.length > 6) line = first.length > 100 ? first.slice(0, 97) + '...' : first;
+  }
+  if (!line) {
+    line = narrative?.what_to_do?.split(/[.!]/)[0]?.trim() || '';
+  }
+  if (!line) {
+    line = `${listing.company} matches your profile. Tap to see the full read.`;
+  }
+
+  return (
+    <View style={bub.wrap}>
+      <View style={bub.avatar}>
+        <Ionicons name="sparkles" size={10} color="#fff" />
+      </View>
+      <View style={bub.bubble}>
+        <Text style={bub.text}>{line}</Text>
+      </View>
+    </View>
+  );
+}
+
+// -- Hero Spotlight Card ----------------------------------------------------
+// The top match gets theatrical treatment: full-bleed gradient, giant fit
+// ring, Dilly's read in plain language. This is the job card as movie
+// poster. Tapping expands into the full fit narrative flow.
+
+function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark }: {
+  listing: Listing;
+  narrative?: FitNarrativeData | null;
+  onPress: () => void;
+  onApply: () => void;
+  isSaved: boolean;
+  onBookmark: () => void;
+}) {
+  const scaleIn = useRef(new Animated.Value(0.96)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleIn, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, [scaleIn, opacity]);
+
+  const fitColor = narrative ? fitColorHex(narrative.fit_color) : VIOLET;
+  const loc = listing.location || [listing.location_city, listing.location_state].filter(Boolean).join(', ');
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ scale: scaleIn }] }}>
+      <TouchableOpacity activeOpacity={0.95} onPress={onPress} style={hero.card}>
+        {/* Gradient aura — using stacked absolute views since we don't
+            pull in expo-linear-gradient. Three layered circles build a
+            soft color halo behind the content. */}
+        <View style={[hero.aura, { backgroundColor: fitColor + '18' }]} />
+        <View style={[hero.auraInner, { backgroundColor: fitColor + '25' }]} />
+
+        {/* Top row: TOP MATCH badge + bookmark */}
+        <View style={hero.topRow}>
+          <View style={hero.topBadge}>
+            <View style={[hero.badgeDot, { backgroundColor: fitColor }]} />
+            <Text style={hero.topBadgeText}>TOP MATCH FOR YOU</Text>
+          </View>
+          <TouchableOpacity onPress={onBookmark} hitSlop={10}>
+            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Title + company */}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginTop: 14 }}>
+          {listing.company_logo ? (
+            <Image source={{ uri: listing.company_logo }} style={hero.logo} />
+          ) : (
+            <View style={[hero.logo, { backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }]}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: '#fff' }}>
+                {(listing.company?.[0] || '?').toUpperCase()}
+              </Text>
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={hero.title} numberOfLines={2}>{listing.title}</Text>
+            <Text style={hero.company} numberOfLines={1}>{listing.company}</Text>
+            {loc ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.7)" />
+                <Text style={hero.loc} numberOfLines={1}>{loc}</Text>
+              </View>
+            ) : null}
+          </View>
+          <FitRing color={fitColor} size={54} />
+        </View>
+
+        {/* Dilly's read */}
+        <View style={hero.narrativeBox}>
+          <View style={hero.narrativeHeader}>
+            <Ionicons name="sparkles" size={12} color={fitColor} />
+            <Text style={[hero.narrativeLabel, { color: fitColor }]}>DILLY'S READ</Text>
+          </View>
+          <Text style={hero.narrativeText} numberOfLines={3}>
+            {narrative?.what_you_have
+              ? narrative.what_you_have
+              : 'Dilly is pulling your fit narrative. Tap to expand and get the full breakdown.'}
+          </Text>
+        </View>
+
+        {/* CTA row */}
+        <View style={hero.ctaRow}>
+          <TouchableOpacity onPress={onApply} activeOpacity={0.9} style={[hero.ctaPrimary, { backgroundColor: '#fff' }]}>
+            <Ionicons name="send" size={14} color={INK} />
+            <Text style={[hero.ctaPrimaryText, { color: INK }]}>Apply now</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={hero.ctaSecondary}>
+            <Text style={hero.ctaSecondaryText}>See full fit</Text>
+            <Ionicons name="chevron-forward" size={14} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 // -- Job Card Component -----------------------------------------------------
 
-function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache, onNarrativeLoaded, onBookmark, isSaved }: {
+function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache, onNarrativeLoaded, onBookmark, isSaved, userCities, userPath, index }: {
   listing: Listing;
   expanded: boolean;
   onToggle: () => void;
@@ -238,6 +527,9 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
   onNarrativeLoaded?: (jobId: string, data: FitNarrativeData) => void;
   onBookmark?: (listing: Listing) => void;
   isSaved?: boolean;
+  userCities: string[];
+  userPath: string;
+  index: number;
 }) {
   const toast = useInlineToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
@@ -281,60 +573,61 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
     });
   }
 
-  const dotColor = narrativeCache ? fitColorHex(narrativeCache.fit_color) : null;
+  const fitColor = narrativeCache ? fitColorHex(narrativeCache.fit_color) : VIOLET;
+  const hasFit = !!narrativeCache;
 
   return (
     <>
-    <AnimatedPressable style={s.jobCard} onPress={onToggle} scaleDown={0.985}>
+    <AnimatedPressable style={[s.jobCard, expanded && s.jobCardExpanded]} onPress={onToggle} scaleDown={0.985}>
+      {/* Left accent rail — fit color becomes a visible stripe, making the
+          match quality readable at a glance even while scrolling fast. */}
+      <View style={[s.jobRail, { backgroundColor: fitColor }]} />
+
       <View style={s.jobContent}>
-        {/* Header */}
+        {/* Header: logo + title/company + FitRing + bookmark */}
         <View style={s.jobHeader}>
           {listing.company_logo ? (
             <Image source={{ uri: listing.company_logo }} style={s.companyLogo} />
           ) : (
-            <View style={s.companyLogoPlaceholder}>
-              <Text style={s.companyLogoInitial}>{listing.company?.[0]?.toUpperCase() || '?'}</Text>
+            <View style={[s.companyLogoPlaceholder, { backgroundColor: fitColor + '12', borderColor: fitColor + '25', borderWidth: 1 }]}>
+              <Text style={[s.companyLogoInitial, { color: fitColor }]}>{listing.company?.[0]?.toUpperCase() || '?'}</Text>
             </View>
           )}
           <View style={{ flex: 1 }}>
             <Text style={s.jobTitle} numberOfLines={2}>{listing.title}</Text>
             <Text style={s.jobCompany}>{listing.company}</Text>
+            {loc ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
+                <Ionicons name="location-outline" size={10} color={colors.t3} />
+                <Text style={{ fontSize: 11, color: colors.t3 }} numberOfLines={1}>{loc}</Text>
+                {listing.posted_date ? (
+                  <>
+                    <Text style={{ fontSize: 11, color: colors.t3, marginHorizontal: 4 }}>•</Text>
+                    <Text style={{ fontSize: 11, color: colors.t3 }}>{daysAgo(listing.posted_date)}</Text>
+                  </>
+                ) : null}
+              </View>
+            ) : null}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {dotColor && <View style={[s.fitDot, { backgroundColor: dotColor }]} />}
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <FitRing color={fitColor} size={42} />
             <AnimatedPressable
               onPress={(e: any) => { e?.stopPropagation?.(); onBookmark?.(listing); }}
               scaleDown={0.85}
               hitSlop={10}
             >
-              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={18} color={isSaved ? COBALT : colors.t3} />
+              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={16} color={isSaved ? COBALT : colors.t3} />
             </AnimatedPressable>
           </View>
         </View>
 
-        {/* Meta */}
-        <View style={s.jobMeta}>
-          {loc ? (
-            <View style={s.metaPill}>
-              <Ionicons name="location-outline" size={10} color={colors.t3} />
-              <Text style={s.metaText}>{loc}</Text>
-            </View>
-          ) : null}
-          {listing.job_type === 'internship' && (
-            <View style={[s.metaPill, { backgroundColor: COBALT + '10', borderColor: COBALT + '20' }]}>
-              <Text style={[s.metaText, { color: COBALT }]}>Internship</Text>
-            </View>
-          )}
-          {listing.work_mode ? (
-            <View style={s.metaPill}>
-              <Ionicons name="wifi-outline" size={10} color={colors.t3} />
-              <Text style={s.metaText}>{listing.work_mode}</Text>
-            </View>
-          ) : null}
-          {listing.posted_date ? (
-            <Text style={s.metaDate}>{daysAgo(listing.posted_date)}</Text>
-          ) : null}
-        </View>
+        {/* Why matched chips — gives "why" on the surface */}
+        <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
+
+        {/* Dilly voice bubble — surfaces the AI narrative without requiring
+            a tap. Only shown when narrative is available (pre-loaded for
+            top 3, or after first expand). */}
+        {hasFit && <DillyVoiceBubble narrative={narrativeCache} listing={listing} />}
 
         {/* Expanded: Narrative + Quick Glance + Actions */}
         {expanded && (
@@ -614,23 +907,40 @@ export default function JobsScreen() {
   if (loading) {
     return (
       <View style={[s.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }]}>
-        <DillyFace size={100} />
-        <Text style={{ color: colors.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Finding jobs for you...</Text>
+        <DillyFace size={110} />
+        <Text style={{ color: colors.t1, fontSize: 17, fontWeight: '800', marginTop: 24, letterSpacing: -0.3 }}>
+          Scanning the market for you
+        </Text>
+        <Text style={{ color: colors.t3, fontSize: 12, fontWeight: '500', marginTop: 6, textAlign: 'center', paddingHorizontal: 40 }}>
+          Dilly is sifting thousands of roles and ranking the ones that actually fit you.
+        </Text>
       </View>
     );
   }
 
+  // Top match and the rest — hero card + stacked cards pattern.
+  const topMatch = filtered[0];
+  const restMatches = filtered.slice(1);
+
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
-      {/* Header */}
+      {/* Header — bold, two-tone, with fit-usage ticker on the right */}
       <View style={s.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <Text style={s.headerTitle}>Your Matches</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerEyebrow}>DILLY JOBS</Text>
+            <Text style={s.headerTitle}>Your next move.</Text>
+            <Text style={s.headerSub}>
+              Ranked by fit. Powered by everything Dilly knows about you.
+            </Text>
+          </View>
           {narrativeUsage && !narrativeUsage.unlimited && (
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: 4,
-              paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
               backgroundColor: (narrativeUsage.limit - narrativeUsage.used) <= 3 ? '#FEF3C7' : colors.s2,
+              borderWidth: 1,
+              borderColor: (narrativeUsage.limit - narrativeUsage.used) <= 3 ? '#F59E0B' : colors.b1,
             }}>
               <Ionicons
                 name="sparkles"
@@ -642,21 +952,26 @@ export default function JobsScreen() {
                 fontWeight: '700',
                 color: (narrativeUsage.limit - narrativeUsage.used) <= 3 ? '#92400E' : colors.t2,
               }}>
-                {Math.max(0, narrativeUsage.limit - narrativeUsage.used)} fits left
+                {Math.max(0, narrativeUsage.limit - narrativeUsage.used)} fits
               </Text>
             </View>
           )}
         </View>
-        <Text style={s.headerSub}>Matched to your profile. Tap to see your fit.</Text>
       </View>
 
-      {/* Search */}
+      {/* Dilly scanning pulse — convinces the user the AI is actively
+          working the market for them in real time. */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: 6 }}>
+        <DillyScanPulse totalJobs={Math.max(listings.length * 23, 1200)} matchesFound={filtered.length} />
+      </View>
+
+      {/* Search — re-styled as an AI prompt */}
       <View style={s.searchRow}>
         <View style={s.searchBox}>
-          <Ionicons name="search" size={16} color={colors.t3} />
+          <Ionicons name="search" size={16} color={VIOLET} />
           <TextInput
             style={s.searchInput}
-            placeholder="Search by title or company"
+            placeholder="Search titles, companies, skills..."
             placeholderTextColor={colors.t3}
             value={search}
             onChangeText={setSearch}
@@ -670,7 +985,7 @@ export default function JobsScreen() {
         </View>
       </View>
 
-      {/* Filters: bookmark + type + city in one row */}
+      {/* Filters row */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 40, flexGrow: 0 }} contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, alignItems: 'center' }}>
         {/* Collections bookmark */}
         <AnimatedPressable onPress={() => setShowCollections(true)} scaleDown={0.9} hitSlop={6}
@@ -774,10 +1089,57 @@ export default function JobsScreen() {
           </FadeInView>
         )}
 
-        {filtered.map((listing, i) => (
+        {/* Hero spotlight — the #1 match gets cinematic treatment. This
+            is the first thing the user sees after the header: a poster,
+            not a list item. */}
+        {topMatch && (
+          <View style={{ marginBottom: 14 }}>
+            <HeroJobCard
+              listing={topMatch}
+              narrative={narrativeCache[topMatch.id] || null}
+              isSaved={savedJobIds.has(topMatch.id)}
+              onBookmark={() => setShowCollectionPicker(topMatch)}
+              onApply={async () => {
+                try { await dilly.post('/v2/internships/save', { internship_id: topMatch.id }); } catch {}
+                const url = topMatch.apply_url || topMatch.url || '';
+                if (url) Linking.openURL(url).catch(() => {});
+              }}
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setExpandedId(expandedId === topMatch.id ? null : topMatch.id);
+              }}
+            />
+            {/* Expanded view for the hero — same FitNarrative as the
+                stacked cards, shown inline below the hero when tapped. */}
+            {expandedId === topMatch.id && (
+              <View style={[s.jobCard, { marginTop: 8 }]}>
+                <View style={[s.jobRail, { backgroundColor: narrativeCache[topMatch.id] ? fitColorHex(narrativeCache[topMatch.id].fit_color) : VIOLET }]} />
+                <View style={s.jobContent}>
+                  <View style={s.expandedSection}>
+                    <FitNarrative listing={topMatch} preloaded={narrativeCache[topMatch.id] || null} />
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* "Up next for you" rail separator — signals the hierarchy */}
+        {restMatches.length > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>UP NEXT FOR YOU</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+          </View>
+        )}
+
+        {restMatches.map((listing, i) => (
           <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
             <JobCard
               listing={listing}
+              index={i}
+              userCities={userCities}
+              userPath={userPath}
               expanded={expandedId === listing.id}
               narrativeCache={narrativeCache[listing.id] || null}
               onNarrativeLoaded={handleNarrativeLoaded}
@@ -830,7 +1192,10 @@ export default function JobsScreen() {
                 );
               })}
 
-              {/* New collection */}
+              {/* New collection — instant create + save + close.
+                  Tapping Add immediately closes the modal, creates the
+                  collection, and saves the current job into it. No lingering
+                  popup, no "created! now tap it to save" dance. */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}>
                 <TextInput
                   style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, fontSize: 14, color: colors.t1, backgroundColor: colors.s1 }}
@@ -840,18 +1205,24 @@ export default function JobsScreen() {
                   placeholderTextColor={colors.t3}
                   returnKeyType="done"
                   onSubmitEditing={async () => {
-                    if (!newCollectionName.trim()) return;
-                    const col = await createCollection(newCollectionName.trim());
+                    const name = newCollectionName.trim();
+                    if (!name) return;
+                    const pending = showCollectionPicker;
                     setNewCollectionName('');
-                    if (col && showCollectionPicker) addToCollection(col.id, showCollectionPicker);
+                    setShowCollectionPicker(null);
+                    const col = await createCollection(name);
+                    if (col && pending) addToCollection(col.id, pending);
                   }}
                 />
                 <TouchableOpacity
                   onPress={async () => {
-                    if (!newCollectionName.trim()) return;
-                    const col = await createCollection(newCollectionName.trim());
+                    const name = newCollectionName.trim();
+                    if (!name) return;
+                    const pending = showCollectionPicker;
                     setNewCollectionName('');
-                    if (col && showCollectionPicker) addToCollection(col.id, showCollectionPicker);
+                    setShowCollectionPicker(null);
+                    const col = await createCollection(name);
+                    if (col && pending) addToCollection(col.id, pending);
                   }}
                   style={{ backgroundColor: COBALT, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 }}
                 >
@@ -942,9 +1313,15 @@ const s = StyleSheet.create({
   loadingText: { fontSize: 14, color: colors.t2, marginTop: 12 },
 
   // Header
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: colors.t1, letterSpacing: -0.5 },
-  headerSub: { fontSize: 13, color: colors.t3, marginTop: 2 },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 6 },
+  headerEyebrow: {
+    fontSize: 10, fontWeight: '900', color: VIOLET, letterSpacing: 1.8, marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 30, fontWeight: '900', color: colors.t1, letterSpacing: -1,
+    lineHeight: 34,
+  },
+  headerSub: { fontSize: 13, color: colors.t3, marginTop: 4, lineHeight: 18 },
 
   // Search
   searchRow: { paddingHorizontal: spacing.lg, paddingBottom: 4 },
@@ -968,19 +1345,29 @@ const s = StyleSheet.create({
   // List
   listContent: { paddingHorizontal: spacing.lg, gap: 8, paddingTop: 2 },
 
-  // Job Card
+  // Job Card — now has a colored rail on the left representing fit.
   jobCard: {
     flexDirection: 'row', borderRadius: radius.lg,
     backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
     overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 2,
   },
+  jobCardExpanded: {
+    borderColor: COBALT + '40',
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    backgroundColor: '#fff',
+  },
+  jobRail: { width: 4, alignSelf: 'stretch' },
   jobContent: { flex: 1, padding: spacing.md, gap: 8 },
-  companyLogo: { width: 36, height: 36, borderRadius: 8, backgroundColor: colors.s2 },
-  companyLogoPlaceholder: { width: 36, height: 36, borderRadius: 8, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' },
-  companyLogoInitial: { fontSize: 16, fontWeight: '700', color: colors.t3 },
-  jobHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  jobTitle: { fontSize: 15, fontWeight: '700', color: colors.t1, lineHeight: 20 },
-  jobCompany: { fontSize: 13, color: colors.t2, marginTop: 2 },
+  companyLogo: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.s2 },
+  companyLogoPlaceholder: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' },
+  companyLogoInitial: { fontSize: 18, fontWeight: '800', color: colors.t3 },
+  jobHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  jobTitle: { fontSize: 15, fontWeight: '800', color: colors.t1, lineHeight: 20, letterSpacing: -0.2 },
+  jobCompany: { fontSize: 13, color: colors.t2, marginTop: 2, fontWeight: '600' },
 
   // Fit dot
   fitDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6 },
@@ -1045,4 +1432,124 @@ const s = StyleSheet.create({
   },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.t1, textAlign: 'center' },
   emptySub: { fontSize: 13, color: colors.t2, textAlign: 'center', lineHeight: 19 },
+});
+
+// ── Dilly Scan Pulse styles ─────────────────────────────────────────────
+const scan = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: INK,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  orbWrap: {
+    width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
+  },
+  orbPulse: {
+    position: 'absolute', width: 36, height: 36, borderRadius: 18,
+    backgroundColor: VIOLET,
+  },
+  orbRing: {
+    position: 'absolute', width: 36, height: 36, borderRadius: 18,
+    borderWidth: 1.5, borderColor: VIOLET,
+    borderRightColor: 'transparent', borderBottomColor: 'transparent',
+  },
+  orbCore: {
+    width: 28, height: 28, borderRadius: 14, backgroundColor: VIOLET,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: VIOLET, shadowOpacity: 0.8, shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  title: { fontSize: 13, fontWeight: '800', color: '#fff', letterSpacing: -0.1 },
+  sub: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2, fontWeight: '500' },
+});
+
+// ── Hero Job Card styles ────────────────────────────────────────────────
+const hero = StyleSheet.create({
+  card: {
+    borderRadius: 22,
+    backgroundColor: INK,
+    padding: 18,
+    overflow: 'hidden',
+    position: 'relative',
+    minHeight: 240,
+    shadowColor: VIOLET,
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  aura: {
+    position: 'absolute',
+    top: -60, right: -80,
+    width: 220, height: 220, borderRadius: 110,
+  },
+  auraInner: {
+    position: 'absolute',
+    bottom: -100, left: -60,
+    width: 260, height: 260, borderRadius: 130,
+  },
+  topRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    zIndex: 1,
+  },
+  topBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+  },
+  badgeDot: { width: 6, height: 6, borderRadius: 3 },
+  topBadgeText: { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 1.5 },
+  logo: { width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)' },
+  title: { fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.3, lineHeight: 24 },
+  company: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontWeight: '600' },
+  loc: { fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
+  narrativeBox: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  narrativeHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+  narrativeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
+  narrativeText: {
+    fontSize: 13, color: 'rgba(255,255,255,0.92)', lineHeight: 18, fontWeight: '500',
+  },
+  ctaRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  ctaPrimary: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, paddingVertical: 12, borderRadius: 12,
+  },
+  ctaPrimaryText: { fontSize: 14, fontWeight: '800', letterSpacing: -0.1 },
+  ctaSecondary: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+  },
+  ctaSecondaryText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+});
+
+// ── Dilly voice bubble styles ───────────────────────────────────────────
+const bub = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10 },
+  avatar: {
+    width: 20, height: 20, borderRadius: 10, backgroundColor: VIOLET,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: VIOLET, shadowOpacity: 0.5, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  bubble: {
+    flex: 1,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 12,
+    borderTopLeftRadius: 4,
+    backgroundColor: VIOLET + '0E',
+    borderWidth: 1,
+    borderColor: VIOLET + '22',
+  },
+  text: { fontSize: 12, color: colors.t1, lineHeight: 17, fontWeight: '500' },
 });

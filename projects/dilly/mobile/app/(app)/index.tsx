@@ -305,7 +305,7 @@ export default function HomeScreen() {
           <View style={s.header}>
             <View style={{ flex: 1 }}>
               <Text style={s.headerName}>Welcome, {firstName || 'there'}.</Text>
-              <Text style={s.headerSub}>Your career center.</Text>
+              <Text style={s.headerSub}>Welcome to your career center.</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <AnimatedPressable

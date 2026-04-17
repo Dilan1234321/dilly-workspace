@@ -35,6 +35,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
 import DillyCardEditor, { type CardData } from '../../components/DillyCard';
+import { DillyFace } from '../../components/DillyFace';
 import InlinePopup, { type PopupAction } from '../../components/InlinePopup';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 
@@ -174,6 +175,59 @@ function SkillTag({ skill, conf, onPress }: { skill: FactItem; conf: number; onP
         <Text style={[d.skillTagText, { fontSize: 11 + conf * 3 }]}>{skill.label || skill.value}</Text>
       </View>
     </AnimatedPressable>
+  );
+}
+
+// ── Loading State ────────────────────────────────────────────────────────────
+// Matches the "What We Think" loading experience — animated DillyFace with
+// rotating status lines — but with text tuned to what My Dilly actually
+// shows (the user's identity, facts, story).
+
+const MY_DILLY_LOADING_TEXTS = [
+  'Gathering everything Dilly knows about you...',
+  'Opening your profile...',
+  'Pulling your strengths and skills...',
+  'Arranging your story...',
+  'Almost ready...',
+];
+
+function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const [textIdx, setTextIdx] = useState(0);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ).start();
+    const interval = setInterval(
+      () => setTextIdx(i => (i + 1) % MY_DILLY_LOADING_TEXTS.length),
+      2500,
+    );
+    return () => clearInterval(interval);
+  }, [pulseAnim]);
+
+  return (
+    <View style={[d.container, { paddingTop: insetTop }]}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
+        <DillyFace size={120} />
+        <Animated.Text
+          style={{
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.t2,
+            marginTop: 24,
+            opacity: pulseAnim,
+            textAlign: 'center',
+            paddingHorizontal: 24,
+          }}
+        >
+          {MY_DILLY_LOADING_TEXTS[textIdx]}
+        </Animated.Text>
+      </View>
+    </View>
   );
 }
 
@@ -342,14 +396,7 @@ export default function MyDillyProfileScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={[d.container, { paddingTop: insets.top }]}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Ionicons name="person-circle" size={60} color={colors.t3} />
-          <Text style={{ color: colors.t3, marginTop: 12, fontSize: 13 }}>Loading your Dilly profile...</Text>
-        </View>
-      </View>
-    );
+    return <MyDillyLoadingState insetTop={insets.top} />;
   }
 
   return (

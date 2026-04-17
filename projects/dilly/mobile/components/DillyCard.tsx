@@ -149,11 +149,11 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           {data.name || 'Your Name'}
         </Text>
         {data.tagline ? (
-          <Text style={{ fontSize: 11, color: '#6B7280', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
+          <Text style={{ fontSize: 12, color: '#4A5260', fontStyle: 'italic', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#6B7280', phone: '#6B7280', url: '#9CA3AF' }} />
-        {showQr && <QrBadge data={data} color="#9CA3AF" />}
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#374151', phone: '#374151', url: '#6B7280' }} />
+        {showQr && <QrBadge data={data} color="#374151" />}
       </View>
     );
   }
@@ -192,6 +192,7 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
   }
 
   // ── Dark: premium matte black ──
+  // Tagline dim-gray → lighter for AA contrast; contact text brightened.
   if (template === 'dark') {
     return (
       <View style={[c.card, { backgroundColor: '#111111', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14 }]}>
@@ -204,11 +205,11 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           {data.name || 'Your Name'}
         </Text>
         {data.tagline ? (
-          <Text style={{ fontSize: 11, color: '#666666', marginTop: 2 }}>{data.tagline}</Text>
+          <Text style={{ fontSize: 12, color: '#B0B0B0', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
-        <View style={{ width: 30, height: 1, backgroundColor: '#FFFFFF', marginTop: 8 }} />
+        <View style={{ width: 40, height: 1.5, backgroundColor: '#FFFFFF', marginTop: 8 }} />
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#999999', phone: '#999999', url: '#555555' }} />
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#D0D0D0', phone: '#D0D0D0', url: '#888888' }} />
         {showQr && <QrBadge data={data} color="#FFFFFF" />}
       </View>
     );
@@ -255,14 +256,16 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
   }
 
   // ── Navy: photo circle left, navy blue background ──
+  // Accessibility: photo bumped to 64pt (was 50pt) so it reads on a printed
+  // 3.5x2" card. Contact colors darkened to pass WCAG AA on navy.
   if (template === 'navy') {
     return (
-      <View style={[c.card, { backgroundColor: '#1B2838', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
+      <View style={[c.card, { backgroundColor: '#1B2838', flexDirection: 'column', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 14 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <PhotoCircle photoUri={data.photoUri} initial={initial} size={50} bgColor="#2A3F55" />
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={64} bgColor="#2A3F55" />
           <View style={{ flex: 1 }}>
             <Text
-              style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}
+              style={{ fontSize: 17, fontWeight: '700', color: '#FFFFFF' }}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.6}
@@ -270,26 +273,28 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
               {data.name || 'Your Name'}
             </Text>
             {data.tagline ? (
-              <Text style={{ fontSize: 10, color: '#8BA4C4', marginTop: 2 }}>{data.tagline}</Text>
+              <Text style={{ fontSize: 11, color: '#B8CDE0', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
             ) : null}
           </View>
         </View>
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#8BA4C4', phone: '#8BA4C4', url: '#5A7FA0' }} />
-        {showQr && <QrBadge data={data} color="#8BA4C4" />}
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#D6E3F0', phone: '#D6E3F0', url: '#8BA4C4' }} />
+        {showQr && <QrBadge data={data} color="#D6E3F0" />}
       </View>
     );
   }
 
   // ── Sage: green-tinted, photo top-right corner ──
+  // Bumped photo 42→56pt. Darkened tagline/contact greens for AA contrast
+  // on the light sage background.
   if (template === 'sage') {
     return (
       <View style={[c.card, { backgroundColor: '#F5F7F4', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
         <View style={{ position: 'absolute', top: 14, right: 16 }}>
-          <PhotoCircle photoUri={data.photoUri} initial={initial} size={42} bgColor="#5C6B5C" />
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={56} bgColor="#3D4A3D" />
         </View>
         <Text
-          style={{ fontSize: 18, fontWeight: '700', color: '#2D3B2D', paddingRight: 54 }}
+          style={{ fontSize: 18, fontWeight: '700', color: '#1F2D1F', paddingRight: 72 }}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.6}
@@ -297,23 +302,25 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           {data.name || 'Your Name'}
         </Text>
         {data.tagline ? (
-          <Text style={{ fontSize: 11, color: '#5C6B5C', fontStyle: 'italic', marginTop: 2 }}>{data.tagline}</Text>
+          <Text style={{ fontSize: 12, color: '#3D4A3D', marginTop: 2, paddingRight: 72 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#5C6B5C', phone: '#5C6B5C', url: '#8A9B8A' }} />
-        {showQr && <QrBadge data={data} color="#5C6B5C" />}
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#2E3A2E', phone: '#2E3A2E', url: '#5C6B5C' }} />
+        {showQr && <QrBadge data={data} color="#2E3A2E" />}
       </View>
     );
   }
 
   // ── Coral: warm coral accent, no photo ──
+  // Accent bar thickened 2→3pt for visibility. Tagline color darkened to
+  // a coral that passes AA on the cream background. Contact gray darkened.
   if (template === 'coral') {
     return (
       <View style={[c.card, { backgroundColor: '#FFF5F3', flexDirection: 'column', paddingBottom: 14, overflow: 'hidden' }]}>
-        <View style={{ width: '100%', height: 2, backgroundColor: '#E8705A' }} />
+        <View style={{ width: '100%', height: 3, backgroundColor: '#C94A2E' }} />
         <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16 }}>
           <Text
-            style={{ fontSize: 20, fontWeight: '700', color: '#2C2C2C' }}
+            style={{ fontSize: 20, fontWeight: '700', color: '#1F1F1F' }}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.6}
@@ -321,25 +328,27 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
             {data.name || 'Your Name'}
           </Text>
           {data.tagline ? (
-            <Text style={{ fontSize: 11, color: '#E8705A', marginTop: 2 }}>{data.tagline}</Text>
+            <Text style={{ fontSize: 12, color: '#A0372A', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
           ) : null}
           <View style={{ flex: 1 }} />
-          <MinimalContact data={data} hideLink={showQr} colors={{ email: '#8B8B8B', phone: '#8B8B8B', url: '#BBBBBB' }} />
+          <MinimalContact data={data} hideLink={showQr} colors={{ email: '#4A4A4A', phone: '#4A4A4A', url: '#8B8B8B' }} />
         </View>
-        {showQr && <QrBadge data={data} color="#E8705A" />}
+        {showQr && <QrBadge data={data} color="#C94A2E" />}
       </View>
     );
   }
 
   // ── Gold: cream paper with deep emerald accent + small photo top-left ──
+  // Photo 44→60pt. Divider darkened + thicker so colorblind users don't
+  // perceive gold-on-cream as a single wash.
   if (template === 'gold') {
     return (
-      <View style={[c.card, { backgroundColor: '#FAF6EE', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
+      <View style={[c.card, { backgroundColor: '#FAF6EE', flexDirection: 'column', paddingHorizontal: 18, paddingTop: 14, paddingBottom: 14 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <PhotoCircle photoUri={data.photoUri} initial={initial} size={44} bgColor="#0E3B2E" />
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={60} bgColor="#0E3B2E" />
           <View style={{ flex: 1 }}>
             <Text
-              style={{ fontSize: 17, fontWeight: '700', color: '#0E3B2E', letterSpacing: 0.2 }}
+              style={{ fontSize: 17, fontWeight: '700', color: '#0B2E24', letterSpacing: 0.2 }}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.6}
@@ -347,27 +356,30 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
               {data.name || 'Your Name'}
             </Text>
             {data.tagline ? (
-              <Text style={{ fontSize: 11, color: '#A47A2E', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
+              <Text style={{ fontSize: 12, color: '#7A5A1E', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
             ) : null}
           </View>
         </View>
-        <View style={{ height: 1, backgroundColor: '#D9C9A1', marginTop: 12 }} />
+        <View style={{ height: 1.5, backgroundColor: '#B89F66', marginTop: 12 }} />
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#5C4A2E', phone: '#5C4A2E', url: '#A47A2E' }} />
-        {showQr && <QrBadge data={data} color="#0E3B2E" />}
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#3A2E1A', phone: '#3A2E1A', url: '#7A5A1E' }} />
+        {showQr && <QrBadge data={data} color="#0B2E24" />}
       </View>
     );
   }
 
   // ── Terracotta: warm clay block, photo circle right ──
+  // Photo 44→58pt; stronger contrast tones throughout. On terracotta, red-
+  // green colorblind users perceive the background and accent as the same
+  // hue — we deepen the text and keep the divider shape-distinct.
   if (template === 'terracotta') {
     return (
       <View style={[c.card, { backgroundColor: '#F2DCC9', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
         <View style={{ position: 'absolute', top: 14, right: 16 }}>
-          <PhotoCircle photoUri={data.photoUri} initial={initial} size={44} bgColor="#A0432B" />
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={58} bgColor="#7A2E1A" />
         </View>
         <Text
-          style={{ fontSize: 18, fontWeight: '800', color: '#3B1B0F', paddingRight: 56 }}
+          style={{ fontSize: 18, fontWeight: '800', color: '#2A1008', paddingRight: 72 }}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.6}
@@ -375,11 +387,11 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           {data.name || 'Your Name'}
         </Text>
         {data.tagline ? (
-          <Text style={{ fontSize: 11, color: '#A0432B', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
+          <Text style={{ fontSize: 12, color: '#7A2E1A', marginTop: 2, paddingRight: 72 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#5C2D1B', phone: '#5C2D1B', url: '#A0432B' }} />
-        {showQr && <QrBadge data={data} color="#3B1B0F" />}
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#3A1A0E', phone: '#3A1A0E', url: '#7A2E1A' }} />
+        {showQr && <QrBadge data={data} color="#2A1008" />}
       </View>
     );
   }
@@ -411,13 +423,17 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
 
   // ── Pearl: soft off-white with lavender accent, photo top-right ──
   if (template === 'pearl') {
+    // Photo is 56pt at top:14. Divider must sit BELOW the photo (>= 14+56=70)
+    // when there's no tagline. With tagline, the name+tagline block already
+    // pushes it down. paddingRight on name/tagline keeps them away from the
+    // photo horizontally; the divider goes full-width below the photo.
     return (
       <View style={[c.card, { backgroundColor: '#F6F4F9', flexDirection: 'column', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }]}>
         <View style={{ position: 'absolute', top: 14, right: 16 }}>
-          <PhotoCircle photoUri={data.photoUri} initial={initial} size={44} bgColor="#6B5B95" />
+          <PhotoCircle photoUri={data.photoUri} initial={initial} size={56} bgColor="#6B5B95" />
         </View>
         <Text
-          style={{ fontSize: 18, fontWeight: '700', color: '#2A2240', paddingRight: 56 }}
+          style={{ fontSize: 18, fontWeight: '700', color: '#2A2240', paddingRight: 72 }}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.6}
@@ -425,22 +441,27 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           {data.name || 'Your Name'}
         </Text>
         {data.tagline ? (
-          <Text style={{ fontSize: 11, color: '#6B5B95', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
+          <Text style={{ fontSize: 12, color: '#4A3F65', marginTop: 2, paddingRight: 72 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
-        <View style={{ height: 1, backgroundColor: '#E2DCEF', marginTop: 12 }} />
+        {/* Divider clears the 56pt photo (top:14 + 56 = 70pt). Without a
+            tagline, the name block ends around 38pt so we push the divider
+            down to 58pt so it sits under the photo, not through it. */}
+        <View style={{ height: 1, backgroundColor: '#C7BCE0', marginTop: data.tagline ? 12 : 42 }} />
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#5A4F75', phone: '#5A4F75', url: '#9385B8' }} />
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#3A2F55', phone: '#3A2F55', url: '#6B5B95' }} />
         {showQr && <QrBadge data={data} color="#6B5B95" />}
       </View>
     );
   }
 
-  // ── Midnight: photo on right 40%, dark cinematic ──
+  // ── Midnight: photo on right 45%, dark cinematic ──
+  // Widened photo column 40%→45% so the face reads at printed size.
+  // Tagline bumped 10→11pt with brighter blue for AA contrast on black.
   return (
     <View style={[c.card, { backgroundColor: '#0F1724', flexDirection: 'row', overflow: 'hidden' }]}>
-      <View style={{ width: '60%', paddingHorizontal: 20, paddingVertical: 16, justifyContent: 'flex-start' }}>
+      <View style={{ width: '55%', paddingHorizontal: 18, paddingVertical: 14, justifyContent: 'flex-start' }}>
         <Text
-          style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}
+          style={{ fontSize: 17, fontWeight: '700', color: '#FFFFFF' }}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.6}
@@ -448,17 +469,17 @@ function CardFront({ data, template = 'photo', showQr = false }: { data: CardDat
           {data.name || 'Your Name'}
         </Text>
         {data.tagline ? (
-          <Text style={{ fontSize: 10, color: '#6B8DB5', marginTop: 2 }}>{data.tagline}</Text>
+          <Text style={{ fontSize: 11, color: '#9BB8D6', marginTop: 2 }} numberOfLines={1}>{data.tagline}</Text>
         ) : null}
         <View style={{ flex: 1 }} />
-        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#6B8DB5', phone: '#6B8DB5', url: '#4A6A8A' }} />
+        <MinimalContact data={data} hideLink={showQr} colors={{ email: '#D6E3F0', phone: '#D6E3F0', url: '#9BB8D6' }} />
       </View>
-      <View style={{ width: '40%', height: '100%' }}>
+      <View style={{ width: '45%', height: '100%' }}>
         {photoWithCache ? (
           <Image source={{ uri: photoWithCache }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
         ) : (
           <View style={{ width: '100%', height: '100%', backgroundColor: '#1A2A3E', justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ fontSize: 36, fontWeight: '800', color: '#3A5A7A' }}>{initial}</Text>
+            <Text style={{ fontSize: 40, fontWeight: '800', color: '#5A7FA0' }}>{initial}</Text>
           </View>
         )}
         {showQr && QRCode && getProfileUrl(data) && (
