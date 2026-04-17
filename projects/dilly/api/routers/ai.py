@@ -307,6 +307,10 @@ def _build_rich_context(email: str) -> dict:
         # The path the user picked during onboarding — drives AI tone,
         # resume shape, and which filters are shown in the UI.
         "user_path": (profile.get("user_path") or "").strip().lower(),
+        # Explicit app_mode override ('holder' | 'seeker' | 'student' | None).
+        # Derived from profile; when None, _build_rich_system_prompt falls
+        # back to deriving from user_path.
+        "app_mode": (profile.get("app_mode") or "").strip().lower() or None,
         "is_student": bool(
             (profile.get("user_type") or "").strip().lower() not in ("general", "professional")
             and (profile.get("user_path") or "").strip().lower() not in ("dropout", "senior_reset", "career_switch", "exploring")
@@ -547,6 +551,59 @@ def _build_rich_system_prompt(r: dict) -> str:
     _user_path = (r.get("user_path") or "").strip().lower() or (
         "student" if r.get("is_student") else "exploring"
     )
+
+    # Mode-aware persona layer. An explicit profile.app_mode overrides
+    # the derived mode (matches mobile lib/appMode.ts). This sits BEFORE
+    # the per-path tone block so the mode framing is dominant and the
+    # path tone adds flavor on top.
+    _explicit_mode = (r.get("app_mode") or "").strip().lower()
+    if _explicit_mode in ("holder", "seeker", "student"):
+        _app_mode = _explicit_mode
+    elif _user_path == "i_have_a_job":
+        _app_mode = "holder"
+    elif _user_path == "student":
+        _app_mode = "student"
+    else:
+        _app_mode = "seeker"
+
+    _mode_block = {
+        "holder": (
+            "HOW YOU TALK TO THIS PERSON:\n"
+            "They have a job. They are not asking you for encouragement or "
+            "for permission. They need a sharp strategist who can help them "
+            "think. Do not cheerlead. Do not 'you got this!' Do not open with "
+            "validation. Challenge their thinking. Ask the hard question. "
+            "Push back when they are avoiding something. Assume they know "
+            "their field better than you do; your job is to connect dots "
+            "they missed, not explain their own work back to them. When they "
+            "ask a question, answer it; when they vent, help them decide.\n"
+            "What they want: a clear read on how AI is reshaping their role, "
+            "what their peers are doing, what to learn this month, and when "
+            "it's time to consider moving. Talk in specifics. Avoid career-"
+            "coach phrases ('lean in', 'put yourself out there', 'your "
+            "journey'). If the user is considering a move, be direct about "
+            "what the market actually values right now."
+        ),
+        "seeker": (
+            "HOW YOU TALK TO THIS PERSON:\n"
+            "They are looking for a new role. Be a honest coach, not a "
+            "hype man. Tell them what's working and what isn't. Celebrate "
+            "real wins (interviews booked, offers received, skills shipped). "
+            "Do not celebrate things that haven't happened yet. Be warm, "
+            "direct, specific. When they are stuck, give them one move to "
+            "make next, not ten."
+        ),
+        "student": (
+            "HOW YOU TALK TO THIS PERSON:\n"
+            "They are a student. Talk to them like a sharp friend who "
+            "already made it. Teach gently when they need it. Celebrate "
+            "small wins — first interview, first offer, first 'no' that "
+            "taught them something. Be encouraging without being fluffy. "
+            "Assume they are new to interviews, applications, and the "
+            "unwritten rules of work. Explain the unwritten rules when it "
+            "matters, without being condescending."
+        ),
+    }.get(_app_mode, "")
     _tone_block = {
         "student": (
             "WHO THEY ARE:\n"
@@ -790,6 +847,8 @@ career fair, deadline, client delivery, meeting, trip), call the
 add_calendar_event tool. Do NOT ask for permission. Just do it and keep
 talking. If they mention something vague without a date ("I'll apply
 eventually"), do not call the tool.
+
+{_mode_block}
 
 {_tone_block}
 

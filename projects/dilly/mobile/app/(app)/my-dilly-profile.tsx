@@ -30,6 +30,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { CAREER_FIELDS as CAREER_FIELD_OPTIONS, ALL_COHORTS, MAJOR_TO_COHORTS, detectCohorts } from '../../lib/cohorts';
 import { mediumHaptic } from '../../lib/haptics';
+import { useAppMode } from '../../hooks/useAppMode';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -235,6 +236,11 @@ function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
 
 export default function MyDillyProfileScreen() {
   const insets = useSafeAreaInsets();
+  // Holder mode reframes this tab as 'My Career' — a trajectory
+  // tracker rather than an identity builder. Seekers/students keep
+  // 'My Dilly' + the existing identity framing.
+  const appMode = useAppMode();
+  const isHolder = appMode === 'holder';
   const toast = useInlineToast();
   const [data, setData] = useState<MemorySurface | null>(null);
   const [loading, setLoading] = useState(true);
@@ -458,7 +464,7 @@ export default function MyDillyProfileScreen() {
         }} scaleDown={0.95} hitSlop={8}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: editMode ? colors.green : colors.indigo }}>{editMode ? 'Save' : 'Edit'}</Text>
         </AnimatedPressable>
-        <Text style={d.headerTitle}>My Dilly</Text>
+        <Text style={d.headerTitle}>{isHolder ? 'My Career' : 'My Dilly'}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <TouchableOpacity
             onPress={() => setShowQrFullscreen(true)}
