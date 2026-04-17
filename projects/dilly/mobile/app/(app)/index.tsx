@@ -15,7 +15,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
-import { useCachedFetch } from '../../lib/sessionCache';
+import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
 const INDIGO = '#1B3FA0';
@@ -485,6 +485,334 @@ const h = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   toolLabel: { fontSize: 11, fontWeight: '700', color: colors.t2 },
+});
+
+
+// ── SeniorResetHome ──────────────────────────────────────────────────
+// Bespoke Career Center for user_path === 'senior_reset'. Rung-3
+// per-situation surface. The user was just laid off after years in
+// their field. Tone is calm, warm, grounded — never cheerleading,
+// never urgent, never treating them like a new-grad looking for
+// their first job. Every block is designed to:
+//   - acknowledge where they are in the arc (weeks since layoff)
+//   - leverage what they built (years, depth, judgment)
+//   - reduce overwhelm (ONE thing today, not ten)
+//   - mobilize their network (that's how senior roles actually fill)
+//
+// Zero LLM cost. Backed by /senior-reset/dashboard which returns
+// deterministic aggregation of profile + memory facts + life_events.
+
+type SeniorResetData = {
+  identity: {
+    name: string;
+    first_name: string;
+    most_recent_role: string;
+    years_experience: number;
+    domain: string | null;
+  };
+  regroup: {
+    headline: string;
+    body: string;
+    weeks_since_layoff: number | null;
+  };
+  moat: {
+    headline: string;
+    leverage_sentence: string;
+    yoe: number;
+    ai_resistant_skills: string[];
+    all_skills: string[];
+  };
+  today_move: {
+    title: string;
+    body: string;
+    chat_seed: string;
+  };
+  network: { headline: string; prompts: string[] };
+  market: { total_senior: number | null; example_role: string | null };
+};
+
+function SeniorResetHome() {
+  const insets = useSafeAreaInsets();
+  const { data, loading, refreshing, refresh } = useCachedFetch<SeniorResetData>(
+    'senior-reset:dashboard',
+    async () => {
+      const res = await dilly.fetch('/senior-reset/dashboard');
+      return res?.ok ? await res.json() : null;
+    },
+    { ttlMs: 60_000 },
+  );
+
+  if (loading) {
+    return (
+      <View style={[sr.container, { paddingTop: insets.top }]}>
+        <View style={{ padding: spacing.xl, gap: 16 }}>
+          <View style={[sr.skelBlock, { height: 48, width: '50%' }]} />
+          <View style={[sr.skelBlock, { height: 160 }]} />
+          <View style={[sr.skelBlock, { height: 120 }]} />
+        </View>
+      </View>
+    );
+  }
+
+  const d = data;
+  const firstName = d?.identity?.first_name || 'there';
+
+  return (
+    <View style={[sr.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={[sr.scroll, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={INDIGO} />}
+      >
+        {/* Grounded greeting. No "Welcome back!", no exclamation. */}
+        <View style={sr.greetRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={sr.eyebrow}>YOUR RESET</Text>
+            <Text style={sr.greeting}>
+              {firstName}, here's where you are today.
+            </Text>
+          </View>
+          <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} scaleDown={0.9} hitSlop={10}>
+            <Ionicons name="settings-outline" size={20} color={colors.t3} />
+          </AnimatedPressable>
+        </View>
+
+        {/* Regroup card. calm and warm. Varies by weeks since layoff. */}
+        {d?.regroup ? (
+          <FadeInView delay={40}>
+            <View style={sr.regroupCard}>
+              <Text style={sr.regroupHead}>{d.regroup.headline}</Text>
+              <Text style={sr.regroupBody}>{d.regroup.body}</Text>
+              {d.regroup.weeks_since_layoff != null ? (
+                <View style={sr.weekPill}>
+                  <View style={sr.weekDot} />
+                  <Text style={sr.weekPillText}>
+                    Week {d.regroup.weeks_since_layoff + 1} of the reset
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* Your moat. the quantified leverage card. */}
+        {d?.moat ? (
+          <FadeInView delay={80}>
+            <Text style={sr.sectionLabel}>YOUR MOAT</Text>
+            <View style={sr.moatCard}>
+              <Text style={sr.moatHead}>{d.moat.headline}</Text>
+              <Text style={sr.moatLev}>{d.moat.leverage_sentence}</Text>
+              {d.moat.ai_resistant_skills.length > 0 ? (
+                <View style={sr.moatSkillsWrap}>
+                  {d.moat.ai_resistant_skills.slice(0, 4).map(s => (
+                    <View key={s} style={sr.moatSkillChip}>
+                      <Text style={sr.moatSkillText} numberOfLines={1}>{s}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* Today's ONE move. Replaces the dashboard noise. */}
+        {d?.today_move ? (
+          <FadeInView delay={120}>
+            <Text style={sr.sectionLabel}>TODAY</Text>
+            <AnimatedPressable
+              style={sr.todayCard}
+              scaleDown={0.98}
+              onPress={() => openDillyOverlay({
+                isPaid: false,
+                initialMessage: d.today_move.chat_seed,
+              })}
+            >
+              <View style={sr.todayIcon}>
+                <Ionicons name="arrow-forward-circle-outline" size={22} color={INDIGO} />
+              </View>
+              <Text style={sr.todayTitle}>{d.today_move.title}</Text>
+              <Text style={sr.todayBody}>{d.today_move.body}</Text>
+              <View style={sr.todayCtaRow}>
+                <Text style={sr.todayCta}>Talk it through with Dilly</Text>
+                <Ionicons name="arrow-forward" size={14} color={INDIGO} />
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        ) : null}
+
+        {/* Your network is the market. */}
+        {d?.network ? (
+          <FadeInView delay={160}>
+            <Text style={sr.sectionLabel}>NETWORK</Text>
+            <View style={sr.networkCard}>
+              <Text style={sr.networkHead}>{d.network.headline}</Text>
+              <Text style={sr.networkSub}>
+                Most senior roles fill through people, not job boards.
+                Dilly can help you pattern-match. Tap a prompt.
+              </Text>
+              <View style={{ gap: 8, marginTop: 10 }}>
+                {d.network.prompts.map((p, i) => (
+                  <AnimatedPressable
+                    key={i}
+                    style={sr.networkPromptRow}
+                    scaleDown={0.98}
+                    onPress={() => openDillyOverlay({
+                      isPaid: false,
+                      initialMessage: `I'm thinking about my network. Question: ${p} Help me think through who comes to mind and what to say.`,
+                    })}
+                  >
+                    <Text style={sr.networkPromptText}>{p}</Text>
+                    <Ionicons name="chatbubble-outline" size={14} color={colors.t3} />
+                  </AnimatedPressable>
+                ))}
+              </View>
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* Senior market read. */}
+        {d?.market?.total_senior != null ? (
+          <FadeInView delay={200}>
+            <Text style={sr.sectionLabel}>SENIOR MARKET</Text>
+            <AnimatedPressable
+              style={sr.marketCard}
+              scaleDown={0.98}
+              onPress={() => router.push('/(app)/jobs' as any)}
+            >
+              <Text style={sr.marketNumber}>
+                {d.market.total_senior.toLocaleString()}
+              </Text>
+              <Text style={sr.marketLabel}>
+                senior roles live right now
+              </Text>
+              {d.market.example_role ? (
+                <Text style={sr.marketExample} numberOfLines={1}>
+                  {d.market.example_role}
+                </Text>
+              ) : null}
+              <View style={sr.marketCtaRow}>
+                <Text style={sr.marketCta}>Open the market</Text>
+                <Ionicons name="arrow-forward" size={14} color={INDIGO} />
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        ) : null}
+
+        {/* Footer composure. */}
+        <FadeInView delay={240}>
+          <Text style={sr.footer}>
+            Slow is fine. Dilly doesn't push.
+          </Text>
+        </FadeInView>
+      </ScrollView>
+    </View>
+  );
+}
+
+// SeniorResetHome styles. scoped to `sr`.
+const sr = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { padding: spacing.xl, paddingTop: 8, gap: 22 },
+  skelBlock: { borderRadius: 12, backgroundColor: '#EEF0F6' },
+
+  greetRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  eyebrow: {
+    fontSize: 10, fontWeight: '900', letterSpacing: 1.8,
+    color: '#0F766E', marginBottom: 2,
+  },
+  greeting: {
+    fontSize: 22, fontWeight: '800',
+    color: colors.t1, letterSpacing: -0.5, lineHeight: 28,
+  },
+
+  // Regroup — warm, quiet
+  regroupCard: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1, borderColor: '#99F6E4',
+    borderRadius: 16, padding: 18, gap: 8,
+  },
+  regroupHead: { fontSize: 18, fontWeight: '700', color: '#134E4A', letterSpacing: -0.3, lineHeight: 24 },
+  regroupBody: { fontSize: 14, color: '#134E4A', lineHeight: 21 },
+  weekPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#CCFBF1',
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
+    marginTop: 4,
+  },
+  weekDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#0F766E' },
+  weekPillText: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: '#0F766E' },
+
+  sectionLabel: {
+    fontSize: 10, fontWeight: '900', letterSpacing: 1.6,
+    color: colors.t3, marginBottom: 8,
+  },
+
+  // Moat
+  moatCard: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1, borderColor: '#FDE68A',
+    borderRadius: 16, padding: 18, gap: 10,
+  },
+  moatHead: { fontSize: 20, fontWeight: '800', color: '#78350F', letterSpacing: -0.4 },
+  moatLev:  { fontSize: 13, color: '#78350F', lineHeight: 20 },
+  moatSkillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  moatSkillChip: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1, borderColor: '#FCD34D',
+  },
+  moatSkillText: { fontSize: 11, fontWeight: '700', color: '#78350F' },
+
+  // Today's one move
+  todayCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 16, padding: 18, gap: 8,
+  },
+  todayIcon: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: INDIGO + '14',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 4,
+  },
+  todayTitle: { fontSize: 17, fontWeight: '800', color: colors.t1, letterSpacing: -0.3 },
+  todayBody:  { fontSize: 13, color: colors.t2, lineHeight: 20 },
+  todayCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  todayCta:   { fontSize: 12, fontWeight: '700', color: INDIGO },
+
+  // Network
+  networkCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 16, padding: 16, gap: 4,
+  },
+  networkHead: { fontSize: 15, fontWeight: '800', color: colors.t1, letterSpacing: -0.2 },
+  networkSub:  { fontSize: 12, color: colors.t2, lineHeight: 18 },
+  networkPromptRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    padding: 12, borderRadius: 10,
+    backgroundColor: colors.s1,
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  networkPromptText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.t1 },
+
+  // Market
+  marketCard: {
+    backgroundColor: '#0D1117',
+    borderRadius: 16, padding: 18,
+    borderWidth: 1, borderColor: '#21262D',
+  },
+  marketNumber: { fontSize: 32, fontWeight: '900', color: '#58A6FF', letterSpacing: -1 },
+  marketLabel:  { fontSize: 13, color: '#C9D1D9', marginTop: 2 },
+  marketExample:{ fontSize: 11, color: '#8B949E', marginTop: 8, fontStyle: 'italic' },
+  marketCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
+  marketCta: { fontSize: 12, fontWeight: '800', color: '#58A6FF' },
+
+  footer: {
+    fontSize: 12, color: colors.t3, textAlign: 'center',
+    marginTop: 6, fontStyle: 'italic',
+  },
 });
 
 
@@ -1031,12 +1359,24 @@ function SeekerHome() {
   );
 }
 
-// Dispatcher: picks the right Home based on app mode. Kept minimal so
-// hook order stays stable for each variant. SeekerHome's hooks never
-// live next to HolderHome's hooks at the call site.
+// Dispatcher: picks the right Home based on app mode + user_path.
+// Kept minimal so hook order stays stable for each variant. Each
+// variant's hooks never live next to another variant's hooks at
+// the call site.
+//
+// Rung-3 paths get bespoke home screens:
+//   - senior_reset  -> SeniorResetHome  (laid-off senior professional)
+//
+// Other paths fall through to SeekerHome / HolderHome.
 export default function HomeScreen() {
   const appMode = useAppMode();
+  // Read path from the cached /profile if any screen has populated it.
+  // Zero-cost lookup: just a Map.get().
+  const profileCached = getCached<any>('profile:full');
+  const userPath = String(profileCached?.user_path || '').toLowerCase();
+
   if (appMode === 'holder') return <HolderHome />;
+  if (userPath === 'senior_reset') return <SeniorResetHome />;
   return <SeekerHome />;
 }
 
