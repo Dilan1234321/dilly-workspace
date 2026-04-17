@@ -229,6 +229,116 @@ def seniority_adjustment(years_experience: float, p50: int) -> int:
     return int(round(p50 * mult))
 
 
+# Role adjacency map — powers the Market Radar "next move" tiles. Each
+# key is a lowercased title that exists in BLS_WAGES; each value is
+# {label -> title} where label explains the move and title is the
+# target role (also must exist in BLS_WAGES). We don't try to cover
+# every occupation — just the ones where holders commonly wonder
+# "what else could I be doing?"
+ROLE_ADJACENCIES: dict[str, list[dict]] = {
+    "software developer": [
+        {"move": "Step up",  "label": "Engineering Manager",      "target": "Engineering Manager"},
+        {"move": "Pivot",    "label": "Machine Learning Engineer", "target": "Machine Learning Engineer"},
+        {"move": "Adjacent", "label": "Product Manager",           "target": "Product Manager"},
+    ],
+    "web developer": [
+        {"move": "Step up",  "label": "Software Developer",       "target": "Software Developer"},
+        {"move": "Pivot",    "label": "Product Designer",         "target": "Product Designer"},
+        {"move": "Adjacent", "label": "DevOps Engineer",          "target": "DevOps Engineer"},
+    ],
+    "data scientist": [
+        {"move": "Step up",  "label": "Machine Learning Engineer", "target": "Machine Learning Engineer"},
+        {"move": "Pivot",    "label": "Product Manager",           "target": "Product Manager"},
+        {"move": "Adjacent", "label": "Statistician",              "target": "Statistician"},
+    ],
+    "machine learning engineer": [
+        {"move": "Step up",  "label": "Computer and Information Research Scientist", "target": "Computer and Information Research Scientist"},
+        {"move": "Adjacent", "label": "Data Scientist",            "target": "Data Scientist"},
+        {"move": "Move to mgmt", "label": "Engineering Manager",   "target": "Engineering Manager"},
+    ],
+    "product manager": [
+        {"move": "Step up",  "label": "Marketing Manager",        "target": "Marketing Manager"},
+        {"move": "Adjacent", "label": "Product Designer",         "target": "Product Designer"},
+        {"move": "Pivot",    "label": "Management Consultant",    "target": "Management Consultant"},
+    ],
+    "product designer": [
+        {"move": "Step up",  "label": "Product Manager",          "target": "Product Manager"},
+        {"move": "Adjacent", "label": "UX Designer",              "target": "UX Designer"},
+        {"move": "Pivot",    "label": "Software Developer",       "target": "Software Developer"},
+    ],
+    "information security analyst": [
+        {"move": "Step up",  "label": "Computer and Information Systems Manager", "target": "Computer and Information Systems Manager"},
+        {"move": "Adjacent", "label": "Computer Systems Analyst", "target": "Computer Systems Analyst"},
+    ],
+    "devops engineer": [
+        {"move": "Step up",  "label": "Site Reliability Engineer", "target": "Site Reliability Engineer"},
+        {"move": "Pivot",    "label": "Software Developer",       "target": "Software Developer"},
+        {"move": "Move to mgmt", "label": "Engineering Manager",  "target": "Engineering Manager"},
+    ],
+    "financial analyst": [
+        {"move": "Step up",  "label": "Financial Manager",        "target": "Financial Manager"},
+        {"move": "Adjacent", "label": "Management Consultant",    "target": "Management Consultant"},
+        {"move": "Pivot",    "label": "Personal Financial Advisor","target": "Personal Financial Advisor"},
+    ],
+    "accountant": [
+        {"move": "Step up",  "label": "Financial Manager",        "target": "Financial Manager"},
+        {"move": "Adjacent", "label": "Financial Analyst",        "target": "Financial Analyst"},
+    ],
+    "management consultant": [
+        {"move": "Step up",  "label": "Financial Manager",        "target": "Financial Manager"},
+        {"move": "Adjacent", "label": "Product Manager",          "target": "Product Manager"},
+        {"move": "Pivot",    "label": "Marketing Manager",        "target": "Marketing Manager"},
+    ],
+    "marketing manager": [
+        {"move": "Step up",  "label": "Chief Executive",          "target": "Chief Executive"},
+        {"move": "Adjacent", "label": "Sales Manager",            "target": "Sales Manager"},
+        {"move": "Pivot",    "label": "Product Manager",          "target": "Product Manager"},
+    ],
+    "marketing specialist": [
+        {"move": "Step up",  "label": "Marketing Manager",        "target": "Marketing Manager"},
+        {"move": "Adjacent", "label": "Public Relations Specialist","target": "Public Relations Specialist"},
+    ],
+    "sales representative": [
+        {"move": "Step up",  "label": "Account Executive",        "target": "Account Executive"},
+        {"move": "Move to mgmt", "label": "Sales Manager",        "target": "Sales Manager"},
+    ],
+    "account executive": [
+        {"move": "Step up",  "label": "Sales Manager",            "target": "Sales Manager"},
+        {"move": "Pivot",    "label": "Product Manager",          "target": "Product Manager"},
+    ],
+    "registered nurse": [
+        {"move": "Step up",  "label": "Nurse Practitioner",       "target": "Nurse Practitioner"},
+        {"move": "Adjacent", "label": "Physician Assistant",      "target": "Physician Assistant"},
+    ],
+    "graphic designer": [
+        {"move": "Step up",  "label": "Product Designer",         "target": "Product Designer"},
+        {"move": "Adjacent", "label": "UX Designer",              "target": "UX Designer"},
+    ],
+    "technical writer": [
+        {"move": "Step up",  "label": "Product Manager",          "target": "Product Manager"},
+        {"move": "Adjacent", "label": "Copywriter",               "target": "Copywriter"},
+    ],
+    "human resources specialist": [
+        {"move": "Step up",  "label": "Human Resources Manager",  "target": "Human Resources Manager"},
+        {"move": "Adjacent", "label": "Compensation and Benefits Specialist", "target": "Compensation and Benefits Specialist"},
+    ],
+    "executive assistant": [
+        {"move": "Step up",  "label": "Administrative Services Manager", "target": "Administrative Services Manager"},
+        {"move": "Pivot",    "label": "Project Management Specialist", "target": "Project Management Specialist"},
+    ],
+    "project management specialist": [
+        {"move": "Step up",  "label": "General and Operations Manager", "target": "General and Operations Manager"},
+        {"move": "Adjacent", "label": "Product Manager",          "target": "Product Manager"},
+    ],
+}
+
+
+def adjacencies_for(wage: Wage) -> list[dict]:
+    """Return the adjacency list for a matched BLS row, or []."""
+    key = wage["title"].lower()
+    return ROLE_ADJACENCIES.get(key, [])
+
+
 def percentile_from_estimate(wage: Wage, estimate: int) -> int:
     """
     Given our YOE-derived wage estimate, return the approximate

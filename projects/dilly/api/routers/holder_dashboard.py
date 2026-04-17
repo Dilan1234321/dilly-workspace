@@ -40,6 +40,7 @@ from projects.dilly.dilly_core.bls_wages import (  # noqa: E402
     lookup_wage,
     seniority_adjustment,
     percentile_from_estimate,
+    adjacencies_for,
 )
 
 router = APIRouter(tags=["holder"])
@@ -232,4 +233,116 @@ async def holder_career_dashboard(request: Request):
         "comp_benchmark": comp_benchmark,
         "trajectory":     trajectory,
         "skills":         skills[:10],
+    }
+
+
+@router.get("/holder/market-radar")
+async def holder_market_radar(request: Request):
+    """
+    Market intelligence tailored for jobholders. Zero-LLM.
+
+    Returns:
+      {
+        current:    { role, estimated_wage, estimated_percentile,
+                      p25, p50, p75, market_count },
+        ladder:     [ { move, label, p50, estimated_wage, delta_pct,
+                        delta_usd } ],
+        active_market: { total, window: 'now' }
+      }
+
+    `current.market_count` and `active_market.total` are the same
+    number right now (we only have one listings feed). Split fields
+    let us swap one for a geo-filtered count later without a client
+    change.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").lower()
+    if not email:
+        raise HTTPException(401, "not authenticated")
+
+    # Profile
+    try:
+        from projects.dilly.api.profile_store import ensure_profile_exists  # type: ignore
+        profile = ensure_profile_exists(email) or {}
+    except Exception:
+        profile = {}
+
+    current_role = (
+        _str(profile.get("current_role"))
+        or _str(profile.get("current_job_title"))
+        or _str(profile.get("title"))
+    )
+    yoe = _years_to_float(profile.get("years_experience"))
+
+    # Fall back to most-recent trajectory role if profile is bare
+    if not current_role:
+        traj = _collect_trajectory(email)
+        if traj:
+            current_role = traj[0].get("role") or ""
+
+    wage = lookup_wage(current_role) if current_role else None
+    current_block: dict = {
+        "role":                 current_role,
+        "estimated_wage":       None,
+        "estimated_percentile": None,
+        "p25":                  None,
+        "p50":                  None,
+        "p75":                  None,
+        "market_count":         None,
+    }
+
+    ladder: list[dict] = []
+
+    if wage:
+        est_current = seniority_adjustment(yoe, wage["p50"])
+        pct_current = percentile_from_estimate(wage, est_current)
+        current_block.update({
+            "estimated_wage":       est_current,
+            "estimated_percentile": pct_current,
+            "p25":                  wage["p25"],
+            "p50":                  wage["p50"],
+            "p75":                  wage["p75"],
+        })
+
+        # Build the ladder — comp deltas against current est
+        for adj in adjacencies_for(wage):
+            tgt_wage = lookup_wage(adj["target"])
+            if not tgt_wage:
+                continue
+            est_tgt = seniority_adjustment(yoe, tgt_wage["p50"])
+            delta_usd = est_tgt - est_current
+            delta_pct = (delta_usd / est_current * 100) if est_current else 0
+            ladder.append({
+                "move":           adj["move"],
+                "label":          adj["label"],
+                "p50":            tgt_wage["p50"],
+                "estimated_wage": est_tgt,
+                "delta_usd":      int(delta_usd),
+                "delta_pct":      round(delta_pct, 1),
+            })
+
+    # Active market count — cheap direct count against the
+    # internships table. Treat any exception as "unavailable" so the
+    # rest of the card still renders.
+    market_total = None
+    try:
+        from projects.dilly.api.routers.internships_v2 import _get_db  # type: ignore
+        conn = _get_db()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM internships")
+            row = cur.fetchone()
+            market_total = int(row[0]) if row else None
+        finally:
+            conn.close()
+    except Exception:
+        market_total = None
+
+    if market_total is not None:
+        current_block["market_count"] = int(market_total)
+
+    return {
+        "current":       current_block,
+        "ladder":        ladder,
+        "active_market": {"total": market_total, "window": "now"},
     }

@@ -798,6 +798,161 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
   );
 }
 
+// ── Market Radar ────────────────────────────────────────────────────────
+// Holder-only card rendered above the listings. Powered by
+// /holder/market-radar: shows the user's current role, estimated
+// market value + percentile, active listings count, and 3 ladder /
+// adjacent roles with comp deltas vs where they are today.
+
+function formatUsdRadar(n: number | null | undefined): string {
+  if (n == null || !isFinite(n as number)) return '—';
+  const v = Number(n);
+  if (v >= 1000) return '$' + Math.round(v / 1000).toLocaleString() + 'K';
+  return '$' + v.toLocaleString();
+}
+function formatDeltaUsd(n: number): string {
+  const abs = Math.abs(n);
+  const s = abs >= 1000 ? '$' + Math.round(abs / 1000) + 'K' : '$' + abs.toLocaleString();
+  return (n >= 0 ? '+' : '-') + s;
+}
+
+function MarketRadarCard({ radar }: {
+  radar: {
+    current: { role: string; estimated_wage: number | null; estimated_percentile: number | null;
+               p25: number | null; p50: number | null; p75: number | null;
+               market_count: number | null };
+    ladder: Array<{ move: string; label: string; p50: number; estimated_wage: number;
+                    delta_usd: number; delta_pct: number }>;
+    active_market: { total: number | null; window: string };
+  };
+}) {
+  const cur = radar.current;
+  const ladder = Array.isArray(radar.ladder) ? radar.ladder : [];
+  const active = radar.active_market?.total;
+
+  // Nothing useful to show — caller should skip, but guard anyway.
+  if (!cur.role && ladder.length === 0 && active == null) return null;
+
+  return (
+    <View style={mr.card}>
+      {/* Header row: eyebrow + market count */}
+      <View style={mr.headRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={mr.eyebrow}>YOUR ROLE RADAR</Text>
+          {cur.role ? (
+            <Text style={mr.roleText} numberOfLines={1}>{cur.role}</Text>
+          ) : null}
+        </View>
+        {active != null ? (
+          <View style={mr.marketPill}>
+            <View style={mr.livePulse} />
+            <Text style={mr.marketPillText}>
+              {active.toLocaleString()} hiring
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Current comp line */}
+      {cur.estimated_wage != null ? (
+        <View style={mr.currentLine}>
+          <Text style={mr.currentValue}>{formatUsdRadar(cur.estimated_wage)}</Text>
+          <Text style={mr.currentSub}>
+            your estimated market value · P{cur.estimated_percentile ?? '--'}
+          </Text>
+        </View>
+      ) : null}
+
+      {/* Ladder */}
+      {ladder.length > 0 ? (
+        <View style={mr.ladderWrap}>
+          {ladder.slice(0, 3).map((row, i) => {
+            const positive = row.delta_usd >= 0;
+            return (
+              <View
+                key={`${row.label}-${i}`}
+                style={[mr.ladderRow, i === ladder.length - 1 && { borderBottomWidth: 0 }]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={mr.ladderMove}>{row.move.toUpperCase()}</Text>
+                  <Text style={mr.ladderLabel} numberOfLines={1}>{row.label}</Text>
+                </View>
+                <Text style={mr.ladderValue}>{formatUsdRadar(row.estimated_wage)}</Text>
+                <View
+                  style={[
+                    mr.deltaPill,
+                    { backgroundColor: positive ? '#0F2B22' : '#2B1414',
+                      borderColor:     positive ? '#1F6B4F' : '#6B1F1F' },
+                  ]}
+                >
+                  <Text style={[mr.deltaText, { color: positive ? '#4ADE80' : '#F87171' }]}>
+                    {formatDeltaUsd(row.delta_usd)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
+      <Text style={mr.foot}>Benchmarks: BLS OES (May 2024)</Text>
+    </View>
+  );
+}
+
+const mr = StyleSheet.create({
+  card: {
+    backgroundColor: '#0D1117',
+    borderRadius: 18, padding: 18,
+    borderWidth: 1, borderColor: '#21262D',
+    marginBottom: 14,
+  },
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  eyebrow: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 1.6,
+    color: '#8B949E', marginBottom: 4,
+  },
+  roleText: { fontSize: 16, fontWeight: '700', color: '#F0F6FC' },
+  marketPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#0F2B22',
+    borderWidth: 1, borderColor: '#1F6B4F',
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+  },
+  livePulse: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' },
+  marketPillText: { fontSize: 11, fontWeight: '700', color: '#4ADE80' },
+
+  currentLine: { marginTop: 14, marginBottom: 6 },
+  currentValue: { fontSize: 26, fontWeight: '800', color: '#58A6FF', letterSpacing: -0.5 },
+  currentSub: { fontSize: 11, color: '#8B949E', marginTop: 2 },
+
+  ladderWrap: {
+    marginTop: 14,
+    borderTopWidth: 1, borderTopColor: '#21262D',
+    paddingTop: 4,
+  },
+  ladderRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: '#1A1F26',
+  },
+  ladderMove: {
+    fontSize: 9, fontWeight: '700', letterSpacing: 1.2,
+    color: '#8B949E',
+  },
+  ladderLabel: { fontSize: 13, fontWeight: '600', color: '#F0F6FC', marginTop: 1 },
+  ladderValue: { fontSize: 13, fontWeight: '700', color: '#C9D1D9' },
+  deltaPill: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6, borderWidth: 1,
+    minWidth: 54, alignItems: 'center',
+  },
+  deltaText: { fontSize: 11, fontWeight: '800' },
+
+  foot: { fontSize: 10, color: '#6B7280', marginTop: 10, textAlign: 'right' },
+});
+
+
 // -- Main Screen ------------------------------------------------------------
 
 export default function JobsScreen() {
@@ -834,6 +989,31 @@ export default function JobsScreen() {
   // Remote-only filter — universal (anyone can tap) AND pre-selected
   // for users on the rural_remote_only path.
   const [remoteOnlyFilter, setRemoteOnlyFilter] = useState<boolean>(false);
+  // Holder-only: the Market Radar card (role ladder + comp deltas).
+  // Fetched separately from the feed so a slow /market-radar doesn't
+  // block the job listings.
+  const [marketRadar, setMarketRadar] = useState<{
+    current: { role: string; estimated_wage: number | null; estimated_percentile: number | null;
+               p25: number | null; p50: number | null; p75: number | null;
+               market_count: number | null };
+    ladder: Array<{ move: string; label: string; p50: number; estimated_wage: number;
+                    delta_usd: number; delta_pct: number }>;
+    active_market: { total: number | null; window: string };
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isHolder) { setMarketRadar(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dilly.fetch('/holder/market-radar');
+        if (!res?.ok || cancelled) return;
+        const json = await res.json();
+        if (!cancelled) setMarketRadar(json);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [isHolder]);
 
   const handleNarrativeLoaded = useCallback((jobId: string, data: FitNarrativeData) => {
     setNarrativeCache(prev => ({ ...prev, [jobId]: data }));
@@ -1310,6 +1490,12 @@ export default function JobsScreen() {
             </View>
           </FadeInView>
         )}
+
+        {/* Holder-only Market Radar — comp benchmark + role ladder at
+            the top of the list. Hidden for seekers/students. Fails
+            silent when the endpoint is still warming up (empty state
+            returns null above). */}
+        {isHolder && marketRadar && <MarketRadarCard radar={marketRadar} />}
 
         {/* Hero spotlight — the #1 match gets cinematic treatment. This
             is the first thing the user sees after the header: a poster,
