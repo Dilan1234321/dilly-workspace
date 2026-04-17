@@ -1229,6 +1229,98 @@ async def get_web_profile(slug: str, prefix: str | None = None):
     if career_interests:
         target_roles = [c for c in career_interests if "role" in c.lower() or "internship" in c.lower()][:3]
 
+    # ── Skill groups (podium) ──────────────────────────────────────
+    # Zero-LLM: cluster the user's existing skill facts against a
+    # curated keyword map. Each group gets member_skills (ranked by
+    # confidence) and an evidence_count (raw fact count). The top-3
+    # by evidence_count fill the podium. Computed per-request but
+    # the cost is a few hundred dict lookups — still effectively
+    # free to serve.
+    SKILL_GROUP_KEYWORDS: dict[str, list[str]] = {
+        "Frontend":          ["react", "vue", "angular", "svelte", "next.js", "nextjs", "tailwind", "css", "html", "ui", "ux", "typescript", "javascript"],
+        "Backend":           ["python", "django", "flask", "fastapi", "node", "go ", "golang", "ruby", "rails", "java", "spring", "kotlin", "scala", "backend", "api"],
+        "Mobile":            ["ios", "android", "swift", "kotlin", "react native", "flutter", "expo", "swiftui"],
+        "Data & ML":         ["ml", "machine learning", "deep learning", "pytorch", "tensorflow", "numpy", "pandas", "scikit", "data", "sql", "snowflake", "bigquery", "airflow", "dbt", "spark", "statistics"],
+        "DevOps / Infra":    ["aws", "gcp", "azure", "kubernetes", "k8s", "docker", "terraform", "ci/cd", "devops", "sre", "linux", "bash"],
+        "Design":            ["figma", "sketch", "adobe", "photoshop", "illustrator", "branding", "typography", "product design", "visual design"],
+        "Product":           ["product management", "roadmap", "prd", "user research", "a/b testing", "prioritization"],
+        "Sales & GTM":       ["sales", "outbound", "cold email", "salesforce", "hubspot", "pipeline", "closing", "crm"],
+        "Finance":           ["accounting", "audit", "financial modeling", "excel", "valuation", "m&a", "vba", "capital markets"],
+        "Consulting / Ops":  ["consulting", "operations", "process improvement", "six sigma", "supply chain"],
+        "Writing & Comms":   ["writing", "copywriting", "content", "seo", "blog", "editorial", "communications", "pr"],
+        "Biology / Science": ["biology", "chemistry", "physics", "pre-med", "research", "lab", "clinical", "pharmacology", "genetics", "biochem"],
+        "Leadership":        ["leadership", "management", "mentoring", "coaching", "team lead", "project management"],
+    }
+
+    def _classify_skill(label: str) -> str | None:
+        lo = (label or "").lower()
+        best_group: str | None = None
+        best_score = 0
+        for group, keywords in SKILL_GROUP_KEYWORDS.items():
+            score = sum(1 for k in keywords if k in lo)
+            if score > best_score:
+                best_group = group
+                best_score = score
+        return best_group
+
+    # Build groups from BOTH technical and soft skills so a
+    # leadership-heavy profile still lands on the Leadership podium.
+    _group_members: dict[str, list[dict]] = {}
+    _group_evidence: dict[str, int] = {}
+    for s in (skills_technical + skills_soft):
+        g = _classify_skill(s["label"])
+        if not g:
+            continue
+        _group_members.setdefault(g, []).append(s)
+        _group_evidence[g] = _group_evidence.get(g, 0) + (2 if s.get("confidence") == "high" else 1)
+
+    # Top-3 groups by evidence count. Tie break: alphabetical.
+    ranked_groups = sorted(
+        _group_evidence.keys(),
+        key=lambda g: (-_group_evidence[g], g),
+    )[:3]
+
+    skill_groups: list[dict] = []
+    for idx, name in enumerate(ranked_groups):
+        members = _group_members.get(name, [])
+        # Rank members by confidence (high first, then medium) then alpha.
+        members_sorted = sorted(
+            members,
+            key=lambda m: (0 if m.get("confidence") == "high" else 1, m.get("label", "").lower()),
+        )
+        skill_groups.append({
+            "rank":           idx + 1,          # 1 = tallest podium
+            "name":           name,
+            "evidence_count": _group_evidence.get(name, 0),
+            "top_skills":     [m["label"] for m in members_sorted[:3]],
+            "all_skills":     [m["label"] for m in members_sorted[:12]],
+            "experiences":    [
+                e for e in experience_items
+                if any(_classify_skill(s) == name for s in (e.get("skills") or []))
+            ][:4],
+        })
+
+    # ── Dilly's Take (templated, zero-LLM) ─────────────────────────
+    # Cheap, human-reasonable one-liner built from facts. If the user
+    # asks us to regenerate via an LLM later, we'll cache the result
+    # on profile['dilly_take_cached'] and prefer it over the template.
+    cached_take = (profile.get("dilly_take_cached") or "").strip()
+    if cached_take:
+        dilly_take = cached_take
+    else:
+        _name_first = ((profile.get("name") or "").split() or [""])[0]
+        _top_group = skill_groups[0]["name"] if skill_groups else None
+        _skill_ct  = len(skills_technical) + len(skills_soft)
+        _tag       = (profile.get("profile_tagline") or profile.get("custom_tagline") or "").strip()
+        if _tag:
+            dilly_take = _tag
+        elif _top_group and _skill_ct >= 4:
+            dilly_take = f"Strongest signal is {_top_group.lower()}. {_skill_ct} skills tracked across the conversation."
+        elif _name_first:
+            dilly_take = f"Still getting to know {_name_first}. Fresh profile, growing fast."
+        else:
+            dilly_take = "Career story in progress."
+
     out = {
         "name": (profile.get("name") or "").strip(),
         "slug": slug,
@@ -1262,6 +1354,20 @@ async def get_web_profile(slug: str, prefix: str | None = None):
         "show_refer_button": profile.get("show_refer_button") is not False,
         "photo_url": f"/profile/public/{get_profile_slug(email)}/photo",
         "has_photo": bool(profile.get("profile_photo_b64") or False),
+        # New fields for the redesigned two-column web profile. All
+        # zero-cost: skill_groups from rule-based clustering,
+        # dilly_take from a template (or cached LLM result if one
+        # exists).
+        "skill_groups": skill_groups,
+        "dilly_take":   dilly_take,
+        # Mission statement — user-owned, lives on profile fields.
+        # We surface whichever is populated. Never auto-generated by
+        # an LLM during a view.
+        "mission":      (profile.get("profile_bio") or profile.get("mission_statement") or "").strip() or None,
+        # Role + company for holders so the new layout can surface
+        # the right subtitle instead of "Major / School".
+        "current_role":    (profile.get("current_role") or "").strip() or None,
+        "current_company": (profile.get("current_company") or "").strip() or None,
     }
 
     return JSONResponse(

@@ -1,20 +1,44 @@
 "use client";
 
 /**
- * PublicProfile - the public-facing Dilly profile page.
+ * PublicProfile - redesigned two-column public web profile.
  *
- * Clean, light mode, premium typography. No clutter.
- * Shows: name, photo, school/company, major, class year, cities,
- *        tagline, skills, career interests, experience, goals.
+ * Zero LLM cost per view. Every AI-derived field (skill_groups,
+ * dilly_take) is either rule-based clustering on existing facts or
+ * a cached/template string — no per-view LLM calls under any
+ * circumstance.
  *
- * This is NOT a resume. It is not LinkedIn. It is the page that makes
- * someone say "I want to hire this person" in under 10 seconds.
+ * Layout:
+ *   Desktop (>= 1024px): fixed two-column, no body scroll at
+ *   maximized window size. Left (40%) = identity + mission + Dilly
+ *   take. Right (60%) = skill-group podium + skill panel + projects.
+ *
+ *   Narrow (< 1024px): columns stack, body scrolls.
+ *
+ * Name fits on one line — measured via ref + useLayoutEffect so it
+ * shrinks to fit between the photo and the right edge of the left
+ * column, never wrapping.
  */
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "https://api.trydilly.com";
+
+// ── Types ────────────────────────────────────────────────────────
+
+interface SkillGroup {
+  rank: number;                // 1 = winner
+  name: string;                // "Frontend", "Backend", etc.
+  evidence_count: number;
+  top_skills: string[];        // up to 3
+  all_skills: string[];        // up to 12
+  experiences: {
+    role: string;
+    organization: string;
+    skills: string[];
+    description?: string | null;
+  }[];
+}
 
 interface ProfileData {
   name: string;
@@ -22,6 +46,8 @@ interface ProfileData {
   user_type: string;
   is_student: boolean;
   tagline: string | null;
+  bio: string | null;
+  headline: string | null;
   school: string | null;
   majors: string[];
   minors: string[];
@@ -29,72 +55,213 @@ interface ProfileData {
   cities: string[];
   career_fields: string[];
   career_interests: string[];
-  skills: { label: string; confidence: string }[];
-  impact_statements: { label: string; value: string }[];
-  experience: { role: string; organization: string; skills: string[] }[];
+  current_role: string | null;
+  current_company: string | null;
+  skills_technical: { label: string; confidence: string }[];
+  skills_soft: { label: string; confidence: string }[];
+  skill_groups: SkillGroup[];
+  dilly_take: string;
+  mission: string | null;
+  projects: { label: string; value: string }[];
+  experience: {
+    role: string;
+    organization: string;
+    skills: string[];
+    description?: string | null;
+  }[];
   photo_url: string;
   has_photo: boolean;
+  booking_enabled: boolean;
+  show_refer_button: boolean;
 }
 
-function SkillPill({ label, confidence }: { label: string; confidence: string }) {
-  const size = confidence === "high" ? "text-sm font-semibold" : "text-xs font-medium";
-  const opacity = confidence === "high" ? "opacity-100" : "opacity-75";
+// ── Auto-fit name ────────────────────────────────────────────────
+// The name must render on one line between the photo and the right
+// edge of the left column. We start big (60px) and step down until
+// scrollWidth <= clientWidth. Only runs on mount + resize.
+function useAutoFitText(
+  text: string,
+  max: number = 60,
+  min: number = 22,
+): { ref: React.RefObject<HTMLHeadingElement | null>; size: number } {
+  const ref = useRef<HTMLHeadingElement | null>(null);
+  const [size, setSize] = useState<number>(max);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fit = () => {
+      let next = max;
+      el.style.fontSize = `${next}px`;
+      // Step down in 2px decrements until it fits or we hit min.
+      while (next > min && el.scrollWidth > el.clientWidth) {
+        next -= 2;
+        el.style.fontSize = `${next}px`;
+      }
+      setSize(next);
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [text, max, min]);
+
+  return { ref, size };
+}
+
+// ── Podium column ────────────────────────────────────────────────
+// Heights: 1st 100%, 2nd 72%, 3rd 54%. Column order in mockup:
+// #3 | #1 | #2 — placed left-to-right as [3, 1, 2].
+function Podium({
+  groups,
+  selected,
+  onSelect,
+}: {
+  groups: SkillGroup[];
+  selected: number | null;                 // rank of currently selected, or null
+  onSelect: (rank: number | null) => void; // toggle
+}) {
+  const byRank = (r: number) => groups.find(g => g.rank === r);
+  const slots: { rank: number; heightPct: number; bg: string; border: string }[] = [
+    { rank: 3, heightPct: 54, bg: "#F1F5F9",   border: "#CBD5E1" },
+    { rank: 1, heightPct: 100, bg: "#FFF7E6",  border: "#F59E0B" },
+    { rank: 2, heightPct: 72, bg: "#F8FAFC",   border: "#94A3B8" },
+  ];
   return (
-    <span
-      className={`inline-block px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 ${size} ${opacity}`}
-    >
-      {label}
-    </span>
+    <div className="flex items-end justify-center gap-4 h-[220px]">
+      {slots.map(({ rank, heightPct, bg, border }) => {
+        const g = byRank(rank);
+        const isSelected = selected === rank;
+        return (
+          <button
+            key={rank}
+            onClick={() => onSelect(isSelected ? null : rank)}
+            disabled={!g}
+            className={`flex flex-col items-center justify-end w-24 rounded-xl transition-all border-2 ${
+              g ? "cursor-pointer hover:shadow-md" : "opacity-40 cursor-default"
+            }`}
+            style={{
+              height: `${heightPct}%`,
+              backgroundColor: bg,
+              borderColor: isSelected ? border : "transparent",
+            }}
+          >
+            <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-2">
+              #{rank}
+            </div>
+            <div className="text-[13px] font-bold text-slate-900 leading-tight px-2 pb-3 text-center">
+              {g?.name ?? "—"}
+            </div>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-function ExperienceCard({ role, organization, skills }: { role: string; organization: string; skills: string[] }) {
+// ── Skill panel ──────────────────────────────────────────────────
+function SkillPanel({
+  group,
+  all,
+  totalSkills,
+}: {
+  group: SkillGroup | null;
+  all: SkillGroup[];
+  totalSkills: number;
+}) {
+  if (!group) {
+    // Default overview state — no podium selected yet.
+    return (
+      <div className="p-5 rounded-xl border border-slate-200 bg-white h-full flex flex-col">
+        <div className="text-[10px] font-bold tracking-widest text-indigo-600 mb-2">
+          GENERAL OVERVIEW
+        </div>
+        <div className="text-xl font-bold text-slate-900 leading-tight mb-4">
+          {totalSkills} skills, {all.length} group{all.length === 1 ? "" : "s"}.
+        </div>
+        <p className="text-sm text-slate-600 leading-relaxed mb-4">
+          Tap a podium block to see the top skills and experiences for that group.
+        </p>
+        <div className="mt-auto">
+          <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-2">
+            GROUPS
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {all.map(g => (
+              <span
+                key={g.name}
+                className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium"
+              >
+                #{g.rank} {g.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="border-l-2 border-indigo-300 pl-4 py-1">
-      <p className="text-sm font-semibold text-slate-800">{role}</p>
-      {organization && <p className="text-xs text-slate-500">{organization}</p>}
-      {skills.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {skills.map((s, i) => (
-            <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 font-medium">
+    <div className="p-5 rounded-xl border border-slate-200 bg-white h-full flex flex-col">
+      <div className="text-[10px] font-bold tracking-widest text-indigo-600 mb-2">
+        #{group.rank} · {group.name.toUpperCase()}
+      </div>
+      <div className="text-xl font-bold text-slate-900 leading-tight mb-4">
+        {group.top_skills.slice(0, 3).join(" · ")}
+      </div>
+
+      {group.experiences.length > 0 ? (
+        <>
+          <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-2">
+            EXPERIENCES
+          </div>
+          <div className="space-y-2 mb-4">
+            {group.experiences.slice(0, 5).map((e, i) => (
+              <div key={i} className="text-sm text-slate-700 leading-snug">
+                <span className="font-semibold">{e.role}</span>
+                {e.organization ? <span className="text-slate-500"> · {e.organization}</span> : null}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      <div className="mt-auto">
+        <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-2">
+          ALL IN THIS GROUP
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {group.all_skills.map((s, i) => (
+            <span key={i} className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
               {s}
             </span>
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function ImpactCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-      {label && <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">{label}</p>}
-      <p className="text-sm text-slate-700 leading-relaxed">{value}</p>
-    </div>
-  );
-}
+// ── Main ─────────────────────────────────────────────────────────
 
 export default function PublicProfile({ slug, prefix }: { slug: string; prefix: "s" | "p" }) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [selectedRank, setSelectedRank] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${API}/profile/web/${slug}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Not found");
+    fetch(`${API}/profile/web/${slug}?prefix=${prefix}`)
+      .then(async res => {
+        if (!res.ok) throw new Error("not found");
         return res.json();
       })
-      .then((data) => {
-        setProfile(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError(true);
-        setLoading(false);
-      });
-  }, [slug]);
+      .then(data => { setProfile(data); setLoading(false); })
+      .catch(() => { setError(true); setLoading(false); });
+  }, [slug, prefix]);
+
+  // Always hook to keep order stable.
+  const { ref: nameRef } = useAutoFitText(profile?.name || "");
 
   if (loading) {
     return (
@@ -102,7 +269,6 @@ export default function PublicProfile({ slug, prefix }: { slug: string; prefix: 
         <div className="animate-pulse flex flex-col items-center gap-4">
           <div className="w-24 h-24 rounded-full bg-slate-200" />
           <div className="w-48 h-4 rounded bg-slate-200" />
-          <div className="w-32 h-3 rounded bg-slate-100" />
         </div>
       </div>
     );
@@ -121,156 +287,199 @@ export default function PublicProfile({ slug, prefix }: { slug: string; prefix: 
 
   const p = profile;
   const photoUrl = `${API}/profile/web/${slug}/photo`;
-  const initial = p.name ? p.name[0].toUpperCase() : "?";
-  const subtitle = p.is_student
-    ? [p.majors?.[0], p.school, p.class_year ? `Class of ${p.class_year}` : null].filter(Boolean).join(" | ")
-    : [p.career_fields?.[0], p.cities?.[0]].filter(Boolean).join(" | ");
+  const totalSkills = (p.skills_technical?.length || 0) + (p.skills_soft?.length || 0);
+  const selectedGroup =
+    selectedRank != null
+      ? p.skill_groups.find(g => g.rank === selectedRank) ?? null
+      : null;
+  const subtitleBits: string[] = [];
+  if (p.current_role)    subtitleBits.push(p.current_role);
+  if (p.current_company) subtitleBits.push(p.current_company);
+  if (!p.current_role && p.is_student) {
+    if (p.majors?.[0]) subtitleBits.push(p.majors[0]);
+    if (p.school)      subtitleBits.push(p.school);
+  }
+  if (!subtitleBits.length && p.career_fields?.[0]) subtitleBits.push(p.career_fields[0]);
+  const subtitle = subtitleBits.join(" · ");
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero */}
-      <div className="max-w-2xl mx-auto px-6 pt-16 pb-8">
-        {/* Photo + Name */}
-        <div className="flex flex-col items-center text-center">
-          {p.has_photo ? (
-            <img
-              src={photoUrl}
-              alt={p.name}
-              className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-lg"
-            />
-          ) : (
-            <div className="w-28 h-28 rounded-full bg-indigo-600 flex items-center justify-center shadow-lg">
-              <span className="text-4xl font-bold text-white">{initial}</span>
+    <div className="bg-slate-50 text-slate-900 lg:h-screen lg:overflow-hidden">
+      <div className="max-w-[1400px] mx-auto p-4 lg:p-6 h-full">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 lg:gap-6 h-full">
+
+          {/* ── LEFT: Identity ── */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 lg:p-8 flex flex-col overflow-hidden">
+            {/* Photo + Name row */}
+            <div className="flex items-center gap-4 lg:gap-5">
+              {p.has_photo ? (
+                <img
+                  src={photoUrl}
+                  alt={p.name}
+                  className="w-20 h-20 lg:w-24 lg:h-24 rounded-full object-cover flex-shrink-0 border-2 border-white shadow"
+                />
+              ) : (
+                <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0 shadow">
+                  <span className="text-3xl font-bold text-white">
+                    {(p.name || "?").charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+
+              {/* Name auto-fits to one line via useAutoFitText */}
+              <div className="min-w-0 flex-1">
+                <h1
+                  ref={nameRef}
+                  className="font-black tracking-tight leading-[1.05] text-slate-900 whitespace-nowrap overflow-hidden"
+                >
+                  {p.name}
+                </h1>
+                {subtitle ? (
+                  <p className="text-sm text-slate-500 mt-1 truncate">{subtitle}</p>
+                ) : null}
+              </div>
             </div>
-          )}
 
-          <h1 className="text-3xl font-bold text-slate-900 mt-6 tracking-tight">
-            {p.name}
-          </h1>
+            {/* Locations */}
+            {p.cities.length > 0 ? (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {p.cities.map((c, i) => (
+                  <span key={i} className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+                    {c}
+                  </span>
+                ))}
+              </div>
+            ) : null}
 
-          {subtitle && (
-            <p className="text-sm text-slate-500 mt-2 max-w-md">{subtitle}</p>
-          )}
-
-          {p.tagline && (
-            <p className="text-base text-slate-600 mt-3 italic max-w-lg leading-relaxed">
-              {p.tagline}
-            </p>
-          )}
-
-          {/* Cities */}
-          {p.cities.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              {p.cities.map((city, i) => (
-                <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-                  {city}
-                </span>
-              ))}
+            {/* CTAs */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {p.booking_enabled ? (
+                <a
+                  href={`${API}/profile/book/${slug}`}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                >
+                  Book a chat
+                </a>
+              ) : null}
+              {p.show_refer_button ? (
+                <a
+                  href={`${API}/profile/refer/${slug}`}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-lg bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 transition"
+                >
+                  Refer
+                </a>
+              ) : null}
             </div>
-          )}
+
+            {/* Mission */}
+            <div className="mt-6 lg:mt-8">
+              <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-2">
+                MISSION STATEMENT
+              </div>
+              {p.mission ? (
+                <p className="text-sm text-slate-700 leading-relaxed">{p.mission}</p>
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-200 p-4 text-[12px] text-slate-400 italic">
+                  {p.tagline || "Mission not yet shared."}
+                </div>
+              )}
+            </div>
+
+            {/* Dilly's take */}
+            <div className="mt-auto pt-6 lg:pt-8">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-indigo-600 text-xl font-black">D</span>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold tracking-widest text-indigo-600 mb-1">
+                    WHAT DILLY THINKS
+                  </div>
+                  <p className="text-sm text-slate-700 leading-snug">
+                    {p.dilly_take}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── RIGHT: Skills + Projects ── */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 lg:p-8 flex flex-col overflow-hidden">
+            {/* Top: skill groups */}
+            <div className="flex items-start gap-4 mb-4">
+              <div className="flex-1">
+                <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-3">
+                  MY TOP SKILLS
+                </div>
+                {p.skill_groups.length > 0 ? (
+                  <Podium
+                    groups={p.skill_groups}
+                    selected={selectedRank}
+                    onSelect={setSelectedRank}
+                  />
+                ) : (
+                  <div className="h-[220px] flex items-center justify-center text-[13px] text-slate-400 italic border border-dashed border-slate-200 rounded-xl">
+                    Skill groups will appear once {(p.name || "this person").split(" ")[0]} has had a few conversations with Dilly.
+                  </div>
+                )}
+              </div>
+
+              {/* Skill panel (right of podium on desktop, below on narrow) */}
+              <div className="hidden lg:block w-[46%] h-[220px]">
+                <SkillPanel
+                  group={selectedGroup}
+                  all={p.skill_groups}
+                  totalSkills={totalSkills}
+                />
+              </div>
+            </div>
+
+            {/* Narrow layout: skill panel below podium */}
+            <div className="lg:hidden mb-4">
+              <SkillPanel
+                group={selectedGroup}
+                all={p.skill_groups}
+                totalSkills={totalSkills}
+              />
+            </div>
+
+            {/* Projects */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-3">
+                PROJECTS
+              </div>
+              {p.projects.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 overflow-y-auto">
+                  {p.projects.slice(0, 6).map((proj, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="text-[13px] font-semibold text-slate-800 mb-1">
+                        {proj.label}
+                      </div>
+                      {proj.value ? (
+                        <p className="text-[12px] text-slate-600 leading-relaxed line-clamp-4">
+                          {proj.value}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex-1 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-[13px] text-slate-400 italic">
+                  No projects added yet.
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="max-w-2xl mx-auto px-6">
-        <div className="h-px bg-slate-200" />
-      </div>
-
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-6 py-10 space-y-10">
-
-        {/* Impact Statements */}
-        {p.impact_statements.length > 0 && (
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              What I Bring
-            </h2>
-            <div className="space-y-3">
-              {p.impact_statements.map((s, i) => (
-                <ImpactCard key={i} label={s.label} value={s.value} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Skills */}
-        {p.skills.length > 0 && (
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Skills
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {p.skills.map((s, i) => (
-                <SkillPill key={i} label={s.label} confidence={s.confidence} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Career Interests */}
-        {p.career_interests.length > 0 && (
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Interested In
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {p.career_interests.map((interest, i) => (
-                <span key={i} className="text-sm px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-medium">
-                  {interest}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Experience */}
-        {p.experience.length > 0 && (
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Experience
-            </h2>
-            <div className="space-y-4">
-              {p.experience.map((exp, i) => (
-                <ExperienceCard key={i} {...exp} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Education details for students */}
-        {p.is_student && (p.majors.length > 0 || p.minors.length > 0) && (
-          <section>
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
-              Education
-            </h2>
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-              {p.school && <p className="text-sm font-semibold text-slate-800">{p.school}</p>}
-              {p.majors.length > 0 && (
-                <p className="text-sm text-slate-600 mt-1">
-                  {p.majors.length === 1 ? "Major" : "Majors"}: {p.majors.join(", ")}
-                </p>
-              )}
-              {p.minors.length > 0 && (
-                <p className="text-sm text-slate-500 mt-0.5">
-                  {p.minors.length === 1 ? "Minor" : "Minors"}: {p.minors.join(", ")}
-                </p>
-              )}
-              {p.class_year && (
-                <p className="text-xs text-slate-400 mt-1">Class of {p.class_year}</p>
-              )}
-            </div>
-          </section>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="max-w-2xl mx-auto px-6 pb-16 pt-4">
-        <div className="h-px bg-slate-200 mb-6" />
-        <div className="flex justify-center">
-          <a href="https://hellodilly.com" className="opacity-40 hover:opacity-60 transition-opacity">
-            <img src="/dilly-wordmark.png" alt="Dilly" className="h-5" />
-          </a>
-        </div>
+      {/* Footer wordmark — only visible when columns stack (narrow) */}
+      <div className="lg:hidden flex justify-center py-6">
+        <a href="https://hellodilly.com" className="opacity-40 hover:opacity-60 transition-opacity">
+          <img src="/dilly-wordmark.png" alt="Dilly" className="h-5" />
+        </a>
       </div>
     </div>
   );
