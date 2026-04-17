@@ -13,6 +13,7 @@ import { Share } from 'react-native';
 import { clearAuth } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { getAppMode, modeLabel, modeDescription, ALL_MODES, type AppMode } from '../../lib/appMode';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
@@ -73,6 +74,13 @@ export default function SettingsScreen() {
   const [webPrefix, setWebPrefix] = useState('s');
   const [webTagline, setWebTagline] = useState('');
   const [taglineSaving, setTaglineSaving] = useState(false);
+  // Career Mode — reshapes the whole app. See lib/appMode.ts.
+  // Stored as an optional override on the profile; when null, mode is
+  // derived from user_path.
+  const [appMode, setAppMode] = useState<AppMode>('seeker');
+  const [appModeOverride, setAppModeOverride] = useState<string | null>(null);
+  const [userPath, setUserPath] = useState<string>('');
+  const [appModeSaving, setAppModeSaving] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -84,6 +92,9 @@ export default function SettingsScreen() {
         setName(p.name || '');
         setEmail(p.email || '');
         setPlan(p.plan || 'starter');
+        setUserPath(p.user_path || '');
+        setAppModeOverride(p.app_mode || null);
+        setAppMode(getAppMode(p));
         const prefs = p.notification_prefs || {};
         setPushEnabled(prefs.enabled !== false);
         setDeadlineReminders(prefs.deadline_reminders !== false);
@@ -112,6 +123,28 @@ export default function SettingsScreen() {
         body: JSON.stringify({ [key]: value }),
       });
     } catch {}
+  }
+
+  // Career Mode switch. The server validates the value; we optimistically
+  // update local state so the toggle feels instant.
+  async function handleModeSwitch(nextMode: AppMode) {
+    if (nextMode === appMode || appModeSaving) return;
+    setAppModeSaving(true);
+    setAppMode(nextMode);
+    setAppModeOverride(nextMode);
+    try {
+      await dilly.fetch('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ app_mode: nextMode }),
+      });
+    } catch {
+      // Roll back on failure. Tries to re-derive from the last known
+      // profile shape rather than snapping to 'seeker'.
+      setAppMode(getAppMode({ user_path: userPath, app_mode: appModeOverride }));
+      setAppModeOverride(appModeOverride);
+    } finally {
+      setAppModeSaving(false);
+    }
   }
 
   async function handleSignOut() {
@@ -252,6 +285,50 @@ export default function SettingsScreen() {
                 </AnimatedPressable>
               </>
             )}
+          </View>
+        </FadeInView>
+
+        {/* ── Career Mode ─────────────────────────────────────────────
+            One account, three experiences. Switches the tab bar, home
+            screen, default language, and AI tone. See lib/appMode.ts. */}
+        <FadeInView delay={100}>
+          <SectionLabel text="CAREER MODE" />
+          <View style={s.card}>
+            <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+              <Text style={{ fontSize: 12, color: colors.t3, lineHeight: 17 }}>
+                {modeDescription(appMode)}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 6, padding: 12 }}>
+              {ALL_MODES.map((m) => {
+                const isActive = appMode === m;
+                return (
+                  <AnimatedPressable
+                    key={m}
+                    scaleDown={0.97}
+                    disabled={appModeSaving}
+                    onPress={() => handleModeSwitch(m)}
+                    style={[
+                      {
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isActive ? INDIGO : colors.s2,
+                        borderColor: isActive ? INDIGO : colors.b1,
+                        opacity: appModeSaving && !isActive ? 0.5 : 1,
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: isActive ? '#fff' : colors.t1 }}>
+                      {modeLabel(m)}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
           </View>
         </FadeInView>
 

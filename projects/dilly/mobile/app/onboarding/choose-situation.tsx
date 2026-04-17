@@ -388,16 +388,9 @@ export default function ChooseSituationScreen() {
                   },
                 ]}
               >
-                {/* Hero-only marker above the title — makes clear which
-                    card is the "this is made for you" option. */}
-                {isHero && (
-                  <View style={styles.heroMarkerRow}>
-                    <View style={[styles.heroMarkerDot, { backgroundColor: opt.color }]} />
-                    <Text style={[styles.heroMarkerText, { color: opt.color }]}>
-                      BUILT FOR YOU
-                    </Text>
-                  </View>
-                )}
+                {/* Hero card: no "BUILT FOR YOU" label — the prominence of
+                    the card (size, border, shadow) communicates the
+                    intent without a heavy-handed label. */}
                 <View style={styles.cardTop}>
                   <View style={[
                     isHero ? styles.iconWrapHero : styles.iconWrap,
