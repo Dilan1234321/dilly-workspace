@@ -575,19 +575,41 @@ def crawl_smartrecruiters(company_id, company_name):
         time.sleep(0.3)
     return results
 
-def ensure_company(cur, name, ats_type, industry):
-    cur.execute("SELECT id FROM companies WHERE name = %s", (name,))
+def ensure_company(cur, name, ats_type, industry, website=None):
+    """Get or create a companies row. When website is provided and the
+    row either doesn't exist or has a NULL website, we set it — that
+    feeds the feed API which the mobile app uses to render real logos
+    via Clearbit. Never overwrites a non-null existing website so we
+    don't clobber manually curated values."""
+    cur.execute("SELECT id, website FROM companies WHERE name = %s", (name,))
     row = cur.fetchone()
-    if row: return row[0]
+    if row:
+        existing_id, existing_site = row[0], row[1]
+        if website and not existing_site:
+            try:
+                cur.execute("UPDATE companies SET website = %s WHERE id = %s", (website, existing_id))
+            except Exception:
+                pass
+        return existing_id
     cid = str(uuid.uuid4())
-    cur.execute("INSERT INTO companies (id, name, ats_type, industry) VALUES (%s, %s, %s, %s) ON CONFLICT (name) DO NOTHING RETURNING id", (cid, name, ats_type, industry))
+    cur.execute(
+        "INSERT INTO companies (id, name, ats_type, industry, website) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (name) DO NOTHING RETURNING id",
+        (cid, name, ats_type, industry, website),
+    )
     result = cur.fetchone()
     return result[0] if result else cid
 
 def write_listings(conn, listings, company_name, ats_type, industry):
     if not listings: return 0
     cur = conn.cursor()
-    company_id = ensure_company(cur, company_name, ats_type, industry)
+    # Pull a website out of the first job that provides one. Enables
+    # the logo pipeline on the mobile client.
+    website = None
+    for j in listings:
+        if j.get("company_website"):
+            website = j["company_website"]
+            break
+    company_id = ensure_company(cur, company_name, ats_type, industry, website=website)
     inserted = 0
     for job in listings:
         try:
@@ -598,6 +620,27 @@ def write_listings(conn, listings, company_name, ats_type, industry):
             print(f"    [ERR] {job.get('title','?')}: {e}")
     conn.commit()
     return inserted
+
+
+def write_multi_company_feed(conn, jobs, ats_type, default_industry="Tech"):
+    """Write jobs that span many different companies (RemoteOK, WWR,
+    Built In, etc.). Groups by company name, then delegates to
+    write_listings per company so we reuse ensure_company + the
+    existing insert logic.
+    """
+    if not jobs:
+        return 0
+    by_company: dict[str, list[dict]] = {}
+    for j in jobs:
+        company = (j.get("company") or "").strip() or "Unknown"
+        by_company.setdefault(company, []).append(j)
+    total = 0
+    for company, rows in by_company.items():
+        try:
+            total += write_listings(conn, rows, company, ats_type, default_industry)
+        except Exception as e:
+            print(f"    [multi-feed ERR] {company}: {e}")
+    return total
 
 # ── Auto-Classification ─────────────────────────────────────────────
 
@@ -712,6 +755,24 @@ def crawl_all():
         except Exception as e:
             print(f"ERROR: {e}")
         time.sleep(0.3)
+
+    # ── Multi-company feeds (RemoteOK, WWR, Built In) ───────────────
+    # Each call returns jobs from MANY different companies at once.
+    # write_multi_company_feed groups by company and inserts in batches.
+    try:
+        import sys as _sys, os as _os
+        _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+        from dilly_core.job_source_remote_feeds import fetch_all_remote_feeds
+        for label, ats_label, jobs in fetch_all_remote_feeds():
+            print(f"\n[{label}] Ingesting {len(jobs)} jobs...")
+            try:
+                new = write_multi_company_feed(conn, jobs, ats_label)
+                print(f"  {len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"  ERROR writing {label}: {e}")
+    except Exception as e:
+        print(f"[remote-feeds] load failed: {e}")
 
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM internships WHERE status = 'active'")

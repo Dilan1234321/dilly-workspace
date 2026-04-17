@@ -447,6 +447,47 @@ def apply_job_attributes_migration(token: str = ""):
     return {"ok": True, "migrations": ["20260417_job_attributes", "20260417_job_attributes_v2"]}
 
 
+@router.get("/backfill-company-websites", summary="Populate companies.website for existing rows")
+def backfill_company_websites(token: str = "", limit: int = 500):
+    """Walk companies rows with NULL website and set website = <slug>.com
+    where slug = lowercase-name with non-alphanumerics removed. This
+    unblocks the Clearbit logo pipeline for the ~10k companies the
+    app scraped before the crawler learned to populate the column.
+
+    Conservative by design: only touches rows where website IS NULL.
+    Never overwrites manually curated values. Pass ?limit=N to
+    control batch size per call.
+    """
+    _require_cron_secret(token)
+    import re as _re
+    from projects.dilly.api.database import get_db
+    updated = 0
+    skipped = 0
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, name FROM companies WHERE website IS NULL ORDER BY name LIMIT %s",
+            (int(limit),),
+        )
+        rows = cur.fetchall()
+        for row in rows:
+            cid, name = row[0], row[1]
+            if not name:
+                skipped += 1
+                continue
+            slug = _re.sub(r"[^a-z0-9]", "", str(name).lower().strip())
+            if not slug or len(slug) < 3:
+                skipped += 1
+                continue
+            cur.execute(
+                "UPDATE companies SET website = %s WHERE id = %s AND website IS NULL",
+                (f"{slug}.com", cid),
+            )
+            updated += 1
+        conn.commit()
+    return {"ok": True, "updated": updated, "skipped": skipped, "hint": "call repeatedly until updated=0"}
+
+
 @router.get("/classify-jobs", summary="Classify un-classified active internships (degree requirement)")
 def classify_jobs(token: str = "", max: int = 200):
     """Run the attribute classifier on active internships with NULL
