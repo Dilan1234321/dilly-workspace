@@ -2,8 +2,10 @@
 classify_job_attributes.py
 
 Batch runner that finds active internships with NULL degree_required
-and fills in a verdict using Haiku. Safe to run repeatedly — it only
-touches un-classified rows.
+and fills in ALL attribute verdicts (degree, h1b_sponsor, fair_chance)
+using a single Haiku call per job. Safe to run repeatedly — it only
+touches rows where degree_required IS NULL (the sentinel for "not
+classified yet").
 
 Invocation:
   python -m projects.dilly.api.scripts.classify_job_attributes [--max N]
@@ -28,21 +30,29 @@ if _WORKSPACE_ROOT not in sys.path:
 def run(max_rows: int = 200) -> dict:
     """Classify up to `max_rows` un-classified active internships.
 
+    Uses the combined classifier — one Haiku call returns all three
+    attribute verdicts (degree, h1b_sponsor, fair_chance). Cheaper than
+    three separate calls and keeps them synced so a row never has a
+    degree verdict without the other two.
+
     Returns a stats dict for the cron report. `max_rows` is a hard cap
     so a single cron run has predictable duration and cost.
     """
     from projects.dilly.api.database import get_db
-    from projects.dilly.api.job_classifiers import classify_degree_requirements_batch
+    from projects.dilly.api.job_classifiers import classify_all_attributes_batch
 
     start = time.time()
     classified = 0
-    counts = {"required": 0, "not_required": 0, "unclear": 0}
+    # Track the distribution so cron logs show drift (e.g. if Haiku starts
+    # returning 'unclear' for everything, we'll see it here).
+    counts = {
+        "degree": {"required": 0, "not_required": 0, "unclear": 0},
+        "h1b_sponsor": {"sponsors": 0, "no_sponsor": 0, "unclear": 0},
+        "fair_chance": {"fair_chance": 0, "standard": 0, "unclear": 0},
+    }
 
     with get_db() as conn:
         cur = conn.cursor()
-        # Pull the oldest un-classified active rows first so the backlog
-        # drains in order. LIMIT guards against runaway queries if the
-        # index is missing for some reason.
         cur.execute(
             """
             SELECT id, description
@@ -54,7 +64,7 @@ def run(max_rows: int = 200) -> dict:
             ORDER BY created_at DESC
             LIMIT %s
             """,
-            (max_rows * 2,),  # fetch a bit extra so the classifier can skip obvious dupes if needed
+            (max_rows * 2,),
         )
         rows = [{"id": r[0], "description": r[1]} for r in cur.fetchall()]
 
@@ -62,18 +72,27 @@ def run(max_rows: int = 200) -> dict:
             return {"ok": True, "classified": 0, "elapsed_sec": 0, "counts": counts}
 
         update_cur = conn.cursor()
-        for jid, verdict in classify_degree_requirements_batch(rows, max_rows=max_rows):
+        for jid, verdicts in classify_all_attributes_batch(rows, max_rows=max_rows):
             update_cur.execute(
                 """
                 UPDATE internships
                 SET degree_required = %s,
+                    h1b_sponsor     = %s,
+                    fair_chance     = %s,
                     classified_at   = NOW()
                 WHERE id = %s
                 """,
-                (verdict, jid),
+                (
+                    verdicts["degree"],
+                    verdicts["h1b_sponsor"],
+                    verdicts["fair_chance"],
+                    jid,
+                ),
             )
             classified += 1
-            counts[verdict] = counts.get(verdict, 0) + 1
+            counts["degree"][verdicts["degree"]] = counts["degree"].get(verdicts["degree"], 0) + 1
+            counts["h1b_sponsor"][verdicts["h1b_sponsor"]] = counts["h1b_sponsor"].get(verdicts["h1b_sponsor"], 0) + 1
+            counts["fair_chance"][verdicts["fair_chance"]] = counts["fair_chance"].get(verdicts["fair_chance"], 0) + 1
 
         conn.commit()
 

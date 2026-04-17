@@ -203,40 +203,46 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   const missingBullets = toBullets(data.whats_missing).slice(0, 3);
   const nothingMissing = data.whats_missing.toLowerCase().startsWith('nothing major');
 
+  // Colors for the narrative are NEUTRAL — no green/amber/red signal.
+  // "What you have" / "What's missing" are just the structure of the
+  // read, not a readiness verdict.
+  const LABEL_COLOR = VIOLET;
+  const BULLET_DOT = VIOLET;
+
   return (
     <Animated.View style={[s.narrativeWrap, { opacity: fadeAnim }]}>
       <View style={s.narrativeColumns}>
-        {/* Left column: What you have */}
+        {/* Left: What you have */}
         <View style={s.narrativeCol}>
-          <Text style={[s.narrativeLabel, { color: GREEN }]}>WHAT YOU HAVE</Text>
+          <Text style={[s.narrativeLabel, { color: LABEL_COLOR }]}>WHAT YOU HAVE</Text>
           {haveBullets.map((b, i) => (
             <View key={i} style={s.narrativeBulletRow}>
-              <Ionicons name="checkmark-circle" size={12} color={GREEN} style={{ marginTop: 2 }} />
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BULLET_DOT, marginTop: 7 }} />
               <Text style={s.narrativeBulletText}>{b}</Text>
             </View>
           ))}
         </View>
 
-        {/* Right column: What's missing */}
+        {/* Right: What's missing (or "nothing major") */}
         <View style={s.narrativeCol}>
-          <Text style={[s.narrativeLabel, { color: nothingMissing ? GREEN : AMBER }]}>WHAT'S MISSING</Text>
+          <Text style={[s.narrativeLabel, { color: LABEL_COLOR }]}>WHAT'S MISSING</Text>
           {nothingMissing ? (
             <View style={s.narrativeBulletRow}>
-              <Ionicons name="checkmark-circle" size={12} color={GREEN} style={{ marginTop: 2 }} />
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BULLET_DOT, marginTop: 7 }} />
               <Text style={s.narrativeBulletText}>Nothing major</Text>
             </View>
           ) : missingBullets.map((b, i) => (
             <View key={i} style={s.narrativeBulletRow}>
-              <Ionicons name="alert-circle" size={12} color={AMBER} style={{ marginTop: 2 }} />
+              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BULLET_DOT, marginTop: 7 }} />
               <Text style={s.narrativeBulletText}>{b}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      {/* What to do - full width below */}
+      {/* What to do — full width */}
       <View style={{ marginTop: 8 }}>
-        <Text style={[s.narrativeLabel, { color: COBALT }]}>WHAT TO DO</Text>
+        <Text style={[s.narrativeLabel, { color: LABEL_COLOR }]}>WHAT TO DO</Text>
         <Text style={[s.narrativeBulletText, { marginTop: 2 }]}>{data.what_to_do}</Text>
       </View>
     </Animated.View>
@@ -287,52 +293,8 @@ function DillyScanPulse({ totalJobs, matchesFound }: { totalJobs: number; matche
   );
 }
 
-// -- Animated Fit Ring ------------------------------------------------------
-// Circular fit indicator. Color + ring fill = instant read of match quality.
-// Not a score, just a visual surrogate for green/amber/red narrative color.
-
-function FitRing({ color, size = 48, label }: { color: string; size?: number; label?: string }) {
-  const fillAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(fillAnim, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
-  }, [fillAnim]);
-
-  // Fill percentage maps to color: green=0.9, amber=0.65, red=0.4
-  const target = color === GREEN ? 0.9 : color === AMBER ? 0.65 : 0.4;
-  const arcDeg = fillAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${target * 360}deg`] });
-
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Track */}
-      <View style={{
-        position: 'absolute', width: size, height: size, borderRadius: size / 2,
-        borderWidth: 3, borderColor: color + '22',
-      }} />
-      {/* Filled arc via rotated half-circle trick */}
-      <Animated.View
-        style={{
-          position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: 3,
-          borderColor: color,
-          borderRightColor: 'transparent',
-          borderBottomColor: 'transparent',
-          transform: [{ rotate: arcDeg }],
-        }}
-      />
-      <View style={{
-        width: size - 12, height: size - 12, borderRadius: (size - 12) / 2,
-        backgroundColor: color + '12', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Text style={{ fontSize: size < 40 ? 9 : 10, fontWeight: '800', color, letterSpacing: 0.5 }}>
-          {label || (target >= 0.85 ? 'FIT' : target >= 0.6 ? 'CLOSE' : 'STRETCH')}
-        </Text>
-      </View>
-    </View>
-  );
-}
+// FitRing removed: Dilly no longer shows ready/stretch/close indicators.
+// The job card now speaks for itself via Dilly's single-line read.
 
 // -- Why Matched Chips ------------------------------------------------------
 // Surfaces the top 2-3 reasons the job matched — built from job metadata and
@@ -386,32 +348,40 @@ function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; 
   );
 }
 
-// -- Dilly Voice Bubble -----------------------------------------------------
-// One-liner from Dilly reasoning the match. Surfaces the pre-loaded
-// narrative so users see AI value without expanding.
+// Dilly's read — ONE powerful sentence. Never cut off, never truncated.
+// Pull the sharpest single sentence out of the fit narrative. If nothing
+// useful has come back yet (narrative still loading), show a stable
+// placeholder that doesn't promise anything Dilly hasn't earned.
+
+function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: Listing): string {
+  if (!narrative) {
+    return `Tap to see why ${listing.company || 'this role'} could work for you.`;
+  }
+  // Prefer what_you_have — the sharpest "you have X" sentence is the
+  // most powerful for the user to see first. Fall back to what_to_do.
+  const pickSentence = (text: string | undefined): string => {
+    if (!text) return '';
+    // Split on sentence boundaries, pick first non-empty sentence with
+    // real content (≥ 25 chars, contains a verb-ish word).
+    const parts = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+    for (const p of parts) {
+      if (p.length >= 25) return p.endsWith('.') ? p : p + '.';
+    }
+    return parts[0] || '';
+  };
+  const best = pickSentence(narrative.what_you_have) || pickSentence(narrative.what_to_do);
+  if (best) return best;
+  return `Worth a look at ${listing.company || 'this role'}.`;
+}
 
 function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
-  // Derive a short reasoning line. Prefer the first strong phrase from
-  // what_you_have; fall back to a generic "Dilly thinks this is worth a look."
-  let line = '';
-  if (narrative?.what_you_have) {
-    const first = narrative.what_you_have.split(/[.!]/)[0]?.trim();
-    if (first && first.length > 6) line = first.length > 100 ? first.slice(0, 97) + '...' : first;
-  }
-  if (!line) {
-    line = narrative?.what_to_do?.split(/[.!]/)[0]?.trim() || '';
-  }
-  if (!line) {
-    line = `${listing.company} matches your profile. Tap to see the full read.`;
-  }
-
   return (
     <View style={bub.wrap}>
       <View style={bub.avatar}>
         <Ionicons name="sparkles" size={10} color="#fff" />
       </View>
       <View style={bub.bubble}>
-        <Text style={bub.text}>{line}</Text>
+        <Text style={bub.text}>{_oneLineRead(narrative, listing)}</Text>
       </View>
     </View>
   );
@@ -440,22 +410,22 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
     ]).start();
   }, [scaleIn, opacity]);
 
-  const fitColor = narrative ? fitColorHex(narrative.fit_color) : VIOLET;
+  // No more color-by-fit. Violet is the Dilly brand; we keep it as a
+  // neutral accent that isn't tied to readiness signaling.
   const loc = listing.location || [listing.location_city, listing.location_state].filter(Boolean).join(', ');
+  const readLine = _oneLineRead(narrative, listing);
 
   return (
     <Animated.View style={{ opacity, transform: [{ scale: scaleIn }] }}>
       <TouchableOpacity activeOpacity={0.95} onPress={onPress} style={hero.card}>
-        {/* Gradient aura — using stacked absolute views since we don't
-            pull in expo-linear-gradient. Three layered circles build a
-            soft color halo behind the content. */}
-        <View style={[hero.aura, { backgroundColor: fitColor + '18' }]} />
-        <View style={[hero.auraInner, { backgroundColor: fitColor + '25' }]} />
+        {/* Gradient aura — pure Dilly brand color, not a fit indicator. */}
+        <View style={[hero.aura, { backgroundColor: VIOLET + '20' }]} />
+        <View style={[hero.auraInner, { backgroundColor: VIOLET + '30' }]} />
 
         {/* Top row: TOP MATCH badge + bookmark */}
         <View style={hero.topRow}>
           <View style={hero.topBadge}>
-            <View style={[hero.badgeDot, { backgroundColor: fitColor }]} />
+            <View style={[hero.badgeDot, { backgroundColor: VIOLET }]} />
             <Text style={hero.topBadgeText}>TOP MATCH FOR YOU</Text>
           </View>
           <TouchableOpacity onPress={onBookmark} hitSlop={10}>
@@ -484,19 +454,16 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
               </View>
             ) : null}
           </View>
-          <FitRing color={fitColor} size={54} />
         </View>
 
-        {/* Dilly's read */}
+        {/* Dilly's read — one powerful sentence, never cut off. */}
         <View style={hero.narrativeBox}>
           <View style={hero.narrativeHeader}>
-            <Ionicons name="sparkles" size={12} color={fitColor} />
-            <Text style={[hero.narrativeLabel, { color: fitColor }]}>DILLY'S READ</Text>
+            <Ionicons name="sparkles" size={12} color={VIOLET} />
+            <Text style={[hero.narrativeLabel, { color: VIOLET }]}>DILLY'S READ</Text>
           </View>
-          <Text style={hero.narrativeText} numberOfLines={3}>
-            {narrative?.what_you_have
-              ? narrative.what_you_have
-              : 'Dilly is pulling your fit narrative. Tap to expand and get the full breakdown.'}
+          <Text style={hero.narrativeText}>
+            {readLine}
           </Text>
         </View>
 
@@ -573,24 +540,19 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
     });
   }
 
-  const fitColor = narrativeCache ? fitColorHex(narrativeCache.fit_color) : VIOLET;
-  const hasFit = !!narrativeCache;
-
   return (
     <>
     <AnimatedPressable style={[s.jobCard, expanded && s.jobCardExpanded]} onPress={onToggle} scaleDown={0.985}>
-      {/* Left accent rail — fit color becomes a visible stripe, making the
-          match quality readable at a glance even while scrolling fast. */}
-      <View style={[s.jobRail, { backgroundColor: fitColor }]} />
-
+      {/* No colored fit rail — Dilly doesn't rank jobs as ready/stretch
+          anymore. Card layout is clean, one-line read carries the signal. */}
       <View style={s.jobContent}>
-        {/* Header: logo + title/company + FitRing + bookmark */}
+        {/* Header: logo + title/company + bookmark */}
         <View style={s.jobHeader}>
           {listing.company_logo ? (
             <Image source={{ uri: listing.company_logo }} style={s.companyLogo} />
           ) : (
-            <View style={[s.companyLogoPlaceholder, { backgroundColor: fitColor + '12', borderColor: fitColor + '25', borderWidth: 1 }]}>
-              <Text style={[s.companyLogoInitial, { color: fitColor }]}>{listing.company?.[0]?.toUpperCase() || '?'}</Text>
+            <View style={[s.companyLogoPlaceholder, { backgroundColor: VIOLET + '12', borderColor: VIOLET + '25', borderWidth: 1 }]}>
+              <Text style={[s.companyLogoInitial, { color: VIOLET }]}>{listing.company?.[0]?.toUpperCase() || '?'}</Text>
             </View>
           )}
           <View style={{ flex: 1 }}>
@@ -609,25 +571,25 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
               </View>
             ) : null}
           </View>
-          <View style={{ alignItems: 'center', gap: 6 }}>
-            <FitRing color={fitColor} size={42} />
-            <AnimatedPressable
-              onPress={(e: any) => { e?.stopPropagation?.(); onBookmark?.(listing); }}
-              scaleDown={0.85}
-              hitSlop={10}
-            >
-              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={16} color={isSaved ? COBALT : colors.t3} />
-            </AnimatedPressable>
-          </View>
+          {/* Bookmark only. No fit ring, no ready/stretch label — Dilly
+              doesn't tell users if they're "ready" for a job anymore.
+              The one-line read below does all the work. */}
+          <AnimatedPressable
+            onPress={(e: any) => { e?.stopPropagation?.(); onBookmark?.(listing); }}
+            scaleDown={0.85}
+            hitSlop={10}
+          >
+            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={18} color={isSaved ? COBALT : colors.t3} />
+          </AnimatedPressable>
         </View>
 
         {/* Why matched chips — gives "why" on the surface */}
         <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
 
-        {/* Dilly voice bubble — surfaces the AI narrative without requiring
-            a tap. Only shown when narrative is available (pre-loaded for
-            top 3, or after first expand). */}
-        {hasFit && <DillyVoiceBubble narrative={narrativeCache} listing={listing} />}
+        {/* Dilly voice bubble — one powerful sentence. Always shown, even
+            before the narrative loads (shows a stable placeholder). Never
+            truncated so the user can read the full sentence on any device. */}
+        <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
 
         {/* Expanded: Narrative + Quick Glance + Actions */}
         {expanded && (
@@ -723,6 +685,13 @@ export default function JobsScreen() {
   // (e.g. 'No degree required' appears only for dropouts).
   const [userPath, setUserPath] = useState<string>('');
   const [noDegreeFilter, setNoDegreeFilter] = useState<boolean>(false);
+  // Path-specific filters: H-1B sponsor (international_grad) +
+  // fair-chance (formerly_incarcerated). Opt-in, default off.
+  const [h1bFilter, setH1bFilter] = useState<boolean>(false);
+  const [fairChanceFilter, setFairChanceFilter] = useState<boolean>(false);
+  // Remote-only filter — universal (anyone can tap) AND pre-selected
+  // for users on the rural_remote_only path.
+  const [remoteOnlyFilter, setRemoteOnlyFilter] = useState<boolean>(false);
 
   const handleNarrativeLoaded = useCallback((jobId: string, data: FitNarrativeData) => {
     setNarrativeCache(prev => ({ ...prev, [jobId]: data }));
@@ -734,11 +703,17 @@ export default function JobsScreen() {
       // no_degree=true to the feed so the server filters to jobs that
       // welcome candidates without a degree.
       const ndParam = noDegreeFilter ? '&no_degree=true' : '';
+      const h1bParam = h1bFilter ? '&h1b_sponsor=true' : '';
+      const fcParam = fairChanceFilter ? '&fair_chance=true' : '';
+      const remoteParam = remoteOnlyFilter ? '&remote_only=true' : '';
       const [profileRes, feedRes, resumesRes, collectionsRes, usageRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
         // When multiple types are selected, fetch all and filter client-side.
         // When only one non-'all' type is selected, pass it to the server for efficiency.
-        dilly.get(`/v2/internships/feed?tab=${tabs.has('all') || tabs.size > 1 ? 'all' : [...tabs][0] || 'all'}&limit=50&sort=rank${ndParam}`).catch(() => null),
+        // limit=100 matches what users realistically scroll through on
+        // one session; if they want more, the feed paginates. Previously
+        // capped at 50, which contradicted the weekly brief's count.
+        dilly.get(`/v2/internships/feed?tab=${tabs.has('all') || tabs.size > 1 ? 'all' : [...tabs][0] || 'all'}&limit=100&sort=rank${ndParam}${h1bParam}${fcParam}${remoteParam}`).catch(() => null),
         dilly.get('/generated-resumes').catch(() => null),
         dilly.get('/collections').catch(() => null),
         dilly.get('/jobs/fit-narrative/usage').catch(() => null),
@@ -754,19 +729,30 @@ export default function JobsScreen() {
         });
       }
 
-      // Load user's preferred cities for location filtering
+      // Load user's preferred cities for location filtering. Cities are
+      // shown as tappable chips but DEFAULT TO UNSELECTED — users can
+      // opt in rather than having their feed silently narrowed. This
+      // was a common confusion point: "why are there only jobs in NYC?"
       const cities: string[] = profileRes?.job_locations || [];
       setUserCities(cities);
-      setSelectedCities(cities);
+      // Only preserve previously-selected cities; don't auto-select new ones.
+      setSelectedCities(prev => prev.filter(c => cities.includes(c)));
 
       // Save the user's onboarding path so we can conditionally render
       // path-specific filters (like "No degree required" for dropouts).
-      setUserPath(((profileRes as any)?.user_path || '').toString().toLowerCase());
+      const pathRaw = ((profileRes as any)?.user_path || '').toString().toLowerCase();
+      setUserPath(pathRaw);
+      // rural_remote_only users have "remote only" as their whole premise.
+      // Pre-select the filter for them on first load. They can toggle off
+      // if they want to browse everything.
+      if (pathRaw === 'rural_remote_only' && !remoteOnlyFilter && userCities.length === 0) {
+        setRemoteOnlyFilter(true);
+      }
 
       setListings(feedRes?.listings || []);
     } catch {}
     finally { setLoading(false); }
-  }, [tabs, noDegreeFilter]);
+  }, [tabs, noDegreeFilter, h1bFilter, fairChanceFilter, remoteOnlyFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -806,12 +792,30 @@ export default function JobsScreen() {
   const filtered = useMemo(() => {
     let result = listings;
 
-    // Search filter
+    // Powerful multi-token search. Splits the query on whitespace and
+    // requires ALL tokens to match at least one searchable field. Lets
+    // the user type natural phrases like "remote python san francisco"
+    // and narrow progressively. Matches title, company, location, work
+    // mode, job type, AND description (so searching "react" finds jobs
+    // that mention React in the JD even if it's not in the title).
     if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(l =>
-        l.title.toLowerCase().includes(q) || l.company.toLowerCase().includes(q)
-      );
+      const tokens = search.toLowerCase().split(/\s+/).filter(t => t.length >= 2);
+      if (tokens.length > 0) {
+        result = result.filter(l => {
+          const haystack = [
+            l.title,
+            l.company,
+            l.location,
+            l.location_city,
+            l.location_state,
+            l.work_mode,
+            l.job_type,
+            l.description_preview,
+            l.description,
+          ].filter(Boolean).join(' ').toLowerCase();
+          return tokens.every(t => haystack.includes(t));
+        });
+      }
     }
 
     // Job type multi-select filter (client-side when we fetched tab=all)
@@ -960,22 +964,29 @@ export default function JobsScreen() {
       </View>
 
       {/* Dilly scanning pulse — convinces the user the AI is actively
-          working the market for them in real time. */}
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: 6 }}>
+          working the market for them in real time. Extra bottom padding
+          gives breathing room between the pulse and the search bar. */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: 6, paddingBottom: 14 }}>
         <DillyScanPulse totalJobs={Math.max(listings.length * 23, 1200)} matchesFound={filtered.length} />
       </View>
 
-      {/* Search — re-styled as an AI prompt */}
+      {/* Powerful search: accepts natural-language queries like
+          "remote Python jobs" or "AI research in SF". The front-end
+          splits the query into space-separated tokens and ALL must
+          match (AND). Each token matches title OR company OR location
+          OR description. This replaces the old 2-field substring
+          match with something that feels like a real search engine. */}
       <View style={s.searchRow}>
         <View style={s.searchBox}>
           <Ionicons name="search" size={16} color={VIOLET} />
           <TextInput
             style={s.searchInput}
-            placeholder="Search titles, companies, skills..."
+            placeholder="Search jobs, companies, skills, cities..."
             placeholderTextColor={colors.t3}
             value={search}
             onChangeText={setSearch}
             autoCapitalize="none"
+            returnKeyType="search"
           />
           {search.length > 0 && (
             <AnimatedPressable onPress={() => setSearch('')} scaleDown={0.9} hitSlop={8}>
@@ -1004,6 +1015,41 @@ export default function JobsScreen() {
             <Text style={[s.filterPillText, noDegreeFilter && s.filterPillTextActive]}>No degree required</Text>
           </AnimatedPressable>
         )}
+
+        {/* International grad — H-1B sponsor filter. Same "#1 thing they
+            open the app for" priority as the dropout pill. */}
+        {userPath === 'international_grad' && (
+          <AnimatedPressable
+            style={[s.filterPill, h1bFilter && s.filterPillActive]}
+            onPress={() => { setH1bFilter(v => !v); setLoading(true); }}
+            scaleDown={0.95}
+          >
+            <Text style={[s.filterPillText, h1bFilter && s.filterPillTextActive]}>Sponsors H-1B</Text>
+          </AnimatedPressable>
+        )}
+
+        {/* Formerly incarcerated + refugee — fair-chance filter.
+            Showing it for refugees too since many refugee-hire programs
+            overlap with fair-chance employer lists. */}
+        {(userPath === 'formerly_incarcerated' || userPath === 'refugee') && (
+          <AnimatedPressable
+            style={[s.filterPill, fairChanceFilter && s.filterPillActive]}
+            onPress={() => { setFairChanceFilter(v => !v); setLoading(true); }}
+            scaleDown={0.95}
+          >
+            <Text style={[s.filterPillText, fairChanceFilter && s.filterPillTextActive]}>Fair chance</Text>
+          </AnimatedPressable>
+        )}
+
+        {/* Remote only — universal pill. Anyone can use it, pre-selected
+            for rural_remote_only users on their first load. */}
+        <AnimatedPressable
+          style={[s.filterPill, remoteOnlyFilter && s.filterPillActive]}
+          onPress={() => { setRemoteOnlyFilter(v => !v); setLoading(true); }}
+          scaleDown={0.95}
+        >
+          <Text style={[s.filterPillText, remoteOnlyFilter && s.filterPillTextActive]}>Remote only</Text>
+        </AnimatedPressable>
 
         {/* Job type pills — multi-select. Tapping 'All' clears other
             selections. Tapping a specific type toggles it; if all specific
@@ -1047,24 +1093,46 @@ export default function JobsScreen() {
           );
         })}
 
-        {/* Divider */}
-        {userCities.length > 0 && <View style={{ width: 1, backgroundColor: colors.b1, marginHorizontal: 2 }} />}
-
-        {/* City pills */}
-        {userCities.map(city => {
-          const active = selectedCities.includes(city);
-          return (
-            <AnimatedPressable
-              key={city}
-              style={[s.filterPill, active && s.filterPillActive]}
-              onPress={() => setSelectedCities(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city])}
-              scaleDown={0.95}
-            >
-              <Text style={[s.filterPillText, active && s.filterPillTextActive]}>{city.replace(/,\s*\w{2}$/, '')}</Text>
-            </AnimatedPressable>
-          );
-        })}
       </ScrollView>
+
+      {/* CITIES — dedicated second row so users clearly see they can
+          narrow by city, and defaults to NONE selected so the feed is
+          never silently capped to a city the user doesn't realize is
+          active. Add-city affordance routes to profile where locations
+          are edited. */}
+      {userCities.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ maxHeight: 40, flexGrow: 0, marginTop: 6 }}
+          contentContainerStyle={{ gap: 6, paddingHorizontal: spacing.lg, alignItems: 'center' }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 4 }}>
+            <Ionicons name="location-outline" size={12} color={colors.t3} />
+            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1 }}>CITIES</Text>
+          </View>
+          {userCities.map(city => {
+            const active = selectedCities.includes(city);
+            return (
+              <AnimatedPressable
+                key={city}
+                style={[s.filterPill, active && s.filterPillActive]}
+                onPress={() => setSelectedCities(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city])}
+                scaleDown={0.95}
+              >
+                <Text style={[s.filterPillText, active && s.filterPillTextActive]}>{city.replace(/,\s*\w{2}$/, '')}</Text>
+              </AnimatedPressable>
+            );
+          })}
+          <AnimatedPressable
+            style={[s.filterPill, { borderStyle: 'dashed', borderColor: VIOLET + '50' }]}
+            onPress={() => router.push('/(app)/my-dilly-profile' as any)}
+            scaleDown={0.95}
+          >
+            <Text style={[s.filterPillText, { color: VIOLET, fontWeight: '700' }]}>+ Edit</Text>
+          </AnimatedPressable>
+        </ScrollView>
+      )}
 
       {/* Job listings */}
       <ScrollView
@@ -1109,11 +1177,11 @@ export default function JobsScreen() {
                 setExpandedId(expandedId === topMatch.id ? null : topMatch.id);
               }}
             />
-            {/* Expanded view for the hero — same FitNarrative as the
-                stacked cards, shown inline below the hero when tapped. */}
+            {/* Expanded hero view — full fit narrative (what you have /
+                what's missing / what to do) inline. No colored rail;
+                scoring language is out of the UI entirely. */}
             {expandedId === topMatch.id && (
               <View style={[s.jobCard, { marginTop: 8 }]}>
-                <View style={[s.jobRail, { backgroundColor: narrativeCache[topMatch.id] ? fitColorHex(narrativeCache[topMatch.id].fit_color) : VIOLET }]} />
                 <View style={s.jobContent}>
                   <View style={s.expandedSection}>
                     <FitNarrative listing={topMatch} preloaded={narrativeCache[topMatch.id] || null} />

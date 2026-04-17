@@ -48,8 +48,8 @@ If you need clarification on something specific, reference what you already know
 # Model identifiers that resolve to the same underlying model.
 # API (direct Anthropic SDK): use DILLY_MODEL_API
 # Desktop/Gateway (AI Gateway alias): use DILLY_MODEL_GATEWAY
-DILLY_MODEL_API = "claude-sonnet-4-6"
-DILLY_MODEL_GATEWAY = "anthropic/claude-sonnet-4-6"
+DILLY_MODEL_API = "claude-haiku-4-5-20251001"
+DILLY_MODEL_GATEWAY = "anthropic/claude-haiku-4-5-20251001"
 # NOTE: These two identifiers resolve to the same model.
 # DILLY_MODEL_API is the explicit Anthropic model ID for direct SDK calls.
 # DILLY_MODEL_GATEWAY is the AI Gateway alias used by the Vercel AI SDK.

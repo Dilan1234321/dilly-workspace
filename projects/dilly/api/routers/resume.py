@@ -1176,7 +1176,7 @@ Return ONLY the letter body text. No headers, no markdown, no JSON, no explanati
         import anthropic
         client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
         async with client.messages.stream(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5-20251001",
             max_tokens=2048,
             system=system_prompt,
             messages=[{
@@ -3280,7 +3280,7 @@ Include only sections that have content. Do not include markdown, explanations, 
         import anthropic
         client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5-20251001",
             max_tokens=4096,
             system=system_prompt,
             messages=[{"role": "user", "content": f"Generate a tailored resume for {job_title} at {job_company}. Return only the JSON array."}],
@@ -3752,7 +3752,7 @@ No markdown, no explanations, no prose outside the JSON."""
         import anthropic
         client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
         async with client.messages.stream(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5-20251001",
             max_tokens=4096,
             system=system_prompt,
             messages=[{

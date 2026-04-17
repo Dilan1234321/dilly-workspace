@@ -129,7 +129,7 @@ Rules:
     raw = get_chat_completion(
         system,
         json.dumps(payload, ensure_ascii=True),
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         temperature=0.2,
         max_tokens=1000,
     )

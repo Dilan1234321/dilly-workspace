@@ -1,6 +1,6 @@
 """
 AI router: simple chat endpoint for the Dilly mobile AI overlay.
-Calls Claude claude-sonnet-4-6 via the Anthropic SDK.
+Calls Claude claude-haiku-4-5-20251001 via the Anthropic SDK.
 Requires ANTHROPIC_API_KEY in .env.
 """
 
@@ -133,7 +133,7 @@ def _build_system_prompt(mode: str, ctx: Optional[StudentContext]) -> str:
 @router.post("/ai/chat", response_model=ChatResponse)
 async def ai_chat(request: Request, body: ChatRequest):
     """
-    Chat with Claude claude-sonnet-4-6 for the Dilly AI overlay.
+    Chat with Claude claude-haiku-4-5-20251001 for the Dilly AI overlay.
     Requires Authorization: Bearer <jwt> header.
     """
     deps.require_auth(request)
@@ -166,7 +166,7 @@ async def ai_chat(request: Request, body: ChatRequest):
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+            model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             system=system,
             messages=messages,

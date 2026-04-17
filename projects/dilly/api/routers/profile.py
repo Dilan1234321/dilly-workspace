@@ -112,32 +112,12 @@ async def get_profile(request: Request):
         # primary-track entry (i.e. the scorer hasn't run yet for this user).
         # The next profile load (a few seconds later) will return the real scores.
         try:
-            _stored_cs = profile.get("cohort_scores") or {}
-            _has_claude = any(
-                isinstance(v, dict) and v.get("scored_by_claude")
-                for v in _stored_cs.values()
-            )
-            if not _has_claude and profile.get("overall_smart"):
-                import threading as _thr
-                _email_for_rescore = email
-
-                def _auto_rescore():
-                    try:
-                        import sys as _sys, os as _os
-                        _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', '..', '..'))
-                        from projects.dilly.api.profile_store import get_profile as _gp
-                        from projects.dilly.api.resume_loader import load_parsed_resume_for_voice as _lpr
-                        from projects.dilly.api.cohort_scorer import score_and_store_cohorts as _ssc
-                        _pr = _gp(_email_for_rescore) or {}
-                        _maj = _pr.get("majors") or ([_pr["major"]] if _pr.get("major") else [])
-                        _min = _pr.get("minors") or []
-                        _int = _pr.get("interests") or []
-                        _rt = _lpr(_email_for_rescore, max_chars=5500) or ""
-                        _ssc(_email_for_rescore, _rt, _maj, _min, _int)
-                    except Exception:
-                        pass
-
-                _thr.Thread(target=_auto_rescore, daemon=True).start()
+            # Cohort auto-rescore DISABLED. See comment in audit.py.
+            # S/G/B per-cohort is no longer surfaced to users, so spending
+            # Haiku calls to regenerate it on every profile read was pure
+            # waste. Kept the guard so if a prior build wrote stale data
+            # it still reads correctly.
+            pass
         except Exception:
             pass
 
@@ -277,33 +257,14 @@ async def get_profile(request: Request):
 
 @router.post("/profile/rescore-cohorts")
 async def rescore_cohorts(request: Request):
-    """
-    Trigger an immediate (background) re-score of per-cohort S/G/B scores with Claude.
-    Returns quickly; the actual scoring runs async and is available within ~10 seconds.
-    """
+    """DEPRECATED. Cohort scoring is no longer user-visible; this endpoint
+    is a no-op so any stale app builds calling it don't error out. Will
+    be removed in a future build."""
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     if not email:
         raise errors.unauthorized()
-
-    import threading
-
-    def _run():
-        try:
-            from projects.dilly.api.profile_store import get_profile as _gp
-            from projects.dilly.api.resume_loader import load_parsed_resume_for_voice as _lpr
-            from projects.dilly.api.cohort_scorer import score_and_store_cohorts as _ssc
-            _pr = _gp(email) or {}
-            _maj = _pr.get("majors") or ([_pr["major"]] if _pr.get("major") else [])
-            _min = _pr.get("minors") or []
-            _int = _pr.get("interests") or []
-            _rt = _lpr(email, max_chars=5500) or ""
-            _ssc(email, _rt, _maj, _min, _int)
-        except Exception:
-            pass
-
-    threading.Thread(target=_run, daemon=True).start()
-    return {"ok": True, "message": "Cohort re-scoring started. Check /profile in ~15 seconds."}
+    return {"ok": True, "message": "Cohort scoring retired."}
 
 
 def _score_page_response(request: Request, audit_id: str | None):
@@ -1627,7 +1588,7 @@ async def get_web_profile_narratives(slug: str, prefix: str | None = None):
 
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5-20251001",
             max_tokens=1500,
             temperature=0.35,
             system=system_prompt,

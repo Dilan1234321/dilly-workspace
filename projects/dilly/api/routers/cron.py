@@ -400,8 +400,24 @@ def apply_job_attributes_migration(token: str = ""):
                 ON internships (created_at DESC)
                 WHERE degree_required IN ('not_required', 'unclear') AND status = 'active'
         """)
+        # v2: h1b_sponsor + fair_chance columns
+        cur.execute("""
+            ALTER TABLE internships
+                ADD COLUMN IF NOT EXISTS h1b_sponsor TEXT,
+                ADD COLUMN IF NOT EXISTS fair_chance TEXT
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_internships_h1b
+                ON internships (created_at DESC)
+                WHERE h1b_sponsor IN ('sponsors', 'unclear') AND status = 'active'
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_internships_fair_chance
+                ON internships (created_at DESC)
+                WHERE fair_chance IN ('fair_chance', 'unclear') AND status = 'active'
+        """)
         conn.commit()
-    return {"ok": True, "migration": "20260417_job_attributes"}
+    return {"ok": True, "migrations": ["20260417_job_attributes", "20260417_job_attributes_v2"]}
 
 
 @router.get("/classify-jobs", summary="Classify un-classified active internships (degree requirement)")
@@ -457,12 +473,12 @@ def daily_pipeline(token: str = ""):
     except Exception as e:
         results["dedup"] = {"error": str(e)}
 
-    # 4. Rescore
-    try:
-        r = rescore_jobs(token=token)
-        results["rescore"] = r
-    except Exception as e:
-        results["rescore"] = {"error": str(e)}
+    # 4. Rescore — DISABLED. The S/G/B per-cohort scoring framework is
+    #    retired (no longer user-facing). The rescore_jobs endpoint still
+    #    exists for manual backfill if we ever need to replay historical
+    #    data, but we don't run it nightly anymore. Saves a Haiku call
+    #    per active job every day.
+    results["rescore"] = {"skipped": "cohort scoring retired"}
 
     # 5. Classify (degree requirement, etc.). Capped per run so a full
     #    daily pipeline never runs a huge Anthropic bill on a backlog.

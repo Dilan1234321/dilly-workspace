@@ -18,6 +18,14 @@ def get_chat_completion(
     """
     Send system + user to Claude and return the assistant message text.
     Uses ANTHROPIC_API_KEY. Returns None on failure or missing key.
+
+    Cost optimization: for any system prompt >= 1024 tokens (~4000 chars)
+    we wrap it in an ephemeral prompt-cache block. Anthropic serves cache
+    reads at 10% of the normal input price within a 5-minute window.
+    Dozens of Dilly call sites pass the same large system prompt across
+    users in quick succession (fit narratives, memory extraction,
+    insights letter) — caching slashes their input bill without any
+    caller code changes.
     """
     try:
         from anthropic import Anthropic
@@ -26,12 +34,21 @@ def get_chat_completion(
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not api_key:
         return None
-    model = (model or os.environ.get("DILLY_LLM_MODEL") or os.environ.get("MERIDIAN_LLM_MODEL") or "claude-sonnet-4-6").strip()
+    model = (model or os.environ.get("DILLY_LLM_MODEL") or os.environ.get("MERIDIAN_LLM_MODEL") or "claude-haiku-4-5-20251001").strip()
+
+    # Wrap the system prompt in a cache block when it's long enough to
+    # be worth caching. The 4000-char threshold is ~1k tokens — below
+    # that the cache overhead eats the savings.
+    if isinstance(system, str) and len(system) >= 4000:
+        system_param: Any = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+    else:
+        system_param = system
+
     try:
         client = Anthropic(api_key=api_key, timeout=45.0)
         response = client.messages.create(
             model=model,
-            system=system,
+            system=system_param,
             messages=[{"role": "user", "content": user}],
             max_tokens=max_tokens,
             temperature=temperature,

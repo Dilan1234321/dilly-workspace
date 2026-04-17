@@ -43,7 +43,7 @@ No exclamation marks. Include at least one number."""
     raw = get_chat_completion(
         system,
         str(payload),
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         temperature=0.3,
         max_tokens=80,
     )

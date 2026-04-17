@@ -114,9 +114,9 @@ const OPTIONS: Situation[] = [
     sub: 'Left school or never went. Self-taught, bootcamp, or on-the-job.',
     icon: 'hammer',
     color: '#059669',
-    badge: 'Dilly Building — $9.99/mo',
+    badge: 'Dilly Building. $9.99/mo',
     perks: [
-      'No Education section — replaced with Training & Credentials',
+      'No Education section. Replaced with Training & Credentials',
       '"No degree required" filter as the first pill on your jobs page',
       'Dilly talks to you like someone who respects the path you\'re on',
     ],
@@ -131,7 +131,7 @@ const OPTIONS: Situation[] = [
     perks: [
       'Two-page resume, reverse-chronological, no GPA or grad year',
       'Leadership & Impact section for management experience',
-      'Warm, confident tone — not the new-grad cheerleading',
+      'Warm, confident tone. Not the new-grad cheerleading',
     ],
     needsEdu: false,
   },
@@ -181,7 +181,7 @@ const OPTIONS: Situation[] = [
     icon: 'key',
     color: '#7c2d12',
     perks: [
-      'Year-only resume dates — no gap spotlight',
+      'Year-only resume dates. No gap spotlight',
       'Filter for fair-chance-certified employers',
       'Training completed inside shown as real credentials',
     ],

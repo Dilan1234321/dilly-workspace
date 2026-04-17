@@ -1,6 +1,6 @@
 """
 AI router: Dilly AI chat with full student context integration.
-Calls Claude claude-sonnet-4-6 via the Anthropic SDK.
+Calls Claude claude-haiku-4-5-20251001 via the Anthropic SDK.
 Requires ANTHROPIC_API_KEY in .env.
 
 Endpoints:
@@ -771,7 +771,25 @@ def _build_rich_system_prompt(r: dict) -> str:
         ),
     }.get(_user_path, "")
 
+    # Today's date is injected so the add_calendar_event tool can resolve
+    # relative phrases the user says ("the 3rd", "Monday", "next month",
+    # "in 2 weeks") into an absolute ISO date. Without this, Haiku
+    # guesses the year wrong and writes events to the wrong calendar slot.
+    from datetime import datetime as _dt
+    _today = _dt.utcnow().strftime("%Y-%m-%d")
+    _today_human = _dt.utcnow().strftime("%A, %B %d, %Y")
+
     return f"""You are Dilly, a career advisor who talks like a sharp, caring friend. You can see this person's full profile.
+
+TODAY IS {_today_human} ({_today}). Use this as the anchor for any relative dates
+the user mentions ("the 3rd" → the next 3rd of the month after today;
+"Monday" → the next Monday; "in 2 weeks" → today + 14 days).
+
+When the user mentions a concrete event with a date anchor (interview,
+career fair, deadline, client delivery, meeting, trip), call the
+add_calendar_event tool. Do NOT ask for permission. Just do it and keep
+talking. If they mention something vague without a date ("I'll apply
+eventually"), do not call the tool.
 
 {_tone_block}
 
@@ -1089,6 +1107,64 @@ async def get_ai_context(request: Request):
         raise HTTPException(status_code=500, detail=f"Could not build context: {str(e)[:200]}")
 
 
+def _append_calendar_deadline(email: str, payload: dict) -> None:
+    """Write a tool-generated calendar event to profile.deadlines.
+
+    Called synchronously during the chat flow when the AI invokes the
+    add_calendar_event tool. Idempotent by (title, date, company) so a
+    user mentioning the same event twice doesn't create duplicates.
+
+    Raises on failure so the tool_result can surface the error back to
+    the model.
+    """
+    from projects.dilly.api.profile_store import get_profile, save_profile
+    import uuid
+    from datetime import datetime as _dt
+
+    title = (payload.get("title") or "").strip()
+    date_str = (payload.get("date") or "").strip()[:10]
+    if not title or not date_str:
+        raise ValueError("title and date are required")
+    # Validate the date — the model sometimes returns partial/invalid dates.
+    try:
+        _dt.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError(f"invalid ISO date: {date_str}")
+
+    ev_type = (payload.get("type") or "custom").strip()
+    company = (payload.get("company") or "").strip()
+    notes = (payload.get("notes") or "").strip()
+
+    profile = get_profile(email) or {}
+    existing = profile.get("deadlines")
+    if not isinstance(existing, list):
+        existing = []
+
+    dedup_key = (title.lower(), date_str, company.lower())
+    for d in existing:
+        if not isinstance(d, dict):
+            continue
+        k = (
+            str(d.get("title") or d.get("label") or "").lower(),
+            str(d.get("date") or "")[:10],
+            str(d.get("company") or "").lower(),
+        )
+        if k == dedup_key:
+            return  # already there, no-op
+
+    existing.append({
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "date": date_str,
+        "type": ev_type,
+        "notes": notes or f"Auto-added by Dilly from chat on {_dt.utcnow().strftime('%Y-%m-%d')}.",
+        "company": company,
+        "completedAt": None,
+        "createdBy": "dilly-ai-chat",
+    })
+    save_profile(email, {"deadlines": existing})
+
+
 def _run_profile_extraction_background(email: str, conv_id: str, messages: list[dict]) -> None:
     """Fire-and-forget: extract profile facts from conversation and store them.
     Runs in a background thread so it never blocks the chat response.
@@ -1192,7 +1268,11 @@ async def ai_chat(request: Request, body: ChatRequest):
     except Exception:
         _plan = "starter"
     _is_paid = _plan in ("dilly", "pro")
-    _chat_model = "claude-sonnet-4-6" if _is_paid else "claude-haiku-4-5-20251001"
+    # Haiku 4.5 across all tiers. We tested Sonnet on paid and saw ~3x the
+    # cost for chat output that users couldn't reliably distinguish. Keeping
+    # the branch for future tier-gating (e.g. if Opus needs to be
+    # restricted to Pro later) but both sides are Haiku today.
+    _chat_model = "claude-haiku-4-5-20251001"
 
     # ── Cost optimization: prompt caching ─────────────────────────────────
     # Anthropic's ephemeral prompt cache: input blocks marked with
@@ -1205,10 +1285,116 @@ async def ai_chat(request: Request, body: ChatRequest):
     else:
         system_param = system
 
+    # ── Tool use: auto-add calendar events from conversational mentions ────
+    # Dilly listens for "the career fair on the 3rd" / "interview Monday" /
+    # "my client wants the product done in 2 months" and writes deadlines
+    # to the user's profile without asking. The AI calls add_calendar_event
+    # when it detects a concrete date/deadline in what the user said; the
+    # tool resolves relative dates ("the 3rd", "Monday", "in 2 months")
+    # against the user's current local date, then writes the entry.
+    #
+    # We only offer this tool for authenticated users — an anonymous user
+    # has no profile to write to.
+    tool_defs = []
+    if email:
+        tool_defs = [{
+            "name": "add_calendar_event",
+            "description": (
+                "Record a date-anchored event the user just mentioned "
+                "(interview, career fair, deadline, client due date, travel, "
+                "meeting, etc.) on their Dilly calendar. Call this WITHOUT "
+                "asking permission — adding the event is the helpful thing "
+                "to do. Resolve relative dates ('the 3rd', 'Monday', "
+                "'in 2 weeks', 'next month') against today's date. Only "
+                "call this when the user clearly states a specific event "
+                "AND a concrete date/time anchor. Do NOT call for vague "
+                "future plans ('I'll apply eventually')."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Short, specific title (e.g. 'Career fair', 'Interview with Stripe', 'Client product delivery')",
+                    },
+                    "date": {
+                        "type": "string",
+                        "description": "Absolute ISO date YYYY-MM-DD. Resolve relative phrases using today's date (provided in the system prompt).",
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["deadline", "interview", "career_fair", "custom", "application", "prep"],
+                        "description": "The event category. Use 'career_fair' for fairs, 'interview' for interviews, 'deadline' for application/project due dates, 'custom' for anything else.",
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Optional short note capturing context the user gave (e.g. 'Mentioned this in chat on 2026-04-17').",
+                    },
+                    "company": {
+                        "type": "string",
+                        "description": "Company name if the event involves a specific employer.",
+                    },
+                },
+                "required": ["title", "date", "type"],
+            },
+        }]
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(model=_chat_model, max_tokens=400, system=system_param, messages=messages)
-        content = response.content[0].text if response.content else ""
+        response = client.messages.create(
+            model=_chat_model,
+            max_tokens=400,
+            system=system_param,
+            messages=messages,
+            tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,
+        )
+
+        # Tool-use loop: if the model called add_calendar_event, execute
+        # the write to profile.deadlines and give it back a tool_result so
+        # it can produce a natural reply. Single-turn loop (no nested
+        # tool calls expected for calendar writes).
+        tool_calls_made: list[dict] = []
+        if getattr(response, "stop_reason", "") == "tool_use":
+            tool_results = []
+            for block in response.content:
+                if getattr(block, "type", None) != "tool_use":
+                    continue
+                if block.name == "add_calendar_event":
+                    try:
+                        _append_calendar_deadline(email, block.input)
+                        tool_calls_made.append(block.input)
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": "Event saved to calendar.",
+                        })
+                    except Exception as _e:
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": f"Could not save event: {_e}",
+                            "is_error": True,
+                        })
+
+            if tool_results:
+                follow_messages = list(messages) + [
+                    {"role": "assistant", "content": response.content},
+                    {"role": "user", "content": tool_results},
+                ]
+                response = client.messages.create(
+                    model=_chat_model,
+                    max_tokens=400,
+                    system=system_param,
+                    messages=follow_messages,
+                    tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,
+                )
+
+        # Extract the final text after any tool turns. The assistant may
+        # return mixed content blocks; concat all text blocks.
+        content = "".join(
+            getattr(b, "text", "") for b in (response.content or [])
+            if getattr(b, "type", None) == "text"
+        )
 
         # ── Background profile extraction (batched) ──────────────────
         # Fire-and-forget: extract everything Dilly learned about the user

@@ -57,7 +57,7 @@ Write the notification message now. One sentence, max 110 chars, no emoji, no ex
     text = get_chat_completion(
         system,
         user_prompt,
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=60,
         temperature=0.5,
     )

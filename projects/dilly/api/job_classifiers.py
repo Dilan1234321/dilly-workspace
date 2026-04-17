@@ -31,6 +31,8 @@ from typing import Literal
 logger = logging.getLogger(__name__)
 
 DegreeVerdict = Literal["required", "not_required", "unclear"]
+H1BVerdict = Literal["sponsors", "no_sponsor", "unclear"]
+FairChanceVerdict = Literal["fair_chance", "standard", "unclear"]
 
 # Classifier model — Haiku 4.5. Cheap, fast, accurate enough for
 # two-label binary+unclear classification.
@@ -127,4 +129,101 @@ def classify_degree_requirements_batch(rows, api_key: str | None = None, max_row
         desc = row.get("description") or ""
         verdict = classify_degree_requirement(desc, client=client)
         yield jid, verdict
+        processed += 1
+
+
+# ── Combined classifier ────────────────────────────────────────────────────
+# One prompt returns all three attribute verdicts. Cheaper than three
+# separate calls (same input tokens, only output tokens triple — which
+# are still tiny JSON). Used by the nightly backfill path.
+
+_COMBINED_SYSTEM = (
+    "You classify job descriptions by three independent attributes. "
+    "Return ONE JSON object with exactly these keys:\n\n"
+    '  "degree":       "required" | "not_required" | "unclear"\n'
+    '  "h1b_sponsor":  "sponsors" | "no_sponsor"   | "unclear"\n'
+    '  "fair_chance":  "fair_chance" | "standard"  | "unclear"\n\n'
+    "Definitions:\n"
+    "degree — does this role require a 4-year degree?\n"
+    "  required:     bachelor's or higher is a hard requirement with no alternative.\n"
+    "  not_required: degree is optional, or equivalent experience / GED accepted.\n"
+    "  unclear:      preferred-but-not-required, or education not discussed.\n\n"
+    "h1b_sponsor — does the employer sponsor H-1B visas for this role?\n"
+    "  sponsors:     description explicitly welcomes visa sponsorship, OR the employer is "
+    "on the well-known sponsor shortlist (major tech firms, most F500 engineering orgs). "
+    "Words like 'will sponsor', 'visa sponsorship available', 'H-1B'.\n"
+    "  no_sponsor:   description explicitly says 'must be authorized to work in US without "
+    "sponsorship', 'no sponsorship', 'US citizen only', 'security clearance required' "
+    "(federal/defense roles effectively cannot sponsor).\n"
+    "  unclear:      nothing said about work authorization.\n\n"
+    "fair_chance — is this role fair-chance friendly (accepts candidates with a record)?\n"
+    "  fair_chance:  explicit fair-chance language, 'ban the box' compliant, "
+    "'background check considered on individualized basis', known fair-chance employers "
+    "(Second Chance Business Coalition, Dave's Killer Bread, Nehemiah Mfg, Greyston Bakery).\n"
+    "  standard:     description requires no-criminal-background, clean record, "
+    "DOJ/defense/finance roles with background-disqualifying requirements.\n"
+    "  unclear:      background check not discussed.\n\n"
+    "Return ONLY the JSON object. No markdown fences, no prose."
+)
+
+
+def classify_all_attributes(description: str, client=None) -> dict:
+    """
+    Classify a single description into all three attribute verdicts in
+    one model call. Returns {degree, h1b_sponsor, fair_chance} with
+    'unclear' as the default for any value that fails to parse.
+    """
+    default = {"degree": "unclear", "h1b_sponsor": "unclear", "fair_chance": "unclear"}
+    text = _clean_description(description)
+    if len(text) < 40:
+        return default
+
+    try:
+        if client is None:
+            import anthropic
+            client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+
+        resp = client.messages.create(
+            model=_MODEL,
+            max_tokens=150,
+            system=_COMBINED_SYSTEM,
+            messages=[{"role": "user", "content": text}],
+        )
+        raw = (resp.content[0].text or "").strip()
+        if raw.startswith("```"):
+            raw = raw.strip("`")
+            if raw.lower().startswith("json"):
+                raw = raw[4:].strip()
+
+        data = json.loads(raw)
+        out = dict(default)
+        for k in ("degree", "h1b_sponsor", "fair_chance"):
+            v = str(data.get(k, "")).lower().strip()
+            # Defensive: only accept valid values per column.
+            if k == "degree" and v in ("required", "not_required", "unclear"):
+                out[k] = v
+            elif k == "h1b_sponsor" and v in ("sponsors", "no_sponsor", "unclear"):
+                out[k] = v
+            elif k == "fair_chance" and v in ("fair_chance", "standard", "unclear"):
+                out[k] = v
+        return out
+    except Exception as e:
+        logger.warning("classify_all_attributes failed: %s", e)
+        return default
+
+
+def classify_all_attributes_batch(rows, api_key: str | None = None, max_rows: int | None = None):
+    """Iterate rows, yield (id, verdicts_dict) tuples. Same shape as the
+    degree-only batcher — caller writes back and commits."""
+    import anthropic
+    client = anthropic.Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY", ""))
+
+    processed = 0
+    for row in rows:
+        if max_rows is not None and processed >= max_rows:
+            return
+        jid = row.get("id")
+        desc = row.get("description") or ""
+        verdicts = classify_all_attributes(desc, client=client)
+        yield jid, verdicts
         processed += 1

@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,17 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { setToken } from '../../lib/auth';
+import { dilly } from '../../lib/dilly';
 
-const RESEND_COOLDOWN = 30;
+// Cooldown before "Resend code" re-arms. Kept short because the real
+// wait most users see is Resend's relay latency to Gmail (sometimes
+// 30-60s during greylisting). A tight cooldown gives users a way out
+// if the first email truly didn't send.
+const RESEND_COOLDOWN = 15;
+// After this many seconds with no code, surface a helpful hint ("check
+// spam / sender is noreply@trydilly.com"). We can't speed Resend up but
+// we can reassure the user that waiting is normal.
+const SLOW_EMAIL_HINT_MS = 18_000;
 const TOTAL_STEPS = 6;
 
 // ── Progress bar ─────────────────────────────────────────────────────────────
@@ -69,6 +78,10 @@ export default function VerifyScreen() {
   const [errorType, setErrorType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  // True once we've been waiting long enough that showing a "check
+  // spam" hint is warranted. Resend's relay to Gmail occasionally takes
+  // 20-60s; without this hint users assume the app is broken.
+  const [showSlowHint, setShowSlowHint] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -88,6 +101,7 @@ export default function VerifyScreen() {
 
   function startResendCooldown() {
     setResendCooldown(RESEND_COOLDOWN);
+    setShowSlowHint(false);
     const iv = setInterval(() => {
       setResendCooldown((c) => {
         if (c <= 1) { clearInterval(iv); return 0; }
@@ -95,6 +109,14 @@ export default function VerifyScreen() {
       });
     }, 1000);
   }
+
+  // Surface the "check spam" hint after a few seconds. Runs once per
+  // screen mount; re-triggers whenever a fresh code is sent via resend.
+  useEffect(() => {
+    if (digits.length > 0) return; // user is typing a code, hide
+    const t = setTimeout(() => setShowSlowHint(true), SLOW_EMAIL_HINT_MS);
+    return () => clearTimeout(t);
+  }, [resendCooldown, digits.length]);
 
   const submitCode = useCallback(
     async (code: string) => {
@@ -380,6 +402,19 @@ export default function VerifyScreen() {
         {/* Error text */}
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
+        {/* Slow-email hint: surfaces after ~18s with no code entered so
+            users know the delay is Resend/Gmail, not Dilly, and where
+            to look. Disappears as soon as they start typing. */}
+        {showSlowHint && !error && digits.length === 0 ? (
+          <View style={styles.hintCard}>
+            <Ionicons name="information-circle" size={14} color={colors.gold} />
+            <Text style={styles.hintText}>
+              Email taking a minute? Check your spam folder. The sender is{' '}
+              <Text style={styles.hintBold}>noreply@trydilly.com</Text>.
+            </Text>
+          </View>
+        ) : null}
+
         {/* Verify button */}
         <TouchableOpacity
           style={[styles.button, allFilled && !loading ? styles.buttonActive : styles.buttonDisabled]}
@@ -531,6 +566,27 @@ const styles = StyleSheet.create({
     color: colors.coral,
     textAlign: 'center',
     marginBottom: spacing.sm,
+  },
+  hintCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 10,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(201,168,76,0.08)',
+    borderWidth: 1,
+    borderColor: colors.goldbdr,
+    marginBottom: spacing.sm,
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.t2,
+    lineHeight: 16,
+  },
+  hintBold: {
+    fontWeight: '700',
+    color: colors.t1,
   },
   button: {
     width: '100%',

@@ -392,11 +392,20 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
             raise HTTPException(status_code=503, detail="AI service not configured.")
 
         client = anthropic.Anthropic(api_key=api_key)
+        # Prompt caching: fit-narrative system prompts are large (~2-3k
+        # tokens) and identical across all users generating a narrative
+        # for the same role type. Caching shaves ~90% off input cost
+        # for the second+ user in a 5-min window.
+        _sys_param = (
+            [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
+            if isinstance(system_prompt, str) and len(system_prompt) >= 4000
+            else system_prompt
+        )
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=800,
             temperature=0.3,
-            system=system_prompt,
+            system=_sys_param,
             messages=[{"role": "user", "content": user_message}],
         )
 

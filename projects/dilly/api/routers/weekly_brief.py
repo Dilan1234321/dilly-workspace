@@ -76,40 +76,61 @@ def _cache_set(key: str, payload: dict) -> None:
 
 
 def _count_new_jobs_this_week(email: str, profile: dict) -> int:
-    """Approximate: count internships with created_at within the last 7
-    days that match the user's cohorts (or career_fields) and preferred
-    cities. Used in the brief's 'X new jobs match you this week' line."""
+    """Count jobs the user would actually see this week.
+
+    Previous implementation used `cohort_requirements::text ILIKE`
+    which matched any job whose JSON blob contained the cohort name
+    anywhere — returning tens of thousands when the real feed shows
+    50. That mismatch was misleading ("you have 4,200 new matches!"
+    then the Jobs tab renders 50 cards).
+
+    The honest count is: active jobs created in the last 7 days that
+    pass the SAME path-specific filter the user's feed applies, with
+    a realistic hard cap. We don't try to replicate full match_scores
+    ranking here — just "is it in the window + path-relevant".
+    """
     try:
         from projects.dilly.api.database import get_db
     except Exception:
         return 0
-    cohorts = profile.get("cohorts") or []
-    extra = profile.get("extra_cohorts") or []
-    all_cohorts = [str(c).lower() for c in (cohorts + extra) if c]
-    cities = [str(c).lower() for c in (profile.get("job_locations") or [])]
+
+    path = str(profile.get("user_path") or "").lower().strip()
     seven_days_ago = _dt.datetime.utcnow() - _dt.timedelta(days=7)
+
     try:
         with get_db() as conn:
             cur = conn.cursor()
-            where = ["i.status = 'active'", "i.created_at >= %s"]
+            where = [
+                "i.status = 'active'",
+                "i.created_at >= %s",
+                "i.description IS NOT NULL",
+                "length(i.description) > 100",
+            ]
             params: list = [seven_days_ago]
-            if all_cohorts:
-                placeholders = " OR ".join(["i.cohort_requirements::text ILIKE %s"] * len(all_cohorts))
-                where.append(f"({placeholders})")
-                params.extend([f"%{c}%" for c in all_cohorts])
-            # Loose city match: any preferred city OR remote.
-            if cities:
-                city_clauses = " OR ".join(
-                    ["COALESCE(i.location_city,'') ILIKE %s"] * len(cities)
-                )
-                where.append(f"(({city_clauses}) OR i.work_mode ILIKE 'remote')")
-                params.extend([f"%{c}%" for c in cities])
+
+            # Path-specific structural filters — same as the feed. We
+            # only apply the strict filter; no heuristic fallback here
+            # (the brief should be conservative, not optimistic).
+            if path == "dropout":
+                where.append("(i.degree_required IN ('not_required', 'unclear') OR i.degree_required IS NULL)")
+            elif path == "international_grad":
+                where.append("(i.h1b_sponsor IN ('sponsors', 'unclear') OR i.h1b_sponsor IS NULL)")
+            elif path in ("formerly_incarcerated", "refugee"):
+                where.append("(i.fair_chance IN ('fair_chance', 'unclear') OR i.fair_chance IS NULL)")
+            elif path == "rural_remote_only":
+                where.append("(LOWER(COALESCE(i.work_mode,'')) = 'remote' OR LOWER(COALESCE(i.location_city,'')) = 'remote')")
+
             cur.execute(
                 f"SELECT COUNT(*) FROM internships i WHERE {' AND '.join(where)}",
                 params,
             )
             row = cur.fetchone()
-            return int(row[0] or 0) if row else 0
+            count = int(row[0] or 0) if row else 0
+
+            # Cap at a believable ceiling matching what the feed actually
+            # surfaces. Keeps the brief from claiming "3,400 new jobs"
+            # while the Jobs tab renders 50.
+            return min(count, 500)
     except Exception as e:
         sys.stderr.write(f"[weekly_brief._count_new_jobs] {type(e).__name__}: {e}\n")
         return 0

@@ -287,6 +287,9 @@ def _fallback_feed(
     sort: str, limit: int, offset: int,
     s_cohort_scores: dict | None = None,
     no_degree: Optional[bool] = None,
+    h1b_sponsor: Optional[bool] = None,
+    fair_chance: Optional[bool] = None,
+    remote_only: Optional[bool] = None,
 ):
     """Serve the feed using on-the-fly scoring (no match_scores rows needed)."""
     where = ["i.status = 'active'", "i.description IS NOT NULL", "length(i.description) > 100"]
@@ -340,6 +343,68 @@ def _fallback_feed(
                     OR i.description ILIKE '%master''s degree required%'
                     OR i.description ILIKE '%master''s required%'
                     OR i.description ILIKE '%phd required%'
+                )
+            )
+        )""")
+
+    # h1b_sponsor filter: jobs where sponsorship is confirmed or at least
+    # possible (unclear). Fallback heuristic for NULL: look for explicit
+    # "sponsor" / "visa" language.
+    if h1b_sponsor:
+        where.append("""(
+            i.h1b_sponsor IN ('sponsors', 'unclear')
+            OR (
+                i.h1b_sponsor IS NULL
+                AND (
+                    i.description ILIKE '%visa sponsorship%'
+                    OR i.description ILIKE '%will sponsor%'
+                    OR i.description ILIKE '%h-1b%'
+                    OR i.description ILIKE '%h1b%'
+                ) AND NOT (
+                    i.description ILIKE '%no sponsorship%'
+                    OR i.description ILIKE '%cannot sponsor%'
+                    OR i.description ILIKE '%US citizen only%'
+                    OR i.description ILIKE '%security clearance required%'
+                )
+            )
+        )""")
+
+    # fair_chance filter: jobs flagged fair-chance or at minimum not
+    # explicitly background-restrictive. Strict: 'unclear' is included
+    # so opt-in users see more options, not fewer.
+    if fair_chance:
+        where.append("""(
+            i.fair_chance IN ('fair_chance', 'unclear')
+            OR (
+                i.fair_chance IS NULL
+                AND NOT (
+                    i.description ILIKE '%clean background%'
+                    OR i.description ILIKE '%no criminal record%'
+                    OR i.description ILIKE '%background check required%'
+                    OR i.description ILIKE '%security clearance%'
+                )
+            )
+        )""")
+
+    # remote_only filter: strict — "remote" work mode only, hybrid excluded.
+    # Also accepts description-level remote signals so jobs with a blank
+    # work_mode column but explicit remote language still show up.
+    if remote_only:
+        where.append("""(
+            LOWER(COALESCE(i.work_mode, '')) = 'remote'
+            OR LOWER(COALESCE(i.location_city, '')) = 'remote'
+            OR (
+                COALESCE(i.work_mode, '') = ''
+                AND (
+                    i.description ILIKE '%fully remote%'
+                    OR i.description ILIKE '%100%% remote%'
+                    OR i.description ILIKE '%work from anywhere%'
+                )
+                AND NOT (
+                    i.description ILIKE '%hybrid%'
+                    OR i.description ILIKE '%in-office%'
+                    OR i.description ILIKE '%on-site%'
+                    OR i.description ILIKE '%on site%'
                 )
             )
         )""")
@@ -488,9 +553,12 @@ async def get_internship_feed(
     q: Optional[str] = Query(None),
     search: Optional[str] = Query(None),  # alias used by jobs page
     sort: str = Query("rank"),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=500),
     offset: int = Query(0, ge=0),
     no_degree: Optional[bool] = Query(None, description="If true, only return jobs that do not require a degree."),
+    h1b_sponsor: Optional[bool] = Query(None, description="If true, only return jobs where H-1B sponsorship is confirmed or possible."),
+    fair_chance: Optional[bool] = Query(None, description="If true, only return jobs that are fair-chance friendly."),
+    remote_only: Optional[bool] = Query(None, description="If true, only return fully-remote roles (not hybrid)."),
 ):
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
@@ -571,6 +639,9 @@ async def get_internship_feed(
             sort, limit, offset,
             s_cohort_scores=s_cohort_scores,
             no_degree=no_degree,
+            h1b_sponsor=h1b_sponsor,
+            fair_chance=fair_chance,
+            remote_only=remote_only,
         )
         conn.close()
         return {**result, "tab": tab,
@@ -648,6 +719,62 @@ async def get_internship_feed(
                     OR i.description ILIKE '%master''s degree required%'
                     OR i.description ILIKE '%master''s required%'
                     OR i.description ILIKE '%phd required%'
+                )
+            )
+        )""")
+
+    # h1b_sponsor (same semantics as no_degree)
+    if h1b_sponsor:
+        where.append("""(
+            i.h1b_sponsor IN ('sponsors', 'unclear')
+            OR (
+                i.h1b_sponsor IS NULL
+                AND (
+                    i.description ILIKE '%visa sponsorship%'
+                    OR i.description ILIKE '%will sponsor%'
+                    OR i.description ILIKE '%h-1b%'
+                    OR i.description ILIKE '%h1b%'
+                ) AND NOT (
+                    i.description ILIKE '%no sponsorship%'
+                    OR i.description ILIKE '%cannot sponsor%'
+                    OR i.description ILIKE '%US citizen only%'
+                    OR i.description ILIKE '%security clearance required%'
+                )
+            )
+        )""")
+
+    # fair_chance (same semantics as no_degree)
+    if fair_chance:
+        where.append("""(
+            i.fair_chance IN ('fair_chance', 'unclear')
+            OR (
+                i.fair_chance IS NULL
+                AND NOT (
+                    i.description ILIKE '%clean background%'
+                    OR i.description ILIKE '%no criminal record%'
+                    OR i.description ILIKE '%background check required%'
+                    OR i.description ILIKE '%security clearance%'
+                )
+            )
+        )""")
+
+    # remote_only (same semantics as the fallback path)
+    if remote_only:
+        where.append("""(
+            LOWER(COALESCE(i.work_mode, '')) = 'remote'
+            OR LOWER(COALESCE(i.location_city, '')) = 'remote'
+            OR (
+                COALESCE(i.work_mode, '') = ''
+                AND (
+                    i.description ILIKE '%fully remote%'
+                    OR i.description ILIKE '%100%% remote%'
+                    OR i.description ILIKE '%work from anywhere%'
+                )
+                AND NOT (
+                    i.description ILIKE '%hybrid%'
+                    OR i.description ILIKE '%in-office%'
+                    OR i.description ILIKE '%on-site%'
+                    OR i.description ILIKE '%on site%'
                 )
             )
         )""")

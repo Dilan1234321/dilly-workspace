@@ -11,6 +11,7 @@ import {
   Animated, Easing, Alert, LayoutAnimation, Dimensions,
   KeyboardAvoidingView, Platform, RefreshControl,
 } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
@@ -510,7 +511,7 @@ export default function AIArenaScreen() {
           <ToolRow
             icon="scan"
             title="Threat Scanner"
-            sub={shield?.tools_unlocked === false ? "Locked — upgrade to scan" : "See which bullets AI can replace"}
+            sub={shield?.tools_unlocked === false ? "Locked. Upgrade to scan" : "See which bullets AI can replace"}
             color={ACCENT}
             onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('scan'); }}
             active={activeFeature === 'scan'}
@@ -577,7 +578,7 @@ export default function AIArenaScreen() {
           <ToolRow
             icon="swap-horizontal"
             title="Replace Me"
-            sub={shield?.tools_unlocked === false ? "Locked — upgrade to test" : "Can AI do what you do?"}
+            sub={shield?.tools_unlocked === false ? "Locked. Upgrade to test" : "Can AI do what you do?"}
             color={AMBER}
             onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('replace'); }}
             active={activeFeature === 'replace'}
@@ -635,7 +636,7 @@ export default function AIArenaScreen() {
           <ToolRow
             icon="rocket"
             title="Career Sim"
-            sub={shield?.tools_unlocked === false ? "Locked — upgrade to simulate" : "See how AI reshapes your career over 5 years"}
+            sub={shield?.tools_unlocked === false ? "Locked. Upgrade to simulate" : "See how AI reshapes your career over 5 years"}
             color={AMBER}
             onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('simulate'); }}
             active={activeFeature === 'simulate'}
