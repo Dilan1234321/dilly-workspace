@@ -34,6 +34,7 @@ import { DillyFace } from '../../components/DillyFace';
 import DillyFooter from '../../components/DillyFooter';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import { useAppMode } from '../../hooks/useAppMode';
 
 const COBALT = '#1652F0';
 const GREEN  = '#34C759';
@@ -313,7 +314,12 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
 // Shows "Dilly is scanning for you" with a live-activity ring. Signals that
 // the system is actively working on the user's behalf — not a static list.
 
-function DillyScanPulse({ totalJobs, matchesFound }: { totalJobs: number; matchesFound: number }) {
+function DillyScanPulse({ totalJobs, matchesFound, title, sub }: {
+  totalJobs: number;
+  matchesFound: number;
+  title?: string;
+  sub?: string;
+}) {
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const ringRotate = useRef(new Animated.Value(0)).current;
 
@@ -344,9 +350,9 @@ function DillyScanPulse({ totalJobs, matchesFound }: { totalJobs: number; matche
         </View>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={scan.title}>Dilly is scanning the market</Text>
+        <Text style={scan.title}>{title || 'Dilly is scanning the market'}</Text>
         <Text style={scan.sub}>
-          {matchesFound} match{matchesFound === 1 ? '' : 'es'} surfaced from {totalJobs.toLocaleString()} live roles
+          {sub || `${matchesFound} match${matchesFound === 1 ? '' : 'es'} surfaced from ${totalJobs.toLocaleString()} live roles`}
         </Text>
       </View>
     </View>
@@ -452,13 +458,16 @@ function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData 
 // ring, Dilly's read in plain language. This is the job card as movie
 // poster. Tapping expands into the full fit narrative flow.
 
-function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark }: {
+function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark, isHolder }: {
   listing: Listing;
   narrative?: FitNarrativeData | null;
   onPress: () => void;
   onApply: () => void;
   isSaved: boolean;
   onBookmark: () => void;
+  // Holders see a benchmark badge + "Save to Market Watch" instead of
+  // "TOP MATCH FOR YOU" and an Apply CTA.
+  isHolder?: boolean;
 }) {
   const scaleIn = useRef(new Animated.Value(0.96)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -486,7 +495,9 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
         <View style={hero.topRow}>
           <View style={hero.topBadge}>
             <View style={[hero.badgeDot, { backgroundColor: VIOLET }]} />
-            <Text style={hero.topBadgeText}>TOP MATCH FOR YOU</Text>
+            <Text style={hero.topBadgeText}>
+              {isHolder ? 'MARKET BENCHMARK' : 'TOP MATCH FOR YOU'}
+            </Text>
           </View>
           <TouchableOpacity onPress={onBookmark} hitSlop={10}>
             <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={20} color="#fff" />
@@ -527,14 +538,27 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
           </Text>
         </View>
 
-        {/* CTA row */}
+        {/* CTA row — mode-aware. Holders see "Save to Watch" + "See
+            what they want" (benchmarking). Seekers see the classic
+            "Apply now" + "See full fit" (applying). */}
         <View style={hero.ctaRow}>
-          <TouchableOpacity onPress={onApply} activeOpacity={0.9} style={[hero.ctaPrimary, { backgroundColor: '#fff' }]}>
-            <Ionicons name="send" size={14} color={INK} />
-            <Text style={[hero.ctaPrimaryText, { color: INK }]}>Apply now</Text>
-          </TouchableOpacity>
+          {isHolder ? (
+            <TouchableOpacity onPress={onBookmark} activeOpacity={0.9} style={[hero.ctaPrimary, { backgroundColor: '#fff' }]}>
+              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={14} color={INK} />
+              <Text style={[hero.ctaPrimaryText, { color: INK }]}>
+                {isSaved ? 'Watching' : 'Save to Watch'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={onApply} activeOpacity={0.9} style={[hero.ctaPrimary, { backgroundColor: '#fff' }]}>
+              <Ionicons name="send" size={14} color={INK} />
+              <Text style={[hero.ctaPrimaryText, { color: INK }]}>Apply now</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={hero.ctaSecondary}>
-            <Text style={hero.ctaSecondaryText}>See full fit</Text>
+            <Text style={hero.ctaSecondaryText}>
+              {isHolder ? 'See what they want' : 'See full fit'}
+            </Text>
             <Ionicons name="chevron-forward" size={14} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -545,7 +569,7 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
 
 // -- Job Card Component -----------------------------------------------------
 
-function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache, onNarrativeLoaded, onBookmark, isSaved, userCities, userPath, index }: {
+function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache, onNarrativeLoaded, onBookmark, isSaved, userCities, userPath, index, isHolder }: {
   listing: Listing;
   expanded: boolean;
   onToggle: () => void;
@@ -557,6 +581,10 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
   userCities: string[];
   userPath: string;
   index: number;
+  // Holder mode hides the Apply button — they're benchmarking, not
+  // applying. A Save to Watch (bookmark) covers the "I'm tracking
+  // this" intent instead.
+  isHolder?: boolean;
 }) {
   const toast = useInlineToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
@@ -686,13 +714,27 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
 
             {/* Action buttons */}
             <View style={s.actionRow}>
-              <AnimatedPressable style={s.applyBtn} onPress={handleApply} scaleDown={0.97}>
-                <Ionicons name="send" size={14} color="#fff" />
-                <Text style={s.applyBtnText}>Apply</Text>
-              </AnimatedPressable>
+              {isHolder ? (
+                // Holders benchmark, they don't apply. "Save to Watch"
+                // replaces the primary CTA and uses the same collections
+                // primitive under the hood.
+                <AnimatedPressable
+                  style={s.applyBtn}
+                  onPress={(e: any) => { e?.stopPropagation?.(); onBookmark?.(listing); }}
+                  scaleDown={0.97}
+                >
+                  <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={14} color="#fff" />
+                  <Text style={s.applyBtnText}>{isSaved ? 'Watching' : 'Save to Watch'}</Text>
+                </AnimatedPressable>
+              ) : (
+                <AnimatedPressable style={s.applyBtn} onPress={handleApply} scaleDown={0.97}>
+                  <Ionicons name="send" size={14} color="#fff" />
+                  <Text style={s.applyBtnText}>Apply</Text>
+                </AnimatedPressable>
+              )}
               <AnimatedPressable style={s.dillyBtn} onPress={handleAskDilly} scaleDown={0.97}>
                 <Ionicons name="sparkles" size={14} color={COBALT} />
-                <Text style={s.dillyBtnText}>Ask Dilly</Text>
+                <Text style={s.dillyBtnText}>{isHolder ? 'Ask Dilly' : 'Ask Dilly'}</Text>
               </AnimatedPressable>
               <AnimatedPressable
                 style={s.tailorBtn}
@@ -724,6 +766,11 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
 
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
+  // Career mode reshapes this whole tab: jobholders see a market
+  // benchmark (no apply CTAs, "The Market" framing); seekers see the
+  // classic apply-focused feed.
+  const appMode = useAppMode();
+  const isHolder = appMode === 'holder';
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -987,14 +1034,19 @@ export default function JobsScreen() {
 
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
-      {/* Header — bold, two-tone, with fit-usage ticker on the right */}
+      {/* Header — mode-aware framing. Holders see a market benchmark
+          ("The Market"), seekers see the classic "your next move" feed. */}
       <View style={s.header}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
-            <Text style={s.headerEyebrow}>DILLY JOBS</Text>
-            <Text style={s.headerTitle}>Your next move.</Text>
+            <Text style={s.headerEyebrow}>{isHolder ? 'THE MARKET · YOUR FIELD' : 'DILLY JOBS'}</Text>
+            <Text style={s.headerTitle}>
+              {isHolder ? "What your role is worth right now." : 'Your next move.'}
+            </Text>
             <Text style={s.headerSub}>
-              Ranked by fit. Powered by everything Dilly knows about you.
+              {isHolder
+                ? 'Benchmarks, new titles, roles hiring this week. Not a to-do list.'
+                : 'Ranked by fit. Powered by everything Dilly knows about you.'}
             </Text>
           </View>
           {narrativeUsage && !narrativeUsage.unlimited && (
@@ -1026,7 +1078,14 @@ export default function JobsScreen() {
           working the market for them in real time. Extra bottom padding
           gives breathing room between the pulse and the search bar. */}
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: 6, paddingBottom: 14 }}>
-        <DillyScanPulse totalJobs={Math.max(listings.length * 23, 1200)} matchesFound={filtered.length} />
+        <DillyScanPulse
+          totalJobs={Math.max(listings.length * 23, 1200)}
+          matchesFound={filtered.length}
+          title={isHolder ? 'Dilly is tracking your market' : undefined}
+          sub={isHolder
+            ? `${filtered.length} role${filtered.length === 1 ? '' : 's'} like yours hiring from ${Math.max(listings.length * 23, 1200).toLocaleString()} live postings`
+            : undefined}
+        />
       </View>
 
       {/* Powerful search: accepts natural-language queries like
@@ -1225,6 +1284,7 @@ export default function JobsScreen() {
               listing={topMatch}
               narrative={narrativeCache[topMatch.id] || null}
               isSaved={savedJobIds.has(topMatch.id)}
+              isHolder={isHolder}
               onBookmark={() => setShowCollectionPicker(topMatch)}
               onApply={async () => {
                 try { await dilly.post('/v2/internships/save', { internship_id: topMatch.id }); } catch {}
@@ -1255,7 +1315,9 @@ export default function JobsScreen() {
         {restMatches.length > 0 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>UP NEXT FOR YOU</Text>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>
+              {isHolder ? 'ALSO HIRING IN YOUR FIELD' : 'UP NEXT FOR YOU'}
+            </Text>
             <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
           </View>
         )}
@@ -1267,6 +1329,7 @@ export default function JobsScreen() {
               index={i}
               userCities={userCities}
               userPath={userPath}
+              isHolder={isHolder}
               expanded={expandedId === listing.id}
               narrativeCache={narrativeCache[listing.id] || null}
               onNarrativeLoaded={handleNarrativeLoaded}
