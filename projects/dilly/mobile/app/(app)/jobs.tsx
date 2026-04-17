@@ -69,6 +69,9 @@ interface Listing {
   rank_score?: number;
   quick_glance?: string[];
   company_logo?: string | null;
+  // Set by the server from the companies.website column. Much more
+  // reliable than deriving a logo URL from the company name.
+  company_website?: string | null;
 }
 
 interface FitNarrativeData {
@@ -97,20 +100,37 @@ function daysAgo(dateStr: string): string {
 }
 
 /**
- * Build a best-effort logo URL from a company name. Uses Clearbit's public
- * logo API, which resolves company names → domain → logo without auth.
- * Falls back to the initial-letter placeholder if the image fails to load.
+ * Build a best-effort logo URL. Priority order:
+ *   1. Server-provided logo_url (most reliable — scraper captured it)
+ *   2. Server-provided website → extract domain → hit Clearbit
+ *   3. Guess from company name → domain → Clearbit (messiest fallback)
  *
- * The scraper doesn't currently populate companies.logo_url on the server,
- * so 99% of listings arrive with null logos. This client-side fallback
- * means we get real logos for any company Clearbit knows without a single
- * backend change.
+ * The <img> falls back to an initial tile if the URL 404s, so a broken
+ * guess just degrades to the placeholder — no crash, no broken image.
  */
-function companyLogoUrl(companyName: string | undefined, fallbackUrl: string | null | undefined): string | null {
-  if (fallbackUrl) return fallbackUrl;
+function companyLogoUrl(
+  companyName: string | undefined,
+  serverLogoUrl: string | null | undefined,
+  companyWebsite: string | null | undefined,
+): string | null {
+  // 1. Real logo URL from the server.
+  if (serverLogoUrl) return serverLogoUrl;
+
+  // 2. Real website → strip protocol + www + path → Clearbit.
+  if (companyWebsite) {
+    try {
+      const cleaned = companyWebsite
+        .trim()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .split('/')[0]
+        .split('?')[0];
+      if (cleaned) return `https://logo.clearbit.com/${cleaned}`;
+    } catch {}
+  }
+
+  // 3. Last-ditch guess from the company name.
   if (!companyName) return null;
-  // Clearbit accepts a domain. Best guess: lowercase, strip spaces + punctuation,
-  // add .com. Works for the 80%+ of companies whose name maps 1:1 to their domain.
   const slug = companyName
     .toLowerCase()
     .replace(/\binc\.?|\bllc\.?|\bco\.?|\bcorp\.?|\bltd\.?/g, '')
@@ -121,10 +141,12 @@ function companyLogoUrl(companyName: string | undefined, fallbackUrl: string | n
 }
 
 /** Company logo with graceful fallback. Tries the server-provided URL
- *  first, then Clearbit, then the initial-letter tile. */
-function CompanyLogo({ companyName, logoUrl, size, borderRadius, initialColor, initialBg, initialBorder }: {
+ *  first, then derives from the company website (server-populated), then
+ *  from the company name, then the initial-letter tile. */
+function CompanyLogo({ companyName, logoUrl, companyWebsite, size, borderRadius, initialColor, initialBg, initialBorder }: {
   companyName: string | undefined;
   logoUrl: string | null | undefined;
+  companyWebsite?: string | null | undefined;
   size: number;
   borderRadius?: number;
   initialColor?: string;
@@ -132,7 +154,7 @@ function CompanyLogo({ companyName, logoUrl, size, borderRadius, initialColor, i
   initialBorder?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  const url = companyLogoUrl(companyName, logoUrl);
+  const url = companyLogoUrl(companyName, logoUrl, companyWebsite);
   const radius = borderRadius ?? Math.round(size / 5);
   const initial = (companyName?.[0] || '?').toUpperCase();
   if (url && !failed) {
@@ -509,6 +531,7 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
           <CompanyLogo
             companyName={listing.company}
             logoUrl={listing.company_logo}
+            companyWebsite={listing.company_website}
             size={48}
             borderRadius={12}
             initialColor="#fff"
@@ -639,6 +662,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
           <CompanyLogo
             companyName={listing.company}
             logoUrl={listing.company_logo}
+            companyWebsite={listing.company_website}
             size={44}
             borderRadius={10}
           />

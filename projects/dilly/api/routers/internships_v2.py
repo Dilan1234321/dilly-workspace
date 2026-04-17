@@ -37,6 +37,35 @@ from projects.dilly.api import deps
 router = APIRouter(tags=["internships"])
 
 
+# Max listings from a single company in one feed response.
+# Without this cap, Stripe (~300 open roles) and Figma (~100) dominate
+# the top of every user's feed and crowd out every other employer.
+# We sort by rank_score first, then walk the list keeping only the
+# first N per company — preserves relative ranking while guaranteeing
+# variety.
+MAX_PER_COMPANY_PER_PAGE = 3
+
+
+def _cap_per_company(listings: list, max_each: int = MAX_PER_COMPANY_PER_PAGE) -> list:
+    """Return a new list with at most `max_each` entries per company
+    name. Input order is preserved — so upstream rank remains intact
+    for the entries that survive the cap.
+    """
+    seen: dict[str, int] = {}
+    out: list = []
+    for row in listings:
+        company = str(row.get("company") or row.get("company_name") or "").strip().lower()
+        if not company:
+            out.append(row)
+            continue
+        count = seen.get(company, 0)
+        if count >= max_each:
+            continue
+        seen[company] = count + 1
+        out.append(row)
+    return out
+
+
 def _get_db():
     pw = os.environ.get("DILLY_DB_PASSWORD", "")
     if not pw:
@@ -498,6 +527,10 @@ def _fallback_feed(
     else:
         listings.sort(key=lambda x: -x["rank_score"])
 
+    # Diversity cap before paging so a single big employer can't flood
+    # the first page. Total count reflects post-cap volume so the
+    # "has_more" and count UI stays honest.
+    listings = _cap_per_company(listings)
     total = len(listings)
     page = listings[offset: offset + limit]
     return {"listings": page, "total": total, "has_more": (offset + limit) < total}
@@ -859,6 +892,10 @@ async def get_internship_feed(
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
             "quick_glance": json.loads(r["quick_glance"]) if isinstance(r.get("quick_glance"), str) else (r.get("quick_glance") or []),
         })
+
+    # Diversity cap: no more than MAX_PER_COMPANY_PER_PAGE roles from
+    # a single employer in one response. Preserves rank order.
+    listings = _cap_per_company(listings)
 
     conn.close()
     return {
