@@ -29,6 +29,82 @@ from projects.dilly.api import deps, errors
 router = APIRouter(tags=["ai-arena"])
 
 
+# ── AI Threat Report (zero LLM cost) ────────────────────────────────────
+# Role-based threat content that makes AI Arena useful to everyone — not
+# just students with a resume. Content lives in dilly_core.ai_threat_report
+# and is hand-curated quarterly. This endpoint is a free, cache-friendly
+# lookup that works for any role the user identifies with.
+
+@router.get("/ai-arena/threat-report")
+async def get_threat_report(request: Request, role: str = ""):
+    """Return the AI threat profile for a role. Free for all tiers.
+
+    Accepts free-form role strings ("software engineer", "I'm an accountant",
+    "RN") and resolves to a canonical entry. If no match, returns a list of
+    supported roles so the caller can show a picker.
+
+    Auth optional — this endpoint works for logged-out users too so the
+    landing page and marketing site can embed threat reports publicly.
+    """
+    from projects.dilly.api.ai_threat_report_helpers import lookup, available_roles
+
+    report = lookup(role) if role else None
+    if report:
+        return {"ok": True, "role": role, "report": report}
+
+    # No match or no role provided — return the picker list so the caller
+    # can show the user options.
+    return {
+        "ok": True,
+        "role": role,
+        "report": None,
+        "available_roles": available_roles(),
+    }
+
+
+@router.get("/ai-arena/threat-report/infer")
+async def infer_threat_report(request: Request):
+    """Infer the user's role from their Dilly Profile and return the
+    corresponding threat report. Falls back to student_general if the
+    profile doesn't name a current role yet.
+
+    Auth required — this reads profile data. Cheap: no LLM, just a
+    profile lookup + alias match.
+    """
+    from projects.dilly.api.ai_threat_report_helpers import lookup, ROLE_THREAT_REPORT
+
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    from projects.dilly.api.profile_store import get_profile
+    profile = get_profile(email) or {}
+
+    # Priority: explicit current_role > user_type heuristic > user_path > major
+    candidates = [
+        profile.get("current_role"),
+        profile.get("current_job_title"),
+        profile.get("title"),
+        profile.get("field"),
+        profile.get("major"),
+    ]
+    for c in candidates:
+        if not c:
+            continue
+        report = lookup(str(c))
+        if report:
+            return {"ok": True, "inferred_from": c, "report": report}
+
+    # Students without a named field → student_general
+    path = str(profile.get("user_path") or "").lower()
+    if path == "student" or path == "first_gen_college" or path == "international_grad":
+        return {"ok": True, "inferred_from": "student path", "report": {**ROLE_THREAT_REPORT["student_general"], "role_key": "student_general"}}
+
+    # No match — the caller will show a role picker.
+    return {"ok": True, "inferred_from": None, "report": None}
+
+
 def _require_paid_for_arena_tool(email: str, tool_name: str) -> None:
     """Block free-tier users from AI Arena tools (scan / replace-test / simulate).
     Returns nothing on success; raises 402 on free tier with a friendly message."""
