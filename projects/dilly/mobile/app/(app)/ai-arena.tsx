@@ -200,6 +200,9 @@ export default function AIArenaScreen() {
   const [threatReport, setThreatReport] = useState<any>(null);
   const [threatRoleInput, setThreatRoleInput] = useState<string>('');
   const [threatSaving, setThreatSaving] = useState(false);
+  // Weekly signal — hand-curated content block describing this
+  // week's biggest move in the user's field. Zero-LLM.
+  const [weeklySignal, setWeeklySignal] = useState<any>(null);
 
   const fetchShield = useCallback(async () => {
     try {
@@ -207,6 +210,18 @@ export default function AIArenaScreen() {
       setTimeout(() => ctrl.abort(), 30_000);
       const res = await dilly.fetch('/ai-arena/shield', { signal: ctrl.signal });
       if (res.ok) setShield(await res.json());
+    } catch {}
+  }, []);
+
+  const fetchWeeklySignal = useCallback(async () => {
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 8_000);
+      const res = await dilly.fetch('/ai-arena/weekly-signal', { signal: ctrl.signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.signal) setWeeklySignal(data.signal);
+      }
     } catch {}
   }, []);
 
@@ -249,7 +264,7 @@ export default function AIArenaScreen() {
     (async () => {
       // Fetch in parallel: threat report is free, so it shouldn't block
       // the shield score even if the shield LLM path takes a few seconds.
-      await Promise.all([fetchShield(), fetchThreatReport()]);
+      await Promise.all([fetchShield(), fetchThreatReport(), fetchWeeklySignal()]);
       setLoading(false);
     })();
   }, []);
@@ -257,9 +272,9 @@ export default function AIArenaScreen() {
   const handleRefresh = useCallback(async () => {
     mediumHaptic();
     setRefreshing(true);
-    await Promise.all([fetchShield(), fetchThreatReport()]);
+    await Promise.all([fetchShield(), fetchThreatReport(), fetchWeeklySignal()]);
     setRefreshing(false);
-  }, [fetchShield, fetchThreatReport]);
+  }, [fetchShield, fetchThreatReport, fetchWeeklySignal]);
 
   function toggleFeature(f: ActiveFeature) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -481,6 +496,44 @@ export default function AIArenaScreen() {
                   : <Text style={threatCard.promptBtnText}>See my AI threat report</Text>
                 }
               </AnimatedPressable>
+            </View>
+          </FadeInView>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            THIS WEEK IN YOUR FIELD — hand-curated signal. Zero LLM.
+            Gives people a reason to open the Arena every week, even
+            when they're stable and their threat report hasn't changed.
+            ════════════════════════════════════════════════════════ */}
+
+        {weeklySignal && (
+          <FadeInView delay={30}>
+            <View style={weekly.card}>
+              <View style={weekly.topRow}>
+                <View style={weekly.eyebrowPill}>
+                  <View style={weekly.livePulse} />
+                  <Text style={weekly.eyebrowText}>THIS WEEK IN YOUR FIELD</Text>
+                </View>
+                {weeklySignal.iso_week ? (
+                  <Text style={weekly.weekLabel}>{weeklySignal.iso_week}</Text>
+                ) : null}
+              </View>
+              <Text style={weekly.headline}>{weeklySignal.headline}</Text>
+              {weeklySignal.source ? (
+                <Text style={weekly.source}>{weeklySignal.source}</Text>
+              ) : null}
+              {weeklySignal.data_point ? (
+                <View style={weekly.dataBox}>
+                  <Ionicons name="pulse" size={12} color="#22D3EE" />
+                  <Text style={weekly.dataText}>{weeklySignal.data_point}</Text>
+                </View>
+              ) : null}
+              {weeklySignal.move ? (
+                <View style={weekly.moveBox}>
+                  <Text style={weekly.moveLabel}>YOUR MOVE</Text>
+                  <Text style={weekly.moveText}>{weeklySignal.move}</Text>
+                </View>
+              ) : null}
             </View>
           </FadeInView>
         )}
@@ -1423,4 +1476,43 @@ const threatCard = StyleSheet.create({
     backgroundColor: '#22D3EE', paddingVertical: 14, borderRadius: 12, marginTop: 4,
   },
   promptBtnText: { fontSize: 14, fontWeight: '800', color: '#0B1426' },
+});
+
+// ── This Week in Your Field styles ──────────────────────────────────
+// Dark news-brief card that reads like a real-time Bloomberg ticker
+// for the user's career. Lives right above the Act I shield ring.
+const weekly = StyleSheet.create({
+  card: {
+    backgroundColor: '#0B1426',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    padding: 16,
+    marginBottom: 16,
+    gap: 10,
+  },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eyebrowPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(34,211,238,0.12)',
+    borderWidth: 1, borderColor: 'rgba(34,211,238,0.35)',
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
+  },
+  livePulse: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#22D3EE' },
+  eyebrowText: { fontSize: 9, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.2 },
+  weekLabel: { fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.6 },
+  headline: { fontSize: 15, fontWeight: '800', color: '#F8FAFC', lineHeight: 21, letterSpacing: -0.2 },
+  source: { fontSize: 11, color: '#94A3B8', fontStyle: 'italic' },
+  dataBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#111827', borderRadius: 8, padding: 10,
+    borderLeftWidth: 2, borderLeftColor: '#22D3EE',
+  },
+  dataText: { flex: 1, fontSize: 12, color: '#E2E8F0', fontWeight: '600' },
+  moveBox: {
+    backgroundColor: '#1F2937', borderRadius: 8, padding: 10,
+    borderTopWidth: 1, borderTopColor: '#22D3EE',
+  },
+  moveLabel: { fontSize: 9, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.2, marginBottom: 4 },
+  moveText: { fontSize: 13, color: '#F8FAFC', fontWeight: '600', lineHeight: 18 },
 });

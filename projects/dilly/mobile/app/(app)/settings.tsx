@@ -300,7 +300,12 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 6, padding: 12 }}>
-              {ALL_MODES.map((m) => {
+              {/* Student mode is hidden from the toggle because it's a
+                  different pricing tier. A user who's on the student
+                  plan got there via the situation screen and the
+                  billing flow; they shouldn't be able to slide into
+                  it (or out of it) via a switch in settings. */}
+              {ALL_MODES.filter((m) => m !== 'student').map((m) => {
                 const isActive = appMode === m;
                 return (
                   <AnimatedPressable

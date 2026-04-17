@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DillyAIOverlay from '../../components/DillyAIOverlay';
 import { useDillyOverlayState } from '../../hooks/useDillyOverlay';
 import { SubscriptionProvider, useSubscription } from '../../hooks/useSubscription';
+import { useAppMode } from '../../hooks/useAppMode';
 import DillyGate from '../../components/DillyGate';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 
@@ -50,12 +51,17 @@ function DillyTabIcon({ focused }: { focused: boolean }) {
 export default function AppLayout() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const mode = useAppMode();
+  const isHolder = mode === 'holder';
 
   return (
     <SubscriptionProvider>
     <ErrorBoundary surface="this page" resetKey={pathname}>
     <>
     <Tabs
+      // Per-mode landing tab: holders land on Arena (their hero),
+      // seekers/students land on Career Center (the journey).
+      initialRouteName={isHolder ? 'ai-arena' : 'index'}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -76,22 +82,31 @@ export default function AppLayout() {
         animation: 'shift',
       }}
     >
-      {/* -- Tab 1: Career Center (Home) -------------------- */}
+      {/* -- Tab 1: Career Center / Home -- renamed for holders.
+           Holder mode treats this tab as the Weekly Brief surface;
+           seekers/students see it as the full Career Center. */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Career Center',
+          title: isHolder ? 'Weekly' : 'Career Center',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={20} color={color} />
+            <Ionicons
+              name={isHolder
+                ? (focused ? 'newspaper' : 'newspaper-outline')
+                : (focused ? 'home' : 'home-outline')}
+              size={20}
+              color={color}
+            />
           ),
         }}
       />
 
-      {/* -- Tab 2: AI Arena -------------------------------- */}
+      {/* -- Tab 2: AI Arena (renamed to 'Arena' for holders since it's
+           their home; 'AI Arena' for seekers/students as a feature). */}
       <Tabs.Screen
         name="ai-arena"
         options={{
-          title: 'AI Arena',
+          title: isHolder ? 'Arena' : 'AI Arena',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'shield' : 'shield-outline'}
@@ -117,29 +132,35 @@ export default function AppLayout() {
         }}
       />
 
-      {/* -- Tab 3: My Dilly (Profile/Identity) ------------- */}
+      {/* -- Tab 3: Profile -- "My Career" for holders (trajectory
+           tracking), "My Dilly" for seekers/students (identity). */}
       <Tabs.Screen
         name="my-dilly-profile"
         options={{
-          title: 'My Dilly',
+          title: isHolder ? 'My Career' : 'My Dilly',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
-              name={focused ? 'person-circle' : 'person-circle-outline'}
-              size={22}
+              name={isHolder
+                ? (focused ? 'analytics' : 'analytics-outline')
+                : (focused ? 'person-circle' : 'person-circle-outline')}
+              size={isHolder ? 20 : 22}
               color={color}
             />
           ),
         }}
       />
 
-      {/* -- Tab 4: Jobs ------------------------------------ */}
+      {/* -- Tab 4: Jobs / The Market -- reframed for holders. Same
+           feed, different label + mental model (benchmark vs. apply). */}
       <Tabs.Screen
         name="jobs"
         options={{
-          title: 'Jobs',
+          title: isHolder ? 'The Market' : 'Jobs',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
-              name={focused ? 'briefcase' : 'briefcase-outline'}
+              name={isHolder
+                ? (focused ? 'trending-up' : 'trending-up-outline')
+                : (focused ? 'briefcase' : 'briefcase-outline')}
               size={20}
               color={color}
             />

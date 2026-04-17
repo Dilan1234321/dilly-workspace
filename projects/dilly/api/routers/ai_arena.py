@@ -62,6 +62,52 @@ async def get_threat_report(request: Request, role: str = ""):
     }
 
 
+@router.get("/ai-arena/weekly-signal")
+async def get_weekly_signal(request: Request, role: str = ""):
+    """Return this week's hand-curated market signal for a role.
+
+    Feeds the 'This Week in Your Field' card on the Arena. Zero-LLM
+    lookup into dilly_core.weekly_signals. Free for every tier;
+    auth optional so the card can render even on a logged-out demo.
+
+    If no role is given, infer from profile (when authed). Falls back
+    to the 'all_roles' generic signal.
+    """
+    from dilly_core.weekly_signals import signal_for_role
+    from projects.dilly.api.ai_threat_report_helpers import lookup as lookup_role
+
+    role_key: str | None = None
+    if role:
+        report = lookup_role(role)
+        if report:
+            role_key = report["role_key"]
+
+    # If caller is authed and didn't send a role, infer from profile.
+    if not role_key:
+        try:
+            user = deps.require_auth(request)
+            email = (user.get("email") or "").strip().lower()
+            if email:
+                from projects.dilly.api.profile_store import get_profile
+                profile = get_profile(email) or {}
+                for candidate in (
+                    profile.get("current_role"),
+                    profile.get("current_job_title"),
+                    profile.get("title"),
+                    profile.get("field"),
+                    profile.get("major"),
+                ):
+                    if candidate:
+                        r = lookup_role(str(candidate))
+                        if r:
+                            role_key = r["role_key"]
+                            break
+        except Exception:
+            pass  # anonymous is fine; fall through to all_roles
+
+    return {"ok": True, "role_key": role_key, "signal": signal_for_role(role_key)}
+
+
 @router.get("/ai-arena/threat-report/infer")
 async def infer_threat_report(request: Request):
     """Infer the user's role from their Dilly Profile and return the

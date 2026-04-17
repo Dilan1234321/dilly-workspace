@@ -129,6 +129,7 @@ const OPTIONS: Situation[] = [
     sub: 'F-1 / OPT, targeting US employment.',
     icon: 'airplane',
     color: '#0ea5e9',
+    badge: 'Dilly Visa. $9.99/mo',
     perks: [
       'Filter for employers with confirmed H-1B sponsorship history',
       'Resume tuned to US conventions (no photo, reverse-chron, US dates)',
