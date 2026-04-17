@@ -142,11 +142,14 @@ function HolderHome() {
       ]);
 
       if (profileRes) {
-        setName((profileRes.name || '').trim());
+        const str = (v: any) => (v == null ? '' : String(v)).trim();
+        setName(str(profileRes.name));
         setCurrentRole(
-          (profileRes.current_role || profileRes.current_job_title || profileRes.title || '').trim()
+          str(profileRes.current_role) ||
+          str(profileRes.current_job_title) ||
+          str(profileRes.title)
         );
-        setYearsExperience((profileRes.years_experience || '').trim());
+        setYearsExperience(str(profileRes.years_experience));
       }
       if (threatRes?.report) setThreat(threatRes.report);
       if (weeklyRes?.signal) setWeekly(weeklyRes.signal);
@@ -476,10 +479,7 @@ const h = StyleSheet.create({
 });
 
 
-export default function HomeScreen() {
-  const appMode = useAppMode();
-  if (appMode === 'holder') return <HolderHome />;
-
+function SeekerHome() {
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<any>({});
   const [loading, setLoading] = useState(true);
@@ -1020,6 +1020,15 @@ export default function HomeScreen() {
       </ScrollView>
     </View>
   );
+}
+
+// Dispatcher: picks the right Home based on app mode. Kept minimal so
+// hook order stays stable for each variant — SeekerHome's hooks never
+// live next to HolderHome's hooks at the call site.
+export default function HomeScreen() {
+  const appMode = useAppMode();
+  if (appMode === 'holder') return <HolderHome />;
+  return <SeekerHome />;
 }
 
 // -- Styles -------------------------------------------------------------------

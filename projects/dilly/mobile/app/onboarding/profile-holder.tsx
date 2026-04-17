@@ -200,10 +200,13 @@ export default function ProfileHolderScreen() {
         ['dilly_onboarding_target', 'growth'],
       ]);
 
-      // Skip the resume upload + scanning animation entirely. A holder
-      // doesn't need that loop to get value; the threat report is
-      // ready the moment they land in the app.
-      router.replace('/onboarding/results');
+      // Offer the resume upload as optional — it only helps Dilly's
+      // AI learn about them faster. The upload screen has a "Skip for
+      // now" CTA so holders can still get to the app in seconds.
+      router.replace({
+        pathname: '/onboarding/upload',
+        params: { name: name.trim().split(/\s+/)[0], optional: '1' },
+      });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Something went wrong.';
       setErr(msg);
@@ -246,10 +249,11 @@ export default function ProfileHolderScreen() {
           {step === 0 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>FIRST, YOUR FACE</Text>
-              <Text style={s.title}>Add a profile photo.</Text>
+              <Text style={s.title}>Add a professional photo.</Text>
               <Text style={s.sub}>
-                Shows up on your Dilly card and profile page. Tap to pick
-                one from your library.
+                Use something you'd put on LinkedIn — clear headshot,
+                good lighting, looking at the camera. Shows up on your
+                Dilly card and profile page.
               </Text>
               <TouchableOpacity
                 onPress={pickPhoto}
