@@ -181,6 +181,15 @@ function HolderHome() {
   const name             = data?.name ?? '';
   const currentRole      = data?.currentRole ?? '';
   const yearsExperience  = data?.yearsExperience ?? '';
+  // Format the YOE string for display. If the stored value is just
+  // digits ("5"), append "yrs experience" so it doesn't read as a
+  // dangling number next to the role. If it already contains letters
+  // (e.g. "5+ yrs", "5 years") trust the user's text.
+  const yoeDisplay = yearsExperience
+    ? (/^\d+(\.\d+)?\+?$/.test(yearsExperience.trim())
+        ? `${yearsExperience.trim()} yrs`
+        : yearsExperience)
+    : '';
   const threat           = data?.threat ?? null;
   const weekly           = data?.weekly ?? null;
   const marketCount      = data?.marketCount ?? null;
@@ -227,7 +236,7 @@ function HolderHome() {
             <Text style={h.eyebrow}>CAREER WATCH</Text>
             <Text style={h.greeting}>Welcome back, {firstName}.</Text>
             {currentRole ? (
-              <Text style={h.roleLine}>{currentRole}{yearsExperience ? ` · ${yearsExperience}` : ''}</Text>
+              <Text style={h.roleLine}>{currentRole}{yoeDisplay ? ` · ${yoeDisplay}` : ''}</Text>
             ) : null}
           </View>
           <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} scaleDown={0.9} hitSlop={10}>
@@ -331,7 +340,7 @@ function HolderHome() {
                   <Text style={h.trajRole}>Your career, tracked</Text>
                 )}
                 <Text style={h.trajMeta}>
-                  {yearsExperience ? `${yearsExperience} · ` : ''}
+                  {yoeDisplay ? `${yoeDisplay} · ` : ''}
                   Dilly knows {factCount} {factCount === 1 ? 'thing' : 'things'} about you
                 </Text>
               </View>

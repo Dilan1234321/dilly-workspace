@@ -319,6 +319,14 @@ def _build_rich_context(email: str) -> dict:
         "most_recent_role": profile.get("most_recent_role") or "",
         "most_recent_industry": profile.get("most_recent_industry") or "",
         "self_taught_skills": profile.get("self_taught_skills") or [],
+        # Holder-specific fields. Without these passed through, the
+        # holder target_block and mode_block could not name the user's
+        # actual role — Dilly would have a holder tone but no idea
+        # what job the person has, so every answer sounded generic.
+        "current_role":         profile.get("current_role") or "",
+        "current_company":      profile.get("current_company") or "",
+        "current_job_title":    profile.get("current_job_title") or "",
+        "title":                profile.get("title") or "",
     }
 
 

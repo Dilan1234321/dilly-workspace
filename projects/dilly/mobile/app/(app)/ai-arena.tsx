@@ -106,6 +106,34 @@ function SignalCard({ signal, accentColor }: { signal: string; accentColor: stri
   );
 }
 
+// ── HolderImpactCard ────────────────────────────────────────────────────
+// Replacement for SignalCard on the holder-mode Arena. The seeker card
+// is a quiet left-rule + text line. Holders asked for a mind-blown
+// version: dark panel, accent-tinted icon disc, uppercase label tag,
+// larger body. Same one-line signal text; the wrapper carries the
+// visual weight.
+function HolderImpactCard({
+  icon, accent, tint, label, text,
+}: {
+  icon: string;
+  accent: string;     // stroke / text colour for the label + icon
+  tint: string;       // dark background tint for the card body
+  label: string;      // eg 'AT RISK' or 'YOUR MOAT'
+  text: string;       // the one-line signal
+}) {
+  return (
+    <View style={[h.impactCard, { borderColor: accent + '40', backgroundColor: tint }]}>
+      <View style={[h.impactIconWrap, { backgroundColor: accent + '22', borderColor: accent + '55' }]}>
+        <Ionicons name={icon as any} size={20} color={accent} />
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={[h.impactLabel, { color: accent }]}>{label}</Text>
+        <Text style={h.impactText}>{text}</Text>
+      </View>
+    </View>
+  );
+}
+
 // ── Tool Row ─────────────────────────────────────────────────────────────────
 
 function ToolRow({ icon, title, sub, color, onPress, active }: {
@@ -563,36 +591,57 @@ export default function AIArenaScreen() {
           <ActDivider number="I" title="THE THREAT" />
         </FadeInView>
 
-        {/* Shield Score Ring -- centered, big */}
-        <FadeInView delay={60}>
-          <View style={a.ringSection}>
-            <ShieldRing score={shieldScore} size={120} />
-            <Text style={a.ringScore}>{Math.round(shieldScore)}</Text>
-            <Text style={a.ringLabel}>{shieldLabel || 'AI SHIELD SCORE'}</Text>
-          </View>
-        </FadeInView>
+        {/* Shield Score Ring — seekers/students only. Holders
+            explicitly don't want a score calculated. For them, the
+            Field Report threat_pct above carries the quantitative
+            load and the vulnerable/moat cards below carry the
+            qualitative weight. */}
+        {!isHolder && (
+          <FadeInView delay={60}>
+            <View style={a.ringSection}>
+              <ShieldRing score={shieldScore} size={120} />
+              <Text style={a.ringScore}>{Math.round(shieldScore)}</Text>
+              <Text style={a.ringLabel}>{shieldLabel || 'AI SHIELD SCORE'}</Text>
+            </View>
+          </FadeInView>
+        )}
 
-        {/* Disruption stat */}
-        <FadeInView delay={100}>
-          <Text style={a.disruptionStatement}>
-            In {cohort}, AI is disrupting {disruptionPct}% of entry-level roles.
-          </Text>
-        </FadeInView>
+        {/* Disruption stat — seeker framing ("entry-level roles")
+            doesn't apply to holders. Skip for them. */}
+        {!isHolder && (
+          <FadeInView delay={100}>
+            <Text style={a.disruptionStatement}>
+              In {cohort}, AI is disrupting {disruptionPct}% of entry-level roles.
+            </Text>
+          </FadeInView>
+        )}
 
         {/* Vulnerable signals */}
         <FadeInView delay={140}>
-          <Text style={a.actSectionHeader}>YOUR VULNERABLE SPOTS</Text>
+          <Text style={a.actSectionHeader}>
+            {isHolder ? 'WHAT AI IS EATING IN YOUR FIELD' : 'YOUR VULNERABLE SPOTS'}
+          </Text>
         </FadeInView>
 
         {vulnerableSignals.length > 0 ? (
-          vulnerableSignals.map((sig: any, i: number) => (
-            <FadeInView key={`v-${i}`} delay={160 + i * 30}>
-              <SignalCard
-                signal={typeof sig === 'string' ? sig : sig.signal || sig.text || ''}
-                accentColor={AMBER}
-              />
-            </FadeInView>
-          ))
+          vulnerableSignals.map((sig: any, i: number) => {
+            const text = typeof sig === 'string' ? sig : sig.signal || sig.text || '';
+            return (
+              <FadeInView key={`v-${i}`} delay={160 + i * 30}>
+                {isHolder ? (
+                  <HolderImpactCard
+                    icon="flame"
+                    accent="#EA580C"
+                    tint="#3A1B10"
+                    label="AT RISK"
+                    text={text}
+                  />
+                ) : (
+                  <SignalCard signal={text} accentColor={AMBER} />
+                )}
+              </FadeInView>
+            );
+          })
         ) : (
           <FadeInView delay={160}>
             <View style={a.emptyCard}>
@@ -614,18 +663,30 @@ export default function AIArenaScreen() {
         </FadeInView>
 
         <FadeInView delay={220}>
-          <Text style={a.actSectionHeader}>WHAT AI CAN'T TOUCH</Text>
+          <Text style={a.actSectionHeader}>
+            {isHolder ? "YOUR MOAT — WHAT AI CAN'T TOUCH" : "WHAT AI CAN'T TOUCH"}
+          </Text>
         </FadeInView>
 
         {resistantSignals.length > 0 ? (
-          resistantSignals.map((sig: any, i: number) => (
-            <FadeInView key={`r-${i}`} delay={240 + i * 30}>
-              <SignalCard
-                signal={typeof sig === 'string' ? sig : sig.signal || sig.text || ''}
-                accentColor={GREEN}
-              />
-            </FadeInView>
-          ))
+          resistantSignals.map((sig: any, i: number) => {
+            const text = typeof sig === 'string' ? sig : sig.signal || sig.text || '';
+            return (
+              <FadeInView key={`r-${i}`} delay={240 + i * 30}>
+                {isHolder ? (
+                  <HolderImpactCard
+                    icon="shield-checkmark"
+                    accent="#16A34A"
+                    tint="#0F2B22"
+                    label="YOUR MOAT"
+                    text={text}
+                  />
+                ) : (
+                  <SignalCard signal={text} accentColor={GREEN} />
+                )}
+              </FadeInView>
+            );
+          })
         ) : (
           <FadeInView delay={240}>
             <View style={a.emptyCard}>
@@ -660,66 +721,78 @@ export default function AIArenaScreen() {
 
 
         {/* ════════════════════════════════════════════════════════
-            ACT 3: YOUR PLAYBOOK
+            ACT 3: YOUR PLAYBOOK — seeker/student only. Holders get
+            the Field Report's WHAT'S SHIFTING / YOUR MOAT /
+            THIS QUARTER'S PLAYS sections up top, which cover the
+            same ground without the score framing.
             ════════════════════════════════════════════════════════ */}
 
-        <FadeInView delay={320}>
-          <ActDivider number="III" title="YOUR PLAYBOOK" />
-        </FadeInView>
+        {!isHolder && (
+          <>
+            <FadeInView delay={320}>
+              <ActDivider number="III" title="YOUR PLAYBOOK" />
+            </FadeInView>
 
-        <FadeInView delay={340}>
-          <Text style={a.actSectionHeader}>HERE'S YOUR PLAN</Text>
-        </FadeInView>
+            <FadeInView delay={340}>
+              <Text style={a.actSectionHeader}>HERE'S YOUR PLAN</Text>
+            </FadeInView>
 
-        {/* Recommendation card */}
-        {recommendation ? (
-          <FadeInView delay={360}>
-            <View style={a.recommendationCard}>
-              <Ionicons name="bulb" size={18} color={ACCENT} />
-              <Text style={a.recommendationText}>{recommendation}</Text>
-            </View>
-          </FadeInView>
-        ) : null}
-
-        {/* AI-resistant skills to develop */}
-        {aiResistantSkills.length > 0 && (
-          <FadeInView delay={380}>
-            <View style={a.skillPillWrap}>
-              {aiResistantSkills.map((skill: string, i: number) => (
-                <View key={`sk-${i}`} style={a.skillPill}>
-                  <Text style={a.skillPillText}>{skill}</Text>
+            {/* Recommendation card */}
+            {recommendation ? (
+              <FadeInView delay={360}>
+                <View style={a.recommendationCard}>
+                  <Ionicons name="bulb" size={18} color={ACCENT} />
+                  <Text style={a.recommendationText}>{recommendation}</Text>
                 </View>
-              ))}
-            </View>
-          </FadeInView>
-        )}
+              </FadeInView>
+            ) : null}
 
-        {/* Improve My Score CTA */}
-        <FadeInView delay={400}>
-          <AnimatedPressable
-            style={a.improveBtn}
-            onPress={() => {
-              const vulnList = vulnerableSignals.map((s: any) => typeof s === 'string' ? s : s.signal || s.text || '').join(', ');
-              openDillyOverlay({
-                isPaid: true,
-                initialMessage: `My AI readiness is ${Math.round(shieldScore)} (${shieldLabel}). Vulnerable: ${vulnList || 'unknown'}. What specific things should I add to my Dilly Profile to become more AI-proof in ${cohort}?`,
-              });
-            }}
-            scaleDown={0.97}
-          >
-            <Ionicons name="trending-up" size={18} color={BG} />
-            <Text style={a.improveBtnText}>Improve My Score</Text>
-          </AnimatedPressable>
-        </FadeInView>
+            {/* AI-resistant skills to develop */}
+            {aiResistantSkills.length > 0 && (
+              <FadeInView delay={380}>
+                <View style={a.skillPillWrap}>
+                  {aiResistantSkills.map((skill: string, i: number) => (
+                    <View key={`sk-${i}`} style={a.skillPill}>
+                      <Text style={a.skillPillText}>{skill}</Text>
+                    </View>
+                  ))}
+                </View>
+              </FadeInView>
+            )}
+
+            {/* Improve My Score CTA */}
+            <FadeInView delay={400}>
+              <AnimatedPressable
+                style={a.improveBtn}
+                onPress={() => {
+                  const vulnList = vulnerableSignals.map((s: any) => typeof s === 'string' ? s : s.signal || s.text || '').join(', ');
+                  openDillyOverlay({
+                    isPaid: true,
+                    initialMessage: `My AI readiness is ${Math.round(shieldScore)} (${shieldLabel}). Vulnerable: ${vulnList || 'unknown'}. What specific things should I add to my Dilly Profile to become more AI-proof in ${cohort}?`,
+                  });
+                }}
+                scaleDown={0.97}
+              >
+                <Ionicons name="trending-up" size={18} color={BG} />
+                <Text style={a.improveBtnText}>Improve My Score</Text>
+              </AnimatedPressable>
+            </FadeInView>
+          </>
+        )}
 
 
         {/* ════════════════════════════════════════════════════════
-            TOOLS SECTION
+            TOOLS SECTION — seeker/student only. Every tool below
+            (Threat Scanner / Replace Me / Career Sim / Firewall /
+            Vault / Index) is resume- and skill-scan-flavored. For
+            holders we end the page at the moat card above.
             ════════════════════════════════════════════════════════ */}
 
+        {!isHolder && (
         <FadeInView delay={440}>
           <Text style={a.toolsSectionHeader}>AI TOOLS</Text>
         </FadeInView>
+        )}
 
         {shield && shield.tools_unlocked === false ? (
           /* Free tier — show locked-tools message + "come back" copy */
@@ -1046,6 +1119,7 @@ export default function AIArenaScreen() {
             </View>
           </FadeInView>
         )}
+        {/* /isHolder gate on everything below the moat section */}
 
         {/* ── Footer ──────────────────────────────────────────── */}
         <DillyFooter />
@@ -1053,6 +1127,28 @@ export default function AIArenaScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+// ── HolderImpactCard styles — scoped to avoid collisions with `a`.
+const h = StyleSheet.create({
+  impactCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    padding: 16, borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  impactIconWrap: {
+    width: 40, height: 40, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+  },
+  impactLabel: {
+    fontSize: 10, fontWeight: '800', letterSpacing: 1.8,
+  },
+  impactText: {
+    fontSize: 14, fontWeight: '600',
+    color: '#F0F6FC', lineHeight: 20,
+  },
+});
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 

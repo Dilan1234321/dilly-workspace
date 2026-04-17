@@ -75,6 +75,15 @@ export default function ProfileHolderScreen() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [experience, setExperience] = useState<string>('');
+  // Exact-years override: when the user types a precise number it
+  // takes priority over the bucket pick so the comp benchmark +
+  // seniority curve downstream can read the real value instead of
+  // a rounded bucket.
+  const [exactYears, setExactYears] = useState<string>('');
+  // Company name — captured in the same step as the role so we don't
+  // renumber everything. Required because Market Radar + My Career
+  // benchmarks lean on this for holder-shaped framing.
+  const [company, setCompany] = useState<string>('');
   const [concerns, setConcerns] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
@@ -127,8 +136,8 @@ export default function ProfileHolderScreen() {
     // New step order: 0 photo, 1 name, 2 role, 3 experience, 4 concerns.
     if (step === 0) return !!photo && !photoUploading;
     if (step === 1) return name.trim().length >= 2;
-    if (step === 2) return role.trim().length >= 2;
-    if (step === 3) return !!experience;
+    if (step === 2) return role.trim().length >= 2 && company.trim().length >= 1;
+    if (step === 3) return !!(experience || exactYears.trim());
     if (step === 4) return concerns.length >= 1;
     return false;
   }
@@ -178,7 +187,12 @@ export default function ProfileHolderScreen() {
         body: JSON.stringify({
           name: name.trim(),
           current_role: role.trim(),
-          years_experience: experience,
+          current_company: company.trim(),
+          // Prefer the exact number if the user typed one; otherwise
+          // fall back to the bucket label. Comp benchmark (BLS curve)
+          // reads this downstream and wants a precise number when we
+          // have it.
+          years_experience: exactYears.trim() ? exactYears.trim() : experience,
           goals: concernLabels,
           user_type: 'general',
           user_path: 'i_have_a_job',
@@ -325,7 +339,6 @@ export default function ProfileHolderScreen() {
                 autoCapitalize="words"
                 autoFocus
                 returnKeyType="next"
-                onSubmitEditing={advance}
               />
               {/* Quick-pick suggestions — tap to fill the input. */}
               <View style={s.suggestionRow}>
@@ -347,6 +360,26 @@ export default function ProfileHolderScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* Company — captured alongside role so the Market
+                  Radar comp benchmark, Career Center trajectory,
+                  and chat prompt ("at {company}") all have it from
+                  the jump. */}
+              <View style={{ marginTop: 14, gap: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.2, color: colors.t3 }}>
+                  COMPANY
+                </Text>
+                <TextInput
+                  style={s.input}
+                  value={company}
+                  onChangeText={setCompany}
+                  placeholder="Where do you work?"
+                  placeholderTextColor={colors.t3}
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                  onSubmitEditing={advance}
+                />
+              </View>
             </View>
           )}
 
@@ -355,16 +388,55 @@ export default function ProfileHolderScreen() {
               <Text style={s.eyebrow}>EXPERIENCE</Text>
               <Text style={s.title}>How long have you been doing this?</Text>
               <Text style={s.sub}>
-                Dilly uses this to compare you against peers at the right
-                stage, not a generic average.
+                Type the exact number of years so Dilly can benchmark
+                your comp precisely. A rough bucket works too.
               </Text>
-              <View style={{ gap: 10, marginTop: 6 }}>
+
+              {/* Exact-years input — takes priority over the buckets
+                  below. Keyboard is numeric so users don't fight
+                  autocorrect; maxLength guards against gag inputs. */}
+              <View style={{ marginTop: 6 }}>
+                <TextInput
+                  value={exactYears}
+                  onChangeText={(v) => {
+                    // Allow digits + one dot ("3.5"), strip the rest.
+                    const cleaned = v.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                    setExactYears(cleaned);
+                    // Typing exact years clears the bucket pick so
+                    // the CTA validation doesn't require both.
+                    if (cleaned) setExperience('');
+                  }}
+                  placeholder="e.g. 5 or 3.5"
+                  placeholderTextColor={colors.t3}
+                  keyboardType="decimal-pad"
+                  maxLength={4}
+                  style={{
+                    borderWidth: 1, borderColor: colors.b1,
+                    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
+                    fontSize: 17, fontWeight: '700', color: colors.t1,
+                    backgroundColor: '#fff',
+                  }}
+                />
+                <Text style={{ fontSize: 11, color: colors.t3, marginTop: 6, marginLeft: 4 }}>
+                  Years (use decimals for fractions, e.g. 3.5)
+                </Text>
+              </View>
+
+              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.2, color: colors.t3, marginTop: 14, marginBottom: 2 }}>
+                OR PICK A RANGE
+              </Text>
+              <View style={{ gap: 10, marginTop: 4 }}>
                 {EXPERIENCE_OPTIONS.map(opt => {
                   const active = experience === opt.key;
                   return (
                     <AnimatedPressable
                       key={opt.key}
-                      onPress={() => setExperience(opt.key)}
+                      onPress={() => {
+                        setExperience(opt.key);
+                        // Picking a bucket clears any typed exact
+                        // value so the two fields don't conflict.
+                        setExactYears('');
+                      }}
                       scaleDown={0.98}
                       style={[s.optionCard, active && s.optionCardActive]}
                     >

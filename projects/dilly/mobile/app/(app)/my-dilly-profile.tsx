@@ -1754,7 +1754,7 @@ function HolderCareer() {
             ) : null}
             <View style={hc.metaRow}>
               {identity.years_experience ? (
-                <Text style={hc.meta}>{identity.years_experience} yrs experience</Text>
+                <Text style={hc.meta}>{identity.years_experience} yrs</Text>
               ) : null}
               {identity.tenure_months ? (
                 <>
@@ -1790,7 +1790,7 @@ function HolderCareer() {
                 identity.tenure_months && identity.tenure_months >= 12
                   ? `since ${new Date().getFullYear() - Math.floor(identity.tenure_months / 12)}`
                   : identity.years_experience
-                    ? `${identity.years_experience} yrs experience`
+                    ? `${identity.years_experience} yrs`
                     : '',
               tagline: p.profile_tagline || p.custom_tagline || '',
               email: p.email || '',
