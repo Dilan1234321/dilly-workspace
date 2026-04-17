@@ -15,6 +15,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
+import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
@@ -818,6 +819,9 @@ const sr = StyleSheet.create({
 
 function SeekerHome() {
   const insets = useSafeAreaInsets();
+  // Per-situation copy — greeting, eyebrow, CTA verb, empty states
+  // all key off the user's user_path via sessionCache.
+  const situationCopy = useSituationCopy();
   const [profile, setProfile] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1093,7 +1097,11 @@ function SeekerHome() {
             <DillyFace size={showJourney ? 100 : 80} />
           </View>
           <AnimatedPressable
-            onPress={() => openDillyOverlay({ name: firstName, isPaid: false, initialMessage: dillyTake || undefined })}
+            onPress={() => openDillyOverlay({
+              name: firstName,
+              isPaid: false,
+              initialMessage: dillyTake || situationCopy.empty_chat_seed,
+            })}
             scaleDown={0.99}
           >
             <Text style={s.dillyMessage}>
@@ -1101,16 +1109,20 @@ function SeekerHome() {
                 ? `Hey ${firstName || 'there'}, let me get to know you so I can help you land your next opportunity.`
                 : dillyTake
                   ? `Hey ${firstName || 'there'}, ${dillyTake.charAt(0).toLowerCase()}${dillyTake.slice(1)}`
-                  : `Hey ${firstName || 'there'}, tell me what you're working on.`}
+                  : situationCopy.greetingResolved}
             </Text>
           </AnimatedPressable>
           <AnimatedPressable
             style={s.talkBtn}
-            onPress={() => openDillyOverlay({ name: firstName, isPaid: false })}
+            onPress={() => openDillyOverlay({
+              name: firstName,
+              isPaid: false,
+              initialMessage: situationCopy.empty_chat_seed,
+            })}
             scaleDown={0.97}
           >
             <Ionicons name="chatbubble" size={16} color="#fff" />
-            <Text style={s.talkBtnText}>Talk to Dilly</Text>
+            <Text style={s.talkBtnText}>{situationCopy.talk_cta}</Text>
           </AnimatedPressable>
         </FadeInView>
 

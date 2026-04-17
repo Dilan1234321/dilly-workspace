@@ -248,6 +248,15 @@ async def get_profile(request: Request):
         except Exception:
             profile["is_student"] = False
 
+        # Attach per-situation copy so every shared surface can
+        # reach a tailored voice through one profile fetch. Zero-
+        # cost: pure dict lookup from dilly_core/situation_copy.py.
+        try:
+            from projects.dilly.dilly_core.situation_copy import copy_for_path  # type: ignore
+            profile["situation_copy"] = copy_for_path(profile.get("user_path"))
+        except Exception:
+            pass
+
         return profile
     except ValueError as e:
         raise errors.validation_error(str(e))
