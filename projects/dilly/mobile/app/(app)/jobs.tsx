@@ -103,12 +103,22 @@ function daysAgo(dateStr: string): string {
 /**
  * Build a best-effort logo URL. Priority order:
  *   1. Server-provided logo_url (most reliable — scraper captured it)
- *   2. Server-provided website → extract domain → hit Clearbit
- *   3. Guess from company name → domain → Clearbit (messiest fallback)
+ *   2. Server-provided website → extract domain → Google favicon
+ *   3. Guess from company name → domain → Google favicon (messiest fallback)
  *
- * The <img> falls back to an initial tile if the URL 404s, so a broken
+ * Why Google favicon and not Clearbit: Clearbit deprecated their free
+ * logo API in late 2024 and most derived URLs now 404. Google's s2
+ * favicon service (https://www.google.com/s2/favicons?domain=X&sz=128)
+ * is free, reliable, backfills for virtually every real domain, and
+ * returns at most 128x128 which is plenty for our 28-48px icon slots.
+ *
+ * The <Image> falls back to an initial tile if the URL 404s, so a broken
  * guess just degrades to the placeholder — no crash, no broken image.
  */
+function _domainToFaviconUrl(domain: string): string {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
 function companyLogoUrl(
   companyName: string | undefined,
   serverLogoUrl: string | null | undefined,
@@ -117,7 +127,7 @@ function companyLogoUrl(
   // 1. Real logo URL from the server.
   if (serverLogoUrl) return serverLogoUrl;
 
-  // 2. Real website → strip protocol + www + path → Clearbit.
+  // 2. Real website → strip protocol + www + path → Google favicon.
   if (companyWebsite) {
     try {
       const cleaned = companyWebsite
@@ -126,7 +136,7 @@ function companyLogoUrl(
         .replace(/^www\./, '')
         .split('/')[0]
         .split('?')[0];
-      if (cleaned) return `https://logo.clearbit.com/${cleaned}`;
+      if (cleaned) return _domainToFaviconUrl(cleaned);
     } catch {}
   }
 
@@ -138,7 +148,7 @@ function companyLogoUrl(
     .replace(/[^a-z0-9]/g, '')
     .trim();
   if (!slug) return null;
-  return `https://logo.clearbit.com/${slug}.com`;
+  return _domainToFaviconUrl(`${slug}.com`);
 }
 
 /** Company logo with graceful fallback. Tries the server-provided URL
@@ -896,7 +906,9 @@ function MarketRadarCard({ radar }: {
         </View>
       ) : null}
 
-      <Text style={mr.foot}>Benchmarks: BLS OES (May 2024)</Text>
+      <Text style={mr.foot}>
+        BLS OES (May 2024) · national average · excludes geo + company premium
+      </Text>
     </View>
   );
 }

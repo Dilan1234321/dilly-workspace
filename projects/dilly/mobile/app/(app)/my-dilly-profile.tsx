@@ -1701,10 +1701,26 @@ function HolderCareer() {
   const skills: string[]  = Array.isArray(data?.skills)     ? data.skills     : [];
 
   const firstName = String(identity.name || '').split(/\s+/)[0] || 'there';
+  // Photo URL resolution for the header avatar. Three sources in
+  // priority order so fresh holders (no slug yet) still get an image:
+  //   1. /profile/public/{slug}/photo (public, CDN-cached)
+  //   2. identity.photo_url (dashboard response)
+  //   3. p.photo_url (full profile response)
+  // Cache-bust with a minute-resolution timestamp so stale 404s on
+  // the CDN clear within ~60s of a new upload.
+  const _bust = Math.floor(Date.now() / 60000);
   const photoFull =
-    identity.photo_url
-      ? (String(identity.photo_url).startsWith('http') ? identity.photo_url : `${API_BASE}${identity.photo_url}`)
-      : null;
+    p.profile_slug
+      ? `${API_BASE}/profile/public/${p.profile_slug}/photo?_t=${_bust}`
+      : identity.photo_url
+        ? (String(identity.photo_url).startsWith('http')
+            ? identity.photo_url
+            : `${API_BASE}${identity.photo_url}`)
+        : p.photo_url
+          ? (String(p.photo_url).startsWith('http')
+              ? p.photo_url
+              : `${API_BASE}${p.photo_url}`)
+          : null;
 
   if (loading) {
     return (
@@ -1780,10 +1796,24 @@ function HolderCareer() {
               email: p.email || '',
               phones: p.phones || [{ label: 'Cell', number: '' }],
               username: p.profile_slug || '',
+              // Three fallbacks so the photo actually shows on
+              // holder profiles: the public slug URL (ideal), the
+              // dashboard's raw photo_url field, and a cache-busting
+              // ?_t query to defeat stale cached 404s that linger on
+              // the CDN after a re-upload. Without this, fresh
+              // holder accounts always showed the placeholder.
               photoUri:
                 p.profile_slug
-                  ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo`
-                  : null,
+                  ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo?_t=${Math.floor(Date.now() / 60000)}`
+                  : identity.photo_url
+                    ? (String(identity.photo_url).startsWith('http')
+                        ? identity.photo_url
+                        : `${API_BASE}${identity.photo_url}`)
+                    : p.photo_url
+                      ? (String(p.photo_url).startsWith('http')
+                          ? p.photo_url
+                          : `${API_BASE}${p.photo_url}`)
+                      : null,
               city: (p.job_locations || [])[0] || '',
               readableSlug: p.readable_slug || '',
               profilePrefix: 'p',
@@ -1830,7 +1860,9 @@ function HolderCareer() {
                 ))}
               </View>
 
-              <Text style={hc.compFoot}>{comp.source}</Text>
+              <Text style={hc.compFoot}>
+                {comp.source} · national, cross-industry · excludes geo + company premium
+              </Text>
             </View>
           </FadeInView>
         ) : null}
@@ -2026,7 +2058,11 @@ const hc = StyleSheet.create({
   pctTrack: {
     position: 'relative',
     height: 8, borderRadius: 4, backgroundColor: '#21262D',
-    marginTop: 18,
+    // Was marginTop: 18 — the absolutely-positioned P-marker above
+    // (top: -26) overlapped the 'Your estimated market value' line.
+    // Bumped to 42 so the marker floats fully above the bar with
+    // breathing room.
+    marginTop: 42,
   },
   pctFill: {
     position: 'absolute', left: 0, top: 0, bottom: 0,
