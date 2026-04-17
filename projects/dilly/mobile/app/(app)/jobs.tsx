@@ -35,6 +35,7 @@ import DillyFooter from '../../components/DillyFooter';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useAppMode } from '../../hooks/useAppMode';
+import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const COBALT = '#1652F0';
 const GREEN  = '#34C759';
@@ -990,30 +991,32 @@ export default function JobsScreen() {
   // for users on the rural_remote_only path.
   const [remoteOnlyFilter, setRemoteOnlyFilter] = useState<boolean>(false);
   // Holder-only: the Market Radar card (role ladder + comp deltas).
-  // Fetched separately from the feed so a slow /market-radar doesn't
-  // block the job listings.
-  const [marketRadar, setMarketRadar] = useState<{
+  // Session-cached via lib/sessionCache so tapping between The Market
+  // and other tabs doesn't refetch on every return, and so flipping
+  // mode in Settings doesn't blank the card out. The radar fetch is
+  // still skipped entirely for non-holders.
+  type MarketRadarData = {
     current: { role: string; estimated_wage: number | null; estimated_percentile: number | null;
                p25: number | null; p50: number | null; p75: number | null;
                market_count: number | null };
     ladder: Array<{ move: string; label: string; p50: number; estimated_wage: number;
                     delta_usd: number; delta_pct: number }>;
     active_market: { total: number | null; window: string };
-  } | null>(null);
-
-  useEffect(() => {
-    if (!isHolder) { setMarketRadar(null); return; }
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await dilly.fetch('/holder/market-radar');
-        if (!res?.ok || cancelled) return;
-        const json = await res.json();
-        if (!cancelled) setMarketRadar(json);
-      } catch {}
-    })();
-    return () => { cancelled = true; };
-  }, [isHolder]);
+  };
+  const marketRadarCached = useCachedFetch<MarketRadarData>(
+    'holder:market-radar',
+    async () => {
+      if (!isHolder) return null;
+      const res = await dilly.fetch('/holder/market-radar');
+      return res?.ok ? await res.json() : null;
+    },
+    { ttlMs: 60_000 },
+  );
+  // Always read through the cache helper so non-holders never trip on
+  // a leftover entry from a previous session.
+  const marketRadar = isHolder
+    ? (marketRadarCached.data ?? getCached<MarketRadarData>('holder:market-radar') ?? null)
+    : null;
 
   const handleNarrativeLoaded = useCallback((jobId: string, data: FitNarrativeData) => {
     setNarrativeCache(prev => ({ ...prev, [jobId]: data }));

@@ -15,6 +15,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
+import { useCachedFetch } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
 const INDIGO = '#1B3FA0';
@@ -116,77 +117,76 @@ function PipelineTile({ icon, count, label, color, onPress }: {
 //
 // Every block is zero-LLM. Static content + profile aggregation.
 
+// Session-cache parser for the 5 parallel HolderHome fetches. Runs
+// once per fetch; cached value is a flat shape so re-renders don't
+// re-parse. See lib/sessionCache.ts.
+type HolderHomeData = {
+  name: string;
+  currentRole: string;
+  yearsExperience: string;
+  threat: any | null;
+  weekly: any | null;
+  marketCount: number | null;
+  trajectoryFacts: Array<{ category: string; label: string; value: string }>;
+  factCount: number;
+};
+
+async function _fetchHolderHomeData(): Promise<HolderHomeData | null> {
+  const [profileRes, threatRes, weeklyRes, feedRes, memRes] = await Promise.all([
+    dilly.get('/profile').catch(() => null),
+    dilly.fetch('/ai-arena/threat-report/infer').then(r => r?.ok ? r.json() : null).catch(() => null),
+    dilly.fetch('/ai-arena/weekly-signal').then(r => r?.ok ? r.json() : null).catch(() => null),
+    dilly.get('/v2/internships/feed?limit=1&sort=rank').catch(() => null),
+    dilly.fetch('/memory').then(r => r?.ok ? r.json() : null).catch(() => null),
+  ]);
+  const str = (v: any) => (v == null ? '' : String(v)).trim();
+  const facts: any[] = memRes?.items && Array.isArray(memRes.items) ? memRes.items : [];
+  return {
+    name: str(profileRes?.name),
+    currentRole:
+      str(profileRes?.current_role) ||
+      str(profileRes?.current_job_title) ||
+      str(profileRes?.title),
+    yearsExperience: str(profileRes?.years_experience),
+    threat: threatRes?.report ?? null,
+    weekly: weeklyRes?.signal ?? null,
+    marketCount:
+      feedRes && typeof (feedRes as any).total === 'number'
+        ? (feedRes as any).total
+        : null,
+    factCount: facts.length,
+    trajectoryFacts: facts
+      .filter(f => (f.confidence || 'medium') !== 'low')
+      .slice(0, 4)
+      .map(f => ({
+        category: String(f.category || ''),
+        label:    String(f.label || ''),
+        value:    String(f.value || ''),
+      })),
+  };
+}
+
 function HolderHome() {
   const insets = useSafeAreaInsets();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [name, setName] = useState<string>('');
-  const [currentRole, setCurrentRole] = useState<string>('');
-  const [yearsExperience, setYearsExperience] = useState<string>('');
-  const [threat, setThreat] = useState<any>(null);
-  const [weekly, setWeekly] = useState<any>(null);
-  const [marketCount, setMarketCount] = useState<number | null>(null);
-  const [trajectoryFacts, setTrajectoryFacts] = useState<
-    Array<{ category: string; label: string; value: string }>
-  >([]);
-  const [factCount, setFactCount] = useState(0);
-
-  const fetchAll = useCallback(async () => {
-    try {
-      const [profileRes, threatRes, weeklyRes, feedRes, memRes] = await Promise.all([
-        dilly.get('/profile').catch(() => null),
-        dilly.fetch('/ai-arena/threat-report/infer').then(r => r?.ok ? r.json() : null).catch(() => null),
-        dilly.fetch('/ai-arena/weekly-signal').then(r => r?.ok ? r.json() : null).catch(() => null),
-        dilly.get('/v2/internships/feed?limit=1&sort=rank').catch(() => null),
-        dilly.fetch('/memory').then(r => r?.ok ? r.json() : null).catch(() => null),
-      ]);
-
-      if (profileRes) {
-        const str = (v: any) => (v == null ? '' : String(v)).trim();
-        setName(str(profileRes.name));
-        setCurrentRole(
-          str(profileRes.current_role) ||
-          str(profileRes.current_job_title) ||
-          str(profileRes.title)
-        );
-        setYearsExperience(str(profileRes.years_experience));
-      }
-      if (threatRes?.report) setThreat(threatRes.report);
-      if (weeklyRes?.signal) setWeekly(weeklyRes.signal);
-      if (feedRes && typeof feedRes === 'object') {
-        // Feed returns {total}; treat as the market size after hard filters.
-        const t = (feedRes as any).total;
-        if (typeof t === 'number') setMarketCount(t);
-      }
-
-      if (memRes?.items && Array.isArray(memRes.items)) {
-        const facts = memRes.items as any[];
-        setFactCount(facts.length);
-        // Grab the 4 most-recent high-confidence facts for the
-        // trajectory block. Sorted by the API by recency already.
-        const highConf = facts
-          .filter(f => (f.confidence || 'medium') !== 'low')
-          .slice(0, 4)
-          .map(f => ({
-            category: String(f.category || ''),
-            label: String(f.label || ''),
-            value: String(f.value || ''),
-          }));
-        setTrajectoryFacts(highConf);
-      }
-    } catch {}
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchAll(); }, []);
-
-  useFocusEffect(useCallback(() => { fetchAll(); }, [fetchAll]));
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchAll();
-    setRefreshing(false);
-  }, [fetchAll]);
+  // Session-cached: renders instantly from the previous fetch on
+  // remount (tab switches, mode flips, coming back from the chat
+  // overlay). 60s TTL before a background revalidation fires. Cuts
+  // the constant refetch loop that made this tab feel slow during
+  // screen-share, and makes Holder ↔ Seeker mode flips feel instant.
+  const { data, loading, refreshing, refresh } = useCachedFetch<HolderHomeData>(
+    'holder:home',
+    _fetchHolderHomeData,
+    { ttlMs: 60_000 },
+  );
+  const name             = data?.name ?? '';
+  const currentRole      = data?.currentRole ?? '';
+  const yearsExperience  = data?.yearsExperience ?? '';
+  const threat           = data?.threat ?? null;
+  const weekly           = data?.weekly ?? null;
+  const marketCount      = data?.marketCount ?? null;
+  const trajectoryFacts  = data?.trajectoryFacts ?? [];
+  const factCount        = data?.factCount ?? 0;
+  const onRefresh = refresh;
 
   const firstName = (name || '').split(/\s+/)[0] || 'there';
 

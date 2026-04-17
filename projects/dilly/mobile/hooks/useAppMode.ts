@@ -77,6 +77,20 @@ export function useAppMode(): AppMode {
 }
 
 /**
+ * Push a freshly-resolved mode into the in-memory + AsyncStorage
+ * cache. Settings calls this the moment the user flips the Career
+ * Mode toggle so every other screen using useAppMode sees the new
+ * mode on its next render — without waiting for its own /profile
+ * fetch to come back. Without this, flipping in Settings only
+ * changed the Settings screen's local state; the tab-bar and other
+ * consumers kept the old mode until their next profile refetch.
+ */
+export async function primeAppMode(mode: AppMode): Promise<void> {
+  _memMode = mode;
+  try { await AsyncStorage.setItem(STORAGE_KEY, mode); } catch {}
+}
+
+/**
  * Clear the cached mode. Call after sign-out so the next user doesn't
  * inherit the previous user's mode on their first mount.
  */

@@ -31,6 +31,7 @@ import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { CAREER_FIELDS as CAREER_FIELD_OPTIONS, ALL_COHORTS, MAJOR_TO_COHORTS, detectCohorts } from '../../lib/cohorts';
 import { mediumHaptic } from '../../lib/haptics';
 import { useAppMode } from '../../hooks/useAppMode';
+import { useCachedFetch } from '../../lib/sessionCache';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -1672,26 +1673,19 @@ function tenureLabel(months: number): string {
 
 function HolderCareer() {
   const insets = useSafeAreaInsets();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [data, setData] = useState<any>(null);
-
-  const fetchAll = useCallback(async () => {
-    try {
+  // Session-cached: renders instantly from the prior fetch on remount
+  // (tab switches, mode flips), revalidates in background only if the
+  // cached copy is older than 60s. Cuts the network-fetch load that
+  // made the app feel slow during screen-share.
+  const { data, loading, refreshing, refresh } = useCachedFetch<any>(
+    'holder:career-dashboard',
+    async () => {
       const res = await dilly.fetch('/holder/career-dashboard');
-      if (res?.ok) setData(await res.json());
-    } catch {}
-    finally { setLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchAll(); }, []);
-  useFocusEffect(useCallback(() => { fetchAll(); }, [fetchAll]));
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchAll();
-    setRefreshing(false);
-  }, [fetchAll]);
+      return res?.ok ? await res.json() : null;
+    },
+    { ttlMs: 60_000 },
+  );
+  const onRefresh = refresh;
 
   const identity  = data?.identity  || {};
   const comp      = data?.comp_benchmark;

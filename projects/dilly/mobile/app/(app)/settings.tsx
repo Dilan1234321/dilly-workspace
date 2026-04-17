@@ -14,6 +14,8 @@ import { clearAuth } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { getAppMode, modeLabel, modeDescription, ALL_MODES, type AppMode } from '../../lib/appMode';
+import { primeAppMode, clearAppModeCache } from '../../hooks/useAppMode';
+import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
@@ -132,6 +134,13 @@ export default function SettingsScreen() {
     setAppModeSaving(true);
     setAppMode(nextMode);
     setAppModeOverride(nextMode);
+    // Push the new mode into the module-level + AsyncStorage cache so
+    // every other consumer of useAppMode (tab bar, dispatchers in
+    // HomeScreen / MyDillyProfileScreen / JobsScreen) flips to the
+    // new mode on its next render. Session data caches are left
+    // intact so switching feels instant — the other mode's cached
+    // data is still there when the user flips back.
+    await primeAppMode(nextMode);
     try {
       await dilly.fetch('/profile', {
         method: 'PATCH',
@@ -140,8 +149,10 @@ export default function SettingsScreen() {
     } catch {
       // Roll back on failure. Tries to re-derive from the last known
       // profile shape rather than snapping to 'seeker'.
-      setAppMode(getAppMode({ user_path: userPath, app_mode: appModeOverride }));
+      const rollback = getAppMode({ user_path: userPath, app_mode: appModeOverride });
+      setAppMode(rollback);
       setAppModeOverride(appModeOverride);
+      await primeAppMode(rollback);
     } finally {
       setAppModeSaving(false);
     }
@@ -155,6 +166,10 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await clearAuth();
+          // Clear cached mode + session data so the next user doesn't
+          // inherit this user's mode, dashboard, or market radar.
+          await clearAppModeCache();
+          clearSessionCache();
           // Clear onboarding state so they see the situation options again
           try {
             const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
