@@ -311,8 +311,7 @@ export default function SettingsScreen() {
                   <View style={{ padding: 12, paddingTop: 0 }}>
                     <AnimatedPressable
                       scaleDown={0.97}
-                      disabled={appModeSaving}
-                      onPress={() => handleModeSwitch('seeker')}
+                      onPress={() => router.push('/onboarding/mode-switch?to=seeker')}
                       style={{
                         paddingVertical: 12,
                         borderRadius: 10,
@@ -321,7 +320,6 @@ export default function SettingsScreen() {
                         justifyContent: 'center',
                         backgroundColor: '#FEF3C7',
                         borderColor: '#F59E0B',
-                        opacity: appModeSaving ? 0.6 : 1,
                       }}
                     >
                       <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E' }}>
@@ -345,8 +343,7 @@ export default function SettingsScreen() {
                   <View style={{ padding: 12, paddingTop: 0 }}>
                     <AnimatedPressable
                       scaleDown={0.97}
-                      disabled={appModeSaving}
-                      onPress={() => handleModeSwitch('holder')}
+                      onPress={() => router.push('/onboarding/mode-switch?to=holder')}
                       style={{
                         paddingVertical: 12,
                         borderRadius: 10,
@@ -355,7 +352,6 @@ export default function SettingsScreen() {
                         justifyContent: 'center',
                         backgroundColor: '#D1FAE5',
                         borderColor: '#16A34A',
-                        opacity: appModeSaving ? 0.6 : 1,
                       }}
                     >
                       <Text style={{ fontSize: 13, fontWeight: '800', color: '#065F46' }}>

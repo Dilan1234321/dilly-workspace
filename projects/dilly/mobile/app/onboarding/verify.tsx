@@ -157,13 +157,26 @@ export default function VerifyScreen() {
           // screen (choose-situation). Read the pending path from
           // AsyncStorage and save it to their freshly-authenticated
           // profile now.
+          let resolvedPath: string | null = null;
           try {
             const AsyncStorage = require('@react-native-async-storage/async-storage').default;
             const pendingPath = await AsyncStorage.getItem('dilly_pending_user_path');
             const pendingPlan = await AsyncStorage.getItem('dilly_pending_plan');
-            if (pendingPath) {
-              const patch: Record<string, string> = { user_path: pendingPath };
-              if (pendingPlan) patch.plan = pendingPlan;
+            resolvedPath = pendingPath;
+
+            // Seed user_type on the profile NOW, before any screen
+            // asks for the slug. Without this, generate-slug sees the
+            // default profile (user_type unset), assumes student, and
+            // hands out an /s/ link to a general user. The profile-pro
+            // onboarding screen eventually PATCHes user_type, but by
+            // then the user may already have a cached /s/ slug.
+            const patch: Record<string, string> = {};
+            if (pendingPath) patch.user_path = pendingPath;
+            if (pendingPlan) patch.plan = pendingPlan;
+            if (userType === 'general' || userType === 'professional') {
+              patch.user_type = 'general';
+            }
+            if (Object.keys(patch).length > 0) {
               await dilly.fetch('/profile', {
                 method: 'PATCH',
                 body: JSON.stringify(patch),
@@ -173,8 +186,14 @@ export default function VerifyScreen() {
             }
           } catch {}
 
-          // Route to the right profile setup based on email type
-          if (userType === 'general' || userType === 'professional') {
+          // Route to the right profile setup based on situation path.
+          // Three flows:
+          //   i_have_a_job  -> profile-holder (4 short steps, no resume)
+          //   student path  -> profile        (existing student flow)
+          //   anyone else   -> profile-pro    (general seeker flow)
+          if (resolvedPath === 'i_have_a_job') {
+            router.replace('/onboarding/profile-holder');
+          } else if (userType === 'general' || userType === 'professional') {
             router.replace('/onboarding/profile-pro');
           } else {
             router.replace('/onboarding/profile');
