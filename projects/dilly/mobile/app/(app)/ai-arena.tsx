@@ -195,6 +195,12 @@ export default function AIArenaScreen() {
   const [simResult, setSimResult] = useState<any>(null);
   const [simLoading, setSimLoading] = useState(false);
 
+  // Threat report — role-based, zero-LLM. Speaks to everyone, not just
+  // students with a resume. Loads in parallel with the shield score.
+  const [threatReport, setThreatReport] = useState<any>(null);
+  const [threatRoleInput, setThreatRoleInput] = useState<string>('');
+  const [threatSaving, setThreatSaving] = useState(false);
+
   const fetchShield = useCallback(async () => {
     try {
       const ctrl = new AbortController();
@@ -204,9 +210,46 @@ export default function AIArenaScreen() {
     } catch {}
   }, []);
 
+  const fetchThreatReport = useCallback(async () => {
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 10_000);
+      const res = await dilly.fetch('/ai-arena/threat-report/infer', { signal: ctrl.signal });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.report) setThreatReport(data.report);
+      }
+    } catch {}
+  }, []);
+
+  const saveRoleAndFetchReport = useCallback(async (role: string) => {
+    const trimmed = role.trim();
+    if (!trimmed) return;
+    setThreatSaving(true);
+    try {
+      // Save role to profile so next visit the infer endpoint resolves it.
+      await dilly.fetch('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ current_role: trimmed }),
+      }).catch(() => {});
+      // Direct lookup so the UI updates instantly even if the profile
+      // write lagged.
+      const res = await dilly.fetch(`/ai-arena/threat-report?role=${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.report) setThreatReport(data.report);
+      }
+    } catch {}
+    finally {
+      setThreatSaving(false);
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
-      await fetchShield();
+      // Fetch in parallel: threat report is free, so it shouldn't block
+      // the shield score even if the shield LLM path takes a few seconds.
+      await Promise.all([fetchShield(), fetchThreatReport()]);
       setLoading(false);
     })();
   }, []);
@@ -214,9 +257,9 @@ export default function AIArenaScreen() {
   const handleRefresh = useCallback(async () => {
     mediumHaptic();
     setRefreshing(true);
-    await fetchShield();
+    await Promise.all([fetchShield(), fetchThreatReport()]);
     setRefreshing(false);
-  }, [fetchShield]);
+  }, [fetchShield, fetchThreatReport]);
 
   function toggleFeature(f: ActiveFeature) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -291,6 +334,147 @@ export default function AIArenaScreen() {
             <Text style={{ fontSize: 14, color: SUB, marginTop: 6 }}>Don't worry. We know exactly how to help you.</Text>
           </View>
         </FadeInView>
+
+        {/* ════════════════════════════════════════════════════════
+            THREAT REPORT — the painkiller card for EVERYONE.
+            Zero LLM cost. Works whether or not user has a resume.
+            Shows role-based AI threat data with actionable next moves.
+            ════════════════════════════════════════════════════════ */}
+
+        {threatReport ? (
+          <FadeInView delay={20}>
+            <View style={threatCard.card}>
+              {/* Top: role + threat level */}
+              <View style={threatCard.topRow}>
+                <View>
+                  <Text style={threatCard.eyebrow}>AI THREAT REPORT</Text>
+                  <Text style={threatCard.role}>{threatReport.display}</Text>
+                </View>
+                <View style={[threatCard.levelBadge, {
+                  backgroundColor: (
+                    threatReport.threat_level === 'severe' ? '#DC2626' + '22' :
+                    threatReport.threat_level === 'high' ? '#EA580C' + '22' :
+                    threatReport.threat_level === 'moderate' ? '#D97706' + '22' :
+                    '#16A34A' + '22'
+                  ),
+                  borderColor: (
+                    threatReport.threat_level === 'severe' ? '#DC2626' :
+                    threatReport.threat_level === 'high' ? '#EA580C' :
+                    threatReport.threat_level === 'moderate' ? '#D97706' :
+                    '#16A34A'
+                  ),
+                }]}>
+                  <Text style={[threatCard.levelText, {
+                    color: (
+                      threatReport.threat_level === 'severe' ? '#FCA5A5' :
+                      threatReport.threat_level === 'high' ? '#FDBA74' :
+                      threatReport.threat_level === 'moderate' ? '#FCD34D' :
+                      '#86EFAC'
+                    ),
+                  }]}>
+                    {threatReport.threat_level.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Big number + headline */}
+              <View style={threatCard.bigRow}>
+                <Text style={threatCard.bigPct}>{threatReport.threat_pct}%</Text>
+                <Text style={threatCard.headline}>{threatReport.headline}</Text>
+              </View>
+
+              {/* Recent signal — the scary news point */}
+              <View style={threatCard.signalBox}>
+                <Ionicons name="newspaper-outline" size={12} color={ACCENT} />
+                <Text style={threatCard.signalText}>{threatReport.recent_signal}</Text>
+              </View>
+
+              {/* Vulnerable tasks */}
+              <Text style={threatCard.sectionLabel}>MOST AT RISK</Text>
+              {(threatReport.vulnerable_tasks || []).slice(0, 4).map((t: string, i: number) => (
+                <View key={`v${i}`} style={threatCard.bulletRow}>
+                  <View style={[threatCard.bulletDot, { backgroundColor: '#EA580C' }]} />
+                  <Text style={threatCard.bulletText}>{t}</Text>
+                </View>
+              ))}
+
+              {/* Safe tasks */}
+              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>WHERE YOU'RE SAFE</Text>
+              {(threatReport.safe_tasks || []).slice(0, 4).map((t: string, i: number) => (
+                <View key={`s${i}`} style={threatCard.bulletRow}>
+                  <View style={[threatCard.bulletDot, { backgroundColor: '#16A34A' }]} />
+                  <Text style={threatCard.bulletText}>{t}</Text>
+                </View>
+              ))}
+
+              {/* What to learn */}
+              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>WHAT TO LEARN NEXT</Text>
+              {(threatReport.what_to_learn || []).slice(0, 3).map((t: string, i: number) => (
+                <View key={`l${i}`} style={threatCard.bulletRow}>
+                  <View style={[threatCard.bulletDot, { backgroundColor: ACCENT }]} />
+                  <Text style={threatCard.bulletText}>{t}</Text>
+                </View>
+              ))}
+
+              {/* 2-year forecast */}
+              <View style={threatCard.forecastBox}>
+                <Text style={threatCard.forecastLabel}>2-YEAR FORECAST</Text>
+                <Text style={threatCard.forecastText}>{threatReport.forecast_2yr}</Text>
+              </View>
+
+              {/* Dilly's take CTA */}
+              <View style={threatCard.dillyTake}>
+                <Ionicons name="sparkles" size={14} color={ACCENT} />
+                <Text style={threatCard.dillyTakeText}>{threatReport.dilly_take}</Text>
+              </View>
+
+              <AnimatedPressable
+                style={threatCard.ctaBtn}
+                onPress={() => openDillyOverlay({
+                  isPaid: false,
+                  initialMessage: `My AI threat level is ${threatReport.threat_level} (${threatReport.threat_pct}%). I'm a ${threatReport.display}. What specific moves should I make this month to become harder to replace?`,
+                })}
+                scaleDown={0.97}
+              >
+                <Ionicons name="chatbubbles" size={14} color="#0B1426" />
+                <Text style={threatCard.ctaBtnText}>Ask Dilly what to do about this</Text>
+              </AnimatedPressable>
+            </View>
+          </FadeInView>
+        ) : (
+          /* No role resolved — show a prompt to tell us what you do */
+          <FadeInView delay={20}>
+            <View style={threatCard.promptCard}>
+              <Text style={threatCard.promptEyebrow}>GET YOUR AI THREAT REPORT</Text>
+              <Text style={threatCard.promptTitle}>What do you do right now?</Text>
+              <Text style={threatCard.promptSub}>
+                Tell Dilly your role (or the one you're aiming for). You'll get a personalized
+                read on how AI is reshaping it — what's at risk, what's safe, what to learn.
+              </Text>
+              <TextInput
+                style={threatCard.promptInput}
+                placeholder="e.g. software engineer, accountant, teacher"
+                placeholderTextColor={DIM}
+                value={threatRoleInput}
+                onChangeText={setThreatRoleInput}
+                autoCapitalize="none"
+                returnKeyType="done"
+                onSubmitEditing={() => saveRoleAndFetchReport(threatRoleInput)}
+              />
+              <AnimatedPressable
+                style={threatCard.promptBtn}
+                onPress={() => saveRoleAndFetchReport(threatRoleInput)}
+                disabled={threatSaving || !threatRoleInput.trim()}
+                scaleDown={0.97}
+              >
+                {threatSaving
+                  ? <ActivityIndicator size="small" color="#0B1426" />
+                  : <Text style={threatCard.promptBtnText}>See my AI threat report</Text>
+                }
+              </AnimatedPressable>
+            </View>
+          </FadeInView>
+        )}
 
         {/* ════════════════════════════════════════════════════════
             ACT 1: THE THREAT
@@ -1157,4 +1341,77 @@ const a = StyleSheet.create({
   compCol: { flex: 1, borderRadius: 10, padding: 10, borderWidth: 1 },
   compLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
   compItem: { fontSize: 11, color: SUB, lineHeight: 16 },
+});
+
+// ── AI Threat Report styles ───────────────────────────────────────────
+// Dark-background dashboard card that lives at the top of the Arena tab
+// and works for everyone regardless of resume state.
+const threatCard = StyleSheet.create({
+  card: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    padding: 18,
+    marginBottom: 20,
+    gap: 12,
+  },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  eyebrow: { fontSize: 10, fontWeight: '900', color: '#7C8FA7', letterSpacing: 1.8 },
+  role: { fontSize: 20, fontWeight: '900', color: '#F8FAFC', marginTop: 4, letterSpacing: -0.4 },
+  levelBadge: {
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1,
+  },
+  levelText: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  bigRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  bigPct: { fontSize: 44, fontWeight: '900', color: '#F8FAFC', letterSpacing: -1.5, lineHeight: 48 },
+  headline: { flex: 1, fontSize: 14, fontWeight: '700', color: '#CBD5E1', lineHeight: 19 },
+  signalBox: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#1E293B', borderRadius: 10, padding: 10,
+    borderLeftWidth: 2, borderLeftColor: '#22D3EE',
+  },
+  signalText: { flex: 1, fontSize: 11, color: '#E2E8F0', lineHeight: 16, fontStyle: 'italic' },
+  sectionLabel: { fontSize: 10, fontWeight: '900', color: '#64748B', letterSpacing: 1.2, marginTop: 4, marginBottom: 2 },
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 2 },
+  bulletDot: { width: 5, height: 5, borderRadius: 2.5, marginTop: 7 },
+  bulletText: { flex: 1, fontSize: 12, color: '#CBD5E1', lineHeight: 17 },
+  forecastBox: {
+    backgroundColor: '#1E293B', borderRadius: 10, padding: 10, marginTop: 6,
+  },
+  forecastLabel: { fontSize: 9, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.2, marginBottom: 4 },
+  forecastText: { fontSize: 12, color: '#E2E8F0', lineHeight: 17, fontWeight: '500' },
+  dillyTake: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#22D3EE' + '14', borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: '#22D3EE' + '30',
+  },
+  dillyTakeText: { flex: 1, fontSize: 12, color: '#E2E8F0', lineHeight: 17, fontWeight: '600' },
+  ctaBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#22D3EE', paddingVertical: 12, borderRadius: 12, marginTop: 4,
+  },
+  ctaBtnText: { fontSize: 13, fontWeight: '800', color: '#0B1426', letterSpacing: 0.1 },
+
+  // Prompt card (when no role resolved yet)
+  promptCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16, borderWidth: 1, borderColor: '#22D3EE' + '50',
+    padding: 18, marginBottom: 20, gap: 10,
+  },
+  promptEyebrow: { fontSize: 10, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.8 },
+  promptTitle: { fontSize: 20, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.4 },
+  promptSub: { fontSize: 13, color: '#94A3B8', lineHeight: 19 },
+  promptInput: {
+    backgroundColor: '#1E293B',
+    borderRadius: 10, borderWidth: 1, borderColor: '#334155',
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 14, color: '#F8FAFC',
+    marginTop: 6,
+  },
+  promptBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#22D3EE', paddingVertical: 14, borderRadius: 12, marginTop: 4,
+  },
+  promptBtnText: { fontSize: 14, fontWeight: '800', color: '#0B1426' },
 });
