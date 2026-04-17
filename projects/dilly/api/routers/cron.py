@@ -372,13 +372,65 @@ def rescore_jobs(token: str = ""):
     return {"ok": result.returncode == 0, "output": result.stdout[-2000:] if result.stdout else result.stderr[-500:]}
 
 
-@router.get("/daily-pipeline", summary="Run full daily job pipeline: scrape → dedup → rescore")
+@router.get("/apply-job-attributes-migration", summary="One-time: add degree_required column + indexes")
+def apply_job_attributes_migration(token: str = ""):
+    """Idempotent bootstrap: runs 20260417_job_attributes.sql. Safe to hit
+    multiple times — uses IF NOT EXISTS on every DDL. Call once after
+    deploying this build, then forget.
+
+    Why this lives in /cron instead of a startup hook: schema changes
+    shouldn't happen on every server boot. Manual trigger keeps the
+    application layer dumb about migrations."""
+    _require_cron_secret(token)
+    from projects.dilly.api.database import get_db
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            ALTER TABLE internships
+                ADD COLUMN IF NOT EXISTS degree_required TEXT,
+                ADD COLUMN IF NOT EXISTS classified_at TIMESTAMPTZ
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_internships_unclassified_degree
+                ON internships (created_at DESC)
+                WHERE degree_required IS NULL AND status = 'active'
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_internships_no_degree
+                ON internships (created_at DESC)
+                WHERE degree_required IN ('not_required', 'unclear') AND status = 'active'
+        """)
+        conn.commit()
+    return {"ok": True, "migration": "20260417_job_attributes"}
+
+
+@router.get("/classify-jobs", summary="Classify un-classified active internships (degree requirement)")
+def classify_jobs(token: str = "", max: int = 200):
+    """Run the attribute classifier on active internships with NULL
+    degree_required. Capped at ?max=N per call (default 200) so a single
+    run has predictable duration + Anthropic cost.
+
+    Intended to be called daily after /crawl-internships so any fresh
+    rows get a degree verdict within one cron cycle. Safe to call more
+    often if we're catching up a backlog."""
+    _require_cron_secret(token)
+    from projects.dilly.api.scripts.classify_job_attributes import run
+    try:
+        stats = run(max_rows=max)
+        return stats
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:500]}
+
+
+@router.get("/daily-pipeline", summary="Run full daily job pipeline: scrape → dedup → rescore → classify")
 def daily_pipeline(token: str = ""):
     """Master endpoint: runs the full daily job pipeline in order.
     1. Scrape all ATS sources
     2. Scrape niche sources
     3. Dedup + quality gate
     4. Rescore any new unscored jobs
+    5. Classify job attributes (degree requirement, etc.) on newly-ingested
+       rows so filters on Jobs page are accurate same-day.
 
     Call with ?token=CRON_SECRET. Intended to run once per day."""
     _require_cron_secret(token)
@@ -411,5 +463,13 @@ def daily_pipeline(token: str = ""):
         results["rescore"] = r
     except Exception as e:
         results["rescore"] = {"error": str(e)}
+
+    # 5. Classify (degree requirement, etc.). Capped per run so a full
+    #    daily pipeline never runs a huge Anthropic bill on a backlog.
+    try:
+        r = classify_jobs(token=token, max=300)
+        results["classify"] = r
+    except Exception as e:
+        results["classify"] = {"error": str(e)}
 
     return {"ok": True, "pipeline": results}

@@ -319,21 +319,29 @@ def _fallback_feed(
         where.append("i.cohort_requirements::text ILIKE %s")
         params.append(f"%{cohort_filter}%")
 
-    # no_degree heuristic filter (same logic as the precomputed path).
+    # no_degree filter (same logic as the precomputed path): prefer the
+    # classified column; fall back to keyword heuristic for NULL rows so
+    # freshly-ingested jobs aren't hidden while awaiting classification.
     if no_degree:
         where.append("""(
-            i.description ILIKE '%no degree required%'
-            OR i.description ILIKE '%or equivalent experience%'
-            OR i.description ILIKE '%without a degree%'
-            OR i.description ILIKE '%degree preferred, not required%'
-            OR i.description ILIKE '%self-taught%'
-            OR i.description ILIKE '%equivalent work experience%'
-        ) AND NOT (
-            i.description ILIKE '%bachelor''s degree required%'
-            OR i.description ILIKE '%bachelor''s required%'
-            OR i.description ILIKE '%master''s degree required%'
-            OR i.description ILIKE '%master''s required%'
-            OR i.description ILIKE '%phd required%'
+            i.degree_required IN ('not_required', 'unclear')
+            OR (
+                i.degree_required IS NULL
+                AND (
+                    i.description ILIKE '%no degree required%'
+                    OR i.description ILIKE '%or equivalent experience%'
+                    OR i.description ILIKE '%without a degree%'
+                    OR i.description ILIKE '%degree preferred, not required%'
+                    OR i.description ILIKE '%self-taught%'
+                    OR i.description ILIKE '%equivalent work experience%'
+                ) AND NOT (
+                    i.description ILIKE '%bachelor''s degree required%'
+                    OR i.description ILIKE '%bachelor''s required%'
+                    OR i.description ILIKE '%master''s degree required%'
+                    OR i.description ILIKE '%master''s required%'
+                    OR i.description ILIKE '%phd required%'
+                )
+            )
         )""")
 
     where_sql = " AND ".join(where)
@@ -611,27 +619,37 @@ async def get_internship_feed(
         where.append("m.cohort_readiness::text ILIKE %s")
         params.append(f"%{cohort}%")
 
-    # "no_degree" heuristic filter: prefer jobs that explicitly welcome
-    # candidates without a degree. We don't have a reliable structured
-    # column for this, so we text-match the description: positive keywords
-    # (equivalent experience, no degree required, self-taught ok) must
-    # appear AND standard-degree-required phrasing must NOT appear.
-    # This is intentionally a strict filter so a dropout sees high-quality
-    # no-degree-required jobs, not everything-with-a-maybe.
+    # "no_degree" filter: prefer the structured `degree_required` column
+    # written by the Haiku classifier (see job_classifiers.py). It maps
+    # descriptions to one of: 'required' | 'not_required' | 'unclear' |
+    # NULL (not yet classified).
+    #
+    # Show: 'not_required' (confident yes) + 'unclear' (probably fine,
+    #   don't hide borderline jobs from an opted-in user).
+    # Hide: 'required' (confident no).
+    # For NULL (unclassified) rows, fall back to the original keyword
+    # heuristic so we don't punish new jobs that haven't been scanned
+    # yet — the nightly /cron/classify-jobs run catches up within a day.
     if no_degree:
         where.append("""(
-            i.description ILIKE '%no degree required%'
-            OR i.description ILIKE '%or equivalent experience%'
-            OR i.description ILIKE '%without a degree%'
-            OR i.description ILIKE '%degree preferred, not required%'
-            OR i.description ILIKE '%self-taught%'
-            OR i.description ILIKE '%equivalent work experience%'
-        ) AND NOT (
-            i.description ILIKE '%bachelor''s degree required%'
-            OR i.description ILIKE '%bachelor''s required%'
-            OR i.description ILIKE '%master''s degree required%'
-            OR i.description ILIKE '%master''s required%'
-            OR i.description ILIKE '%phd required%'
+            i.degree_required IN ('not_required', 'unclear')
+            OR (
+                i.degree_required IS NULL
+                AND (
+                    i.description ILIKE '%no degree required%'
+                    OR i.description ILIKE '%or equivalent experience%'
+                    OR i.description ILIKE '%without a degree%'
+                    OR i.description ILIKE '%degree preferred, not required%'
+                    OR i.description ILIKE '%self-taught%'
+                    OR i.description ILIKE '%equivalent work experience%'
+                ) AND NOT (
+                    i.description ILIKE '%bachelor''s degree required%'
+                    OR i.description ILIKE '%bachelor''s required%'
+                    OR i.description ILIKE '%master''s degree required%'
+                    OR i.description ILIKE '%master''s required%'
+                    OR i.description ILIKE '%phd required%'
+                )
+            )
         )""")
 
     where_sql = " AND ".join(where)
