@@ -137,6 +137,7 @@ from projects.dilly.api.routers import generated_resumes as generated_resumes_ro
 from projects.dilly.api.routers import home as home_router
 from projects.dilly.api.routers import job_url as job_url_router
 from projects.dilly.api.routers import internships_v2 as internships_v2_router
+from projects.dilly.api.routers import holder_dashboard as holder_dashboard_router
 from projects.dilly.api.routers import push as push_router
 from projects.dilly.api.routers import notifications as notifications_router
 from projects.dilly.api.routers import internal_notifications as internal_notifications_router
@@ -185,6 +186,7 @@ app.include_router(home_router.router)
 app.include_router(job_url_router.router)
 app.include_router(ai_arena_router.router)
 app.include_router(internships_v2_router.router)
+app.include_router(holder_dashboard_router.router)
 app.include_router(push_router.router)
 app.include_router(notifications_router.router)
 # Internal routers require DILLY_INTERNAL_KEY (or legacy CRON_SECRET) header

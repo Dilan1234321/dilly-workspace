@@ -234,7 +234,7 @@ function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
 
 // ── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function MyDillyProfileScreen() {
+function SeekerProfileScreen() {
   const insets = useSafeAreaInsets();
   // Holder mode reframes this tab as 'My Career' — a trajectory
   // tracker rather than an identity builder. Seekers/students keep
@@ -1647,6 +1647,344 @@ export default function MyDillyProfileScreen() {
       </Modal>
     </View>
   );
+}
+
+// ── Holder "My Career" ────────────────────────────────────────────────────────
+// Jobholders don't want a facts list — they want a career dashboard:
+// trajectory, skills arsenal, and a real market-position block powered
+// by BLS OES wage percentiles (dilly_core/bls_wages.py). Zero-LLM.
+
+const HOLDER_ACCENT = '#1B3FA0';
+
+function formatUsd(n: number): string {
+  if (n >= 1000) return '$' + Math.round(n / 1000).toLocaleString() + 'K';
+  return '$' + n.toLocaleString();
+}
+
+function tenureLabel(months: number): string {
+  if (!months || months < 1) return '';
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} in role`;
+  const yrs = Math.floor(months / 12);
+  const rem = months % 12;
+  if (rem === 0) return `${yrs} year${yrs === 1 ? '' : 's'} in role`;
+  return `${yrs}y ${rem}m in role`;
+}
+
+function HolderCareer() {
+  const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [data, setData] = useState<any>(null);
+
+  const fetchAll = useCallback(async () => {
+    try {
+      const res = await dilly.fetch('/holder/career-dashboard');
+      if (res?.ok) setData(await res.json());
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchAll(); }, []);
+  useFocusEffect(useCallback(() => { fetchAll(); }, [fetchAll]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchAll();
+    setRefreshing(false);
+  }, [fetchAll]);
+
+  const identity  = data?.identity  || {};
+  const comp      = data?.comp_benchmark;
+  const trajectory: any[] = Array.isArray(data?.trajectory) ? data.trajectory : [];
+  const skills: string[]  = Array.isArray(data?.skills)     ? data.skills     : [];
+
+  const firstName = String(identity.name || '').split(/\s+/)[0] || 'there';
+  const photoFull =
+    identity.photo_url
+      ? (String(identity.photo_url).startsWith('http') ? identity.photo_url : `${API_BASE}${identity.photo_url}`)
+      : null;
+
+  if (loading) {
+    return (
+      <View style={[hc.container, { paddingTop: insets.top }]}>
+        <View style={{ padding: spacing.lg, gap: 16 }}>
+          <View style={hc.skelHeader} />
+          <View style={hc.skelCardTall} />
+          <View style={hc.skelCard} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[hc.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={[hc.scroll, { paddingBottom: insets.bottom + 40 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={HOLDER_ACCENT} />}
+      >
+        {/* Header: name, role, company, photo */}
+        <View style={hc.idRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={hc.eyebrow}>MY CAREER</Text>
+            <Text style={hc.name}>{identity.name || firstName}</Text>
+            {identity.current_role ? (
+              <Text style={hc.role}>
+                {identity.current_role}
+                {identity.current_company ? ` · ${identity.current_company}` : ''}
+              </Text>
+            ) : null}
+            <View style={hc.metaRow}>
+              {identity.years_experience ? (
+                <Text style={hc.meta}>{identity.years_experience} yrs experience</Text>
+              ) : null}
+              {identity.tenure_months ? (
+                <>
+                  <View style={hc.metaDot} />
+                  <Text style={hc.meta}>{tenureLabel(identity.tenure_months)}</Text>
+                </>
+              ) : null}
+            </View>
+          </View>
+          {photoFull ? (
+            <Image source={{ uri: photoFull }} style={hc.photo} />
+          ) : (
+            <View style={[hc.photo, hc.photoPlaceholder]}>
+              <Ionicons name="person" size={28} color={colors.t3} />
+            </View>
+          )}
+        </View>
+
+        {/* Comp benchmark — the money shot */}
+        {comp ? (
+          <FadeInView delay={40}>
+            <View style={hc.compCard}>
+              <Text style={hc.compEyebrow}>MARKET POSITION</Text>
+              <Text style={hc.compHeadline}>
+                {comp.title}s earn {formatUsd(comp.p25)}–{formatUsd(comp.p75)}
+              </Text>
+              <Text style={hc.compSub}>
+                Your estimated market value at {identity.years_experience || 0} yrs:{' '}
+                <Text style={hc.compEstValue}>{formatUsd(comp.estimated_wage)}</Text>
+              </Text>
+
+              {/* Percentile bar */}
+              <View style={hc.pctTrack}>
+                <View style={[hc.pctFill, { width: `${Math.max(6, comp.estimated_percentile)}%` }]} />
+                <View style={[hc.pctMarker, { left: `${Math.max(6, comp.estimated_percentile)}%` }]}>
+                  <Text style={hc.pctMarkerText}>P{comp.estimated_percentile}</Text>
+                </View>
+              </View>
+
+              {/* Percentile scale */}
+              <View style={hc.pctScale}>
+                {[
+                  { k: 'p10', v: comp.p10 },
+                  { k: 'p25', v: comp.p25 },
+                  { k: 'p50', v: comp.p50 },
+                  { k: 'p75', v: comp.p75 },
+                  { k: 'p90', v: comp.p90 },
+                ].map(({ k, v }) => (
+                  <View key={k} style={hc.pctTick}>
+                    <Text style={hc.pctTickPct}>{k.toUpperCase().replace('P', '')}</Text>
+                    <Text style={hc.pctTickVal}>{formatUsd(v)}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={hc.compFoot}>{comp.source}</Text>
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* Trajectory timeline */}
+        {trajectory.length > 0 ? (
+          <FadeInView delay={80}>
+            <Text style={hc.sectionLabel}>TRAJECTORY</Text>
+            <View style={hc.trajWrap}>
+              {trajectory.map((t, i) => {
+                const last = i === trajectory.length - 1;
+                return (
+                  <View key={`${t.company}-${i}`} style={hc.trajRow}>
+                    {/* Rail */}
+                    <View style={hc.trajRail}>
+                      <View style={[hc.trajDot, i === 0 && hc.trajDotActive]} />
+                      {!last && <View style={hc.trajLine} />}
+                    </View>
+                    {/* Content */}
+                    <View style={hc.trajContent}>
+                      {t.role ? <Text style={hc.trajRole}>{t.role}</Text> : null}
+                      <Text style={hc.trajCompany}>
+                        {t.company}
+                        {t.date ? <Text style={hc.trajDate}>   ·  {t.date}</Text> : null}
+                      </Text>
+                      {t.location ? <Text style={hc.trajLocation}>{t.location}</Text> : null}
+                      {(t.bullets || []).slice(0, 3).map((b: string, j: number) => (
+                        <Text key={j} style={hc.trajBullet} numberOfLines={2}>• {b}</Text>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* Skills arsenal */}
+        {skills.length > 0 ? (
+          <FadeInView delay={120}>
+            <Text style={hc.sectionLabel}>SKILLS ARSENAL</Text>
+            <View style={hc.skillsGrid}>
+              {skills.map((s, i) => (
+                <View key={`${s}-${i}`} style={hc.skillChip}>
+                  <Text style={hc.skillText} numberOfLines={1}>{s}</Text>
+                </View>
+              ))}
+            </View>
+          </FadeInView>
+        ) : null}
+
+        {/* Ask Dilly */}
+        <FadeInView delay={160}>
+          <AnimatedPressable
+            style={hc.askCard}
+            scaleDown={0.98}
+            onPress={() => openDillyOverlay({ isPaid: true })}
+          >
+            <View style={hc.askIcon}>
+              <Ionicons name="chatbubbles" size={18} color={HOLDER_ACCENT} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={hc.askTitle}>Talk to Dilly</Text>
+              <Text style={hc.askSub}>Negotiate a raise, plan your next move, or stress-test a job offer.</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={16} color={HOLDER_ACCENT} />
+          </AnimatedPressable>
+        </FadeInView>
+      </ScrollView>
+    </View>
+  );
+}
+
+// Holder My-Career stylesheet — scoped to avoid collisions with `d`.
+const hc = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { padding: spacing.lg, gap: 20 },
+
+  // Skeleton placeholders
+  skelHeader: { height: 80, borderRadius: 14, backgroundColor: '#EEF0F6' },
+  skelCardTall: { height: 220, borderRadius: 18, backgroundColor: '#EEF0F6' },
+  skelCard: { height: 140, borderRadius: 16, backgroundColor: '#EEF0F6' },
+
+  // Identity row
+  idRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  eyebrow: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1.4,
+    color: HOLDER_ACCENT, marginBottom: 2,
+  },
+  name:  { fontSize: 24, fontWeight: '800', color: colors.t1, marginBottom: 2 },
+  role:  { fontSize: 14, fontWeight: '600', color: colors.t2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 },
+  meta: { fontSize: 12, color: colors.t3 },
+  metaDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: colors.t3 },
+  photo: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.s1 },
+  photoPlaceholder: {
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.b1, borderStyle: 'dashed',
+  },
+
+  // Comp card
+  compCard: {
+    backgroundColor: '#0D1117',
+    borderRadius: 18, padding: 18,
+    borderWidth: 1, borderColor: '#21262D',
+  },
+  compEyebrow: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 1.6,
+    color: '#8B949E', marginBottom: 6,
+  },
+  compHeadline: { fontSize: 17, fontWeight: '700', color: '#F0F6FC', lineHeight: 22 },
+  compSub: { fontSize: 13, color: '#C9D1D9', marginTop: 8, lineHeight: 19 },
+  compEstValue: { fontWeight: '700', color: '#58A6FF' },
+
+  pctTrack: {
+    position: 'relative',
+    height: 8, borderRadius: 4, backgroundColor: '#21262D',
+    marginTop: 18,
+  },
+  pctFill: {
+    position: 'absolute', left: 0, top: 0, bottom: 0,
+    borderRadius: 4, backgroundColor: '#58A6FF',
+  },
+  pctMarker: {
+    position: 'absolute', top: -26, marginLeft: -18,
+    backgroundColor: '#58A6FF', borderRadius: 4,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  pctMarkerText: { fontSize: 10, fontWeight: '800', color: '#0D1117' },
+
+  pctScale: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  pctTick: { alignItems: 'center' },
+  pctTickPct: { fontSize: 9, fontWeight: '700', color: '#8B949E' },
+  pctTickVal: { fontSize: 10, fontWeight: '600', color: '#C9D1D9', marginTop: 1 },
+
+  compFoot: { fontSize: 10, color: '#6B7280', marginTop: 12, textAlign: 'right' },
+
+  // Sections
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 1.4,
+    color: colors.t3, marginBottom: 10,
+  },
+
+  // Trajectory
+  trajWrap: { gap: 14 },
+  trajRow: { flexDirection: 'row', gap: 12 },
+  trajRail: { alignItems: 'center', width: 14, paddingTop: 6 },
+  trajDot: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: colors.b1, borderWidth: 2, borderColor: colors.bg,
+  },
+  trajDotActive: { backgroundColor: HOLDER_ACCENT },
+  trajLine: { flex: 1, width: 2, backgroundColor: colors.b1, marginTop: 4 },
+  trajContent: { flex: 1, paddingBottom: 4 },
+  trajRole: { fontSize: 15, fontWeight: '700', color: colors.t1 },
+  trajCompany: { fontSize: 13, fontWeight: '600', color: colors.t2, marginTop: 1 },
+  trajDate: { fontWeight: '400', color: colors.t3 },
+  trajLocation: { fontSize: 12, color: colors.t3, marginTop: 1 },
+  trajBullet: { fontSize: 12, color: colors.t2, marginTop: 5, lineHeight: 17 },
+
+  // Skills
+  skillsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  skillChip: {
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 999, backgroundColor: HOLDER_ACCENT + '10',
+    borderWidth: 1, borderColor: HOLDER_ACCENT + '25',
+  },
+  skillText: { fontSize: 12, fontWeight: '600', color: HOLDER_ACCENT },
+
+  // Ask Dilly
+  askCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 14, borderRadius: 14,
+    backgroundColor: '#FAFAFC',
+    borderWidth: 1, borderColor: colors.b1,
+  },
+  askIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: HOLDER_ACCENT + '14',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  askTitle: { fontSize: 14, fontWeight: '700', color: colors.t1 },
+  askSub:   { fontSize: 12, color: colors.t2, marginTop: 2 },
+});
+
+// Dispatcher — isHolder gets the career dashboard, everyone else the
+// original identity-facts profile. Keeping the two bodies in separate
+// components preserves hook order when the mode flips mid-session.
+export default function MyDillyProfileScreen() {
+  const appMode = useAppMode();
+  if (appMode === 'holder') return <HolderCareer />;
+  return <SeekerProfileScreen />;
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
