@@ -774,6 +774,22 @@ def crawl_all():
     except Exception as e:
         print(f"[remote-feeds] load failed: {e}")
 
+    # ── Workday (Fortune 500) ───────────────────────────────────────
+    # Biggest single volume unlock. Each configured tenant returns up
+    # to ~500 jobs. Tenants that 404/401 are skipped without affecting
+    # the rest. Uses write_multi_company_feed so companies.website is
+    # populated on insert -> logos work.
+    try:
+        from dilly_core.job_source_workday import fetch_all_workday
+        print(f"\n[Workday] Fetching Fortune 500 tenants...")
+        wd_jobs = fetch_all_workday()
+        print(f"[Workday] Ingesting {len(wd_jobs)} jobs...")
+        new = write_multi_company_feed(conn, wd_jobs, "workday")
+        print(f"  {len(wd_jobs)} jobs ({new} new)")
+        total_found += len(wd_jobs); total_new += new
+    except Exception as e:
+        print(f"[workday] load failed: {e}")
+
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM internships WHERE status = 'active'")
     total_active = cur.fetchone()[0]

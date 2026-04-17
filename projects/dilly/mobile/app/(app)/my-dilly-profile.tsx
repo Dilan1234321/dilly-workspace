@@ -1812,8 +1812,10 @@ const d = StyleSheet.create({
   strengthBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   strengthBadgeText: { fontSize: 10, fontWeight: '700' },
 
-  // Expanded facts
+  // Expanded facts — marginTop keeps the category-grid chip and the
+  // fact list visually distinct instead of mashed together.
   expandedFacts: {
+    marginTop: 12,
     backgroundColor: colors.s1, borderRadius: 10, padding: 12, gap: 8,
     borderWidth: 1, borderColor: colors.b1,
   },

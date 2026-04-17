@@ -20,19 +20,20 @@ import { useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Easing,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Easing, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { authHeaders } from '../../lib/auth';
 import AnimatedPressable from '../../components/AnimatedPressable';
 
 const INDIGO = colors.indigo;
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
-type Step = 0 | 1 | 2 | 3;
+type Step = 0 | 1 | 2 | 3 | 4;
 
 // Quick-pick role suggestions. The user can type anything; these just
 // seed the field with common roles the threat-report classifier
@@ -69,6 +70,8 @@ export default function ProfileHolderScreen() {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>(0);
 
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [experience, setExperience] = useState<string>('');
@@ -76,6 +79,38 @@ export default function ProfileHolderScreen() {
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+
+  async function pickPhoto() {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        setErr("We need photo library access to upload your picture.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const uri = result.assets[0].uri;
+      setPhoto(uri);
+      setPhotoUploading(true);
+      try {
+        const headers = await authHeaders();
+        const form = new FormData();
+        form.append('file', { uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob);
+        await fetch(`${API_BASE}/profile/photo`, { method: 'POST', headers, body: form });
+      } catch (e) {
+        setErr("Couldn't upload the photo — tap to try again.");
+      } finally {
+        setPhotoUploading(false);
+      }
+    } catch (e: any) {
+      setErr(e?.message || "Couldn't open the photo picker.");
+    }
+  }
 
   // Progress bar — fills as user advances. Same visual as the tutorial.
   const progressAnim = useRef(new Animated.Value(1 / TOTAL_STEPS)).current;
@@ -89,16 +124,18 @@ export default function ProfileHolderScreen() {
   }
 
   function canAdvance(): boolean {
-    if (step === 0) return name.trim().length >= 2;
-    if (step === 1) return role.trim().length >= 2;
-    if (step === 2) return !!experience;
-    if (step === 3) return concerns.length >= 1;
+    // New step order: 0 photo, 1 name, 2 role, 3 experience, 4 concerns.
+    if (step === 0) return !!photo && !photoUploading;
+    if (step === 1) return name.trim().length >= 2;
+    if (step === 2) return role.trim().length >= 2;
+    if (step === 3) return !!experience;
+    if (step === 4) return concerns.length >= 1;
     return false;
   }
 
   function advance() {
     if (!canAdvance() || saving) return;
-    if (step < 3) {
+    if (step < 4) {
       const next = (step + 1) as Step;
       setStep(next);
       animateProgress(next);
@@ -208,14 +245,56 @@ export default function ProfileHolderScreen() {
         >
           {step === 0 && (
             <View style={{ gap: 12 }}>
-              <Text style={s.eyebrow}>FIRST, YOUR NAME</Text>
+              <Text style={s.eyebrow}>FIRST, YOUR FACE</Text>
+              <Text style={s.title}>Add a profile photo.</Text>
+              <Text style={s.sub}>
+                Shows up on your Dilly card and profile page. Tap to pick
+                one from your library.
+              </Text>
+              <TouchableOpacity
+                onPress={pickPhoto}
+                activeOpacity={0.85}
+                style={{
+                  alignSelf: 'center',
+                  width: 160, height: 160, borderRadius: 80,
+                  backgroundColor: colors.s1,
+                  borderWidth: 2, borderColor: photo ? INDIGO : colors.b1,
+                  borderStyle: photo ? 'solid' : 'dashed',
+                  alignItems: 'center', justifyContent: 'center',
+                  marginTop: 12,
+                  overflow: 'hidden',
+                }}
+              >
+                {photo ? (
+                  <Image source={{ uri: photo }} style={{ width: 156, height: 156, borderRadius: 78 }} />
+                ) : (
+                  <View style={{ alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="camera" size={34} color={colors.t3} />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: colors.t3 }}>
+                      Tap to add
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {photoUploading && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}>
+                  <ActivityIndicator size="small" color={INDIGO} />
+                  <Text style={{ fontSize: 13, color: colors.t3 }}>Uploading...</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {step === 1 && (
+            <View style={{ gap: 12 }}>
+              <Text style={s.eyebrow}>YOUR NAME</Text>
               <Text style={s.title}>What should Dilly call you?</Text>
-              <Text style={s.sub}>First name is fine. This is just for Dilly.</Text>
+              <Text style={s.sub}>Full name please. This is just for Dilly.</Text>
               <TextInput
                 style={s.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Your name"
+                placeholder="Your full name"
                 placeholderTextColor={colors.t3}
                 autoCapitalize="words"
                 autoFocus
@@ -225,7 +304,7 @@ export default function ProfileHolderScreen() {
             </View>
           )}
 
-          {step === 1 && (
+          {step === 2 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>YOUR ROLE</Text>
               <Text style={s.title}>What do you do right now?</Text>
@@ -267,7 +346,7 @@ export default function ProfileHolderScreen() {
             </View>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>EXPERIENCE</Text>
               <Text style={s.title}>How long have you been doing this?</Text>
@@ -296,7 +375,7 @@ export default function ProfileHolderScreen() {
             </View>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>WHAT'S ON YOUR MIND</Text>
               <Text style={s.title}>What brought you here?</Text>
@@ -345,7 +424,7 @@ export default function ProfileHolderScreen() {
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <>
-                <Text style={s.ctaText}>{step === 3 ? 'Finish setup' : 'Continue'}</Text>
+                <Text style={s.ctaText}>{step === 4 ? 'Finish setup' : 'Continue'}</Text>
                 <Ionicons name="arrow-forward" size={17} color="#fff" />
               </>
             )}

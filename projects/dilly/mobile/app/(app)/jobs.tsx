@@ -550,14 +550,20 @@ function HeroJobCard({ listing, narrative, onPress, onApply, isSaved, onBookmark
           </View>
         </View>
 
-        {/* Dilly's read — one powerful sentence, never cut off. */}
+        {/* One-line read. For holders it's a market benchmark tone
+            ("here's what this role expects") instead of a match tone
+            ("here's why you'd be a fit"). */}
         <View style={hero.narrativeBox}>
           <View style={hero.narrativeHeader}>
             <Ionicons name="sparkles" size={12} color={VIOLET} />
-            <Text style={[hero.narrativeLabel, { color: VIOLET }]}>DILLY'S READ</Text>
+            <Text style={[hero.narrativeLabel, { color: VIOLET }]}>
+              {isHolder ? 'MARKET READ' : "DILLY'S READ"}
+            </Text>
           </View>
           <Text style={hero.narrativeText}>
-            {readLine}
+            {isHolder
+              ? `${listing.company} is hiring for this role right now. Tap to see what they want.`
+              : readLine}
           </Text>
         </View>
 
@@ -694,19 +700,25 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
           </AnimatedPressable>
         </View>
 
-        {/* Why matched chips — gives "why" on the surface */}
-        <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
-
-        {/* Dilly voice bubble — one powerful sentence. Always shown, even
-            before the narrative loads (shows a stable placeholder). Never
-            truncated so the user can read the full sentence on any device. */}
-        <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
+        {/* Holders are benchmarking the market, not being pitched on
+            "how you fit." Both the chips and Dilly's voice bubble are
+            seeker/student-only. Holders get a cleaner card. */}
+        {!isHolder && (
+          <>
+            <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
+            <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
+          </>
+        )}
 
         {/* Expanded: Narrative + Quick Glance + Actions */}
         {expanded && (
           <View style={s.expandedSection}>
             {/* Fit Narrative */}
-            <FitNarrative listing={listing} preloaded={narrativeCache} />
+            {/* FitNarrative is a "how you match this job" explainer.
+                For holders we skip it entirely — they're scanning the
+                market, not being sold on fit. The rest of the expanded
+                section (full description, action row) still renders. */}
+            {!isHolder && <FitNarrative listing={listing} preloaded={narrativeCache} />}
 
             {/* Quick Glance bullets */}
             {listing.quick_glance && listing.quick_glance.length > 0 && (
@@ -1320,10 +1332,11 @@ export default function JobsScreen() {
                 setExpandedId(expandedId === topMatch.id ? null : topMatch.id);
               }}
             />
-            {/* Expanded hero view — full fit narrative (what you have /
-                what's missing / what to do) inline. No colored rail;
-                scoring language is out of the UI entirely. */}
-            {expandedId === topMatch.id && (
+            {/* Expanded hero view — full fit narrative inline. Holders
+                don't see this (benchmarking, not matching); the tap
+                still expands the card, it just won't render the
+                fit-breakdown component. */}
+            {expandedId === topMatch.id && !isHolder && (
               <View style={[s.jobCard, { marginTop: 8 }]}>
                 <View style={s.jobContent}>
                   <View style={s.expandedSection}>
