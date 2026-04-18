@@ -31,23 +31,15 @@ function DillyGateWrapper() {
 
 /** Global paywall. Triggered by any 402 response via lib/dilly.ts.
  *
- *  On dismiss (either "Not right now" or after the user taps Unlock
- *  and returns from the web checkout), we kick them back to the
- *  Career Center. Reason: the underlying surface that triggered the
- *  402 is half-loaded with an error state. Without this redirect,
- *  users see the paywall → web → and then land back on a broken
- *  "Generating…" spinner or a blank practice card. Career Center
- *  is always safe. */
+ *  On dismiss: return the user to the page they were on when the
+ *  paywall opened. Previously we force-routed to /(app) which felt
+ *  like the app ate their session. Now we just close the overlay —
+ *  the screen they were on is still underneath, and if it was in a
+ *  402'd state (e.g. Forge mid-generation) the screen's own paywall
+ *  bail logic has already reset it to a safe state. */
 function DillyPaywallWrapper() {
   const { visible, context, close } = usePaywallState();
-  function handleDismiss() {
-    close();
-    try {
-      // Replace (not push) so back-button doesn't return to the 402.
-      router.replace('/(app)' as any);
-    } catch {}
-  }
-  return <DillyPaywallFullScreen visible={visible} onDismiss={handleDismiss} context={context} />;
+  return <DillyPaywallFullScreen visible={visible} onDismiss={close} context={context} />;
 }
 
 function DillyTabIcon({ focused }: { focused: boolean }) {

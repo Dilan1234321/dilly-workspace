@@ -38,6 +38,7 @@ import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { useSubscription } from '../../hooks/useSubscription';
+import { openPaywall } from '../../hooks/usePaywall';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const COBALT = '#1652F0';
@@ -330,7 +331,10 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
             marginTop: 4,
           }}
           scaleDown={0.97}
-          onPress={() => router.push('/(app)/settings')}
+          onPress={() => openPaywall({
+            surface: 'Fit Reads',
+            promise: "Dilly tells you what you have, what's missing, and what to do for every job you care about.",
+          })}
         >
           <Ionicons name="sparkles" size={13} color="#fff" />
           <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>

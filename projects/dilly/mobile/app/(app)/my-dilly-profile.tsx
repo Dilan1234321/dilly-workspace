@@ -646,14 +646,31 @@ function SeekerProfileScreen() {
                 }}
                 scaleDown={0.95}
               >
-                {p.profile_slug ? (
-                  <Image source={{ uri: `${API_BASE}/profile/public/${p.profile_slug}/photo?_t=${Date.now()}` }} style={d.editPhotoImg} />
+                {/* Photo OR grayed-out "add photo" placeholder. We
+                    can't rely on profile_slug alone because every
+                    user has one from signup — that made the old code
+                    always render an <Image> at /profile/public/{slug}
+                    /photo even when the user had never uploaded, so
+                    they saw a broken thumbnail. Use photo_url to
+                    decide: if it's populated we trust it; otherwise
+                    render the camera placeholder. */}
+                {p.photo_url ? (
+                  <Image
+                    source={{
+                      uri: String(p.photo_url).startsWith('http')
+                        ? `${p.photo_url}?_t=${Date.now()}`
+                        : `${API_BASE}${p.photo_url}?_t=${Date.now()}`,
+                    }}
+                    style={d.editPhotoImg}
+                  />
                 ) : (
                   <View style={d.editPhotoPlaceholder}>
-                    <Ionicons name="camera" size={24} color={colors.t3} />
+                    <Ionicons name="camera" size={28} color={colors.t3} />
                   </View>
                 )}
-                <Text style={d.editPhotoLabel}>Change photo</Text>
+                <Text style={d.editPhotoLabel}>
+                  {p.photo_url ? 'Change photo' : 'Add a photo'}
+                </Text>
               </AnimatedPressable>
 
               {/* Name */}
@@ -1166,22 +1183,38 @@ function SeekerProfileScreen() {
                 {webTaglineSaving && <Text style={{ fontSize: 10, color: colors.t3, marginTop: 2 }}>Saving...</Text>}
               </View>
 
-              {/* Bio */}
+              {/* Mission Statement — replaces the old "Bio" block.
+                  Saves to profile_bio for backward compat with the
+                  web profile that reads either field (per the PATCH
+                  allow-list in api/routers/profile.py the canonical
+                  field is mission_statement). */}
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>BIO</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>MISSION STATEMENT</Text>
+                <Text style={{ fontSize: 11, color: colors.t3, marginBottom: 6, lineHeight: 15 }}>
+                  One or two lines on why you do what you do. Recruiters read this first on your public profile.
+                </Text>
                 <TextInput
-                  style={{ fontSize: 14, color: colors.t1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, backgroundColor: colors.s2, minHeight: 60 }}
+                  style={{ fontSize: 14, color: colors.t1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1, backgroundColor: colors.s2, minHeight: 90, textAlignVertical: 'top' }}
                   value={webBio}
                   onChangeText={setWebBio}
                   onEndEditing={() => {
                     setWebBioSaving(true);
-                    dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ profile_bio: webBio.trim() }) })
+                    // Write to BOTH fields: mission_statement is the
+                    // canonical home; profile_bio is the legacy
+                    // fallback the public-profile API reads. Writing
+                    // both means either web surface reads the fresh
+                    // value without a schema migration step.
+                    const val = webBio.trim();
+                    dilly.fetch('/profile', {
+                      method: 'PATCH',
+                      body: JSON.stringify({ mission_statement: val, profile_bio: val }),
+                    })
                       .then(() => setWebBioSaving(false))
                       .catch(() => setWebBioSaving(false));
                   }}
-                  placeholder="A short line about you (max 160 chars)"
+                  placeholder="e.g. I help early-stage teams ship things that people actually use. I'm drawn to problems where the hard part is the judgment, not the code."
                   placeholderTextColor={colors.t3}
-                  maxLength={160}
+                  maxLength={320}
                   multiline
                   returnKeyType="done"
                   blurOnSubmit
@@ -2785,10 +2818,16 @@ const d = StyleSheet.create({
   },
   editPhotoBtn: { alignItems: 'center', gap: 8 },
   editPhotoImg: { width: 80, height: 80, borderRadius: 40 },
+  // Grayed camera mold — rendered when the user has no photo yet.
+  // Dashed border reads as "empty slot, add something here" per
+  // standard photo-upload UX patterns. Slightly bigger than the
+  // filled photo so the target feels tappable.
   editPhotoPlaceholder: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.b1,
+    backgroundColor: colors.s2,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.b1,
+    borderStyle: 'dashed',
   },
   editPhotoLabel: { fontSize: 12, fontWeight: '600', color: colors.indigo },
   editField: { gap: 4 },

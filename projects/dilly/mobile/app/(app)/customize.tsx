@@ -129,9 +129,16 @@ export default function CustomizeStudio() {
         </AnimatedPressable>
       </View>
 
-      {/* Live preview — a phone frame shrunk to fit. */}
+      {/* Live preview — phone frame clamped so it never blocks the
+          top bar. maxHeight accounts for: top bar (~56) + screen-picker
+          row (~60) + panel (~280) + bottom safe area (~34) so the
+          phone never crowds into the Close/Save buttons on short
+          screens (SE, older iPhones). */}
       <View style={s.previewWrap}>
-        <View style={[s.previewPhone, { height: Math.min(420, W * 1.4), width: Math.min(240, W * 0.6) }]}>
+        <View style={[s.previewPhone, {
+          height: Math.min(360, W * 1.25),
+          width: Math.min(210, W * 0.52),
+        }]}>
           <MockFrame theme={theme} screen={screen} />
         </View>
       </View>
@@ -217,81 +224,166 @@ interface AxisProps {
 }
 
 function AccentPanel({ pending, patch, theme }: AxisProps) {
+  // Horizontal-scroll swatch strip. Previously a wrap grid — users
+  // didn't know there were more colors than the first row. Now:
+  // single row, swipe to discover, with a "more →" fade indicator
+  // on the right edge so the scroll is obvious.
   return (
-    <ScrollView contentContainerStyle={s.swatchGrid}>
-      {ACCENT_PRESETS.map(p => {
-        const selected = pending.accent === p.id;
-        return (
-          <AnimatedPressable
-            key={p.id}
-            style={{ alignItems: 'center', gap: 4, width: 62 }}
-            onPress={() => patch({ accent: p.id as AccentId })}
-            scaleDown={0.92}
-          >
-            <View style={[{
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: p.color,
-              borderWidth: selected ? 3 : 1,
-              borderColor: selected ? p.color : 'rgba(0,0,0,0.08)',
-              alignItems: 'center', justifyContent: 'center',
-            }, selected && {
-              shadowColor: p.color, shadowOpacity: 0.4, shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 3,
-            }]}>
-              {selected && <Ionicons name="checkmark" size={18} color="#fff" />}
-            </View>
-            <Text style={{
-              fontSize: 9, fontWeight: selected ? '800' : '600',
-              color: selected ? p.color : '#8A8AA0',
-            }}>
-              {p.label}
-            </Text>
-          </AnimatedPressable>
-        );
-      })}
-    </ScrollView>
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.swatchRow}
+      >
+        {ACCENT_PRESETS.map(p => {
+          const selected = pending.accent === p.id;
+          return (
+            <AnimatedPressable
+              key={p.id}
+              style={{ alignItems: 'center', gap: 4, width: 62 }}
+              onPress={() => patch({ accent: p.id as AccentId })}
+              scaleDown={0.92}
+            >
+              <View style={[{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: p.color,
+                borderWidth: selected ? 3 : 1,
+                borderColor: selected ? p.color : 'rgba(0,0,0,0.08)',
+                alignItems: 'center', justifyContent: 'center',
+              }, selected && {
+                shadowColor: p.color, shadowOpacity: 0.4, shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 3,
+              }]}>
+                {selected && <Ionicons name="checkmark" size={18} color="#fff" />}
+              </View>
+              <Text style={{
+                fontSize: 9, fontWeight: selected ? '800' : '600',
+                color: selected ? p.color : '#8A8AA0',
+              }}>
+                {p.label}
+              </Text>
+            </AnimatedPressable>
+          );
+        })}
+      </ScrollView>
+      <Text style={s.scrollHint}>Swipe for more →</Text>
+    </View>
   );
 }
 
 function SurfacePanel({ pending, patch, theme }: AxisProps) {
+  // Appearance mode — Auto / Light / Dark.
+  // Auto   = autoDark=true + whatever light surface the user picked
+  // Light  = autoDark=false + user's light surface (never midnight)
+  // Dark   = autoDark=false + surface='midnight' (overrides light pick)
+  const mode: 'auto' | 'light' | 'dark' =
+    pending.autoDark ? 'auto'
+    : pending.surface === 'midnight' ? 'dark'
+    : 'light';
+
+  function setMode(m: 'auto' | 'light' | 'dark') {
+    if (m === 'auto') {
+      // Going to auto: keep the user's chosen light surface if they
+      // had one. If they're currently on midnight, fall back to cloud.
+      patch({
+        autoDark: true,
+        surface: pending.surface === 'midnight' ? 'cloud' : pending.surface,
+      });
+    } else if (m === 'light') {
+      patch({
+        autoDark: false,
+        surface: pending.surface === 'midnight' ? 'cloud' : pending.surface,
+      });
+    } else {
+      patch({ autoDark: false, surface: 'midnight' });
+    }
+  }
+
+  // Swatches shown depend on mode. Dark mode only has one surface
+  // (Midnight) so we collapse to that. Light/Auto show all the
+  // light-family surfaces (Cloud, Cream, Slate + 5 pastels).
+  const lightSurfaces = Object.values(SURFACE_PRESETS).filter(sp => !sp.dark);
+  const showLightGrid = mode !== 'dark';
+
   return (
-    <View style={{ gap: 10, paddingHorizontal: 14 }}>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {Object.values(SURFACE_PRESETS).map(sp => {
-          const selected = pending.surface === sp.id;
+    <View style={{ gap: 12, paddingHorizontal: 14 }}>
+      {/* Three-way toggle — Auto / Light / Dark. Pill buttons with
+          the active one tinted accent. Always rendered so the user
+          sees the other options even if they haven't flipped them. */}
+      <View style={s.segRow}>
+        {(['auto', 'light', 'dark'] as const).map(m => {
+          const active = mode === m;
+          const label = m === 'auto' ? 'Auto' : m === 'light' ? 'Light' : 'Dark';
+          const icon = m === 'auto' ? 'contrast' : m === 'light' ? 'sunny' : 'moon';
           return (
             <AnimatedPressable
-              key={sp.id}
+              key={m}
               style={[
-                s.surfaceCard,
-                { backgroundColor: sp.bg, borderColor: selected ? theme.accent : sp.border },
-                selected && { borderWidth: 2 },
+                s.segBtn,
+                active && { backgroundColor: theme.accent, borderColor: theme.accent },
               ]}
-              onPress={() => patch({ surface: sp.id as SurfaceId })}
+              onPress={() => setMode(m)}
               scaleDown={0.96}
             >
-              <View style={[s.surfaceChip, { backgroundColor: sp.s2 }]} />
-              <View style={[s.surfaceChip, { backgroundColor: sp.s1, width: '70%' }]} />
-              <Text style={[s.surfaceLabel, { color: sp.t1 }]}>{sp.label}</Text>
-              {sp.dark && <Text style={[s.surfaceSubLabel, { color: sp.t3 }]}>DARK</Text>}
+              <Ionicons name={icon as any} size={12} color={active ? '#fff' : '#1A1A2E'} />
+              <Text style={[s.segBtnText, active && { color: '#fff' }]}>{label}</Text>
             </AnimatedPressable>
           );
         })}
       </View>
-      <View style={s.toggleRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.toggleLabel}>Auto dark mode</Text>
-          <Text style={s.toggleHint}>Use Midnight when your phone is in dark mode.</Text>
+      <Text style={s.segHint}>
+        {mode === 'auto'
+          ? 'Follows your phone. Dark when your phone is dark, light when light.'
+          : mode === 'light'
+            ? 'Always light. Pick a light surface below.'
+            : 'Always dark. Midnight surface active.'}
+      </Text>
+
+      {/* Light-surface grid. Horizontal scroll so all 8 light
+          surfaces (Cloud, Cream, Slate + 5 pastels) are reachable
+          without wrapping into many rows. */}
+      {showLightGrid && (
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+          >
+            {lightSurfaces.map(sp => {
+              const selected = pending.surface === sp.id;
+              return (
+                <AnimatedPressable
+                  key={sp.id}
+                  style={[
+                    s.surfaceCard,
+                    { backgroundColor: sp.bg, borderColor: selected ? theme.accent : sp.border, minWidth: 92 },
+                    selected && { borderWidth: 2 },
+                  ]}
+                  onPress={() => patch({ surface: sp.id as SurfaceId, autoDark: mode === 'auto' })}
+                  scaleDown={0.96}
+                >
+                  <View style={[s.surfaceChip, { backgroundColor: sp.s2 }]} />
+                  <View style={[s.surfaceChip, { backgroundColor: sp.s1, width: '70%' }]} />
+                  <Text style={[s.surfaceLabel, { color: sp.t1 }]}>{sp.label}</Text>
+                </AnimatedPressable>
+              );
+            })}
+          </ScrollView>
+          <Text style={s.scrollHint}>Swipe for more →</Text>
         </View>
-        <AnimatedPressable
-          onPress={() => patch({ autoDark: !pending.autoDark })}
-          scaleDown={0.92}
-          style={[s.toggle, pending.autoDark && { backgroundColor: theme.accent }]}
-        >
-          <View style={[s.toggleDot, pending.autoDark && { transform: [{ translateX: 18 }] }]} />
-        </AnimatedPressable>
-      </View>
+      )}
+
+      {/* Dark mode explanation when Dark is picked. No grid — there's
+          only one dark surface for v1 (Midnight). */}
+      {mode === 'dark' && (
+        <View style={[s.surfaceCard, { backgroundColor: '#0B0F1E', minWidth: '100%' }]}>
+          <View style={[s.surfaceChip, { backgroundColor: '#1D2340' }]} />
+          <View style={[s.surfaceChip, { backgroundColor: '#151A2E', width: '70%' }]} />
+          <Text style={[s.surfaceLabel, { color: '#E8EAF4' }]}>Midnight</Text>
+          <Text style={[s.surfaceSubLabel, { color: 'rgba(232,234,244,0.6)' }]}>DARK</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -426,6 +518,11 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)',
+    // Always above the phone preview — on short screens the preview
+    // could overflow its container and paint over the close button.
+    // Explicit zIndex + solid background guards against that.
+    zIndex: 10,
+    backgroundColor: '#FFFFFF',
   },
   topTitle: { fontSize: 15, fontWeight: '800', color: '#1A1A2E', letterSpacing: 0.2 },
   saveBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
@@ -483,6 +580,26 @@ const s = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: 12,
     paddingHorizontal: 14, paddingVertical: 6, justifyContent: 'space-evenly',
   },
+  swatchRow: {
+    gap: 12, paddingHorizontal: 14, paddingVertical: 6, alignItems: 'center',
+  },
+  scrollHint: {
+    fontSize: 10, fontWeight: '700', color: '#8A8AA0',
+    letterSpacing: 0.4, textAlign: 'right',
+    paddingHorizontal: 14, marginTop: 4,
+  },
+  // Auto/Light/Dark segmented control.
+  segRow: {
+    flexDirection: 'row', gap: 6,
+  },
+  segBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, paddingVertical: 10, borderRadius: 10,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: '#F7F8FC',
+  },
+  segBtnText: { fontSize: 12, fontWeight: '700', color: '#1A1A2E' },
+  segHint: { fontSize: 11, color: '#8A8AA0', lineHeight: 15 },
 
   surfaceCard: {
     flex: 1, borderRadius: 12, borderWidth: 1,
