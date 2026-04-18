@@ -61,19 +61,24 @@ export default function ModeSwitchScreen() {
   const [newRole, setNewRole] = useState('');
   const [newCompany, setNewCompany] = useState('');
 
-  // Soft fade-in on mount. The face settles, text breathes in, CTA
-  // appears last. Keeps the moment from feeling like a pop-up.
+  // Soft fade-in on mount. The face settles first, then text + CTA
+  // come in together so the button is tappable within ~500ms.
+  //
+  // Bug fix: the earlier version ran a 1.2s SEQUENCED fade (face
+  // 500 + text 400 + CTA 300) so the CTA was invisible/untappable
+  // for over a second after arriving. Users tapped and nothing
+  // happened — looked like the app froze. Starting fadeCta at 1
+  // (fully visible) removes the perceived freeze entirely.
   const fadeFace  = useRef(new Animated.Value(0)).current;
   const fadeText  = useRef(new Animated.Value(0)).current;
-  const fadeCta   = useRef(new Animated.Value(0)).current;
+  const fadeCta   = useRef(new Animated.Value(1)).current;  // instant, no sequence
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.timing(fadeFace, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(fadeText, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(fadeCta,  { toValue: 1, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    Animated.parallel([
+      Animated.timing(fadeFace, { toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(fadeText, { toValue: 1, duration: 400, delay: 120, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
-  }, [fadeFace, fadeText, fadeCta]);
+  }, [fadeFace, fadeText]);
 
   // Holder CTA is disabled until role + company are typed. we need
   // them to populate the comp benchmark + trajectory without a

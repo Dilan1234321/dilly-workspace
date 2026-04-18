@@ -1966,21 +1966,6 @@ function HolderCareer() {
           </View>
         </FadeInView>
 
-        {/* Life event switch. "I got laid off" surfaced outside
-            Settings so users actually find it. Buried in Settings
-            they miss it; 90% of users who actually do get laid off
-            never tap it and get stuck with the wrong app. */}
-        <FadeInView delay={110}>
-          <AnimatedPressable
-            style={hc.layoffBtn}
-            scaleDown={0.98}
-            onPress={() => router.push('/onboarding/mode-switch?to=seeker' as any)}
-          >
-            <Ionicons name="sync-outline" size={14} color="#B45309" />
-            <Text style={hc.layoffBtnText}>I got laid off. switch to Job Search</Text>
-          </AnimatedPressable>
-        </FadeInView>
-
         {/* Skills arsenal */}
         {skills.length > 0 ? (
           <FadeInView delay={120}>
@@ -2088,6 +2073,24 @@ function HolderCareer() {
               <Text style={hc.askSub}>Negotiate a raise, plan your next move, or stress-test a job offer.</Text>
             </View>
             <Ionicons name="arrow-forward" size={16} color={HOLDER_ACCENT} />
+          </AnimatedPressable>
+        </FadeInView>
+
+        {/* Life event switch: moved here (bottom of My Career) so it
+            doesn't crowd the primary holder content up top. Users who
+            actually need it will scroll to find it. Copy updated to
+            cover both layoff and voluntary departure ("no longer
+            employed") since not everyone who leaves a job was fired. */}
+        <FadeInView delay={260}>
+          <AnimatedPressable
+            style={hc.layoffBtn}
+            scaleDown={0.98}
+            onPress={() => router.push('/onboarding/mode-switch?to=seeker' as any)}
+          >
+            <Ionicons name="sync-outline" size={14} color="#B45309" />
+            <Text style={hc.layoffBtnText}>
+              I got laid off or am no longer employed. Switch to Job Search.
+            </Text>
           </AnimatedPressable>
         </FadeInView>
       </ScrollView>
