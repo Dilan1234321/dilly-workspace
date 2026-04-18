@@ -3596,6 +3596,58 @@ def _get_ats_formatting(ats: str) -> str:
             "- Include a Research Interests line near the top if the user "
             "has articulated them."
         ),
+
+        # ── Workable (mid-market standard parser) ───────────────────
+        # Workable uses a native HireAbility-based parser. Well-behaved
+        # on clean single-column PDFs. Known quirks: the parser pulls
+        # the top 3-4 lines as the "header" for auto-fill; anything odd
+        # up top leaks into the name/contact fields.
+        'workable': (
+            "ATS: Workable (HireAbility-based parser).\n"
+            + BASELINE + "\n"
+            "- First 3-4 lines MUST be: full name, phone, email, city/state. "
+            "Nothing else up top — no quote, no tagline, no objective. The "
+            "parser auto-fills application fields from those top lines.\n"
+            "- Section headers from the standard set: Experience, Education, "
+            "Skills, Projects. 'Professional Experience' parses; 'Career "
+            "History' often doesn't.\n"
+            "- DATES: 'Mon YYYY' or 'MM/YYYY'. Hyphen- or en-dash-separated "
+            "range. Workable tolerates both.\n"
+            "- KEYWORD STRATEGY: Workable's candidate-rank model scores the "
+            "Skills section and bullet text about equally. Mirror the JD's "
+            "required-skills list in your Skills block with the exact "
+            "spellings, then weave the top 5 into your most-recent-role "
+            "bullets.\n"
+            "- AVOID: multi-column layouts, tables of skills (parses as a "
+            "single paragraph), or decorative dividers between sections."
+        ),
+
+        # ── SAP SuccessFactors (enterprise, native parser) ───────────
+        # SuccessFactors is on the hiring-manager list and is surprisingly
+        # strict. Used at most F500 enterprises (Nestle, Unilever, GSK).
+        'successfactors': (
+            "ATS: SAP SuccessFactors (native parser, strict).\n"
+            + BASELINE + "\n"
+            "- Section headers EXACTLY: 'Experience', 'Education', 'Skills', "
+            "'Certifications'. SF's parser is known to drop sections with "
+            "non-standard names.\n"
+            "- DATES: MM/YYYY format, hyphen-separated. 'Present' is "
+            "allowed; 'Current' is not. Every role MUST have a start AND "
+            "end date or the role is dropped.\n"
+            "- KEYWORD STRATEGY: SF's recruiter-side search is keyword-"
+            "count dominant on the Skills section. Put a comma-separated "
+            "Skills list with every JD keyword the candidate legitimately has.\n"
+            "- AVOID: bolded company names (confuses the section-header "
+            "detector), role titles on the same line as dates."
+        ),
+
+        # ── Ashby alias for a few small startups ──────────────────────
+        'ashbyhq': (
+            "ATS: Ashby (modern parser, high tolerance).\n"
+            + BASELINE + "\n"
+            "- Ashby extracts well from any clean single-column layout.\n"
+            "- KEYWORD STRATEGY: semantic matching — bridge language works."
+        ),
     }
     # Default to Greenhouse rules — safe because ~94% of Dilly's jobs are
     # on Greenhouse-parsed systems (Greenhouse + Jobvite use Sovren).

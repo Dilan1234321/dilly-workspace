@@ -790,6 +790,31 @@ def crawl_all():
     except Exception as e:
         print(f"[workday] load failed: {e}")
 
+    # ── Workable (mid-market employers) ─────────────────────────────
+    # Public JSON API at apply.workable.com. Thousands of employers
+    # use Workable; this starter list covers known-large boards and
+    # will grow as we verify additional slugs. Each board that 404s
+    # is silently skipped; network errors don't break the run.
+    try:
+        from dilly_core.job_source_workable import fetch_all_workable
+        workable_slugs = [
+            # Starter set — verified public boards, added 2026-04-18.
+            # Format: workable subdomain slug used in apply.workable.com.
+            "remotecom", "doist", "deel", "hopin",
+            "canonical", "tier", "gopuff", "bandcamp",
+            "pleo", "blinkist", "getyourguide", "freeletics",
+            "n26", "payoneer", "cloudpay", "taxjar",
+            "mews", "workable",  # Workable themselves run on Workable
+        ]
+        print(f"\n[Workable] Fetching {len(workable_slugs)} boards...")
+        wk_jobs = fetch_all_workable(workable_slugs, max_per_company=100)
+        print(f"[Workable] Ingesting {len(wk_jobs)} jobs...")
+        new = write_multi_company_feed(conn, wk_jobs, "workable")
+        print(f"  {len(wk_jobs)} jobs ({new} new)")
+        total_found += len(wk_jobs); total_new += new
+    except Exception as e:
+        print(f"[workable] load failed: {e}")
+
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM internships WHERE status = 'active'")
     total_active = cur.fetchone()[0]
