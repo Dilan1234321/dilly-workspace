@@ -1864,14 +1864,15 @@ function SeekerProfileScreen() {
         </View>
       )}
 
-      {/* QR Code Fullscreen */}
+      {/* QR Code Fullscreen. The QR itself stays dark-on-white for scan
+          reliability — theme only chromes the surrounding screen. */}
       <Modal visible={showQrFullscreen} animationType="slide" presentationStyle="fullScreen" transparent={false}>
-        <View style={{ flex: 1, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ flex: 1, backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center' }}>
           <TouchableOpacity
-            style={{ position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
+            style={{ position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: theme.surface.s2, alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
             onPress={() => setShowQrFullscreen(false)}
           >
-            <Ionicons name="close" size={20} color={colors.t1} />
+            <Ionicons name="close" size={20} color={theme.surface.t1} />
           </TouchableOpacity>
 
           {readableSlug ? (
@@ -1917,6 +1918,8 @@ function SeekerProfileScreen() {
                     </View>
                   );
                 })()}
+                {/* Name + URL sit INSIDE the captured QR card so they
+                    travel with the shared image — stay dark-on-white. */}
                 <Text style={{ fontSize: 16, fontWeight: '700', color: '#0f172a', marginTop: 14 }}>
                   {p.name || 'Your Profile'}
                 </Text>
@@ -1924,11 +1927,11 @@ function SeekerProfileScreen() {
                   hellodilly.com/{profilePrefix}/{readableSlug}
                 </Text>
               </View>
-              <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 16, textAlign: 'center' }}>
+              <Text style={{ fontSize: 12, color: theme.surface.t3, marginTop: 16, textAlign: 'center' }}>
                 Scan to view profile
               </Text>
               <AnimatedPressable
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.indigo }}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10, backgroundColor: theme.accent }}
                 onPress={async () => {
                   try {
                     let captureRef: any = null;
@@ -1971,7 +1974,7 @@ function SeekerProfileScreen() {
               </AnimatedPressable>
             </>
           ) : (
-            <Text style={{ color: colors.t3 }}>Setting up your profile link...</Text>
+            <Text style={{ color: theme.surface.t3 }}>Setting up your profile link...</Text>
           )}
         </View>
       </Modal>

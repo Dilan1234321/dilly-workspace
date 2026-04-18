@@ -3,6 +3,7 @@ import { View, Text, Modal, Animated, StyleSheet } from 'react-native';
 import { colors } from '../lib/tokens';
 import { DillyFace } from './DillyFace';
 import AnimatedPressable from './AnimatedPressable';
+import { useResolvedTheme } from '../hooks/useTheme';
 
 interface DillyGateProps {
   visible: boolean;
@@ -15,6 +16,7 @@ export default function DillyGate({ visible, message, requiredPlan, onDismiss }:
   const faceScale = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
   const buttonsOpacity = useRef(new Animated.Value(0)).current;
+  const theme = useResolvedTheme();
 
   useEffect(() => {
     if (visible) {
@@ -62,7 +64,7 @@ export default function DillyGate({ visible, message, requiredPlan, onDismiss }:
       statusBarTranslucent
       onRequestClose={onDismiss}
     >
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
         {/* Centered content */}
         <View style={s.center}>
           {/* Animated DillyFace */}
@@ -72,15 +74,15 @@ export default function DillyGate({ visible, message, requiredPlan, onDismiss }:
 
           {/* Message text */}
           <Animated.View style={[s.messageWrap, { opacity: textOpacity }]}>
-            <Text style={s.messageText}>{displayMessage}</Text>
+            <Text style={[s.messageText, { color: theme.surface.t1 }]}>{displayMessage}</Text>
           </Animated.View>
         </View>
 
         {/* Buttons at bottom */}
         <Animated.View style={[s.buttonsWrap, { opacity: buttonsOpacity }]}>
-          {/* See plans - filled */}
+          {/* See plans - filled with theme accent */}
           <AnimatedPressable
-            style={s.seePlansBtn}
+            style={[s.seePlansBtn, { backgroundColor: theme.accent }]}
             onPress={onDismiss}
             scaleDown={0.97}
           >
@@ -89,11 +91,11 @@ export default function DillyGate({ visible, message, requiredPlan, onDismiss }:
 
           {/* Not now - outlined */}
           <AnimatedPressable
-            style={s.notNowBtn}
+            style={[s.notNowBtn, { borderColor: theme.surface.border }]}
             onPress={onDismiss}
             scaleDown={0.97}
           >
-            <Text style={s.notNowBtnText}>Not now</Text>
+            <Text style={[s.notNowBtnText, { color: theme.surface.t2 }]}>Not now</Text>
           </AnimatedPressable>
         </Animated.View>
       </View>
@@ -104,7 +106,6 @@ export default function DillyGate({ visible, message, requiredPlan, onDismiss }:
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
     justifyContent: 'space-between',
     paddingHorizontal: 32,
     paddingTop: 80,
@@ -122,7 +123,6 @@ const s = StyleSheet.create({
   messageText: {
     fontSize: 16,
     lineHeight: 24,
-    color: colors.t1,
     textAlign: 'center',
     fontWeight: '400',
   },
@@ -131,7 +131,6 @@ const s = StyleSheet.create({
     paddingBottom: 16,
   },
   seePlansBtn: {
-    backgroundColor: colors.indigo,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
@@ -144,7 +143,6 @@ const s = StyleSheet.create({
   },
   notNowBtn: {
     borderWidth: 1.5,
-    borderColor: colors.b2,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
@@ -152,6 +150,5 @@ const s = StyleSheet.create({
   notNowBtnText: {
     fontSize: 15,
     fontWeight: '500',
-    color: colors.t2,
   },
 });

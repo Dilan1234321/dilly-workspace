@@ -36,8 +36,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DillyFace } from './DillyFace';
 import AnimatedPressable from './AnimatedPressable';
 import { colors, spacing } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 
-const INDIGO = '#1B3FA0';
 const PRICING_URL = 'https://hellodilly.com/pricing.html';
 
 export interface DillyPaywallContext {
@@ -63,6 +63,7 @@ export default function DillyPaywallFullScreen({
   const insets = useSafeAreaInsets();
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(30)).current;
+  const theme = useResolvedTheme();
 
   useEffect(() => {
     if (visible) {
@@ -111,6 +112,7 @@ export default function DillyPaywallFullScreen({
         style={[
           s.container,
           {
+            backgroundColor: theme.surface.bg,
             paddingTop: insets.top + 10,
             paddingBottom: insets.bottom + 14,
             opacity: fade,
@@ -121,7 +123,7 @@ export default function DillyPaywallFullScreen({
             aren't ready yet. We don't want to feel like a trap. */}
         <View style={s.topRow}>
           <Pressable onPress={onDismiss} hitSlop={16} style={s.closeBtn}>
-            <Ionicons name="close" size={22} color={colors.t3} />
+            <Ionicons name="close" size={22} color={theme.surface.t3} />
           </Pressable>
         </View>
 
@@ -131,42 +133,44 @@ export default function DillyPaywallFullScreen({
             <DillyFace size={96} />
           </View>
 
-          {/* Surface label. "this is where you are" context — optional. */}
+          {/* Surface label. "this is where you are" context — optional.
+              Eyebrow uses theme accent so the paywall ties into the
+              user's customized color on every launch. */}
           {surface ? (
-            <Text style={s.eyebrow}>{surface.toUpperCase()}</Text>
+            <Text style={[s.eyebrow, { color: theme.accent }]}>{surface.toUpperCase()}</Text>
           ) : (
-            <Text style={s.eyebrow}>A GENTLE REMINDER</Text>
+            <Text style={[s.eyebrow, { color: theme.accent }]}>A GENTLE REMINDER</Text>
           )}
 
           {/* Primary headline. spoken to the user, not at them. */}
-          <Text style={s.headline}>
+          <Text style={[s.headline, { color: theme.surface.t1 }]}>
             This is where Dilly{'\n'}goes to work.
           </Text>
 
           {/* The promise. one paragraph. specific to the surface if provided. */}
-          <Text style={s.promise}>
+          <Text style={[s.promise, { color: theme.surface.t2 }]}>
             {promise}
           </Text>
 
           {/* Three short lines of what's unlocked. Written as sentences,
               not bullets. Fewer exclamation points, more substance. */}
           <View style={s.linesWrap}>
-            <PaywallLine text="Coaching that learns you over time, not a cold chatbot." />
-            <PaywallLine text="Personalized fit reads on every job, tailored resumes per role." />
-            <PaywallLine text="A career coach that's available the moment you need one." />
+            <PaywallLine accent={theme.accent} textColor={theme.surface.t1} text="Coaching that learns you over time, not a cold chatbot." />
+            <PaywallLine accent={theme.accent} textColor={theme.surface.t1} text="Personalized fit reads on every job, tailored resumes per role." />
+            <PaywallLine accent={theme.accent} textColor={theme.surface.t1} text="A career coach that's available the moment you need one." />
           </View>
         </Animated.View>
 
         {/* Footer. price + CTA + subtle 'continue free' affordance. */}
         <Animated.View style={[s.footer, { transform: [{ translateY: slide }] }]}>
           <View style={s.priceRow}>
-            <Text style={s.priceAmount}>$9.99</Text>
-            <Text style={s.pricePeriod}>/ month</Text>
+            <Text style={[s.priceAmount, { color: theme.surface.t1 }]}>$9.99</Text>
+            <Text style={[s.pricePeriod, { color: theme.surface.t3 }]}>/ month</Text>
           </View>
-          <Text style={s.priceNote}>Cancel anytime. No contract.</Text>
+          <Text style={[s.priceNote, { color: theme.surface.t3 }]}>Cancel anytime. No contract.</Text>
 
           <AnimatedPressable
-            style={s.cta}
+            style={[s.cta, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
             scaleDown={0.97}
             onPress={handleOpenPricing}
           >
@@ -175,7 +179,7 @@ export default function DillyPaywallFullScreen({
           </AnimatedPressable>
 
           <Pressable onPress={onDismiss} hitSlop={12} style={s.continueFree}>
-            <Text style={s.continueFreeText}>Not right now</Text>
+            <Text style={[s.continueFreeText, { color: theme.surface.t3 }]}>Not right now</Text>
           </Pressable>
         </Animated.View>
       </Animated.View>
@@ -183,11 +187,11 @@ export default function DillyPaywallFullScreen({
   );
 }
 
-function PaywallLine({ text }: { text: string }) {
+function PaywallLine({ text, accent, textColor }: { text: string; accent: string; textColor: string }) {
   return (
     <View style={s.line}>
-      <View style={s.lineDot} />
-      <Text style={s.lineText}>{text}</Text>
+      <View style={[s.lineDot, { backgroundColor: accent }]} />
+      <Text style={[s.lineText, { color: textColor }]}>{text}</Text>
     </View>
   );
 }
@@ -195,7 +199,6 @@ function PaywallLine({ text }: { text: string }) {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
     paddingHorizontal: spacing.xl,
   },
   topRow: {
@@ -222,14 +225,12 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.8,
-    color: INDIGO,
     textAlign: 'center',
   },
 
   headline: {
     fontSize: 32,
     fontWeight: '800',
-    color: colors.t1,
     letterSpacing: -0.8,
     lineHeight: 38,
     textAlign: 'center',
@@ -237,7 +238,6 @@ const s = StyleSheet.create({
 
   promise: {
     fontSize: 16,
-    color: colors.t2,
     lineHeight: 24,
     textAlign: 'center',
     paddingHorizontal: 4,
@@ -256,13 +256,11 @@ const s = StyleSheet.create({
   },
   lineDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: INDIGO,
     marginTop: 8,
   },
   lineText: {
     flex: 1,
     fontSize: 14,
-    color: colors.t1,
     lineHeight: 21,
   },
 
@@ -278,17 +276,14 @@ const s = StyleSheet.create({
   priceAmount: {
     fontSize: 34,
     fontWeight: '900',
-    color: colors.t1,
     letterSpacing: -1,
   },
   pricePeriod: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.t3,
   },
   priceNote: {
     fontSize: 12,
-    color: colors.t3,
     marginBottom: 8,
   },
 
@@ -297,12 +292,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: INDIGO,
     paddingVertical: 16,
     paddingHorizontal: 28,
     borderRadius: 14,
     alignSelf: 'stretch',
-    shadowColor: INDIGO,
     shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
@@ -321,7 +314,6 @@ const s = StyleSheet.create({
   },
   continueFreeText: {
     fontSize: 13,
-    color: colors.t3,
     fontWeight: '600',
     textAlign: 'center',
   },

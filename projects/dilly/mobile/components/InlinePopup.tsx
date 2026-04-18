@@ -22,6 +22,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { colors, spacing, radius } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 
 const PANEL_WIDTH = 200;
 const PANEL_PADDING = 14;
@@ -46,6 +47,7 @@ export default function InlinePopup({ visible, anchor, title, message, actions, 
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.9)).current;
   const { width: screenW, height: screenH } = useWindowDimensions();
+  const theme = useResolvedTheme();
 
   useEffect(() => {
     if (visible) {
@@ -80,24 +82,32 @@ export default function InlinePopup({ visible, anchor, title, message, actions, 
       {/* Backdrop. tapping dismisses */}
       <Pressable style={s.backdrop} onPress={onClose} />
 
-      {/* Panel */}
+      {/* Panel. Dynamic colors come from theme so Midnight gets a dark
+          popover; Mint/Blush get pastel ones. Layout stays in StyleSheet. */}
       <Animated.View
         style={[
           s.panel,
-          { top, left, opacity, transform: [{ scale }] },
+          {
+            top,
+            left,
+            opacity,
+            backgroundColor: theme.surface.s1,
+            borderColor: theme.surface.border,
+            transform: [{ scale }],
+          },
         ]}
       >
-        {title && <Text style={s.title} numberOfLines={1}>{title}</Text>}
-        {message && <Text style={s.message} numberOfLines={2}>{message}</Text>}
+        {title && <Text style={[s.title, { color: theme.surface.t1 }]} numberOfLines={1}>{title}</Text>}
+        {message && <Text style={[s.message, { color: theme.surface.t3 }]} numberOfLines={2}>{message}</Text>}
 
-        <View style={s.actions}>
+        <View style={[s.actions, { borderTopColor: theme.surface.border }]}>
           {actions.map((action, i) => (
             <Pressable
               key={i}
               style={({ pressed }) => [
                 s.actionBtn,
-                pressed && { backgroundColor: colors.s2 },
-                i < actions.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.b1 },
+                pressed && { backgroundColor: theme.surface.s2 },
+                i < actions.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.surface.border },
               ]}
               onPress={() => {
                 onClose();
@@ -105,7 +115,7 @@ export default function InlinePopup({ visible, anchor, title, message, actions, 
                 setTimeout(action.onPress, 80);
               }}
             >
-              <Text style={[s.actionLabel, action.destructive && { color: '#FF453A' }]}>
+              <Text style={[s.actionLabel, { color: theme.surface.t1 }, action.destructive && { color: '#FF453A' }]}>
                 {action.label}
               </Text>
             </Pressable>
@@ -124,7 +134,6 @@ const s = StyleSheet.create({
   panel: {
     position: 'absolute',
     width: PANEL_WIDTH,
-    backgroundColor: '#fff',
     borderRadius: 14,
     paddingTop: PANEL_PADDING,
     paddingBottom: 4,
@@ -134,25 +143,21 @@ const s = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.b1,
   },
   title: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.t1,
     paddingHorizontal: PANEL_PADDING,
     marginBottom: 2,
   },
   message: {
     fontSize: 11,
-    color: colors.t3,
     lineHeight: 15,
     paddingHorizontal: PANEL_PADDING,
     marginBottom: 8,
   },
   actions: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.b1,
     marginTop: 4,
   },
   actionBtn: {
@@ -162,6 +167,5 @@ const s = StyleSheet.create({
   actionLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.t1,
   },
 });
