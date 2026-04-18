@@ -260,6 +260,9 @@ function SeekerProfileScreen() {
   const [editName, setEditName] = useState('');
   const [editTagline, setEditTagline] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  // Mission statement — user-owned, surfaced as the hero block
+  // on the public web profile. Edited from this screen only.
+  const [editMission, setEditMission] = useState('');
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [editingMajor, setEditingMajor] = useState(false);
@@ -501,6 +504,11 @@ function SeekerProfileScreen() {
               const patch: any = {
                 name: editName.trim() || undefined,
                 profile_tagline: editTagline.trim() || undefined,
+                // Mission statement — saved to both the canonical
+                // field and the legacy profile_bio fallback so the
+                // public profile reads it on either field.
+                mission_statement: editMission.trim(),
+                profile_bio: editMission.trim(),
               };
               // Include majors/minors if they were edited
               if (editingMajor) patch.majors = editMajors;
@@ -532,6 +540,7 @@ function SeekerProfileScreen() {
             // Enter edit mode
             setEditName(p.name || '');
             setEditTagline(p.profile_tagline || p.custom_tagline || '');
+            setEditMission((p.mission_statement || p.profile_bio || '').toString());
             setEditEmail(p.email || '');
             setEditMajors(p.majors || (p.major ? [p.major] : []));
             setEditMinors(p.minors || []);
@@ -637,6 +646,28 @@ function SeekerProfileScreen() {
               <View style={d.editField}>
                 <Text style={d.editFieldLabel}>Name</Text>
                 <TextInput style={d.editFieldInput} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={colors.t3} />
+              </View>
+
+              {/* Mission Statement — rendered on the public web
+                  profile as the hero block under the CTAs. One or
+                  two sentences on why you do what you do. */}
+              <View style={d.editField}>
+                <Text style={d.editFieldLabel}>Mission Statement</Text>
+                <Text style={{ fontSize: 11, color: colors.t3, marginBottom: 6, lineHeight: 15 }}>
+                  One or two lines on why you do what you do. Recruiters read this first.
+                </Text>
+                <TextInput
+                  style={[d.editFieldInput, { minHeight: 90, textAlignVertical: 'top' as const, paddingTop: 10 }]}
+                  value={editMission}
+                  onChangeText={setEditMission}
+                  placeholder="e.g. I help early-stage teams ship things that people actually use. I'm drawn to problems where the hard part is the judgment, not the code."
+                  placeholderTextColor={colors.t3}
+                  multiline
+                  maxLength={320}
+                />
+                <Text style={{ fontSize: 10, color: colors.t3, marginTop: 4, textAlign: 'right' }}>
+                  {editMission.length} / 320
+                </Text>
               </View>
 
               {/* Majors & Minors (students only) */}

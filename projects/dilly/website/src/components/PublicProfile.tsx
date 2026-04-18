@@ -313,16 +313,22 @@ export default function PublicProfile({ slug, prefix }: { slug: string; prefix: 
           <section className="rounded-2xl border border-slate-200 bg-white p-6 lg:p-8 flex flex-col overflow-hidden">
             {/* Photo + Name row */}
             <div className="flex items-center gap-4 lg:gap-5">
+              {/* Photo frame — aspect-square + object-center so the
+                  user's face sits in the mold correctly no matter
+                  what ratio they upload. Was previously cropping
+                  off-center on portrait images. */}
               {p.has_photo ? (
-                <img
-                  src={photoUrl}
-                  alt={p.name}
-                  className="w-20 h-20 lg:w-24 lg:h-24 rounded-full object-cover flex-shrink-0 border-2 border-white shadow"
-                />
+                <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full flex-shrink-0 border-2 border-white shadow overflow-hidden bg-slate-100">
+                  <img
+                    src={photoUrl}
+                    alt={p.name}
+                    className="w-full h-full object-cover object-center"
+                  />
+                </div>
               ) : (
-                <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0 shadow">
-                  <span className="text-3xl font-bold text-white">
-                    {(p.name || "?").charAt(0).toUpperCase()}
+                <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0 border-2 border-white shadow">
+                  <span className="text-3xl font-bold text-white leading-none">
+                    {String(p.name || "?").trim().charAt(0).toUpperCase() || "?"}
                   </span>
                 </div>
               )}
@@ -338,64 +344,65 @@ export default function PublicProfile({ slug, prefix }: { slug: string; prefix: 
                 {subtitle ? (
                   <p className="text-sm text-slate-500 mt-1 truncate">{subtitle}</p>
                 ) : null}
-                {p.identity_tag ? (
-                  <span
-                    className="inline-block mt-2 text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full"
-                    style={{
-                      color:           p.identity_accent || "#6366f1",
-                      backgroundColor: (p.identity_accent || "#6366f1") + "15",
-                      borderWidth:     1,
-                      borderStyle:     "solid",
-                      borderColor:     (p.identity_accent || "#6366f1") + "33",
-                    }}
-                  >
-                    {p.identity_tag}
-                  </span>
-                ) : null}
+                {/* identity_tag badge ("10%", etc) removed per lead-dev
+                    review — it read as stale / promo-y and cluttered
+                    the headline. Kept on the API response for other
+                    surfaces; intentionally not rendered here. */}
               </div>
             </div>
 
-            {/* Locations */}
+            {/* Locations — tightened: a single flex row, constrained
+                width so they don't wrap into four sparse lines. */}
             {p.cities.length > 0 ? (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {p.cities.map((c, i) => (
-                  <span key={i} className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+              <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                {p.cities.slice(0, 3).map((c, i) => (
+                  <span key={i} className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 whitespace-nowrap">
                     {c}
                   </span>
                 ))}
+                {p.cities.length > 3 ? (
+                  <span className="text-[11px] text-slate-400">+{p.cities.length - 3} more</span>
+                ) : null}
               </div>
             ) : null}
 
-            {/* CTAs */}
-            <div className="flex flex-wrap gap-2 mt-4">
+            {/* CTA row — single, balanced row. "Request a chat"
+                replaces the older "Book a chat" label (same endpoint,
+                clearer verb). "Refer" is a clean outline button.
+                Alignment fix: consistent heights + px via `h-9`. */}
+            <div className="flex flex-wrap items-center gap-2 mt-4">
               {p.booking_enabled ? (
                 <a
                   href={`${API}/profile/book/${slug}`}
-                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                  className="inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold h-9 px-4 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
                 >
-                  Book a chat
+                  Request a chat
                 </a>
               ) : null}
               {p.show_refer_button ? (
                 <a
                   href={`${API}/profile/refer/${slug}`}
-                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-lg bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 transition"
+                  className="inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold h-9 px-4 rounded-lg bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 transition"
                 >
                   Refer
                 </a>
               ) : null}
             </div>
 
-            {/* Mission */}
-            <div className="mt-6 lg:mt-8">
+            {/* Mission Statement — hero block now. User-owned,
+                editable from the mobile app. No auto-generation
+                ever. This is the part recruiters actually read. */}
+            <div className="mt-6 lg:mt-7">
               <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-2">
                 MISSION STATEMENT
               </div>
               {p.mission ? (
-                <p className="text-sm text-slate-700 leading-relaxed">{p.mission}</p>
+                <p className="text-base lg:text-[17px] text-slate-800 leading-relaxed font-medium">
+                  {p.mission}
+                </p>
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-200 p-4 text-[12px] text-slate-400 italic">
-                  {p.tagline || "Mission not yet shared."}
+                <div className="rounded-xl border border-dashed border-slate-300 p-5 text-[13px] text-slate-400 italic leading-relaxed">
+                  {p.tagline || "Write this from the Dilly app — one or two lines on why you do what you do."}
                 </div>
               )}
             </div>
