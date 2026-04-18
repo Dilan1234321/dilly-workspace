@@ -10,6 +10,7 @@ import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createDillyClient, type TokenProvider, AUTH_TOKEN_KEY as TOKEN_KEY } from "@dilly/api";
 import { API_BASE } from "./tokens";
+import { openPaywall } from "../hooks/usePaywall";
 
 /**
  * SecureStore-backed token provider with AsyncStorage fallback.
@@ -60,7 +61,7 @@ function secureStoreTokenProvider(): TokenProvider {
   };
 }
 
-export const dilly = createDillyClient({
+const _baseClient = createDillyClient({
   baseUrl: API_BASE,
   tokenProvider: secureStoreTokenProvider(),
   onUnauthorized() {
@@ -68,6 +69,39 @@ export const dilly = createDillyClient({
     // which listens for 401s and redirects to the login screen.
   },
 });
+
+/**
+ * Intercept every 402 Payment Required response and surface the
+ * DillyPaywallFullScreen globally. Backend paid routes return 402
+ * with a JSON body like `{ feature, message }` which we pass through
+ * as the paywall's surface + promise.
+ *
+ * We clone the response so consumers downstream can still read the
+ * body themselves (some screens need the error detail for toasts).
+ */
+const _origFetch = _baseClient.fetch.bind(_baseClient);
+async function fetchWithPaywall(path: string, init?: RequestInit): Promise<Response> {
+  const res = await _origFetch(path, init);
+  if (res.status === 402) {
+    let ctx: { surface?: string; promise?: string } | undefined;
+    try {
+      const body = await res.clone().json();
+      ctx = {
+        surface: body?.feature || body?.detail?.feature,
+        promise: body?.message || body?.detail?.message || body?.error,
+      };
+    } catch {
+      // body wasn't JSON — show the default paywall copy
+    }
+    openPaywall(ctx);
+  }
+  return res;
+}
+
+export const dilly = {
+  ..._baseClient,
+  fetch: fetchWithPaywall,
+};
 
 // Re-export everything from @dilly/api for convenient single-import
 export * from "@dilly/api";

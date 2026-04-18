@@ -8,6 +8,8 @@ import { useDillyOverlayState } from '../../hooks/useDillyOverlay';
 import { SubscriptionProvider, useSubscription } from '../../hooks/useSubscription';
 import { useAppMode } from '../../hooks/useAppMode';
 import DillyGate from '../../components/DillyGate';
+import DillyPaywallFullScreen from '../../components/DillyPaywallFullScreen';
+import { usePaywallState } from '../../hooks/usePaywall';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 
 function DillyAIOverlayWrapper() {
@@ -25,6 +27,12 @@ function DillyGateWrapper() {
       onDismiss={dismissGate}
     />
   );
+}
+
+/** Global paywall. Triggered by any 402 response via lib/dilly.ts. */
+function DillyPaywallWrapper() {
+  const { visible, context, close } = usePaywallState();
+  return <DillyPaywallFullScreen visible={visible} onDismiss={close} context={context} />;
 }
 
 function DillyTabIcon({ focused }: { focused: boolean }) {
@@ -221,6 +229,7 @@ export default function AppLayout() {
     </Tabs>
     <DillyAIOverlayWrapper />
     <DillyGateWrapper />
+    <DillyPaywallWrapper />
   </>
   </ErrorBoundary>
   </SubscriptionProvider>

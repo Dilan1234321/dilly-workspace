@@ -198,7 +198,10 @@ function HolderHome() {
   const factCount        = data?.factCount ?? 0;
   const onRefresh = refresh;
 
-  const firstName = (name || '').split(/\s+/)[0] || 'there';
+  // Reject `name` values that look like an email local-part or
+  // any non-name garbage. Same defense as the seeker greeting below.
+  const _nameLooksReal = !!name && !name.includes('@') && !/^\d/.test(name);
+  const firstName = (_nameLooksReal ? name.split(/\s+/)[0] : '').replace(/@.*$/, '') || 'there';
 
   // Threat-level color for the hero pulse ring. Defaults to violet when
   // we haven't resolved a role yet so the card still looks alive.
@@ -955,7 +958,19 @@ function SeekerHome() {
 
   // Derived
   const p = profile as any;
-  const firstName = p.name?.trim().split(/\s+/)[0] || p.first_name || '';
+  // Name derivation: prefer the structured `first_name` when
+  // present. `name` can be a full display string set from other
+  // sources (profile slug, email local-part, tagline) which made
+  // the greeting read "Welcome, <email-local>." in the wild. Only
+  // fall back to splitting `name` when it clearly looks like a
+  // real name (no @, no digits at the start). Strip @ local-parts
+  // explicitly as a last line of defense.
+  const looksLikeName = (s: string) => !!s && !s.includes('@') && !/^\d/.test(s);
+  const firstNameRaw =
+    (p.first_name && String(p.first_name).trim()) ||
+    (looksLikeName(String(p.name || '').trim()) ? String(p.name).trim().split(/\s+/)[0] : '') ||
+    '';
+  const firstName = firstNameRaw.replace(/@.*$/, '');
 
   // Journey steps
   const journeySteps: JourneyStep[] = [

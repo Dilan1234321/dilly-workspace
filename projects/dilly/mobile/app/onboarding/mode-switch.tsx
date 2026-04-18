@@ -101,6 +101,16 @@ export default function ModeSwitchScreen() {
         // jobholder for downstream prompts / filters. Matches the
         // holder onboarding path setter.
         patchBody.user_path       = 'i_have_a_job';
+      } else {
+        // Laid-off / job-seeker pivot. Wipe the previous role +
+        // company everywhere so Dilly treats this person like any
+        // other job seeker and doesn't keep surfacing a role they
+        // no longer hold. user_path flips to 'exploring' to match
+        // the onboarding situation that says "I'm looking for my
+        // next opportunity." No visible trace of the old role.
+        patchBody.current_role    = '';
+        patchBody.current_company = '';
+        patchBody.user_path       = 'exploring';
       }
       // Record the life-event on the profile so Dilly's chat +
       // memory system know this was a pivot, not a random toggle.

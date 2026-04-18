@@ -264,6 +264,7 @@ function SeekerProfileScreen() {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [editingMajor, setEditingMajor] = useState(false);
   const [editingMinor, setEditingMinor] = useState(false);
+  const [careerFieldsExpanded, setCareerFieldsExpanded] = useState(false);
   const [editMajors, setEditMajors] = useState<string[]>([]);
   const [editMinors, setEditMinors] = useState<string[]>([]);
   const [majorSearch, setMajorSearch] = useState('');
@@ -801,36 +802,142 @@ function SeekerProfileScreen() {
                 </>
               )}
 
-              {/* Career Fields (non-students only) */}
+              {/* Career Fields (non-students only) — collapsible.
+                  Long list of chips was bloating the edit box and
+                  pushing everything else off screen. Collapsed by
+                  default, tap header to expand. */}
               {(p.user_type === 'general' || p.user_type === 'professional') && (
                 <View style={d.editField}>
-                  <Text style={d.editFieldLabel}>Career Fields</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    {CAREER_FIELD_OPTIONS.map(field => {
-                      const selected = (p.career_fields || []).includes(field);
-                      return (
-                        <AnimatedPressable
-                          key={field}
-                          style={{
-                            paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-                            backgroundColor: selected ? colors.indigo : colors.s2,
-                            borderWidth: 1, borderColor: selected ? colors.indigo : colors.b1,
-                          }}
-                          onPress={async () => {
-                            const current = p.career_fields || [];
-                            const updated = selected ? current.filter((f: string) => f !== field) : [...current, field];
-                            setProfile((prev: any) => ({ ...prev, career_fields: updated }));
-                            await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ career_fields: updated }) }).catch(() => {});
-                          }}
-                          scaleDown={0.95}
-                        >
-                          <Text style={{ fontSize: 11, fontWeight: '600', color: selected ? '#fff' : colors.t2 }}>{field}</Text>
-                        </AnimatedPressable>
-                      );
-                    })}
-                  </View>
+                  <AnimatedPressable
+                    onPress={() => {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setCareerFieldsExpanded(v => !v);
+                    }}
+                    scaleDown={0.98}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                      <Text style={d.editFieldLabel}>Career Fields</Text>
+                      {(p.career_fields || []).length > 0 && (
+                        <Text style={{ fontSize: 11, color: colors.t3 }}>
+                          {(p.career_fields || []).length} selected
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons
+                      name={careerFieldsExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.t3}
+                    />
+                  </AnimatedPressable>
+                  {careerFieldsExpanded && (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                      {CAREER_FIELD_OPTIONS.map(field => {
+                        const selected = (p.career_fields || []).includes(field);
+                        return (
+                          <AnimatedPressable
+                            key={field}
+                            style={{
+                              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+                              backgroundColor: selected ? colors.indigo : colors.s2,
+                              borderWidth: 1, borderColor: selected ? colors.indigo : colors.b1,
+                            }}
+                            onPress={async () => {
+                              const current = p.career_fields || [];
+                              const updated = selected ? current.filter((f: string) => f !== field) : [...current, field];
+                              setProfile((prev: any) => ({ ...prev, career_fields: updated }));
+                              await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ career_fields: updated }) }).catch(() => {});
+                            }}
+                            scaleDown={0.95}
+                          >
+                            <Text style={{ fontSize: 11, fontWeight: '600', color: selected ? '#fff' : colors.t2 }}>{field}</Text>
+                          </AnimatedPressable>
+                        );
+                      })}
+                    </View>
+                  )}
+                  {!careerFieldsExpanded && (p.career_fields || []).length > 0 && (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                      {(p.career_fields || []).slice(0, 3).map((f: string) => (
+                        <View key={f} style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.indigo + '15' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '600', color: colors.indigo }}>{f}</Text>
+                        </View>
+                      ))}
+                      {(p.career_fields || []).length > 3 && (
+                        <Text style={{ fontSize: 10, color: colors.t3, alignSelf: 'center' }}>
+                          +{(p.career_fields || []).length - 3} more
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </View>
               )}
+
+              {/* Cities — moved inside the edit box so it's
+                  discoverable. Previously lived far below the edit
+                  panel and users didn't realize cities were editable. */}
+              <View style={d.editField}>
+                <Text style={d.editFieldLabel}>Cities you're available in</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  {(p.job_locations || []).map((city: string, i: number) => (
+                    <View key={i} style={d.cityChip}>
+                      <Ionicons name="location" size={12} color={colors.indigo} />
+                      <Text style={d.cityChipText}>{city}</Text>
+                      <AnimatedPressable
+                        onPress={async () => {
+                          const updated = (p.job_locations || []).filter((_: string, j: number) => j !== i);
+                          setProfile((prev: any) => ({ ...prev, job_locations: updated }));
+                          await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ job_locations: updated }) }).catch(() => {});
+                        }}
+                        scaleDown={0.9}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="close-circle" size={14} color={colors.t3} />
+                      </AnimatedPressable>
+                    </View>
+                  ))}
+                  {(p.job_locations || []).length === 0 && (
+                    <Text style={{ fontSize: 11, color: colors.t3, fontStyle: 'italic' }}>None added yet</Text>
+                  )}
+                </View>
+                <View style={[d.cityInputRow, { marginTop: 8 }]}>
+                  <TextInput
+                    style={d.cityInput}
+                    placeholder="Type a city (e.g. New York)"
+                    placeholderTextColor={colors.t3}
+                    value={citySearch}
+                    onChangeText={(t) => { setCitySearch(t); setShowCityDropdown(t.length >= 2); }}
+                    returnKeyType="done"
+                    onSubmitEditing={() => {
+                      if (citySearch.trim().length >= 2) addCity(citySearch.trim());
+                    }}
+                  />
+                  {citySearch.trim().length >= 2 && (
+                    <AnimatedPressable
+                      style={d.cityAddBtn}
+                      onPress={() => addCity(citySearch.trim())}
+                      scaleDown={0.95}
+                    >
+                      <Ionicons name="add" size={16} color="#fff" />
+                    </AnimatedPressable>
+                  )}
+                </View>
+                {showCityDropdown && (
+                  <View style={d.cityDropdown}>
+                    {US_CANADA_CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).slice(0, 5).map((city, i) => (
+                      <AnimatedPressable
+                        key={i}
+                        style={d.cityDropdownItem}
+                        onPress={() => addCity(city)}
+                        scaleDown={0.98}
+                      >
+                        <Ionicons name="location-outline" size={14} color={colors.t2} />
+                        <Text style={d.cityDropdownText}>{city}</Text>
+                      </AnimatedPressable>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
           </FadeInView>
         )}
@@ -888,80 +995,27 @@ function SeekerProfileScreen() {
           </FadeInView>
         )}
 
-        {/* ── 0. Cities ──────────────────────────────────────── */}
-        <FadeInView delay={0}>
-          <View style={d.citySection}>
-            <Text style={d.sectionLabel}>CITIES YOU'RE AVAILABLE IN</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {(p.job_locations || []).map((city: string, i: number) => (
-                <View key={i} style={d.cityChip}>
-                  <Ionicons name="location" size={12} color={colors.indigo} />
-                  <Text style={d.cityChipText}>{city}</Text>
-                  {editMode && (
-                    <AnimatedPressable
-                      onPress={async () => {
-                        const updated = (p.job_locations || []).filter((_: string, j: number) => j !== i);
-                        setProfile((prev: any) => ({ ...prev, job_locations: updated }));
-                        await dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ job_locations: updated }) }).catch(() => {});
-                      }}
-                      scaleDown={0.9}
-                      hitSlop={8}
-                    >
-                      <Ionicons name="close-circle" size={14} color={colors.t3} />
-                    </AnimatedPressable>
-                  )}
-                </View>
-              ))}
-              {(p.job_locations || []).length === 0 && !editMode && (
-                <Text style={{ fontSize: 12, color: colors.t3 }}>Tap Edit to add cities</Text>
-              )}
-            </View>
-            {/* City search input - only in edit mode */}
-            {editMode && (
-              <>
-                <View style={d.cityInputRow}>
-                  <TextInput
-                    style={d.cityInput}
-                    placeholder="Type a city (e.g. New York)"
-                    placeholderTextColor={colors.t3}
-                    value={citySearch}
-                    onChangeText={(t) => { setCitySearch(t); setShowCityDropdown(t.length >= 2); }}
-                    returnKeyType="done"
-                    onSubmitEditing={() => {
-                      if (citySearch.trim().length >= 2) {
-                        addCity(citySearch.trim());
-                      }
-                    }}
-                  />
-                  {citySearch.trim().length >= 2 && (
-                    <AnimatedPressable
-                      style={d.cityAddBtn}
-                      onPress={() => addCity(citySearch.trim())}
-                      scaleDown={0.95}
-                    >
-                      <Ionicons name="add" size={16} color="#fff" />
-                    </AnimatedPressable>
-                  )}
-                </View>
-                {showCityDropdown && (
-                  <View style={d.cityDropdown}>
-                    {US_CANADA_CITIES.filter(c => c.toLowerCase().includes(citySearch.toLowerCase())).slice(0, 5).map((city, i) => (
-                      <AnimatedPressable
-                        key={i}
-                        style={d.cityDropdownItem}
-                        onPress={() => addCity(city)}
-                        scaleDown={0.98}
-                      >
-                        <Ionicons name="location-outline" size={14} color={colors.t2} />
-                        <Text style={d.cityDropdownText}>{city}</Text>
-                      </AnimatedPressable>
-                    ))}
+        {/* ── 0. Cities (read-only view) ────────────────────────
+            Edit controls live inside the Edit box (see editMode
+            panel above) so users don't have to scroll to find them. */}
+        {!editMode && (
+          <FadeInView delay={0}>
+            <View style={d.citySection}>
+              <Text style={d.sectionLabel}>CITIES YOU'RE AVAILABLE IN</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {(p.job_locations || []).map((city: string, i: number) => (
+                  <View key={i} style={d.cityChip}>
+                    <Ionicons name="location" size={12} color={colors.indigo} />
+                    <Text style={d.cityChipText}>{city}</Text>
                   </View>
+                ))}
+                {(p.job_locations || []).length === 0 && (
+                  <Text style={{ fontSize: 12, color: colors.t3 }}>Tap Edit to add cities</Text>
                 )}
-              </>
-            )}
-          </View>
-        </FadeInView>
+              </View>
+            </View>
+          </FadeInView>
+        )}
 
         {/* ── 1. Dilly Card ──────────────────────────────────── */}
         <FadeInView delay={0}>
