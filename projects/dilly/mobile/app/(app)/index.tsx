@@ -16,7 +16,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
-import { useAccent } from '../../hooks/useTheme';
+import { useAccent, useResolvedTheme } from '../../hooks/useTheme';
 import { ExploringHome, DropoutHome, LaidOffHome, VisaHome } from '../../components/SituationHomes';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
@@ -824,10 +824,12 @@ const sr = StyleSheet.create({
 
 function SeekerHome() {
   const insets = useSafeAreaInsets();
-  // User-chosen accent color — defaults to indigo. Only threads
-  // through a few hero surfaces so the personalization feels
-  // premium, not overwhelming.
-  const accent = useAccent();
+  // Full theme: accent + surface + shape + type. Every hero and
+  // card on this screen reads from here so Customize actually
+  // paints the highest-traffic screen end-to-end (not just the
+  // accent swatch on the name, which is what it was before).
+  const theme = useResolvedTheme();
+  const accent = theme.accent;
   // Per-situation copy — greeting, eyebrow, CTA verb, empty states
   // all key off the user's user_path via sessionCache.
   const situationCopy = useSituationCopy();
@@ -1034,21 +1036,28 @@ function SeekerHome() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingTop: insets.top + 14, paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={INDIGO} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={accent} />}
       >
 
         {/* Header */}
         <FadeInView delay={0}>
           <View style={s.header}>
             <View style={{ flex: 1 }}>
-              <Text style={s.headerName}>
+              <Text style={[s.headerName, {
+                color: theme.surface.t1,
+                fontFamily: theme.type.display,
+                fontWeight: theme.type.heroWeight,
+                letterSpacing: theme.type.heroTracking,
+              }]}>
                 Welcome, <Text style={{ color: accent }}>{firstName || 'there'}</Text>.
               </Text>
-              <Text style={s.headerSub}>Welcome to your career center.</Text>
+              <Text style={[s.headerSub, { color: theme.surface.t3, fontFamily: theme.type.body }]}>
+                Welcome to your career center.
+              </Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <AnimatedPressable
@@ -1355,12 +1364,14 @@ function SeekerHome() {
         {showJourney && (
           <FadeInView delay={120}>
             <View style={s.journeyHeader}>
-              <Text style={s.sectionLabel}>GETTING STARTED</Text>
-              <Text style={s.journeyProgress}>{completedCount} of {journeySteps.length}</Text>
+              <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>GETTING STARTED</Text>
+              <Text style={[s.journeyProgress, { color: theme.surface.t2 }]}>
+                {completedCount} of {journeySteps.length}
+              </Text>
             </View>
             {/* Progress bar */}
-            <View style={s.progressBar}>
-              <View style={[s.progressFill, { width: `${(completedCount / journeySteps.length) * 100}%` }]} />
+            <View style={[s.progressBar, { backgroundColor: theme.surface.s2 }]}>
+              <View style={[s.progressFill, { width: `${(completedCount / journeySteps.length) * 100}%`, backgroundColor: accent }]} />
             </View>
             <View style={{ gap: 6, marginTop: 10 }}>
               {journeySteps.map((step, i) => (
@@ -1374,7 +1385,7 @@ function SeekerHome() {
 
         {/* Quick Tools (moved above pipeline) */}
         <FadeInView delay={showJourney ? 360 : 140}>
-          <Text style={[s.sectionLabel, { marginTop: 24 }]}>QUICK TOOLS</Text>
+          <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>QUICK TOOLS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
             {[
               { icon: 'sparkles' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
@@ -1388,7 +1399,7 @@ function SeekerHome() {
                 <View style={[s.toolIcon, { backgroundColor: tool.color + '10' }]}>
                   <Ionicons name={tool.icon} size={20} color={tool.color} />
                 </View>
-                <Text style={s.toolLabel}>{tool.label}</Text>
+                <Text style={[s.toolLabel, { color: theme.surface.t2, fontFamily: theme.type.body }]}>{tool.label}</Text>
               </AnimatedPressable>
             ))}
           </ScrollView>
@@ -1397,7 +1408,7 @@ function SeekerHome() {
         {/* Pipeline tiles */}
         {appCount > 0 && (
           <FadeInView delay={showJourney ? 400 : 180}>
-            <Text style={[s.sectionLabel, { marginTop: 24 }]}>YOUR PIPELINE</Text>
+            <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>YOUR PIPELINE</Text>
             <View style={s.pipeGrid}>
               <PipelineTile icon="bookmark" count={appCount} label="Saved" color={colors.blue} onPress={() => router.push('/(app)/internship-tracker')} />
               <PipelineTile icon="send" count={0} label="Applied" color={colors.indigo} onPress={() => router.push('/(app)/internship-tracker')} />
@@ -1410,7 +1421,7 @@ function SeekerHome() {
         {/* Activity feed */}
         {activities.length > 0 && (
           <FadeInView delay={showJourney ? 440 : 220}>
-            <Text style={[s.sectionLabel, { marginTop: 24 }]}>WHAT'S HAPPENING</Text>
+            <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>WHAT'S HAPPENING</Text>
             <View style={{ gap: 6 }}>
               {activities.map((a, i) => (
                 <ActivityCard key={i} {...a} />
@@ -1422,14 +1433,27 @@ function SeekerHome() {
         {/* Recent jobs */}
         {topJobs.length > 0 && (
           <FadeInView delay={showJourney ? 480 : 260}>
-            <Text style={[s.sectionLabel, { marginTop: 24 }]}>RECENT JOBS</Text>
+            <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>RECENT JOBS</Text>
             {topJobs.map((job: any) => (
-              <AnimatedPressable key={job.id} style={s.jobCard} onPress={() => router.push('/(app)/jobs')} scaleDown={0.98}>
+              <AnimatedPressable
+                key={job.id}
+                style={[s.jobCard, {
+                  backgroundColor: theme.surface.s1,
+                  borderColor: theme.surface.border,
+                  borderRadius: theme.shape.md,
+                }]}
+                onPress={() => router.push('/(app)/jobs')}
+                scaleDown={0.98}
+              >
                 <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={s.jobTitle} numberOfLines={1}>{job.title}</Text>
-                  <Text style={s.jobCompany} numberOfLines={1}>{job.company}</Text>
+                  <Text style={[s.jobTitle, { color: theme.surface.t1, fontFamily: theme.type.body }]} numberOfLines={1}>
+                    {job.title}
+                  </Text>
+                  <Text style={[s.jobCompany, { color: theme.surface.t2, fontFamily: theme.type.body }]} numberOfLines={1}>
+                    {job.company}
+                  </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
               </AnimatedPressable>
             ))}
           </FadeInView>

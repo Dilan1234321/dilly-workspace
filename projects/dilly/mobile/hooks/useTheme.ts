@@ -36,7 +36,9 @@ export type AccentId =
   | 'indigo' | 'rose' | 'emerald' | 'amber' | 'violet' | 'graphite'
   | 'sky' | 'teal' | 'crimson' | 'plum' | 'forest' | 'navy';
 
-export type SurfaceId = 'cloud' | 'cream' | 'slate' | 'midnight';
+export type SurfaceId =
+  | 'cloud' | 'cream' | 'slate' | 'midnight'
+  | 'sky' | 'blush' | 'mint' | 'lavender' | 'butter';
 export type ShapeId = 'sharp' | 'standard' | 'rounded' | 'pill';
 export type TypeId = 'dilly' | 'modern' | 'editorial' | 'playful';
 export type DensityId = 'comfortable' | 'compact';
@@ -126,6 +128,41 @@ export const SURFACE_PRESETS: Record<SurfaceId, SurfacePreset> = {
     bg: '#0B0F1E', s1: '#151A2E', s2: '#1D2340', s3: '#272D4F',
     t1: '#E8EAF4', t2: 'rgba(232,234,244,0.62)', t3: 'rgba(232,234,244,0.38)',
     border: 'rgba(232,234,244,0.10)',
+  },
+  // ── Pastels ───────────────────────────────────────────────────
+  // Soft, low-saturation backgrounds. Text stays dark (same ink as
+  // Cloud) so contrast stays AA-level against the tinted white. s1
+  // is a half-shade deeper than bg for cards; s2/s3 step darker for
+  // selected chips + popovers.
+  sky: {
+    id: 'sky', label: 'Sky', dark: false,
+    bg: '#EFF7FF', s1: '#E3F0FE', s2: '#D3E7FC', s3: '#BFD8F7',
+    t1: '#0F2540', t2: 'rgba(15,37,64,0.60)', t3: 'rgba(15,37,64,0.35)',
+    border: 'rgba(15,37,64,0.10)',
+  },
+  blush: {
+    id: 'blush', label: 'Blush', dark: false,
+    bg: '#FFF1F5', s1: '#FEE4EC', s2: '#FCD3DE', s3: '#F9BBCB',
+    t1: '#3A0F1A', t2: 'rgba(58,15,26,0.60)', t3: 'rgba(58,15,26,0.35)',
+    border: 'rgba(58,15,26,0.10)',
+  },
+  mint: {
+    id: 'mint', label: 'Mint', dark: false,
+    bg: '#EEFBF3', s1: '#E0F6E8', s2: '#CFEED9', s3: '#B6E3C3',
+    t1: '#0B2A18', t2: 'rgba(11,42,24,0.60)', t3: 'rgba(11,42,24,0.35)',
+    border: 'rgba(11,42,24,0.10)',
+  },
+  lavender: {
+    id: 'lavender', label: 'Lavender', dark: false,
+    bg: '#F4EFFF', s1: '#EAE2FC', s2: '#DCD1F8', s3: '#C9B9F1',
+    t1: '#22133F', t2: 'rgba(34,19,63,0.60)', t3: 'rgba(34,19,63,0.35)',
+    border: 'rgba(34,19,63,0.10)',
+  },
+  butter: {
+    id: 'butter', label: 'Butter', dark: false,
+    bg: '#FFF9E6', s1: '#FDF1CC', s2: '#FBE8AE', s3: '#F6D97E',
+    t1: '#3B2A05', t2: 'rgba(59,42,5,0.60)', t3: 'rgba(59,42,5,0.35)',
+    border: 'rgba(59,42,5,0.12)',
   },
 };
 

@@ -36,6 +36,7 @@ import InlineToastView, { useInlineToast } from '../../components/InlineToast';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const COBALT = '#1652F0';
@@ -978,6 +979,9 @@ const mr = StyleSheet.create({
 
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
+  // User-chosen theme — container bg, header typography, refresh
+  // tint all read from here so Customize paints this tab too.
+  const theme = useResolvedTheme();
   // Career mode reshapes this whole tab: jobholders see a market
   // benchmark (no apply CTAs, "The Market" framing); seekers see the
   // classic apply-focused feed.
@@ -1292,17 +1296,24 @@ export default function JobsScreen() {
   const restMatches = filtered.slice(1);
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* Header. mode-aware framing. Holders see a market benchmark
           ("The Market"), seekers see the classic "your next move" feed. */}
       <View style={s.header}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
-            <Text style={s.headerEyebrow}>{isHolder ? 'THE MARKET · YOUR FIELD' : 'DILLY JOBS'}</Text>
-            <Text style={s.headerTitle}>
+            <Text style={[s.headerEyebrow, { color: theme.accent, fontFamily: theme.type.body }]}>
+              {isHolder ? 'THE MARKET · YOUR FIELD' : 'DILLY JOBS'}
+            </Text>
+            <Text style={[s.headerTitle, {
+              color: theme.surface.t1,
+              fontFamily: theme.type.display,
+              fontWeight: theme.type.heroWeight,
+              letterSpacing: theme.type.heroTracking,
+            }]}>
               {isHolder ? "What your role is worth right now." : 'Your next move.'}
             </Text>
-            <Text style={s.headerSub}>
+            <Text style={[s.headerSub, { color: theme.surface.t3, fontFamily: theme.type.body }]}>
               {isHolder
                 ? 'Benchmarks, new titles, roles hiring this week. Not a to-do list.'
                 : 'Ranked by fit. Powered by everything Dilly knows about you.'}

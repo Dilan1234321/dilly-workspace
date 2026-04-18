@@ -34,6 +34,7 @@ import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch } from '../../lib/sessionCache';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
@@ -238,6 +239,11 @@ function MyDillyLoadingState({ insetTop }: { insetTop: number }) {
 
 function SeekerProfileScreen() {
   const insets = useSafeAreaInsets();
+  // User-chosen theme (accent + surface + shape + type + density).
+  // Threaded into container bg, header title, and card surfaces so
+  // picking Mint/Sky/Midnight etc in Customize actually paints this
+  // screen end-to-end.
+  const theme = useResolvedTheme();
   // Holder mode reframes this tab as 'My Career'. a trajectory
   // tracker rather than an identity builder. Seekers/students keep
   // 'My Dilly' + the existing identity framing.
@@ -488,7 +494,7 @@ function SeekerProfileScreen() {
   }
 
   return (
-    <View style={d.container}>
+    <View style={[d.container, { backgroundColor: theme.surface.bg }]}>
       {/* Toast overlay. absolute, top-most z-index */}
       <InlineToastView
         {...toast.props}
@@ -496,7 +502,10 @@ function SeekerProfileScreen() {
       />
 
       {/* Header */}
-      <View style={[d.header, { paddingTop: insets.top + 8 }]}>
+      <View style={[d.header, {
+        paddingTop: insets.top + 8,
+        borderBottomColor: theme.surface.border,
+      }]}>
         <AnimatedPressable onPress={async () => {
           if (editMode) {
             // Save changes
@@ -552,7 +561,12 @@ function SeekerProfileScreen() {
         }} scaleDown={0.95} hitSlop={8}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: editMode ? colors.green : colors.indigo }}>{editMode ? 'Save' : 'Edit'}</Text>
         </AnimatedPressable>
-        <Text style={d.headerTitle}>{isHolder ? 'My Career' : 'My Dilly'}</Text>
+        <Text style={[d.headerTitle, {
+          color: theme.surface.t1,
+          fontFamily: theme.type.display,
+          fontWeight: theme.type.heroWeight,
+          letterSpacing: theme.type.heroTracking,
+        }]}>{isHolder ? 'My Career' : 'My Dilly'}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <TouchableOpacity
             onPress={() => setShowQrFullscreen(true)}
@@ -571,7 +585,7 @@ function SeekerProfileScreen() {
       <ScrollView
         contentContainerStyle={[d.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={GOLD} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />}
       >
 
         {/* Vertical business card CTA — prominent so users actually
