@@ -559,6 +559,12 @@ async def replace_me_test(request: Request, body: ReplaceRequest):
             ),
             messages=[{"role": "user", "content": f"Resume bullet: \"{bullet}\""}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.AI_ARENA, response,
+                                        metadata={"op": "bullet_replace"})
+        except Exception:
+            pass
 
         raw = response.content[0].text.strip()
         # Parse JSON from response
@@ -653,6 +659,12 @@ async def simulate_career(request: Request, body: SimulateRequest):
                 "content": f"Simulate the career path for: {job_title} at {company}. The person is in the {cohort} field. Show years 1, 2, 3, and 5.",
             }],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.AI_ARENA, response,
+                                        metadata={"op": "career_simulator", "cohort": cohort})
+        except Exception:
+            pass
 
         raw = response.content[0].text.strip()
         if raw.startswith("```"):

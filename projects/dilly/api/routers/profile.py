@@ -1796,6 +1796,12 @@ async def get_web_profile_narratives(slug: str, prefix: str | None = None):
             system=system_prompt,
             messages=[{"role": "user", "content": f"---PROFILE---\n{profile_text}\n---END PROFILE---"}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.PROFILE, response,
+                                        metadata={"op": "web_narratives"})
+        except Exception:
+            pass
 
         raw = response.content[0].text.strip()
         if raw.startswith("```"):

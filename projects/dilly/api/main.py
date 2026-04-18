@@ -122,6 +122,7 @@ from projects.dilly.api.routers import voice as voice_router
 from projects.dilly.api.routers import ats as ats_router
 from projects.dilly.api.routers import report as report_router
 from projects.dilly.api.routers import health as health_router
+from projects.dilly.api.routers import admin_cost as admin_cost_router
 from projects.dilly.api.routers import waitlist as waitlist_router
 from projects.dilly.api.routers import cron as cron_router
 from projects.dilly.api.routers import family as family_router
@@ -171,6 +172,7 @@ app.include_router(voice_router.router)
 app.include_router(ats_router.router)
 app.include_router(report_router.router)
 app.include_router(health_router.router)
+app.include_router(admin_cost_router.router)
 app.include_router(waitlist_router.router)
 app.include_router(cron_router.router)
 app.include_router(family_router.router)

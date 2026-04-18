@@ -89,6 +89,11 @@ def classify_degree_requirement(description: str, client=None) -> DegreeVerdict:
             system=_SYSTEM,
             messages=[{"role": "user", "content": text}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response("", FEATURES.JOB_CLASSIFIER, resp)
+        except Exception:
+            pass
         raw = (resp.content[0].text or "").strip()
 
         # Some models sometimes wrap JSON in ```. Strip defensively.
@@ -189,6 +194,12 @@ def classify_all_attributes(description: str, client=None) -> dict:
             system=_COMBINED_SYSTEM,
             messages=[{"role": "user", "content": text}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response("", FEATURES.JOB_CLASSIFIER, resp,
+                                        metadata={"op": "combined"})
+        except Exception:
+            pass
         raw = (resp.content[0].text or "").strip()
         if raw.startswith("```"):
             raw = raw.strip("`")

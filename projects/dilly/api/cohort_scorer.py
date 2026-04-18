@@ -273,6 +273,11 @@ Return ONLY valid JSON array (no markdown, no explanation):
         max_tokens=1200,
         messages=[{"role": "user", "content": prompt}],
     )
+    try:
+        from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+        log_from_anthropic_response("", FEATURES.COHORT_SCORER, resp)
+    except Exception:
+        pass
 
     text = resp.content[0].text.strip()
     if text.startswith("```"):

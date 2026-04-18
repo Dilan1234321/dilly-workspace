@@ -296,6 +296,12 @@ async def audit_profile_score(request: Request, body: dict = Body(default={})):
                 ),
             }],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.AUDIT, response,
+                                        metadata={"track": track, "cohort": cohort})
+        except Exception:
+            pass
         raw = response.content[0].text
         # Parse JSON from response
         json_start = raw.find("{")
@@ -1391,6 +1397,12 @@ async def _audit_resume_v2_impl(
                             ),
                             messages=[{"role": "user", "content": f"Resume for {_extract_name}:\n\n{_extract_text}"}],
                         )
+                        try:
+                            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+                            log_from_anthropic_response(email, FEATURES.PROFILE, resp,
+                                                        metadata={"op": "seed_from_resume"})
+                        except Exception:
+                            pass
                         raw = resp.content[0].text.strip()
                         if raw.startswith("```"):
                             raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]

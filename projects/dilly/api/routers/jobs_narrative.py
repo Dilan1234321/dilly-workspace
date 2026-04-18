@@ -439,6 +439,11 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
             system=_sys_param,
             messages=[{"role": "user", "content": user_message}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.FIT_NARRATIVE, response)
+        except Exception:
+            pass
 
         raw = response.content[0].text.strip()
 

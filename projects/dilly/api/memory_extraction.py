@@ -297,6 +297,10 @@ Extract new memory items now. Return JSON array only."""
         model="claude-haiku-4-5-20251001",
         max_tokens=1200,
         temperature=0.2,
+        log_email=uid,
+        log_feature="extraction",
+        log_metadata={"conv_id": conv_id[:16] if conv_id else None,
+                      "n_messages": len(messages)},
     )
     if not raw:
         return []
@@ -468,6 +472,8 @@ Write the narrative now. 3-5 sentences, specific, no hollow phrases."""
         model="claude-haiku-4-5-20251001",
         max_tokens=200,
         temperature=0.3,
+        log_email=(profile.get("email") or "") if isinstance(profile, dict) else "",
+        log_feature="narrative_regen",
     )
     return (raw or "").strip()
 

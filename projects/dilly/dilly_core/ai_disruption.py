@@ -152,6 +152,11 @@ Only use evidence from the profile. If the profile is thin, score lower and say 
             system=prompt,
             messages=[{"role": "user", "content": f"Profile:\n{profile_text[:8000]}"}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response("", FEATURES.AI_DISRUPTION, response)
+        except Exception:
+            pass
         raw = response.content[0].text
         j_start = raw.find("{")
         j_end = raw.rfind("}") + 1

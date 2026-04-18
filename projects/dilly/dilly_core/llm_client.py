@@ -14,6 +14,13 @@ def get_chat_completion(
     model: Optional[str] = None,
     max_tokens: int = 16000,
     temperature: float = 0.1,
+    # Cost ledger attribution. Callers that know the user + feature
+    # should pass them so per-user spend can be tracked. Default
+    # anonymous + FEATURES.OTHER so we don't break any call sites
+    # that haven't been updated yet.
+    log_email: str = "",
+    log_feature: str = "other",
+    log_metadata: Optional[dict] = None,
 ) -> Optional[str]:
     """
     Send system + user to Claude and return the assistant message text.
@@ -53,6 +60,14 @@ def get_chat_completion(
             max_tokens=max_tokens,
             temperature=temperature,
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response
+            log_from_anthropic_response(
+                log_email, log_feature, response,
+                metadata=log_metadata or {"route": "dilly_core/llm_client.py"},
+            )
+        except Exception:
+            pass
         text = response.content[0].text if response.content else None
         return (text or "").strip() or None
     except Exception:
@@ -150,6 +165,12 @@ def get_chat_completion_with_tools(
             max_tokens=max_tokens,
             temperature=temperature,
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response("", FEATURES.OTHER, response,
+                                        metadata={"route": "dilly_core/llm_client.py tool"})
+        except Exception:
+            pass
         content = None
         tool_calls = []
         for block in response.content:

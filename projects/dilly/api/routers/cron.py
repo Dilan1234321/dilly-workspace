@@ -560,3 +560,22 @@ def daily_pipeline(token: str = ""):
         results["classify"] = {"error": str(e)}
 
     return {"ok": True, "pipeline": results}
+
+
+@router.get(
+    "/purge-llm-usage-log",
+    summary="Daily: purge llm_usage_log rows older than 90 days",
+)
+def purge_llm_usage_log(token: str = "", retention_days: int = 90):
+    """Daily cron target. Deletes per-call rows older than `retention_days`
+    so the ledger stays bounded. Idempotent. Aggregates can be rolled
+    up into a separate monthly table later if we need longer history.
+
+    Call this once per day. No LLM, pure SQL delete."""
+    _require_cron_secret(token)
+    try:
+        from projects.dilly.api.llm_usage_log import purge_old_rows
+        n = purge_old_rows(retention_days=max(7, min(365, int(retention_days))))
+        return {"ok": True, "purged": n, "retention_days": retention_days}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}

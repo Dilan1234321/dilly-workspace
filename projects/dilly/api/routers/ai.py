@@ -1644,6 +1644,15 @@ async def ai_chat(request: Request, body: ChatRequest):
                     f"in={in_tok} cache_r={cache_r} cache_c={cache_c} out={out_tok}",
                     flush=True,
                 )
+                # Per-call cost ledger — lets us answer "how much did
+                # user X spend on chat this month" with a SQL query.
+                from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+                log_from_anthropic_response(
+                    email, FEATURES.CHAT, response,
+                    plan=_plan,
+                    session_id=(body.conv_id or None),
+                    metadata={"mode": body.mode or "chat"},
+                )
         except Exception:
             pass
 

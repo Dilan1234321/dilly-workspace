@@ -258,6 +258,11 @@ async def insights_letter(request: Request):
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.WWT_LETTER, response)
+        except Exception:
+            pass
 
         raw = response.content[0].text.strip()
 

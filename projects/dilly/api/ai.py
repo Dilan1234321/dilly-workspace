@@ -171,6 +171,12 @@ async def ai_chat(request: Request, body: ChatRequest):
             system=system,
             messages=messages,
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response("", FEATURES.OTHER, response,
+                                        metadata={"route": "api/ai.py legacy"})
+        except Exception:
+            pass
         content = response.content[0].text if response.content else ""
         return ChatResponse(content=content.strip())
     except Exception as e:

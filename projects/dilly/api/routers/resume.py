@@ -2747,6 +2747,11 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
                     system=rank_system,
                     messages=[{"role": "user", "content": rank_user}],
                 )
+                try:
+                    from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+                    log_from_anthropic_response(email, FEATURES.RESUME_FACT_RANK, rank_res)
+                except Exception:
+                    pass
                 rank_text = rank_res.content[0].text if rank_res.content else ""
                 js = rank_text.find("{")
                 je = rank_text.rfind("}") + 1
@@ -2833,6 +2838,11 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
             system="You evaluate if a candidate has enough in their profile to create an honest resume for a specific role. Return JSON only: {\"readiness\": \"ready\" | \"gaps\" | \"not_ready\", \"gaps\": [\"list of specific missing things\"], \"summary\": \"one sentence explanation\"}. ready = can build a strong resume. gaps = can build a resume but has notable gaps. not_ready = profile is too thin or mismatched for this role.",
             messages=[{"role": "user", "content": f"Role: {job_title} at {job_company}\nJD: {job_description[:1500]}\nProfile: {profile_facts_text[:2000]}\nResume sections: {len(base_sections)} sections"}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.RESUME_KW_CHECK, check_response)
+        except Exception:
+            pass
         check_text = check_response.content[0].text
         j_start = check_text.find('{')
         j_end = check_text.rfind('}') + 1
@@ -3305,6 +3315,12 @@ Include only sections that have content. Do not include markdown, explanations, 
             system=system_prompt,
             messages=[{"role": "user", "content": f"Generate a tailored resume for {job_title} at {job_company}. Return only the JSON array."}],
         )
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.RESUME_GENERATE, response,
+                                        metadata={"ats": job_ats, "company": job_company})
+        except Exception:
+            pass
         raw = response.content[0].text
         # Parse the JSON array
         j_start = raw.find('[')

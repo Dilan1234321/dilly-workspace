@@ -319,6 +319,13 @@ async def interview_feedback(req: InterviewFeedbackRequest, request: Request):
             messages=[{"role": "user", "content": user_message}],
         )
 
+        # Cost ledger — record per-user interview-feedback spend.
+        try:
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response(email, FEATURES.INTERVIEW_FEEDBACK, response)
+        except Exception:
+            pass
+
         raw = "".join(getattr(b, "text", "") or "" for b in (response.content or []))
         raw = raw.strip()
 

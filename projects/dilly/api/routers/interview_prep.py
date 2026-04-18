@@ -408,6 +408,16 @@ No markdown, no prose, just the JSON array."""
             system=system,
             messages=[{"role": "user", "content": f"Generate the 8 interview questions for {role} at {company}."}],
         )
+        try:
+            # Feature-level cost logged anonymously here. Caller
+            # (/interview/prep-deck router) wraps this and records
+            # per-user cost with the real email. This inner log is
+            # a safety net — remove once the outer route is wrapped.
+            from projects.dilly.api.llm_usage_log import log_from_anthropic_response, FEATURES
+            log_from_anthropic_response("", FEATURES.INTERVIEW_PREP_DECK, msg,
+                                        metadata={"company": company, "role": role})
+        except Exception:
+            pass
         raw = "".join(getattr(b, "text", "") or "" for b in (msg.content or []))
         cleaned = raw.strip()
         if cleaned.startswith("```"):
