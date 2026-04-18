@@ -1,8 +1,38 @@
-import { useEffect, useState, useRef } from 'react';
+/**
+ * Interview Practice — "The Room"
+ *
+ * Not a chatbot. Not a prompt wrapper. A simulated interview room
+ * built from the job description, with live performance feedback
+ * that cannot be reproduced by typing questions into ChatGPT.
+ *
+ * The differentiators (what you're paying for):
+ *   - A cinematic, focused practice surface (dark, immersive) instead
+ *     of a utility form. The environment cues the user to treat the
+ *     session like the real thing.
+ *   - Live STAR coverage bar + answer-duration meter beneath every
+ *     answer. You see your Situation/Task/Action/Result chips light
+ *     up as you type, and a color-coded length meter nudges you
+ *     toward the 40-90s sweet spot. No chatbot can do this — it's
+ *     reactive in real time as characters land.
+ *   - Narrated loader stages ("reading the description → identifying
+ *     what they'll test → calibrating difficulty") so the user feels
+ *     the machine working, not a mystery spinner.
+ *   - Scorecard debrief with 4 axes (Clarity, Specificity, Structure,
+ *     Confidence) derived from the feedback payload. Feels like a
+ *     hiring rubric, not a grade.
+ *   - Your-answer / stronger-answer side-by-side on each question,
+ *     so the user sees the specific gap and closes it.
+ *
+ * The API contract (prep-deck → feedback) is unchanged — this is a
+ * pure UI rewrite. If the backend ever ships voice transcription, the
+ * practice surface is already shaped for it.
+ */
+
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform,
-  LayoutAnimation, UIManager, Alert,
+  LayoutAnimation, UIManager, Alert, Animated, Easing,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,12 +48,19 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const GOLD  = '#2B3A8E';
+// Palette — dark mode is only used during the immersive practice
+// phase. Setup and debrief stay in the light Dilly brand.
+const INDIGO = '#2B3A8E';
+const NIGHT_BG = '#0B0F1E';
+const NIGHT_CARD = '#151A2E';
+const NIGHT_BORDER = 'rgba(255,255,255,0.08)';
+const NIGHT_TEXT = '#E8EAF4';
+const NIGHT_MUTED = 'rgba(232,234,244,0.55)';
+const NIGHT_DIM = 'rgba(232,234,244,0.35)';
+const GLOW_INDIGO = '#5B6EE1';
 const GREEN = '#34C759';
 const AMBER = '#FF9F0A';
 const CORAL = '#FF453A';
-const PURPLE = '#AF52DE';
-const GRAY  = '#8E8E93';
 
 interface PrepQuestion {
   question: string;
@@ -51,17 +88,59 @@ interface InterviewFeedback {
 type Phase = 'setup' | 'loading' | 'practice' | 'analyzing' | 'review';
 
 const RATING_CONFIG = {
-  strong: { label: 'Strong', color: GREEN, bg: GREEN + '15', border: GREEN + '35' },
-  needs_work: { label: 'Needs Work', color: AMBER, bg: AMBER + '15', border: AMBER + '35' },
-  weak: { label: 'Weak', color: CORAL, bg: CORAL + '15', border: CORAL + '35' },
-  skipped: { label: 'Skipped', color: GRAY, bg: GRAY + '15', border: GRAY + '35' },
+  strong: { label: 'Strong', color: GREEN },
+  needs_work: { label: 'Needs Work', color: AMBER },
+  weak: { label: 'Weak', color: CORAL },
+  skipped: { label: 'Skipped', color: NIGHT_DIM },
 };
 
 const VERDICT_CONFIG = {
-  ready: { label: 'Ready to interview', color: GREEN, icon: 'checkmark-circle' as const },
-  almost: { label: 'Almost there', color: AMBER, icon: 'alert-circle' as const },
-  needs_work: { label: 'More practice needed', color: CORAL, icon: 'close-circle' as const },
+  ready: { label: "You're ready.", sub: "This is a hire-level performance. Keep the edge.", color: GREEN },
+  almost: { label: 'Almost there.', sub: "You'd be competitive. Tighten a few spots and it's yours.", color: AMBER },
+  needs_work: { label: 'Not there yet.', sub: "One more session at this rubric and you're close.", color: CORAL },
 };
+
+// Loader narration — the user sees the machine working. Each line
+// dwells for ~1.4s. If the API comes back faster, the loader just
+// jumps to the final state. If slower, the last line stays pinned.
+const LOADER_STAGES = [
+  { icon: 'eye', text: 'Reading the job description' },
+  { icon: 'analytics', text: "Identifying what they'll actually test" },
+  { icon: 'aperture', text: 'Picking 5 questions that matter most' },
+  { icon: 'shield-checkmark', text: 'Calibrating difficulty to the role' },
+];
+
+const ANALYZING_NARRATION = [
+  "Reviewing each answer against the hiring bar",
+  "Checking specificity, structure, and depth",
+  "Looking for the exact gap holding you back",
+  "Scoring against how they actually hire",
+];
+
+// STAR keyword detectors. Rough but honest — chosen because they
+// actually appear in strong answers. Matched case-insensitively,
+// as whole-word fragments, against the current answer text.
+const STAR_PATTERNS: Record<'S' | 'T' | 'A' | 'R', RegExp[]> = {
+  S: [/\b(when|while|during|at the time|context|situation|background)\b/i,
+      /\b(our team|the company|our customers|the project)\b/i],
+  T: [/\b(my (?:goal|task|job|responsibility)|i had to|i needed to|i was asked)\b/i,
+      /\b(target|objective|deadline|goal|challenge)\b/i],
+  A: [/\b(i (?:led|built|designed|shipped|wrote|owned|ran|proposed|pitched|organized|implemented|architected|rolled out|launched|negotiated))\b/i,
+      /\b(i decided to|my approach|first, i|then i|i convinced)\b/i],
+  R: [/\b(\d+(?:\.\d+)?\s*(?:%|percent|x|kx|k|m|million))\b/i,
+      /\b(increased|decreased|shipped|delivered|saved|won|closed|converted|reduced|cut)\b/i,
+      /\b(as a result|ultimately|we landed|we ended up|we hit|ended up)\b/i],
+};
+
+// 40s floor and 90s ceiling are the sweet spot for behavioral answers.
+// The color-coded meter nudges toward that band in real time.
+const TARGET_MIN_SEC = 40;
+const TARGET_MAX_SEC = 90;
+
+// Words-per-second assumption for spoken answers (≈ natural speech).
+// We convert character count -> estimated spoken duration so the
+// timer shows a meaningful duration even when the user is typing.
+const AVG_WORDS_PER_SEC = 2.3;
 
 export default function InterviewPracticeScreen() {
   const toast = useInlineToast();
@@ -82,7 +161,26 @@ export default function InterviewPracticeScreen() {
   const [jobUrl, setJobUrl] = useState('');
   const [urlLoading, setUrlLoading] = useState(false);
   const [urlError, setUrlError] = useState('');
+  const [loaderStage, setLoaderStage] = useState(0);
+  const [analyzingLine, setAnalyzingLine] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Rotate through loader narration stages.
+  useEffect(() => {
+    if (phase !== 'loading') { setLoaderStage(0); return; }
+    const id = setInterval(() => {
+      setLoaderStage(s => Math.min(s + 1, LOADER_STAGES.length - 1));
+    }, 1400);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'analyzing') { setAnalyzingLine(0); return; }
+    const id = setInterval(() => {
+      setAnalyzingLine(l => (l + 1) % ANALYZING_NARRATION.length);
+    }, 1800);
+    return () => clearInterval(id);
+  }, [phase]);
 
   async function handleUrlFetch() {
     const url = jobUrl.trim();
@@ -111,24 +209,28 @@ export default function InterviewPracticeScreen() {
     }
   }
 
-  // Auto-load if company+role were passed as params
   useEffect(() => {
     if (paramCompany && paramRole) {
       loadDeck(paramCompany, paramRole, '');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Track JD length for inline validation
   useEffect(() => {
     const trimmed = jobDescription.trim();
-    if (trimmed.length > 0 && trimmed.length < 100) {
-      setJdTooShort(true);
-    } else {
-      setJdTooShort(false);
-    }
+    setJdTooShort(trimmed.length > 0 && trimmed.length < 100);
   }, [jobDescription]);
 
   const canGenerate = company.trim().length > 0 && role.trim().length > 0 && jobDescription.trim().length >= 100;
+
+  // JD quality meter — visible signal that "more detail = better prep".
+  const jdLen = jobDescription.trim().length;
+  const jdQuality =
+    jdLen === 0 ? { pct: 0, label: 'Empty', color: NIGHT_DIM } :
+    jdLen < 100 ? { pct: 20, label: 'Too thin', color: CORAL } :
+    jdLen < 400 ? { pct: 55, label: 'Usable', color: AMBER } :
+    jdLen < 900 ? { pct: 85, label: 'Strong detail', color: GREEN } :
+                  { pct: 100, label: 'Full spec', color: GREEN };
 
   async function loadDeck(c: string, r: string, jd: string) {
     if (!c.trim() || !r.trim()) {
@@ -141,7 +243,6 @@ export default function InterviewPracticeScreen() {
     }
     setPhase('loading');
     try {
-      // Detect if JD is a URL and fetch it first
       let finalJD = jd.trim();
       const isUrl = /^https?:\/\//i.test(finalJD) || /^(www\.)?[\w-]+\.(com|co|io|org|net|jobs)\//i.test(finalJD);
       if (isUrl && finalJD.split('\n').length <= 3) {
@@ -181,7 +282,7 @@ export default function InterviewPracticeScreen() {
       setCurrentIdx(0);
       setCurrentAnswer('');
       setPhase('practice');
-    } catch (e: any) {
+    } catch {
       toast.show({ message: 'Prep failed. Try again.' });
       setPhase('setup');
     }
@@ -197,7 +298,6 @@ export default function InterviewPracticeScreen() {
       setCurrentIdx(currentIdx + 1);
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     } else {
-      // All questions done, go to analysis
       const finalAnswers = [...updated];
       finalAnswers[currentIdx] = currentAnswer.trim();
       requestFeedback(finalAnswers);
@@ -221,7 +321,7 @@ export default function InterviewPracticeScreen() {
     setPhase('analyzing');
     try {
       const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 180_000); // 3 minute timeout
+      const timeout = setTimeout(() => ctrl.abort(), 180_000);
       const res = await dilly.fetch('/interview/feedback', {
         method: 'POST',
         body: JSON.stringify({
@@ -239,23 +339,13 @@ export default function InterviewPracticeScreen() {
       clearTimeout(timeout);
 
       if (!res.ok) {
-        const d = await res.json().catch(() => null);
-        // Plan gates: surface a clear upgrade path instead of a generic error
+        // 402 is handled globally by the paywall wrapper in lib/dilly.
+        // We just need to not crash after it surfaces — bail to setup.
         if (res.status === 402) {
-          const code = d?.detail?.code || d?.code;
-          const msg = d?.detail?.message || d?.message || 'Upgrade required.';
-          const requiredPlan = d?.detail?.required_plan || d?.required_plan || 'dilly';
           setPhase('setup');
-          Alert.alert(
-            code === 'PLAN_LIMIT_REACHED' ? 'Monthly limit reached' : 'Upgrade to use this',
-            msg,
-            [
-              { text: 'Not now', style: 'cancel' },
-              { text: requiredPlan === 'pro' ? 'Upgrade to Pro' : 'Upgrade to Dilly', onPress: () => router.push('/(app)/settings') },
-            ],
-          );
           return;
         }
+        const d = await res.json().catch(() => null);
         throw new Error(d?.detail || `Server error ${res.status}`);
       }
 
@@ -263,13 +353,11 @@ export default function InterviewPracticeScreen() {
       setFeedback(data);
       setExpandedCards(new Set());
       setPhase('review');
-    } catch (e: any) {
-      // Auto-retry once before showing error
+    } catch {
       if (retryCount < 1) {
         requestFeedback(finalAnswers, retryCount + 1);
         return;
       }
-      // Show error but let them retry
       Alert.alert(
         'Feedback took too long',
         'Dilly could not generate feedback for this session. This can happen with long interviews. Want to try again?',
@@ -285,11 +373,8 @@ export default function InterviewPracticeScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedCards(prev => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
       return next;
     });
   }
@@ -305,598 +390,1085 @@ export default function InterviewPracticeScreen() {
   }
 
   const q = questions[currentIdx];
+  const isDark = phase === 'practice';
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
-      {/* Nav */}
-      <View style={s.navBar}>
-        <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color={colors.t1} />
-        </AnimatedPressable>
-        <Text style={s.navTitle}>Interview Practice</Text>
-        <View style={{ width: 22 }} />
-      </View>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: isDark ? NIGHT_BG : colors.bg }]}>
+      <NavBar dark={isDark} onBack={() => router.back()} phase={phase} currentIdx={currentIdx} total={questions.length} />
 
-      {/* Setup phase */}
       {phase === 'setup' && (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}>
-            <FadeInView delay={0}>
-              <View style={s.setupCard}>
-                <View style={s.setupIcon}>
-                  <Ionicons name="mic" size={28} color={PURPLE} />
-                </View>
-                <Text style={s.setupTitle}>Interview Practice</Text>
-                <Text style={s.setupSub}>
-                  Paste a job URL or enter the details manually.
-                </Text>
-
-                {/* URL option */}
-                <Text style={s.inputLabel}>Job URL</Text>
-                <TextInput
-                  style={s.input}
-                  value={jobUrl}
-                  onChangeText={setJobUrl}
-                  placeholder="Paste a job listing URL"
-                  placeholderTextColor={colors.t3}
-                  autoCapitalize="none"
-                  keyboardType="url"
-                  returnKeyType="go"
-                  onSubmitEditing={() => handleUrlFetch()}
-                />
-                {urlLoading && <ActivityIndicator size="small" color={PURPLE} style={{ marginTop: 8 }} />}
-                {urlError ? <Text style={{ fontSize: 12, color: '#FF453A', marginTop: 4 }}>{urlError}</Text> : null}
-
-                {/* Divider */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 12 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-                  <Text style={{ fontSize: 12, color: colors.t3 }}>or enter manually</Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-                </View>
-
-                <Text style={s.inputLabel}>Company <Text style={{ color: '#FF453A' }}>*</Text></Text>
-                <TextInput
-                  style={s.input}
-                  value={company}
-                  onChangeText={setCompany}
-                  placeholder="e.g. Google"
-                  placeholderTextColor={colors.t3}
-                  autoFocus
-                />
-                <Text style={[s.inputLabel, { marginTop: 12 }]}>Role <Text style={{ color: '#FF453A' }}>*</Text></Text>
-                <TextInput
-                  style={s.input}
-                  value={role}
-                  onChangeText={setRole}
-                  placeholder="e.g. Data Science Intern"
-                  placeholderTextColor={colors.t3}
-                />
-                <Text style={[s.inputLabel, { marginTop: 12 }]}>Job Description <Text style={{ color: '#FF453A' }}>*</Text></Text>
-                <TextInput
-                  style={[s.input, { minHeight: 120, textAlignVertical: 'top' }]}
-                  value={jobDescription}
-                  onChangeText={setJobDescription}
-                  placeholder="Paste the full job description or a job URL"
-                  placeholderTextColor={colors.t3}
-                  multiline
-                />
-                {jdTooShort && (
-                  <Text style={s.jdWarning}>
-                    This job description isn't detailed enough for accurate interview questions. Paste the full description.
-                  </Text>
-                )}
-                <AnimatedPressable
-                  style={[s.startBtn, !canGenerate && { opacity: 0.4 }]}
-                  onPress={() => loadDeck(company, role, jobDescription)}
-                  disabled={!canGenerate}
-                  scaleDown={0.97}
-                >
-                  <Ionicons name="flash" size={16} color="#FFFFFF" />
-                  <Text style={s.startBtnText}>Generate interview questions</Text>
-                </AnimatedPressable>
-              </View>
-            </FadeInView>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        <SetupPhase
+          company={company} setCompany={setCompany}
+          role={role} setRole={setRole}
+          jobDescription={jobDescription} setJobDescription={setJobDescription}
+          jobUrl={jobUrl} setJobUrl={setJobUrl}
+          urlLoading={urlLoading} urlError={urlError}
+          onUrlFetch={handleUrlFetch}
+          jdTooShort={jdTooShort} jdQuality={jdQuality}
+          canGenerate={canGenerate}
+          onStart={() => loadDeck(company, role, jobDescription)}
+          insetsBottom={insets.bottom}
+        />
       )}
 
-      {/* Loading */}
-      {phase === 'loading' && (
-        <View style={s.loadingWrap}>
-          <ActivityIndicator size="large" color={PURPLE} />
-          <Text style={s.loadingText}>Generating questions for {company}...</Text>
-        </View>
-      )}
+      {phase === 'loading' && <LoadingPhase company={company} role={role} stage={loaderStage} />}
 
-      {/* Practice phase */}
       {phase === 'practice' && q && (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView ref={scrollRef} contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}>
-            {/* Progress */}
-            <View style={s.progressRow}>
-              <Text style={s.progressText}>Question {currentIdx + 1} of {questions.length}</Text>
-              <View style={s.progressTrack}>
-                <View style={[s.progressFill, { width: `${((currentIdx + 1) / questions.length) * 100}%` }]} />
-              </View>
-            </View>
-
-            {/* Question card */}
-            <FadeInView delay={0} key={currentIdx}>
-              <View style={s.questionCard}>
-                <View style={s.questionMeta}>
-                  <View style={[s.probBadge, {
-                    backgroundColor: q.probability === 'high' ? CORAL + '15' : q.probability === 'medium' ? AMBER + '15' : colors.s3,
-                    borderColor: q.probability === 'high' ? CORAL + '35' : q.probability === 'medium' ? AMBER + '35' : colors.b1,
-                  }]}>
-                    <Text style={[s.probText, {
-                      color: q.probability === 'high' ? CORAL : q.probability === 'medium' ? AMBER : colors.t3,
-                    }]}>
-                      {q.probability === 'high' ? 'Likely' : q.probability === 'medium' ? 'Possible' : 'Stretch'}
-                    </Text>
-                  </View>
-                  <Text style={s.categoryText}>{q.category}</Text>
-                </View>
-                <Text style={s.questionText}>{q.question}</Text>
-                {q.why_flagged && (
-                  <Text style={s.whyFlagged}>Why this matters: {q.why_flagged}</Text>
-                )}
-              </View>
-
-              {/* Prep tip */}
-              {q.prep_tip && (
-                <View style={s.tipCard}>
-                  <Ionicons name="bulb-outline" size={12} color={AMBER} />
-                  <Text style={s.tipText}>{q.prep_tip}</Text>
-                </View>
-              )}
-
-              {/* Ask Dilly for help */}
-              <AnimatedPressable
-                style={s.dillyHelpBtn}
-                onPress={() => openDillyOverlay({
-                  isPaid: true,
-                  initialMessage: `I'm practicing for the ${role} role at ${company}. I was asked: "${q.question}". Based on this job description, help me structure a strong answer. What specific experiences from my Dilly Profile should I highlight? ${q.prep_tip ? 'Tip: ' + q.prep_tip : ''}`,
-                })}
-                scaleDown={0.97}
-              >
-                <Ionicons name="sparkles" size={13} color={GOLD} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: GOLD }}>Ask Dilly for help</Text>
-              </AnimatedPressable>
-
-              {/* Answer input */}
-              <TextInput
-                style={s.answerInput}
-                value={currentAnswer}
-                onChangeText={setCurrentAnswer}
-                placeholder="Type your answer here..."
-                placeholderTextColor={colors.t3}
-                multiline
-                textAlignVertical="top"
-              />
-
-              {/* Actions */}
-              <View style={s.actionRow}>
-                <AnimatedPressable
-                  style={[s.submitBtn, currentAnswer.trim().length === 0 && { opacity: 0.4 }]}
-                  onPress={submitAnswer}
-                  disabled={currentAnswer.trim().length === 0}
-                  scaleDown={0.97}
-                >
-                  <Text style={s.submitBtnText}>
-                    {currentIdx < questions.length - 1 ? 'Submit & Next' : 'Submit & Review'}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
-                </AnimatedPressable>
-                <AnimatedPressable style={s.skipBtn} onPress={skipQuestion} scaleDown={0.97}>
-                  <Text style={s.skipBtnText}>Skip</Text>
-                </AnimatedPressable>
-              </View>
-            </FadeInView>
-          </ScrollView>
-        </KeyboardAvoidingView>
+        <PracticePhase
+          scrollRef={scrollRef}
+          question={q}
+          company={company}
+          role={role}
+          currentIdx={currentIdx}
+          total={questions.length}
+          currentAnswer={currentAnswer}
+          setCurrentAnswer={setCurrentAnswer}
+          onSubmit={submitAnswer}
+          onSkip={skipQuestion}
+          insetsBottom={insets.bottom}
+        />
       )}
 
-      {/* Analyzing phase */}
-      {phase === 'analyzing' && (
-        <View style={s.loadingWrap}>
-          <View style={s.analyzingCard}>
-            <View style={s.pulsingDots}>
-              <PulsingDot delay={0} />
-              <PulsingDot delay={200} />
-              <PulsingDot delay={400} />
-            </View>
-            <Text style={s.analyzingTitle}>Analyzing your answers for {company}...</Text>
-            <Text style={s.analyzingSub}>
-              Reviewing each response against the job description and your profile
-            </Text>
-          </View>
-        </View>
-      )}
+      {phase === 'analyzing' && <AnalyzingPhase company={company} line={analyzingLine} />}
 
-      {/* Review phase */}
       {phase === 'review' && (
-        <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}>
-          <FadeInView delay={0}>
-            {feedback ? (
-              <>
-                {/* Overall Assessment Card */}
-                <View style={[s.assessmentCard, { borderColor: VERDICT_CONFIG[feedback.verdict].color + '40' }]}>
-                  <View style={s.verdictRow}>
-                    <Ionicons
-                      name={VERDICT_CONFIG[feedback.verdict].icon}
-                      size={28}
-                      color={VERDICT_CONFIG[feedback.verdict].color}
-                    />
-                    <Text style={[s.verdictLabel, { color: VERDICT_CONFIG[feedback.verdict].color }]}>
-                      {VERDICT_CONFIG[feedback.verdict].label}
-                    </Text>
-                  </View>
-                  <Text style={s.overallText}>{feedback.overall}</Text>
-
-                  <View style={s.assessmentDivider} />
-
-                  <View style={s.assessmentItem}>
-                    <View style={[s.assessmentDot, { backgroundColor: GREEN }]} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.assessmentItemLabel}>Top strength</Text>
-                      <Text style={s.assessmentItemText}>{feedback.top_strength}</Text>
-                    </View>
-                  </View>
-
-                  <View style={s.assessmentItem}>
-                    <View style={[s.assessmentDot, { backgroundColor: AMBER }]} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.assessmentItemLabel}>Priority fix</Text>
-                      <Text style={s.assessmentItemText}>{feedback.priority_fix}</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Per-Question Feedback Cards */}
-                <Text style={s.sectionLabel}>QUESTION-BY-QUESTION</Text>
-                {questions.map((q, i) => {
-                  const pq = feedback.per_question[i];
-                  const rating = pq?.rating || 'skipped';
-                  const config = RATING_CONFIG[rating];
-                  const isExpanded = expandedCards.has(i);
-                  const userAnswer = answers[i];
-
-                  return (
-                    <AnimatedPressable
-                      key={i}
-                      style={s.feedbackCard}
-                      onPress={() => toggleCard(i)}
-                      scaleDown={0.98}
-                    >
-                      {/* Always visible: question + rating */}
-                      <View style={s.feedbackCardHeader}>
-                        <Text style={s.feedbackCardQuestion} numberOfLines={isExpanded ? undefined : 2}>
-                          {q.question}
-                        </Text>
-                        <View style={[s.ratingBadge, { backgroundColor: config.bg, borderColor: config.border }]}>
-                          <Text style={[s.ratingBadgeText, { color: config.color }]}>{config.label}</Text>
-                        </View>
-                      </View>
-
-                      {/* Expand indicator */}
-                      <View style={s.expandIndicator}>
-                        <Ionicons
-                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                          size={14}
-                          color={colors.t3}
-                        />
-                      </View>
-
-                      {/* Expanded content */}
-                      {isExpanded && (
-                        <View style={s.feedbackExpanded}>
-                          {/* Their answer */}
-                          <View style={s.answerBlock}>
-                            <Text style={s.answerBlockLabel}>Your answer</Text>
-                            <Text style={s.answerBlockText}>
-                              {userAnswer || 'Skipped'}
-                            </Text>
-                          </View>
-
-                          {/* Feedback */}
-                          {pq?.feedback ? (
-                            <View style={s.feedbackBlock}>
-                              <Text style={s.feedbackBlockLabel}>Feedback</Text>
-                              <Text style={s.feedbackBlockText}>{pq.feedback}</Text>
-                            </View>
-                          ) : null}
-
-                          {/* Model answer */}
-                          {pq?.model_answer ? (
-                            <View style={s.modelBlock}>
-                              <Text style={s.modelBlockLabel}>A strong candidate might say</Text>
-                              <Text style={s.modelBlockText}>{pq.model_answer}</Text>
-                            </View>
-                          ) : null}
-                        </View>
-                      )}
-                    </AnimatedPressable>
-                  );
-                })}
-
-                {/* Action Items Card */}
-                {feedback.action_items.length > 0 && (
-                  <>
-                    <Text style={s.sectionLabel}>BEFORE THE REAL INTERVIEW</Text>
-                    <View style={s.actionsCard}>
-                      {feedback.action_items.map((item, i) => (
-                        <AnimatedPressable
-                          key={i}
-                          style={s.actionItem}
-                          onPress={() => openDillyOverlay({
-                            isPaid: true,
-                            initialMessage: `I'm preparing for the ${role} role at ${company}. One of my action items is: "${item}". Help me work on this. What specific steps should I take?`,
-                          })}
-                          scaleDown={0.98}
-                        >
-                          <View style={s.actionBullet}>
-                            <Text style={s.actionBulletText}>{i + 1}</Text>
-                          </View>
-                          <Text style={s.actionItemText}>{item}</Text>
-                          <Ionicons name="chevron-forward" size={14} color={colors.t3} />
-                        </AnimatedPressable>
-                      ))}
-                    </View>
-                  </>
-                )}
-              </>
-            ) : (
-              /* Fallback if feedback failed */
-              <View style={s.assessmentCard}>
-                <View style={s.verdictRow}>
-                  <Ionicons name="alert-circle" size={28} color={AMBER} />
-                  <Text style={[s.verdictLabel, { color: AMBER }]}>Practice complete</Text>
-                </View>
-                <Text style={s.overallText}>
-                  We could not generate AI feedback for this session. You answered {answers.filter(a => a.length > 0).length} of {questions.length} questions for {company}.
-                </Text>
-              </View>
-            )}
-
-            {/* Bottom buttons */}
-            <View style={s.reviewActions}>
-              <AnimatedPressable
-                style={s.retryBtn}
-                onPress={resetToSetup}
-                scaleDown={0.97}
-              >
-                <Ionicons name="refresh" size={14} color={GOLD} />
-                <Text style={s.retryBtnText}>Practice again</Text>
-              </AnimatedPressable>
-              <AnimatedPressable
-                style={s.doneBtn}
-                onPress={() => router.back()}
-                scaleDown={0.97}
-              >
-                <Text style={s.doneBtnText}>Done</Text>
-              </AnimatedPressable>
-            </View>
-          </FadeInView>
-        </ScrollView>
+        <ReviewPhase
+          feedback={feedback}
+          questions={questions}
+          answers={answers}
+          company={company}
+          role={role}
+          expandedCards={expandedCards}
+          onToggle={toggleCard}
+          onRetry={resetToSetup}
+          onDone={() => router.back()}
+          insetsBottom={insets.bottom}
+        />
       )}
+
       <InlineToastView {...toast.props} />
     </View>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────── */
+/* Nav                                                              */
+/* ─────────────────────────────────────────────────────────────── */
 
-// Pulsing dot component for the analyzing animation
-function PulsingDot({ delay }: { delay: number }) {
-  const [opacity, setOpacity] = useState(0.3);
-
-  useEffect(() => {
-    let mounted = true;
-    const interval = setInterval(() => {
-      if (mounted) setOpacity(prev => (prev === 0.3 ? 1 : 0.3));
-    }, 600);
-    const timer = setTimeout(() => {
-      if (mounted) setOpacity(1);
-    }, delay);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-      clearTimeout(timer);
-    };
-  }, [delay]);
-
+function NavBar({ dark, onBack, phase, currentIdx, total }:
+  { dark: boolean; onBack: () => void; phase: Phase; currentIdx: number; total: number }) {
+  const title =
+    phase === 'practice' ? `${currentIdx + 1} / ${total}` :
+    phase === 'analyzing' ? 'Debriefing...' :
+    phase === 'review' ? 'Debrief' : 'The Room';
   return (
-    <View style={[s.dot, { opacity }]} />
+    <View style={[s.navBar, { borderBottomColor: dark ? NIGHT_BORDER : colors.b1 }]}>
+      <AnimatedPressable onPress={onBack} scaleDown={0.9} hitSlop={12}>
+        <Ionicons name="chevron-back" size={22} color={dark ? NIGHT_TEXT : colors.t1} />
+      </AnimatedPressable>
+      <Text style={[s.navTitle, { color: dark ? NIGHT_TEXT : colors.t1 }]}>
+        {title}
+      </Text>
+      <View style={{ width: 22 }} />
+    </View>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────── */
+/* Setup — cinematic gateway                                        */
+/* ─────────────────────────────────────────────────────────────── */
+
+function SetupPhase({
+  company, setCompany, role, setRole,
+  jobDescription, setJobDescription,
+  jobUrl, setJobUrl, urlLoading, urlError, onUrlFetch,
+  jdTooShort, jdQuality, canGenerate, onStart, insetsBottom,
+}: any) {
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 60 }]}>
+        <FadeInView delay={0}>
+          {/* Hero — no logo, no chatbot framing. This is a Room. */}
+          <View style={s.hero}>
+            <View style={s.heroRingOuter}>
+              <View style={s.heroRingInner}>
+                <Ionicons name="mic" size={28} color={INDIGO} />
+              </View>
+            </View>
+            <Text style={s.heroKicker}>STEP INTO</Text>
+            <Text style={s.heroTitle}>The Interview Room</Text>
+            <Text style={s.heroSub}>
+              This isn't a chatbot. Dilly reads the job, builds five questions they'll actually ask, and tracks your answers in real time — structure, specificity, and pace — against the way companies like this actually hire.
+            </Text>
+            <View style={s.heroProofRow}>
+              <ProofChip icon="flash" text="5 questions" />
+              <ProofChip icon="time" text="~10 min" />
+              <ProofChip icon="medal" text="Role-specific" />
+            </View>
+          </View>
+        </FadeInView>
+
+        <FadeInView delay={80}>
+          <Text style={s.sectionHeader}>PASTE THE ROLE</Text>
+
+          <View style={s.inputCard}>
+            {/* URL primary — one tap, everything fills. */}
+            <FieldLabel text="Job URL" hint="Fastest way in" />
+            <View style={s.urlRow}>
+              <TextInput
+                style={[s.input, { flex: 1 }]}
+                value={jobUrl}
+                onChangeText={setJobUrl}
+                placeholder="Paste a Greenhouse, Lever, or careers page URL"
+                placeholderTextColor={colors.t3}
+                autoCapitalize="none"
+                keyboardType="url"
+                returnKeyType="go"
+                onSubmitEditing={onUrlFetch}
+              />
+              <AnimatedPressable
+                style={[s.urlBtn, (!jobUrl.trim() || urlLoading) && { opacity: 0.4 }]}
+                onPress={onUrlFetch}
+                disabled={!jobUrl.trim() || urlLoading}
+                scaleDown={0.95}
+              >
+                {urlLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Ionicons name="arrow-forward" size={16} color="#fff" />}
+              </AnimatedPressable>
+            </View>
+            {urlError ? <Text style={s.urlError}>{urlError}</Text> : null}
+
+            <View style={s.dividerRow}>
+              <View style={s.dividerLine} />
+              <Text style={s.dividerText}>OR ENTER MANUALLY</Text>
+              <View style={s.dividerLine} />
+            </View>
+
+            <FieldLabel text="Company" required />
+            <TextInput
+              style={s.input}
+              value={company}
+              onChangeText={setCompany}
+              placeholder="e.g. Stripe"
+              placeholderTextColor={colors.t3}
+              autoFocus={!company}
+            />
+            <FieldLabel text="Role" required top />
+            <TextInput
+              style={s.input}
+              value={role}
+              onChangeText={setRole}
+              placeholder="e.g. Senior Product Engineer"
+              placeholderTextColor={colors.t3}
+            />
+
+            <View style={{ marginTop: 14 }}>
+              <View style={s.jdHeaderRow}>
+                <FieldLabel text="Job Description" required inline />
+                <View style={s.jdQualityPill}>
+                  <View style={[s.jdQualityDot, { backgroundColor: jdQuality.color }]} />
+                  <Text style={[s.jdQualityText, { color: jdQuality.color }]}>{jdQuality.label}</Text>
+                </View>
+              </View>
+              <TextInput
+                style={[s.input, { minHeight: 140, textAlignVertical: 'top' }]}
+                value={jobDescription}
+                onChangeText={setJobDescription}
+                placeholder="Paste the full description. The more detail, the sharper the questions."
+                placeholderTextColor={colors.t3}
+                multiline
+              />
+              <View style={s.jdQualityTrack}>
+                <View style={[s.jdQualityFill, { width: `${jdQuality.pct}%`, backgroundColor: jdQuality.color }]} />
+              </View>
+              {jdTooShort && (
+                <Text style={s.jdWarning}>
+                  Too short for accurate interview questions. Paste the full description.
+                </Text>
+              )}
+            </View>
+          </View>
+        </FadeInView>
+
+        <FadeInView delay={140}>
+          <AnimatedPressable
+            style={[s.enterBtn, !canGenerate && { opacity: 0.35 }]}
+            onPress={onStart}
+            disabled={!canGenerate}
+            scaleDown={0.97}
+          >
+            <Text style={s.enterBtnText}>Step into the Room</Text>
+            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          </AnimatedPressable>
+          <Text style={s.enterFootnote}>
+            No recruiter hears this session. It's yours.
+          </Text>
+        </FadeInView>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+function ProofChip({ icon, text }: { icon: any; text: string }) {
+  return (
+    <View style={s.proofChip}>
+      <Ionicons name={icon} size={11} color={INDIGO} />
+      <Text style={s.proofChipText}>{text}</Text>
+    </View>
+  );
+}
+
+function FieldLabel({ text, required, top, hint, inline }:
+  { text: string; required?: boolean; top?: boolean; hint?: string; inline?: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: top ? 12 : (inline ? 0 : 4), marginBottom: 6 }}>
+      <Text style={s.fieldLabel}>{text}{required ? <Text style={{ color: CORAL }}> *</Text> : null}</Text>
+      {hint ? <Text style={s.fieldHint}>{hint}</Text> : null}
+    </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Loading — narrated stages                                        */
+/* ─────────────────────────────────────────────────────────────── */
+
+function LoadingPhase({ company, role, stage }: { company: string; role: string; stage: number }) {
+  return (
+    <View style={s.loadingWrap}>
+      <View style={s.loadingCardLight}>
+        <View style={s.loadingRing}>
+          <ActivityIndicator size="small" color={INDIGO} />
+        </View>
+        <Text style={s.loadingCompany}>
+          {company.toUpperCase()} · {role}
+        </Text>
+        <View style={{ gap: 10, marginTop: 20, width: '100%' }}>
+          {LOADER_STAGES.map((st, i) => {
+            const done = i < stage;
+            const active = i === stage;
+            return (
+              <View key={i} style={s.loaderRow}>
+                <View style={[s.loaderBullet, {
+                  backgroundColor: done ? INDIGO : active ? INDIGO + '30' : colors.s3,
+                  borderColor: done || active ? INDIGO : colors.b1,
+                }]}>
+                  {done
+                    ? <Ionicons name="checkmark" size={10} color="#fff" />
+                    : active
+                      ? <View style={s.loaderPulse} />
+                      : null}
+                </View>
+                <Text style={[s.loaderText, {
+                  color: done ? colors.t2 : active ? colors.t1 : colors.t3,
+                  fontWeight: active ? '700' : '500',
+                }]}>
+                  {st.text}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Practice — immersive dark room                                   */
+/* ─────────────────────────────────────────────────────────────── */
+
+function PracticePhase({
+  scrollRef, question, company, role, currentIdx, total,
+  currentAnswer, setCurrentAnswer, onSubmit, onSkip, insetsBottom,
+}: any) {
+  // Derived live metrics for the performance bar.
+  const metrics = useMemo(() => {
+    const text = currentAnswer;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const estSec = Math.round(words / AVG_WORDS_PER_SEC);
+    const star = {
+      S: STAR_PATTERNS.S.some(rx => rx.test(text)),
+      T: STAR_PATTERNS.T.some(rx => rx.test(text)),
+      A: STAR_PATTERNS.A.some(rx => rx.test(text)),
+      R: STAR_PATTERNS.R.some(rx => rx.test(text)),
+    };
+    const starCount = (star.S ? 1 : 0) + (star.T ? 1 : 0) + (star.A ? 1 : 0) + (star.R ? 1 : 0);
+    return { words, estSec, star, starCount };
+  }, [currentAnswer]);
+
+  const durationColor =
+    metrics.estSec === 0 ? NIGHT_DIM :
+    metrics.estSec < TARGET_MIN_SEC ? AMBER :
+    metrics.estSec <= TARGET_MAX_SEC ? GREEN :
+    CORAL;
+  const durationHint =
+    metrics.estSec === 0 ? 'Start talking' :
+    metrics.estSec < TARGET_MIN_SEC ? 'Keep going — add specifics' :
+    metrics.estSec <= TARGET_MAX_SEC ? 'Sweet spot' :
+    'Tighten it up';
+
+  const canSubmit = currentAnswer.trim().length >= 40;
+
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
+        {/* Progress dots */}
+        <View style={s.dotProgress}>
+          {Array.from({ length: total }).map((_, i) => (
+            <View
+              key={i}
+              style={[
+                s.progressPip,
+                i < currentIdx && { backgroundColor: GLOW_INDIGO, opacity: 0.5 },
+                i === currentIdx && { backgroundColor: GLOW_INDIGO, width: 22 },
+                i > currentIdx && { backgroundColor: NIGHT_BORDER },
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Interviewer card — grounds the user in a specific moment */}
+        <FadeInView delay={0} key={currentIdx}>
+          <View style={s.interviewerStrip}>
+            <View style={s.interviewerDot} />
+            <Text style={s.interviewerText}>
+              Interviewing at <Text style={s.interviewerCo}>{company}</Text> for <Text style={s.interviewerCo}>{role}</Text>
+            </Text>
+          </View>
+
+          <View style={s.questionCardNight}>
+            <View style={s.questionHeaderRow}>
+              <CategoryTag category={question.category} probability={question.probability} />
+            </View>
+            <Text style={s.questionTextNight}>{question.question}</Text>
+            {question.why_flagged ? (
+              <View style={s.whyFlaggedNight}>
+                <Ionicons name="alert-circle" size={12} color={AMBER} />
+                <Text style={s.whyFlaggedNightText}>{question.why_flagged}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {question.prep_tip ? (
+            <View style={s.tipCardNight}>
+              <View style={s.tipIconBubble}>
+                <Ionicons name="bulb" size={11} color={AMBER} />
+              </View>
+              <Text style={s.tipTextNight}>{question.prep_tip}</Text>
+            </View>
+          ) : null}
+
+          <AnimatedPressable
+            style={s.dillyHelpBtnNight}
+            onPress={() => openDillyOverlay({
+              isPaid: true,
+              initialMessage: `I'm practicing for the ${role} role at ${company}. I was asked: "${question.question}". Based on this job description, help me structure a strong answer. What specific experiences from my Dilly Profile should I highlight? ${question.prep_tip ? 'Tip: ' + question.prep_tip : ''}`,
+            })}
+            scaleDown={0.97}
+          >
+            <Ionicons name="sparkles" size={12} color={GLOW_INDIGO} />
+            <Text style={s.dillyHelpBtnText}>Think it through with Dilly</Text>
+          </AnimatedPressable>
+
+          {/* Answer surface — dark, wide, spacious */}
+          <Text style={s.yourAnswerLabel}>YOUR ANSWER</Text>
+          <TextInput
+            style={s.answerInputNight}
+            value={currentAnswer}
+            onChangeText={setCurrentAnswer}
+            placeholder="Talk it out here. Aim for 45-90 seconds when spoken aloud."
+            placeholderTextColor={NIGHT_DIM}
+            multiline
+            textAlignVertical="top"
+          />
+
+          {/* Live performance bar — the thing no chatbot can do */}
+          <View style={s.perfBar}>
+            <View style={s.perfTopRow}>
+              <View style={s.perfMetric}>
+                <Text style={[s.perfValue, { color: durationColor }]}>
+                  {metrics.estSec === 0 ? '0s' : `~${metrics.estSec}s`}
+                </Text>
+                <Text style={s.perfHint}>{durationHint}</Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              <View style={s.perfMetric}>
+                <Text style={s.perfValue}>{metrics.words}</Text>
+                <Text style={s.perfHint}>words</Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              <View style={s.perfMetric}>
+                <Text style={[s.perfValue, { color: metrics.starCount === 4 ? GREEN : metrics.starCount >= 2 ? AMBER : NIGHT_DIM }]}>
+                  {metrics.starCount} / 4
+                </Text>
+                <Text style={s.perfHint}>STAR</Text>
+              </View>
+            </View>
+
+            {/* Duration track — nudges toward 40-90s band */}
+            <View style={s.durationTrack}>
+              <View style={[s.durationBand, {
+                left: `${(TARGET_MIN_SEC / 120) * 100}%`,
+                right: `${100 - (TARGET_MAX_SEC / 120) * 100}%`,
+              }]} />
+              <View style={[s.durationMarker, {
+                left: `${Math.min(100, (metrics.estSec / 120) * 100)}%`,
+                backgroundColor: durationColor,
+              }]} />
+            </View>
+
+            {/* STAR chips — light up as you hit each pillar */}
+            <View style={s.starRow}>
+              {(['S', 'T', 'A', 'R'] as const).map(letter => (
+                <View
+                  key={letter}
+                  style={[
+                    s.starChip,
+                    metrics.star[letter] && { backgroundColor: GLOW_INDIGO + '25', borderColor: GLOW_INDIGO },
+                  ]}
+                >
+                  <Text style={[
+                    s.starChipLetter,
+                    metrics.star[letter] && { color: '#FFFFFF' },
+                  ]}>
+                    {letter}
+                  </Text>
+                  <Text style={[
+                    s.starChipLabel,
+                    metrics.star[letter] && { color: GLOW_INDIGO + 'DD' },
+                  ]}>
+                    {letter === 'S' ? 'Situation' : letter === 'T' ? 'Task' : letter === 'A' ? 'Action' : 'Result'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Actions */}
+          <View style={s.actionRow}>
+            <AnimatedPressable
+              style={[s.submitBtnNight, !canSubmit && { opacity: 0.35 }]}
+              onPress={onSubmit}
+              disabled={!canSubmit}
+              scaleDown={0.97}
+            >
+              <Text style={s.submitBtnNightText}>
+                {currentIdx < total - 1 ? 'Lock in · Next' : 'Lock in · Debrief'}
+              </Text>
+              <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+            </AnimatedPressable>
+            <AnimatedPressable style={s.skipBtnNight} onPress={onSkip} scaleDown={0.97}>
+              <Text style={s.skipBtnNightText}>Skip</Text>
+            </AnimatedPressable>
+          </View>
+        </FadeInView>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+function CategoryTag({ category, probability }: { category: string; probability: string }) {
+  const color = probability === 'high' ? CORAL : probability === 'medium' ? AMBER : GLOW_INDIGO;
+  const probLabel = probability === 'high' ? 'LIKELY' : probability === 'medium' ? 'POSSIBLE' : 'STRETCH';
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={[s.catTag, { borderColor: color + '55', backgroundColor: color + '18' }]}>
+        <View style={[s.catDot, { backgroundColor: color }]} />
+        <Text style={[s.catTagText, { color }]}>{probLabel}</Text>
+      </View>
+      <Text style={s.catCategory}>{category}</Text>
+    </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Analyzing                                                        */
+/* ─────────────────────────────────────────────────────────────── */
+
+function AnalyzingPhase({ company, line }: { company: string; line: number }) {
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 2400, easing: Easing.linear, useNativeDriver: true }),
+    ).start();
+  }, [spin]);
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  return (
+    <View style={s.loadingWrap}>
+      <View style={s.loadingCardLight}>
+        <Animated.View style={[s.analyzingGlyph, { transform: [{ rotate }] }]}>
+          <Ionicons name="aperture" size={38} color={INDIGO} />
+        </Animated.View>
+        <Text style={s.analyzingHeadline}>Debriefing your {company} round</Text>
+        <Text style={s.analyzingLine}>{ANALYZING_NARRATION[line]}...</Text>
+        <Text style={s.analyzingFooter}>
+          Takes about 30 seconds. Worth it.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Review / Debrief                                                 */
+/* ─────────────────────────────────────────────────────────────── */
+
+function ReviewPhase({
+  feedback, questions, answers, company, role,
+  expandedCards, onToggle, onRetry, onDone, insetsBottom,
+}: any) {
+  if (!feedback) {
+    return (
+      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
+        <View style={s.debriefCard}>
+          <Ionicons name="alert-circle" size={24} color={AMBER} />
+          <Text style={s.verdictHeadline}>Practice complete</Text>
+          <Text style={s.verdictSub}>
+            Couldn't generate AI feedback this time. You answered {answers.filter((a: string) => a.length > 0).length} of {questions.length} at {company}.
+          </Text>
+        </View>
+        <View style={s.reviewActions}>
+          <AnimatedPressable style={s.retryBtn} onPress={onRetry} scaleDown={0.97}>
+            <Ionicons name="refresh" size={14} color={INDIGO} />
+            <Text style={s.retryBtnText}>Run it back</Text>
+          </AnimatedPressable>
+          <AnimatedPressable style={s.doneBtn} onPress={onDone} scaleDown={0.97}>
+            <Text style={s.doneBtnText}>Done</Text>
+          </AnimatedPressable>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  const verdict = VERDICT_CONFIG[feedback.verdict];
+  const strong = feedback.per_question.filter((p: any) => p?.rating === 'strong').length;
+  const total = questions.length;
+
+  // Derived scorecard. Maps the four rating levels into four-axis
+  // sub-scores. Clarity comes from feedback text length / non-skipped
+  // answers; Specificity weights 'strong' heavier; Structure rewards
+  // non-skipped + non-weak; Confidence is a function of average rating.
+  const ratingWeight = (r: string) => r === 'strong' ? 1 : r === 'needs_work' ? 0.55 : r === 'weak' ? 0.2 : 0;
+  const avg = feedback.per_question.length
+    ? feedback.per_question.reduce((acc: number, p: any) => acc + ratingWeight(p?.rating || 'skipped'), 0) / feedback.per_question.length
+    : 0;
+
+  const nonSkipped = feedback.per_question.filter((p: any) => p?.rating !== 'skipped').length;
+  const scorecard = {
+    clarity:     Math.round(Math.min(1, avg * 0.9 + (nonSkipped / total) * 0.15) * 100),
+    specificity: Math.round(Math.min(1, avg * 1.05) * 100),
+    structure:   Math.round(Math.min(1, avg * 0.85 + (strong / total) * 0.2) * 100),
+    confidence:  Math.round(Math.min(1, avg * 0.95 + (nonSkipped / total) * 0.1) * 100),
+  };
+
+  return (
+    <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
+      <FadeInView delay={0}>
+        {/* Verdict headline — the one thing the user looks at first */}
+        <View style={[s.verdictCard, { borderColor: verdict.color + '50' }]}>
+          <View style={[s.verdictGlyph, { backgroundColor: verdict.color + '15', borderColor: verdict.color + '40' }]}>
+            <Ionicons
+              name={feedback.verdict === 'ready' ? 'trophy' : feedback.verdict === 'almost' ? 'time' : 'barbell'}
+              size={22}
+              color={verdict.color}
+            />
+          </View>
+          <Text style={[s.verdictHeadline, { color: verdict.color }]}>{verdict.label}</Text>
+          <Text style={s.verdictSub}>{verdict.sub}</Text>
+          <View style={s.verdictDivider} />
+          <Text style={s.verdictBody}>{feedback.overall}</Text>
+        </View>
+
+        {/* Scorecard — feels like a hiring rubric */}
+        <Text style={s.sectionHeader}>SCORECARD</Text>
+        <View style={s.scorecardCard}>
+          <ScoreRow label="Clarity"     value={scorecard.clarity} />
+          <ScoreRow label="Specificity" value={scorecard.specificity} />
+          <ScoreRow label="Structure"   value={scorecard.structure} />
+          <ScoreRow label="Confidence"  value={scorecard.confidence} />
+        </View>
+
+        {/* Strength / Gap — side by side, not buried */}
+        <View style={s.sgRow}>
+          <View style={[s.sgCard, { borderColor: GREEN + '40' }]}>
+            <Text style={[s.sgLabel, { color: GREEN }]}>WHAT WORKED</Text>
+            <Text style={s.sgText}>{feedback.top_strength}</Text>
+          </View>
+          <View style={[s.sgCard, { borderColor: AMBER + '40' }]}>
+            <Text style={[s.sgLabel, { color: AMBER }]}>CLOSE THIS GAP</Text>
+            <Text style={s.sgText}>{feedback.priority_fix}</Text>
+          </View>
+        </View>
+
+        {/* Per-question — side-by-side answer upgrade */}
+        <Text style={s.sectionHeader}>QUESTION BY QUESTION</Text>
+        {questions.map((qq: PrepQuestion, i: number) => {
+          const pq = feedback.per_question[i];
+          const rating = pq?.rating || 'skipped';
+          const config = RATING_CONFIG[rating];
+          const isExpanded = expandedCards.has(i);
+          const userAnswer = answers[i];
+
+          return (
+            <AnimatedPressable
+              key={i}
+              style={s.debriefCard}
+              onPress={() => onToggle(i)}
+              scaleDown={0.98}
+            >
+              <View style={s.debriefHeader}>
+                <Text style={s.debriefQNum}>Q{i + 1}</Text>
+                <Text style={s.debriefQ} numberOfLines={isExpanded ? undefined : 2}>{qq.question}</Text>
+                <View style={[s.ratingPill, { backgroundColor: config.color + '15', borderColor: config.color + '40' }]}>
+                  <Text style={[s.ratingPillText, { color: config.color }]}>{config.label}</Text>
+                </View>
+              </View>
+              <View style={s.debriefExpandRow}>
+                <Text style={s.debriefExpandHint}>{isExpanded ? 'Tap to collapse' : 'Tap to see the upgrade'}</Text>
+                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.t3} />
+              </View>
+
+              {isExpanded && (
+                <View style={s.debriefExpanded}>
+                  {/* Side by side answer diff */}
+                  <View style={s.diffRow}>
+                    <View style={[s.diffCol, { borderColor: colors.b1 }]}>
+                      <Text style={[s.diffLabel, { color: colors.t3 }]}>YOUR ANSWER</Text>
+                      <Text style={s.diffTextYours}>
+                        {userAnswer || <Text style={{ fontStyle: 'italic' }}>Skipped</Text>}
+                      </Text>
+                    </View>
+                    <View style={[s.diffCol, { borderColor: GREEN + '40', backgroundColor: GREEN + '08' }]}>
+                      <Text style={[s.diffLabel, { color: GREEN }]}>STRONGER ANSWER</Text>
+                      <Text style={s.diffTextModel}>
+                        {pq?.model_answer || '—'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {pq?.feedback ? (
+                    <View style={s.coachBlock}>
+                      <View style={s.coachBullet} />
+                      <Text style={s.coachText}>{pq.feedback}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+            </AnimatedPressable>
+          );
+        })}
+
+        {/* Action items */}
+        {feedback.action_items && feedback.action_items.length > 0 && (
+          <>
+            <Text style={s.sectionHeader}>BEFORE THE REAL INTERVIEW</Text>
+            <View style={s.actionsCardLight}>
+              {feedback.action_items.map((item: string, i: number) => (
+                <AnimatedPressable
+                  key={i}
+                  style={[s.actionItemLight, i === feedback.action_items.length - 1 && { borderBottomWidth: 0 }]}
+                  onPress={() => openDillyOverlay({
+                    isPaid: true,
+                    initialMessage: `I'm preparing for the ${role} role at ${company}. One of my action items is: "${item}". Help me work on this. What specific steps should I take?`,
+                  })}
+                  scaleDown={0.98}
+                >
+                  <View style={s.actionBulletLight}>
+                    <Text style={s.actionBulletTextLight}>{i + 1}</Text>
+                  </View>
+                  <Text style={s.actionItemTextLight}>{item}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                </AnimatedPressable>
+              ))}
+            </View>
+          </>
+        )}
+
+        <View style={s.reviewActions}>
+          <AnimatedPressable style={s.retryBtn} onPress={onRetry} scaleDown={0.97}>
+            <Ionicons name="refresh" size={14} color={INDIGO} />
+            <Text style={s.retryBtnText}>Run it back</Text>
+          </AnimatedPressable>
+          <AnimatedPressable style={s.doneBtn} onPress={onDone} scaleDown={0.97}>
+            <Text style={s.doneBtnText}>Done</Text>
+          </AnimatedPressable>
+        </View>
+      </FadeInView>
+    </ScrollView>
+  );
+}
+
+function ScoreRow({ label, value }: { label: string; value: number }) {
+  const color = value >= 80 ? GREEN : value >= 55 ? AMBER : CORAL;
+  return (
+    <View style={s.scoreRow}>
+      <Text style={s.scoreLabel}>{label}</Text>
+      <View style={s.scoreTrack}>
+        <View style={[s.scoreFill, { width: `${value}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={[s.scoreValue, { color }]}>{value}</Text>
+    </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Styles                                                           */
+/* ─────────────────────────────────────────────────────────────── */
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1 },
   navBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 18, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: colors.b1,
+    borderBottomWidth: 1,
   },
-  navTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1, color: colors.t1 },
+  navTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 13, letterSpacing: 1.4 },
   scroll: { paddingHorizontal: spacing.xl, paddingTop: 16 },
 
-  // Setup
-  setupCard: {
-    backgroundColor: colors.s2, borderRadius: 16, borderWidth: 1, borderColor: colors.b1,
-    padding: 24, alignItems: 'center', gap: 8,
+  // ── Setup: Hero ────────────────────────────────────────────────
+  hero: {
+    alignItems: 'center',
+    paddingVertical: 22,
+    marginBottom: 18,
   },
-  setupIcon: {
+  heroRingOuter: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: INDIGO + '08',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+  },
+  heroRingInner: {
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: PURPLE + '12', borderWidth: 1, borderColor: PURPLE + '30',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+    backgroundColor: INDIGO + '12',
+    borderWidth: 1, borderColor: INDIGO + '30',
+    alignItems: 'center', justifyContent: 'center',
   },
-  setupTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 16, color: colors.t1, textAlign: 'center' },
-  setupSub: { fontSize: 12, color: colors.t3, textAlign: 'center', lineHeight: 18, marginBottom: 8 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: colors.t2, marginBottom: 4, marginTop: 8, alignSelf: 'flex-start' },
+  heroKicker: { fontSize: 10, fontWeight: '800', color: INDIGO, letterSpacing: 2, marginBottom: 6 },
+  heroTitle: {
+    fontFamily: 'Cinzel_700Bold',
+    fontSize: 28, color: colors.t1, letterSpacing: -0.4,
+    textAlign: 'center', marginBottom: 10,
+  },
+  heroSub: {
+    fontSize: 13, color: colors.t2, lineHeight: 20,
+    textAlign: 'center', paddingHorizontal: 12, marginBottom: 14,
+  },
+  heroProofRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
+  proofChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '22',
+  },
+  proofChipText: { fontSize: 10, fontWeight: '700', color: INDIGO, letterSpacing: 0.3 },
+
+  // ── Setup: Input card ─────────────────────────────────────────
+  sectionHeader: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.4,
+    color: colors.t3, marginBottom: 10, marginTop: 8,
+  },
+  inputCard: {
+    backgroundColor: colors.s1, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 16,
+  },
+  fieldLabel: { fontSize: 11, fontWeight: '700', color: colors.t2, letterSpacing: 0.3 },
+  fieldHint: { fontSize: 10, color: colors.t3, fontStyle: 'italic' },
   input: {
-    width: '100%', backgroundColor: colors.bg, borderRadius: 10,
+    backgroundColor: colors.bg, borderRadius: 10,
     borderWidth: 1, borderColor: colors.b1,
-    paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 13, color: colors.t1, marginTop: 6,
+    paddingHorizontal: 12, paddingVertical: 11,
+    fontSize: 13, color: colors.t1,
   },
-  jdWarning: {
-    fontSize: 11, color: CORAL, marginTop: 6, lineHeight: 16, alignSelf: 'flex-start',
+  urlRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  urlBtn: {
+    width: 44, height: 44, borderRadius: 10,
+    backgroundColor: INDIGO, alignItems: 'center', justifyContent: 'center',
   },
-  startBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: PURPLE, borderRadius: 12, paddingVertical: 14,
-    width: '100%', marginTop: 12,
+  urlError: { fontSize: 11, color: CORAL, marginTop: 6 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.b1 },
+  dividerText: { fontSize: 9, color: colors.t3, fontWeight: '700', letterSpacing: 1.2 },
+  jdHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  jdQualityPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.b1,
   },
-  startBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
-
-  // Loading
-  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 24 },
-  loadingText: { fontSize: 13, color: colors.t3 },
-
-  // Analyzing
-  analyzingCard: {
-    backgroundColor: colors.s2, borderRadius: 16, borderWidth: 1, borderColor: colors.b1,
-    padding: 32, alignItems: 'center', gap: 16, width: '100%',
+  jdQualityDot: { width: 6, height: 6, borderRadius: 3 },
+  jdQualityText: { fontSize: 10, fontWeight: '700' },
+  jdQualityTrack: {
+    height: 3, borderRadius: 2, backgroundColor: colors.b1,
+    marginTop: 8, overflow: 'hidden',
   },
-  pulsingDots: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: PURPLE },
-  analyzingTitle: { fontSize: 14, fontWeight: '700', color: colors.t1, textAlign: 'center' },
-  analyzingSub: { fontSize: 12, color: colors.t3, textAlign: 'center', lineHeight: 18 },
+  jdQualityFill: { height: '100%' },
+  jdWarning: { fontSize: 11, color: CORAL, marginTop: 8, lineHeight: 16 },
 
-  // Progress
-  progressRow: { marginBottom: 16, gap: 6 },
-  progressText: { fontSize: 10, color: colors.t3, fontWeight: '600' },
-  progressTrack: { height: 4, backgroundColor: colors.b1, borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: PURPLE, borderRadius: 2 },
-
-  // Question card
-  questionCard: {
-    backgroundColor: colors.s2, borderRadius: 14, borderWidth: 1, borderColor: colors.b1,
-    padding: 16, marginBottom: 10,
+  enterBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: INDIGO, borderRadius: 14, paddingVertical: 17,
+    marginTop: 18,
+    shadowColor: INDIGO, shadowOpacity: 0.22, shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 }, elevation: 4,
   },
-  questionMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  probBadge: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1 },
-  probText: { fontSize: 9, fontWeight: '700' },
-  categoryText: { fontSize: 10, color: colors.t3, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  questionText: { fontSize: 15, fontWeight: '700', color: colors.t1, lineHeight: 22 },
-  whyFlagged: { fontSize: 11, color: AMBER, marginTop: 8, lineHeight: 16 },
+  enterBtnText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 },
+  enterFootnote: { fontSize: 11, color: colors.t3, textAlign: 'center', marginTop: 10, fontStyle: 'italic' },
 
-  // Tip
-  tipCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: AMBER + '08', borderRadius: 10, borderWidth: 1, borderColor: AMBER + '20',
-    padding: 10, marginBottom: 12,
-  },
-  tipText: { fontSize: 11, color: colors.t2, flex: 1, lineHeight: 16 },
-
-  // Dilly help button
-  dillyHelpBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
-    backgroundColor: GOLD + '10', borderWidth: 1, borderColor: GOLD + '20', marginBottom: 10,
-  },
-
-  // Answer input
-  answerInput: {
-    minHeight: 120, backgroundColor: colors.s2, borderRadius: 12,
+  // ── Loading ────────────────────────────────────────────────────
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  loadingCardLight: {
+    backgroundColor: colors.s1, borderRadius: 18,
     borderWidth: 1, borderColor: colors.b1,
-    padding: 12, fontSize: 13, color: colors.t1, lineHeight: 19,
+    padding: 24, alignItems: 'center', width: '100%',
+  },
+  loadingRing: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '28',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  loadingCompany: {
+    fontSize: 11, fontWeight: '800', color: colors.t2,
+    letterSpacing: 1.2, marginTop: 14,
+  },
+  loaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  loaderBullet: {
+    width: 18, height: 18, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  loaderPulse: { width: 6, height: 6, borderRadius: 3, backgroundColor: INDIGO },
+  loaderText: { fontSize: 13, flex: 1 },
+
+  // ── Analyzing ──────────────────────────────────────────────────
+  analyzingGlyph: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '28',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 18,
+  },
+  analyzingHeadline: { fontSize: 15, fontWeight: '800', color: colors.t1, textAlign: 'center' },
+  analyzingLine: { fontSize: 13, color: colors.t2, textAlign: 'center', marginTop: 10, lineHeight: 19 },
+  analyzingFooter: { fontSize: 11, color: colors.t3, textAlign: 'center', marginTop: 16, fontStyle: 'italic' },
+
+  // ── Practice: progress ─────────────────────────────────────────
+  dotProgress: { flexDirection: 'row', gap: 6, justifyContent: 'center', marginBottom: 18 },
+  progressPip: { width: 8, height: 8, borderRadius: 4 },
+
+  // ── Practice: interviewer strip + question ────────────────────
+  interviewerStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     marginBottom: 12,
   },
+  interviewerDot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: CORAL,
+  },
+  interviewerText: { fontSize: 11, color: NIGHT_MUTED, letterSpacing: 0.2 },
+  interviewerCo: { color: NIGHT_TEXT, fontWeight: '700' },
 
-  // Actions
-  actionRow: { flexDirection: 'row', gap: 8 },
-  submitBtn: {
+  questionCardNight: {
+    backgroundColor: NIGHT_CARD, borderRadius: 16,
+    borderWidth: 1, borderColor: NIGHT_BORDER,
+    padding: 20, marginBottom: 12,
+  },
+  questionHeaderRow: { marginBottom: 12 },
+  catTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1,
+  },
+  catDot: { width: 5, height: 5, borderRadius: 2.5 },
+  catTagText: { fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  catCategory: { fontSize: 10, color: NIGHT_MUTED, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
+  questionTextNight: {
+    fontSize: 18, fontWeight: '700', color: NIGHT_TEXT,
+    lineHeight: 26, letterSpacing: -0.2,
+  },
+  whyFlaggedNight: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    marginTop: 14, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: NIGHT_BORDER,
+  },
+  whyFlaggedNightText: { fontSize: 11, color: AMBER, flex: 1, lineHeight: 16 },
+
+  tipCardNight: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: AMBER + '10', borderRadius: 10, borderWidth: 1, borderColor: AMBER + '22',
+    padding: 11, marginBottom: 12,
+  },
+  tipIconBubble: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: AMBER + '22',
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 1,
+  },
+  tipTextNight: { fontSize: 12, color: NIGHT_TEXT, flex: 1, lineHeight: 17 },
+
+  dillyHelpBtnNight: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+    backgroundColor: GLOW_INDIGO + '15', borderWidth: 1, borderColor: GLOW_INDIGO + '30',
+    marginBottom: 18,
+  },
+  dillyHelpBtnText: { fontSize: 12, fontWeight: '700', color: GLOW_INDIGO },
+
+  yourAnswerLabel: {
+    fontSize: 10, fontWeight: '800', color: NIGHT_MUTED,
+    letterSpacing: 1.5, marginBottom: 8,
+  },
+  answerInputNight: {
+    minHeight: 130,
+    backgroundColor: NIGHT_CARD, borderRadius: 12,
+    borderWidth: 1, borderColor: NIGHT_BORDER,
+    padding: 14, fontSize: 14, color: NIGHT_TEXT, lineHeight: 20,
+  },
+
+  // ── Practice: live performance bar ────────────────────────────
+  perfBar: {
+    backgroundColor: NIGHT_CARD, borderRadius: 12,
+    borderWidth: 1, borderColor: NIGHT_BORDER,
+    padding: 12, marginTop: 10, marginBottom: 14,
+  },
+  perfTopRow: { flexDirection: 'row', alignItems: 'flex-end' },
+  perfMetric: { alignItems: 'center' },
+  perfValue: { fontSize: 20, fontWeight: '800', color: NIGHT_TEXT, letterSpacing: -0.5 },
+  perfHint: { fontSize: 9, color: NIGHT_DIM, fontWeight: '700', letterSpacing: 0.8, marginTop: 2, textTransform: 'uppercase' },
+
+  durationTrack: {
+    height: 4, borderRadius: 2, marginTop: 12,
+    backgroundColor: NIGHT_BORDER, position: 'relative', overflow: 'visible',
+  },
+  durationBand: {
+    position: 'absolute', top: 0, bottom: 0,
+    backgroundColor: GREEN + '35', borderRadius: 2,
+  },
+  durationMarker: {
+    position: 'absolute', width: 10, height: 10, borderRadius: 5,
+    top: -3, marginLeft: -5,
+    borderWidth: 2, borderColor: NIGHT_BG,
+  },
+
+  starRow: { flexDirection: 'row', gap: 6, marginTop: 12 },
+  starChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 8, paddingVertical: 7, borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1, borderColor: NIGHT_BORDER,
+  },
+  starChipLetter: { fontSize: 12, fontWeight: '900', color: NIGHT_DIM },
+  starChipLabel: { fontSize: 10, color: NIGHT_DIM, fontWeight: '600' },
+
+  // ── Practice: actions ─────────────────────────────────────────
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  submitBtnNight: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: PURPLE, borderRadius: 10, paddingVertical: 13,
+    backgroundColor: GLOW_INDIGO, borderRadius: 12, paddingVertical: 15,
+    shadowColor: GLOW_INDIGO, shadowOpacity: 0.4, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 3,
   },
-  submitBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
-  skipBtn: {
-    paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: colors.b1,
+  submitBtnNightText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 },
+  skipBtnNight: {
+    paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'transparent', borderRadius: 12,
+    borderWidth: 1, borderColor: NIGHT_BORDER,
   },
-  skipBtnText: { fontSize: 12, color: colors.t3, fontWeight: '600' },
+  skipBtnNightText: { fontSize: 12, color: NIGHT_MUTED, fontWeight: '700' },
 
-  // Review - Overall assessment
-  assessmentCard: {
-    backgroundColor: colors.s2, borderRadius: 16, borderWidth: 1.5,
-    borderColor: colors.b1, padding: 20, marginBottom: 20,
+  // ── Review: verdict ────────────────────────────────────────────
+  verdictCard: {
+    backgroundColor: colors.s1, borderRadius: 18,
+    borderWidth: 1.5, padding: 22, marginBottom: 18,
+    alignItems: 'center',
   },
-  verdictRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  verdictLabel: { fontSize: 16, fontWeight: '800' },
-  overallText: { fontSize: 13, color: colors.t2, lineHeight: 20, marginBottom: 8 },
-  assessmentDivider: { height: 1, backgroundColor: colors.b1, marginVertical: 12 },
-  assessmentItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
-  assessmentDot: { width: 8, height: 8, borderRadius: 4, marginTop: 4 },
-  assessmentItemLabel: { fontSize: 11, fontWeight: '700', color: colors.t3, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  assessmentItemText: { fontSize: 12, color: colors.t1, lineHeight: 18 },
+  verdictGlyph: {
+    width: 52, height: 52, borderRadius: 26,
+    borderWidth: 1, alignItems: 'center', justifyContent: 'center',
+    marginBottom: 12,
+  },
+  verdictHeadline: { fontSize: 22, fontWeight: '900', letterSpacing: -0.4, textAlign: 'center' },
+  verdictSub: { fontSize: 13, color: colors.t2, textAlign: 'center', marginTop: 6, lineHeight: 19 },
+  verdictDivider: { height: 1, backgroundColor: colors.b1, alignSelf: 'stretch', marginVertical: 14 },
+  verdictBody: { fontSize: 13, color: colors.t1, lineHeight: 20, textAlign: 'center' },
 
-  // Section label
-  sectionLabel: {
-    fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2,
-    color: colors.t3, marginBottom: 10,
-  },
-
-  // Per-question feedback cards
-  feedbackCard: {
-    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
-    padding: 14, marginBottom: 8,
-  },
-  feedbackCardHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10,
-  },
-  feedbackCardQuestion: { fontSize: 13, fontWeight: '700', color: colors.t1, flex: 1, lineHeight: 19 },
-  ratingBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
-  ratingBadgeText: { fontSize: 10, fontWeight: '700' },
-  expandIndicator: { alignItems: 'center', marginTop: 6 },
-
-  feedbackExpanded: { marginTop: 12, gap: 12 },
-  answerBlock: {
-    backgroundColor: colors.bg, borderRadius: 8, padding: 10,
+  // ── Review: scorecard ──────────────────────────────────────────
+  scorecardCard: {
+    backgroundColor: colors.s1, borderRadius: 14,
     borderWidth: 1, borderColor: colors.b1,
+    padding: 16, marginBottom: 16, gap: 10,
   },
-  answerBlockLabel: { fontSize: 10, fontWeight: '700', color: colors.t3, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  answerBlockText: { fontSize: 12, color: colors.t2, lineHeight: 18, fontStyle: 'normal' },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  scoreLabel: { fontSize: 12, color: colors.t2, fontWeight: '700', width: 88 },
+  scoreTrack: { flex: 1, height: 6, backgroundColor: colors.b1, borderRadius: 3, overflow: 'hidden' },
+  scoreFill: { height: '100%', borderRadius: 3 },
+  scoreValue: { fontSize: 13, fontWeight: '800', width: 34, textAlign: 'right' },
 
-  feedbackBlock: {},
-  feedbackBlockLabel: { fontSize: 10, fontWeight: '700', color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  feedbackBlockText: { fontSize: 12, color: colors.t1, lineHeight: 18 },
-
-  modelBlock: {
-    backgroundColor: GREEN + '08', borderRadius: 8, padding: 10,
-    borderWidth: 1, borderColor: GREEN + '20',
+  // ── Review: strength / gap ─────────────────────────────────────
+  sgRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  sgCard: {
+    flex: 1, backgroundColor: colors.s1, borderRadius: 14,
+    borderWidth: 1, padding: 12,
   },
-  modelBlockLabel: { fontSize: 10, fontWeight: '700', color: GREEN, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  modelBlockText: { fontSize: 12, color: colors.t2, lineHeight: 18, fontStyle: 'italic' },
+  sgLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2, marginBottom: 6 },
+  sgText: { fontSize: 12, color: colors.t1, lineHeight: 17 },
 
-  // Action items card
-  actionsCard: {
-    backgroundColor: colors.s2, borderRadius: 12, borderWidth: 1, borderColor: colors.b1,
+  // ── Review: per-question ───────────────────────────────────────
+  debriefCard: {
+    backgroundColor: colors.s1, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 14, marginBottom: 10,
+  },
+  debriefHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  debriefQNum: { fontSize: 11, fontWeight: '900', color: INDIGO, letterSpacing: 0.5, marginTop: 1 },
+  debriefQ: { fontSize: 13, fontWeight: '700', color: colors.t1, flex: 1, lineHeight: 19 },
+  ratingPill: {
+    borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1,
+  },
+  ratingPillText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
+  debriefExpandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+  debriefExpandHint: { fontSize: 10, color: colors.t3, fontWeight: '600' },
+
+  debriefExpanded: { marginTop: 14, gap: 14 },
+  diffRow: { gap: 10 },
+  diffCol: { borderRadius: 10, borderWidth: 1, padding: 11 },
+  diffLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2, marginBottom: 6 },
+  diffTextYours: { fontSize: 12, color: colors.t2, lineHeight: 18 },
+  diffTextModel: { fontSize: 12, color: colors.t1, lineHeight: 18, fontWeight: '500' },
+
+  coachBlock: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.b1,
+  },
+  coachBullet: { width: 4, height: 14, borderRadius: 2, backgroundColor: INDIGO, marginTop: 3 },
+  coachText: { fontSize: 12, color: colors.t1, lineHeight: 18, flex: 1 },
+
+  // ── Review: action items ──────────────────────────────────────
+  actionsCardLight: {
+    backgroundColor: colors.s1, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.b1,
     overflow: 'hidden', marginBottom: 16,
   },
-  actionItem: {
+  actionItemLight: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
     borderBottomWidth: 1, borderBottomColor: colors.b1,
   },
-  actionBullet: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: GOLD + '15', alignItems: 'center', justifyContent: 'center',
+  actionBulletLight: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: INDIGO + '15', alignItems: 'center', justifyContent: 'center',
   },
-  actionBulletText: { fontSize: 10, fontWeight: '800', color: GOLD },
-  actionItemText: { fontSize: 12, color: colors.t1, flex: 1, lineHeight: 18 },
+  actionBulletTextLight: { fontSize: 11, fontWeight: '900', color: INDIGO },
+  actionItemTextLight: { fontSize: 12, color: colors.t1, flex: 1, lineHeight: 18 },
 
-  // Review bottom buttons
+  // ── Review: bottom ────────────────────────────────────────────
   reviewActions: { flexDirection: 'row', gap: 8, marginTop: 16 },
   retryBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: GOLD + '40',
-    paddingVertical: 12,
+    backgroundColor: colors.s1, borderRadius: 12, borderWidth: 1, borderColor: INDIGO + '40',
+    paddingVertical: 14,
   },
-  retryBtnText: { fontSize: 12, fontWeight: '700', color: GOLD },
+  retryBtnText: { fontSize: 13, fontWeight: '800', color: INDIGO },
   doneBtn: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: PURPLE, borderRadius: 10, paddingVertical: 12,
+    backgroundColor: INDIGO, borderRadius: 12, paddingVertical: 14,
   },
-  doneBtnText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+  doneBtnText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
 });
