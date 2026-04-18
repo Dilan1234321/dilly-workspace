@@ -7,6 +7,7 @@ import DillyAIOverlay from '../../components/DillyAIOverlay';
 import { useDillyOverlayState } from '../../hooks/useDillyOverlay';
 import { SubscriptionProvider, useSubscription } from '../../hooks/useSubscription';
 import { useAppMode } from '../../hooks/useAppMode';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import DillyGate from '../../components/DillyGate';
 import DillyPaywallFullScreen from '../../components/DillyPaywallFullScreen';
 import { usePaywallState } from '../../hooks/usePaywall';
@@ -63,16 +64,17 @@ function DillyTabIcon({ focused }: { focused: boolean }) {
   );
 }
 
-export default function AppLayout() {
+function AppLayoutInner() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const mode = useAppMode();
   const isHolder = mode === 'holder';
+  // Tab bar adopts the user's surface + accent. On Midnight the bar
+  // goes dark; on Mint/Blush the tab bar picks up the pastel so the
+  // seam between content and chrome disappears.
+  const theme = useResolvedTheme();
 
   return (
-    <SubscriptionProvider>
-    <ErrorBoundary surface="this page" resetKey={pathname}>
-    <>
     <Tabs
       // Per-mode landing tab: holders land on Arena (their hero),
       // seekers/students land on Career Center (the journey).
@@ -80,15 +82,15 @@ export default function AppLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(255,255,255,0.97)',
+          backgroundColor: theme.surface.bg,
           borderTopWidth: 1,
-          borderTopColor: colors.b1,
+          borderTopColor: theme.surface.border,
           paddingBottom: insets.bottom,
           paddingTop: 6,
           height: 49 + insets.bottom,
         },
-        tabBarActiveTintColor: colors.t1,
-        tabBarInactiveTintColor: colors.t3,
+        tabBarActiveTintColor: theme.accent,
+        tabBarInactiveTintColor: theme.surface.t3,
         tabBarLabelStyle: {
           fontSize: 9,
           fontWeight: '500',
@@ -238,11 +240,25 @@ export default function AppLayout() {
         options={{ href: null, animation: 'fade' }}
       />
     </Tabs>
-    <DillyAIOverlayWrapper />
-    <DillyGateWrapper />
-    <DillyPaywallWrapper />
-  </>
-  </ErrorBoundary>
-  </SubscriptionProvider>
+  );
+}
+
+export default function AppLayout() {
+  // useResolvedTheme subscribes to AsyncStorage-hydrated state —
+  // keep it inside a child (AppLayoutInner) so the SubscriptionProvider
+  // and ErrorBoundary wrap it cleanly. The other wrappers (overlay,
+  // gate, paywall) live here so they stay mounted across tab switches.
+  const pathname = usePathname();
+  return (
+    <SubscriptionProvider>
+      <ErrorBoundary surface="this page" resetKey={pathname}>
+        <>
+          <AppLayoutInner />
+          <DillyAIOverlayWrapper />
+          <DillyGateWrapper />
+          <DillyPaywallWrapper />
+        </>
+      </ErrorBoundary>
+    </SubscriptionProvider>
   );
 }

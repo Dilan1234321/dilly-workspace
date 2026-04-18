@@ -282,14 +282,21 @@ async def book_slot(slug: str, request: Request, prefix: str | None = None):
         except Exception:
             time_display = slot_datetime
 
-        subject = f"New chat booked: {visitor_name}"
+        # Host email: action-oriented. The host starts the meeting
+        # (Google Meet / Zoom link), not the visitor. Product rule:
+        # the person being requested controls the meeting logistics.
+        subject = f"{visitor_name} requested a chat — you start the meeting"
         body_text = (
             f"Hey {user_name},\n\n"
-            f"{visitor_name} ({visitor_email}) booked a chat with you.\n\n"
+            f"{visitor_name} ({visitor_email}) requested a chat with you.\n\n"
             f"When: {time_display}\n"
             f"Duration: {booking['duration']} minutes\n"
-            + (f"Message: \"{visitor_message}\"\n\n" if visitor_message else "\n")
-            + f"Reply to {visitor_email} to confirm details or send a meeting link.\n\n"
+            + (f"What they want to talk about: \"{visitor_message}\"\n\n" if visitor_message else "\n")
+            + "YOUR MOVE:\n"
+            + f"1. Create a meeting link (Google Meet, Zoom, whatever you prefer).\n"
+            + f"2. Reply to {visitor_email} with the link before the meeting.\n"
+            + "3. Show up and run the meeting.\n\n"
+            + "This is your call — you're the host. Dilly just brought the intro.\n\n"
             + "- Dilly"
         )
         send_email(email, subject, body_text)
@@ -306,13 +313,17 @@ async def book_slot(slug: str, request: Request, prefix: str | None = None):
         except Exception:
             time_display = slot_datetime
 
-        subject = f"Chat confirmed with {owner_name}"
+        # Visitor email: wait-for-the-host framing. Host sends the
+        # meeting link in a follow-up reply, so the visitor doesn't
+        # need to do anything right now.
+        subject = f"Chat with {owner_name} confirmed"
         body_text = (
             f"Hey {visitor_name},\n\n"
-            f"Your chat with {owner_name} is confirmed.\n\n"
+            f"Your chat request with {owner_name} is confirmed.\n\n"
             f"When: {time_display}\n"
             f"Duration: {booking['duration']} minutes\n\n"
-            f"{owner_name} will reach out with meeting details.\n\n"
+            f"{owner_name} will send you the meeting link before the meeting — "
+            f"they're the host. Keep an eye on this inbox.\n\n"
             + "- Dilly"
         )
         send_email(visitor_email, subject, body_text)
@@ -323,7 +334,7 @@ async def book_slot(slug: str, request: Request, prefix: str | None = None):
         content={
             "ok": True,
             "booking": booking,
-            "message": f"Chat booked! {user_name} will reach out with meeting details.",
+            "message": f"Chat requested. {user_name} will send you the meeting link before the meeting.",
         },
         headers={"Access-Control-Allow-Origin": "*"},
     )

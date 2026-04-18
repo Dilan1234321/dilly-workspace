@@ -18,7 +18,7 @@ import { primeAppMode, clearAppModeCache } from '../../hooks/useAppMode';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
-import { THEMES, useTheme, setTheme } from '../../hooks/useTheme';
+import { THEMES, useTheme, setTheme, useResolvedTheme } from '../../hooks/useTheme';
 
 const INDIGO = colors.indigo;
 const APP_VERSION = '1.0.0';
@@ -26,33 +26,36 @@ const APP_VERSION = '1.0.0';
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function SectionLabel({ text }: { text: string }) {
-  return <Text style={s.sectionLabel}>{text}</Text>;
+  const t = useResolvedTheme();
+  return <Text style={[s.sectionLabel, { color: t.surface.t3 }]}>{text}</Text>;
 }
 
 function Row({ label, value, onPress }: { label: string; value?: string; onPress?: () => void }) {
+  const t = useResolvedTheme();
   return (
     <AnimatedPressable style={s.row} onPress={onPress} disabled={!onPress} scaleDown={onPress ? 0.98 : 1}>
-      <Text style={s.rowLabel}>{label}</Text>
+      <Text style={[s.rowLabel, { color: t.surface.t1 }]}>{label}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        {value ? <Text style={s.rowValue}>{value}</Text> : null}
-        {onPress ? <Ionicons name="chevron-forward" size={14} color={colors.t3} /> : null}
+        {value ? <Text style={[s.rowValue, { color: t.surface.t2 }]}>{value}</Text> : null}
+        {onPress ? <Ionicons name="chevron-forward" size={14} color={t.surface.t3} /> : null}
       </View>
     </AnimatedPressable>
   );
 }
 
 function ToggleRow({ label, hint, value, onToggle }: { label: string; hint?: string; value: boolean; onToggle: (v: boolean) => void }) {
+  const t = useResolvedTheme();
   return (
     <View style={s.row}>
       <View style={{ flex: 1 }}>
-        <Text style={s.rowLabel}>{label}</Text>
-        {hint ? <Text style={s.rowHint}>{hint}</Text> : null}
+        <Text style={[s.rowLabel, { color: t.surface.t1 }]}>{label}</Text>
+        {hint ? <Text style={[s.rowHint, { color: t.surface.t3 }]}>{hint}</Text> : null}
       </View>
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: colors.b2, true: INDIGO + '40' }}
-        thumbColor={value ? INDIGO : '#f4f3f4'}
+        trackColor={{ false: t.surface.s3, true: t.accent + '40' }}
+        thumbColor={value ? t.accent : '#f4f3f4'}
       />
     </View>
   );
@@ -108,6 +111,10 @@ function ThemePicker() {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  // Settings respects the user's theme: container bg, card surfaces,
+  // text color, refresh tint. Customize → Mint should turn this
+  // whole screen pale green, etc.
+  const theme = useResolvedTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -274,13 +281,18 @@ export default function SettingsScreen() {
   const planLabel = plan === 'pro' ? 'Dilly Pro' : plan === 'dilly' ? 'Dilly' : 'Dilly Starter';
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { borderBottomColor: theme.surface.border }]}>
         <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color={colors.t1} />
+          <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
         </AnimatedPressable>
-        <Text style={s.headerTitle}>Settings</Text>
+        <Text style={[s.headerTitle, {
+          color: theme.surface.t1,
+          fontFamily: theme.type.display,
+          fontWeight: theme.type.heroWeight,
+          letterSpacing: theme.type.heroTracking,
+        }]}>Settings</Text>
         <View style={{ width: 22 }} />
       </View>
 
@@ -291,7 +303,7 @@ export default function SettingsScreen() {
       >
         {/* Edit Profile (always visible) */}
         <FadeInView delay={0}>
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             {/* Photo */}
             <AnimatedPressable
               style={{ alignItems: 'center', gap: 6, paddingVertical: 12 }}
@@ -330,7 +342,7 @@ export default function SettingsScreen() {
         {/* Plan */}
         <FadeInView delay={40}>
           <SectionLabel text="PLAN" />
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             <View style={s.planRow}>
               <Text style={s.planName}>{planLabel}</Text>
               <View style={[s.planBadge, plan !== 'starter' && { backgroundColor: INDIGO + '15', borderColor: INDIGO + '30' }]}>
@@ -361,7 +373,7 @@ export default function SettingsScreen() {
         {appMode !== 'student' && (
           <FadeInView delay={100}>
             <SectionLabel text="CAREER STATUS" />
-            <View style={s.card}>
+            <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               {appMode === 'holder' ? (
                 <>
                   <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
@@ -456,7 +468,7 @@ export default function SettingsScreen() {
         {/* Notifications */}
         <FadeInView delay={80}>
           <SectionLabel text="NOTIFICATIONS" />
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             <ToggleRow
               label="Push notifications"
               hint="Job matches, coaching tips"
@@ -482,7 +494,7 @@ export default function SettingsScreen() {
         {/* Web Profile */}
         <FadeInView delay={120}>
           <SectionLabel text="WEB PROFILE" />
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             {(() => {
               const slug = webSlug;
               const profileUrl = `https://hellodilly.com/${webPrefix}/${slug}`;
@@ -544,7 +556,7 @@ export default function SettingsScreen() {
         {/* About */}
         <FadeInView delay={160}>
           <SectionLabel text="ABOUT" />
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             <Row label="Terms of Service" onPress={() => Alert.alert('Terms of Service', 'By using Dilly, you agree to the following:\n\n1. Dilly is a career guidance platform. It is not a guarantee of employment.\n2. AI-generated content (fit narratives, resumes, interview feedback) may not always be accurate. Verify important information independently.\n3. Your Dilly Profile data is stored securely and used to provide personalized career guidance.\n4. You may delete your account and all data at any time from Settings.\n5. Dilly is not a substitute for professional career counseling.\n6. We reserve the right to modify features and pricing with notice.\n7. Misuse of the platform (fake profiles, spam, harassment) will result in account termination.\n\nQuestions? Email ceo@hellodilly.com')} />
             <Divider />
             <Row label="Privacy Policy" onPress={() => Alert.alert('Privacy Policy', 'Your privacy matters to us.\n\n1. We collect: email, name, profile information you provide, and conversation history with Dilly AI.\n2. We use this data to: build your Dilly Profile, generate fit narratives, tailor resumes, and improve our service.\n3. We do NOT sell your data to third parties.\n4. We use Anthropic (Claude) for AI features. Your conversations are processed by their API but not used to train their models.\n5. We use Resend for email delivery and Railway for hosting.\n6. You can delete all your data at any time from Settings > Delete Account.\n7. We may use anonymized, aggregated data for product improvement.\n8. We use cookies and local storage for authentication only.\n\nQuestions? Email ceo@hellodilly.com')} />
