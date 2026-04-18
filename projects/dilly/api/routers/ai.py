@@ -1167,6 +1167,40 @@ def _opening_phrase_for_fact(fact: dict) -> str:
     return f"I saw {subject}"
 
 
+@router.get("/ai/chat-history")
+async def get_ai_chat_history(request: Request, limit: int = 30):
+    """
+    List past /ai/chat threads for the AI overlay "history" panel.
+    Each thread: conv_id, first_user_message (as title), last
+    assistant preview, turn count, timestamps. Zero LLM — pure read
+    from chat_thread_store.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    try:
+        from projects.dilly.api.chat_thread_store import list_threads  # type: ignore
+        items = list_threads(email, limit=limit)
+    except Exception:
+        items = []
+    return {"items": items, "count": len(items)}
+
+
+@router.delete("/ai/chat-history/{conv_id}")
+async def delete_ai_chat_thread(request: Request, conv_id: str):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    try:
+        from projects.dilly.api.chat_thread_store import delete_thread  # type: ignore
+        ok = delete_thread(email, conv_id)
+    except Exception:
+        ok = False
+    return {"ok": ok}
+
+
 @router.get("/ai/context")
 async def get_ai_context(request: Request):
     user = deps.require_auth(request)
@@ -1573,12 +1607,15 @@ async def ai_chat(request: Request, body: ChatRequest):
         if email and len(messages) >= 2:
             assistant_turns = sum(1 for m in raw_messages if m["role"] == "assistant") + 1  # +1 for the reply we just produced
             should_extract = (assistant_turns % 3 == 0) or (assistant_turns == 1)
+            # Conv id used by BOTH the memory extraction below and the
+            # chat-thread store. Stable across turns of the same chat so
+            # thread upserts hit the same row.
+            import hashlib
+            conv_id = body.conv_id or hashlib.sha256(
+                f"{email}:{raw_messages[0].get('content', '')[:100]}".encode()
+            ).hexdigest()[:16]
             if should_extract:
-                import hashlib
                 import threading
-                conv_id = body.conv_id or hashlib.sha256(
-                    f"{email}:{raw_messages[0].get('content', '')[:100]}".encode()
-                ).hexdigest()[:16]
                 # Use the FULL untruncated history for extraction so we
                 # don't lose facts that were dropped from the LLM context.
                 full_messages = raw_messages + [{"role": "assistant", "content": content.strip()}]
@@ -1588,6 +1625,28 @@ async def ai_chat(request: Request, body: ChatRequest):
                     daemon=True,
                 )
                 thread.start()
+
+            # Chat thread store: upsert every turn, zero-LLM, so the
+            # AI overlay's "past conversations" panel actually has
+            # something to show. Fire-and-forget; failures never block
+            # the reply. Previously the history button hit /voice/history
+            # which only returned Voice-feature outputs, so chat users
+            # saw "No past conversations" even after many chats.
+            try:
+                from projects.dilly.api.chat_thread_store import record_turn as _record_turn  # type: ignore
+                last_user = next(
+                    (m.get("content") or "" for m in reversed(raw_messages) if m.get("role") == "user"),
+                    "",
+                )
+                _record_turn(
+                    email=email,
+                    conv_id=conv_id,
+                    user_message=last_user,
+                    assistant_message=content.strip(),
+                    mode=body.mode or "coaching",
+                )
+            except Exception:
+                pass
 
         # ── Auto-attach visual cards based on response content ─────────
         visual = _detect_visual(content, body.student_context, body.mode, email)

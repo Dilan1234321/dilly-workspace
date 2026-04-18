@@ -501,9 +501,18 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
             </View>
             <TouchableOpacity
               onPress={async () => {
+                // /ai/chat-history returns threads recorded by the
+                // chat endpoint itself. Previously we hit
+                // /voice/history which only covered Voice-feature
+                // outputs, so chat users saw "No past conversations"
+                // even after dozens of chats. See
+                // api/chat_thread_store.py for the storage format.
                 try {
-                  const res = await dilly.fetch('/voice/history?limit=20');
-                  if (res.ok) { const data = await res.json(); setHistory(data?.items || []); }
+                  const res = await dilly.fetch('/ai/chat-history?limit=30');
+                  if (res.ok) {
+                    const data = await res.json();
+                    setHistory(data?.items || []);
+                  }
                 } catch {}
                 setShowHistory(true);
               }}
@@ -653,20 +662,37 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
             {history.length === 0 ? (
               <Text style={s.historyEmpty}>No past conversations yet.</Text>
             ) : (
-              history.map((item: any, i: number) => (
-                <TouchableOpacity
-                  key={item.conv_id || i}
-                  style={s.historyItem}
-                  onPress={() => setShowHistory(false)}
-                >
-                  <Text style={s.historyItemTitle} numberOfLines={1}>
-                    {item.session_title || item.topic || 'Conversation'}
-                  </Text>
-                  <Text style={s.historyItemDate}>
-                    {item.captured_at ? new Date(item.captured_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                  </Text>
-                </TouchableOpacity>
-              ))
+              history.map((item: any, i: number) => {
+                // Shape from /ai/chat-history:
+                //   first_user_message, last_assistant_message,
+                //   last_turn_at, turn_count, conv_id
+                // Fall back to older voice-history shape so we
+                // don't blank out any users with leftover cached data.
+                const title =
+                  item.first_user_message ||
+                  item.session_title ||
+                  item.topic ||
+                  'Conversation';
+                const whenIso = item.last_turn_at || item.captured_at;
+                const whenLabel = whenIso
+                  ? new Date(whenIso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  : '';
+                const turns = Number(item.turn_count) || 0;
+                return (
+                  <TouchableOpacity
+                    key={item.conv_id || i}
+                    style={s.historyItem}
+                    onPress={() => setShowHistory(false)}
+                  >
+                    <Text style={s.historyItemTitle} numberOfLines={1}>
+                      {title}
+                    </Text>
+                    <Text style={s.historyItemDate}>
+                      {whenLabel}{turns ? `  ·  ${turns} turn${turns === 1 ? '' : 's'}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
             )}
           </ScrollView>
         </View>
