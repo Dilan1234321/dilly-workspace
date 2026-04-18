@@ -17,7 +17,13 @@
  */
 
 import React from 'react';
-import { Text, TextStyle } from 'react-native';
+import { Text, TextStyle, Linking } from 'react-native';
+
+// Matches http(s) URLs. Used to auto-linkify resource suggestions
+// Dilly makes (YouTube videos, docs, blog posts). The URL can include
+// query params and fragments; trailing punctuation is stripped below.
+const URL_RX = /(https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]])/gi;
+const LINK_COLOR = '#2B3A8E';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -127,17 +133,15 @@ function parse(input: string): Token[] {
       }
     }
 
-    // Plain text  -  collect until next special char
+    // Plain text  -  collect until next special char. We only break on
+    // `=` when it's a double `==` (the highlight marker). A single `=`
+    // in the middle of a URL query string (e.g. ?v=xyz) must NOT break
+    // the URL token, otherwise auto-linkification drops half the URL.
     let j = i + 1;
     while (j < input.length) {
       const c = input[j];
-      if (
-        c === '\n' ||
-        c === '*' ||
-        c === '_' ||
-        c === '~' ||
-        c === '='
-      ) break;
+      if (c === '\n' || c === '*' || c === '_' || c === '~') break;
+      if (c === '=' && input[j + 1] === '=') break;
       j++;
     }
     tokens.push({ type: 'text', text: input.slice(i, j) });
@@ -175,12 +179,46 @@ export default function RichText({ text, baseStyle }: RichTextProps) {
           style.fontWeight = '700';
         }
 
+        // Auto-linkify any URLs inside the token text. Every match
+        // becomes a tappable Text that opens in the system browser.
+        const parts = splitWithUrls(token.text);
         return (
           <Text key={idx} style={style}>
-            {token.text}
+            {parts.map((part, pi) =>
+              part.url ? (
+                <Text
+                  key={pi}
+                  style={{ color: LINK_COLOR, textDecorationLine: 'underline', fontWeight: '600' }}
+                  onPress={() => { Linking.openURL(part.url!).catch(() => {}); }}
+                >
+                  {part.text}
+                </Text>
+              ) : (
+                <Text key={pi}>{part.text}</Text>
+              ),
+            )}
           </Text>
         );
       })}
     </Text>
   );
+}
+
+/** Split a string into [text, url, text, url, text...] segments. */
+function splitWithUrls(s: string): Array<{ text: string; url?: string }> {
+  if (!s || !URL_RX.test(s)) {
+    URL_RX.lastIndex = 0;
+    return [{ text: s }];
+  }
+  URL_RX.lastIndex = 0;
+  const parts: Array<{ text: string; url?: string }> = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = URL_RX.exec(s)) !== null) {
+    if (m.index > last) parts.push({ text: s.slice(last, m.index) });
+    parts.push({ text: m[0], url: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < s.length) parts.push({ text: s.slice(last) });
+  return parts;
 }

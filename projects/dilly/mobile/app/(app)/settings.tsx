@@ -18,6 +18,7 @@ import { primeAppMode, clearAppModeCache } from '../../hooks/useAppMode';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { THEMES, useTheme, setTheme } from '../../hooks/useTheme';
 
 const INDIGO = colors.indigo;
 const APP_VERSION = '1.0.0';
@@ -59,6 +60,48 @@ function ToggleRow({ label, hint, value, onToggle }: { label: string; hint?: str
 
 function Divider() {
   return <View style={s.divider} />;
+}
+
+/** Horizontal swatch picker. Selected theme gets a ring + checkmark. */
+function ThemePicker() {
+  const current = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 14 }}>
+      {THEMES.map(t => {
+        const selected = t.id === current.id;
+        return (
+          <AnimatedPressable
+            key={t.id}
+            onPress={() => setTheme(t.id)}
+            scaleDown={0.92}
+            style={{ alignItems: 'center', gap: 6 }}
+          >
+            <View style={{
+              width: 44, height: 44, borderRadius: 22,
+              backgroundColor: t.accent,
+              borderWidth: selected ? 3 : 1,
+              borderColor: selected ? t.accent : colors.b1,
+              alignItems: 'center', justifyContent: 'center',
+              shadowColor: t.accent,
+              shadowOpacity: selected ? 0.35 : 0,
+              shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+              elevation: selected ? 4 : 0,
+            }}>
+              {selected && <Ionicons name="checkmark" size={20} color="#fff" />}
+            </View>
+            <Text style={{
+              fontSize: 10,
+              fontWeight: selected ? '800' : '600',
+              color: selected ? t.accent : colors.t3,
+              letterSpacing: 0.2,
+            }}>
+              {t.label}
+            </Text>
+          </AnimatedPressable>
+        );
+      })}
+    </View>
+  );
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────
@@ -386,6 +429,19 @@ export default function SettingsScreen() {
             </View>
           </FadeInView>
         )}
+
+        {/* Appearance — user-selectable accent. Top-of-settings so
+            the result is visible without scrolling. */}
+        <FadeInView delay={40}>
+          <SectionLabel text="APPEARANCE" />
+          <View style={s.card}>
+            <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6 }}>
+              <Text style={s.rowLabel}>Accent color</Text>
+              <Text style={s.rowHint}>Personalize the highlights across Dilly.</Text>
+            </View>
+            <ThemePicker />
+          </View>
+        </FadeInView>
 
         {/* Notifications */}
         <FadeInView delay={80}>

@@ -16,6 +16,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
+import { useAccent } from '../../hooks/useTheme';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
@@ -822,6 +823,10 @@ const sr = StyleSheet.create({
 
 function SeekerHome() {
   const insets = useSafeAreaInsets();
+  // User-chosen accent color — defaults to indigo. Only threads
+  // through a few hero surfaces so the personalization feels
+  // premium, not overwhelming.
+  const accent = useAccent();
   // Per-situation copy — greeting, eyebrow, CTA verb, empty states
   // all key off the user's user_path via sessionCache.
   const situationCopy = useSituationCopy();
@@ -1039,7 +1044,9 @@ function SeekerHome() {
         <FadeInView delay={0}>
           <View style={s.header}>
             <View style={{ flex: 1 }}>
-              <Text style={s.headerName}>Welcome, {firstName || 'there'}.</Text>
+              <Text style={s.headerName}>
+                Welcome, <Text style={{ color: accent }}>{firstName || 'there'}</Text>.
+              </Text>
               <Text style={s.headerSub}>Welcome to your career center.</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
@@ -1048,7 +1055,7 @@ function SeekerHome() {
                 scaleDown={0.9}
                 hitSlop={10}
               >
-                <Ionicons name="qr-code" size={20} color={colors.indigo} />
+                <Ionicons name="qr-code" size={20} color={accent} />
               </AnimatedPressable>
               <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
                 <Ionicons name="settings-outline" size={20} color={colors.t3} />
