@@ -76,6 +76,43 @@ async def create_memory_item(request: Request, body: dict = Body(...)):
     value = str(body.get("value") or "").strip()
     if not category or not label or not value:
         return JSONResponse(content={"error": "category, label, value required"}, status_code=400)
+
+    # Free-tier cap: 20 manually-added facts per calendar month. We
+    # only count items with source=="profile" (manual adds from the
+    # My Dilly UI); chat-derived facts are unmetered because the
+    # chat quota already gates them.
+    try:
+        plan = ((get_profile(email) or {}).get("plan") or "starter").lower().strip()
+    except Exception:
+        plan = "starter"
+    if plan == "starter":
+        try:
+            surface = get_memory_surface(email) or {}
+            items = surface.get("items") or []
+            now = datetime.now(timezone.utc)
+            ym = f"{now.year:04d}-{now.month:02d}"
+            def _is_this_month(it):
+                ts = str(it.get("created_at") or "")
+                return ts.startswith(ym) and (it.get("source") == "profile")
+            used = sum(1 for it in items if _is_this_month(it))
+            if used >= 20:
+                return JSONResponse(
+                    content={
+                        "detail": {
+                            "code": "PLAN_LIMIT_REACHED",
+                            "message": "You've added 20 facts this month on the free plan. Upgrade to Dilly for unlimited.",
+                            "feature": "Manual adds",
+                            "required_plan": "dilly",
+                            "used": used,
+                            "limit": 20,
+                        }
+                    },
+                    status_code=402,
+                )
+        except Exception:
+            # Fail-open: never block a user because the counter blew up.
+            pass
+
     row = add_memory_item(
         email,
         {

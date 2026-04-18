@@ -629,13 +629,17 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
             })}
 
             {isTyping && (
-              <View style={[s.msgRow, { justifyContent: 'flex-start' }]}>
-                <View style={s.assistantDot} />
-                <View style={s.typingBubble}>
-                  {dotAnims.map((a, i) => (
-                    <Animated.View key={i} style={[s.typingDot, { transform: [{ translateY: a }] }]} />
-                  ))}
+              // Writing Dilly replaces the three dots. Same
+              // "something is happening" affordance, way more
+              // personality. The pencil scribbles while the
+              // response streams.
+              <View style={[s.msgRow, { justifyContent: 'flex-start', alignItems: 'center', gap: 8 }]}>
+                <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+                  <DillyFace size={40} mood="writing" accessory="pencil" />
                 </View>
+                <Text style={{ fontSize: 11, color: colors.t3, fontStyle: 'italic' }}>
+                  Dilly is writing…
+                </Text>
               </View>
             )}
           </ScrollView>

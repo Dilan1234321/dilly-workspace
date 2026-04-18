@@ -1330,7 +1330,29 @@ function SeekerProfileScreen() {
         {/* ── 3. Strengths Map ─────────────────────────────────── */}
         {strengthCats.length > 0 && (
           <FadeInView delay={200}>
-            <Text style={d.sectionLabel}>WHAT WE KNOW ABOUT YOU</Text>
+            {/* Section header with a prominent always-visible Add
+                button. Users were missing the in-tile +s before. */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={d.sectionLabel}>WHAT WE KNOW ABOUT YOU</Text>
+              <AnimatedPressable
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 5,
+                  paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+                  backgroundColor: colors.indigo + '12',
+                  borderWidth: 1, borderColor: colors.indigo + '35',
+                }}
+                onPress={() => {
+                  // Default to "project_detail" — widest-relevant bucket
+                  // for a first fact. User can add anywhere after.
+                  openAddFactModal('project_detail', STRENGTH_CATEGORIES.project_detail.label);
+                }}
+                scaleDown={0.95}
+                hitSlop={8}
+              >
+                <Ionicons name="add" size={12} color={colors.indigo} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.indigo, letterSpacing: 0.2 }}>Add a fact</Text>
+              </AnimatedPressable>
+            </View>
             <View style={d.strengthGrid}>
               {Object.entries(STRENGTH_CATEGORIES).map(([key, cfg]) => {
                 const facts = data?.grouped?.[key] || [];
@@ -1660,9 +1682,30 @@ function SeekerProfileScreen() {
             onPress={() => { Keyboard.dismiss(); setAddFactModal(prev => ({ ...prev, visible: false })); }}
           />
           <View style={d.inlineEditor}>
-            <Text style={[d.inlineEditorFieldLabel, { marginBottom: 10, color: colors.t3, fontSize: 11, letterSpacing: 1.2 }]}>
-              {addFactModal.categoryLabel.toUpperCase()}
-            </Text>
+            {/* Category picker — tap the pill to change bucket
+                without closing the modal. Makes the top-level
+                "Add a fact" button genuinely useful. */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 10 }}>
+              {Object.entries(STRENGTH_CATEGORIES).map(([k, cfg]) => {
+                const active = addFactModal.category === k;
+                return (
+                  <AnimatedPressable
+                    key={k}
+                    onPress={() => setAddFactModal(prev => ({ ...prev, category: k, categoryLabel: cfg.label }))}
+                    scaleDown={0.95}
+                    style={{
+                      paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+                      backgroundColor: active ? cfg.color + '22' : colors.s2,
+                      borderWidth: 1, borderColor: active ? cfg.color + '55' : colors.b1,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? cfg.color : colors.t2 }}>
+                      {cfg.label}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </ScrollView>
             <Text style={d.inlineEditorFieldLabel}>Title</Text>
             <TextInput
               style={d.inlineEditorLabelInput}

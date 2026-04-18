@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -12,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { DillyFace } from '../../components/DillyFace';
 
 export default function ResultsScreen() {
   const router = useRouter();
@@ -35,9 +35,10 @@ export default function ResultsScreen() {
     <View style={[s.container, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl }]}>
       {/* Centered content */}
       <View style={s.content}>
-        {/* Checkmark circle */}
-        <View style={s.checkCircle}>
-          <Ionicons name="checkmark" size={40} color={colors.gold} />
+        {/* Excited Dilly. Replaces the old checkmark — Dilly's own
+            face celebrating is a stronger signal than a stock check. */}
+        <View style={s.faceHero}>
+          <DillyFace size={108} mood="celebrating" />
         </View>
 
         <Text style={s.heading}>Your Dilly Profile is ready.</Text>
@@ -76,13 +77,9 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
-  checkCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(201,168,76,0.1)',
-    borderWidth: 1,
-    borderColor: colors.goldbdr,
+  // Was a small gold check circle. Now just a centered slot for
+  // DillyFace — no ring, no fill, per the face-is-clean rule.
+  faceHero: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
