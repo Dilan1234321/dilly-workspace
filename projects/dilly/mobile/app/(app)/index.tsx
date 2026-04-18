@@ -17,6 +17,7 @@ import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useAccent } from '../../hooks/useTheme';
+import { ExploringHome, DropoutHome, LaidOffHome, VisaHome } from '../../components/SituationHomes';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
@@ -1445,18 +1446,24 @@ function SeekerHome() {
 // the call site.
 //
 // Rung-3 paths get bespoke home screens:
-//   - senior_reset  -> SeniorResetHome  (laid-off senior professional)
+//   - senior_reset     -> SeniorResetHome (laid-off senior professional)
+//   - exploring        -> ExploringHome   (finding my next)
+//   - dropout          -> DropoutHome     (proof over paper)
+//   - laid_off         -> LaidOffHome     (runway + momentum)
+//   - visa             -> VisaHome        (timing + sponsors)
 //
 // Other paths fall through to SeekerHome / HolderHome.
 export default function HomeScreen() {
   const appMode = useAppMode();
-  // Read path from the cached /profile if any screen has populated it.
-  // Zero-cost lookup: just a Map.get().
   const profileCached = getCached<any>('profile:full');
   const userPath = String(profileCached?.user_path || '').toLowerCase();
 
   if (appMode === 'holder') return <HolderHome />;
-  if (userPath === 'senior_reset') return <SeniorResetHome />;
+  if (userPath === 'senior_reset')   return <SeniorResetHome />;
+  if (userPath === 'exploring')      return <ExploringHome />;
+  if (userPath === 'dropout')        return <DropoutHome />;
+  if (userPath === 'laid_off')       return <LaidOffHome />;
+  if (userPath === 'visa')           return <VisaHome />;
   return <SeekerHome />;
 }
 

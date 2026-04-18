@@ -245,24 +245,11 @@ export default function ProfileProScreen() {
           </FadeInView>
         )}
 
-        {/* Career Target */}
-        <FadeInView delay={220}>
-          <View style={s.field}>
-            <Text style={s.label}>What are you looking for?</Text>
-            <View style={s.targetGrid}>
-              {TARGET_OPTIONS.map(opt => (
-                <AnimatedPressable
-                  key={opt.key}
-                  style={[s.targetChip, targetKey === opt.key && s.targetChipSelected]}
-                  onPress={() => setTargetKey(opt.key)}
-                  scaleDown={0.96}
-                >
-                  <Text style={[s.targetChipText, targetKey === opt.key && s.targetChipTextSelected]}>{opt.label}</Text>
-                </AnimatedPressable>
-              ))}
-            </View>
-          </View>
-        </FadeInView>
+        {/* "What are you looking for?" field removed per product
+            direction — users asked for it to go. targetKey still
+            lives in state and defaults to 'new_role' so the POST
+            body shape is unchanged. If we need per-user targeting
+            later we'll ask contextually, not upfront. */}
 
         {/* Error */}
         {submitError ? <Text style={s.error}>{submitError}</Text> : null}
