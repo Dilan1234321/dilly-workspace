@@ -111,30 +111,48 @@ export default function ModeSwitchScreen() {
         company: direction === 'holder' ? newCompany.trim() : undefined,
       };
 
-      await dilly.fetch('/profile', {
-        method: 'PATCH',
-        body: JSON.stringify(patchBody),
-      });
+      // PATCH the profile. Wrapped in its own try so a network hiccup
+      // gets surfaced as an inline error instead of throwing into the
+      // /onboarding ErrorBoundary ("Something's off with onboarding").
+      try {
+        const res = await dilly.fetch('/profile', {
+          method: 'PATCH',
+          body: JSON.stringify(patchBody),
+        });
+        if (res && !res.ok) {
+          throw new Error(`Server returned ${res.status}`);
+        }
+      } catch (patchErr: any) {
+        setErr(patchErr?.message || 'Could not save your update. Try again in a moment.');
+        setSaving(false);
+        return;
+      }
       // Reset the tutorial flag so the mode-specific 5-card intro
-      // runs for the new identity. Layoff users see the seeker
-      // onboarding deck; just-got-hired users see the holder deck.
-      // Without this, switching mode silently skipped the tutorial
-      // because the flag was already "true" from the previous mode.
+      // runs for the new identity. Failures here are non-fatal: the
+      // worst outcome is the tutorial doesn't re-show, which is
+      // recoverable and not worth blocking the flow.
       try {
         const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
         await AsyncStorage.removeItem('dilly_tutorial_shown').catch(() => {});
       } catch {}
-      // Push the new mode into useAppMode's in-memory + disk cache
-      // so the tab bar / dispatchers flip instantly on the next
-      // screen. Without this, they'd start rendering the OLD mode
-      // while /profile refetches.
+      // Prime the in-memory mode cache. Non-fatal if this fails.
       try {
         const { primeAppMode } = await import('../../hooks/useAppMode');
         await primeAppMode(direction);
       } catch {}
-      // Route into the tutorial, not directly to the app. Tutorial
-      // picks its own mode-specific deck via profile fetch.
-      router.replace('/onboarding/tutorial');
+      // Route into the app. Wrapped in try so a routing failure
+      // (which would otherwise bubble into the onboarding
+      // ErrorBoundary) surfaces as an inline error. Also switched
+      // from /onboarding/tutorial to /(app) because the holder
+      // tutorial adds friction right after the user just typed role
+      // + company. They already know the app; they want to see the
+      // change they just made.
+      try {
+        router.replace('/(app)');
+      } catch (navErr: any) {
+        setErr(navErr?.message || 'Saved, but the app didn\'t open. Pull down to refresh.');
+        setSaving(false);
+      }
     } catch (e: any) {
       setErr(e?.message || 'Something went wrong.');
       setSaving(false);
@@ -150,6 +168,12 @@ export default function ModeSwitchScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      // Offset the KeyboardAvoidingView so the scroll content fully
+      // clears the keyboard AND the CTA sits visibly above it. Without
+      // this, when the user focuses the Company field and the keyboard
+      // comes up, the fixed-position CTA below was stacking on top of
+      // the input, hiding the text they were typing.
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
       <View style={[s.container, { paddingTop: insets.top + 6 }]}>
         {/* Top-right close. lets the user back out without doing the switch */}
@@ -159,7 +183,16 @@ export default function ModeSwitchScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={s.content}>
+        {/* Scroll container so the form never collides with the CTA
+            when the keyboard is up. contentContainerStyle grows the
+            inner content; the outer ScrollView handles scrolling when
+            keyboard-pushed content exceeds viewport height. */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={s.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Animated.View style={{ opacity: fadeFace, alignItems: 'center', marginBottom: 18 }}>
             <DillyFace size={120} />
           </Animated.View>
@@ -207,7 +240,12 @@ export default function ModeSwitchScreen() {
           ) : null}
 
           {err ? <Text style={s.err}>{err}</Text> : null}
-        </View>
+
+          {/* Spacer so the last field isn't flush against the CTA
+              button (which sits below this ScrollView). Gives the
+              user 24px of breathing room on keyboard-expanded views. */}
+          <View style={{ height: 24 }} />
+        </ScrollView>
 
         <Animated.View
           style={{
@@ -215,6 +253,9 @@ export default function ModeSwitchScreen() {
             paddingHorizontal: spacing.xl,
             paddingBottom: insets.bottom + 14,
             paddingTop: 12,
+            backgroundColor: colors.bg,
+            borderTopWidth: 1,
+            borderTopColor: colors.b1,
           }}
         >
           <TouchableOpacity
@@ -248,6 +289,14 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+  },
+  // ScrollView contentContainerStyle. grows to fit content, starts
+  // centered when short, scrolls when keyboard pushes it past viewport.
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 20,
   },
   eyebrow: {
     fontSize: 11, fontWeight: '900', color: INDIGO, letterSpacing: 1.6, textAlign: 'center',
