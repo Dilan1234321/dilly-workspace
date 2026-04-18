@@ -52,11 +52,11 @@ function ProgressBar({ step }: { step: number }) {
 }
 
 const pb = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 3, paddingHorizontal: spacing.xl, marginTop: 14 },
-  segment: { flex: 1, height: 2.5, borderRadius: 999 },
-  done: { backgroundColor: colors.gold },
-  active: { backgroundColor: 'rgba(201,168,76,0.4)' },
-  empty: { backgroundColor: 'rgba(255,255,255,0.08)' },
+  row: { flexDirection: 'row', gap: 4, paddingHorizontal: spacing.xl, marginTop: 14 },
+  segment: { flex: 1, height: 3, borderRadius: 999 },
+  done: { backgroundColor: colors.indigo },
+  active: { backgroundColor: 'rgba(94,92,230,0.4)' },
+  empty: { backgroundColor: colors.s3 },
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
@@ -309,7 +309,7 @@ export default function VerifyScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.iconTile}>
-            <Ionicons name="person-outline" size={22} color={colors.gold} />
+            <Ionicons name="person-outline" size={22} color={colors.indigo} />
           </View>
           <Text style={styles.heading}>Welcome back.</Text>
           <Text style={styles.sub}>Enter your .edu email to get back in.</Text>
@@ -366,7 +366,7 @@ export default function VerifyScreen() {
       >
         {/* Email icon tile */}
         <View style={styles.iconTile}>
-          <Ionicons name="mail-outline" size={22} color={colors.gold} />
+          <Ionicons name="mail-outline" size={22} color={colors.indigo} />
         </View>
 
         {/* Heading */}
@@ -435,7 +435,7 @@ export default function VerifyScreen() {
             to look. Disappears as soon as they start typing. */}
         {showSlowHint && !error && digits.length === 0 ? (
           <View style={styles.hintCard}>
-            <Ionicons name="information-circle" size={14} color={colors.gold} />
+            <Ionicons name="information-circle" size={14} color={colors.indigo} />
             <Text style={styles.hintText}>
               Email taking a minute? Check your spam folder. The sender is{' '}
               <Text style={styles.hintBold}>noreply@trydilly.com</Text>.
@@ -499,46 +499,47 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl,
   },
   iconTile: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(201,168,76,0.08)',
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: 'rgba(94,92,230,0.10)',
     borderWidth: 1,
-    borderColor: colors.goldbdr,
+    borderColor: 'rgba(94,92,230,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   emailInput: {
     width: '100%',
-    height: 50,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    height: 54,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: colors.b2,
     backgroundColor: colors.s3,
     paddingHorizontal: spacing.lg,
-    fontSize: 15,
+    fontSize: 16,
     color: colors.t1,
     marginBottom: spacing.md,
     marginTop: spacing.xl,
   },
   heading: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 22,
+    fontSize: 28,
+    fontWeight: '800',
     color: colors.t1,
     textAlign: 'center',
-    marginBottom: 6,
+    letterSpacing: -0.6,
+    marginBottom: 8,
   },
   sub: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.t2,
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   emailLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.indigo,
     textAlign: 'center',
     marginBottom: spacing.xl,
   },
@@ -548,37 +549,39 @@ const styles = StyleSheet.create({
   },
   boxesRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 8,
     width: '100%',
   },
   box: {
     flex: 1,
-    height: 48,
-    borderRadius: 9,
-    borderWidth: 1,
+    height: 58,
+    borderRadius: 12,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   boxDefault: {
-    backgroundColor: colors.s3,
-    borderColor: colors.b2,
+    backgroundColor: colors.s2,
+    borderColor: colors.b1,
   },
   boxFilled: {
-    backgroundColor: colors.s3,
-    borderColor: colors.b2,
+    backgroundColor: 'rgba(94,92,230,0.06)',
+    borderColor: 'rgba(94,92,230,0.35)',
   },
   boxActive: {
-    backgroundColor: 'rgba(201,168,76,0.07)',
-    borderColor: colors.goldbdr,
+    backgroundColor: 'rgba(94,92,230,0.10)',
+    borderColor: colors.indigo,
+    borderWidth: 2,
   },
   boxError: {
-    backgroundColor: colors.s2,
+    backgroundColor: 'rgba(255,69,58,0.06)',
     borderColor: colors.coral,
   },
   boxDigit: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.t1,
+    letterSpacing: -0.3,
   },
   hiddenInput: {
     position: 'absolute',
@@ -599,18 +602,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    padding: 10,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(201,168,76,0.08)',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(94,92,230,0.06)',
     borderWidth: 1,
-    borderColor: colors.goldbdr,
+    borderColor: 'rgba(94,92,230,0.18)',
     marginBottom: spacing.sm,
   },
   hintText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     color: colors.t2,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   hintBold: {
     fontWeight: '700',
@@ -618,7 +621,7 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    borderRadius: radius.md,
+    borderRadius: 12,
     paddingVertical: 17,
     alignItems: 'center',
     justifyContent: 'center',
@@ -626,29 +629,29 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   buttonActive: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.indigo,
   },
   buttonDisabled: {
     backgroundColor: colors.s3,
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 0.1,
+    letterSpacing: 0.2,
   },
   buttonTextDisabled: {
     color: colors.t3,
   },
   links: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 24,
     justifyContent: 'center',
   },
   link: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.gold,
+    color: colors.indigo,
   },
   linkDim: {
     color: colors.t3,

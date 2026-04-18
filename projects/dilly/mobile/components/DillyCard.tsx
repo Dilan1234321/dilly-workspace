@@ -14,7 +14,7 @@
 import { useRef, useState } from 'react';
 import {
   View, Text, Image, StyleSheet, Dimensions, TouchableOpacity,
-  TextInput, ScrollView, Share, Animated, Easing,
+  TextInput, ScrollView, Share, Animated, Easing, PanResponder,
 } from 'react-native';
 import InlineToastView, { useInlineToast } from './InlineToast';
 import { Ionicons } from '@expo/vector-icons';
@@ -621,6 +621,25 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
     }).start(() => setShowBack(!showBack));
   }
 
+  // Swipe-to-flip gesture. Threshold of 40pt horizontal movement OR
+  // a fast flick (>0.3 px/ms) triggers the flip. Only horizontal
+  // swipes grab — vertical scrolls pass through so the card doesn't
+  // fight the parent ScrollView. PanResponder is memoized in a ref
+  // and reads handleFlip via a ref so it always invokes the latest
+  // (showBack is stale inside the one-time closure otherwise).
+  const handleFlipRef = useRef(handleFlip);
+  handleFlipRef.current = handleFlip;
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      onPanResponderRelease: (_e, g) => {
+        if (Math.abs(g.dx) > 40 || Math.abs(g.vx) > 0.3) {
+          handleFlipRef.current();
+        }
+      },
+    })
+  ).current;
+
   const saveTaglineTimer = useRef<any>(null);
   function update(key: keyof CardData, value: string) {
     setData(prev => ({ ...prev, [key]: value }));
@@ -681,26 +700,37 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
         </View>
       </View>
 
-      {/* Live preview */}
-      <TouchableOpacity onPress={handleFlip} activeOpacity={0.95} style={{ height: CARD_H }}>
-        {/* Front */}
-        <Animated.View style={{
-          position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
-          transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }],
-        }}>
-          <CardFront data={data} template={template} showQr={showQr} />
-        </Animated.View>
-        {/* Back */}
-        <Animated.View style={{
-          position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
-          transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] }) }],
-        }}>
-          <CardBack template={template} username={data.username} showQr={showQr} />
-        </Animated.View>
-      </TouchableOpacity>
-      <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
-        Tap card to flip
-      </Text>
+      {/* Live preview. Wrapper View hosts the PanResponder so horizontal
+          swipes flip the card; tap still works because the inner
+          TouchableOpacity is a child. */}
+      <View style={{ height: CARD_H }} {...panResponder.panHandlers}>
+        <TouchableOpacity onPress={handleFlip} activeOpacity={0.95} style={{ flex: 1 }}>
+          {/* Front */}
+          <Animated.View style={{
+            position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
+            transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }],
+          }}>
+            <CardFront data={data} template={template} showQr={showQr} />
+          </Animated.View>
+          {/* Back */}
+          <Animated.View style={{
+            position: 'absolute', width: '100%', backfaceVisibility: 'hidden',
+            transform: [{ perspective: 1000 }, { rotateY: flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] }) }],
+          }}>
+            <CardBack template={template} username={data.username} showQr={showQr} />
+          </Animated.View>
+        </TouchableOpacity>
+      </View>
+      {/* Discoverability hint. Arrows make the swipe affordance obvious
+          so users don't have to guess. Sync icon reinforces flip. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <Ionicons name="chevron-back" size={11} color={LIGHT_GRAY} />
+        <Ionicons name="sync" size={11} color={LIGHT_GRAY} />
+        <Text style={{ fontSize: 10, color: LIGHT_GRAY, textAlign: 'center' }}>
+          Tap or swipe to flip
+        </Text>
+        <Ionicons name="chevron-forward" size={11} color={LIGHT_GRAY} />
+      </View>
 
       {/* Template picker + QR toggle */}
       <TemplatePicker selected={template} onSelect={setTemplate} />
