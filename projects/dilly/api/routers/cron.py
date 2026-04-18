@@ -277,12 +277,23 @@ def admin_delete_account(token: str = "", email: str = ""):
         traceback.print_exc()
         deleted_profile = False
 
-    # 2. PostgreSQL tables
+    # 2. PostgreSQL tables. Order matters: push_tokens FKs to students(id)
+    # and has no email column of its own — delete it FIRST via a subquery
+    # against students, then students, then the rest. The previous loop
+    # assumed every table had an email column and blew up silently on
+    # push_tokens (column doesn't exist).
     try:
         from projects.dilly.api.database import get_db
         with get_db() as conn:
             cur = conn.cursor()
-            for table in ("profile_facts", "students", "push_tokens", "internship_applications"):
+            try:
+                cur.execute(
+                    "DELETE FROM push_tokens WHERE student_id IN (SELECT id FROM students WHERE LOWER(email) = LOWER(%s))",
+                    (email,),
+                )
+            except Exception:
+                pass
+            for table in ("profile_facts", "students", "internship_applications"):
                 try:
                     cur.execute(f"DELETE FROM {table} WHERE LOWER(email) = LOWER(%s)", (email,))
                 except Exception:

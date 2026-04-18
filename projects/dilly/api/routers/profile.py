@@ -928,13 +928,17 @@ async def delete_account(request: Request):
                 "Could not cancel your subscription right now. Please try again in a minute."
             )
 
-    # 1. Delete ALL data from every table (each in its own transaction)
+    # 1. Delete ALL data from every table (each in its own transaction).
+    # Order matters: push_tokens FKs to students(id), so it must go BEFORE
+    # students (otherwise the subquery finds no matching student_id and
+    # orphan tokens are left behind — this was a real bug). push_tokens
+    # has no email column, only student_id, hence the subquery.
     from projects.dilly.api.database import get_db
     delete_queries = [
         ("profile_facts", "DELETE FROM profile_facts WHERE LOWER(email) = LOWER(%s)"),
+        ("push_tokens", "DELETE FROM push_tokens WHERE student_id IN (SELECT id FROM students WHERE LOWER(email) = LOWER(%s))"),
         ("students", "DELETE FROM students WHERE LOWER(email) = LOWER(%s)"),
         ("users", "DELETE FROM users WHERE LOWER(email) = LOWER(%s)"),
-        ("push_tokens", "DELETE FROM push_tokens WHERE LOWER(email) = LOWER(%s)"),
         ("verification_codes", "DELETE FROM verification_codes WHERE LOWER(email) = LOWER(%s)"),
     ]
     for table, query in delete_queries:
