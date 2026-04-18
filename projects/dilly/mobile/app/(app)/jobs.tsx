@@ -1096,31 +1096,16 @@ export default function JobsScreen() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Pre-load fit narratives for the top 3 jobs on first session visit.
-  // This makes the Jobs tab feel instantly useful. the user doesn't see
-  // "expand a card and wait" as their first interaction, they see a job
-  // card already showing the fit narrative. Runs once per session; uses
-  // the server's per-user cache on repeat visits for free.
-  const preloadedRef = useRef(false);
-  useEffect(() => {
-    if (preloadedRef.current) return;
-    if (listings.length === 0) return;
-    preloadedRef.current = true;
-    const top = listings.slice(0, 3);
-    // Fire in parallel, but silently. any failure just falls back to
-    // on-demand loading when the card is expanded.
-    top.forEach(async (listing) => {
-      try {
-        const res = await dilly.fetch('/jobs/fit-narrative', {
-          method: 'POST',
-          body: JSON.stringify({ job_id: listing.id }),
-        });
-        if (!res.ok) return;
-        const json = await res.json();
-        setNarrativeCache(prev => ({ ...prev, [listing.id]: json }));
-      } catch {}
-    });
-  }, [listings]);
+  // Fit-narrative preload DISABLED. Previously this fired 3 Haiku
+  // LLM calls per session on mount to warm the top-3 job cards. Cost:
+  // ~$0.012/session × many sessions/day. The cards still load on
+  // demand when the user taps to expand, using the same /jobs/fit-
+  // narrative endpoint with a 7-day server-side cache, so the cost
+  // has been moved from "every session for every user" to "only the
+  // specific cards people actually tap." Preserving the ref so the
+  // rest of the file doesn't error; setting it true so the block
+  // below never enters.
+  const preloadedRef = useRef(true);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

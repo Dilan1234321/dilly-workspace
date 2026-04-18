@@ -1606,7 +1606,13 @@ async def ai_chat(request: Request, body: ChatRequest):
         # extractor calls. Cuts extraction cost ~67%.
         if email and len(messages) >= 2:
             assistant_turns = sum(1 for m in raw_messages if m["role"] == "assistant") + 1  # +1 for the reply we just produced
-            should_extract = (assistant_turns % 3 == 0) or (assistant_turns == 1)
+            # Was every 3 turns. Bumped to every 5 after a cost spike
+            # investigation: extraction + narrative regen on every 3rd
+            # turn was running ~40% of total LLM spend. Every 5 cuts
+            # that in half without losing meaningful fact capture
+            # (the full untruncated message window is what gets
+            # extracted, so a 5-turn batch still sees everything).
+            should_extract = (assistant_turns % 5 == 0) or (assistant_turns == 1)
             # Conv id used by BOTH the memory extraction below and the
             # chat-thread store. Stable across turns of the same chat so
             # thread upserts hit the same row.

@@ -557,10 +557,17 @@ def should_regenerate_narrative(last_updated_at: str | None, new_items_count: in
     # Stale: regen if older than 3 days even with no new items
     if age > 3 * 86400:
         return True
-    # Significant new info: 3+ facts means the profile changed meaningfully
-    if new_items_count >= 3:
+    # Significant new info: 5+ facts means the profile changed meaningfully.
+    # Bumped from 3 -> 5 during cost cleanup. Narratives aren't user-facing
+    # outside of My Dilly + recruiter views; regen on every 3rd fact was
+    # burning ~$0.0008 per chat × a lot of chats.
+    if new_items_count >= 5:
         return True
-    # Fresh new info + some time passed: regen after 2 hours
-    if new_items_count > 0 and age > 2 * 3600:
+    # Fresh new info + time passed: regen after 12 hours. Was 2 hours;
+    # bumped to 12 because the narrative summary rarely changes shape
+    # within a day unless a lot of new facts come in, which the branch
+    # above already covers. Users never "feel" a 10-hour staleness on a
+    # summary they read once a week.
+    if new_items_count > 0 and age > 12 * 3600:
         return True
     return False
