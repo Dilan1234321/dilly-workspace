@@ -54,15 +54,21 @@ def _cache_set(key: str, response: dict, profile_hash: str) -> None:
 # ---------------------------------------------------------------------------
 # Plan limits
 # ---------------------------------------------------------------------------
+# Starter gets 0 fit narratives. Each narrative is a Haiku call
+# (~$0.008) and was the second biggest free-tier LLM cost behind
+# chat. Free users see a cached "upgrade for personalized fit"
+# message on job cards now, and paid users get the full narrative.
+# Dilly tier gets a generous cap; Pro is unlimited.
 _PLAN_LIMITS = {
-    "starter": 20,
-    "dilly": 100,
-    "pro": -1,  # unlimited
+    "starter":  0,    # was 20 — chat and fit narratives are paid
+    "building": 20,   # dropout path still gets some coaching
+    "dilly":    100,
+    "pro":      -1,   # unlimited
 }
 
 
 def _get_plan_limit(plan: str) -> int:
-    return _PLAN_LIMITS.get(plan, 10)
+    return _PLAN_LIMITS.get(plan, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -279,10 +285,9 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
     surface = get_memory_surface(email)
     facts = surface.get("items") or []
 
-    # Check plan limits
-    # NOTE: No plan column in DB yet (Stripe/RevenueCat not wired).
-    # Default to "dilly" (250/month) until payment system is live.
-    plan = profile.get("plan") or "dilly"
+    # Check plan limits. Default to "starter" when unset — anything
+    # else lets free users quietly burn paid-tier budget.
+    plan = (profile.get("plan") or "starter").lower().strip()
     limit = _get_plan_limit(plan)
     count, reset_date = _get_narrative_usage(email)
 
@@ -291,10 +296,34 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
     if reset_date != current_month:
         count = 0
 
+    # Starter: limit == 0 means "paid feature, not metered." Return a
+    # rich 402 so the mobile client can render an upgrade sheet.
+    if limit == 0:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "FIT_NARRATIVE_REQUIRES_PLAN",
+                "message": "Personalized fit narratives are a Dilly feature.",
+                "plan": plan,
+                "required_plan": "dilly",
+                "features_unlocked": [
+                    "Tailored read on every job: what you have, what to build",
+                    "Resume suggestions per role",
+                    "Interview practice for that company",
+                    "Unlimited chat with Dilly",
+                ],
+            },
+        )
+
     if limit > 0 and count >= limit:
         raise HTTPException(
-            status_code=403,
-            detail="You've used all your fit assessments this month.",
+            status_code=429,
+            detail={
+                "code": "FIT_NARRATIVE_CAP",
+                "message": f"You've used all {limit} fit assessments this month. Resets on the 1st.",
+                "plan": plan,
+                "upgrade_plan": "pro" if plan == "dilly" else "dilly",
+            },
         )
 
     # Build profile text

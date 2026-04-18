@@ -522,7 +522,41 @@ async def audit_resume_v2(
     track: str | None = Form(None),  # backward compat
     industry_target: str | None = Form(None),
 ):
-    """Dilly Auditor V2: unlimited audits for all authenticated users."""
+    """Dilly Auditor V2. Starter users get blocked here; paid users
+    can rerun as often as they want. (The /audit/first-run endpoint
+    is separately unlocked for everyone — that's the one-shot
+    onboarding audit that seeds the profile, gated by
+    first_run_bypass which is set before this handler runs.)"""
+    # Tier gate: starter is blocked from re-auditing. The onboarding
+    # /audit/first-run path sets first_run_bypass=True before calling
+    # us, which lets a brand-new starter user finish their one-shot
+    # signup audit. Everything else requires a paid plan.
+    if not getattr(request.state, "first_run_bypass", False):
+        try:
+            user = deps.require_auth(request)
+            email = (user.get("email") or "").strip().lower()
+            from projects.dilly.api.profile_store import get_profile as _gp
+            _plan = ((_gp(email) or {}).get("plan") or "starter").lower().strip()
+            if _plan == "starter":
+                raise HTTPException(
+                    status_code=402,
+                    detail={
+                        "code": "AUDIT_REQUIRES_PLAN",
+                        "message": "Re-auditing your resume is a Dilly feature. Your first audit is free.",
+                        "plan": _plan,
+                        "required_plan": "dilly",
+                        "features_unlocked": [
+                            "Unlimited resume audits",
+                            "Tailored resumes per role (30/mo)",
+                            "Personalized fit narratives",
+                            "Unlimited chat with Dilly",
+                        ],
+                    },
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # auth/profile errors fall through to the real handler
     try:
         return await _audit_resume_v2_impl(request, file, user_email, application_target, cohort, track, industry_target)
     except HTTPException:

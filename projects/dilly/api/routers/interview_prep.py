@@ -15,7 +15,7 @@ _WORKSPACE_ROOT = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "..", "
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from projects.dilly.api import deps, errors
@@ -439,6 +439,33 @@ No markdown, no prose, just the JSON array."""
 async def generate_prep_deck(req: PrepDeckRequest, request: Request):
     user = deps.require_auth(request)
     email = user.get("email") or ""
+
+    # Tier gate: JD-based interview prep is a paid feature. The static
+    # fallback question bank is also only useful with a decent profile,
+    # so we block all starter calls here rather than letting the
+    # handler proceed and burn a Haiku call on _generate_jd_specific_
+    # questions.
+    try:
+        from projects.dilly.api.profile_store import get_profile as _gp
+        _plan = ((_gp(email) or {}).get("plan") or "starter").lower().strip()
+    except Exception:
+        _plan = "starter"
+    if _plan == "starter":
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "INTERVIEW_PREP_REQUIRES_PLAN",
+                "message": "Interview prep is a Dilly feature.",
+                "plan": _plan,
+                "required_plan": "dilly",
+                "features_unlocked": [
+                    "Role-specific interview questions per company",
+                    "Mock interview practice with feedback",
+                    "Scripts you can rehearse",
+                    "Unlimited chat with Dilly",
+                ],
+            },
+        )
 
     track = _resolve_track(req.track, email)
     audits = get_audits(email)

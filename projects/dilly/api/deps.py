@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 from typing import Dict, List
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from projects.dilly.api import errors
 
@@ -60,14 +60,37 @@ def bearer_user(request: Request) -> dict | None:
 
 
 def require_subscribed(request: Request) -> dict:
-    """Require valid session and subscribed; return user dict. Raises 401/403 otherwise.
-    If request.state.first_run_bypass is True, subscription check is skipped (used by /audit/first-run)."""
+    """Require valid session and a paid plan; return user dict. Raises
+    401 if unauthenticated, 402 if on starter. first_run_bypass
+    (onboarding audit path) skips the plan check.
+
+    Previously this was a no-op ('all users treated as paid'). That
+    was turning every LLM endpoint wrapped by require_subscribed
+    (templates/cover-letter, thank-you, follow-up, linkedin,
+    interview-prep, resume-tailor) into free-tier LLM-burning
+    surfaces. Now it actually enforces the plan.
+    """
     user = bearer_user(request)
     if not user:
-        raise errors.unauthorized("Sign in to run audits.")
+        raise errors.unauthorized("Sign in to continue.")
     if getattr(request.state, "first_run_bypass", False):
         return user
-    # Subscription check disabled during development — all users treated as paid
+    email = (user.get("email") or "").strip().lower()
+    try:
+        from projects.dilly.api.profile_store import get_profile
+        plan = ((get_profile(email) or {}).get("plan") or "starter").lower().strip()
+    except Exception:
+        plan = "starter"
+    if plan == "starter":
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "REQUIRES_PLAN",
+                "message": "This feature is part of Dilly.",
+                "plan": plan,
+                "required_plan": "dilly",
+            },
+        )
     return user
 
 

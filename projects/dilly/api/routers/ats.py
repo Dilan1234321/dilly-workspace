@@ -24,6 +24,36 @@ from projects.dilly.api.ats_score_history import (
 router = APIRouter(tags=["ats"])
 
 
+def _require_paid_for_ats(email: str, feature: str = "ATS tools") -> None:
+    """Block starter users from calling LLM-backed ATS endpoints.
+    Previously every ATS endpoint was open to all plans, so free users
+    could silently burn Haiku calls through /ats-check, /ats-rewrite,
+    /ats-keyword-density, and /gap-analysis. Now each of those routes
+    calls this guard at the top. Non-LLM routes (ats-score/history,
+    ats-score/record, resume-text, ats-company-lookup) stay open."""
+    try:
+        from projects.dilly.api.profile_store import get_profile as _gp
+        plan = ((_gp(email) or {}).get("plan") or "starter").lower().strip()
+    except Exception:
+        plan = "starter"
+    if plan == "starter":
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "ATS_REQUIRES_PLAN",
+                "message": f"{feature} are a Dilly feature.",
+                "plan": plan,
+                "required_plan": "dilly",
+                "features_unlocked": [
+                    "ATS keyword analysis per job",
+                    "AI bullet rewrites",
+                    "Gap analysis per role",
+                    "Unlimited chat with Dilly",
+                ],
+            },
+        )
+
+
 def _parse_body_to_parsed(body: dict):
     """Build ParsedResume and raw/structured text from request body (parsed_text, raw_text, track, page_count)."""
     from dilly_core.resume_parser import parse_resume
@@ -132,7 +162,8 @@ async def ats_score_history(request: Request):
 @router.post("/ats-keyword-density")
 async def ats_keyword_density(request: Request, body: dict = Body(...)):
     """Run keyword density and placement analysis. Optional job_description for JD match."""
-    deps.require_auth(request)
+    user = deps.require_auth(request)
+    _require_paid_for_ats((user.get("email") or "").strip().lower(), "Keyword density analysis")
     parsed, raw_text, _, _, _ = _parse_body_to_parsed(body)
     if not raw_text or parsed is None:
         raise HTTPException(status_code=400, detail="Provide parsed_text or raw_text.")
@@ -183,7 +214,8 @@ async def ats_vendor_sim(request: Request, body: dict = Body(...)):
 @router.post("/ats-rewrite")
 async def ats_rewrite(request: Request, body: dict = Body(...)):
     """Rewrite bullets for ATS (from issues + bullets or bullets only)."""
-    deps.require_auth(request)
+    user = deps.require_auth(request)
+    _require_paid_for_ats((user.get("email") or "").strip().lower(), "AI bullet rewrites")
     bullets = body.get("bullets") or []
     issues = body.get("issues") or []
     track = (body.get("track") or "").strip() or None
@@ -269,7 +301,8 @@ async def ats_company_lookup(request: Request, company: str = ""):
 @router.post("/ats-check")
 async def ats_check(request: Request, body: dict = Body(...)):
     """Check resume against job description for ATS keyword gaps (LLM). Returns missing keywords, suggestions, ready."""
-    deps.require_auth(request)
+    user = deps.require_auth(request)
+    _require_paid_for_ats((user.get("email") or "").strip().lower(), "ATS keyword check")
     job_description = (body.get("job_description") or "").strip()
     if not job_description or len(job_description) < 50:
         raise HTTPException(status_code=400, detail="Paste the full job description (at least 50 characters).")
@@ -318,7 +351,8 @@ async def ats_check(request: Request, body: dict = Body(...)):
 @router.post("/gap-analysis")
 async def gap_analysis(request: Request, body: dict = Body(...)):
     """Deep gap analysis: what's missing or weak for the target (LLM)."""
-    deps.require_auth(request)
+    user = deps.require_auth(request)
+    _require_paid_for_ats((user.get("email") or "").strip().lower(), "Gap analysis")
     target = (body.get("target") or body.get("application_target") or "").strip()
     audit = body.get("audit") or {}
     if not target or len(target) > 300:

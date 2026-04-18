@@ -154,6 +154,23 @@ async def insights_letter(request: Request):
     if not email:
         raise HTTPException(status_code=401, detail="Not authenticated.")
 
+    # Tier gate: starter users can't trigger LLM letter generation.
+    try:
+        from projects.dilly.api.profile_store import get_profile as _gp
+        _plan = ((_gp(email) or {}).get("plan") or "starter").lower().strip()
+    except Exception:
+        _plan = "starter"
+    if _plan == "starter":
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "code": "INSIGHTS_REQUIRES_PLAN",
+                "message": "Dilly's letter is a Dilly feature.",
+                "plan": _plan,
+                "required_plan": "dilly",
+            },
+        )
+
     # Load profile and facts
     from projects.dilly.api.profile_store import get_profile
     from projects.dilly.api.memory_surface_store import get_memory_surface

@@ -37,10 +37,14 @@ router = APIRouter(tags=["resume"])
 # ---------------------------------------------------------------------------
 # Resume generation plan limits (per calendar month)
 # ---------------------------------------------------------------------------
-_RESUME_PLAN_LIMITS = {"starter": 2, "dilly": 30, "pro": -1}
+# Starter is 0. Resume generation is a Haiku call that produces a
+# full ATS-tailored resume (~$0.02/call) — two of those per free
+# user per month is ~$0.04 leaked. Pushed to paid feature; the
+# mobile client shows an upgrade prompt on 402.
+_RESUME_PLAN_LIMITS = {"starter": 0, "building": 5, "dilly": 30, "pro": -1}
 
 def _resume_plan_limit(plan: str) -> int:
-    return _RESUME_PLAN_LIMITS.get((plan or "starter").lower().strip(), 2)
+    return _RESUME_PLAN_LIMITS.get((plan or "starter").lower().strip(), 0)
 
 
 _RESUME_COLUMNS_ENSURED = False
@@ -2591,26 +2595,42 @@ async def generate_resume(request: Request, body: GenerateResumeRequest):
         raise errors.validation_error("job_title and job_company are required.")
 
     # ── Plan gate: monthly resume gen limits ──────────────────────────────
-    # Resume generation is the most expensive call (~$0.07 each). Strict caps:
-    #   starter: 2 / month, then upgrade to Dilly
-    #   dilly:   30 / month, then upgrade to Pro
+    # Resume generation is the most expensive call (~$0.07 each).
+    # Strict caps:
+    #   starter: 0 (paid feature, immediate upgrade prompt)
+    #   building: 5 / month (dropout path gets some coaching)
+    #   dilly:   30 / month
     #   pro:     unlimited
     from projects.dilly.api.profile_store import get_profile as _gp_for_plan
     _profile_for_plan = _gp_for_plan(email) or {}
     _resume_plan = (_profile_for_plan.get("plan") or "starter").lower().strip()
     _resume_limit = _resume_plan_limit(_resume_plan)
     _resume_used, _ = _get_resume_usage(email)
-    if 0 < _resume_limit <= _resume_used:
+    # Starter is explicitly limit==0: paid feature, never runs the LLM.
+    if _resume_limit == 0:
         raise HTTPException(
             status_code=402,
             detail={
-                "code": "PLAN_LIMIT_REACHED",
-                "message": (
-                    "You've used both free resume generations this month. Upgrade to Dilly for 30 / month."
-                    if _resume_plan == "starter"
-                    else f"You've used all {_resume_limit} tailored resumes this month. Upgrade to Dilly Pro for unlimited."
-                ),
-                "required_plan": "dilly" if _resume_plan == "starter" else "pro",
+                "code": "RESUME_REQUIRES_PLAN",
+                "message": "Tailored resumes are a Dilly feature.",
+                "plan": _resume_plan,
+                "required_plan": "dilly",
+                "features_unlocked": [
+                    "ATS-tailored resumes per role",
+                    "30 generations every month",
+                    "Fit narratives on every job",
+                    "Unlimited chat with Dilly",
+                ],
+            },
+        )
+    # Paid tier out of monthly budget: upgrade to next tier.
+    if 0 < _resume_limit <= _resume_used:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "code": "RESUME_MONTHLY_CAP",
+                "message": f"You've used all {_resume_limit} resumes this month. Resets on the 1st.",
+                "required_plan": "pro" if _resume_plan == "dilly" else "dilly",
                 "used": _resume_used,
                 "limit": _resume_limit,
             },
