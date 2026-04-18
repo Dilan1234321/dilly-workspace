@@ -155,15 +155,16 @@ export default function ModeSwitchScreen() {
         const { primeAppMode } = await import('../../hooks/useAppMode');
         await primeAppMode(direction);
       } catch {}
-      // Route into the app. Wrapped in try so a routing failure
-      // (which would otherwise bubble into the onboarding
-      // ErrorBoundary) surfaces as an inline error. Also switched
-      // from /onboarding/tutorial to /(app) because the holder
-      // tutorial adds friction right after the user just typed role
-      // + company. They already know the app; they want to see the
-      // change they just made.
+      // Route into the mode-specific tutorial. The user's identity
+      // just flipped (holder ↔ seeker), which means the app they're
+      // about to see is effectively a new product to them — every
+      // tab changes, every CTA changes, every copy string changes.
+      // Running the 5-card intro on each flip is cheap and orients
+      // them in the new experience. The tutorial reads
+      // `dilly_tutorial_shown` and bails if already seen; we cleared
+      // it above so it will play.
       try {
-        router.replace('/(app)');
+        router.replace('/onboarding/tutorial');
       } catch (navErr: any) {
         setErr(navErr?.message || 'Saved, but the app didn\'t open. Pull down to refresh.');
         setSaving(false);

@@ -100,13 +100,12 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   faceButton: { alignItems: 'center', gap: 14 },
+  // Previously drew a visible ring. Dropped to align with the
+  // app-wide rule: DillyFace always renders clean, no ring. The
+  // tap target stays the same, it just doesn't draw a border.
   faceRing: {
     width: 124,
     height: 124,
-    borderRadius: 62,
-    backgroundColor: 'rgba(201,168,76,0.06)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(201,168,76,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
   },

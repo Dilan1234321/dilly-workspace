@@ -1,137 +1,397 @@
 /**
- * useTheme — user-selectable accent color.
+ * useTheme — multi-axis personalization.
  *
- * Beta testers asked: "can I make it pink / customize the look?" This
- * hook is the foundation. Pick an accent from THEMES, the choice
- * persists to AsyncStorage, and surfaces that opt in get repainted.
+ * Six independent axes, each a small enum. Every surface that
+ * subscribes reads from `useResolvedTheme()` (or the lighter
+ * `useAccent()`) and repaints automatically.
  *
- * Rollout strategy:
- *   v1: hero accents, primary CTAs, and brand chips on the highest-
- *       traffic screens read theme via useAccent(). Everything else
- *       keeps the default indigo token. This is intentional — we want
- *       the accent to feel like a personal touch on hero surfaces,
- *       not paint every pixel in the app.
- *   v2+: more surfaces subscribe over time.
+ * Axes:
+ *   - accent       : primary brand hue (12 presets)
+ *   - surface      : app background family (Cloud / Cream / Slate / Midnight)
+ *   - shape        : radius scale (Sharp / Standard / Rounded / Pill)
+ *   - typeScale    : font pairing (Dilly / Modern / Editorial / Playful)
+ *   - density      : padding scale (Comfortable / Compact)
+ *   - accentStyle  : CTA fill style (Solid / Gradient)
+ *   - autoDark     : when true, surface overrides to Midnight on system dark
  *
- * Default theme matches the brand (Indigo #2B3A8E).
+ * Everything persists to AsyncStorage under a single JSON key.
+ * Default preserves the current brand look (Indigo / Cloud / Standard
+ * / Dilly / Comfortable / Solid / autoDark on).
+ *
+ * The module-level pub/sub pattern matches useDillyOverlay and
+ * usePaywall so non-React code can also trigger repaints.
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = 'dilly_theme_accent_v1';
+const STORAGE_KEY = 'dilly_theme_v2';
 
-export interface Theme {
-  id: string;
-  label: string;
-  /** Primary brand accent — used for CTAs, hero icons, active chips. */
-  accent: string;
-  /** Lighter translucent accent — used for backgrounds / chip fills. */
-  accentSoft: string;
-  /** Border accent — used for hover / selected outlines. */
-  accentBorder: string;
-  /** Emoji fingerprint so the theme picker looks like a picker, not a swatch grid. */
-  fingerprint: string;
+/* ─────────────────────────────────────────────────────────────── */
+/* Axis enums                                                       */
+/* ─────────────────────────────────────────────────────────────── */
+
+export type AccentId =
+  | 'indigo' | 'rose' | 'emerald' | 'amber' | 'violet' | 'graphite'
+  | 'sky' | 'teal' | 'crimson' | 'plum' | 'forest' | 'navy';
+
+export type SurfaceId = 'cloud' | 'cream' | 'slate' | 'midnight';
+export type ShapeId = 'sharp' | 'standard' | 'rounded' | 'pill';
+export type TypeId = 'dilly' | 'modern' | 'editorial' | 'playful';
+export type DensityId = 'comfortable' | 'compact';
+export type AccentStyleId = 'solid' | 'gradient';
+
+export interface ThemeConfig {
+  accent: AccentId;
+  surface: SurfaceId;
+  shape: ShapeId;
+  type: TypeId;
+  density: DensityId;
+  accentStyle: AccentStyleId;
+  /** When true, surface resolves to 'midnight' whenever the system
+      is in dark mode. When false, the user's explicit surface wins. */
+  autoDark: boolean;
 }
 
-export const THEMES: Theme[] = [
-  {
-    id: 'indigo',
-    label: 'Dilly Indigo',
-    accent: '#2B3A8E',
-    accentSoft: 'rgba(43,58,142,0.10)',
-    accentBorder: 'rgba(43,58,142,0.30)',
-    fingerprint: '●',
-  },
-  {
-    id: 'rose',
-    label: 'Rose',
-    accent: '#E11D74',
-    accentSoft: 'rgba(225,29,116,0.10)',
-    accentBorder: 'rgba(225,29,116,0.30)',
-    fingerprint: '●',
-  },
-  {
-    id: 'emerald',
-    label: 'Emerald',
-    accent: '#0E9F6E',
-    accentSoft: 'rgba(14,159,110,0.10)',
-    accentBorder: 'rgba(14,159,110,0.30)',
-    fingerprint: '●',
-  },
-  {
-    id: 'gold',
-    label: 'Amber',
-    accent: '#B45309',
-    accentSoft: 'rgba(180,83,9,0.10)',
-    accentBorder: 'rgba(180,83,9,0.30)',
-    fingerprint: '●',
-  },
-  {
-    id: 'violet',
-    label: 'Violet',
-    accent: '#7C3AED',
-    accentSoft: 'rgba(124,58,237,0.10)',
-    accentBorder: 'rgba(124,58,237,0.30)',
-    fingerprint: '●',
-  },
-  {
-    id: 'slate',
-    label: 'Graphite',
-    accent: '#1F2937',
-    accentSoft: 'rgba(31,41,55,0.10)',
-    accentBorder: 'rgba(31,41,55,0.30)',
-    fingerprint: '●',
-  },
+/* ─────────────────────────────────────────────────────────────── */
+/* Presets                                                          */
+/* ─────────────────────────────────────────────────────────────── */
+
+export interface AccentPreset {
+  id: AccentId;
+  label: string;
+  color: string;
+}
+
+export const ACCENT_PRESETS: AccentPreset[] = [
+  { id: 'indigo',    label: 'Dilly',     color: '#2B3A8E' },
+  { id: 'navy',      label: 'Navy',      color: '#0F2A6B' },
+  { id: 'sky',       label: 'Sky',       color: '#0A84FF' },
+  { id: 'teal',      label: 'Teal',      color: '#0D9488' },
+  { id: 'emerald',   label: 'Emerald',   color: '#0E9F6E' },
+  { id: 'forest',    label: 'Forest',    color: '#166534' },
+  { id: 'amber',     label: 'Amber',     color: '#B45309' },
+  { id: 'crimson',   label: 'Crimson',   color: '#B91C1C' },
+  { id: 'rose',      label: 'Rose',      color: '#E11D74' },
+  { id: 'plum',      label: 'Plum',      color: '#9D174D' },
+  { id: 'violet',    label: 'Violet',    color: '#7C3AED' },
+  { id: 'graphite',  label: 'Graphite',  color: '#1F2937' },
 ];
 
-const DEFAULT_THEME = THEMES[0];
+export interface SurfacePreset {
+  id: SurfaceId;
+  label: string;
+  /** True if this is a dark surface — used to flip text colors. */
+  dark: boolean;
+  /** Primary page background. */
+  bg: string;
+  /** Slightly elevated surface (cards, form inputs on bg). */
+  s1: string;
+  /** Mid elevation (cards on s1, selected chips). */
+  s2: string;
+  /** Higher elevation (menus, popovers). */
+  s3: string;
+  /** Primary text. */
+  t1: string;
+  /** Secondary text (labels, subdued). */
+  t2: string;
+  /** Tertiary text (placeholders, captions). */
+  t3: string;
+  /** Default border / divider. */
+  border: string;
+}
 
-/* Module-level pub/sub so theme changes propagate without React
-   Context (matches the pattern used by useDillyOverlay, usePaywall). */
-type Listener = (t: Theme) => void;
+export const SURFACE_PRESETS: Record<SurfaceId, SurfacePreset> = {
+  cloud: {
+    id: 'cloud', label: 'Cloud', dark: false,
+    bg: '#FFFFFF', s1: '#F7F8FC', s2: '#EFF0F6', s3: '#E4E6F0',
+    t1: '#1A1A2E', t2: 'rgba(26,26,46,0.6)', t3: 'rgba(26,26,46,0.35)',
+    border: 'rgba(43,58,142,0.10)',
+  },
+  cream: {
+    id: 'cream', label: 'Cream', dark: false,
+    bg: '#FBF8F2', s1: '#F4EFE5', s2: '#EBE4D5', s3: '#DFD5C1',
+    t1: '#2A1F12', t2: 'rgba(42,31,18,0.62)', t3: 'rgba(42,31,18,0.35)',
+    border: 'rgba(42,31,18,0.12)',
+  },
+  slate: {
+    id: 'slate', label: 'Slate', dark: false,
+    bg: '#F4F6FA', s1: '#E9EDF3', s2: '#DEE3EB', s3: '#CFD6E0',
+    t1: '#0F172A', t2: 'rgba(15,23,42,0.62)', t3: 'rgba(15,23,42,0.38)',
+    border: 'rgba(15,23,42,0.12)',
+  },
+  midnight: {
+    id: 'midnight', label: 'Midnight', dark: true,
+    bg: '#0B0F1E', s1: '#151A2E', s2: '#1D2340', s3: '#272D4F',
+    t1: '#E8EAF4', t2: 'rgba(232,234,244,0.62)', t3: 'rgba(232,234,244,0.38)',
+    border: 'rgba(232,234,244,0.10)',
+  },
+};
+
+export interface ShapePreset {
+  id: ShapeId;
+  label: string;
+  /** Radius for tight chips, pills. */
+  chip: number;
+  /** Radius for inputs, buttons, small cards. */
+  sm: number;
+  /** Default card radius. */
+  md: number;
+  /** Hero / modal card radius. */
+  lg: number;
+}
+
+export const SHAPE_PRESETS: Record<ShapeId, ShapePreset> = {
+  sharp:    { id: 'sharp',    label: 'Sharp',    chip: 4,  sm: 6,  md: 8,  lg: 10 },
+  standard: { id: 'standard', label: 'Standard', chip: 8,  sm: 10, md: 12, lg: 16 },
+  rounded:  { id: 'rounded',  label: 'Rounded',  chip: 14, sm: 16, md: 20, lg: 24 },
+  pill:     { id: 'pill',     label: 'Pill',     chip: 999, sm: 999, md: 28, lg: 32 },
+};
+
+export interface TypePreset {
+  id: TypeId;
+  label: string;
+  /** Hero / eyebrow font (e.g. big titles). Falls back to system if missing. */
+  display: string | undefined;
+  /** Body font family, or undefined to use system default. */
+  body: string | undefined;
+  /** Letter-spacing bump (applied to hero headlines). */
+  heroTracking: number;
+  /** Hero font weight. */
+  heroWeight: '700' | '800' | '900';
+}
+
+export const TYPE_PRESETS: Record<TypeId, TypePreset> = {
+  dilly:     { id: 'dilly',     label: 'Dilly',     display: 'Cinzel_700Bold', body: undefined, heroTracking: -0.4, heroWeight: '700' },
+  modern:    { id: 'modern',    label: 'Modern',    display: undefined,        body: undefined, heroTracking: -0.8, heroWeight: '900' },
+  editorial: { id: 'editorial', label: 'Editorial', display: 'Cinzel_700Bold', body: undefined, heroTracking:  0.2, heroWeight: '700' },
+  playful:   { id: 'playful',   label: 'Playful',   display: undefined,        body: undefined, heroTracking: -0.2, heroWeight: '800' },
+};
+
+export interface DensityPreset {
+  id: DensityId;
+  label: string;
+  /** Multiplier applied to padding scale. 1.0 = default, 0.82 = compact. */
+  scale: number;
+}
+
+export const DENSITY_PRESETS: Record<DensityId, DensityPreset> = {
+  comfortable: { id: 'comfortable', label: 'Comfortable', scale: 1.0 },
+  compact:     { id: 'compact',     label: 'Compact',     scale: 0.82 },
+};
+
+export interface AccentStylePreset {
+  id: AccentStyleId;
+  label: string;
+}
+
+export const ACCENT_STYLE_PRESETS: Record<AccentStyleId, AccentStylePreset> = {
+  solid:    { id: 'solid',    label: 'Solid' },
+  gradient: { id: 'gradient', label: 'Gradient' },
+};
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Defaults                                                         */
+/* ─────────────────────────────────────────────────────────────── */
+
+export const DEFAULT_CONFIG: ThemeConfig = {
+  accent: 'indigo',
+  surface: 'cloud',
+  shape: 'standard',
+  type: 'dilly',
+  density: 'comfortable',
+  accentStyle: 'solid',
+  autoDark: true,
+};
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Resolved theme — what components actually consume                */
+/* ─────────────────────────────────────────────────────────────── */
+
+export interface ResolvedTheme {
+  config: ThemeConfig;
+  systemIsDark: boolean;
+  /** Accent color in hex. */
+  accent: string;
+  /** Translucent tint of accent (~10% alpha) for soft fills. */
+  accentSoft: string;
+  /** Slightly darker accent border (~30% alpha). */
+  accentBorder: string;
+  /** Resolved surface palette (respects autoDark). */
+  surface: SurfacePreset;
+  /** Active shape scale. */
+  shape: ShapePreset;
+  /** Active typography. */
+  type: TypePreset;
+  /** Active density multiplier. */
+  density: number;
+  /** Gradient stops when accentStyle === 'gradient', else null. */
+  gradient: [string, string] | null;
+}
+
+function hexToAlpha(hex: string, alpha: number): string {
+  // Accept #RRGGBB or #RGB. Produce rgba(...). Robust on malformed input.
+  const m = /^#?([a-f\d]{3}|[a-f\d]{6})$/i.exec(hex);
+  if (!m) return hex;
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function accentFor(id: AccentId): string {
+  return (ACCENT_PRESETS.find(a => a.id === id) || ACCENT_PRESETS[0]).color;
+}
+
+function darken(hex: string, amount: number = 0.15): string {
+  const m = /^#?([a-f\d]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const h = m[1];
+  const r = Math.max(0, Math.min(255, Math.round(parseInt(h.slice(0, 2), 16) * (1 - amount))));
+  const g = Math.max(0, Math.min(255, Math.round(parseInt(h.slice(2, 4), 16) * (1 - amount))));
+  const b = Math.max(0, Math.min(255, Math.round(parseInt(h.slice(4, 6), 16) * (1 - amount))));
+  return `#${[r, g, b].map(n => n.toString(16).padStart(2, '0')).join('')}`;
+}
+
+export function resolveTheme(config: ThemeConfig, systemIsDark: boolean): ResolvedTheme {
+  const shouldForceDark = config.autoDark && systemIsDark;
+  const surfaceId: SurfaceId = shouldForceDark ? 'midnight' : config.surface;
+  const accent = accentFor(config.accent);
+
+  return {
+    config,
+    systemIsDark,
+    accent,
+    accentSoft: hexToAlpha(accent, 0.10),
+    accentBorder: hexToAlpha(accent, 0.30),
+    surface: SURFACE_PRESETS[surfaceId],
+    shape: SHAPE_PRESETS[config.shape],
+    type: TYPE_PRESETS[config.type],
+    density: DENSITY_PRESETS[config.density].scale,
+    gradient: config.accentStyle === 'gradient'
+      ? [accent, darken(accent, 0.18)]
+      : null,
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Pub/sub                                                          */
+/* ─────────────────────────────────────────────────────────────── */
+
+type Listener = (cfg: ThemeConfig) => void;
 const _listeners = new Set<Listener>();
-let _current: Theme = DEFAULT_THEME;
+let _config: ThemeConfig = { ...DEFAULT_CONFIG };
 let _hydrated = false;
 
 async function _hydrate() {
   if (_hydrated) return;
   _hydrated = true;
   try {
-    const id = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!id) return;
-    const found = THEMES.find(t => t.id === id);
-    if (found) {
-      _current = found;
-      _listeners.forEach(l => l(_current));
-    }
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    _config = { ...DEFAULT_CONFIG, ...parsed };
+    _listeners.forEach(l => l(_config));
   } catch {}
 }
 
-/** Switch the active theme and persist. */
-export async function setTheme(id: string) {
-  const found = THEMES.find(t => t.id === id);
-  if (!found) return;
-  _current = found;
-  _listeners.forEach(l => l(_current));
-  try { await AsyncStorage.setItem(STORAGE_KEY, id); } catch {}
+/** Patch any subset of the theme config. Persists + broadcasts. */
+export async function patchTheme(patch: Partial<ThemeConfig>) {
+  _config = { ..._config, ...patch };
+  _listeners.forEach(l => l(_config));
+  try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_config)); } catch {}
 }
 
-/** Read the current theme. Triggers re-render when it changes. */
-export function useTheme(): Theme {
-  const [theme, setLocal] = useState<Theme>(_current);
+/** Legacy shim — kept so the simple swatch picker in Settings still works. */
+export async function setTheme(accentId: string) {
+  await patchTheme({ accent: accentId as AccentId });
+}
+
+/** Reset everything to brand defaults. */
+export async function resetTheme() {
+  await patchTheme({ ...DEFAULT_CONFIG });
+}
+
+/** Pick a tasteful-but-random preset on each axis. */
+export async function surpriseTheme() {
+  const rand = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+  await patchTheme({
+    accent: rand(ACCENT_PRESETS).id,
+    surface: rand(Object.values(SURFACE_PRESETS)).id,
+    shape: rand(Object.values(SHAPE_PRESETS)).id,
+    type: rand(Object.values(TYPE_PRESETS)).id,
+    accentStyle: rand(Object.values(ACCENT_STYLE_PRESETS)).id,
+    // density stays where the user put it — too jarring to flip
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Hooks                                                            */
+/* ─────────────────────────────────────────────────────────────── */
+
+/** Low-level config hook. Most screens should use useResolvedTheme. */
+export function useThemeConfig(): ThemeConfig {
+  const [cfg, setCfg] = useState<ThemeConfig>(_config);
   useEffect(() => {
     _hydrate();
-    const listener: Listener = (t) => setLocal(t);
+    const listener: Listener = (c) => setCfg(c);
     _listeners.add(listener);
-    // Sync in case hydration finished between render and effect.
-    setLocal(_current);
+    setCfg(_config);
     return () => { _listeners.delete(listener); };
   }, []);
-  return theme;
+  return cfg;
 }
 
-/** Convenience: just the accent color. */
+/**
+ * Resolved theme: config + system color scheme → colors, radii, font,
+ * density. React to system dark-mode toggles too.
+ */
+export function useResolvedTheme(): ResolvedTheme {
+  const cfg = useThemeConfig();
+  const systemScheme = useColorScheme();
+  const systemIsDark = systemScheme === 'dark';
+  return resolveTheme(cfg, systemIsDark);
+}
+
+/** Convenience wrappers — common shortcuts. */
 export function useAccent(): string {
-  return useTheme().accent;
+  return useResolvedTheme().accent;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Legacy API — preserves existing Settings swatch picker behavior. */
+/* ─────────────────────────────────────────────────────────────── */
+
+export interface Theme {
+  id: string;
+  label: string;
+  accent: string;
+  accentSoft: string;
+  accentBorder: string;
+  fingerprint: string;
+}
+
+export const THEMES: Theme[] = ACCENT_PRESETS.map(p => ({
+  id: p.id,
+  label: p.label,
+  accent: p.color,
+  accentSoft: hexToAlpha(p.color, 0.10),
+  accentBorder: hexToAlpha(p.color, 0.30),
+  fingerprint: '●',
+}));
+
+/** Back-compat for the old useTheme() that returned {accent, …}. */
+export function useTheme(): Theme {
+  const resolved = useResolvedTheme();
+  return {
+    id: resolved.config.accent,
+    label: ACCENT_PRESETS.find(a => a.id === resolved.config.accent)?.label || 'Dilly',
+    accent: resolved.accent,
+    accentSoft: resolved.accentSoft,
+    accentBorder: resolved.accentBorder,
+    fingerprint: '●',
+  };
 }

@@ -586,7 +586,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
                   </>
                 ) : (
                   <>
-                    <View style={{ width: 90, height: 90, borderRadius: 45, borderWidth: 2, borderColor: colors.indigo, alignItems: 'center', justifyContent: 'center' }}>
+                    {/* No ring — DillyFace is always rendered clean.
+                        The face itself carries the personality. */}
+                    <View style={{ width: 90, height: 90, alignItems: 'center', justifyContent: 'center' }}>
                       <DillyFace size={70} />
                     </View>
                     <Text style={[s.emptyText, { marginTop: 16 }]}>

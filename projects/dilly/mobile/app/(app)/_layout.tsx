@@ -1,4 +1,4 @@
-import { Tabs, usePathname } from 'expo-router';
+import { Tabs, usePathname, router } from 'expo-router';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../lib/tokens';
@@ -29,10 +29,25 @@ function DillyGateWrapper() {
   );
 }
 
-/** Global paywall. Triggered by any 402 response via lib/dilly.ts. */
+/** Global paywall. Triggered by any 402 response via lib/dilly.ts.
+ *
+ *  On dismiss (either "Not right now" or after the user taps Unlock
+ *  and returns from the web checkout), we kick them back to the
+ *  Career Center. Reason: the underlying surface that triggered the
+ *  402 is half-loaded with an error state. Without this redirect,
+ *  users see the paywall → web → and then land back on a broken
+ *  "Generating…" spinner or a blank practice card. Career Center
+ *  is always safe. */
 function DillyPaywallWrapper() {
   const { visible, context, close } = usePaywallState();
-  return <DillyPaywallFullScreen visible={visible} onDismiss={close} context={context} />;
+  function handleDismiss() {
+    close();
+    try {
+      // Replace (not push) so back-button doesn't return to the 402.
+      router.replace('/(app)' as any);
+    } catch {}
+  }
+  return <DillyPaywallFullScreen visible={visible} onDismiss={handleDismiss} context={context} />;
 }
 
 function DillyTabIcon({ focused }: { focused: boolean }) {
@@ -224,6 +239,10 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="escape-hatch"
+        options={{ href: null, animation: 'fade' }}
+      />
+      <Tabs.Screen
+        name="customize"
         options={{ href: null, animation: 'fade' }}
       />
     </Tabs>

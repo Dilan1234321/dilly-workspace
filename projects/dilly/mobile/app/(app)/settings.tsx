@@ -430,17 +430,27 @@ export default function SettingsScreen() {
           </FadeInView>
         )}
 
-        {/* Appearance — user-selectable accent. Top-of-settings so
-            the result is visible without scrolling. */}
+        {/* Appearance — deep customization lives in its own studio.
+            The entry point here is intentionally hero-sized because
+            the feature is a brand-new differentiator. */}
         <FadeInView delay={40}>
           <SectionLabel text="APPEARANCE" />
-          <View style={s.card}>
-            <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6 }}>
-              <Text style={s.rowLabel}>Accent color</Text>
-              <Text style={s.rowHint}>Personalize the highlights across Dilly.</Text>
+          <AnimatedPressable
+            onPress={() => router.push('/(app)/customize' as any)}
+            scaleDown={0.98}
+            style={s.customizeHero}
+          >
+            <View style={s.customizeGlyph}>
+              <Ionicons name="color-palette" size={22} color={INDIGO} />
             </View>
-            <ThemePicker />
-          </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.customizeTitle}>Customize Dilly</Text>
+              <Text style={s.customizeSub}>
+                Accent, surface, shape, type, density. Preview live on every screen.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.t3} />
+          </AnimatedPressable>
         </FadeInView>
 
         {/* Notifications */}
@@ -596,6 +606,19 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
   },
+  customizeHero: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.s1, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 14, marginBottom: 16,
+  },
+  customizeGlyph: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: INDIGO + '12', borderWidth: 1, borderColor: INDIGO + '30',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  customizeTitle: { fontSize: 14, fontWeight: '800', color: colors.t1, letterSpacing: 0.2 },
+  customizeSub: { fontSize: 11, color: colors.t3, marginTop: 2, lineHeight: 15 },
   rowLabel: { fontSize: 14, fontWeight: '500', color: colors.t1 },
   rowValue: { fontSize: 14, color: colors.t3 },
   rowHint: { fontSize: 11, color: colors.t3, marginTop: 2 },
