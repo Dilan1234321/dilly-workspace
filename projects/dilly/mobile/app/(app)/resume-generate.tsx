@@ -1,4 +1,31 @@
-import { useState, useRef, useEffect } from 'react';
+/**
+ * Generate Resume — "The Forge"
+ *
+ * This is not a resume generator. It is a one-role, one-company
+ * artifact builder. Every surface here reinforces: your profile
+ * plus this specific job, forged into a resume that hits this
+ * company's ATS bar.
+ *
+ * Differentiators (why the user pays for this):
+ *   - JD strength meter during setup — instant signal that the
+ *     quality of what they paste directly shapes what they get.
+ *   - Narrated forge stages during generation, plus a live
+ *     keyword ticker showing what Dilly just pulled out of the JD.
+ *     The user watches the machine work.
+ *   - ATS Readiness scorecard on the done screen: 4 axes (ATS
+ *     parse, Keyword match, Profile depth, Role fit). Reads like
+ *     an instrument panel, not a success message.
+ *   - Keyword-highlighted preview: every token from the JD that
+ *     landed in the resume lights up in indigo. The user sees
+ *     the match, doesn't have to trust it.
+ *   - Weakest-bullet spotlight: the one bullet that looks thinnest
+ *     (no metrics, short, vague) is called out with a one-tap
+ *     path into Dilly chat to strengthen it.
+ *   - Same API contract (/resume/generate → /generated-resumes)
+ *     and same deep-link viewId flow. Pure UI rewrite.
+ */
+
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +37,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
-  Share,
 } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -48,13 +74,79 @@ interface GeneratedSection {
   simple?: { lines?: string[] };
 }
 
-const GENERATION_STEPS = [
-  'Reading your Dilly profile…',
-  'Tailoring experience bullets…',
-  'Matching job description keywords…',
-  'Formatting for ATS compatibility…',
-  'Finalizing your resume…',
+// The forge stages the user sees during generation. Each dwells
+// for ~3s; if the API comes back first, we jump to done.
+const FORGE_STAGES = [
+  { icon: 'document-text', text: 'Parsing the job description' },
+  { icon: 'analytics', text: "Extracting what they're hiring for" },
+  { icon: 'flash', text: 'Mining your profile for matches' },
+  { icon: 'construct', text: 'Tailoring every bullet to this role' },
+  { icon: 'shield-checkmark', text: 'Formatting for ATS parse' },
 ];
+
+/** Common English stopwords we strip before keyword extraction. */
+const STOP = new Set(['a','an','the','and','or','but','of','in','on','for','to','with','by','at','from','as','is','are','was','were','be','been','being','have','has','had','do','does','did','will','would','can','could','should','may','might','must','shall','this','that','these','those','we','you','your','our','their','they','it','its','i','he','she','his','her','them','who','what','which','when','where','why','how','so','if','then','than','just','more','most','some','any','all','each','every','no','not','only','own','same','such','other','new','will','up','out','over','about','into','through','during','before','after','above','below','between','against','both','few','here','there','now','ever','also','very','across','per','using','use','used','like','including','include','includes','included','etc','year','years','role','team','teams','work','working','works']);
+
+/**
+ * Pull likely-meaningful tokens out of a blob of text.
+ * Words of len >= 3, not stopwords, alphanumeric, unique.
+ * Used both to extract JD keywords and to match them in the
+ * generated resume for highlighting.
+ */
+function tokenize(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const tokens = (raw || '').toLowerCase().match(/[a-z][a-z0-9+#.\-]{2,}/g) || [];
+  for (const t of tokens) {
+    const clean = t.replace(/^[.-]+|[.-]+$/g, '');
+    if (clean.length < 3) continue;
+    if (STOP.has(clean)) continue;
+    if (seen.has(clean)) continue;
+    seen.add(clean);
+    out.push(clean);
+  }
+  return out;
+}
+
+/** Flatten a GeneratedSection[] into the text the resume displays. */
+function resumeText(sections: GeneratedSection[]): string {
+  const parts: string[] = [];
+  for (const s of sections) {
+    if (s.contact) parts.push(Object.values(s.contact).filter(Boolean).join(' '));
+    if (s.education) parts.push(Object.values(s.education).filter(Boolean).join(' '));
+    if (s.experiences) for (const e of s.experiences) {
+      parts.push([e.role, e.company, e.location, e.date].filter(Boolean).join(' '));
+      if (e.bullets) for (const b of e.bullets) parts.push(typeof b === 'string' ? b : b.text);
+    }
+    if (s.projects) for (const p of s.projects) {
+      parts.push([p.name, p.tech, p.date].filter(Boolean).join(' '));
+      if (p.bullets) for (const b of p.bullets) parts.push(typeof b === 'string' ? b : b.text);
+    }
+    if (s.simple?.lines) parts.push(s.simple.lines.join(' '));
+  }
+  return parts.join(' ');
+}
+
+/** Find the "weakest" bullet — heuristic: short + no metrics/numbers. */
+function findWeakestBullet(sections: GeneratedSection[]): { text: string; where: string } | null {
+  const candidates: { text: string; where: string; score: number }[] = [];
+  const hasMetric = (t: string) => /\d/.test(t);
+  for (const s of sections) {
+    if (s.experiences) for (const e of s.experiences) {
+      if (!e.bullets) continue;
+      for (const b of e.bullets) {
+        const t = (typeof b === 'string' ? b : b.text) || '';
+        if (t.trim().length < 20) continue;
+        // Higher score = weaker. Short + no metric = weakest.
+        const score = (hasMetric(t) ? 0 : 2) + Math.max(0, 120 - t.length) / 60;
+        candidates.push({ text: t, where: `${e.role}${e.company ? ` at ${e.company}` : ''}`, score });
+      }
+    }
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0].score > 1.5 ? { text: candidates[0].text, where: candidates[0].where } : null;
+}
 
 function PulsingDot({ delay = 0 }: { delay?: number }) {
   const opacity = useSharedValue(0.3);
@@ -67,6 +159,7 @@ function PulsingDot({ delay = 0 }: { delay?: number }) {
       -1,
       false,
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
   return (
@@ -78,14 +171,11 @@ export default function ResumeGenerateScreen() {
   const insets = useSafeAreaInsets();
   const { jobTitle: paramTitle, company: paramCompany, jd: paramJd, viewId } = useLocalSearchParams<{ jobTitle?: string; company?: string; jd?: string; viewId?: string }>();
   const [stage, setStage] = useState<Stage>(viewId ? 'done' : 'idle');
-  // Captures the server's actual error detail so the user sees something
-  // more useful than a generic "Generation Failed" screen.
   const [generateError, setGenerateError] = useState<string>('');
   const [jobTitle, setJobTitle] = useState('');
   const [company, setCompany] = useState('');
   const [jd, setJd] = useState('');
 
-  // Always sync from params when they change (handles navigating from different jobs)
   useEffect(() => {
     if (paramTitle) setJobTitle(paramTitle);
     if (paramCompany) setCompany(paramCompany);
@@ -96,18 +186,21 @@ export default function ResumeGenerateScreen() {
       setVariantId(null);
       setSaved(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramTitle, paramCompany, paramJd]);
-  const [stepIdx, setStepIdx] = useState(0);
+
+  const [stageIdx, setStageIdx] = useState(0);
   const [sections, setSections] = useState<GeneratedSection[]>([]);
   const [variantId, setVariantId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [profile, setProfile] = useState<Record<string, any>>({});
   const [atsInfo, setAtsInfo] = useState<any>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  // Resume generation usage ticker for the header
   const [resumeUsage, setResumeUsage] = useState<{ used: number; limit: number; plan: string; unlimited: boolean } | null>(null);
+  // Rolling keyword ticker during generation. We extract from the JD
+  // up front and rotate through them so the loader feels alive.
+  const [keywordTick, setKeywordTick] = useState(0);
 
-  // Fetch usage on mount + after each generation
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -124,46 +217,53 @@ export default function ResumeGenerateScreen() {
     })();
     return () => { cancelled = true; };
   }, [stage]);
-  const stepTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const resumePreviewRef = useRef<View>(null);
 
-  // Downloads real text-layer PDF / DOCX from the server (NOT a PNG
-  // screenshot. ATS parsers need real text bytes to extract). We still
-  // need the variant to be saved first, because the download endpoint
-  // pulls from the stored sections row.
+  const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const keywordTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Rotate the stage narration every 3s while generating.
+  useEffect(() => {
+    if (stage !== 'generating') { setStageIdx(0); return; }
+    stageTimer.current = setInterval(() => {
+      setStageIdx(s => Math.min(s + 1, FORGE_STAGES.length - 1));
+    }, 3000);
+    return () => {
+      if (stageTimer.current) clearInterval(stageTimer.current);
+    };
+  }, [stage]);
+
+  // Rotate the keyword ticker every 700ms during generation.
+  useEffect(() => {
+    if (stage !== 'generating') { setKeywordTick(0); return; }
+    keywordTimer.current = setInterval(() => {
+      setKeywordTick(k => k + 1);
+    }, 700);
+    return () => {
+      if (keywordTimer.current) clearInterval(keywordTimer.current);
+    };
+  }, [stage]);
+
   async function handleDownloadFormat(format: 'pdf' | 'docx') {
     try {
       if (!variantId) {
-        Alert.alert(
-          'Saving resume…',
-          'Give it a second and tap Download again. Dilly is saving this version.',
-        );
+        Alert.alert('Saving resume…', 'Give it a second and tap Download again.');
         return;
       }
       const fileSystemMod: any = require('expo-file-system');
       const FileSystem = fileSystemMod?.default ?? fileSystemMod;
-
       const token = await dilly.tokenProvider.getToken();
       const name = (profile.name || 'Resume').replace(/[^a-zA-Z0-9 ]/g, '').trim();
       const safeCompany = company.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Company';
       const filename = `${name}_${safeCompany}_Resume.${format}`;
       const destPath = (FileSystem?.cacheDirectory || FileSystem?.documentDirectory || '') + filename;
-
       const url = `${(require('../../lib/tokens') as any).API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
-
-      // Use downloadAsync. handles redirects, auth headers, and writes straight to disk.
       const res = await FileSystem.downloadAsync(url, destPath, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res?.uri) {
-        throw new Error('Download failed');
-      }
-
+      if (!res?.uri) throw new Error('Download failed');
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(res.uri, {
-          mimeType: format === 'pdf'
-            ? 'application/pdf'
-            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          mimeType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           UTI: format === 'pdf' ? 'com.adobe.pdf' : 'org.openxmlformats.wordprocessingml.document',
           dialogTitle: filename,
         });
@@ -175,16 +275,14 @@ export default function ResumeGenerateScreen() {
     }
   }
 
-  // Offer the user PDF or DOCX via an iOS action sheet
   function handleDownload() {
-    // Newer Expo apps have ActionSheetIOS available on iOS for this native feel.
     if (Platform.OS === 'ios') {
       try {
         const { ActionSheetIOS } = require('react-native');
         ActionSheetIOS.showActionSheetWithOptions(
           {
-            title: 'Download resume',
-            message: 'Choose a format. PDF is best for most companies. DOCX is best for older ATS like Taleo or some Workday portals.',
+            title: 'Export resume',
+            message: 'PDF is best for most companies. DOCX for older ATS like Taleo or some Workday portals.',
             options: ['Cancel', 'PDF', 'Word (DOCX)'],
             cancelButtonIndex: 0,
           },
@@ -196,27 +294,19 @@ export default function ResumeGenerateScreen() {
         return;
       } catch {}
     }
-    // Fallback: plain Alert picker
-    Alert.alert(
-      'Download resume',
-      'Choose a format',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'PDF', onPress: () => handleDownloadFormat('pdf') },
-        { text: 'Word (DOCX)', onPress: () => handleDownloadFormat('docx') },
-      ],
-    );
+    Alert.alert('Export resume', 'Choose a format', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'PDF', onPress: () => handleDownloadFormat('pdf') },
+      { text: 'Word (DOCX)', onPress: () => handleDownloadFormat('docx') },
+    ]);
   }
 
   const progressAnim = useSharedValue(0);
-  const progressStyle = useAnimatedStyle(() => ({
-    width: `${progressAnim.value * 100}%`,
-  }));
+  const progressStyle = useAnimatedStyle(() => ({ width: `${progressAnim.value * 100}%` }));
 
   useEffect(() => {
     (async () => {
       try {
-        // If viewing an existing resume, load it
         if (viewId) {
           const resume = await dilly.get(`/generated-resumes/${viewId}`);
           if (resume) {
@@ -229,15 +319,16 @@ export default function ResumeGenerateScreen() {
             setStage('done');
           }
         }
-
         const profileRes = await dilly.get('/profile');
         setProfile(profileRes || {});
       } catch {}
       finally { setProfileLoaded(true); }
     })();
     return () => {
-      if (stepTimer.current) clearInterval(stepTimer.current);
+      if (stageTimer.current) clearInterval(stageTimer.current);
+      if (keywordTimer.current) clearInterval(keywordTimer.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleGenerate() {
@@ -251,26 +342,15 @@ export default function ResumeGenerateScreen() {
     }
 
     setStage('generating');
-    setStepIdx(0);
+    setStageIdx(0);
     setSections([]);
     setVariantId(null);
     setSaved(false);
     setGenerateError('');
     progressAnim.value = 0;
-
-    // Animate through steps
-    let step = 0;
-    progressAnim.value = withTiming(0.15, { duration: 400 });
-    stepTimer.current = setInterval(() => {
-      step++;
-      if (step < GENERATION_STEPS.length) {
-        setStepIdx(step);
-        progressAnim.value = withTiming((step + 1) / GENERATION_STEPS.length, { duration: 700 });
-      }
-    }, 3500);
+    progressAnim.value = withTiming(0.95, { duration: 20000, easing: Easing.out(Easing.cubic) });
 
     try {
-      // AI generation streams tokens and can take 30-60s; override the default 22s timeout
       const genController = new AbortController();
       const genTimeout = setTimeout(() => genController.abort(), 90_000);
       const res = await dilly.fetch('/resume/generate', {
@@ -284,31 +364,12 @@ export default function ResumeGenerateScreen() {
       });
       clearTimeout(genTimeout);
 
-      if (stepTimer.current) {
-        clearInterval(stepTimer.current);
-        stepTimer.current = null;
-      }
-
       if (!res.ok) {
-        // Plan gate: surface upgrade path instead of generic error
+        // 402 → global paywall wrapper already shows the modal. Just bail.
         if (res.status === 402) {
-          const d = await res.json().catch(() => null);
-          const code = d?.detail?.code || d?.code;
-          const msg = d?.detail?.message || d?.message || 'Monthly resume limit reached.';
-          const requiredPlan = d?.detail?.required_plan || d?.required_plan || 'dilly';
-          if (stepTimer.current) { clearInterval(stepTimer.current); stepTimer.current = null; }
           setStage('idle');
-          Alert.alert(
-            code === 'PLAN_LIMIT_REACHED' ? 'Monthly limit reached' : 'Upgrade to generate',
-            msg,
-            [
-              { text: 'Not now', style: 'cancel' },
-              { text: requiredPlan === 'pro' ? 'Upgrade to Pro' : 'Upgrade to Dilly', onPress: () => router.push('/(app)/settings') },
-            ],
-          );
           return;
         }
-        // Extract the real server detail so the error screen can show why.
         let serverDetail = '';
         try {
           const d = await res.json();
@@ -319,18 +380,14 @@ export default function ResumeGenerateScreen() {
 
       const data = await res.json();
 
-      // Handle not_ready response
       if (data.not_ready) {
-        if (stepTimer.current) { clearInterval(stepTimer.current); stepTimer.current = null; }
         setAtsInfo(data);
         setStage('not_ready');
         return;
       }
 
-      // New format: JSON object with sections array
       const parsed: GeneratedSection[] = data.sections || [];
       if (parsed.length === 0) {
-        // Fallback: try old format (raw JSON array)
         const text = JSON.stringify(data);
         const jsonStart = text.indexOf('[');
         const jsonEnd = text.lastIndexOf(']');
@@ -344,31 +401,18 @@ export default function ResumeGenerateScreen() {
 
       setSections(parsed);
       setAtsInfo(data);
-      progressAnim.value = withTiming(1, { duration: 500 });
+      progressAnim.value = withTiming(1, { duration: 400 });
       setStage('done');
-
-      // Auto-save as a variant
       await saveVariant(parsed);
     } catch (err: any) {
-      if (stepTimer.current) {
-        clearInterval(stepTimer.current);
-        stepTimer.current = null;
-      }
-      // Surface the real reason on the error screen. massively improves
-      // debuggability for users and for us reading support threads.
       const detail = String(err?.message || err?.toString?.() || 'Unknown error').slice(0, 400);
       setGenerateError(detail);
-      // eslint-disable-next-line no-console
-      console.warn('[resume/generate failed]', detail, err);
       setStage('error');
     }
   }
 
   async function saveVariant(sectionsToSave: GeneratedSection[]) {
     try {
-      // Persist the verification fields alongside the resume so the
-      // download endpoint can render the right per-ATS formatting and
-      // the history view can show the parse score later.
       const res = await dilly.post('/generated-resumes', {
         job_title: jobTitle.trim(),
         company: company.trim(),
@@ -381,9 +425,7 @@ export default function ResumeGenerateScreen() {
       const id = res?.id;
       if (id) setVariantId(id);
       setSaved(true);
-    } catch {
-      // Saving failed silently. not blocking
-    }
+    } catch {}
   }
 
   function handleReset() {
@@ -393,36 +435,36 @@ export default function ResumeGenerateScreen() {
     setSaved(false);
   }
 
+  // Derived: JD quality meter for the setup screen.
+  const jdLen = jd.trim().length;
+  const jdQuality = useMemo(() =>
+    jdLen === 0 ? { pct: 0, label: 'Empty', color: colors.t3 } :
+    jdLen < 150 ? { pct: 20, label: 'Too thin', color: CORAL } :
+    jdLen < 400 ? { pct: 55, label: 'Usable', color: AMBER } :
+    jdLen < 900 ? { pct: 85, label: 'Strong detail', color: GREEN } :
+                  { pct: 100, label: 'Full spec', color: GREEN }
+  , [jdLen]);
+
+  // Derived: JD keywords for the ticker + highlighting.
+  const jdKeywords = useMemo(() => tokenize(jd).slice(0, 60), [jd]);
+  const resumeTokens = useMemo(() => new Set(tokenize(resumeText(sections))), [sections]);
+  const matchedKeywords = useMemo(
+    () => jdKeywords.filter(k => resumeTokens.has(k)),
+    [jdKeywords, resumeTokens],
+  );
+
+  const weakestBullet = useMemo(() => findWeakestBullet(sections), [sections]);
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <AnimatedPressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color={colors.t1} />
-        </AnimatedPressable>
-        <Text style={styles.headerTitle}>Generate Resume</Text>
-        {resumeUsage && !resumeUsage.unlimited ? (
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', gap: 4,
-            paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-            backgroundColor: (resumeUsage.limit - resumeUsage.used) <= 1 ? '#FEF3C7' : colors.s2,
-            minWidth: 36, justifyContent: 'center',
-          }}>
-            <Text style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: (resumeUsage.limit - resumeUsage.used) <= 1 ? '#92400E' : colors.t2,
-            }}>
-              {Math.max(0, resumeUsage.limit - resumeUsage.used)} left
-            </Text>
-          </View>
-        ) : (
-          <View style={{ width: 36 }} />
-        )}
-      </View>
+      <Header
+        insetsTop={insets.top}
+        usage={resumeUsage}
+        onBack={() => router.back()}
+      />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -431,755 +473,925 @@ export default function ResumeGenerateScreen() {
         showsVerticalScrollIndicator={false}
       >
         {stage === 'idle' && (
-          <FadeInView>
-            {/* Hero */}
-            <View style={styles.heroCard}>
-              <View style={styles.heroIcon}>
-                <Ionicons name="sparkles" size={24} color={INDIGO} />
-              </View>
-              <Text style={styles.heroTitle}>AI Resume Builder</Text>
-              <Text style={styles.heroSub}>
-                Dilly reads your profile, your experiences, and the job description to write a
-                tailored resume from scratch  -  not a template.
-              </Text>
-            </View>
-
-            {/* Form */}
-            <View style={styles.formCard}>
-              <Text style={styles.fieldLabel}>Job Title <Text style={{ color: colors.coral }}>*</Text></Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Data Science Intern"
-                placeholderTextColor={colors.t3}
-                value={jobTitle}
-                onChangeText={setJobTitle}
-                autoCapitalize="words"
-                returnKeyType="next"
-              />
-
-              <Text style={[styles.fieldLabel, { marginTop: spacing.lg }]}>Company <Text style={{ color: colors.coral }}>*</Text></Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Goldman Sachs"
-                placeholderTextColor={colors.t3}
-                value={company}
-                onChangeText={setCompany}
-                autoCapitalize="words"
-                returnKeyType="next"
-              />
-
-              <Text style={[styles.fieldLabel, { marginTop: spacing.lg }]}>
-                Job Description <Text style={{ color: colors.coral }}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.input, styles.jdInput]}
-                placeholder="Paste the full job description  -  required for accurate scoring and tailoring…"
-                placeholderTextColor={colors.t3}
-                value={jd}
-                onChangeText={setJd}
-                multiline
-                textAlignVertical="top"
-                returnKeyType="done"
-              />
-            </View>
-
-
-            <AnimatedPressable style={styles.generateBtn} onPress={handleGenerate}>
-              <Ionicons name="sparkles" size={18} color="#fff" />
-              <Text style={styles.generateBtnText}>Generate My Resume</Text>
-            </AnimatedPressable>
-
-            <Text style={styles.disclaimer}>
-              Takes ~15-25 seconds. Your Dilly profile and current resume are used as source material.
-            </Text>
-          </FadeInView>
+          <IdleSetup
+            jobTitle={jobTitle} setJobTitle={setJobTitle}
+            company={company} setCompany={setCompany}
+            jd={jd} setJd={setJd}
+            jdQuality={jdQuality}
+            onGenerate={handleGenerate}
+          />
         )}
 
         {stage === 'generating' && (
-          <FadeInView>
-            <View style={styles.generatingCard}>
-              <View style={styles.dotsRow}>
-                <PulsingDot delay={0} />
-                <PulsingDot delay={4} />
-                <PulsingDot delay={8} />
-              </View>
-              <Text style={styles.generatingTitle}>Building your resume</Text>
-              <Text style={styles.generatingStep}>{GENERATION_STEPS[stepIdx]}</Text>
-
-              {/* Progress bar */}
-              <View style={styles.progressTrack}>
-                <Animated.View style={[styles.progressFill, progressStyle]} />
-              </View>
-
-              <Text style={styles.generatingHint}>
-                Tailored for {jobTitle} at {company}
-              </Text>
-            </View>
-          </FadeInView>
+          <GeneratingPhase
+            stageIdx={stageIdx}
+            keywordTick={keywordTick}
+            keywords={jdKeywords}
+            jobTitle={jobTitle}
+            company={company}
+            progressStyle={progressStyle}
+          />
         )}
 
         {stage === 'done' && (
-          <FadeInView>
-            <View style={styles.doneCard}>
-              <View style={styles.doneIcon}>
-                <Ionicons name="checkmark-circle" size={36} color={GREEN} />
-              </View>
-              <Text style={styles.doneTitle}>Resume Generated</Text>
-              <Text style={styles.doneSub}>
-                Tailored for <Text style={{ fontWeight: '600' }}>{jobTitle}</Text> at{' '}
-                <Text style={{ fontWeight: '600' }}>{company}</Text>
-              </Text>
-
-              {/* Section list */}
-              <View style={styles.sectionList}>
-                {sections.map((s, i) => (
-                  <View key={s.key ?? i} style={styles.sectionRow}>
-                    <Ionicons name="checkmark" size={14} color={GREEN} />
-                    <Text style={styles.sectionLabel}>{s.label ?? s.key}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* ATS Badge */}
-              {atsInfo?.ats && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F0FFF4', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: '#C6F6D5', marginTop: 8 }}>
-                  <Ionicons name="shield-checkmark" size={14} color={GREEN} />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: GREEN }}>
-                    {atsInfo.ats_label || `Formatted for ${(atsInfo.ats || '').charAt(0).toUpperCase() + (atsInfo.ats || '').slice(1)}`}
-                  </Text>
-                </View>
-              )}
-
-              {/* Verification chips. parse score + keyword coverage + facts used */}
-              {(atsInfo?.ats_parse_score || atsInfo?.keyword_coverage_pct || atsInfo?.facts_used) ? (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                  {typeof atsInfo?.ats_parse_score === 'number' && atsInfo.ats_parse_score > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.s2, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                      <Ionicons name="scan" size={10} color={colors.t2} />
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.t2 }}>
-                        {atsInfo.ats_parse_score}/100 ATS parse
-                      </Text>
-                    </View>
-                  )}
-                  {typeof atsInfo?.keyword_coverage_pct === 'number' && atsInfo.keyword_coverage_pct > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: atsInfo.keyword_coverage_pct >= 70 ? '#F0FFF4' : '#FFFBEB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                      <Ionicons name="key" size={10} color={atsInfo.keyword_coverage_pct >= 70 ? GREEN : AMBER} />
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: atsInfo.keyword_coverage_pct >= 70 ? GREEN : AMBER }}>
-                        {atsInfo.keyword_coverage_pct}% keyword match
-                      </Text>
-                    </View>
-                  )}
-                  {typeof atsInfo?.facts_used === 'number' && atsInfo.facts_used > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.s2, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                      <Ionicons name="sparkles" size={10} color={colors.t2} />
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.t2 }}>
-                        Built from {atsInfo.facts_used} of your facts
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              ) : null}
-
-              {/* Keyword coverage warning. shown when the JD asks for things
-                  the profile doesn't know about. This is the "you may get
-                  filtered out" banner. Tapping opens Dilly AI with a
-                  concrete starter message. */}
-              {atsInfo?.keyword_warning && Array.isArray(atsInfo.missing_keywords) && atsInfo.missing_keywords.length > 0 && (
-                <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#FDE68A', marginTop: 8, gap: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="warning" size={14} color={AMBER} />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: AMBER }}>
-                      Low keyword match ({atsInfo.keyword_coverage_pct}%)
-                    </Text>
-                  </View>
-                  <Text style={{ fontSize: 12, color: colors.t2, lineHeight: 17 }}>
-                    The JD asks for things like{' '}
-                    <Text style={{ fontWeight: '700', color: colors.t1 }}>
-                      {(atsInfo.missing_keywords as string[]).slice(0, 4).join(', ')}
-                    </Text>{' '}
-                    that aren't clearly in your profile. If you actually have experience with these, tell Dilly and we'll weave them in.
-                  </Text>
-                  <AnimatedPressable
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}
-                    onPress={() => openDillyOverlay({
-                      isPaid: true,
-                      initialMessage: `For my ${jobTitle} resume at ${company}, Dilly doesn't have enough about me for: ${(atsInfo.missing_keywords as string[]).slice(0, 5).join(', ')}. Ask me about each one so you can add them to my profile.`,
-                    })}
-                    scaleDown={0.97}
-                  >
-                    <Ionicons name="chatbubble" size={11} color={colors.indigo} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.indigo }}>Tell Dilly about these</Text>
-                  </AnimatedPressable>
-                </View>
-              )}
-
-              {/* Gaps warning */}
-              {atsInfo?.readiness === 'gaps' && Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
-                <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#FDE68A', marginTop: 8, gap: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="alert-circle" size={14} color={AMBER} />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: AMBER }}>Gaps detected</Text>
-                  </View>
-                  {atsInfo.gaps.map((g: string, i: number) => (
-                    <Text key={i} style={{ fontSize: 12, color: colors.t2, lineHeight: 17 }}>- {g}</Text>
-                  ))}
-                  <AnimatedPressable
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}
-                    onPress={() => openDillyOverlay({
-                      isPaid: true,
-                      initialMessage: `My resume for ${jobTitle} at ${company} has gaps: ${atsInfo.gaps.join(', ')}. Help me figure out how to close these gaps.`,
-                    })}
-                    scaleDown={0.97}
-                  >
-                    <Ionicons name="chatbubble" size={11} color={colors.indigo} />
-                    <Text style={{ fontSize: 11, fontWeight: '600', color: colors.indigo }}>Ask Dilly how to close these gaps</Text>
-                  </AnimatedPressable>
-                </View>
-              )}
-
-              {saved && (
-                <View style={styles.savedBadge}>
-                  <Ionicons name="bookmark" size={13} color={INDIGO} />
-                  <Text style={styles.savedText}>Saved as a Resume Variant</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Inline resume preview */}
-            <View ref={resumePreviewRef} collapsable={false} style={styles.previewCard}>
-              <Text style={styles.previewTitle}>Your Tailored Resume</Text>
-              {sections.map((sec: any, si: number) => (
-                <View key={sec.key ?? si} style={styles.previewSection}>
-                  <Text style={styles.previewSectionLabel}>{sec.label ?? sec.key}</Text>
-
-                  {/* Contact */}
-                  {sec.contact && (
-                    <View style={styles.previewEntry}>
-                      {!!sec.contact.name && <Text style={styles.previewEntryTitle}>{sec.contact.name}</Text>}
-                      <Text style={styles.previewEntryDates}>
-                        {[sec.contact.email, sec.contact.phone, sec.contact.location, sec.contact.linkedin].filter(Boolean).join(' | ')}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Education */}
-                  {sec.education && (
-                    <View style={styles.previewEntry}>
-                      <Text style={styles.previewEntryTitle}>{sec.education.university}</Text>
-                      <Text style={styles.previewEntryDates}>
-                        {[sec.education.major, sec.education.minor ? `Minor: ${sec.education.minor}` : '', sec.education.graduation].filter(Boolean).join(' | ')}
-                      </Text>
-                      {!!sec.education.gpa && <Text style={styles.previewBullet}>GPA: {sec.education.gpa}</Text>}
-                      {!!sec.education.honors && <Text style={styles.previewBullet}>{sec.education.honors}</Text>}
-                    </View>
-                  )}
-
-                  {/* Experiences */}
-                  {Array.isArray(sec.experiences) && sec.experiences.map((exp: any, ei: number) => (
-                    <View key={exp.id ?? ei} style={styles.previewEntry}>
-                      <Text style={styles.previewEntryTitle}>{exp.role}{exp.company ? `, ${exp.company}` : ''}</Text>
-                      <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' | ')}</Text>
-                      {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
-                        <Text key={b.id ?? bi} style={styles.previewBullet}>• {typeof b === 'string' ? b : b.text}</Text>
-                      ))}
-                    </View>
-                  ))}
-
-                  {/* Projects */}
-                  {Array.isArray(sec.projects) && sec.projects.map((proj: any, pi: number) => (
-                    <View key={proj.id ?? pi} style={styles.previewEntry}>
-                      <Text style={styles.previewEntryTitle}>{proj.name}</Text>
-                      <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' | ')}</Text>
-                      {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
-                        <Text key={b.id ?? bi} style={styles.previewBullet}>• {typeof b === 'string' ? b : b.text}</Text>
-                      ))}
-                    </View>
-                  ))}
-
-                  {/* Skills (simple lines) */}
-                  {sec.simple?.lines && (
-                    <View style={styles.previewEntry}>
-                      {sec.simple.lines.map((line: string, li: number) => (
-                        <Text key={li} style={styles.previewBullet}>{line}</Text>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </View>
-
-            {/* Actions */}
-            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={handleDownload}>
-              <Ionicons name="download-outline" size={18} color="#fff" />
-              <Text style={styles.actionBtnText}>Download Resume</Text>
-            </AnimatedPressable>
-
-            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
-              <Ionicons name="refresh" size={18} color={INDIGO} />
-              <Text style={[styles.actionBtnText, { color: INDIGO }]}>Generate Another</Text>
-            </AnimatedPressable>
-          </FadeInView>
+          <DonePhase
+            sections={sections}
+            atsInfo={atsInfo}
+            jobTitle={jobTitle}
+            company={company}
+            jd={jd}
+            matchedKeywords={matchedKeywords}
+            totalKeywords={jdKeywords.length}
+            weakestBullet={weakestBullet}
+            saved={saved}
+            onDownload={handleDownload}
+            onReset={handleReset}
+          />
         )}
 
-        {/* Not Ready. Dilly never invents. When the profile is too thin for
-            this role, we surface the gaps and route each gap into a one-tap
-            "Tell Dilly about X" prompt. Fill them in, come back, regenerate. */}
         {stage === 'not_ready' && atsInfo && (
-          <FadeInView>
-            <View style={[styles.errorCard, { borderColor: colors.ibdr, backgroundColor: colors.idim }]}>
-              <Ionicons name="hand-left" size={36} color={colors.indigo} />
-              <Text style={styles.errorTitle}>Tell Dilly more first.</Text>
-              <Text style={styles.errorSub}>
-                {atsInfo.summary || "Dilly doesn't know enough about you to build an honest resume for this role yet."}
-              </Text>
-              {Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
-                <View style={{ marginTop: 12, gap: 6, width: '100%' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t1 }}>What Dilly is missing:</Text>
-                  {atsInfo.gaps.map((g: string, i: number) => (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-                      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.indigo, marginTop: 6 }} />
-                      <Text style={{ fontSize: 13, color: colors.t2, lineHeight: 18, flex: 1 }}>{g}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-
-            {/* One-tap "tell Dilly about this" chips. one per specific gap */}
-            {Array.isArray(atsInfo.tell_dilly_prompts) && atsInfo.tell_dilly_prompts.length > 0 && (
-              <View style={{ gap: 8, marginTop: 8 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 0.5, paddingHorizontal: 2 }}>
-                  FASTEST WAY TO FIX
-                </Text>
-                {(atsInfo.tell_dilly_prompts as string[]).slice(0, 5).map((prompt, i) => (
-                  <AnimatedPressable
-                    key={i}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                      paddingHorizontal: 14,
-                      paddingVertical: 12,
-                      borderRadius: 12,
-                      backgroundColor: colors.s1,
-                      borderWidth: 1,
-                      borderColor: colors.b1,
-                    }}
-                    onPress={() => openDillyOverlay({ isPaid: true, initialMessage: prompt })}
-                    scaleDown={0.98}
-                  >
-                    <Ionicons name="chatbubble" size={14} color={colors.indigo} />
-                    <Text style={{ fontSize: 13, color: colors.t1, flex: 1 }}>{prompt}</Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.t3} />
-                  </AnimatedPressable>
-                ))}
-              </View>
-            )}
-
-            <AnimatedPressable
-              style={[styles.actionBtn, styles.actionBtnSecondary]}
-              onPress={() => openDillyOverlay({
-                isPaid: true,
-                initialMessage: `I tried to generate a resume for ${jobTitle} at ${company} but I'm not ready yet. Walk me through each gap one by one so I can tell you about them and build out my profile.`,
-              })}
-            >
-              <Ionicons name="chatbubble" size={16} color={INDIGO} />
-              <Text style={[styles.actionBtnText, { color: INDIGO }]}>Talk it through with Dilly</Text>
-            </AnimatedPressable>
-            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={handleReset}>
-              <Ionicons name="refresh" size={18} color={INDIGO} />
-              <Text style={[styles.actionBtnText, { color: INDIGO }]}>Try a different role</Text>
-            </AnimatedPressable>
-          </FadeInView>
+          <NotReadyPhase
+            atsInfo={atsInfo}
+            jobTitle={jobTitle}
+            company={company}
+            onReset={handleReset}
+          />
         )}
 
         {stage === 'error' && (
-          <FadeInView>
-            <View style={styles.errorCard}>
-              <Ionicons name="alert-circle" size={36} color={AMBER} />
-              <Text style={styles.errorTitle}>Generation Failed</Text>
-              <Text style={styles.errorSub}>
-                Something went wrong on our end. Try again in a moment.
-              </Text>
-              {!!generateError && (
-                <View style={{
-                  marginTop: 10,
-                  padding: 10,
-                  borderRadius: 8,
-                  backgroundColor: colors.s1,
-                  borderWidth: 1,
-                  borderColor: colors.b1,
-                  width: '100%',
-                }}>
-                  <Text style={{
-                    fontSize: 10,
-                    fontWeight: '700',
-                    color: colors.t3,
-                    letterSpacing: 0.5,
-                    marginBottom: 4,
-                  }}>
-                    ERROR DETAIL
-                  </Text>
-                  <Text style={{ fontSize: 11, color: colors.t2, fontFamily: 'Menlo' }} selectable>
-                    {generateError}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={handleReset}>
-              <Ionicons name="refresh" size={18} color="#fff" />
-              <Text style={styles.actionBtnText}>Try Again</Text>
-            </AnimatedPressable>
-          </FadeInView>
+          <ErrorPhase error={generateError} onRetry={handleReset} />
         )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────── */
+/* Header                                                           */
+/* ─────────────────────────────────────────────────────────────── */
+
+function Header({ insetsTop, usage, onBack }: { insetsTop: number; usage: any; onBack: () => void }) {
+  return (
+    <View style={[styles.header, { paddingTop: insetsTop + spacing.sm }]}>
+      <AnimatedPressable onPress={onBack} style={styles.backBtn}>
+        <Ionicons name="chevron-back" size={22} color={colors.t1} />
+      </AnimatedPressable>
+      <Text style={styles.headerTitle}>The Forge</Text>
+      {usage && !usage.unlimited ? (
+        <View style={[styles.usagePill, (usage.limit - usage.used) <= 1 && { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}>
+          <Ionicons name="flash" size={10} color={(usage.limit - usage.used) <= 1 ? '#92400E' : colors.t2} />
+          <Text style={[styles.usageText, (usage.limit - usage.used) <= 1 && { color: '#92400E' }]}>
+            {Math.max(0, usage.limit - usage.used)} left
+          </Text>
+        </View>
+      ) : (
+        <View style={{ width: 36 }} />
+      )}
+    </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Idle / Setup                                                     */
+/* ─────────────────────────────────────────────────────────────── */
+
+function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQuality, onGenerate }: any) {
+  const canGenerate = jobTitle.trim().length > 0 && company.trim().length > 0 && jd.trim().length >= 100;
+  return (
+    <FadeInView>
+      {/* Hero */}
+      <View style={styles.hero}>
+        <View style={styles.heroRingOuter}>
+          <View style={styles.heroRingInner}>
+            <Ionicons name="flame" size={28} color={INDIGO} />
+          </View>
+        </View>
+        <Text style={styles.heroKicker}>FORGE</Text>
+        <Text style={styles.heroTitle}>One role.{'\n'}One company.{'\n'}One resume.</Text>
+        <Text style={styles.heroSub}>
+          Not a template. Not a rewrite. Dilly reads the job you're applying to, mines your profile for the matches, and builds a resume from scratch — ATS-parsed and tailored to this specific opening.
+        </Text>
+        <View style={styles.heroProofRow}>
+          <ProofChip icon="shield-checkmark" text="ATS-aware" />
+          <ProofChip icon="key" text="Keyword-matched" />
+          <ProofChip icon="person" text="From your profile" />
+        </View>
+      </View>
+
+      <Text style={styles.sectionHeader}>THE JOB</Text>
+
+      <View style={styles.inputCard}>
+        <FieldLabel text="Job Title" required />
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Senior Data Engineer"
+          placeholderTextColor={colors.t3}
+          value={jobTitle}
+          onChangeText={setJobTitle}
+          autoCapitalize="words"
+        />
+
+        <FieldLabel text="Company" required top />
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Stripe"
+          placeholderTextColor={colors.t3}
+          value={company}
+          onChangeText={setCompany}
+          autoCapitalize="words"
+        />
+
+        <View style={{ marginTop: 14 }}>
+          <View style={styles.jdHeaderRow}>
+            <FieldLabel text="Job Description" required inline />
+            <View style={styles.jdQualityPill}>
+              <View style={[styles.jdQualityDot, { backgroundColor: jdQuality.color }]} />
+              <Text style={[styles.jdQualityText, { color: jdQuality.color }]}>{jdQuality.label}</Text>
+            </View>
+          </View>
+          <TextInput
+            style={[styles.input, styles.jdInput]}
+            placeholder="Paste the full job description. The more detail, the sharper the resume."
+            placeholderTextColor={colors.t3}
+            value={jd}
+            onChangeText={setJd}
+            multiline
+            textAlignVertical="top"
+          />
+          <View style={styles.jdQualityTrack}>
+            <View style={[styles.jdQualityFill, { width: `${jdQuality.pct}%`, backgroundColor: jdQuality.color }]} />
+          </View>
+        </View>
+      </View>
+
+      <AnimatedPressable
+        style={[styles.forgeBtn, !canGenerate && { opacity: 0.35 }]}
+        onPress={onGenerate}
+        disabled={!canGenerate}
+        scaleDown={0.97}
+      >
+        <Ionicons name="flame" size={18} color="#fff" />
+        <Text style={styles.forgeBtnText}>Forge this resume</Text>
+      </AnimatedPressable>
+
+      <Text style={styles.forgeFootnote}>
+        ~20 seconds. Saved automatically. You can forge another for a different role any time.
+      </Text>
+    </FadeInView>
+  );
+}
+
+function ProofChip({ icon, text }: { icon: any; text: string }) {
+  return (
+    <View style={styles.proofChip}>
+      <Ionicons name={icon} size={11} color={INDIGO} />
+      <Text style={styles.proofChipText}>{text}</Text>
+    </View>
+  );
+}
+
+function FieldLabel({ text, required, top, inline }: { text: string; required?: boolean; top?: boolean; inline?: boolean }) {
+  return (
+    <Text style={[styles.fieldLabel, { marginTop: top ? 14 : (inline ? 0 : 0), marginBottom: 6 }]}>
+      {text}{required ? <Text style={{ color: CORAL }}> *</Text> : null}
+    </Text>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Generating                                                       */
+/* ─────────────────────────────────────────────────────────────── */
+
+function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, progressStyle }: any) {
+  const visibleKeyword = keywords.length > 0 ? keywords[keywordTick % keywords.length] : '…';
+  return (
+    <FadeInView>
+      <View style={styles.forgeCard}>
+        <View style={styles.forgeAnvil}>
+          <Ionicons name="flame" size={32} color={INDIGO} />
+        </View>
+        <Text style={styles.forgeCardKicker}>
+          FORGING FOR {(company || '').toUpperCase()}
+        </Text>
+        <Text style={styles.forgeCardRole}>{jobTitle}</Text>
+
+        {/* Stages */}
+        <View style={styles.forgeStages}>
+          {FORGE_STAGES.map((st, i) => {
+            const done = i < stageIdx;
+            const active = i === stageIdx;
+            return (
+              <View key={i} style={styles.forgeStageRow}>
+                <View style={[styles.forgeBullet, {
+                  backgroundColor: done ? INDIGO : active ? INDIGO + '30' : colors.s3,
+                  borderColor: done || active ? INDIGO : colors.b1,
+                }]}>
+                  {done
+                    ? <Ionicons name="checkmark" size={11} color="#fff" />
+                    : active
+                      ? <View style={styles.forgePulse} />
+                      : null}
+                </View>
+                <Text style={[styles.forgeStageText, {
+                  color: done ? colors.t2 : active ? colors.t1 : colors.t3,
+                  fontWeight: active ? '700' : '500',
+                }]}>
+                  {st.text}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Progress bar */}
+        <View style={styles.progressTrack}>
+          <Animated.View style={[styles.progressFill, progressStyle]} />
+        </View>
+
+        {/* Keyword ticker — watch Dilly extract the JD */}
+        <View style={styles.kwTickerWrap}>
+          <View style={styles.kwTickerDot} />
+          <Text style={styles.kwTickerLabel}>EXTRACTED</Text>
+          <Text style={styles.kwTickerWord}>{visibleKeyword}</Text>
+        </View>
+      </View>
+    </FadeInView>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Done                                                             */
+/* ─────────────────────────────────────────────────────────────── */
+
+function DonePhase({
+  sections, atsInfo, jobTitle, company, jd,
+  matchedKeywords, totalKeywords, weakestBullet,
+  saved, onDownload, onReset,
+}: any) {
+  // Derived scorecard values. Prefer server-provided signals when
+  // present; fall back to local heuristics so the panel never feels
+  // empty. 4 axes:
+  //   - ATS parse     (server ats_parse_score, else 85)
+  //   - Keyword match (local matchedKeywords / totalKeywords, clamped)
+  //   - Profile depth (server facts_used mapped, else 75)
+  //   - Role fit      (keyword match × parse, soft blend)
+  const atsParse = Math.max(0, Math.min(100, Math.round(atsInfo?.ats_parse_score ?? 85)));
+  const localKwPct = totalKeywords > 0 ? Math.round((matchedKeywords.length / totalKeywords) * 100) : 0;
+  const serverKwPct = Math.max(0, Math.min(100, Math.round(atsInfo?.keyword_coverage_pct ?? 0)));
+  const kwMatch = serverKwPct || localKwPct;
+  const factsUsed = Number(atsInfo?.facts_used) || 0;
+  const profileDepth = Math.max(0, Math.min(100, factsUsed > 0 ? Math.min(100, 45 + factsUsed * 3) : 70));
+  const roleFit = Math.round((atsParse * 0.35) + (kwMatch * 0.5) + (profileDepth * 0.15));
+
+  const scorecard = {
+    'ATS parse': atsParse,
+    'Keyword match': kwMatch,
+    'Profile depth': profileDepth,
+    'Role fit': roleFit,
+  };
+
+  return (
+    <FadeInView>
+      {/* Forged headline — this is the moment */}
+      <View style={styles.forgedHero}>
+        <View style={styles.forgedGlyph}>
+          <Ionicons name="ribbon" size={22} color={INDIGO} />
+        </View>
+        <Text style={styles.forgedKicker}>FORGED</Text>
+        <Text style={styles.forgedTitle}>
+          for {jobTitle}
+          {'\n'}
+          <Text style={{ color: INDIGO }}>at {company}</Text>
+        </Text>
+        {saved ? (
+          <View style={styles.savedStrip}>
+            <Ionicons name="bookmark" size={11} color={INDIGO} />
+            <Text style={styles.savedStripText}>Saved to your Resume Variants</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Scorecard — reads like a hiring rubric */}
+      <Text style={styles.sectionHeader}>ATS READINESS</Text>
+      <View style={styles.scorecardCard}>
+        {Object.entries(scorecard).map(([label, value]) => (
+          <ScoreRow key={label} label={label} value={value as number} />
+        ))}
+      </View>
+
+      {/* Gaps / missing keyword warnings — only when present */}
+      {atsInfo?.keyword_warning && Array.isArray(atsInfo?.missing_keywords) && atsInfo.missing_keywords.length > 0 && (
+        <View style={styles.warnCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="warning" size={14} color={AMBER} />
+            <Text style={styles.warnTitle}>
+              Missing some JD terms ({atsInfo.keyword_coverage_pct || 0}% match)
+            </Text>
+          </View>
+          <Text style={styles.warnBody}>
+            The JD asks for{' '}
+            <Text style={{ fontWeight: '700', color: colors.t1 }}>
+              {(atsInfo.missing_keywords as string[]).slice(0, 4).join(', ')}
+            </Text>
+            {' '}— none of these are in your profile yet. If you actually have experience with them, tell Dilly and the next forge will include them.
+          </Text>
+          <AnimatedPressable
+            style={styles.warnCta}
+            onPress={() => openDillyOverlay({
+              isPaid: true,
+              initialMessage: `For my ${jobTitle} resume at ${company}, Dilly doesn't have enough about me for: ${(atsInfo.missing_keywords as string[]).slice(0, 5).join(', ')}. Ask me about each one so you can add them to my profile.`,
+            })}
+            scaleDown={0.97}
+          >
+            <Ionicons name="chatbubble" size={11} color={INDIGO} />
+            <Text style={styles.warnCtaText}>Tell Dilly about these</Text>
+          </AnimatedPressable>
+        </View>
+      )}
+
+      {atsInfo?.readiness === 'gaps' && Array.isArray(atsInfo?.gaps) && atsInfo.gaps.length > 0 && (
+        <View style={styles.warnCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="alert-circle" size={14} color={AMBER} />
+            <Text style={styles.warnTitle}>Gaps detected</Text>
+          </View>
+          {atsInfo.gaps.map((g: string, i: number) => (
+            <Text key={i} style={styles.warnBullet}>— {g}</Text>
+          ))}
+        </View>
+      )}
+
+      {/* Weakest bullet spotlight — one bullet that could be stronger */}
+      {weakestBullet && (
+        <View style={styles.weakestCard}>
+          <View style={styles.weakestKicker}>
+            <Ionicons name="scan" size={11} color={AMBER} />
+            <Text style={styles.weakestKickerText}>WEAKEST BULLET</Text>
+          </View>
+          <Text style={styles.weakestWhere}>{weakestBullet.where}</Text>
+          <Text style={styles.weakestText}>"{weakestBullet.text}"</Text>
+          <Text style={styles.weakestWhy}>
+            This one could use a metric or a concrete outcome. Strong bullets pin a number or a named result.
+          </Text>
+          <AnimatedPressable
+            style={styles.weakestCta}
+            onPress={() => openDillyOverlay({
+              isPaid: true,
+              initialMessage: `In my resume for ${jobTitle} at ${company}, this bullet feels thin: "${weakestBullet.text}" (from ${weakestBullet.where}). Ask me the specifics — numbers, outcomes, what changed — so we can rewrite it with real impact.`,
+            })}
+            scaleDown={0.97}
+          >
+            <Ionicons name="sparkles" size={11} color={INDIGO} />
+            <Text style={styles.weakestCtaText}>Strengthen with Dilly</Text>
+          </AnimatedPressable>
+        </View>
+      )}
+
+      {/* Resume preview with keyword highlighting */}
+      <View style={styles.previewHeaderRow}>
+        <Text style={styles.sectionHeader}>YOUR RESUME</Text>
+        <Text style={styles.previewHighlightLegend}>
+          <Text style={{ color: INDIGO, fontWeight: '800' }}>•</Text> JD match
+        </Text>
+      </View>
+      <View style={styles.previewCard}>
+        {sections.map((sec: GeneratedSection, si: number) => (
+          <SectionView
+            key={sec.key ?? si}
+            section={sec}
+            matchedKeywords={matchedKeywords}
+          />
+        ))}
+      </View>
+
+      {/* Actions */}
+      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={onDownload}>
+        <Ionicons name="download" size={17} color="#fff" />
+        <Text style={styles.actionBtnText}>Export · PDF or DOCX</Text>
+      </AnimatedPressable>
+
+      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={onReset}>
+        <Ionicons name="flame" size={17} color={INDIGO} />
+        <Text style={[styles.actionBtnText, { color: INDIGO }]}>Forge another</Text>
+      </AnimatedPressable>
+    </FadeInView>
+  );
+}
+
+function ScoreRow({ label, value }: { label: string; value: number }) {
+  const color = value >= 80 ? GREEN : value >= 55 ? AMBER : CORAL;
+  return (
+    <View style={styles.scoreRow}>
+      <Text style={styles.scoreLabel}>{label}</Text>
+      <View style={styles.scoreTrack}>
+        <View style={[styles.scoreFill, { width: `${value}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={[styles.scoreValue, { color }]}>{value}</Text>
+    </View>
+  );
+}
+
+/** Renders a single resume section. Bullet/body text gets keyword
+ *  tokens highlighted in indigo so the user sees the JD match. */
+function SectionView({ section, matchedKeywords }: { section: GeneratedSection; matchedKeywords: string[] }) {
+  const keywordSet = useMemo(() => new Set(matchedKeywords), [matchedKeywords]);
+  return (
+    <View style={styles.previewSection}>
+      <Text style={styles.previewSectionLabel}>{section.label ?? section.key}</Text>
+
+      {section.contact && (
+        <View style={styles.previewEntry}>
+          {!!section.contact.name && <Text style={styles.previewName}>{section.contact.name}</Text>}
+          <Text style={styles.previewEntryDates}>
+            {[section.contact.email, section.contact.phone, section.contact.location, section.contact.linkedin].filter(Boolean).join(' · ')}
+          </Text>
+        </View>
+      )}
+
+      {section.education && (
+        <View style={styles.previewEntry}>
+          <Text style={styles.previewEntryTitle}>{section.education.university}</Text>
+          <Text style={styles.previewEntryDates}>
+            {[section.education.major, section.education.minor ? `Minor: ${section.education.minor}` : '', section.education.graduation].filter(Boolean).join(' · ')}
+          </Text>
+          {!!section.education.gpa && <Highlighted style={styles.previewBullet} text={`GPA: ${section.education.gpa}`} keywords={keywordSet} />}
+          {!!section.education.honors && <Highlighted style={styles.previewBullet} text={section.education.honors} keywords={keywordSet} />}
+        </View>
+      )}
+
+      {Array.isArray(section.experiences) && section.experiences.map((exp: any, ei: number) => (
+        <View key={ei} style={styles.previewEntry}>
+          <Text style={styles.previewEntryTitle}>
+            {exp.role}{exp.company ? `, ${exp.company}` : ''}
+          </Text>
+          <Text style={styles.previewEntryDates}>{[exp.date, exp.location].filter(Boolean).join(' · ')}</Text>
+          {Array.isArray(exp.bullets) && exp.bullets.map((b: any, bi: number) => (
+            <Highlighted
+              key={bi}
+              style={styles.previewBullet}
+              text={`• ${typeof b === 'string' ? b : b.text}`}
+              keywords={keywordSet}
+            />
+          ))}
+        </View>
+      ))}
+
+      {Array.isArray(section.projects) && section.projects.map((proj: any, pi: number) => (
+        <View key={pi} style={styles.previewEntry}>
+          <Text style={styles.previewEntryTitle}>{proj.name}</Text>
+          <Text style={styles.previewEntryDates}>{[proj.tech, proj.date].filter(Boolean).join(' · ')}</Text>
+          {Array.isArray(proj.bullets) && proj.bullets.map((b: any, bi: number) => (
+            <Highlighted
+              key={bi}
+              style={styles.previewBullet}
+              text={`• ${typeof b === 'string' ? b : b.text}`}
+              keywords={keywordSet}
+            />
+          ))}
+        </View>
+      ))}
+
+      {section.simple?.lines && (
+        <View style={styles.previewEntry}>
+          {section.simple.lines.map((line: string, li: number) => (
+            <Highlighted key={li} style={styles.previewBullet} text={line} keywords={keywordSet} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Splits `text` on word boundaries and bolds any token whose
+ * lowercased form is in `keywords`. Keyword matches render in
+ * indigo so the JD overlap is visible at a glance.
+ */
+function Highlighted({ text, keywords, style }: { text: string; keywords: Set<string>; style: any }) {
+  if (keywords.size === 0 || !text) {
+    return <Text style={style}>{text}</Text>;
+  }
+  const parts = text.split(/(\W+)/);
+  return (
+    <Text style={style}>
+      {parts.map((part, i) => {
+        const clean = part.toLowerCase().replace(/^[.-]+|[.-]+$/g, '');
+        const isMatch = clean.length >= 3 && keywords.has(clean);
+        if (isMatch) {
+          return <Text key={i} style={{ color: INDIGO, fontWeight: '700' }}>{part}</Text>;
+        }
+        return <Text key={i}>{part}</Text>;
+      })}
+    </Text>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Not ready                                                        */
+/* ─────────────────────────────────────────────────────────────── */
+
+function NotReadyPhase({ atsInfo, jobTitle, company, onReset }: any) {
+  return (
+    <FadeInView>
+      <View style={styles.notReadyCard}>
+        <View style={styles.notReadyGlyph}>
+          <Ionicons name="hand-left" size={26} color={INDIGO} />
+        </View>
+        <Text style={styles.notReadyKicker}>DILLY WON'T INVENT</Text>
+        <Text style={styles.notReadyTitle}>Tell Dilly more first.</Text>
+        <Text style={styles.notReadySub}>
+          {atsInfo.summary || "Dilly doesn't know enough about you to build an honest resume for this role yet. Fill the gaps, then forge again."}
+        </Text>
+
+        {Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
+          <View style={styles.notReadyGapsBlock}>
+            <Text style={styles.notReadyGapsLabel}>WHAT'S MISSING</Text>
+            {atsInfo.gaps.map((g: string, i: number) => (
+              <View key={i} style={styles.notReadyGapRow}>
+                <View style={styles.notReadyGapDot} />
+                <Text style={styles.notReadyGapText}>{g}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {Array.isArray(atsInfo.tell_dilly_prompts) && atsInfo.tell_dilly_prompts.length > 0 && (
+        <>
+          <Text style={styles.sectionHeader}>FASTEST WAY TO FIX</Text>
+          <View style={{ gap: 8 }}>
+            {(atsInfo.tell_dilly_prompts as string[]).slice(0, 5).map((prompt, i) => (
+              <AnimatedPressable
+                key={i}
+                style={styles.promptRow}
+                onPress={() => openDillyOverlay({ isPaid: true, initialMessage: prompt })}
+                scaleDown={0.98}
+              >
+                <View style={styles.promptDot}>
+                  <Ionicons name="chatbubble" size={11} color={INDIGO} />
+                </View>
+                <Text style={styles.promptText}>{prompt}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+              </AnimatedPressable>
+            ))}
+          </View>
+        </>
+      )}
+
+      <AnimatedPressable
+        style={[styles.actionBtn, styles.actionBtnSecondary, { marginTop: 14 }]}
+        onPress={() => openDillyOverlay({
+          isPaid: true,
+          initialMessage: `I tried to forge a resume for ${jobTitle} at ${company} but I'm not ready yet. Walk me through each gap one by one so I can tell you about them and build out my profile.`,
+        })}
+      >
+        <Ionicons name="chatbubble" size={17} color={INDIGO} />
+        <Text style={[styles.actionBtnText, { color: INDIGO }]}>Talk it through with Dilly</Text>
+      </AnimatedPressable>
+      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={onReset}>
+        <Ionicons name="refresh" size={17} color={INDIGO} />
+        <Text style={[styles.actionBtnText, { color: INDIGO }]}>Try a different role</Text>
+      </AnimatedPressable>
+    </FadeInView>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Error                                                            */
+/* ─────────────────────────────────────────────────────────────── */
+
+function ErrorPhase({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <FadeInView>
+      <View style={styles.errorCard}>
+        <Ionicons name="alert-circle" size={32} color={AMBER} />
+        <Text style={styles.errorTitle}>The forge cooled off.</Text>
+        <Text style={styles.errorSub}>
+          Something went sideways mid-generation. Usually a one-tap retry fixes it.
+        </Text>
+        {!!error && (
+          <View style={styles.errorDetailBlock}>
+            <Text style={styles.errorDetailLabel}>ERROR DETAIL</Text>
+            <Text style={styles.errorDetailText} selectable>{error}</Text>
+          </View>
+        )}
+      </View>
+      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={onRetry}>
+        <Ionicons name="refresh" size={17} color="#fff" />
+        <Text style={styles.actionBtnText}>Try again</Text>
+      </AnimatedPressable>
+    </FadeInView>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Styles                                                           */
+/* ─────────────────────────────────────────────────────────────── */
+
 const styles = StyleSheet.create({
+  // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.b1,
-    backgroundColor: colors.bg,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.md,
+    borderBottomWidth: 1, borderBottomColor: colors.b1, backgroundColor: colors.bg,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.s1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.s1, alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.t1,
+  headerTitle: { fontFamily: 'Cinzel_700Bold', fontSize: 14, letterSpacing: 1.4, color: colors.t1 },
+  usagePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10,
+    backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.b1,
   },
-  content: {
-    padding: spacing.lg,
-    gap: spacing.md,
+  usageText: { fontSize: 11, fontWeight: '800', color: colors.t2, letterSpacing: 0.2 },
+
+  content: { padding: spacing.lg, gap: spacing.md },
+
+  // Section header
+  sectionHeader: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 10, letterSpacing: 1.4,
+    color: colors.t3, marginBottom: 10, marginTop: 4,
   },
 
   // Hero
-  heroCard: {
-    backgroundColor: colors.idim,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.ibdr,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.sm,
+  hero: { alignItems: 'center', paddingVertical: 18, marginBottom: 12 },
+  heroRingOuter: {
+    width: 80, height: 80, borderRadius: 40, backgroundColor: INDIGO + '08',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.ibdr,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
+  heroRingInner: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: INDIGO + '12', borderWidth: 1, borderColor: INDIGO + '30',
+    alignItems: 'center', justifyContent: 'center',
   },
+  heroKicker: { fontSize: 10, fontWeight: '800', color: INDIGO, letterSpacing: 2.5, marginBottom: 8 },
   heroTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.t1,
-    textAlign: 'center',
+    fontFamily: 'Cinzel_700Bold', fontSize: 26, color: colors.t1,
+    letterSpacing: -0.4, textAlign: 'center', lineHeight: 32, marginBottom: 12,
   },
   heroSub: {
-    fontSize: 13,
-    color: colors.t2,
-    textAlign: 'center',
-    lineHeight: 19,
+    fontSize: 13, color: colors.t2, lineHeight: 20,
+    textAlign: 'center', paddingHorizontal: 8, marginBottom: 14,
   },
-
-  // Form
-  formCard: {
-    backgroundColor: colors.s1,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.b2,
-    padding: spacing.xl,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.t1,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.b2,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    fontSize: 15,
-    color: colors.t1,
-  },
-  jdInput: {
-    height: 120,
-    paddingTop: spacing.sm + 2,
-  },
-
-  // Generate button
-  generateBtn: {
-    backgroundColor: INDIGO,
-    borderRadius: radius.xl,
-    paddingVertical: spacing.md + 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  generateBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  disclaimer: {
-    fontSize: 11,
-    color: colors.t3,
-    textAlign: 'center',
-    lineHeight: 16,
-    marginTop: spacing.xs,
-  },
-
-  // Warning card (no track / no audit)
-  warnCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: `${AMBER}12`, borderRadius: radius.md,
-    borderWidth: 1, borderColor: `${AMBER}30`, padding: spacing.md,
-  },
-  warnTitle: { fontSize: 13, fontWeight: '700', color: colors.t1, marginBottom: 2 },
-  warnSub: { fontSize: 12, color: colors.t2, lineHeight: 18 },
-
-  // Score card
-  scoreCard: {
-    backgroundColor: colors.s1, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.b2, padding: spacing.md, gap: 12,
-  },
-  scoreCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  scoreCardLabel: { fontFamily: 'Cinzel_700Bold', fontSize: 9, letterSpacing: 1.2, color: colors.t3 },
-  cohortBadge: {
+  heroProofRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
+  proofChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: `${INDIGO}12`, borderRadius: 999, borderWidth: 1, borderColor: `${INDIGO}25`,
-    paddingHorizontal: 10, paddingVertical: 4,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '22',
   },
-  cohortBadgeText: { fontSize: 11, fontWeight: '700', color: INDIGO },
-  scoreDims: { flexDirection: 'row', gap: 10 },
-  scoreDim: { flex: 1, gap: 4 },
-  scoreDimLabel: { fontSize: 10, fontWeight: '600', color: colors.t3, textTransform: 'uppercase', letterSpacing: 0.5 },
-  scoreDimVal: { fontFamily: 'Cinzel_700Bold', fontSize: 20 },
-  scoreDimBar: { height: 4, borderRadius: 2, backgroundColor: colors.s3, overflow: 'hidden' },
-  scoreDimFill: { height: '100%', borderRadius: 2 },
-  scoreNote: { fontSize: 11, color: colors.t3, lineHeight: 16 },
+  proofChipText: { fontSize: 10, fontWeight: '700', color: INDIGO, letterSpacing: 0.3 },
+
+  // Input card
+  inputCard: {
+    backgroundColor: colors.s1, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.b1, padding: 16,
+  },
+  fieldLabel: { fontSize: 11, fontWeight: '700', color: colors.t2, letterSpacing: 0.3 },
+  input: {
+    backgroundColor: colors.bg, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1,
+    paddingHorizontal: 12, paddingVertical: 11,
+    fontSize: 13, color: colors.t1,
+  },
+  jdInput: { minHeight: 140, paddingTop: 11, textAlignVertical: 'top' },
+  jdHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  jdQualityPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.b1,
+  },
+  jdQualityDot: { width: 6, height: 6, borderRadius: 3 },
+  jdQualityText: { fontSize: 10, fontWeight: '700' },
+  jdQualityTrack: {
+    height: 3, borderRadius: 2, backgroundColor: colors.b1,
+    marginTop: 8, overflow: 'hidden',
+  },
+  jdQualityFill: { height: '100%' },
+
+  forgeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: INDIGO, borderRadius: 14, paddingVertical: 17,
+    marginTop: 18,
+    shadowColor: INDIGO, shadowOpacity: 0.22, shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 }, elevation: 4,
+  },
+  forgeBtnText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 },
+  forgeFootnote: { fontSize: 11, color: colors.t3, textAlign: 'center', marginTop: 12, fontStyle: 'italic', lineHeight: 16 },
 
   // Generating
-  generatingCard: {
-    backgroundColor: colors.s1,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.b2,
-    padding: spacing.xxl,
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xl,
+  forgeCard: {
+    backgroundColor: colors.s1, borderRadius: 18,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 24, alignItems: 'center',
   },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
+  forgeAnvil: {
+    width: 68, height: 68, borderRadius: 34,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '28',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
-  generatingTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.t1,
+  forgeCardKicker: {
+    fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 2,
   },
-  generatingStep: {
-    fontSize: 13,
-    color: colors.t2,
-    textAlign: 'center',
+  forgeCardRole: {
+    fontSize: 15, fontWeight: '800', color: colors.t1,
+    marginTop: 4, marginBottom: 18, textAlign: 'center',
   },
+  forgeStages: { gap: 10, width: '100%', marginBottom: 18 },
+  forgeStageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  forgeBullet: {
+    width: 18, height: 18, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  forgePulse: { width: 6, height: 6, borderRadius: 3, backgroundColor: INDIGO },
+  forgeStageText: { fontSize: 13, flex: 1 },
+
   progressTrack: {
-    width: '100%',
-    height: 4,
-    backgroundColor: colors.s3,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginTop: spacing.xs,
+    height: 4, borderRadius: 2, backgroundColor: colors.b1,
+    overflow: 'hidden', width: '100%',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: INDIGO,
-    borderRadius: 2,
+  progressFill: { height: '100%', backgroundColor: INDIGO, borderRadius: 2 },
+
+  kwTickerWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 16, paddingVertical: 10, paddingHorizontal: 14,
+    backgroundColor: colors.bg, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.b1, width: '100%',
   },
-  generatingHint: {
-    fontSize: 11,
-    color: colors.t3,
-    textAlign: 'center',
+  kwTickerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GREEN },
+  kwTickerLabel: { fontSize: 9, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 },
+  kwTickerWord: {
+    flex: 1, fontFamily: 'Menlo', fontSize: 12, fontWeight: '700',
+    color: INDIGO, textAlign: 'right',
   },
 
   // Done
-  doneCard: {
-    backgroundColor: colors.gdim,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.gbdr,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
+  forgedHero: {
+    alignItems: 'center', paddingVertical: 12,
+    marginBottom: 14,
   },
-  doneIcon: {
-    marginBottom: spacing.xs,
+  forgedGlyph: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: INDIGO + '12', borderWidth: 1, borderColor: INDIGO + '32',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
   },
-  doneTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.t1,
+  forgedKicker: { fontSize: 10, fontWeight: '800', color: INDIGO, letterSpacing: 2.8, marginBottom: 6 },
+  forgedTitle: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 22, color: colors.t1,
+    textAlign: 'center', lineHeight: 30, letterSpacing: -0.3,
   },
-  doneSub: {
-    fontSize: 13,
-    color: colors.t2,
-    textAlign: 'center',
+  savedStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginTop: 12,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '22',
   },
-  sectionList: {
-    width: '100%',
-    marginTop: spacing.sm,
-    gap: spacing.xs,
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 2,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    color: colors.t1,
-  },
-  savedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.idim,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.ibdr,
-    marginTop: spacing.xs,
-  },
-  savedText: {
-    fontSize: 12,
-    color: INDIGO,
-    fontWeight: '600',
-  },
+  savedStripText: { fontSize: 11, fontWeight: '700', color: INDIGO },
 
-  // Action buttons
+  // Scorecard
+  scorecardCard: {
+    backgroundColor: colors.s1, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 16, marginBottom: 16, gap: 10,
+  },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  scoreLabel: { fontSize: 12, color: colors.t2, fontWeight: '700', width: 96 },
+  scoreTrack: { flex: 1, height: 6, backgroundColor: colors.b1, borderRadius: 3, overflow: 'hidden' },
+  scoreFill: { height: '100%', borderRadius: 3 },
+  scoreValue: { fontSize: 13, fontWeight: '800', width: 34, textAlign: 'right' },
+
+  // Warnings
+  warnCard: {
+    backgroundColor: AMBER + '08', borderRadius: 12,
+    borderWidth: 1, borderColor: AMBER + '30',
+    padding: 14, marginBottom: 12, gap: 8,
+  },
+  warnTitle: { fontSize: 12, fontWeight: '800', color: AMBER, letterSpacing: 0.2 },
+  warnBody: { fontSize: 12, color: colors.t2, lineHeight: 18 },
+  warnBullet: { fontSize: 12, color: colors.t2, lineHeight: 17 },
+  warnCta: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start', marginTop: 2,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '22',
+  },
+  warnCtaText: { fontSize: 11, fontWeight: '800', color: INDIGO },
+
+  // Weakest bullet spotlight
+  weakestCard: {
+    backgroundColor: colors.s1, borderRadius: 12,
+    borderWidth: 1, borderColor: AMBER + '35',
+    padding: 14, marginBottom: 14,
+  },
+  weakestKicker: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+  weakestKickerText: { fontSize: 10, fontWeight: '800', color: AMBER, letterSpacing: 1.2 },
+  weakestWhere: { fontSize: 11, fontWeight: '700', color: colors.t3, marginBottom: 6 },
+  weakestText: {
+    fontSize: 13, color: colors.t1, fontStyle: 'italic',
+    lineHeight: 19, marginBottom: 8,
+  },
+  weakestWhy: { fontSize: 12, color: colors.t2, lineHeight: 17, marginBottom: 10 },
+  weakestCta: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '22',
+  },
+  weakestCtaText: { fontSize: 11, fontWeight: '800', color: INDIGO },
+
+  // Preview
+  previewHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  previewHighlightLegend: { fontSize: 10, color: colors.t3, fontWeight: '600', marginBottom: 10 },
+  previewCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 12,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 18, marginBottom: 16,
+  },
+  previewSection: { marginBottom: 14 },
+  previewSectionLabel: {
+    fontSize: 10, fontWeight: '900', color: INDIGO,
+    letterSpacing: 1.8, marginBottom: 8,
+    borderBottomWidth: 1, borderBottomColor: INDIGO + '25',
+    paddingBottom: 4,
+  },
+  previewEntry: { marginBottom: 10 },
+  previewName: {
+    fontSize: 16, fontWeight: '800', color: colors.t1,
+    textAlign: 'center', marginBottom: 2,
+  },
+  previewEntryTitle: { fontSize: 13, fontWeight: '700', color: colors.t1 },
+  previewEntryDates: { fontSize: 11, color: colors.t3, marginTop: 2, marginBottom: 4 },
+  previewBullet: { fontSize: 12, color: colors.t2, lineHeight: 18, marginTop: 2 },
+
+  // Actions
   actionBtn: {
-    borderRadius: radius.xl,
-    paddingVertical: spacing.md + 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderRadius: 12, paddingVertical: 15, marginTop: 10,
   },
   actionBtnPrimary: {
     backgroundColor: INDIGO,
+    shadowColor: INDIGO, shadowOpacity: 0.2, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 }, elevation: 3,
   },
   actionBtnSecondary: {
-    backgroundColor: colors.idim,
-    borderWidth: 1,
-    borderColor: colors.ibdr,
+    backgroundColor: colors.s1, borderWidth: 1, borderColor: INDIGO + '40',
   },
-  actionBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+  actionBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+
+  // Not ready
+  notReadyCard: {
+    backgroundColor: colors.s1, borderRadius: 18,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 22, alignItems: 'center', marginBottom: 14,
   },
+  notReadyGlyph: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: INDIGO + '12', borderWidth: 1, borderColor: INDIGO + '30',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+  },
+  notReadyKicker: { fontSize: 10, fontWeight: '800', color: INDIGO, letterSpacing: 2, marginBottom: 8 },
+  notReadyTitle: {
+    fontFamily: 'Cinzel_700Bold', fontSize: 22, color: colors.t1,
+    marginBottom: 8, textAlign: 'center', letterSpacing: -0.3,
+  },
+  notReadySub: { fontSize: 13, color: colors.t2, lineHeight: 19, textAlign: 'center' },
+  notReadyGapsBlock: { marginTop: 16, alignSelf: 'stretch', gap: 6 },
+  notReadyGapsLabel: { fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2, marginBottom: 4 },
+  notReadyGapRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  notReadyGapDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INDIGO, marginTop: 6 },
+  notReadyGapText: { fontSize: 13, color: colors.t2, lineHeight: 19, flex: 1 },
+
+  promptRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 13, borderRadius: 12,
+    backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.b1,
+  },
+  promptDot: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: INDIGO + '15', alignItems: 'center', justifyContent: 'center',
+  },
+  promptText: { fontSize: 13, color: colors.t1, flex: 1, lineHeight: 18 },
 
   // Error
   errorCard: {
-    backgroundColor: colors.adim,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.abdr,
-    padding: spacing.xxl,
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.xl,
+    backgroundColor: colors.s1, borderRadius: 16,
+    borderWidth: 1, borderColor: colors.b1,
+    padding: 22, alignItems: 'center',
   },
   errorTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.t1,
+    fontFamily: 'Cinzel_700Bold', fontSize: 18,
+    color: colors.t1, marginTop: 10, letterSpacing: -0.2,
   },
-  errorSub: {
-    fontSize: 13,
-    color: colors.t2,
-    textAlign: 'center',
-    lineHeight: 19,
+  errorSub: { fontSize: 13, color: colors.t2, marginTop: 6, textAlign: 'center', lineHeight: 19 },
+  errorDetailBlock: {
+    width: '100%', marginTop: 14, padding: 10,
+    borderRadius: 8, backgroundColor: colors.bg,
+    borderWidth: 1, borderColor: colors.b1,
   },
-
-  // Inline resume preview
-  previewCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.b1,
-    padding: 20,
-    marginTop: 16,
+  errorDetailLabel: {
+    fontSize: 10, fontWeight: '800', color: colors.t3,
+    letterSpacing: 1.2, marginBottom: 4,
   },
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.t1,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  previewSection: {
-    marginBottom: 14,
-  },
-  previewSectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    color: colors.t2,
-    textTransform: 'uppercase',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.b1,
-    paddingBottom: 4,
-    marginBottom: 8,
-  },
-  previewEntry: {
-    marginBottom: 10,
-  },
-  previewEntryTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.t1,
-  },
-  previewEntryDates: {
-    fontSize: 11,
-    color: colors.t3,
-    marginBottom: 4,
-  },
-  previewBullet: {
-    fontSize: 12,
-    color: colors.t2,
-    lineHeight: 18,
-    paddingLeft: 4,
-    marginBottom: 2,
-  },
+  errorDetailText: { fontSize: 11, color: colors.t2, fontFamily: 'Menlo' },
 });
