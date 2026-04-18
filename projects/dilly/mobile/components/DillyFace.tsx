@@ -19,6 +19,7 @@
 import { useEffect, useRef } from 'react'
 import { Animated, Easing } from 'react-native'
 import Svg, { Circle, Path, G, Line, Rect } from 'react-native-svg'
+import { useResolvedTheme } from '../hooks/useTheme'
 
 export type DillyMood =
   | 'idle'
@@ -44,7 +45,10 @@ interface DillyFaceProps {
 const AnimatedPath = Animated.createAnimatedComponent(Path)
 const AnimatedG = Animated.createAnimatedComponent(G)
 
-const FACE_INK = '#2B3A8E'
+const FACE_INK_LIGHT = '#2B3A8E'
+// On Midnight (dark) surfaces the dark-indigo ink disappears into the bg.
+// Light sky blue makes Dilly's face pop against black.
+const FACE_INK_DARK = '#8AB4FF'
 
 /* ─────────────────────────────────────────────────────────────── */
 /* Mood → spring targets                                           */
@@ -90,6 +94,11 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const TRAVEL = size * 0.15
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
+
+  // Ink color tracks the active theme surface: dark-indigo on light
+  // surfaces, light sky-blue on Midnight so the face pops against black.
+  const theme = useResolvedTheme()
+  const faceInk = theme.surface.dark ? FACE_INK_DARK : FACE_INK_LIGHT
 
   const shape = shapeFor(mood)
 
@@ -231,6 +240,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
           browLiftAnim={browLiftAnim}
           smilePath={smilePath}
           archEyes={shape.archEyes}
+          ink={faceInk}
         />
         {accessory !== 'none' && (
           <Accessory
@@ -238,7 +248,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
             cx={cx}
             cy={cy}
             s={s}
-            color={accessoryColor || FACE_INK}
+            color={accessoryColor || faceInk}
             scribbleAnim={mood === 'writing' ? scribbleAnim : null}
           />
         )}
@@ -260,9 +270,11 @@ interface EyesProps {
   browLiftAnim: Animated.Value
   smilePath: Animated.AnimatedInterpolation<string>
   archEyes: boolean
+  /** Ink color for eyes, brows, and smile. Swapped per-theme. */
+  ink: string
 }
 
-function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smilePath, archEyes }: EyesProps) {
+function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smilePath, archEyes, ink }: EyesProps) {
   // Eye radius is interpolated from scale so transitions are smooth.
   const baseR = 2.8 * s
   const eyeR = eyeScaleAnim.interpolate({
@@ -295,27 +307,27 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
         cx={cx - 8 * s}
         cy={eyeY as unknown as number}
         r={eyeR as unknown as number}
-        fill={archEyes ? 'transparent' : FACE_INK}
+        fill={archEyes ? 'transparent' : ink}
       />
       <AnimatedCircle
         cx={cx + 8 * s}
         cy={eyeY as unknown as number}
         r={eyeR as unknown as number}
-        fill={archEyes ? 'transparent' : FACE_INK}
+        fill={archEyes ? 'transparent' : ink}
       />
 
       {/* Arched "smiling eyes" — only visible on celebrating / proud. */}
       {archEyes && (
         <>
-          <Path d={archLPath} stroke={FACE_INK} strokeWidth={2.2 * s} strokeLinecap="round" fill="none" />
-          <Path d={archRPath} stroke={FACE_INK} strokeWidth={2.2 * s} strokeLinecap="round" fill="none" />
+          <Path d={archLPath} stroke={ink} strokeWidth={2.2 * s} strokeLinecap="round" fill="none" />
+          <Path d={archRPath} stroke={ink} strokeWidth={2.2 * s} strokeLinecap="round" fill="none" />
         </>
       )}
 
       {/* Subtle brows — only render when browLift > 0 (curious/thinking). */}
       <AnimatedPath
         d={`M ${browLx} 0 l ${browSpan} 0`}
-        stroke={FACE_INK}
+        stroke={ink}
         strokeWidth={1.4 * s}
         strokeLinecap="round"
         transform={browY.interpolate({
@@ -328,7 +340,7 @@ function EyesAndSmile({ cx, cy, s, eyeScaleAnim, eyeLiftAnim, browLiftAnim, smil
       {/* Smile / frown */}
       <AnimatedPath
         d={smilePath}
-        stroke={FACE_INK}
+        stroke={ink}
         strokeWidth={2.2 * s}
         strokeLinecap="round"
         fill="none"

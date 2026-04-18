@@ -26,6 +26,20 @@ import { getAppMode, type AppMode } from '../lib/appMode';
 const STORAGE_KEY = 'dilly_app_mode_cache_v1';
 let _memMode: AppMode | null = null;
 
+// Pub/sub for mode changes. Every useAppMode hook subscribes on mount
+// and re-renders whenever primeAppMode fires. Without this, Settings
+// could update _memMode but already-mounted screens (tab bar, Home,
+// Jobs) would keep rendering with the stale mode — which caused mid-
+// session crashes when a screen tried to render a tab or view that
+// only exists in the new mode.
+const _modeListeners = new Set<(m: AppMode) => void>();
+
+function _notifyModeChange(m: AppMode) {
+  _modeListeners.forEach(cb => {
+    try { cb(m); } catch {}
+  });
+}
+
 function isValidMode(v: unknown): v is AppMode {
   return v === 'holder' || v === 'seeker' || v === 'student';
 }
@@ -34,6 +48,14 @@ export function useAppMode(): AppMode {
   // Seed synchronously from the in-memory cache so re-renders after
   // the first profile fetch never flash back to the default.
   const [mode, setMode] = useState<AppMode>(_memMode ?? 'seeker');
+
+  // Subscribe to primeAppMode pushes so ALL consumers re-render when
+  // the mode flips — not just the one that initiated the switch.
+  useEffect(() => {
+    const cb = (m: AppMode) => setMode(m);
+    _modeListeners.add(cb);
+    return () => { _modeListeners.delete(cb); };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +110,10 @@ export function useAppMode(): AppMode {
 export async function primeAppMode(mode: AppMode): Promise<void> {
   _memMode = mode;
   try { await AsyncStorage.setItem(STORAGE_KEY, mode); } catch {}
+  // Fan out to every mounted useAppMode — this is what makes the tab
+  // bar and other screens actually flip to the new mode in real time
+  // instead of waiting for their own /profile refetch on next focus.
+  _notifyModeChange(mode);
 }
 
 /**

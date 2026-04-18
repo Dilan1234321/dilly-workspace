@@ -98,7 +98,6 @@ export default function DillyPaywallFullScreen({
   }
 
   const promise = context?.promise || DEFAULT_PROMISE;
-  const surface = context?.surface;
 
   return (
     <Modal
@@ -119,13 +118,10 @@ export default function DillyPaywallFullScreen({
           },
         ]}
       >
-        {/* Dismiss. small, quiet, top-right. Respects users who
-            aren't ready yet. We don't want to feel like a trap. */}
-        <View style={s.topRow}>
-          <Pressable onPress={onDismiss} hitSlop={16} style={s.closeBtn}>
-            <Ionicons name="close" size={22} color={theme.surface.t3} />
-          </Pressable>
-        </View>
+        {/* No dismiss button up top anymore — the 'Not right now' CTA at
+            the bottom is the single way out. Cleaner visually and avoids
+            the paywall feeling like an alert to swat away. */}
+        <View style={s.topRow} />
 
         <Animated.View style={[s.content, { transform: [{ translateY: slide }] }]}>
           {/* Dilly presence. familiar face. no brand shouting. */}
@@ -133,14 +129,10 @@ export default function DillyPaywallFullScreen({
             <DillyFace size={96} />
           </View>
 
-          {/* Surface label. "this is where you are" context — optional.
-              Eyebrow uses theme accent so the paywall ties into the
-              user's customized color on every launch. */}
-          {surface ? (
-            <Text style={[s.eyebrow, { color: theme.accent }]}>{surface.toUpperCase()}</Text>
-          ) : (
-            <Text style={[s.eyebrow, { color: theme.accent }]}>A GENTLE REMINDER</Text>
-          )}
+          {/* Eyebrow is always "A GENTLE REMINDER" — consistent voice.
+              Previously we'd swap in the surface name (FIT READS etc.)
+              but that split the brand tone; this reads gentler. */}
+          <Text style={[s.eyebrow, { color: theme.accent }]}>A GENTLE REMINDER</Text>
 
           {/* Primary headline. spoken to the user, not at them. */}
           <Text style={[s.headline, { color: theme.surface.t1 }]}>
