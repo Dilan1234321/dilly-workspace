@@ -34,7 +34,8 @@ import { DillyFace } from './DillyFace';
 import { useCachedFetch } from '../lib/sessionCache';
 import { dilly } from '../lib/dilly';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
-import { useAccent } from '../hooks/useTheme';
+import { useAccent, useResolvedTheme } from '../hooks/useTheme';
+import { useSpacing } from './Themed';
 
 const INDIGO = colors.indigo;
 
@@ -91,10 +92,17 @@ function HomeShell({
   accent: string;
   children: React.ReactNode;
 }) {
+  // Pull the user's theme: surface bg + density scale. This is
+  // the biggest visible change when someone picks Cream or Midnight
+  // in Customize — their entire home repaints.
+  const t = useResolvedTheme();
+  const sp = useSpacing();
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: t.surface.bg }]}>
       <ScrollView
-        contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[
+          { padding: sp.xl, paddingTop: sp.sm, gap: sp.xl, paddingBottom: insets.bottom + 40 },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
@@ -106,13 +114,18 @@ function HomeShell({
 
 function Greeting({ eyebrow, firstName, line, eyebrowColor }:
   { eyebrow: string; firstName: string; line: string; eyebrowColor: string }) {
-  const accent = useAccent();
+  const t = useResolvedTheme();
   return (
     <View style={s.greetRow}>
       <View style={{ flex: 1 }}>
-        <Text style={[s.eyebrow, { color: eyebrowColor }]}>{eyebrow}</Text>
-        <Text style={s.greeting}>
-          <Text style={{ color: accent }}>{firstName}</Text>
+        <Text style={[s.eyebrow, { color: eyebrowColor, fontFamily: t.type.body }]}>{eyebrow}</Text>
+        <Text style={[s.greeting, {
+          color: t.surface.t1,
+          fontFamily: t.type.display,
+          fontWeight: t.type.heroWeight,
+          letterSpacing: t.type.heroTracking,
+        }]}>
+          <Text style={{ color: t.accent }}>{firstName}</Text>
           {', '}
           {line}
         </Text>
@@ -122,7 +135,7 @@ function Greeting({ eyebrow, firstName, line, eyebrowColor }:
         scaleDown={0.9}
         hitSlop={10}
       >
-        <Ionicons name="qr-code" size={20} color={accent} />
+        <Ionicons name="qr-code" size={20} color={t.accent} />
       </AnimatedPressable>
       <AnimatedPressable
         onPress={() => router.push('/(app)/settings' as any)}
@@ -130,27 +143,47 @@ function Greeting({ eyebrow, firstName, line, eyebrowColor }:
         hitSlop={10}
         style={{ marginLeft: 10 }}
       >
-        <Ionicons name="settings-outline" size={20} color={colors.t3} />
+        <Ionicons name="settings-outline" size={20} color={t.surface.t3} />
       </AnimatedPressable>
     </View>
   );
 }
 
 function PromptRow({ text, onPress, tint }: { text: string; onPress: () => void; tint?: string }) {
+  const t = useResolvedTheme();
   return (
-    <AnimatedPressable style={s.promptRow} scaleDown={0.98} onPress={onPress}>
-      <Text style={s.promptText}>{text}</Text>
-      <Ionicons name="chatbubble-outline" size={14} color={tint || colors.t3} />
+    <AnimatedPressable
+      style={[s.promptRow, {
+        backgroundColor: t.surface.s1,
+        borderColor: t.surface.border,
+        borderRadius: t.shape.sm,
+      }]}
+      scaleDown={0.98}
+      onPress={onPress}
+    >
+      <Text style={[s.promptText, { color: t.surface.t1, fontFamily: t.type.body }]}>{text}</Text>
+      <Ionicons name="chatbubble-outline" size={14} color={tint || t.surface.t3} />
     </AnimatedPressable>
   );
 }
 
 function MarketTile({ count, label, accent, onPress }: { count: number | null; label: string; accent: string; onPress: () => void }) {
+  const t = useResolvedTheme();
   if (count == null) return null;
   return (
-    <AnimatedPressable style={[s.marketTile, { borderColor: accent + '30' }]} scaleDown={0.98} onPress={onPress}>
-      <Text style={[s.marketNumber, { color: accent }]}>{count.toLocaleString()}</Text>
-      <Text style={s.marketLabel}>{label}</Text>
+    <AnimatedPressable
+      style={[s.marketTile, {
+        backgroundColor: t.surface.s1,
+        borderColor: accent + '30',
+        borderRadius: t.shape.md,
+      }]}
+      scaleDown={0.98}
+      onPress={onPress}
+    >
+      <Text style={[s.marketNumber, { color: accent, fontFamily: t.type.display, fontWeight: t.type.heroWeight }]}>
+        {count.toLocaleString()}
+      </Text>
+      <Text style={[s.marketLabel, { color: t.surface.t2, fontFamily: t.type.body }]}>{label}</Text>
       <View style={s.marketCtaRow}>
         <Text style={[s.marketCta, { color: accent }]}>Open the market</Text>
         <Ionicons name="arrow-forward" size={14} color={accent} />
@@ -160,15 +193,80 @@ function MarketTile({ count, label, accent, onPress }: { count: number | null; l
 }
 
 function TalkCta({ label, seed, accent }: { label: string; seed: string; accent: string }) {
+  const t = useResolvedTheme();
+  const gradient = t.gradient;
   return (
     <AnimatedPressable
-      style={[s.talkCta, { backgroundColor: accent }]}
+      style={[s.talkCta, {
+        backgroundColor: accent,
+        borderRadius: t.shape.sm,
+        overflow: 'hidden',
+      }]}
       scaleDown={0.97}
       onPress={() => openDillyOverlay({ isPaid: false, initialMessage: seed })}
     >
-      <Ionicons name="chatbubble" size={14} color="#fff" />
-      <Text style={s.talkCtaText}>{label}</Text>
+      {/* Gradient slice when user picked Gradient style. */}
+      {gradient && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute', top: 0, bottom: 0, right: 0,
+            width: '55%', backgroundColor: gradient[1], opacity: 0.9,
+          }}
+        />
+      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Ionicons name="chatbubble" size={14} color="#fff" />
+        <Text style={[s.talkCtaText, { fontFamily: t.type.body }]}>{label}</Text>
+      </View>
     </AnimatedPressable>
+  );
+}
+
+/** Hero card wrapper — honors theme surface, shape.lg, and density. */
+function HeroCard({ tintColor, borderColor, bg, children }: {
+  tintColor?: string; borderColor?: string; bg?: string; children: React.ReactNode;
+}) {
+  const t = useResolvedTheme();
+  const sp = useSpacing();
+  return (
+    <View style={{
+      backgroundColor: bg || (tintColor ? tintColor + '08' : t.surface.s1),
+      borderWidth: 1,
+      borderColor: borderColor || (tintColor ? tintColor + '28' : t.surface.border),
+      borderRadius: t.shape.lg,
+      padding: sp.lg + 4,
+      gap: 10,
+    }}>
+      {children}
+    </View>
+  );
+}
+
+function HeroText({ kicker, head, body, kickerColor }: {
+  kicker: string; head: string; body: string; kickerColor: string;
+}) {
+  const t = useResolvedTheme();
+  return (
+    <>
+      <Text style={[s.heroKicker, { color: kickerColor, fontFamily: t.type.body }]}>{kicker}</Text>
+      <Text style={[s.heroHead, {
+        color: t.surface.t1,
+        fontFamily: t.type.display,
+        fontWeight: t.type.heroWeight,
+        letterSpacing: t.type.heroTracking,
+      }]}>{head}</Text>
+      <Text style={[s.heroBody, { color: t.surface.t2, fontFamily: t.type.body }]}>{body}</Text>
+    </>
+  );
+}
+
+function SectionLabel({ children }: { children: string }) {
+  const t = useResolvedTheme();
+  return (
+    <Text style={[s.sectionLabel, { color: t.surface.t3, fontFamily: t.type.body }]}>
+      {children}
+    </Text>
   );
 }
 
@@ -196,23 +294,24 @@ export function ExploringHome() {
 
       {/* Hero — 3 concrete next moves, picked for explorers. */}
       <FadeInView delay={40}>
-        <View style={[s.heroCard, { backgroundColor: accent + '08', borderColor: accent + '22' }]}>
-          <Text style={[s.heroKicker, { color: accent }]}>THE QUESTION THAT CRACKS IT OPEN</Text>
-          <Text style={s.heroHead}>What would make the next job{'\n'}feel like the right one?</Text>
-          <Text style={s.heroBody}>
-            Most people searching never answer that clearly. Spend five minutes with Dilly and you'll know what you're actually optimizing for.
-          </Text>
+        <HeroCard tintColor={accent}>
+          <HeroText
+            kicker="THE QUESTION THAT CRACKS IT OPEN"
+            head={"What would make the next job\nfeel like the right one?"}
+            body="Most people searching never answer that clearly. Spend five minutes with Dilly and you'll know what you're actually optimizing for."
+            kickerColor={accent}
+          />
           <TalkCta
             label="Work it out with Dilly"
             seed="I'm exploring what comes next. Help me figure out what would actually make the next role feel like the right one. Ask me questions."
             accent={accent}
           />
-        </View>
+        </HeroCard>
       </FadeInView>
 
       {/* Two prompt rows — "where do I start today". */}
       <FadeInView delay={100}>
-        <Text style={s.sectionLabel}>START HERE TODAY</Text>
+        <SectionLabel>START HERE TODAY</SectionLabel>
         <View style={{ gap: 8 }}>
           <PromptRow
             text="What kind of work actually energizes me?"
@@ -231,7 +330,7 @@ export function ExploringHome() {
 
       {/* Market tile. */}
       <FadeInView delay={160}>
-        <Text style={s.sectionLabel}>THE MARKET</Text>
+        <SectionLabel>THE MARKET</SectionLabel>
         <MarketTile
           count={marketCount}
           label="live roles Dilly is tracking"
@@ -288,25 +387,24 @@ export function DropoutHome() {
       />
 
       <FadeInView delay={40}>
-        <View style={[s.heroCard, { backgroundColor: PROOF + '08', borderColor: PROOF + '28' }]}>
-          <Text style={[s.heroKicker, { color: PROOF }]}>YOUR EDGE</Text>
-          <Text style={s.heroHead}>
-            Every hiring manager who's hiring well{'\n'}already knows — degrees aren't it.
-          </Text>
-          <Text style={s.heroBody}>
-            They want receipts: shipped projects, real outcomes, a concrete problem you solved. Dilly helps you collect those and tell them well.
-          </Text>
+        <HeroCard tintColor={PROOF}>
+          <HeroText
+            kicker="YOUR EDGE"
+            head={"Every hiring manager who's hiring well\nalready knows — degrees aren't it."}
+            body="They want receipts: shipped projects, real outcomes, a concrete problem you solved. Dilly helps you collect those and tell them well."
+            kickerColor={PROOF}
+          />
           <TalkCta
             label="Build my proof"
             seed="I don't have a degree. Help me turn what I've built into a short list of specific, sharp proof points. Ask me about one project at a time."
             accent={PROOF}
           />
-        </View>
+        </HeroCard>
       </FadeInView>
 
       {/* Proof stack visual — facts the user has captured. */}
       <FadeInView delay={100}>
-        <Text style={s.sectionLabel}>YOUR PROOF STACK</Text>
+        <SectionLabel>YOUR PROOF STACK</SectionLabel>
         <View style={s.proofStack}>
           <View style={[s.proofBar, { width: `${Math.min(100, (factCount / 40) * 100)}%`, backgroundColor: PROOF }]} />
         </View>
@@ -317,7 +415,7 @@ export function DropoutHome() {
       </FadeInView>
 
       <FadeInView delay={160}>
-        <Text style={s.sectionLabel}>QUICK PROOF PROMPTS</Text>
+        <SectionLabel>QUICK PROOF PROMPTS</SectionLabel>
         <View style={{ gap: 8 }}>
           <PromptRow
             text="A project I shipped and what it cost me"
@@ -338,7 +436,7 @@ export function DropoutHome() {
       </FadeInView>
 
       <FadeInView delay={220}>
-        <Text style={s.sectionLabel}>OPEN ROLES THAT DON'T GATE ON DEGREES</Text>
+        <SectionLabel>OPEN ROLES THAT DON'T GATE ON DEGREES</SectionLabel>
         <MarketTile
           count={marketCount}
           label="roles Dilly is tracking · filter applied"
@@ -385,28 +483,24 @@ export function LaidOffHome() {
 
       {/* Regroup card — calm but moving. */}
       <FadeInView delay={40}>
-        <View style={[s.heroCard, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
-          <Text style={[s.heroKicker, { color: RESET }]}>
-            {weeksSince != null ? `WEEK ${weeksSince + 1}` : 'RIGHT NOW'}
-          </Text>
-          <Text style={s.heroHead}>
-            First week: breathe and list.{'\n'}
-            After that: send.
-          </Text>
-          <Text style={s.heroBody}>
-            The data is clear — momentum in the first 30 days is worth more than polish. Dilly helps you ship three tailored applications a week, not perfect ones.
-          </Text>
+        <HeroCard bg="#FFF7ED" borderColor="#FED7AA">
+          <HeroText
+            kicker={weeksSince != null ? `WEEK ${weeksSince + 1}` : 'RIGHT NOW'}
+            head={"First week: breathe and list.\nAfter that: send."}
+            body="The data is clear — momentum in the first 30 days is worth more than polish. Dilly helps you ship three tailored applications a week, not perfect ones."
+            kickerColor={RESET}
+          />
           <TalkCta
             label="Plan this week with Dilly"
             seed="I was just laid off. Help me plan this week. What's the ONE highest-leverage thing I should do today, and what can wait?"
             accent={RESET}
           />
-        </View>
+        </HeroCard>
       </FadeInView>
 
       {/* Pipeline — 3 stages the user should be working. */}
       <FadeInView delay={100}>
-        <Text style={s.sectionLabel}>YOUR PIPELINE</Text>
+        <SectionLabel>YOUR PIPELINE</SectionLabel>
         <View style={s.pipelineRow}>
           <View style={[s.pipelineTile, { borderColor: RESET + '30' }]}>
             <Ionicons name="document-text" size={18} color={RESET} />
@@ -428,7 +522,7 @@ export function LaidOffHome() {
 
       {/* Prompts — layoff-specific. */}
       <FadeInView delay={160}>
-        <Text style={s.sectionLabel}>TODAY'S OPENING</Text>
+        <SectionLabel>TODAY'S OPENING</SectionLabel>
         <View style={{ gap: 8 }}>
           <PromptRow
             text="How do I talk about the layoff in interviews?"
@@ -449,7 +543,7 @@ export function LaidOffHome() {
       </FadeInView>
 
       <FadeInView delay={220}>
-        <Text style={s.sectionLabel}>LIVE ROLES</Text>
+        <SectionLabel>LIVE ROLES</SectionLabel>
         <MarketTile
           count={marketCount}
           label="roles open right now"
@@ -492,26 +586,24 @@ export function VisaHome() {
       />
 
       <FadeInView delay={40}>
-        <View style={[s.heroCard, { backgroundColor: VISA + '08', borderColor: VISA + '28' }]}>
-          <Text style={[s.heroKicker, { color: VISA }]}>THE REAL CONSTRAINT</Text>
-          <Text style={s.heroHead}>
-            The best job is useless{'\n'}
-            if they won't sponsor.
-          </Text>
-          <Text style={s.heroBody}>
-            Dilly filters the market for companies that sponsor, tracks your OPT/STEM/H1B cutoffs, and rewrites your resume for sponsor-side recruiters who screen differently. Nothing else wastes your time.
-          </Text>
+        <HeroCard tintColor={VISA}>
+          <HeroText
+            kicker="THE REAL CONSTRAINT"
+            head={"The best job is useless\nif they won't sponsor."}
+            body="Dilly filters the market for companies that sponsor, tracks your OPT/STEM/H1B cutoffs, and rewrites your resume for sponsor-side recruiters who screen differently. Nothing else wastes your time."
+            kickerColor={VISA}
+          />
           <TalkCta
             label="Plan my visa timeline"
             seed="I'm on a visa. Help me lay out my timeline: what OPT/STEM/H1B deadlines I should be aware of and what my search should look like backwards from those."
             accent={VISA}
           />
-        </View>
+        </HeroCard>
       </FadeInView>
 
       {/* Sponsor-first callout. */}
       <FadeInView delay={100}>
-        <Text style={s.sectionLabel}>SPONSOR-FIRST THINKING</Text>
+        <SectionLabel>SPONSOR-FIRST THINKING</SectionLabel>
         <View style={s.infoCard}>
           <View style={[s.infoIcon, { backgroundColor: VISA + '15' }]}>
             <Ionicons name="globe" size={18} color={VISA} />
@@ -532,7 +624,7 @@ export function VisaHome() {
       </FadeInView>
 
       <FadeInView delay={160}>
-        <Text style={s.sectionLabel}>FASTEST WAY TO USE DILLY</Text>
+        <SectionLabel>FASTEST WAY TO USE DILLY</SectionLabel>
         <View style={{ gap: 8 }}>
           <PromptRow
             text="Which companies in my cohort actually sponsor?"
@@ -553,7 +645,7 @@ export function VisaHome() {
       </FadeInView>
 
       <FadeInView delay={220}>
-        <Text style={s.sectionLabel}>LIVE ROLES</Text>
+        <SectionLabel>LIVE ROLES</SectionLabel>
         <MarketTile
           count={marketCount}
           label="roles live right now"
