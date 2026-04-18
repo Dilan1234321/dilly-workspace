@@ -2595,12 +2595,15 @@ Rules:
 
     from dilly_core.llm_client import get_chat_completion, get_light_model
 
+    # Career playbook. Was 3200 output tokens — the single most
+    # expensive paid-tier call (~$0.013 just on output). Tightening
+    # to 2000; playbook renders in 2k easily, 3200 was padding.
     raw = get_chat_completion(
         system,
         user_content,
         model=get_light_model(),
         temperature=0.42,
-        max_tokens=3200,
+        max_tokens=2000,
     )
     parsed = _parse_career_playbook_response(raw) if raw else None
     if not isinstance(parsed, dict):

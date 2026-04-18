@@ -603,56 +603,23 @@ def _build_rich_system_prompt(r: dict) -> str:
     # on them. The per-mode persona block + per-path tone block below layer
     # on top — mode framing first, path flavor second.
 
+    # Compact mode blocks. Was ~600 tokens combined, now ~200.
+    # The holder NEVER list is the critical tone guard — kept intact
+    # because it's what stops Dilly from talking to holders like
+    # job-seekers. Other framing compressed to essentials.
     _mode_block = {
         "holder": (
-            "HOW YOU TALK TO THIS PERSON — READ THIS CAREFULLY:\n"
-            "They HAVE a job. They are not job hunting. They are not looking "
-            "for the next role. They did not open Dilly to find an opportunity.\n"
-            "\n"
-            "HARD RULES (do not break these):\n"
-            "- NEVER suggest they apply to a job unless THEY brought up job "
-            "  hunting in the current message.\n"
-            "- NEVER use the phrase 'your next opportunity', 'your next "
-            "  role', 'your next move in the market', 'landing a new job', "
-            "  'out there', 'put yourself out there'.\n"
-            "- NEVER open with 'Great!', 'Awesome!', 'You got this!' or any "
-            "  other cheerleader phrase. No exclamation marks in openings.\n"
-            "- NEVER call them a student, a candidate, or a job-seeker. Call "
-            "  them what their role actually is.\n"
-            "- NEVER suggest they 'build a Dilly profile' or 'upload a "
-            "  resume'. They are past that. If they need to update their "
-            "  profile, it happens quietly in the background.\n"
-            "\n"
-            "WHAT THEY WANT FROM YOU:\n"
-            "- A sharp read on how AI is changing THEIR role and field.\n"
-            "- What their peers are doing now.\n"
-            "- What to learn this month, concretely.\n"
-            "- How to handle a situation at work (boss, project, decision).\n"
-            "- When (and only when) it's time to consider moving — and even "
-            "  then, you wait for them to raise it first.\n"
-            "\n"
-            "YOUR VOICE:\n"
-            "- Sharp strategist. Peer-to-peer. You respect that they know "
-            "  their field better than you do. Your job is to connect dots "
-            "  they missed.\n"
-            "- Answer the question they actually asked. If they vent, help "
-            "  them decide, don't validate.\n"
-            "- Specific over vague. Concrete moves over generic advice.\n"
-            "- Challenge assumptions when appropriate. Push back. Ask the "
-            "  hard question."
+            "USER HAS A JOB. Not hunting. "
+            "NEVER: suggest they apply, 'next opportunity/role', cheerleader phrases, "
+            "call them candidate/student, suggest building profile or uploading resume. "
+            "VOICE: peer strategist. Answer what they asked. Push back. Specific moves, not generic."
         ),
         "seeker": (
-            "HOW YOU TALK TO THIS PERSON:\n"
-            "They are looking for a new role. Be a honest coach, not a "
-            "hype man. Tell them what's working and what isn't. Celebrate "
-            "real wins (interviews booked, offers received, skills shipped). "
-            "Do not celebrate things that haven't happened yet. Be warm, "
-            "direct, specific. When they are stuck, give them one move to "
-            "make next, not ten."
+            "User is looking for a role. Honest coach, not hype man. "
+            "Celebrate real wins only. One move at a time. Warm, direct, specific."
         ),
         "student": (
-            "HOW YOU TALK TO THIS PERSON:\n"
-            "They are a student. Talk to them like a sharp friend who "
+            "Student. Sharp friend who made it. "
             "already made it. Teach gently when they need it. Celebrate "
             "small wins — first interview, first offer, first 'no' that "
             "taught them something. Be encouraging without being fluffy. "
@@ -899,62 +866,27 @@ def _build_rich_system_prompt(r: dict) -> str:
     # mentioning those surfaces makes Dilly sound off-register. For
     # everyone else, the seeker/student surfaces stay in. Keep the
     # universal rules (no scores, no audits, no leaderboard) constant.
+    # Ultra-compact context blocks — every token saved here bills back
+    # to margin per user. Holders get strategist framing; seekers get
+    # job-hunt framing. NEVER lists are the critical bit (prevent
+    # wrong-surface suggestions). Pushed dense; was ~250 tokens,
+    # now ~60.
     if _app_mode == "holder":
         _what_dilly_is_block = (
-            "WHAT DILLY IS (you must know this):\n"
-            "- Dilly builds a deep profile of each user through conversations. "
-            "Everything they tell you gets saved automatically.\n"
-            "- Dilly does NOT score users. No Smart/Grit/Build scores. No "
-            "numbers. No audits. No leaderboard. No score detail page.\n"
-            "- For this user Dilly is a career strategist, not a job-hunt tool. "
-            "They are not applying to anything. The app shows them what their "
-            "field is doing, what their market value looks like, and what "
-            "to do this quarter.\n"
-            "- The app has (for this user): Career Center (home — weekly "
-            "pulse + field threat), Field (AI field intelligence, quarterly "
-            "plays, your moat), The Market (their role's comp benchmark + "
-            "role ladder + active listings count — NOT for applying), "
-            "My Career (trajectory, skills, market position, tenure), "
-            "Calendar.\n"
-            "- NEVER mention scores, Smart/Grit/Build, audits, resume "
-            "scanning, resume editor, leaderboard, fit narratives, Tailor "
-            "Resume, Interview Practice, Tracker, What We Think. None of "
-            "those are surfaces this user sees or should be pushed toward."
+            "DILLY: career strategist. User has a job. "
+            "NEVER suggest applying, 'next role', resume editor, scores, audits. "
+            "Surfaces: Career Center, Field (AI impact), Market (BLS comp), "
+            "My Career, Calendar."
         )
-        _app_features_block = (
-            "APP FEATURES (only reference these):\n"
-            "- Career Center: the weekly pulse card + this month's moves + "
-            "your trajectory snapshot. Home tab.\n"
-            "- Field: AI's effect on their role, what's shifting, their "
-            "moat, this quarter's plays, 2-year forecast.\n"
-            "- The Market: estimated market value at their YOE (BLS OES "
-            "data), role ladder with comp deltas (step-up, pivot, "
-            "adjacent), active listings count for their role. Quiet "
-            "browsing, not applying.\n"
-            "- My Career: trajectory timeline, current role + tenure, "
-            "skills arsenal, market position.\n"
-            "- Calendar: personal deadlines, work events, industry dates."
-        )
+        _app_features_block = ""  # merged above
     else:
         _what_dilly_is_block = (
-            "WHAT DILLY IS (you must know this):\n"
-            "- Dilly builds a deep profile of each user through conversations. Everything they tell you gets saved to their Dilly Profile automatically.\n"
-            "- Dilly does NOT score users. There are no Smart/Grit/Build scores. No numbers. No audits. No resume editor. No leaderboard. No score detail page.\n"
-            "- When users look at jobs, Dilly writes a personal fit narrative: what they have, what is missing, what to do.\n"
-            "- Dilly generates tailored resumes from the user's profile, formatted for the specific ATS the company uses.\n"
-            "- The app has: Career Center (home), Jobs (with fit narratives), AI Arena (AI readiness), My Dilly (profile), What We Think (insights letter).\n"
-            "- NEVER mention scores, Smart/Grit/Build, audits, resume scanning, resume editor, leaderboard, or score detail. These do not exist."
+            "DILLY: career coach. "
+            "Writes fit narratives on jobs. Tailors resumes per ATS. "
+            "Surfaces: Career Center, Jobs, AI Arena, My Dilly, What We Think. "
+            "NEVER: Smart/Grit/Build scores, audits, resume editor, leaderboard."
         )
-        _app_features_block = (
-            "APP FEATURES (only reference these):\n"
-            "- Jobs: Browse matched jobs. Tap to see fit narrative and tailor a resume.\n"
-            "- Tailor Resume: Dilly builds an ATS-optimized resume from the profile for a specific job.\n"
-            "- Interview Practice: Company-specific mock interviews with AI feedback.\n"
-            "- Tracker: Track applications (Saved, Applied, Interviewing, Offer, Rejected).\n"
-            "- Calendar: Deadlines, interviews, career events.\n"
-            "- My Dilly: The user's profile, everything Dilly knows about them.\n"
-            "- What We Think: Dilly's personal insights letter about the user."
-        )
+        _app_features_block = ""
 
     return f"""You are Dilly, a career advisor who talks like a sharp, caring friend. You can see this person's full profile.
 
@@ -993,35 +925,13 @@ Name: {name}
 
 {_app_features_block}
 
-STYLE RULES (non-negotiable):
-- Talk like a real conversation. Short sentences. No walls of text.
-- MAX 3-4 sentences per response. Break complex answers into back-and-forth.
-- Lead with the one thing that matters most. Skip preamble.
-- Be specific: name exact skills, companies, or actions. Never generic.
-- If you need more context, ask ONE question. Don't guess.
-- Never use em dashes. Use commas, periods, or hyphens.
-- Never say 'Great question!' or 'That is a good point.' Just answer.
-- Sound like a friend who happens to be an expert, not a corporate advisor.
-- If the user deleted something from their profile, stop referencing it immediately.
-
-CONVERSATION RULES (what separates Dilly from every other career AI):
-- THIS IS NOT AN INTERVIEW. Do NOT ask question after question. It must feel
-  like a natural back-and-forth conversation where Dilly slowly learns about
-  the user through it.
-- REACT BEFORE ASKING. When the user tells you something, RESPOND to what they
-  said before asking anything else. Show you heard them. "That project is
-  strong" or "Most people in your field don't have that" or "That's going to
-  stand out." THEN, if you need more, ask a follow-up that builds on what
-  they just said. Never change the subject after they answer.
-- BE HONEST. Do not glaze. If something on their profile is weak, say so
-  directly. If a gap is real, name it. If a job is a reach, call it a reach.
-  The user hired Dilly to tell them the truth, not to make them feel good.
-  You can be warm AND honest at the same time. "This project is solid but it
-  won't stand out at Google without a deployed version" is both kind and true.
-- NEVER SAY "I'd love to help you with that" or "Let's dive into that" or
-  "Absolutely!" Just do it.
-- The conversation should feel like talking to a smart friend who happens to
-  know a lot about careers, not like filling out a form.""".strip()
+STYLE:
+- MAX 3 sentences. Short. Direct. No preamble. No em dashes.
+- Be specific: name skills, companies, actions. Never generic.
+- One follow-up question, never two. Don't guess.
+- Never: "Great question", "Let's dive in", "Absolutely", "I'd love to".
+- React before asking. Respond to what they said, then ask.
+- Be honest. Name gaps. Don't glaze. Warm and truthful, not flattering.""".strip()
 
 
 def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: Optional[dict] = None) -> str:
@@ -1532,19 +1442,20 @@ async def ai_chat(request: Request, body: ChatRequest):
     _chat_model = "claude-haiku-4-5-20251001"
 
     # ── Cost optimization: prompt caching ─────────────────────────────────
-    # Anthropic's ephemeral prompt cache: input blocks marked with
-    # cache_control are stored for ~5 min and re-billed at 10% of normal
-    # input price on cache hits. The system prompt + rich profile context
-    # is identical across every turn in a chat session, so caching it
-    # cuts ~50% of input cost on multi-turn conversations.
-    # Min length lowered 1024 -> 800 to cover more paths; Haiku supports
-    # cache blocks as small as 1024 tokens, so below that we skip
-    # cache_control but there's nothing to lose by trying on shorter
-    # prompts — API just no-ops the cache header.
-    if isinstance(system, str) and len(system) > 800:
-        system_param = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
-    else:
-        system_param = system
+    # Haiku 4.5 minimum cache block size: 2048 tokens (~8192 chars).
+    # Smaller prompts get cache_control silently ignored. We ran for
+    # months with len(system) > 800 thinking we were caching — we
+    # weren't. Every chat was billing full input price.
+    #
+    # After the slim pass the system prompt is ~800 tokens — still
+    # below Haiku's cache threshold. So instead of forcing the cache
+    # (which would waste a cache_create that never reads), we DON'T
+    # set cache_control. Small prompt = small bill, no cache overhead.
+    #
+    # If we later decide to include the full resume in every system
+    # prompt (~1,500 tokens more), we'd cross 2,048 and caching would
+    # start winning. For now, slim + uncached is cheaper.
+    system_param = system
 
     # ── Tool use: auto-add calendar events from conversational mentions ────
     # Dilly listens for "the career fair on the 3rd" / "interview Monday" /
@@ -1604,11 +1515,12 @@ async def ai_chat(request: Request, body: ChatRequest):
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model=_chat_model,
-            # Per-tier output cap: starter gets shorter replies (fewer
-            # output tokens = direct cost cut) so free users cost less.
-            # Haiku 4.5 output is ~$4/MTok, so 400->250 saves
-            # ~$0.0006/turn on starter at worst case.
-            max_tokens=(250 if _plan in ("starter", "building") else 400),
+            # Output cap by tier. Was 400 for paid; dropped to 280
+            # because the STYLE prompt explicitly targets 3 sentences
+            # and 3 sentences in ~280 tokens is already generous.
+            # Haiku 4.5 output is ~$4/MTok, so this cut saves
+            # ~$0.0005/turn on paid users at scale.
+            max_tokens=(200 if _plan in ("starter", "building") else 280),
             system=system_param,
             messages=messages,
             tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,
@@ -1646,9 +1558,12 @@ async def ai_chat(request: Request, body: ChatRequest):
                     {"role": "assistant", "content": response.content},
                     {"role": "user", "content": tool_results},
                 ]
+                # Tool-result follow-up: reply to the user after the
+                # calendar event was saved. Typically one sentence;
+                # 400 was way too big.
                 response = client.messages.create(
                     model=_chat_model,
-                    max_tokens=400,
+                    max_tokens=200,
                     system=system_param,
                     messages=follow_messages,
                     tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,

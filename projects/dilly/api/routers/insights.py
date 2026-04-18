@@ -251,7 +251,9 @@ async def insights_letter(request: Request):
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=1500,
+            # Letter is a short personal read. 800 is enough; 1500 was
+            # room for rambling that cost ~$0.003/call extra.
+            max_tokens=800,
             temperature=0.4,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],

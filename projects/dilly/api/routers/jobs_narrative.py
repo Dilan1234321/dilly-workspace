@@ -430,9 +430,11 @@ async def fit_narrative(request: Request, body: dict = Body(...)):
             if isinstance(system_prompt, str) and len(system_prompt) >= 4000
             else system_prompt
         )
+        # Fit narrative is a 3-paragraph read. 500 output tokens is
+        # plenty; 800 was padding that cost ~$0.0012/call extra.
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=800,
+            max_tokens=500,
             temperature=0.3,
             system=_sys_param,
             messages=[{"role": "user", "content": user_message}],
