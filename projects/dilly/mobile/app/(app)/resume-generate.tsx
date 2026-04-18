@@ -56,6 +56,7 @@ import { colors, spacing, radius } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { DillyFeatureBanner } from '../../components/DillyFeatureBanner';
+import { useSubscription } from '../../hooks/useSubscription';
 
 const W = Dimensions.get('window').width;
 const INDIGO = colors.indigo;
@@ -558,6 +559,8 @@ function Header({ insetsTop, usage, onBack }: { insetsTop: number; usage: any; o
 
 function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQuality, onGenerate }: any) {
   const canGenerate = jobTitle.trim().length > 0 && company.trim().length > 0 && jd.trim().length >= 100;
+  const { isPaid, loading: subLoading } = useSubscription();
+  const showPowerDemo = !subLoading && !isPaid;
   return (
     <FadeInView>
       {/* Free-tier nudge — banner only renders for starter users. */}
@@ -583,6 +586,56 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
           <ProofChip icon="person" text="From your profile" />
         </View>
       </View>
+
+      {/* Power demo — free-tier only. Concrete specifics, not generic
+          marketing. The goal is to make the user read "oh, this does
+          things a template can't" before they tap and hit the paywall.
+          Paid users skip this entirely. */}
+      {showPowerDemo && (
+        <>
+          <Text style={styles.sectionHeader}>WHAT THE FORGE ACTUALLY DOES</Text>
+          <View style={styles.powerGrid}>
+            <PowerRow
+              icon="scan"
+              title="Detects the ATS"
+              body="Greenhouse, Lever, Workday, Ashby, SmartRecruiters, iCIMS, SuccessFactors, Workable, Taleo, and more. Formatting rules switch per parser so your resume doesn't get mangled at the door."
+            />
+            <PowerRow
+              icon="git-compare"
+              title="Keyword-matches every bullet"
+              body="Reads the JD, extracts the real keywords (not buzzwords), then checks your bullets against them. You see the match pct on the done screen with every matching word highlighted."
+            />
+            <PowerRow
+              icon="person"
+              title="Builds from your profile, not a template"
+              body="Every bullet is a real thing you told Dilly. If you don't have proof for a JD requirement, Dilly flags it as a missing keyword instead of inventing one."
+            />
+            <PowerRow
+              icon="analytics"
+              title="Scores itself on 4 axes"
+              body="ATS parse, keyword match, profile depth, role fit. Color-coded bars. You know before sending whether this resume is strong enough."
+            />
+            <PowerRow
+              icon="flash"
+              title="Calls out your weakest bullet"
+              body="Dilly identifies the one bullet that's thinnest (short, no metrics, vague) and offers to strengthen it with you. One-tap path into chat."
+            />
+          </View>
+
+          <View style={styles.powerStatRow}>
+            <PowerStat n="~20s" label="Forge time" />
+            <PowerStat n="11" label="ATSes tuned" />
+            <PowerStat n="PDF + DOCX" label="Export formats" />
+          </View>
+
+          <View style={styles.lockedBadge}>
+            <Ionicons name="lock-closed" size={12} color={INDIGO} />
+            <Text style={styles.lockedBadgeText}>
+              Starter: setup + preview only.  Forging unlocks with Dilly.
+            </Text>
+          </View>
+        </>
+      )}
 
       <Text style={styles.sectionHeader}>THE JOB</Text>
 
@@ -661,6 +714,31 @@ function FieldLabel({ text, required, top, inline }: { text: string; required?: 
     <Text style={[styles.fieldLabel, { marginTop: top ? 14 : (inline ? 0 : 0), marginBottom: 6 }]}>
       {text}{required ? <Text style={{ color: CORAL }}> *</Text> : null}
     </Text>
+  );
+}
+
+/** One row in the Forge power demo — icon bubble, title, one-liner. */
+function PowerRow({ icon, title, body }: { icon: any; title: string; body: string }) {
+  return (
+    <View style={styles.powerRow}>
+      <View style={styles.powerRowIcon}>
+        <Ionicons name={icon} size={14} color={INDIGO} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.powerRowTitle}>{title}</Text>
+        <Text style={styles.powerRowBody}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** One big-number stat tile in the stat row beneath the power grid. */
+function PowerStat({ n, label }: { n: string; label: string }) {
+  return (
+    <View style={styles.powerStat}>
+      <Text style={styles.powerStatN}>{n}</Text>
+      <Text style={styles.powerStatLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -1400,4 +1478,41 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2, marginBottom: 4,
   },
   errorDetailText: { fontSize: 11, color: colors.t2, fontFamily: 'Menlo' },
+
+  // ── Forge power demo (free-tier only) ─────────────────────────
+  powerGrid: {
+    gap: 10,
+    backgroundColor: colors.s1,
+    borderWidth: 1, borderColor: colors.b1,
+    borderRadius: 14, padding: 14,
+  },
+  powerRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  powerRowIcon: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: INDIGO + '12', borderWidth: 1, borderColor: INDIGO + '28',
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 1,
+  },
+  powerRowTitle: { fontSize: 13, fontWeight: '800', color: colors.t1, letterSpacing: -0.1 },
+  powerRowBody:  { fontSize: 12, color: colors.t2, lineHeight: 17, marginTop: 2 },
+
+  powerStatRow: {
+    flexDirection: 'row', gap: 8, marginTop: 10,
+  },
+  powerStat: {
+    flex: 1, alignItems: 'center', gap: 3,
+    backgroundColor: INDIGO + '08',
+    borderWidth: 1, borderColor: INDIGO + '22',
+    borderRadius: 12, paddingVertical: 12,
+  },
+  powerStatN: { fontSize: 16, fontWeight: '900', color: INDIGO, letterSpacing: -0.4 },
+  powerStatLabel: { fontSize: 10, fontWeight: '700', color: colors.t3, letterSpacing: 0.2 },
+
+  lockedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'center', marginTop: 12, marginBottom: 2,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
+    backgroundColor: INDIGO + '10', borderWidth: 1, borderColor: INDIGO + '22',
+  },
+  lockedBadgeText: { fontSize: 11, fontWeight: '700', color: INDIGO },
 });

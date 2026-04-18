@@ -37,6 +37,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useResolvedTheme } from '../../hooks/useTheme';
+import { useSubscription } from '../../hooks/useSubscription';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const COBALT = '#1652F0';
@@ -235,6 +236,12 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   const fadeAnim = useRef(new Animated.Value(preloaded ? 1 : 0)).current;
   const fetched = useRef(!!preloaded);
 
+  // Free-tier check: /jobs/fit-narrative returns 402 for starter users.
+  // Calling it on every job expansion fires the global paywall every
+  // single tap — terrible UX. Instead we check the plan client-side
+  // and render a marketing teaser without ever hitting the endpoint.
+  const { isPaid, loading: subLoading } = useSubscription();
+
   useEffect(() => {
     // If a preloaded narrative was provided by the parent (warmed cache
     // on Jobs tab mount for the top 3 jobs), skip the fetch entirely -
@@ -245,7 +252,18 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
       fetched.current = true;
       return;
     }
+    // Free-tier short-circuit: never call the paid endpoint. Teaser
+    // renders immediately, no network, no global paywall trigger.
+    if (!subLoading && !isPaid) {
+      setLoading(false);
+      fetched.current = true;
+      return;
+    }
     if (fetched.current) return;
+    // Wait for subscription state to resolve before firing so we
+    // don't accidentally call the paid endpoint during the brief
+    // loading window.
+    if (subLoading) return;
     fetched.current = true;
 
     (async () => {
@@ -267,6 +285,10 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
       } catch (e: any) {
         if (e?.status === 403 || e?.message?.includes('403')) {
           setError("You've used all your fit assessments this month.");
+        } else if (e?.status === 402) {
+          // Server gave us 402 (race with subscription state). Fall
+          // through to the same teaser the client-side short-circuit
+          // renders — no inline error, no duplicate paywall.
         } else {
           setError('Could not load fit narrative.');
         }
@@ -274,9 +296,50 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
         setLoading(false);
       }
     })();
-  }, [listing.id, fadeAnim, preloaded]);
+  }, [listing.id, fadeAnim, preloaded, isPaid, subLoading]);
 
   if (loading) return <SkeletonLines />;
+
+  // Free-tier teaser card. Renders when the user is on Starter AND
+  // a preloaded narrative wasn't provided. This is the "sell it"
+  // surface — same intent as a paywall but in-line so tapping a
+  // second job doesn't re-open the full-screen paywall modal.
+  if (!isPaid && !data) {
+    return (
+      <View style={[s.narrativeWrap, {
+        borderWidth: 1,
+        borderColor: colors.indigo + '30',
+        backgroundColor: colors.indigo + '08',
+        borderRadius: 12,
+        padding: 14,
+        gap: 10,
+      }]}>
+        <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 1.4, color: colors.indigo }}>
+          WHAT DILLY SEES ON THIS JOB
+        </Text>
+        <Text style={{ fontSize: 14, fontWeight: '800', color: colors.t1, letterSpacing: -0.2, lineHeight: 20 }}>
+          What you have. What's missing. What to do.
+        </Text>
+        <Text style={{ fontSize: 12, color: colors.t2, lineHeight: 18 }}>
+          Dilly reads every bullet in this job, checks it against everything in your profile, and tells you the honest read. No score. No fluff. Just the three things you need to know before you apply.
+        </Text>
+        <AnimatedPressable
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+            gap: 6, backgroundColor: colors.indigo, borderRadius: 10, paddingVertical: 11,
+            marginTop: 4,
+          }}
+          scaleDown={0.97}
+          onPress={() => router.push('/(app)/settings')}
+        >
+          <Ionicons name="sparkles" size={13} color="#fff" />
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>
+            Unlock fit reads with Dilly
+          </Text>
+        </AnimatedPressable>
+      </View>
+    );
+  }
 
   if (error) {
     return (
