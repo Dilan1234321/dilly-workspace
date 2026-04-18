@@ -889,17 +889,44 @@ async def delete_profile_photo_endpoint(request: Request):
 async def delete_account(request: Request):
     """
     Permanently delete the current user's account. Wipes EVERYTHING:
+    - Stripe subscription (cancelled before any local data is deleted)
     - Profile folder (profile.json, audits.json, applications, resume, photos)
     - PostgreSQL: profile_facts, students row
     - Parsed resume text files
     - Auth: user record + all sessions
     This is irreversible. The user is gone.
+
+    IMPORTANT ORDER: Stripe first, then local data. If we delete the
+    profile row first and then Stripe fails, we lose the stripe_subscription_id
+    and the user gets charged forever with no way for us to find them.
     """
     import traceback
     user = deps.require_auth(request)
     email = (user.get("email") or "").strip().lower()
     if not email:
         raise errors.validation_error("Email required.")
+
+    # 0. Cancel Stripe subscription FIRST (before we lose the profile row
+    # that holds the subscription_id). If Stripe is unreachable we bail
+    # out — better to leave the profile intact than to orphan a paid
+    # subscription that keeps charging a deleted user.
+    from projects.dilly.api.profile_store import get_profile
+    profile_snapshot = get_profile(email) or {}
+    sub_id = (profile_snapshot.get("stripe_subscription_id") or "").strip()
+    stripe_configured = bool(os.environ.get("STRIPE_SECRET_KEY", "").strip())
+    if sub_id and stripe_configured:
+        try:
+            import stripe
+            stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+            # Immediate cancel — the user asked to leave. If the sub is
+            # already cancelled Stripe returns the prior state; still OK.
+            stripe.Subscription.cancel(sub_id)
+            print(f"[DELETE-ACCOUNT] Stripe subscription cancelled: {sub_id}", flush=True)
+        except Exception as se:
+            print(f"[DELETE-ACCOUNT] Stripe cancel failed for {email}: {se}", flush=True)
+            raise errors.service_unavailable(
+                "Could not cancel your subscription right now. Please try again in a minute."
+            )
 
     # 1. Delete ALL data from every table (each in its own transaction)
     from projects.dilly.api.database import get_db

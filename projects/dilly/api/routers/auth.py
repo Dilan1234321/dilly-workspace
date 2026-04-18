@@ -341,9 +341,75 @@ async def redeem_gift(request: Request, body: RedeemGiftRequest):
         raise errors.internal("Could not redeem gift.")
 
 
+# ---------------------------------------------------------------------------
+# Stripe event idempotency. Stripe retries webhook deliveries until we return
+# 2xx, so the same event.id can arrive multiple times. We keep a tiny table
+# keyed by event.id and bail early on duplicates. Lazy-create the table on
+# first use to avoid a separate migration step.
+# ---------------------------------------------------------------------------
+
+def _ensure_stripe_events_table() -> None:
+    from projects.dilly.api.database import get_db
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS processed_stripe_events (
+                event_id    TEXT PRIMARY KEY,
+                event_type  TEXT,
+                received_at TIMESTAMPTZ DEFAULT now()
+            )
+            """
+        )
+
+
+def _stripe_event_already_processed(event_id: str) -> bool:
+    """Return True if we've already handled this event and it should be skipped.
+    Also records the event so subsequent retries are no-ops. Returns False on
+    the first call for a given event_id."""
+    if not event_id:
+        return False
+    from projects.dilly.api.database import get_db
+    try:
+        _ensure_stripe_events_table()
+        with get_db() as conn:
+            cur = conn.cursor()
+            # ON CONFLICT ... RETURNING tells us whether we actually inserted
+            cur.execute(
+                "INSERT INTO processed_stripe_events (event_id) VALUES (%s) ON CONFLICT (event_id) DO NOTHING RETURNING event_id",
+                (event_id,),
+            )
+            return cur.fetchone() is None
+    except Exception as e:
+        # Fail-open: if the idempotency table is unreachable we'd rather
+        # double-process than drop a paid subscription event. Log and move on.
+        print(f"[STRIPE] idempotency check failed: {e}", flush=True)
+        return False
+
+
+def _plan_from_subscription(sub: dict) -> tuple[str, bool]:
+    """Map a Stripe subscription status to (plan, subscribed).
+    `active` and `trialing` count as paid; `past_due` keeps access during
+    grace; anything else downgrades to Starter."""
+    status = (sub.get("status") or "").lower()
+    if status in ("active", "trialing", "past_due"):
+        return ("dilly", True)
+    return ("starter", False)
+
+
 @router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
-    """Stripe webhook: on checkout.session.completed, set user as subscribed or create gift/family. Requires STRIPE_WEBHOOK_SECRET."""
+    """Stripe webhook. Handles the full subscription lifecycle:
+
+    - checkout.session.completed  → mark subscribed, save customer_id + subscription_id
+    - customer.subscription.updated  → sync plan from latest status/price
+    - customer.subscription.deleted  → downgrade to Starter
+    - invoice.payment_failed  → flag past_due + start grace window
+    - invoice.payment_succeeded  → clear grace
+
+    Events are idempotent via processed_stripe_events so Stripe's retry policy
+    doesn't double-apply. Requires STRIPE_WEBHOOK_SECRET.
+    """
     secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip()
     if not secret:
         raise errors.service_unavailable("Webhook not configured.")
@@ -355,7 +421,28 @@ async def stripe_webhook(request: Request):
         event = stripe.Webhook.construct_event(body, sig, secret)
     except Exception:
         raise errors.bad_request("Invalid signature.")
-    if event.type == "checkout.session.completed":
+
+    event_id = getattr(event, "id", None) or event.get("id") if hasattr(event, "get") else None
+    event_type = getattr(event, "type", None) or event.get("type") if hasattr(event, "get") else None
+
+    # Idempotency guard — short-circuit duplicate deliveries.
+    if _stripe_event_already_processed(event_id):
+        return {"received": True, "duplicate": True}
+
+    from projects.dilly.api.auth_store import set_subscribed
+    from projects.dilly.api.profile_store import (
+        save_profile,
+        ensure_profile_exists,
+        get_profile_by_stripe_customer_id,
+    )
+
+    def _email_for_customer(customer_id: str) -> str | None:
+        p = get_profile_by_stripe_customer_id(customer_id)
+        if p and p.get("email"):
+            return p["email"]
+        return None
+
+    if event_type == "checkout.session.completed":
         session = event.data.object
         meta = session.get("metadata") or {}
         pay_type = (meta.get("type") or "").strip().lower()
@@ -383,9 +470,78 @@ async def stripe_webhook(request: Request):
                 .lower()
             )
             if email:
-                from projects.dilly.api.auth_store import set_subscribed
-                from projects.dilly.api.profile_store import save_profile, ensure_profile_exists
                 set_subscribed(email, True)
                 ensure_profile_exists(email)
-                save_profile(email, {"profileStatus": "active"})
+                # Capture both IDs so later subscription.* / invoice.* events
+                # can be mapped back to this user. Without these, Stripe tells
+                # us "customer X cancelled" and we have no way to know who X is.
+                patch: dict = {"profileStatus": "active", "plan": "dilly"}
+                customer_id = session.get("customer")
+                subscription_id = session.get("subscription")
+                if customer_id:
+                    patch["stripe_customer_id"] = customer_id
+                if subscription_id:
+                    patch["stripe_subscription_id"] = subscription_id
+                save_profile(email, patch)
+
+    elif event_type == "customer.subscription.updated":
+        # Tier change or status transition. Re-sync plan from the subscription.
+        sub = event.data.object
+        customer_id = sub.get("customer")
+        email = _email_for_customer(customer_id) if customer_id else None
+        if email:
+            plan, subscribed = _plan_from_subscription(sub)
+            set_subscribed(email, subscribed)
+            save_profile(email, {
+                "plan": plan,
+                "stripe_subscription_id": sub.get("id"),
+            })
+
+    elif event_type == "customer.subscription.deleted":
+        # Stripe has finalized the cancellation. Downgrade to Starter.
+        sub = event.data.object
+        customer_id = sub.get("customer")
+        email = _email_for_customer(customer_id) if customer_id else None
+        if email:
+            set_subscribed(email, False)
+            save_profile(email, {
+                "plan": "starter",
+                "profileStatus": "cancelled",
+                "stripe_subscription_id": None,
+                "payment_state": None,
+                "grace_ends_at": None,
+            })
+
+    elif event_type == "invoice.payment_failed":
+        # Card declined or payment failed. Start 7-day grace. User keeps
+        # access during grace; downgrade happens either via a follow-up
+        # subscription.deleted (Stripe auto-cancels after retries) or via
+        # our nightly reconciliation sweep.
+        invoice = event.data.object
+        customer_id = invoice.get("customer")
+        email = _email_for_customer(customer_id) if customer_id else None
+        if email:
+            import time as _time
+            grace_end = _time.time() + 7 * 24 * 3600
+            save_profile(email, {
+                "payment_state": "past_due",
+                "grace_ends_at": grace_end,
+            })
+
+    elif event_type == "invoice.payment_succeeded":
+        # Card recovered (or renewal succeeded). Clear grace.
+        invoice = event.data.object
+        customer_id = invoice.get("customer")
+        email = _email_for_customer(customer_id) if customer_id else None
+        if email:
+            save_profile(email, {
+                "payment_state": None,
+                "grace_ends_at": None,
+            })
+
     return {"received": True}
+
+
+# Note: user-facing account deletion lives at POST /account/delete in
+# profile.py (router prefix-free). That endpoint already does a thorough
+# wipe across all tables, and now cancels Stripe first before deletion.

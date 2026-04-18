@@ -242,40 +242,73 @@ export default function SettingsScreen() {
   }
 
   async function handleDeleteAccount() {
-    Alert.alert(
-      'Delete account',
-      'This will permanently delete your account and all data. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Are you absolutely sure?', 'All your data will be gone forever.', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Yes, delete',
-                style: 'destructive',
-                onPress: async () => {
+    // Two-step confirm. The first alert names the consequences in plain
+    // language; the second is a final "are you absolutely sure". Paying
+    // users see the subscription-cancel line so they know their card
+    // won't keep getting charged.
+    const isPaid = plan === 'dilly' || plan === 'pro';
+    const firstMessage = isPaid
+      ? 'This will cancel your subscription and permanently delete your account and all data. This cannot be undone.'
+      : 'This will permanently delete your account and all data. This cannot be undone.';
+
+    Alert.alert('Delete account', firstMessage, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert('Are you absolutely sure?', 'All your data will be gone forever.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Yes, delete',
+              style: 'destructive',
+              onPress: async () => {
+                // Hit the real endpoint and actually wait for confirmation.
+                // Backend cancels Stripe before deleting data and returns
+                // 503 if Stripe is unreachable — in that case we must NOT
+                // clear local auth, otherwise the user ends up locked out
+                // of an account that still exists and is still billing.
+                let res: Response | null = null;
+                try {
+                  res = await dilly.fetch('/account/delete', { method: 'POST' });
+                } catch (e) {
+                  Alert.alert(
+                    'Could not delete account',
+                    'We could not reach the server. Check your connection and try again.',
+                  );
+                  return;
+                }
+                if (!res.ok) {
+                  // Most likely 503 — Stripe cancel failed. Show the
+                  // server's message if present so the user knows to retry.
+                  let msg = 'Please try again in a minute.';
                   try {
-                    await dilly.fetch('/account/delete', { method: 'POST' });
+                    const body = await res.clone().json();
+                    const detail = body?.detail;
+                    if (typeof detail === 'string') msg = detail;
+                    else if (detail?.message) msg = detail.message;
                   } catch {}
-                  await clearAuth();
-                  // Clear all onboarding state so they get the fresh choose-path screen
+                  Alert.alert('Could not delete account', msg);
+                  return;
+                }
+                // Success — wipe local state and route to onboarding.
+                await clearAuth();
+                try {
                   const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
                   await AsyncStorage.multiRemove([
                     'dilly_has_onboarded', 'dilly_visited_jobs', 'dilly_visited_arena',
                     'dilly_done_interview', 'dilly_pending_upload',
                     'dilly_pending_user_path', 'dilly_pending_plan',
+                    'dilly_tutorial_shown',
                   ]).catch(() => {});
-                  router.replace('/onboarding/choose-situation');
-                },
+                } catch {}
+                router.replace('/onboarding/choose-situation');
               },
-            ]);
-          },
+            },
+          ]);
         },
-      ],
-    );
+      },
+    ]);
   }
 
   const planLabel = plan === 'pro' ? 'Dilly Pro' : plan === 'dilly' ? 'Dilly' : 'Dilly Starter';

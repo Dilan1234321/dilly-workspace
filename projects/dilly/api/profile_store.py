@@ -250,6 +250,29 @@ def get_profile_slug(email: str) -> str:
     return _user_id((email or "").strip().lower())
 
 
+def get_profile_by_stripe_customer_id(customer_id: str) -> dict | None:
+    """Lookup profile by Stripe customer ID. Used by webhook handlers
+    that receive `customer.subscription.*` / `invoice.*` events — those
+    events give us a `customer` ID but no email. We store the customer
+    ID in profile_json on checkout.session.completed, so this just
+    hunts the JSONB blob for it."""
+    customer_id = (customer_id or "").strip()
+    if not customer_id:
+        return None
+    with get_db() as conn:
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # profile_json is JSONB; containment operator finds exact match
+        cur.execute(
+            "SELECT * FROM users WHERE profile_json @> %s::jsonb LIMIT 1",
+            (json.dumps({"stripe_customer_id": customer_id}),),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        return _row_to_profile(dict(row))
+
+
 def get_profile_by_slug(slug: str) -> dict | None:
     if not slug or len(slug) != 16:
         return None
