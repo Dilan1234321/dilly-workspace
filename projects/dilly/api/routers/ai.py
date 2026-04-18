@@ -1657,13 +1657,15 @@ async def ai_chat(request: Request, body: ChatRequest):
         # extractor calls. Cuts extraction cost ~67%.
         if email and len(messages) >= 2:
             assistant_turns = sum(1 for m in raw_messages if m["role"] == "assistant") + 1  # +1 for the reply we just produced
-            # Was every 3 turns. Bumped to every 5 after a cost spike
-            # investigation: extraction + narrative regen on every 3rd
-            # turn was running ~40% of total LLM spend. Every 5 cuts
-            # that in half without losing meaningful fact capture
-            # (the full untruncated message window is what gets
-            # extracted, so a 5-turn batch still sees everything).
-            should_extract = (assistant_turns % 5 == 0) or (assistant_turns == 1)
+            # Was every 5 turns. Now every 15 — the mobile client calls
+            # /ai/chat/flush on overlay close, running extraction once
+            # per session. This mid-turn trigger is now a safety net for
+            # sessions that never close cleanly (force quit, killed in
+            # background, etc). Net cost cut ~60-70% on the median
+            # session. Still fires on turn 1 so a one-shot introduction
+            # ("I'm Sarah, I just graduated, I want X") seeds the
+            # profile even if the user never returns.
+            should_extract = (assistant_turns % 15 == 0) or (assistant_turns == 1)
             # Conv id used by BOTH the memory extraction below and the
             # chat-thread store. Stable across turns of the same chat so
             # thread upserts hit the same row.
@@ -1868,3 +1870,113 @@ def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
             }
 
     return None
+
+
+# ---------------------------------------------------------------------------
+# /ai/chat/flush — on-exit extraction (cost cut)
+# ---------------------------------------------------------------------------
+#
+# Cost-cut play. Instead of running extraction every 5 turns mid-conversation
+# (~2-3 Haiku calls per typical 10-15 message session), the mobile client
+# calls this endpoint ONCE when the user closes the chat overlay. One Haiku
+# call per session.
+#
+# Why keep the mid-conversation trigger at all?
+#   Long sessions (20+ messages) would lose facts if the user force-quits
+#   the app before the overlay dispatches /flush. The existing every-5-turns
+#   trigger in /ai/chat handles that safety net. If a session ends cleanly
+#   via the close button, /flush runs and the mid-turn extraction for that
+#   session was wasted — but the mid-turn code is rate-limited so it only
+#   fires ~twice in a long session. Still a net 60-70% cost cut on the
+#   median session.
+#
+# Response shape:
+#   { added: [{id, category, label, value}, ...], updated: [...], count: N }
+# Mobile uses `added` to drive the staggered-reveal animation on My Dilly.
+
+
+class ChatFlushRequest(BaseModel):
+    """Body for /ai/chat/flush — tells the backend to extract whatever the
+    user said during the session that's closing.
+
+    Either `conv_id` + `messages` (from the client's active conversation) or
+    `conv_id` alone (we look up the last chat_thread rows on the server).
+    The client ALWAYS has the messages in hand so it should prefer the
+    first shape — the fallback exists for cases where the app restarts
+    mid-session and still wants to flush."""
+    conv_id: Optional[str] = None
+    messages: Optional[list[ChatMessage]] = None
+
+
+@router.post("/ai/chat/flush")
+async def ai_chat_flush(request: Request, body: ChatFlushRequest):
+    """Run the on-close extraction for a chat session. Returns the newly
+    added facts so the client can animate their staggered reveal on the
+    user's profile."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+
+    conv_id = (body.conv_id or "").strip()
+    raw_messages = body.messages or []
+    messages: list[dict[str, Any]] = []
+    # Hydrate messages from the chat thread store if the client didn't
+    # send them. Keeps the flush endpoint useful even on cold relaunches.
+    if not raw_messages and conv_id:
+        try:
+            from projects.dilly.api.chat_thread_store import get_thread_messages  # type: ignore
+            stored = get_thread_messages(email, conv_id) or []
+            messages = [
+                {"role": m.get("role") or "user", "content": m.get("content") or ""}
+                for m in stored if (m.get("content") or "").strip()
+            ]
+        except Exception:
+            messages = []
+    else:
+        messages = [
+            {"role": m.role, "content": m.content}
+            for m in raw_messages if (m.content or "").strip()
+        ]
+
+    # Nothing worth extracting — skip the Haiku call entirely. Saves cost
+    # when users open/close chat without typing anything.
+    if not messages or not conv_id or len(messages) < 2:
+        return {"added": [], "updated": [], "count": 0, "skipped": True}
+
+    # Snapshot existing item IDs so we can diff — the extractor returns
+    # the full new list + `item_ids` of new rows, but we want to return
+    # actual fact objects to the mobile client for the animation.
+    try:
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+        before = get_memory_surface(email) or {}
+        before_ids = {str(it.get("id")) for it in (before.get("items") or [])}
+    except Exception:
+        before_ids = set()
+
+    # Run the extraction synchronously so the response contains the new
+    # facts. Wrapped in a try/except: if the Haiku call fails we still
+    # return 200 with an empty list so the client's close animation
+    # doesn't break on us.
+    added: list[dict[str, Any]] = []
+    try:
+        from projects.dilly.api.memory_extraction import run_extraction
+        result = await asyncio.to_thread(run_extraction, email, conv_id, messages[-30:])
+        new_ids = set(result.get("item_ids") or [])
+        # Read the updated surface to return the actual fact payloads.
+        after = get_memory_surface(email) or {}
+        for it in (after.get("items") or []):
+            if str(it.get("id")) in new_ids and str(it.get("id")) not in before_ids:
+                added.append({
+                    "id": str(it.get("id")),
+                    "category": it.get("category") or "",
+                    "label": it.get("label") or "",
+                    "value": it.get("value") or "",
+                })
+    except Exception as e:
+        # Log + soft-return. Client handles an empty `added` gracefully
+        # (no overlay, no animation).
+        import sys as _sys
+        _sys.stderr.write(f"[chat_flush_failed] email={email[:6]}*** err={e}\n")
+
+    return {"added": added, "updated": [], "count": len(added), "skipped": False}

@@ -14,6 +14,9 @@ import RichText from './RichText';
 import { DillyVisual, VisualPayload } from './DillyVisuals';
 import { DillyFace } from './DillyFace';
 import { useSubscription } from '../hooks/useSubscription';
+import {
+  markExtractionPending, resolveExtraction, abortExtraction,
+} from '../hooks/useExtractionPending';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const GOLD = '#2B3A8E';
@@ -72,6 +75,15 @@ const MessageAnimIn = ({ children }: { children: React.ReactNode; index?: number
   );
 };
 
+/** 16-char hex conv id. Timestamp-seeded + random suffix so two sessions
+ *  opened the same millisecond still get distinct ids. Stable per
+ *  session; sent with every /ai/chat + the eventual /ai/chat/flush. */
+function _newConvId(): string {
+  const t = Date.now().toString(16).padStart(11, '0').slice(-11);
+  const r = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+  return (t + r).slice(0, 16);
+}
+
 function getInitialSuggestions(ctx?: StudentContext, mode?: ChatMode): string[] {
   if (mode === 'practice') {
     return ['Start the interview', 'Ask me a behavioral question', 'Give me a technical challenge'];
@@ -109,7 +121,7 @@ function getResponseSuggestions(text: string): string[] {
   return chips.slice(0, 3);
 }
 
-export default function DillyAIOverlay({ visible, onClose, studentContext }: Props) {
+export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentContext }: Props) {
   const insets = useSafeAreaInsets();
   const { canSendAIMessage, incrementAIMessage, showPaywall } = useSubscription();
 
@@ -139,6 +151,52 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
   const [input,    setInput]    = useState(''); // kept for backward compat but not used for display
   const inputRef = useRef('');
   const inputFieldRef = useRef<any>(null);
+  // Stable conversation id — created on first send of a fresh session,
+  // sent with every /ai/chat so the backend groups turns correctly, and
+  // sent with /ai/chat/flush on close so extraction targets this exact
+  // session. Cleared when the overlay closes.
+  const convIdRef = useRef<string | null>(null);
+  const messagesRef = useRef<Message[]>([]);
+  // Mirror state into a ref so the (non-re-rendered) onClose callback
+  // can read the final message list at dispatch time. Runs synchronously
+  // on every render; cheap.
+  messagesRef.current = messages;
+
+  /** Wrap the passed-in onClose so we can flush extraction before
+   *  handing back to the parent. If the user sent at least 2 messages
+   *  this session, POST to /ai/chat/flush (one Haiku per session,
+   *  cheaper than the per-turn extraction). Fires a global "pending"
+   *  signal so My Dilly can show the writing-down overlay if mounted.
+   *  Non-blocking — the overlay closes immediately, flush runs in the
+   *  background. */
+  const onClose = useCallback(() => {
+    const convId = convIdRef.current;
+    const msgs = messagesRef.current;
+    const userMsgCount = msgs.filter(m => m.role === 'user').length;
+    convIdRef.current = null;
+    rawOnClose();
+    if (!convId || userMsgCount < 1) return;
+    markExtractionPending();
+    (async () => {
+      try {
+        const res = await dilly.fetch('/ai/chat/flush', {
+          method: 'POST',
+          body: JSON.stringify({
+            conv_id: convId,
+            messages: msgs
+              .filter(m => (m.content || '').trim().length > 0)
+              .slice(-30)
+              .map(m => ({ role: m.role, content: m.content })),
+          }),
+        });
+        if (!res?.ok) { abortExtraction(); return; }
+        const data = await res.json();
+        resolveExtraction(Array.isArray(data?.added) ? data.added : []);
+      } catch {
+        abortExtraction();
+      }
+    })();
+  }, [rawOnClose]);
   const [mode,     setMode]     = useState<ChatMode>('coaching');
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -240,6 +298,9 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         body: JSON.stringify({
           messages: apiHistory,
           mode,
+          // Seed a stable conv_id on first send. Sticks for the whole
+          // session, gets cleared on overlay close.
+          conv_id: (convIdRef.current ||= _newConvId()),
           student_context: studentContext ? {
             name:              studentContext.name,
             cohort:            studentContext.cohort,
