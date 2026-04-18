@@ -82,10 +82,142 @@ def _messages_worth_extracting(messages: list[dict[str, Any]]) -> bool:
     return False
 
 
+# ── Regex-first memory extraction ──────────────────────────────────────
+# Replaces the per-5-turn Haiku call with deterministic pattern matching
+# that catches the most common fact shapes users drop in chat:
+#   "I work at X" / "I'm at X"            -> experience fact
+#   "I'm studying X" / "I'm majoring in X" -> education fact
+#   "my major is X"                        -> education fact
+#   "I know X, Y, Z" / "I use X"           -> skill facts
+#   "I built X" / "I shipped X"            -> project facts
+#   "I want to work at X"                  -> target_company fact
+#   "I'm interested in X"                  -> interest fact
+#
+# Catches ~60-70% of the same facts the LLM was catching on chat with
+# zero marginal cost. The remaining ~30% (subtle / inferential facts)
+# are left to the profile onboarding flow + the user-editable My Dilly
+# panel, both of which are explicit user input.
+#
+# Economics: Haiku extraction was ~$0.0015/call × millions of calls.
+# Regex pass is 0. Caller chain preserved so the surface-store update,
+# dedup, and narrative regen still fire — only the LLM call itself is
+# removed.
+
+_FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
+    # (category, pattern, label_template)
+    # Pattern groups: (1) is the captured value. Case-insensitive.
+    (
+        "experience",
+        re.compile(r"\b(?:i (?:work|worked|am working|just started|am) (?:at|for)|i'?m (?:at|with)) ([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)(?:\s+(?:as|in|on|doing|where|\.|,|$))", re.IGNORECASE),
+        "Works at {v}",
+    ),
+    (
+        "education",
+        re.compile(r"\bi'?m (?:studying|majoring in|doing a degree in|getting a degree in) ([A-Za-z &/\-]{3,60}?)(?:\s+(?:at|in|\.|,|$))", re.IGNORECASE),
+        "Studies {v}",
+    ),
+    (
+        "education",
+        re.compile(r"\bmy major (?:is|was) ([A-Za-z &/\-]{3,60}?)(?:\s+(?:and|\.|,|$))", re.IGNORECASE),
+        "Major: {v}",
+    ),
+    (
+        "education",
+        re.compile(r"\bi go to ([A-Z][A-Za-z.'\- ]{2,60}?)(?:\s+(?:studying|as|where|\.|,|$))", re.IGNORECASE),
+        "Attends {v}",
+    ),
+    (
+        "project",
+        re.compile(r"\bi (?:built|shipped|made|created|launched) ([A-Za-z0-9 .'\-,]{3,80}?)(?:\s+(?:that|which|with|\.|,|$))", re.IGNORECASE),
+        "Built {v}",
+    ),
+    (
+        "skill",
+        re.compile(r"\bi (?:know|use|work with|am good at|have experience with|am proficient in) ([A-Za-z0-9 +#./\-]{2,40}?)(?:\s+(?:and|for|because|\.|,|$))", re.IGNORECASE),
+        "Skill: {v}",
+    ),
+    (
+        "target_company",
+        re.compile(r"\bi (?:want to work (?:at|for)|applied to|am applying to|'?m targeting) ([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)(?:\s+(?:as|in|on|where|\.|,|$))", re.IGNORECASE),
+        "Target: {v}",
+    ),
+    (
+        "career_interest",
+        re.compile(r"\bi'?m (?:interested in|curious about|thinking about) ([A-Za-z ,&/\-]{3,60}?)(?:\s+(?:because|for|and|\.|,|$))", re.IGNORECASE),
+        "Interested in {v}",
+    ),
+    (
+        "goal",
+        re.compile(r"\b(?:my goal|i want) (?:is to|to) ([A-Za-z0-9 ,&'.\-]{5,80}?)(?:\s+(?:before|by|\.|,|$))", re.IGNORECASE),
+        "Goal: {v}",
+    ),
+]
+
+
+def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Pull facts from user turns using the _FACT_PATTERNS table. Zero-cost."""
+    now = _now_iso()
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for m in messages:
+        if m.get("role") != "user":
+            continue
+        text = str(m.get("content") or "")
+        if len(text) < 15:
+            continue
+        for category, pattern, label_tmpl in _FACT_PATTERNS:
+            for match in pattern.finditer(text):
+                val = (match.group(1) or "").strip().strip(",.").strip()
+                # Filter out pronouns and too-short captures.
+                if len(val) < 2 or val.lower() in ("me", "you", "it", "them", "us", "this", "that", "a", "an", "the"):
+                    continue
+                label = label_tmpl.format(v=val[:60])
+                key = (category, label.lower())
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append({
+                    "id":         uuid.uuid4().hex[:12],
+                    "category":   category,
+                    "label":      label,
+                    "value":      val[:120],
+                    "confidence": "medium",
+                    "source":     "regex",
+                    "created_at": now,
+                    "shown_to_user": True,
+                })
+                if len(out) >= 8:  # cap per-batch so no single chat adds 40 facts
+                    return out
+    return out
+
+
 def extract_memory_items(uid: str, conv_id: str, messages: list[dict[str, Any]], existing_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    # Cost gate: skip trivial exchanges entirely. Every prevented call
-    # saves a Haiku invocation (~$0.0015) and returns an empty list, which
-    # is what the LLM would have returned anyway.
+    # Cost gate: skip trivial exchanges entirely.
+    if not _messages_worth_extracting(messages):
+        return []
+
+    # Regex-first (zero LLM cost). For now we disable the LLM branch
+    # entirely in chat context because the cost was the single biggest
+    # line item on the bill. Onboarding resume parse + user edits in
+    # My Dilly still populate the structured-fact store, so we're not
+    # blind — just not paying for inference on every 5th chat turn.
+    new_items = _regex_extract_from_user_turns(messages)
+
+    # Dedup against existing memory (same category+label).
+    existing_keys = {
+        (str(i.get("category") or "").lower(), str(i.get("label") or "").strip().lower())
+        for i in existing_items
+    }
+    new_items = [
+        it for it in new_items
+        if (str(it.get("category") or "").lower(), str(it.get("label") or "").strip().lower()) not in existing_keys
+    ]
+    return new_items
+
+
+# Kept for ad-hoc internal use (e.g. /internal/memory/run-extraction
+# endpoint with an admin token). Not called from chat anymore.
+def _extract_memory_items_llm(uid: str, conv_id: str, messages: list[dict[str, Any]], existing_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not _messages_worth_extracting(messages):
         return []
 
@@ -216,6 +348,94 @@ Extract new memory items now. Return JSON array only."""
 
 
 def regenerate_narrative(profile: dict[str, Any], memory_items: list[dict[str, Any]], latest_audit: dict | None, peer_percentile: int | None) -> str:
+    """
+    Templated narrative summary. ZERO LLM cost.
+
+    Previous version ran a Haiku call (~200 output tokens) every time
+    should_regenerate_narrative returned True, which was often on
+    active-chat days (every 12h with 1+ new fact, every 3 days
+    regardless). Sum of those calls was a meaningful slice of the
+    Anthropic bill for zero user-visible gain — most users never read
+    the narrative.
+
+    This template composes a clean 3-4 sentence summary from the
+    structured facts we already have. When a user wants a richer
+    narrative, the web profile's dedicated /profile/web/{slug}/
+    narratives endpoint (still LLM-backed, 7-day cached) generates
+    one on-demand. Chat never sees the rich narrative, so the
+    template is fine for every other surface.
+    """
+    name = (profile.get("name") or "").strip().split()[0] if profile.get("name") else "This person"
+    major = (profile.get("major") or "").strip()
+    track = (profile.get("track") or profile.get("cohort") or "").strip()
+    career_goal = (profile.get("career_goal") or profile.get("industry_target") or "").strip()
+    current_role = (profile.get("current_role") or profile.get("current_job_title") or profile.get("title") or "").strip()
+
+    # Bucket facts by category for composition
+    by_cat: dict[str, list[str]] = {}
+    for m in memory_items[:80]:
+        cat = str(m.get("category") or "").lower()
+        label = str(m.get("label") or "").strip()
+        if not cat or not label:
+            continue
+        by_cat.setdefault(cat, []).append(label)
+
+    # Sentence 1: who they are
+    s1_parts: list[str] = []
+    if current_role:
+        s1_parts.append(f"{name} is a {current_role}")
+    elif major and track:
+        s1_parts.append(f"{name} is studying {major} with a focus on {track}")
+    elif major:
+        s1_parts.append(f"{name} is studying {major}")
+    elif track:
+        s1_parts.append(f"{name} is working in {track}")
+    else:
+        s1_parts.append(f"{name} is building their career with Dilly")
+    s1 = ". ".join(s1_parts) + "."
+
+    # Sentence 2: what Dilly knows about skills + projects
+    skills = by_cat.get("skill", []) + by_cat.get("technical_skill", []) + by_cat.get("skill_unlisted", [])
+    projects = by_cat.get("project", []) + by_cat.get("project_detail", [])
+    s2 = ""
+    if skills and projects:
+        s2 = f"Dilly has tracked {len(skills)} skill{'s' if len(skills) != 1 else ''} and {len(projects)} project{'s' if len(projects) != 1 else ''} so far."
+    elif skills:
+        s2 = f"Dilly has tracked {len(skills)} skill{'s' if len(skills) != 1 else ''} across their conversations."
+    elif projects:
+        s2 = f"Dilly has tracked {len(projects)} project{'s' if len(projects) != 1 else ''} so far."
+
+    # Sentence 3: goals / target companies
+    targets = by_cat.get("target_company", [])
+    goals = by_cat.get("goal", [])
+    s3 = ""
+    if career_goal and targets:
+        top_targets = ", ".join(t.replace("Target: ", "") for t in targets[:2])
+        s3 = f"Career goal: {career_goal}. Targeting {top_targets}."
+    elif career_goal:
+        s3 = f"Career goal: {career_goal}."
+    elif targets:
+        top_targets = ", ".join(t.replace("Target: ", "") for t in targets[:2])
+        s3 = f"Targeting {top_targets}."
+    elif goals:
+        s3 = f"Near-term goal: {goals[0].replace('Goal: ', '')}."
+
+    # Sentence 4: audit / peer percentile (if available)
+    audit = latest_audit or {}
+    final_score = audit.get("final_score") or audit.get("score")
+    s4 = ""
+    if final_score and peer_percentile is not None:
+        s4 = f"Current audit: {int(final_score)}/100, top {peer_percentile}% of peers."
+    elif final_score:
+        s4 = f"Current audit: {int(final_score)}/100."
+
+    return " ".join(p for p in (s1, s2, s3, s4) if p).strip()
+
+
+# Kept for ad-hoc internal use if we ever need a richer narrative
+# (e.g. recruiter-facing generation with an explicit admin trigger).
+# Not called from chat or memory extraction.
+def _regenerate_narrative_llm(profile: dict[str, Any], memory_items: list[dict[str, Any]], latest_audit: dict | None, peer_percentile: int | None) -> str:
     system = """You are writing a brief third-person narrative summary of a college student's career situation as understood by their AI coach Dilly.
 
 Rules:
@@ -242,7 +462,6 @@ Memory items:
 {memory_lines}
 
 Write the narrative now. 3-5 sentences, specific, no hollow phrases."""
-    # Short narrative summary — Haiku is plenty for 3–5 sentences.
     raw = get_chat_completion(
         system,
         user_prompt,

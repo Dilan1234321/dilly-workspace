@@ -1468,6 +1468,37 @@ async def ai_chat(request: Request, body: ChatRequest):
     except Exception:
         _plan = "starter"
     _is_paid = _plan in ("dilly", "pro")
+
+    # ── Daily chat quota ──────────────────────────────────────────────────
+    # Hard per-tier daily cap. Starter:20, Dilly:50, Pro:500. Without
+    # this, a single engaged user sending 100 chats/day at ~$0.006/turn
+    # burned more than their $9.99 subscription nets us. Caps enforced
+    # here; tier values live in chat_quota_store.DAILY_CAPS.
+    if body.mode != "practice" and email:
+        try:
+            from projects.dilly.api.chat_quota_store import is_over_cap, record_chat
+            _over, _used, _cap = is_over_cap(email, _plan)
+            if _over:
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "code": "DAILY_CHAT_CAP",
+                        "message": f"You've hit today's chat limit ({_cap} messages). Resets at midnight UTC.",
+                        "used": _used,
+                        "cap": _cap,
+                        "plan": _plan,
+                        "upgrade_plan": "dilly" if _plan == "starter" else "pro",
+                    },
+                )
+            # Record the chat NOW, before the LLM call. If the LLM call
+            # fails the user still "used" the slot, which is fine — the
+            # alternative (record-after-success) lets errant retries burn
+            # the quota twice.
+            record_chat(email)
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # quota store failures must never block chat
     # Haiku 4.5 across all tiers. We tested Sonnet on paid and saw ~3x the
     # cost for chat output that users couldn't reliably distinguish. Keeping
     # the branch for future tier-gating (e.g. if Opus needs to be
@@ -1480,7 +1511,11 @@ async def ai_chat(request: Request, body: ChatRequest):
     # input price on cache hits. The system prompt + rich profile context
     # is identical across every turn in a chat session, so caching it
     # cuts ~50% of input cost on multi-turn conversations.
-    if isinstance(system, str) and len(system) > 1024:
+    # Min length lowered 1024 -> 800 to cover more paths; Haiku supports
+    # cache blocks as small as 1024 tokens, so below that we skip
+    # cache_control but there's nothing to lose by trying on shorter
+    # prompts — API just no-ops the cache header.
+    if isinstance(system, str) and len(system) > 800:
         system_param = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
     else:
         system_param = system
@@ -1543,7 +1578,11 @@ async def ai_chat(request: Request, body: ChatRequest):
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model=_chat_model,
-            max_tokens=400,
+            # Per-tier output cap: starter gets shorter replies (fewer
+            # output tokens = direct cost cut) so free users cost less.
+            # Haiku 4.5 output is ~$4/MTok, so 400->250 saves
+            # ~$0.0006/turn on starter at worst case.
+            max_tokens=(250 if _plan in ("starter", "building") else 400),
             system=system_param,
             messages=messages,
             tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,
@@ -1595,6 +1634,29 @@ async def ai_chat(request: Request, body: ChatRequest):
             getattr(b, "text", "") for b in (response.content or [])
             if getattr(b, "type", None) == "text"
         )
+
+        # Cost visibility: log per-turn usage so we can verify in prod
+        # logs that prompt caching is actually hitting. usage fields:
+        # input_tokens, cache_creation_input_tokens,
+        # cache_read_input_tokens, output_tokens. If cache_read is
+        # high relative to input_tokens we're winning; if it's near 0
+        # on multi-turn chats, the cache isn't hitting and we should
+        # investigate.
+        try:
+            u = getattr(response, "usage", None)
+            if u is not None:
+                in_tok    = int(getattr(u, "input_tokens", 0) or 0)
+                cache_r   = int(getattr(u, "cache_read_input_tokens", 0) or 0)
+                cache_c   = int(getattr(u, "cache_creation_input_tokens", 0) or 0)
+                out_tok   = int(getattr(u, "output_tokens", 0) or 0)
+                _email_hint = (email.split("@")[0][:4] + "***") if email and "@" in email else "anon"
+                print(
+                    f"[AI_CHAT] user={_email_hint} plan={_plan} "
+                    f"in={in_tok} cache_r={cache_r} cache_c={cache_c} out={out_tok}",
+                    flush=True,
+                )
+        except Exception:
+            pass
 
         # ── Background profile extraction (batched) ──────────────────
         # Fire-and-forget: extract everything Dilly learned about the user
