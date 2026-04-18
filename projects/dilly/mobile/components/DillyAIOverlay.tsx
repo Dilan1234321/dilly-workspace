@@ -261,6 +261,44 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         if (res.status === 401 || res.status === 403) throw new Error('auth');
         const errData = await res.json().catch(() => ({}));
         const detail = errData.detail;
+
+        // Upgrade-required (starter tier hits chat) — render a rich
+        // upgrade card instead of a generic error. The backend returns
+        // { code: 'CHAT_REQUIRES_PLAN', message, required_plan,
+        //   features_unlocked: [...] }.
+        if (res.status === 402 && typeof detail === 'object' && detail?.code === 'CHAT_REQUIRES_PLAN') {
+          setIsTyping(false);
+          const features: string[] = Array.isArray(detail.features_unlocked) ? detail.features_unlocked : [];
+          const upgradeMsg =
+            `**Chat with Dilly is a Dilly feature.**\n\n` +
+            (features.length > 0 ? features.map(f => `· ${f}`).join('\n') + '\n\n' : '') +
+            `Tap Upgrade in Settings to unlock.`;
+          setMessages([...newHistory, {
+            id: ++_msgId,
+            role: 'assistant',
+            content: upgradeMsg,
+          }]);
+          return;
+        }
+
+        // Daily quota hit (paid tier exhausted). Different message
+        // because the user already pays. Route them to Pro instead.
+        if (res.status === 429 && typeof detail === 'object' && detail?.code === 'DAILY_CHAT_CAP') {
+          setIsTyping(false);
+          const { used, cap, upgrade_plan } = detail;
+          const quotaMsg =
+            `You've used all ${cap} chats today (resets at midnight UTC).\n\n` +
+            (upgrade_plan === 'pro'
+              ? `For unlimited conversations, upgrade to Pro.`
+              : `Come back tomorrow, or upgrade your plan in Settings.`);
+          setMessages([...newHistory, {
+            id: ++_msgId,
+            role: 'assistant',
+            content: quotaMsg,
+          }]);
+          return;
+        }
+
         const errMsg = typeof detail === 'string' ? detail
           : typeof detail === 'object' && detail?.message ? detail.message
           : `Server error ${res.status}`;

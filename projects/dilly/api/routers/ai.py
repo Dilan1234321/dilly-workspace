@@ -1469,12 +1469,38 @@ async def ai_chat(request: Request, body: ChatRequest):
         _plan = "starter"
     _is_paid = _plan in ("dilly", "pro")
 
-    # ── Daily chat quota ──────────────────────────────────────────────────
-    # Hard per-tier daily cap. Starter:20, Dilly:50, Pro:500. Without
-    # this, a single engaged user sending 100 chats/day at ~$0.006/turn
-    # burned more than their $9.99 subscription nets us. Caps enforced
-    # here; tier values live in chat_quota_store.DAILY_CAPS.
+    # ── Tier gating + daily quota ─────────────────────────────────────────
+    # Chat is a paid feature. Free (starter) tier is blocked at this
+    # gate with a 402 and a structured upgrade payload the mobile client
+    # turns into an upgrade sheet. Paid tiers still get a daily quota
+    # cap (DAILY_CAPS) so no single user can run away with cost, but
+    # they pass this gate.
+    #
+    # Why gate chat specifically: chat is the highest-cost surface in
+    # the app (Haiku output per turn). Free users get the rest of Dilly
+    # (Jobs feed, Arena, Career Center, My Dilly, web profile, hero
+    # cards, all templated/cached content) with zero LLM cost per view.
+    # Chat is the #1 reason to upgrade.
     if body.mode != "practice" and email:
+        # Tier gate: starter hits a hard 402.
+        if _plan == "starter":
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "code": "CHAT_REQUIRES_PLAN",
+                    "message": "Chat with Dilly is a Dilly feature. Upgrade to unlock daily conversations with your career coach.",
+                    "plan": _plan,
+                    "required_plan": "dilly",
+                    "features_unlocked": [
+                        "Unlimited profile building through conversation",
+                        "Personalized daily coaching",
+                        "Interview practice with feedback",
+                        "Resume tailoring per role",
+                    ],
+                },
+            )
+
+        # Paid tiers: enforce daily cap.
         try:
             from projects.dilly.api.chat_quota_store import is_over_cap, record_chat
             _over, _used, _cap = is_over_cap(email, _plan)
@@ -1487,7 +1513,7 @@ async def ai_chat(request: Request, body: ChatRequest):
                         "used": _used,
                         "cap": _cap,
                         "plan": _plan,
-                        "upgrade_plan": "dilly" if _plan == "starter" else "pro",
+                        "upgrade_plan": "pro",
                     },
                 )
             # Record the chat NOW, before the LLM call. If the LLM call

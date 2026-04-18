@@ -4,9 +4,15 @@ import { dilly } from '../lib/dilly';
 
 // -- Constants ----------------------------------------------------------------
 
-const FREE_AI_MESSAGES_PER_DAY = 3;
-const DILLY_AI_MESSAGES_PER_DAY = 100;
-const PRO_AI_MESSAGES_PER_DAY = 999999;
+// Chat with Dilly is a paid feature. Free tier gets 0 per day so
+// tapping the chat surface immediately shows the upgrade sheet
+// instead of burning 3 free turns (the Haiku cost of those 3 was
+// the single biggest item on the per-user LLM bill pre-gating).
+// The backend enforces this with a 402 on /ai/chat for starter;
+// the client value matches so we don't even round-trip.
+const FREE_AI_MESSAGES_PER_DAY = 0;
+const DILLY_AI_MESSAGES_PER_DAY = 50;   // matches api/chat_quota_store DAILY_CAPS
+const PRO_AI_MESSAGES_PER_DAY = 500;    // matches api/chat_quota_store DAILY_CAPS
 const FREE_AUDITS_TOTAL = 1;
 const AI_COUNT_KEY = 'dilly_ai_msg_count';
 const AI_COUNT_DATE_KEY = 'dilly_ai_msg_date';

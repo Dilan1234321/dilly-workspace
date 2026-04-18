@@ -26,14 +26,16 @@ from projects.dilly.api.profile_store import get_profile_folder_path
 _FILENAME = "chat_quota.json"
 
 
-# Per-plan daily chat caps. Starter is tight, dilly is generous,
-# pro is effectively unlimited. Tuned to keep unit economics positive
-# at each tier — if any of these need to change, change this dict.
+# Per-plan daily chat caps. Starter is not in this map because
+# starter is blocked at the /ai/chat gate before quota checks run
+# (chat is a paid feature, see /ai/chat in api/routers/ai.py).
+# Building is dropout-path-on-starter-adjacent; gets a small chat
+# allowance since that path's product promise leans on coaching.
+# Dilly and Pro are the actual paid tiers.
 DAILY_CAPS: dict[str, int] = {
-    "starter":  20,
-    "building": 30,
-    "dilly":    50,
-    "pro":      500,   # de-facto unlimited for paying users
+    "building": 30,    # dropout path; coaching is part of the promise
+    "dilly":    50,    # $9.99/mo main tier
+    "pro":      500,   # $24.99+ power-user tier, de-facto unlimited
 }
 
 
@@ -75,9 +77,18 @@ def _save(email: str, data: dict[str, Any]) -> None:
 
 
 def cap_for_plan(plan: str) -> int:
-    """Return the daily chat cap for the given plan, default starter."""
-    p = (plan or "starter").lower().strip()
-    return DAILY_CAPS.get(p, DAILY_CAPS["starter"])
+    """Return the daily chat cap for the given plan.
+
+    Starter is not in DAILY_CAPS because chat is gated at the
+    /ai/chat tier check BEFORE this runs (starter gets 402, never
+    reaches quota enforcement). If this is somehow called for
+    starter we return 0 so the caller treats them as over-cap;
+    never returns DAILY_CAPS['starter'] which no longer exists.
+    """
+    p = (plan or "").lower().strip()
+    if p not in DAILY_CAPS:
+        return 0
+    return DAILY_CAPS[p]
 
 
 def get_daily_usage(email: str) -> tuple[int, str]:
