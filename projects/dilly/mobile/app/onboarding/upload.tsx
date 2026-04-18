@@ -190,12 +190,21 @@ export default function UploadScreen() {
 
       <ProgressBar current={5} total={6} />
 
-      {/* Header */}
+      {/* Header. The copy here is tuned to "strongly suggest" without
+          pressuring. "Recommended" as the eyebrow replaces the prior
+          "Optional" because Dilly genuinely works better with a resume;
+          telling the user that up front is honest. Sub explains the
+          *why* concretely (jobs sort better, facts auto-populate) so
+          the benefit is legible. Skip is still a first-class choice
+          but framed as something that costs you. */}
       <View style={s.header}>
-        <Text style={s.eyebrow}>Optional</Text>
-        <Text style={s.heading}>Want to speed things up?</Text>
+        <Text style={s.eyebrow}>Recommended</Text>
+        <Text style={s.heading}>Start Dilly off strong.</Text>
         <Text style={s.sub}>
-          Upload your resume and Dilly will build your profile automatically. You can always add more later.
+          Drop your resume in and Dilly knows your projects, skills,
+          and experience from the first second. Jobs match better.
+          Your profile fills itself. You can keep adding later, but
+          starting here saves a lot of typing.
         </Text>
       </View>
 
@@ -255,7 +264,7 @@ export default function UploadScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={s.skipButton} onPress={handleSkip} activeOpacity={0.85}>
-          <Text style={s.skipText}>Skip for now</Text>
+          <Text style={s.skipText}>I'll add things manually</Text>
         </TouchableOpacity>
       </View>
     </View>

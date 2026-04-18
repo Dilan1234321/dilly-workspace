@@ -292,6 +292,57 @@ function SeekerProfileScreen() {
   });
   const [hiddenFactIds, setHiddenFactIds] = useState<string[]>([]);
   const [showFactToggles, setShowFactToggles] = useState(false);
+  // Manual-add modal state. Free users who skipped the resume upload
+  // can't use the chat-based add flow (paywall). This lets them type
+  // facts directly into their profile. Paid users can still use chat,
+  // but this works for everyone.
+  const [addFactModal, setAddFactModal] = useState<{
+    visible: boolean;
+    category: string;
+    categoryLabel: string;
+    label: string;
+    value: string;
+    saving: boolean;
+  }>({ visible: false, category: '', categoryLabel: '', label: '', value: '', saving: false });
+
+  function openAddFactModal(category: string, categoryLabel: string) {
+    setAddFactModal({
+      visible: true,
+      category,
+      categoryLabel,
+      label: '',
+      value: '',
+      saving: false,
+    });
+  }
+
+  async function submitAddFact() {
+    const { category, label, value } = addFactModal;
+    if (!category || !label.trim() || !value.trim()) return;
+    setAddFactModal(prev => ({ ...prev, saving: true }));
+    try {
+      const res = await dilly.fetch('/memory/items', {
+        method: 'POST',
+        body: JSON.stringify({
+          category,
+          label: label.trim().slice(0, 80),
+          value: value.trim().slice(0, 400),
+        }),
+      });
+      if (res?.ok) {
+        setAddFactModal({ visible: false, category: '', categoryLabel: '', label: '', value: '', saving: false });
+        // Refetch the memory surface so the new fact shows up.
+        try {
+          const mr = await dilly.fetch('/memory');
+          if (mr?.ok) setData(await mr.json());
+        } catch {}
+      } else {
+        setAddFactModal(prev => ({ ...prev, saving: false }));
+      }
+    } catch {
+      setAddFactModal(prev => ({ ...prev, saving: false }));
+    }
+  }
   const starterOpacity = useRef(new Animated.Value(1)).current;
 
   async function addCity(city: string) {
@@ -1239,10 +1290,12 @@ function SeekerProfileScreen() {
                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                         setExpandedCat(expandedCat === key ? null : key);
                       } else {
-                        openDillyOverlay({
-                          isPaid: true,
-                          initialMessage: `Help me add ${cfg.label.toLowerCase()} to my profile. Ask me a specific question to get started.`,
-                        });
+                        // Empty category tile -> open manual-add
+                        // modal. Chat-based add was paywalled for free
+                        // users with no way to add anything manually,
+                        // leaving the whole profile un-populatable
+                        // without a resume.
+                        openAddFactModal(key, cfg.label);
                       }
                     }}
                     scaleDown={0.96}
@@ -1274,13 +1327,11 @@ function SeekerProfileScreen() {
                     onPress={(anchor) => setPopup({ visible: true, anchor, fact })}
                   />
                 ))}
-                {/* Add new fact */}
+                {/* Add new fact — manual add so free users
+                    without a resume can still populate this. */}
                 <AnimatedPressable
                   style={[d.factRow, { borderTopWidth: 1, borderTopColor: colors.b1, paddingTop: 10 }]}
-                  onPress={() => openDillyOverlay({
-                    isPaid: true,
-                    initialMessage: `I want to add something new to my ${STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat} profile. Ask me what I want to add.`,
-                  })}
+                  onPress={() => openAddFactModal(expandedCat, STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat)}
                   scaleDown={0.97}
                 >
                   <Ionicons name="add-circle" size={16} color={colors.gold} />
@@ -1537,6 +1588,66 @@ function SeekerProfileScreen() {
                 }}
               >
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Manual add-fact modal. Reuses the inline-editor look for
+          consistency. This is the escape hatch for free-tier users
+          who didn't upload a resume — they can still grow their
+          profile without being gated into the paid chat surface. */}
+      {addFactModal.visible && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <TouchableOpacity
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.15)' }]}
+            activeOpacity={1}
+            onPress={() => { Keyboard.dismiss(); setAddFactModal(prev => ({ ...prev, visible: false })); }}
+          />
+          <View style={d.inlineEditor}>
+            <Text style={[d.inlineEditorFieldLabel, { marginBottom: 10, color: colors.t3, fontSize: 11, letterSpacing: 1.2 }]}>
+              {addFactModal.categoryLabel.toUpperCase()}
+            </Text>
+            <Text style={d.inlineEditorFieldLabel}>Title</Text>
+            <TextInput
+              style={d.inlineEditorLabelInput}
+              value={addFactModal.label}
+              onChangeText={(v) => setAddFactModal(prev => ({ ...prev, label: v }))}
+              placeholder="e.g. Team Lead at University Data Lab"
+              placeholderTextColor={colors.t3}
+              autoFocus
+              returnKeyType="next"
+              maxLength={80}
+            />
+            <Text style={[d.inlineEditorFieldLabel, { marginTop: 12 }]}>Details</Text>
+            <TextInput
+              style={d.inlineEditorInput}
+              value={addFactModal.value}
+              onChangeText={(v) => setAddFactModal(prev => ({ ...prev, value: v }))}
+              placeholder="What happened, what you did, what you learned."
+              placeholderTextColor={colors.t3}
+              multiline
+              returnKeyType="done"
+              blurOnSubmit
+              maxLength={400}
+            />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+              <TouchableOpacity
+                style={d.inlineEditorCancel}
+                onPress={() => setAddFactModal(prev => ({ ...prev, visible: false }))}
+                disabled={addFactModal.saving}
+              >
+                <Text style={{ fontSize: 13, color: colors.t2 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[d.inlineEditorSave, (!addFactModal.label.trim() || !addFactModal.value.trim() || addFactModal.saving) && { opacity: 0.5 }]}
+                onPress={submitAddFact}
+                disabled={!addFactModal.label.trim() || !addFactModal.value.trim() || addFactModal.saving}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>
+                  {addFactModal.saving ? 'Saving...' : 'Save'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
