@@ -147,9 +147,12 @@ export interface ProfileUpdatePayload {
   color?: string;
 }
 
+// Live payload types. ScoreBreakdown and CohortComparison were
+// removed because the underlying features (numeric scores, cohort
+// ranking) are deprecated app-wide. Old chat transcripts may still
+// have them stored — client-side renderer returns null for those
+// types below so they render as nothing rather than crashing.
 export type VisualPayload =
-  | ScoreBreakdownPayload
-  | CohortComparisonPayload
   | InterviewChecklistPayload
   | BulletComparisonPayload
   | TimelinePayload
@@ -572,10 +575,11 @@ export function ProfileUpdateCard({ data }: { data: ProfileUpdatePayload }) {
 
 // ── Router ────────────────────────────────────────────────────────────────────
 
-export function DillyVisual({ payload }: { payload: VisualPayload }) {
-  switch (payload.type) {
-    case 'score_breakdown':     return <ScoreBreakdownCard data={payload} />;
-    case 'cohort_comparison':   return <CohortComparisonCard data={payload} />;
+export function DillyVisual({ payload }: { payload: any }) {
+  // score_breakdown and cohort_comparison were retired when scores
+  // and cohort ranking got removed from the product. Old transcripts
+  // stored with those types just render as nothing.
+  switch (payload?.type) {
     case 'interview_checklist': return <InterviewChecklistCard data={payload} />;
     case 'bullet_comparison':   return <BulletComparisonCard data={payload} />;
     case 'timeline':            return <TimelineCard data={payload} />;

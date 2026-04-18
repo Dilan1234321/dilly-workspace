@@ -111,7 +111,46 @@ def _build_rich_context(email: str) -> dict:
             "dilly_take": a.get("dilly_take") or a.get("meridian_take") or "",
         })
 
-    COHORT_BARS = {"Tech": {"bar": 75, "company": "Google"}, "Finance": {"bar": 72, "company": "Goldman Sachs"}, "Health": {"bar": 68, "company": "Mayo Clinic"}, "Quantitative": {"bar": 75, "company": "Jane Street"}, "General": {"bar": 65, "company": "top companies"}}
+    # Cohort → representative interviewer company. Used both as the
+    # default reference_company for visuals AND as the default company
+    # the practice-mode interviewer claims to work at when the caller
+    # didn't pin one explicitly. Every cohort resolves to something
+    # plausible so the mock interview stays in-world.
+    COHORT_BARS = {
+        "Software Engineering":                 {"bar": 75, "company": "Stripe"},
+        "Data Science & Analytics":             {"bar": 74, "company": "Airbnb"},
+        "Cybersecurity & IT":                   {"bar": 72, "company": "CrowdStrike"},
+        "Finance & Accounting":                 {"bar": 72, "company": "Goldman Sachs"},
+        "Consulting & Strategy":                {"bar": 74, "company": "McKinsey"},
+        "Marketing & Advertising":              {"bar": 68, "company": "Ogilvy"},
+        "Management & Operations":              {"bar": 68, "company": "Target"},
+        "Healthcare & Clinical":                {"bar": 70, "company": "Mayo Clinic"},
+        "Design & Creative":                    {"bar": 70, "company": "Figma"},
+        "Media & Communications":               {"bar": 65, "company": "The New York Times"},
+        "Legal & Compliance":                   {"bar": 74, "company": "Skadden"},
+        "Education & Teaching":                 {"bar": 65, "company": "Teach For America"},
+        "Human Resources":                      {"bar": 65, "company": "Workday"},
+        "Sales & Business Development":         {"bar": 66, "company": "Salesforce"},
+        "Real Estate":                          {"bar": 65, "company": "CBRE"},
+        "Supply Chain & Logistics":             {"bar": 66, "company": "FedEx"},
+        "Environmental & Sustainability":       {"bar": 66, "company": "Patagonia"},
+        "Life Sciences & Research":             {"bar": 72, "company": "Genentech"},
+        "Engineering (Mechanical/Aerospace)":   {"bar": 72, "company": "SpaceX"},
+        "Engineering (Electrical/Computer)":    {"bar": 73, "company": "NVIDIA"},
+        "Engineering (Civil/Environmental)":    {"bar": 68, "company": "AECOM"},
+        "Architecture & Urban Planning":        {"bar": 68, "company": "Gensler"},
+        "Performing Arts & Film":               {"bar": 62, "company": "A24"},
+        "Entrepreneurship & Startups":          {"bar": 65, "company": "Y Combinator"},
+        "Government & Public Policy":           {"bar": 66, "company": "the State Department"},
+        "Nonprofit & Social Impact":            {"bar": 62, "company": "the Gates Foundation"},
+        "Hospitality & Events":                 {"bar": 62, "company": "Marriott"},
+        "Quantitative":                         {"bar": 75, "company": "Jane Street"},
+        # Legacy short-form keys kept for safety.
+        "Tech":                                 {"bar": 75, "company": "Stripe"},
+        "Finance":                              {"bar": 72, "company": "Goldman Sachs"},
+        "Health":                               {"bar": 68, "company": "Mayo Clinic"},
+        "General":                              {"bar": 65, "company": "a top company"},
+    }
     cohort_cfg = COHORT_BARS.get(cohort, COHORT_BARS["General"])
     bar = cohort_cfg["bar"]
     reference_company = cohort_cfg["company"]
@@ -1677,35 +1716,97 @@ async def ai_chat(request: Request, body: ChatRequest):
 
 
 def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
-    """Auto-detect which visual card to show based on the AI response content."""
-    if mode == "practice":
-        return None  # Interview mode is text-only
+    """Auto-detect which visual card to show based on the AI response content.
 
+    Rules:
+      - score_breakdown is gone (scores deprecated app-wide).
+      - cohort_comparison is gone (we show fit narratives, not ranks).
+      - 'run an audit' is gone from action_keywords (audit deprecated).
+      - practice mode now emits visuals too — it was text-only before,
+        but a mock interview is exactly where a checklist, bullet
+        rewrite, and post-round action buttons pay off.
+    """
     text = content.lower()
-    score = ctx.score if ctx else None
-    smart = ctx.smart if ctx else None
-    grit = ctx.grit if ctx else None
-    build = ctx.build if ctx else None
-    cohort = ctx.cohort if ctx else "General"
-    bar = ctx.cohort_bar if ctx else 70
+    cohort = (ctx.cohort if ctx else None) or "General"
+    company = (ctx.reference_company if ctx else None) or "a top company"
 
-    # If discussing scores and we have data → show score breakdown
-    score_keywords = ["your score", "smart score", "grit score", "build score", "dilly score", "your smart", "your grit", "your build"]
-    if any(kw in text for kw in score_keywords) and smart is not None and grit is not None and build is not None:
-        return {
-            "type": "score_breakdown",
-            "overall": int(score or ((smart + grit + build) / 3)),
-            "smart": int(smart),
-            "grit": int(grit),
-            "build": int(build),
-            "bar": int(bar or 70),
-            "cohort": str(cohort),
-        }
+    # ── PRACTICE MODE ───────────────────────────────────────────────
+    # The interviewer surface. Visuals here are different from the
+    # general chat — we want them to feel like debrief / coaching.
+    if mode == "practice":
+        # 1. Before/after rewrite of the candidate's answer → bullet_comparison
+        before_match = re.search(r'(?:before|original|weak(?:er)?|instead of)[:\s]*["\u201c](.+?)["\u201d]', content, re.IGNORECASE)
+        after_match  = re.search(r'(?:after|stronger|better|try)[:\s]*["\u201c](.+?)["\u201d]', content, re.IGNORECASE)
+        if before_match and after_match:
+            return {
+                "type": "bullet_comparison",
+                "before": before_match.group(1)[:240],
+                "after":  after_match.group(1)[:240],
+                "dimension": "answer",
+                "impact": "Specific + quantified + STAR structure",
+            }
 
-    # If giving a weekly plan or step-by-step plan → show weekly plan card
+        # 2. Interviewer lists topics/areas to prepare → interview_checklist
+        # Triggers when the AI enumerates what to work on next.
+        prep_triggers = [
+            "before we continue", "here's what to work on", "you should prep",
+            "work on these", "topics to prepare", "areas to improve", "focus on these",
+            "prep list", "let's wrap up", "to summarize", "recap:",
+        ]
+        if any(kw in text for kw in prep_triggers):
+            items = re.findall(r'(?:^|\n)\s*(?:\d+[\.\)]\s*|[-*]\s*)(.+?)(?=\n|$)', content)
+            if len(items) >= 2:
+                checklist = []
+                for i, item in enumerate(items[:6]):
+                    trimmed = item.strip()[:110]
+                    if not trimmed:
+                        continue
+                    # High priority for the first two, medium for the rest.
+                    prio = "high" if i < 2 else "medium"
+                    checklist.append({"label": trimmed, "priority": prio, "done": False})
+                if checklist:
+                    return {
+                        "type": "interview_checklist",
+                        "company": company,
+                        "role": ctx.application_target if ctx else None,
+                        "round": None,
+                        "items": checklist,
+                    }
+
+        # 3. End-of-interview call to action → action_buttons
+        # When the AI signals the mock is wrapping up, point the user
+        # at the full Interview Practice screen for a real session.
+        wrap_triggers = ["that's all", "end of our session", "good luck", "nice job", "well done", "nice work"]
+        if any(kw in text for kw in wrap_triggers):
+            return {
+                "type": "action_buttons",
+                "buttons": [
+                    {"label": "Open Interview Room",  "route": "/(app)/interview-practice"},
+                    {"label": "Tailor Resume",        "route": "/(app)/resume-generate"},
+                ],
+            }
+
+        # 4. Profile pickup during the mock → profile_update
+        # "I'll remember that about you" moments also happen in practice.
+        profile_keywords_p = ["i'll remember", "i've noted", "good signal", "added that", "noted about you"]
+        if any(kw in text for kw in profile_keywords_p):
+            learned = re.search(r'(?:you|your)\s+(\w+(?:\s+\w+){1,8})', content[:400])
+            if learned:
+                return {
+                    "type": "profile_update",
+                    "category": "interview_prep",
+                    "label": "Captured from this round",
+                    "value": learned.group(0)[:120],
+                    "icon": "mic",
+                    "color": "#7C3AED",
+                }
+
+        return None
+
+    # ── DEFAULT CHAT MODE ───────────────────────────────────────────
+    # Weekly plan when the response is a numbered day-by-day plan.
     plan_keywords = ["this week", "your plan", "here's what to do", "step 1", "day 1", "monday", "tuesday"]
     if any(kw in text for kw in plan_keywords):
-        # Try to extract numbered steps
         steps = re.findall(r'(?:^|\n)\s*(?:\d+[\.\)]\s*|[-*]\s*)(.*?)(?=\n|$)', content)
         if len(steps) >= 3:
             days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -1721,14 +1822,16 @@ def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
                 "days": plan_days,
             }
 
-    # If recommending the editor, audit, or other app features → action buttons
+    # Routing CTAs. 'Run an audit' removed — the audit feature is
+    # deprecated and the old /(app)/new-audit route no longer leads
+    # anywhere useful.
     action_keywords = {
-        "open the editor": ("/(app)/resume-editor", "Open Resume Editor"),
-        "run an audit": ("/(app)/new-audit", "Run Audit"),
-        "resume editor": ("/(app)/resume-editor", "Open Resume Editor"),
-        "tailor your resume": ("/(app)/resume-editor", "Tailor Resume"),
-        "check the jobs": ("/(app)/jobs", "Browse Jobs"),
-        "practice interview": ("/(app)/interview-practice", "Practice Interview"),
+        "tailor your resume":   ("/(app)/resume-generate",  "Tailor Resume"),
+        "generate your resume": ("/(app)/resume-generate",  "Generate Resume"),
+        "check the jobs":       ("/(app)/jobs",             "Browse Jobs"),
+        "browse jobs":          ("/(app)/jobs",             "Browse Jobs"),
+        "practice interview":   ("/(app)/interview-practice","Practice Interview"),
+        "mock interview":       ("/(app)/interview-practice","Practice Interview"),
     }
     buttons = []
     for keyword, (route, label) in action_keywords.items():
@@ -1737,20 +1840,19 @@ def _detect_visual(content: str, ctx, mode: str, email: str) -> Optional[dict]:
     if buttons:
         return {"type": "action_buttons", "buttons": buttons[:3]}
 
-    # If discussing a before/after bullet rewrite → bullet comparison
-    before_after = re.findall(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE) if True else []
-    before_match = re.search(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE)
-    after_match = re.search(r'(?:after|improved|new|rewritten)[:\s]*["\u201c](.+?)["\u201d]', text, re.IGNORECASE)
+    # Before/after bullet rewrites.
+    before_match = re.search(r'(?:before|original|old)[:\s]*["\u201c](.+?)["\u201d]', content, re.IGNORECASE)
+    after_match  = re.search(r'(?:after|improved|new|rewritten)[:\s]*["\u201c](.+?)["\u201d]', content, re.IGNORECASE)
     if before_match and after_match:
         return {
             "type": "bullet_comparison",
             "before": before_match.group(1)[:200],
-            "after": after_match.group(1)[:200],
+            "after":  after_match.group(1)[:200],
             "dimension": "overall",
             "impact": "Stronger action verb + quantified metric",
         }
 
-    # If the AI learned something new about the user → profile update visual
+    # Profile capture confirmations.
     profile_keywords = ["i'll remember", "i've noted", "saved to your profile", "added to your dilly",
                         "i'll keep that in mind", "noted!", "got it, i", "i've saved"]
     if any(kw in text for kw in profile_keywords):
