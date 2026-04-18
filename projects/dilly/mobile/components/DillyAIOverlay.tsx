@@ -262,22 +262,16 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
         const errData = await res.json().catch(() => ({}));
         const detail = errData.detail;
 
-        // Upgrade-required (starter tier hits chat) — render a rich
-        // upgrade card instead of a generic error. The backend returns
-        // { code: 'CHAT_REQUIRES_PLAN', message, required_plan,
-        //   features_unlocked: [...] }.
-        if (res.status === 402 && typeof detail === 'object' && detail?.code === 'CHAT_REQUIRES_PLAN') {
+        // 402 — global paywall wrapper (lib/dilly.ts) already
+        // surfaced the elegant full-screen paywall. We just stop
+        // spinning, remove the pending user message, and bail.
+        // Never show "Server error 402" or a duplicate inline
+        // upgrade bubble — one paywall, clean exit.
+        if (res.status === 402) {
           setIsTyping(false);
-          const features: string[] = Array.isArray(detail.features_unlocked) ? detail.features_unlocked : [];
-          const upgradeMsg =
-            `**Chat with Dilly is a Dilly feature.**\n\n` +
-            (features.length > 0 ? features.map(f => `· ${f}`).join('\n') + '\n\n' : '') +
-            `Tap Upgrade in Settings to unlock.`;
-          setMessages([...newHistory, {
-            id: ++_msgId,
-            role: 'assistant',
-            content: upgradeMsg,
-          }]);
+          // Roll back the optimistic user message so the next chat
+          // doesn't look half-sent.
+          setMessages(newHistory.slice(0, -1));
           return;
         }
 
@@ -299,10 +293,11 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
           return;
         }
 
+        // Soft error — never surface raw status codes to the user.
+        // They're alarming, look like a bug, and say nothing useful.
         const errMsg = typeof detail === 'string' ? detail
           : typeof detail === 'object' && detail?.message ? detail.message
-          : `Server error ${res.status}`;
-        if (res.status === 503) throw new Error(errMsg);
+          : 'Dilly hit a snag. Try again in a moment.';
         throw new Error(errMsg);
       }
       const data = await res.json();
@@ -342,15 +337,15 @@ export default function DillyAIOverlay({ visible, onClose, studentContext }: Pro
       setIsTyping(false);
       console.warn('[DillyAI] error:', err?.message || err);
       const errMsg = err?.message || '';
-      const isAuth = errMsg === 'auth' || errMsg.includes('Sign in') || errMsg.includes('401') || errMsg.includes('session');
+      const isAuth = errMsg === 'auth' || errMsg.includes('Sign in') || errMsg.includes('session') || errMsg.includes('401');
       const isTimeout = err?.name === 'AbortError';
+      // Never surface "Server error" or a raw status code. Generic
+      // friendly message — the kind of thing you'd say to a friend.
       const msg = isAuth
         ? 'Your session expired. Close this and reopen Dilly to reconnect.'
         : isTimeout
         ? 'That took too long. Check your connection and try again.'
-        : errMsg.includes('Server error')
-        ? `Dilly's servers are busy. Try again in a moment. (${errMsg})`
-        : `Something went wrong: ${errMsg.slice(0, 100)}`;
+        : "Dilly is having a moment. Give it a minute and try again.";
       setMessages([...newHistory, {
         id: ++_msgId,
         role: 'assistant',

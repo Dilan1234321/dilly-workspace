@@ -255,7 +255,10 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
         });
         if (!res.ok) {
           if (res.status === 403) throw { status: 403 };
-          throw new Error(`Server error ${res.status}`);
+          // 402 is handled globally by the paywall wrapper. Just
+          // bail silently — don't render "Server error 402".
+          if (res.status === 402) throw { status: 402, silent: true };
+          throw new Error('Fit narrative unavailable.');
         }
         const json = await res.json();
         setData(json);
@@ -838,11 +841,15 @@ function MarketRadarCard({ radar }: {
     active_market: { total: number | null; window: string };
   };
 }) {
-  const cur = radar.current;
-  const ladder = Array.isArray(radar.ladder) ? radar.ladder : [];
-  const active = radar.active_market?.total;
+  // Defensive: backend can return a partial shape during warm-up or
+  // when a holder's role hasn't been resolved yet. Accessing
+  // radar.current.role on an undefined `current` was a real source
+  // of the jobs-tab white screen of doom. Fall through to null.
+  const cur = radar?.current ?? null;
+  const ladder = Array.isArray(radar?.ladder) ? radar.ladder : [];
+  const active = radar?.active_market?.total;
 
-  // Nothing useful to show. caller should skip, but guard anyway.
+  if (!cur) return null;
   if (!cur.role && ladder.length === 0 && active == null) return null;
 
   return (
@@ -997,6 +1004,11 @@ export default function JobsScreen() {
   // User's chosen onboarding path. drives which extra filters show
   // (e.g. 'No degree required' appears only for dropouts).
   const [userPath, setUserPath] = useState<string>('');
+  // Student flag — drives the jobs-page filter constraint. Students
+  // see ONLY internships + entry-level roles (product rule:
+  // don't show them jobs they can't realistically land yet). Derived
+  // from profile.user_type or profile.is_student — either works.
+  const [isStudent, setIsStudent] = useState<boolean>(false);
   const [noDegreeFilter, setNoDegreeFilter] = useState<boolean>(false);
   // Path-specific filters: H-1B sponsor (international_grad) +
   // fair-chance (formerly_incarcerated). Opt-in, default off.
@@ -1082,6 +1094,23 @@ export default function JobsScreen() {
       // path-specific filters (like "No degree required" for dropouts).
       const pathRaw = ((profileRes as any)?.user_path || '').toString().toLowerCase();
       setUserPath(pathRaw);
+      // Student lock: if profile says student, force the filters
+      // to internship+entry-level only. The user can still pick
+      // between them but can't see full-time or part-time roles —
+      // product rule ("don't show them what they can't realistically
+      // land yet").
+      const userType = String((profileRes as any)?.user_type || '').toLowerCase();
+      const studentFlag = !!(profileRes as any)?.is_student || (userType !== 'general' && userType !== 'professional' && userType !== '');
+      setIsStudent(studentFlag);
+      if (studentFlag) {
+        setTabs(prev => {
+          // Clamp any state that selected 'all'/'full_time'/'part_time'/'other'.
+          const allowed: Tab[] = ['internship', 'entry_level'];
+          const next = new Set<Tab>(Array.from(prev).filter(t => allowed.includes(t)));
+          if (next.size === 0) next.add('internship');
+          return next;
+        });
+      }
       // rural_remote_only users have "remote only" as their whole premise.
       // Pre-select the filter for them on first load. They can toggle off
       // if they want to browse everything.
@@ -1116,6 +1145,17 @@ export default function JobsScreen() {
   // Filter listings by search and city
   const filtered = useMemo(() => {
     let result = listings;
+
+    // Student hard filter: internships + entry-level only, no matter
+    // what the server returned. Defense in depth — tab pills already
+    // hide Full/Part Time but we never want a slipped full-time role
+    // to reach a student's feed.
+    if (isStudent) {
+      result = result.filter(l => {
+        const jt = (l.job_type || '').toLowerCase();
+        return jt === 'internship' || jt === 'entry_level';
+      });
+    }
 
     // Powerful multi-token search. Splits the query on whitespace and
     // requires ALL tokens to match at least one searchable field. Lets
@@ -1163,7 +1203,7 @@ export default function JobsScreen() {
     }
 
     return result;
-  }, [listings, search, selectedCities, tabs]);
+  }, [listings, search, selectedCities, tabs, isStudent]);
 
   // Check if a job is in any collection
   const savedJobIds = useMemo(() => {
@@ -1391,13 +1431,19 @@ export default function JobsScreen() {
         {/* Job type pills. multi-select. Tapping 'All' clears other
             selections. Tapping a specific type toggles it; if all specific
             types are deselected, falls back to 'All'. */}
-        {([
-          { key: 'all', label: 'All' },
-          { key: 'internship', label: 'Internships' },
-          { key: 'entry_level', label: 'Entry Level' },
-          { key: 'full_time', label: 'Full Time' },
-          { key: 'part_time', label: 'Part Time' },
-        ] as { key: Tab; label: string }[]).map(t => {
+        {(((isStudent
+          ? [
+              // Students: ONLY internships + entry level. No All / Full / Part.
+              { key: 'internship', label: 'Internships' },
+              { key: 'entry_level', label: 'Entry Level' },
+            ]
+          : [
+              { key: 'all', label: 'All' },
+              { key: 'internship', label: 'Internships' },
+              { key: 'entry_level', label: 'Entry Level' },
+              { key: 'full_time', label: 'Full Time' },
+              { key: 'part_time', label: 'Part Time' },
+            ]) as { key: Tab; label: string }[])).map(t => {
           const active = tabs.has(t.key);
           return (
             <AnimatedPressable

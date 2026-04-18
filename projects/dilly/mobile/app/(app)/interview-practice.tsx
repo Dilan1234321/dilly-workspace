@@ -43,6 +43,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
+import { DillyFeatureBanner } from '../../components/DillyFeatureBanner';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -346,7 +347,9 @@ export default function InterviewPracticeScreen() {
           return;
         }
         const d = await res.json().catch(() => null);
-        throw new Error(d?.detail || `Server error ${res.status}`);
+        // Never surface a raw status — the feedback screen already
+        // has its own "took too long" fallback UI.
+        throw new Error(d?.detail || 'Dilly could not score this round.');
       }
 
       const data: InterviewFeedback = await res.json();
@@ -487,6 +490,11 @@ function SetupPhase({
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 60 }]}>
+        {/* Free-tier nudge. Paid users never see this. */}
+        <DillyFeatureBanner
+          feature="The Interview Room"
+          sub="You can set up a mock for free. Running the round + feedback unlocks with Dilly."
+        />
         <FadeInView delay={0}>
           {/* Hero — no logo, no chatbot framing. This is a Room. */}
           <View style={s.hero}>

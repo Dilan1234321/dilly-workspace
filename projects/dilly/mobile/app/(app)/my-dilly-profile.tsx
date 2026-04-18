@@ -565,6 +565,41 @@ function SeekerProfileScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={GOLD} />}
       >
 
+        {/* Vertical business card CTA — prominent so users actually
+            find it. The header QR icon was invisible to most testers. */}
+        {!editMode && readableSlug ? (
+          <FadeInView delay={0}>
+            <AnimatedPressable
+              onPress={() => setShowQrFullscreen(true)}
+              scaleDown={0.98}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                backgroundColor: colors.indigo + '10',
+                borderWidth: 1, borderColor: colors.indigo + '30',
+                borderRadius: 14, padding: 14, marginBottom: 14,
+              }}
+            >
+              <View style={{
+                width: 44, height: 44, borderRadius: 10,
+                backgroundColor: '#fff',
+                borderWidth: 1, borderColor: colors.indigo + '30',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Ionicons name="qr-code" size={22} color={colors.indigo} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.indigo, letterSpacing: 0.2 }}>
+                  Your business card
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.t2, marginTop: 2, lineHeight: 15 }}>
+                  One scan — recruiters get your Dilly profile + contact in a tap.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.t3} />
+            </AnimatedPressable>
+          </FadeInView>
+        ) : null}
+
         {/* ── Edit Profile Section ──────────────────────────── */}
         {editMode && (
           <FadeInView delay={0}>

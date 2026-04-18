@@ -118,7 +118,7 @@ export default function WhatWeThinkScreen() {
       const timeout = setTimeout(() => controller.abort(), 60000);
       const res = await dilly.fetch('/insights/letter', { method: 'POST', body: JSON.stringify({}), signal: controller.signal });
       clearTimeout(timeout);
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      if (!res.ok) throw new Error('Could not load this letter right now. Try again in a moment.');
       const letter: InsightsLetter = await res.json();
       setData(letter);
       cachedRef.current = letter;

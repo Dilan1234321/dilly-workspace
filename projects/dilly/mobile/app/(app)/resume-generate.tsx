@@ -55,6 +55,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { DillyFeatureBanner } from '../../components/DillyFeatureBanner';
 
 const W = Dimensions.get('window').width;
 const INDIGO = colors.indigo;
@@ -375,7 +376,7 @@ export default function ResumeGenerateScreen() {
           const d = await res.json();
           serverDetail = d?.detail?.message || d?.detail || d?.error || JSON.stringify(d).slice(0, 300);
         } catch {}
-        throw new Error(serverDetail || `Server error ${res.status}`);
+        throw new Error(serverDetail || 'The forge cooled off. Try again.');
       }
 
       const data = await res.json();
@@ -559,6 +560,11 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
   const canGenerate = jobTitle.trim().length > 0 && company.trim().length > 0 && jd.trim().length >= 100;
   return (
     <FadeInView>
+      {/* Free-tier nudge — banner only renders for starter users. */}
+      <DillyFeatureBanner
+        feature="The Forge"
+        sub="You can set up the role for free. Forging the tailored resume unlocks with Dilly."
+      />
       {/* Hero */}
       <View style={styles.hero}>
         <View style={styles.heroRingOuter}>
