@@ -1,10 +1,112 @@
 """
-Dilly LLM client - Anthropic Claude. Chat completion for auditor, voice, and tools.
+Dilly LLM client - routes between Anthropic Claude (user-facing) and
+OpenAI GPT-4o-mini (backend work). Chat completion for auditor, voice,
+extraction, and tools.
+
+Split-brain design:
+  - User-facing replies (routers/ai.py /ai/chat) call Anthropic directly.
+  - Everything else (extraction, narrative, audit explain, ATS, voice
+    post-processing) routes through this file. When
+    DILLY_BACKEND_PROVIDER=openai, every call here goes to GPT-4o-mini
+    instead of Haiku. ~7x cheaper per call, with no user-visible output
+    quality change since these tasks are JSON / structured categorization
+    where both models are comparable.
+
+Switch back anytime with DILLY_BACKEND_PROVIDER=anthropic (or unset).
 """
 
 import json
 import os
 from typing import Any, Optional
+
+
+def _provider() -> str:
+    """Which provider to use for non-user-facing LLM work.
+    Returns 'openai' or 'anthropic'. Default: anthropic (safe fallback
+    if OPENAI_API_KEY is missing)."""
+    p = (os.environ.get("DILLY_BACKEND_PROVIDER") or "").strip().lower()
+    if p == "openai" and os.environ.get("OPENAI_API_KEY", "").strip():
+        return "openai"
+    return "anthropic"
+
+
+def _openai_model() -> str:
+    """Default OpenAI model for backend work. Override with env var."""
+    return (os.environ.get("DILLY_OPENAI_MODEL") or "gpt-4o-mini").strip()
+
+
+def _get_chat_completion_openai(
+    system: str,
+    user: str,
+    *,
+    model: Optional[str] = None,
+    max_tokens: int = 16000,
+    temperature: float = 0.1,
+    log_email: str = "",
+    log_feature: str = "other",
+    log_metadata: Optional[dict] = None,
+) -> Optional[str]:
+    """OpenAI path. Same signature as the Anthropic version so callers
+    don't care which backend ran.
+
+    OpenAI-specific notes:
+      - No prompt caching marker needed. OpenAI auto-caches prefixes
+        server-side without any explicit control. ~50% discount on
+        repeated long prompts, no code required.
+      - System message goes as its own role="system" chat message.
+      - gpt-4o-mini max output is 16k tokens; request cap is honored.
+    """
+    try:
+        from openai import OpenAI
+    except ImportError:
+        return None
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return None
+    chosen = (model or _openai_model()).strip()
+    try:
+        client = OpenAI(api_key=api_key, timeout=45.0)
+        response = client.chat.completions.create(
+            model=chosen,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": user},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        # Cost ledger. OpenAI's usage object exposes prompt_tokens /
+        # completion_tokens / prompt_tokens_details.cached_tokens. We
+        # translate to the same fields log_usage expects.
+        try:
+            from projects.dilly.api.llm_usage_log import log_usage
+            usage = getattr(response, "usage", None)
+            prompt_tok = int(getattr(usage, "prompt_tokens", 0) or 0)
+            out_tok = int(getattr(usage, "completion_tokens", 0) or 0)
+            cached_tok = 0
+            details = getattr(usage, "prompt_tokens_details", None)
+            if details is not None:
+                cached_tok = int(getattr(details, "cached_tokens", 0) or 0)
+            # Anthropic split input_tokens (fresh) and cache_read; OpenAI
+            # reports prompt_tokens = fresh + cached combined. Pass the
+            # total as input_tokens and cached separately — _cost_usd
+            # handles the double-count correctly (fresh = input - cached).
+            log_usage(
+                log_email, log_feature, chosen,
+                input_tokens=prompt_tok,
+                output_tokens=out_tok,
+                cache_read_tokens=cached_tok,
+                cache_write_tokens=0,
+                request_id=getattr(response, "id", None),
+                metadata=log_metadata or {"route": "dilly_core/llm_client.py"},
+            )
+        except Exception:
+            pass  # cost logging failures never break the chat
+        msg = response.choices[0].message if response.choices else None
+        text = (getattr(msg, "content", None) or "") if msg else ""
+        return text.strip() or None
+    except Exception:
+        return None
 
 
 def get_chat_completion(
@@ -23,17 +125,32 @@ def get_chat_completion(
     log_metadata: Optional[dict] = None,
 ) -> Optional[str]:
     """
-    Send system + user to Claude and return the assistant message text.
-    Uses ANTHROPIC_API_KEY. Returns None on failure or missing key.
+    Send system + user to whichever backend is selected (see _provider()).
+    Returns the assistant message text, or None on failure.
 
-    Cost optimization: for any system prompt >= 1024 tokens (~4000 chars)
-    we wrap it in an ephemeral prompt-cache block. Anthropic serves cache
-    reads at 10% of the normal input price within a 5-minute window.
-    Dozens of Dilly call sites pass the same large system prompt across
-    users in quick succession (fit narratives, memory extraction,
-    insights letter) — caching slashes their input bill without any
-    caller code changes.
+    Default provider: Anthropic Claude (claude-haiku-4-5).
+    Set DILLY_BACKEND_PROVIDER=openai to route through GPT-4o-mini.
+    The `model` kwarg still wins if explicitly passed.
+
+    Cost optimization (Anthropic path): for any system prompt >= 1024
+    tokens (~4000 chars) we wrap it in an ephemeral prompt-cache block.
+    OpenAI auto-caches prefixes server-side so no wrapping is needed.
     """
+    # Route to OpenAI if configured. Only skip this when the caller
+    # explicitly passed a Claude-family model (we never send claude-*
+    # names to OpenAI since it would fail).
+    caller_forced_anthropic = bool(model and model.lower().startswith("claude"))
+    if _provider() == "openai" and not caller_forced_anthropic:
+        return _get_chat_completion_openai(
+            system, user,
+            model=None if (model and model.lower().startswith("claude")) else model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            log_email=log_email,
+            log_feature=log_feature,
+            log_metadata=log_metadata,
+        )
+
     try:
         from anthropic import Anthropic
     except ImportError:

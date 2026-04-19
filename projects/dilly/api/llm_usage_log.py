@@ -50,6 +50,21 @@ _PRICES_USD_PER_M = {
     "claude-3-5-haiku-20241022": {
         "input": 0.80, "cache_write": 1.00, "cache_read": 0.08, "output": 4.00,
     },
+    # OpenAI backend models (split-brain: used for extraction, narrative,
+    # audit explains, ATS, voice post-processing — everything except the
+    # user-facing /ai/chat call, which stays on Haiku).
+    # OpenAI auto-caches prefix content and bills cached tokens at ~50%
+    # of fresh input. There's no explicit cache_write premium — the first
+    # call just pays full rate like normal input.
+    "gpt-4o-mini": {
+        "input":       0.15,
+        "cache_write": 0.15,   # no write premium on OpenAI
+        "cache_read":  0.075,  # 50% off input for cached prefix
+        "output":      0.60,
+    },
+    "gpt-4o-mini-2024-07-18": {
+        "input": 0.15, "cache_write": 0.15, "cache_read": 0.075, "output": 0.60,
+    },
 }
 
 
