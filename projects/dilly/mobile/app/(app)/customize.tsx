@@ -39,7 +39,7 @@ const { width: W } = Dimensions.get('window');
 type AxisId = 'accent' | 'surface' | 'shape' | 'type' | 'density' | 'style';
 const AXES: { id: AxisId; label: string; icon: any }[] = [
   { id: 'accent',  label: 'Accent',  icon: 'color-palette' },
-  { id: 'surface', label: 'Surface', icon: 'layers' },
+  { id: 'surface', label: 'Theme', icon: 'layers' },
   { id: 'shape',   label: 'Shape',   icon: 'square' },
   { id: 'type',    label: 'Type',    icon: 'text' },
   { id: 'density', label: 'Density', icon: 'resize' },

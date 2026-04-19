@@ -1447,12 +1447,17 @@ function SeekerProfileScreen() {
                 button. Users were missing the in-tile +s before. */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <Text style={d.sectionLabel}>WHAT WE KNOW ABOUT YOU</Text>
+              {/* 'Add a fact' is a rounded rectangle (not a pill) and
+                  follows the user's accent from Customize Dilly. Radius
+                  pulls from theme.shape.sm so shape axis actually
+                  propagates here too. */}
               <AnimatedPressable
                 style={{
                   flexDirection: 'row', alignItems: 'center', gap: 5,
-                  paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
-                  backgroundColor: colors.indigo + '12',
-                  borderWidth: 1, borderColor: colors.indigo + '35',
+                  paddingHorizontal: 10, paddingVertical: 6,
+                  borderRadius: theme.shape.sm,
+                  backgroundColor: theme.accentSoft,
+                  borderWidth: 1, borderColor: theme.accentBorder,
                 }}
                 onPress={() => {
                   // Default to "project_detail" — widest-relevant bucket
@@ -1462,8 +1467,8 @@ function SeekerProfileScreen() {
                 scaleDown={0.95}
                 hitSlop={8}
               >
-                <Ionicons name="add" size={12} color={colors.indigo} />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.indigo, letterSpacing: 0.2 }}>Add a fact</Text>
+                <Ionicons name="add" size={12} color={theme.accent} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, letterSpacing: 0.2 }}>Add a fact</Text>
               </AnimatedPressable>
             </View>
             <View style={d.strengthGrid}>

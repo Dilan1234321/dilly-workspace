@@ -49,9 +49,14 @@ interface JourneyStep {
 }
 
 function JourneyStepCard({ step }: { step: JourneyStep }) {
+  const theme = useResolvedTheme();
   return (
     <AnimatedPressable
-      style={[s.journeyCard, step.completed && s.journeyCardDone]}
+      style={[
+        s.journeyCard,
+        { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+        step.completed && s.journeyCardDone,
+      ]}
       onPress={step.onPress}
       scaleDown={0.98}
     >
@@ -63,10 +68,10 @@ function JourneyStepCard({ step }: { step: JourneyStep }) {
         )}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[s.journeyTitle, step.completed && { color: colors.t3 }]}>{step.title}</Text>
-        <Text style={s.journeySub}>{step.subtitle}</Text>
+        <Text style={[s.journeyTitle, { color: theme.surface.t1 }, step.completed && { color: theme.surface.t3 }]}>{step.title}</Text>
+        <Text style={[s.journeySub, { color: theme.surface.t2 }]}>{step.subtitle}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={14} color={step.completed ? colors.t3 : step.color} />
+      <Ionicons name="chevron-forward" size={14} color={step.completed ? theme.surface.t3 : step.color} />
     </AnimatedPressable>
   );
 }
@@ -76,14 +81,19 @@ function JourneyStepCard({ step }: { step: JourneyStep }) {
 function ActivityCard({ icon, color, title, subtitle, onPress }: {
   icon: string; color: string; title: string; subtitle: string; onPress: () => void;
 }) {
+  const theme = useResolvedTheme();
   return (
-    <AnimatedPressable style={s.activityCard} onPress={onPress} scaleDown={0.97}>
+    <AnimatedPressable
+      style={[s.activityCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+      onPress={onPress}
+      scaleDown={0.97}
+    >
       <View style={[s.activityIcon, { backgroundColor: color + '12' }]}>
         <Ionicons name={icon as any} size={16} color={color} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={s.activityTitle} numberOfLines={1}>{title}</Text>
-        <Text style={s.activitySub} numberOfLines={1}>{subtitle}</Text>
+        <Text style={[s.activityTitle, { color: theme.surface.t1 }]} numberOfLines={1}>{title}</Text>
+        <Text style={[s.activitySub, { color: theme.surface.t2 }]} numberOfLines={1}>{subtitle}</Text>
       </View>
     </AnimatedPressable>
   );
@@ -94,11 +104,16 @@ function ActivityCard({ icon, color, title, subtitle, onPress }: {
 function PipelineTile({ icon, count, label, color, onPress }: {
   icon: string; count: number; label: string; color: string; onPress: () => void;
 }) {
+  const theme = useResolvedTheme();
   return (
-    <AnimatedPressable style={s.pipeTile} onPress={onPress} scaleDown={0.95}>
+    <AnimatedPressable
+      style={[s.pipeTile, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+      onPress={onPress}
+      scaleDown={0.95}
+    >
       <Ionicons name={icon as any} size={16} color={color} />
       <Text style={[s.pipeCount, { color }]}>{count}</Text>
-      <Text style={s.pipeLabel}>{label}</Text>
+      <Text style={[s.pipeLabel, { color: theme.surface.t2 }]}>{label}</Text>
     </AnimatedPressable>
   );
 }
@@ -1132,18 +1147,18 @@ function SeekerHome() {
             shows the jobs that match). */}
         {weeklyBrief && (weeklyBrief.new_jobs_count > 0 || (weeklyBrief.bullets?.length ?? 0) > 0) && (
           <FadeInView delay={40}>
-            <View style={s.briefCard}>
+            <View style={[s.briefCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <View style={s.briefTopRow}>
-                <View style={s.briefBadge}>
-                  <Ionicons name="sparkles" size={11} color={colors.indigo} />
-                  <Text style={s.briefBadgeText}>YOUR WEEK</Text>
+                <View style={[s.briefBadge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                  <Ionicons name="sparkles" size={11} color={theme.accent} />
+                  <Text style={[s.briefBadgeText, { color: theme.accent }]}>YOUR WEEK</Text>
                 </View>
               </View>
-              <Text style={s.briefHeadline}>{weeklyBrief.headline}</Text>
+              <Text style={[s.briefHeadline, { color: theme.surface.t1 }]}>{weeklyBrief.headline}</Text>
               {(weeklyBrief.bullets || []).map((b, i) => (
                 <AnimatedPressable
                   key={i}
-                  style={s.briefRow}
+                  style={[s.briefRow, { borderTopColor: theme.surface.border }]}
                   scaleDown={0.98}
                   onPress={() => {
                     const link = b.deep_link || '';
@@ -1158,11 +1173,11 @@ function SeekerHome() {
                     }
                   }}
                 >
-                  <View style={s.briefRowIcon}>
-                    <Ionicons name={b.icon as any} size={13} color={colors.indigo} />
+                  <View style={[s.briefRowIcon, { backgroundColor: theme.accentSoft }]}>
+                    <Ionicons name={b.icon as any} size={13} color={theme.accent} />
                   </View>
-                  <Text style={s.briefRowText}>{b.text}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                  <Text style={[s.briefRowText, { color: theme.surface.t1 }]}>{b.text}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
                 </AnimatedPressable>
               ))}
             </View>
