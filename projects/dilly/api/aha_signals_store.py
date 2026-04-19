@@ -43,10 +43,22 @@ from psycopg2.extras import RealDictCursor
 # no-op instead of blocking the request.
 
 def _conn():
-    """Short-lived connection. Identical pattern to llm_usage_log."""
+    """Short-lived connection. Identical three-layer fallback as
+    llm_usage_log: DATABASE_URL → PG* → DILLY_DB_*."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if db_url:
         return psycopg2.connect(db_url, sslmode="require", connect_timeout=3)
+    pg_host = (os.environ.get("PGHOST") or "").strip()
+    if pg_host:
+        return psycopg2.connect(
+            host=pg_host,
+            database=os.environ.get("PGDATABASE") or "",
+            user=os.environ.get("PGUSER") or "",
+            password=os.environ.get("PGPASSWORD") or "",
+            port=int(os.environ.get("PGPORT") or "5432"),
+            sslmode="require",
+            connect_timeout=3,
+        )
     return psycopg2.connect(
         host=os.environ.get("DILLY_DB_HOST", ""),
         database=os.environ.get("DILLY_DB_NAME", "dilly"),

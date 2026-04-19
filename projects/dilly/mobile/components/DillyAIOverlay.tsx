@@ -140,13 +140,15 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
     top <= 20 ? 0 : top <= 44 ? 42 : top <= 48 ? 47
     : top <= 50 ? 50 : top <= 55 ? 52 : top <= 61 ? 55 : 60;
 
-  // The glow ring needs to sit FULLY INSIDE the viewport. If the path
-  // runs along x=0..W the outer half of the stroke gets clipped and the
-  // corners look rectangular since the curve radius extends off-screen
-  // where it's invisible. We inset the path by half the outermost stroke
-  // so the entire glow is visible AND the corner arc hugs the device.
-  const STROKE_OUTER = 30;
-  const INSET = STROKE_OUTER / 2; // 15
+  // Apple Intelligence-style edge glow: a THIN line hugging the
+  // device edge with a narrow soft bloom. Not a thick ring. Total
+  // visual width is ~4px + a few pixels of fade — any thicker and
+  // it reads as a "border," which isn't the vibe.
+  //
+  // Path still needs to be inset by half the widest stroke so the
+  // outer half doesn't clip at the viewport edge.
+  const STROKE_OUTER = 10;   // soft bloom (low opacity)
+  const INSET = STROKE_OUTER / 2; // 5
   const cornerR = Math.max(0, R - INSET);
   const x0 = INSET;
   const y0 = INSET;
@@ -587,12 +589,14 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Animated.View style={[StyleSheet.absoluteFill, { opacity: combinedOpacity }]}>
             <Svg width={SCREEN_W} height={SCREEN_H}>
-              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={BLUE} strokeWidth={STROKE_OUTER} strokeOpacity={0.12} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={BLUE} strokeWidth={14} strokeOpacity={0.42} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={GOLD} strokeWidth={5}  strokeOpacity={1}    strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={BLUE} strokeWidth={STROKE_OUTER} strokeOpacity={0.12} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={BLUE} strokeWidth={14} strokeOpacity={0.42} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={GOLD} strokeWidth={5}  strokeOpacity={1}    strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              {/* Apple-Intelligence edge glow: just two strokes per
+                  side. An outer 10px soft bloom at ~15% opacity, and
+                  a 1.5px crisp accent line at full opacity. That's
+                  the entire light. Reads as "edge glow," not a ring. */}
+              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={BLUE} strokeWidth={STROKE_OUTER} strokeOpacity={0.15} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={GOLD} strokeWidth={1.5} strokeOpacity={1} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={BLUE} strokeWidth={STROKE_OUTER} strokeOpacity={0.15} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={GOLD} strokeWidth={1.5} strokeOpacity={1} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
               <AnimatedCircle cx={W / 2} cy={0} r={flashR} fill="none" stroke={GOLD} strokeWidth={2} opacity={flashOp} />
             </Svg>
           </Animated.View>
