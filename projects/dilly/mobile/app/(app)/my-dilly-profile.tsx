@@ -2138,24 +2138,33 @@ function HolderCareer() {
               email: p.email || '',
               phones: p.phones || [{ label: 'Cell', number: '' }],
               username: p.profile_slug || '',
-              // Three fallbacks so the photo actually shows on
-              // holder profiles: the public slug URL (ideal), the
-              // dashboard's raw photo_url field, and a cache-busting
-              // ?_t query to defeat stale cached 404s that linger on
-              // the CDN after a re-upload. Without this, fresh
-              // holder accounts always showed the placeholder.
-              photoUri:
-                p.profile_slug
-                  ? `https://api.trydilly.com/profile/public/${p.profile_slug}/photo?_t=${Math.floor(Date.now() / 60000)}`
-                  : identity.photo_url
-                    ? (String(identity.photo_url).startsWith('http')
-                        ? identity.photo_url
-                        : `${API_BASE}${identity.photo_url}`)
-                    : p.photo_url
-                      ? (String(p.photo_url).startsWith('http')
-                          ? p.photo_url
-                          : `${API_BASE}${p.photo_url}`)
-                      : null,
+              // Photo resolution order changed: prefer the explicit
+              // photo_url fields FIRST (authoritative from /profile
+              // and the career-dashboard), fall back to the public
+              // slug URL only as a last resort. Previously we tried
+              // the slug URL first, but that endpoint returns 404
+              // when the user has a profile photo stored only in
+              // photo_url (e.g. holders who uploaded during holder
+              // onboarding but never hit the slug-photo migration).
+              // Result: card showed the initial instead of the
+              // actual photo even though the profile had one.
+              photoUri: (() => {
+                const bust = Math.floor(Date.now() / 60000);
+                if (identity.photo_url) {
+                  return String(identity.photo_url).startsWith('http')
+                    ? `${identity.photo_url}?_t=${bust}`
+                    : `${API_BASE}${identity.photo_url}?_t=${bust}`;
+                }
+                if (p.photo_url) {
+                  return String(p.photo_url).startsWith('http')
+                    ? `${p.photo_url}?_t=${bust}`
+                    : `${API_BASE}${p.photo_url}?_t=${bust}`;
+                }
+                if (p.profile_slug) {
+                  return `https://api.trydilly.com/profile/public/${p.profile_slug}/photo?_t=${bust}`;
+                }
+                return null;
+              })(),
               city: (p.job_locations || [])[0] || '',
               readableSlug: p.readable_slug || '',
               profilePrefix: 'p',

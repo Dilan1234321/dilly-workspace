@@ -17,6 +17,7 @@ import {
   TextInput, ScrollView, Share, Animated, Easing, PanResponder,
 } from 'react-native';
 import InlineToastView, { useInlineToast } from './InlineToast';
+import { useResolvedTheme } from '../hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { lightHaptic, mediumHaptic, successHaptic } from '../lib/haptics';
 import { dilly } from '../lib/dilly';
@@ -530,12 +531,16 @@ function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSele
   // Scroll progress 0..1. drives the indicator track + thumb width.
   const [scrollProgress, setScrollProgress] = useState(0);
   const [thumbWidthPct, setThumbWidthPct] = useState(0.35);
+  // Theme so the label + inactive chip surfaces + track respect dark
+  // mode. Active chip uses the user's accent (was hardcoded DILLY_BLUE)
+  // so the card editor ties into Customize.
+  const theme = useResolvedTheme();
 
   return (
     <View style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 13, fontWeight: '700', color: DARK }}>Choose a style</Text>
-        <Text style={{ fontSize: 11, color: GRAY }}>{CARD_TEMPLATES.length} styles</Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>Choose a style</Text>
+        <Text style={{ fontSize: 11, color: theme.surface.t3 }}>{CARD_TEMPLATES.length} styles</Text>
       </View>
       <ScrollView
         horizontal
@@ -561,19 +566,19 @@ function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSele
               activeOpacity={0.8}
               style={{
                 paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
-                backgroundColor: active ? DILLY_BLUE : '#F3F4F6',
+                backgroundColor: active ? theme.accent : theme.surface.s2,
                 borderWidth: 1.5,
-                borderColor: active ? DILLY_BLUE : '#E5E7EB',
+                borderColor: active ? theme.accent : theme.surface.border,
                 minWidth: 70, alignItems: 'center',
               }}
             >
-              <Text style={{ fontSize: 12, fontWeight: '600', color: active ? '#fff' : GRAY }}>{t.label}</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: active ? '#fff' : theme.surface.t2 }}>{t.label}</Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
-      {/* Scroll indicator: a track with a thumb that moves as the carousel scrolls */}
-      <View style={{ height: 3, backgroundColor: '#EEF0F3', borderRadius: 2, marginHorizontal: 4, overflow: 'hidden' }}>
+      {/* Scroll indicator: track with a thumb that moves as the carousel scrolls */}
+      <View style={{ height: 3, backgroundColor: theme.surface.s3, borderRadius: 2, marginHorizontal: 4, overflow: 'hidden' }}>
         <View
           style={{
             position: 'absolute',
@@ -581,7 +586,7 @@ function TemplatePicker({ selected, onSelect }: { selected: CardTemplate; onSele
             bottom: 0,
             width: `${thumbWidthPct * 100}%`,
             left: `${scrollProgress * (1 - thumbWidthPct) * 100}%`,
-            backgroundColor: DILLY_BLUE,
+            backgroundColor: theme.accent,
             borderRadius: 2,
           }}
         />
@@ -605,6 +610,11 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
   const [editorOpen, setEditorOpen] = useState(false);
   const [template, setTemplate] = useState<CardTemplate>('photo');
   const [showQr, setShowQr] = useState(true);
+  // Theme-aware editor field styling. The module-level `c` StyleSheet
+  // (fieldLabel/fieldInput) is frozen at light-palette values, so we
+  // override via inline styles at the call sites below. Fields were
+  // unreadable white-on-white in dark mode prior to this.
+  const theme = useResolvedTheme();
   const frontRef = useRef<any>(null);
   const backRef = useRef<any>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -767,47 +777,47 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
       {/* Editor fields */}
       {editorOpen && (<>
       <View style={c.field}>
-        <Text style={c.fieldLabel}>Full Name</Text>
-        <TextInput style={c.fieldInput} value={data.name} onChangeText={v => update('name', v)} placeholder="Your name" placeholderTextColor={LIGHT_GRAY} />
+        <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Full Name</Text>
+        <TextInput style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]} value={data.name} onChangeText={v => update('name', v)} placeholder="Your name" placeholderTextColor={theme.surface.t3} />
       </View>
       {userType !== 'general' && userType !== 'professional' && (
         <>
           <View style={c.field}>
-            <Text style={c.fieldLabel}>School</Text>
-            <TextInput style={c.fieldInput} value={data.school} onChangeText={v => update('school', v)} placeholder="University" placeholderTextColor={LIGHT_GRAY} />
+            <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>School</Text>
+            <TextInput style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]} value={data.school} onChangeText={v => update('school', v)} placeholder="University" placeholderTextColor={theme.surface.t3} />
           </View>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={[c.field, { flex: 1 }]}>
-              <Text style={c.fieldLabel}>Major</Text>
-              <TextInput style={c.fieldInput} value={data.major} onChangeText={v => update('major', v)} placeholder="Major" placeholderTextColor={LIGHT_GRAY} />
+              <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Major</Text>
+              <TextInput style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]} value={data.major} onChangeText={v => update('major', v)} placeholder="Major" placeholderTextColor={theme.surface.t3} />
             </View>
             <View style={[c.field, { width: 80 }]}>
-              <Text style={c.fieldLabel}>Class</Text>
-              <TextInput style={c.fieldInput} value={data.classYear} onChangeText={v => update('classYear', v)} placeholder="2027" placeholderTextColor={LIGHT_GRAY} keyboardType="number-pad" />
+              <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Class</Text>
+              <TextInput style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]} value={data.classYear} onChangeText={v => update('classYear', v)} placeholder="2027" placeholderTextColor={theme.surface.t3} keyboardType="number-pad" />
             </View>
           </View>
         </>
       )}
       {(userType === 'general' || userType === 'professional') && (
         <View style={c.field}>
-          <Text style={c.fieldLabel}>Field</Text>
-          <TextInput style={c.fieldInput} value={data.major} onChangeText={v => update('major', v)} placeholder="Your career field" placeholderTextColor={LIGHT_GRAY} />
+          <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Field</Text>
+          <TextInput style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]} value={data.major} onChangeText={v => update('major', v)} placeholder="Your career field" placeholderTextColor={theme.surface.t3} />
         </View>
       )}
       <View style={c.field}>
-        <Text style={c.fieldLabel}>Tagline</Text>
-        <TextInput style={c.fieldInput} value={data.tagline} onChangeText={v => update('tagline', v.slice(0, 50))} placeholder="e.g. Aspiring Investment Banker" placeholderTextColor={LIGHT_GRAY} maxLength={50} />
+        <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Tagline</Text>
+        <TextInput style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]} value={data.tagline} onChangeText={v => update('tagline', v.slice(0, 50))} placeholder="e.g. Aspiring Investment Banker" placeholderTextColor={theme.surface.t3} maxLength={50} />
       </View>
       <View style={c.field}>
-        <Text style={c.fieldLabel}>Email</Text>
-        <TextInput style={c.fieldInput} value={data.email} onChangeText={v => update('email', v)} placeholder="you@email.com" placeholderTextColor={LIGHT_GRAY} keyboardType="email-address" autoCapitalize="none" />
+        <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Email</Text>
+        <TextInput style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]} value={data.email} onChangeText={v => update('email', v)} placeholder="you@email.com" placeholderTextColor={theme.surface.t3} keyboardType="email-address" autoCapitalize="none" />
       </View>
       <View style={c.field}>
-        <Text style={c.fieldLabel}>Phone Numbers</Text>
+        <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Phone Numbers</Text>
         {(data.phones || []).map((phone, i) => (
           <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 6 }}>
             <TextInput
-              style={[c.fieldInput, { width: 70, textAlign: 'center' }]}
+              style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border, width: 70, textAlign: 'center' }]}
               value={phone.label}
               onChangeText={v => {
                 const updated = [...(data.phones || [])];
@@ -815,10 +825,10 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
                 setData(prev => ({ ...prev, phones: updated }));
               }}
               placeholder="Cell"
-              placeholderTextColor={LIGHT_GRAY}
+              placeholderTextColor={theme.surface.t3}
             />
             <TextInput
-              style={[c.fieldInput, { flex: 1 }]}
+              style={[c.fieldInput, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border, flex: 1 }]}
               value={formatPhone(phone.number)}
               onChangeText={v => {
                 const digits = v.replace(/\D/g, '').slice(0, 10);
@@ -827,7 +837,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
                 setData(prev => ({ ...prev, phones: updated }));
               }}
               placeholder="(555) 123-4567"
-              placeholderTextColor={LIGHT_GRAY}
+              placeholderTextColor={theme.surface.t3}
               keyboardType="phone-pad"
             />
             <TouchableOpacity onPress={() => {
@@ -847,8 +857,8 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
         </TouchableOpacity>
       </View>
       <View style={c.field}>
-        <Text style={c.fieldLabel}>Profile URL</Text>
-        <Text style={[c.fieldInput, { color: GRAY }]}>{getProfileUrl(data) || 'Loading...'}</Text>
+        <Text style={[c.fieldLabel, { color: theme.surface.t3 }]}>Profile URL</Text>
+        <Text style={[c.fieldInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t3 }]}>{getProfileUrl(data) || 'Loading...'}</Text>
       </View>
 
       </>)}
