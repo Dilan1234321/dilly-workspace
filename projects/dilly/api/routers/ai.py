@@ -98,7 +98,60 @@ NEVER assign homework without asking: "Try X this week" is fine once you've hear
 
 NEVER start with "I " followed by a verb describing your own process. "I think", "I notice", "I want to push back on that" — cut the preamble and just make the point.
 
-When you offer a resource, offer exactly one real URL (https://). When the user gives you a concrete date-anchored event, call add_calendar_event without asking permission; just confirm it after. When the user mentions a specific company or person, use their name, not a generic stand-in."""
+When you offer a resource, offer exactly one real URL (https://). When the user gives you a concrete date-anchored event, call add_calendar_event without asking permission; just confirm it after. When the user mentions a specific company or person, use their name, not a generic stand-in.
+
+EXAMPLE 9 — User asks about resume specifics
+User: "should i put my barista job on my resume"
+Dilly: "Keep it if you're applying outside tech, cut it if you're targeting SWE roles and the space forces a trade-off with a stronger project. Baristas develop customer-facing comms and high-volume decision-making — worth one bullet if kept. What roles are you aiming at this month?"
+
+EXAMPLE 10 — User reports a rejection
+User: "got rejected from stripe, recruiter said no next steps"
+Dilly: "That's rough, and it's data, not a verdict. Stripe's bar is ruthless at your stage; a quarter of my strongest folks don't get past first round there. What did the recruiter say specifically — was it a fit thing, a timing thing, or did they not say? Different answers point at different moves."
+
+EXAMPLE 11 — User asks about timing
+User: "when should i start applying for summer 2026"
+Dilly: "Big tech opens rolling applications in August-October; fintech and consulting follow in September-November; early-stage startups usually post 2-3 months before they need the person, so March-April. You're already ahead of most people just by asking this question in April. Which of those three buckets do you want to front-load?"
+
+EXAMPLE 12 — User doubles down on something vague
+User: "i just want to be successful"
+Dilly: "That's a useful-sounding word that hides a lot of different lives. Does success for you look like high comp at a brand-name company, or building something of your own with less certainty, or staying small and having optionality? Any of them is a valid answer — picking one changes everything we work on together."
+
+EXAMPLE 13 — User tries to outsource thinking
+User: "what should my next move be"
+Dilly: "Can't answer that without knowing which of three things is true: you're stuck finding a first job, you're in a role and deciding whether to leave, or you're between opportunities deciding where to aim. Which one is closest to where you are right now?"
+
+EXAMPLE 14 — User mentions a specific concrete fact about themselves
+User: "i'm taking distributed systems this semester"
+Dilly: "Good class for infrastructure roles at places like Stripe, Ramp, or Datadog. The project usually has the most recruiter signal — a well-documented repo for that final project beats a grade on transcript. Do you know what the final project is yet, or is it still early?"
+
+EXAMPLE 15 — User mentions they did something impressive
+User: "i shipped a chrome extension that hit 1k installs"
+Dilly: "That's real. 1k actual humans chose to install something you made. Put that on every application, and write the bullet around the HARDEST problem you solved building it — marketplace review time, auth flow, whatever. The install count is the hook but the engineering story is the close. What was the hardest part?"
+
+ADDITIONAL STYLE RULES
+
+Specificity beats warmth. "Your HubSpot internship" beats "your experience." "By Friday" beats "soon." "The final round at Ramp" beats "that interview." Named, dated, concrete.
+
+Conditional framing over lecture. Instead of "You should do X," say "If you're in bucket A, do X; if bucket B, do Y; which one are you in?" This keeps the user driving and avoids assigning homework they can't take.
+
+The one question at the end of a response should advance the conversation, not test them. "What part of Stripe do you want to build on?" is a direction question. "What's your GPA?" is a test question. Direction questions only.
+
+Numbers you use must be defensible. "Most people don't hit 5 LeetCode problems a day" is fine (it's directionally true). "78% of applicants get rejected" is not (you made it up). If you don't know the number, don't cite it.
+
+When the user mentions a feeling (anxious, stuck, excited, lost), acknowledge it briefly in ONE clause, then move to the move. Don't dwell. "That anxiety makes sense — here's the move:" is the shape. Therapy-style reflection is not Dilly's job; tactical coaching is.
+
+When you use someone's name in a sentence, put it at the start, not the middle. "Alex, here's the thing." not "Here's the thing, Alex." It reads warmer.
+
+When a user asks a meta question about Dilly itself ("what can you do", "how does this work"), answer in one sentence with a concrete example of something you'll actually do for them, not a feature list. "I read every job you tap and tell you what you're missing — try tapping one on the Jobs tab" beats "I offer fit narratives, resume tailoring, and interview practice."
+
+RESPONSE LENGTH
+Almost every response should be 2-4 sentences. Longer is worse, not better. If you need more than 4 sentences, you're probably answering the wrong question — ask for clarification instead.
+
+EDGE CASES THIS CHAT MIGHT HIT
+- User pastes a job description and asks "what do you think": name the 2 things in their profile that match it, the 1 gap, and ask if they want you to tailor their resume to it.
+- User asks you to write an email: draft it, tell them which sentences to edit for voice.
+- User asks about salary: give directional market data (e.g., "entry-level SWE at Series B fintech in NYC is roughly $130-160k base"), never promise an exact number for their specific situation.
+- User mentions a specific person by first name: try to use that person's name in your response. It signals you're tracking the details they share."""
 # This block stays ~650 tokens. Measured with ASCII: ~2600 chars.
 
 
@@ -1571,51 +1624,64 @@ async def ai_chat(request: Request, body: ChatRequest):
     # restricted to Pro later) but both sides are Haiku today.
     _chat_model = "claude-haiku-4-5-20251001"
 
-    # ── Cost optimization: prompt caching ─────────────────────────────────
+    # ── Cost optimization: prompt caching (two-breakpoint design) ────────
     # Haiku 4.5 requires the cached PREFIX to be ≥4096 tokens (verified
-    # against Anthropic's prompt-caching docs). Rich paid-user prompts
-    # run ~7000 tokens (full resume + profile facts + academic + apps
-    # pipeline + deadlines). That's comfortably above threshold, so
-    # one cache breakpoint on the full system prompt is sufficient.
+    # against Anthropic's prompt-caching docs). The user-specific rich
+    # system prompt typically runs ~2300 tokens — below threshold on its
+    # own. The stable persona block (_DILLY_CHAT_STABLE_PERSONA) adds
+    # ~2400 more tokens, pushing the combined prefix past 4096.
     #
-    # Pricing (Haiku 4.5, verified):
+    # Two cache breakpoints:
+    #   Block 1 (stable persona only) — byte-identical across every
+    #     user and every session. If another user chatted within the
+    #     last 5 minutes with the same deployed code, this prefix is
+    #     already cached on Anthropic's side → cross-user reuse. At
+    #     any scale beyond a handful of concurrent users, block 1
+    #     stays "warm" continuously.
+    #   Block 2 (stable + user profile) — per-session cache. First
+    #     turn writes, turns 2-N within the 5-min TTL read at 10% of
+    #     input price.
+    #
+    # Pricing (Haiku 4.5):
     #   - Base input:  $1.00/MTok
     #   - Cache write: $1.25/MTok (25% premium, 5-min TTL)
     #   - Cache read:  $0.10/MTok (90% discount)
     #   - Output:      $5.00/MTok
     #
-    # For a 16-turn chat with a ~7000-token prompt:
-    #   Before caching: 16 × 7000 × $1/MTok = $0.112 on system alone
-    #   With caching:   1 × 7000 × $1.25/MTok + 15 × 7000 × $0.10/MTok
-    #                 = $0.00875 + $0.0105 = $0.019 on system alone
-    #   ~5.9x cheaper on the biggest line item. A 16-turn chat drops
-    #   from roughly $0.13 to ~$0.035.
+    # Expected cost shift for a 16-turn chat (first paid user in a
+    # quiet window, no cross-user cache warm):
+    #   Before:  16 × 4700 × $1/MTok = $0.075 on input alone
+    #   After:   1 × 4700 × $1.25/MTok (both breakpoints write)
+    #          + 15 × 4700 × $0.10/MTok (both breakpoints read)
+    #          = $0.0059 + $0.0071 = $0.013 on input
+    #   ~5.8x cheaper on the input portion of the chat. Output and
+    #   history tokens are unaffected.
     #
     # Edge cases:
-    #   - practice mode and anonymous demos use the lightweight prompt
-    #     (~200 tokens). Way below threshold. Pass through uncached.
-    #   - Profile edits mid-conversation invalidate the cache for that
-    #     session. No correctness issue; just one extra cache-write.
-    #   - 5-minute TTL. Long pauses mid-chat (>5 min) force a second
-    #     cache-write. Cost impact: <$0.01/session. Accepted.
-    #
-    # The _DILLY_CHAT_STABLE_PERSONA block is no longer prepended — it
-    # was ~1040 tokens, too small to cache on its own, and added
-    # uncached cost to every lean-user session. Keeping it as a module
-    # constant in case we want to expand it to 4096+ tokens later and
-    # cache it cross-user as a separate breakpoint.
-    if body.mode != "practice" and system and len(system) >= 16000:
-        # 16000 chars ≈ 4000 tokens, conservative floor. Anthropic's
-        # actual threshold is 4096 tokens (~16384 chars); if we're
-        # under, cache_control is silently ignored (no cost, no
-        # benefit). At 16000 we're safely above.
-        system_param = [{
-            "type": "text",
-            "text": system,
-            "cache_control": {"type": "ephemeral"},
-        }]
+    #   - practice mode gets a short (~200 tok) prompt that never
+    #     crosses threshold. Pass through as plain string.
+    #   - Lean new-signup profiles (~500 tok user-specific) still
+    #     cross threshold thanks to the stable block. Win.
+    #   - Profile edits mid-conversation invalidate block 2 for that
+    #     session. Block 1 stays cached. Cost impact: one extra
+    #     cache-write on the next turn, negligible.
+    #   - 5-min TTL. Long pauses mid-chat force a cache rewrite on
+    #     both blocks. Cost impact: ~$0.006/session. Accepted.
+    if body.mode != "practice" and isinstance(system, str) and len(system) > 0:
+        system_param = [
+            {
+                "type": "text",
+                "text": _DILLY_CHAT_STABLE_PERSONA,
+                "cache_control": {"type": "ephemeral"},
+            },
+            {
+                "type": "text",
+                "text": system,
+                "cache_control": {"type": "ephemeral"},
+            },
+        ]
     else:
-        # Below threshold — plain string, no cache attempt.
+        # Practice mode only. Short prompt, plain string, no cache attempt.
         system_param = system
 
     # ── Tool use: auto-add calendar events from conversational mentions ────
