@@ -51,16 +51,23 @@ function eyebrowColor(c: SplashState['eyebrow_color']): string {
 }
 
 function Headline({ text, goldPortion }: { text: string; goldPortion: string }) {
+  // Headline reads theme so the non-highlighted portion ('before' and
+  // 'after') stays readable in dark mode. The highlighted portion
+  // uses the user's accent (was a fixed dark indigo that disappeared
+  // into the Midnight bg).
+  const theme = useResolvedTheme();
+  const baseColor = theme.surface.t1;
+  const highlightColor = theme.accent;
   if (!goldPortion || !text.includes(goldPortion)) {
-    return <Text style={ss.headline}>{text}</Text>;
+    return <Text style={[ss.headline, { color: baseColor }]}>{text}</Text>;
   }
   const idx    = text.lastIndexOf(goldPortion);
   const before = text.slice(0, idx);
   const after  = text.slice(idx + goldPortion.length);
   return (
-    <Text style={ss.headline}>
+    <Text style={[ss.headline, { color: baseColor }]}>
       {before}
-      <Text style={[ss.headline, { color: GOLD }]}>{goldPortion}</Text>
+      <Text style={[ss.headline, { color: highlightColor }]}>{goldPortion}</Text>
       {after}
     </Text>
   );

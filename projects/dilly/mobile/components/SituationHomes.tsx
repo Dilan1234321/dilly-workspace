@@ -323,7 +323,7 @@ export function ExploringHome() {
           />
           <PromptRow
             text="What's a good first role to aim for?"
-            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me pick a target role for my first serious application. Ask me about constraints — location, pay floor, must-haves." })}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me pick a target role for my first serious application. Ask me about constraints like location, pay floor, must-haves." })}
           />
         </View>
       </FadeInView>
@@ -390,7 +390,7 @@ export function DropoutHome() {
         <HeroCard tintColor={PROOF}>
           <HeroText
             kicker="YOUR EDGE"
-            head={"Every hiring manager who's hiring well\nalready knows — degrees aren't it."}
+            head={"Every hiring manager who's hiring well\nalready knows. Degrees aren't it."}
             body="They want receipts: shipped projects, real outcomes, a concrete problem you solved. Dilly helps you collect those and tell them well."
             kickerColor={PROOF}
           />
@@ -487,7 +487,7 @@ export function LaidOffHome() {
           <HeroText
             kicker={weeksSince != null ? `WEEK ${weeksSince + 1}` : 'RIGHT NOW'}
             head={"First week: breathe and list.\nAfter that: send."}
-            body="The data is clear — momentum in the first 30 days is worth more than polish. Dilly helps you ship three tailored applications a week, not perfect ones."
+            body="The data is clear. Momentum in the first 30 days is worth more than polish. Dilly helps you ship three tailored applications a week, not perfect ones."
             kickerColor={RESET}
           />
           <TalkCta

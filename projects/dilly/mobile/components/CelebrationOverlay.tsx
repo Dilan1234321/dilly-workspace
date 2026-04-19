@@ -81,7 +81,7 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
   'unlocked-dilly': {
     eyebrow: "YOU'RE IN",
     headline: "Welcome to\nDilly.",
-    sub: "Most people stay on the free side their whole career. You chose differently — and you'll feel the difference on the next job you touch.",
+    sub: "Most people stay on the free side their whole career. You chose differently, and you'll feel the difference on the next job you touch.",
     accentColor: colors.gold,
     ctaLabel: "Let's go",
   },

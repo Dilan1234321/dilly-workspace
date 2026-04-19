@@ -712,7 +712,7 @@ function PracticePhase({
     CORAL;
   const durationHint =
     metrics.estSec === 0 ? 'Start talking' :
-    metrics.estSec < TARGET_MIN_SEC ? 'Keep going — add specifics' :
+    metrics.estSec < TARGET_MIN_SEC ? 'Keep going. Add specifics' :
     metrics.estSec <= TARGET_MAX_SEC ? 'Sweet spot' :
     'Tighten it up';
 
@@ -1051,7 +1051,7 @@ function ReviewPhase({
                     <View style={[s.diffCol, { borderColor: GREEN + '40', backgroundColor: GREEN + '08' }]}>
                       <Text style={[s.diffLabel, { color: GREEN }]}>STRONGER ANSWER</Text>
                       <Text style={s.diffTextModel}>
-                        {pq?.model_answer || '—'}
+                        {pq?.model_answer || '...'}
                       </Text>
                     </View>
                   </View>

@@ -14,6 +14,7 @@ import RichText from './RichText';
 import { DillyVisual, VisualPayload } from './DillyVisuals';
 import { DillyFace } from './DillyFace';
 import { useSubscription } from '../hooks/useSubscription';
+import { useResolvedTheme } from '../hooks/useTheme';
 import {
   markExtractionPending, resolveExtraction, abortExtraction,
 } from '../hooks/useExtractionPending';
@@ -124,6 +125,10 @@ function getResponseSuggestions(text: string): string[] {
 export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentContext }: Props) {
   const insets = useSafeAreaInsets();
   const { canSendAIMessage, incrementAIMessage, showPaywall } = useSubscription();
+  // Theme-aware chat chrome. Bubbles, input, suggestion chips, and
+  // send button all pull from the user's theme so the overlay reads
+  // as part of Dilly on Midnight instead of flashing white.
+  const theme = useResolvedTheme();
 
   const top = insets.top || 44;
   const R =
@@ -553,7 +558,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
-      <Animated.View style={[s.container, { opacity: contentOpacity }]}>
+      <Animated.View style={[s.container, { opacity: contentOpacity, backgroundColor: theme.surface.bg, borderColor: theme.accent }]}>
 
         {/* Glow border */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -661,16 +666,16 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               <Wrapper key={msg.id} index={msg.id}>
                 {msg.role === 'user' ? (
                   <View style={[s.msgRow, { justifyContent: 'flex-end' }]}>
-                    <View style={s.userBubble}>
-                      <Text style={s.msgText}>{msg.content}</Text>
+                    <View style={[s.userBubble, { backgroundColor: theme.accentSoft }]}>
+                      <Text style={[s.msgText, { color: theme.surface.t1 }]}>{msg.content}</Text>
                     </View>
                   </View>
                 ) : (
                   <View style={s.assistantBlock}>
                     <View style={s.msgRow}>
                       <View style={s.assistantDot} />
-                      <View style={s.assistantBubble}>
-                        <RichText text={msg.content} baseStyle={s.msgText} />
+                      <View style={[s.assistantBubble, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                        <RichText text={msg.content} baseStyle={[s.msgText, { color: theme.surface.t1 }]} />
                       </View>
                     </View>
                     {msg.visual && (
@@ -713,7 +718,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 {suggestions.map((chip, i) => (
                   <TouchableOpacity
                     key={i}
-                    style={s.suggestionChip}
+                    style={[s.suggestionChip, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
                     onPress={() => {
                       setSuggestions([]);
                       suggestionsOpacity.setValue(0);
@@ -721,7 +726,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                     }}
                     activeOpacity={0.7}
                   >
-                    <Text style={s.suggestionChipText}>{chip}</Text>
+                    <Text style={[s.suggestionChipText, { color: theme.surface.t1 }]}>{chip}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -731,9 +736,9 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           {/* Input */}
           <View style={[s.inputBar, { paddingBottom: insets.bottom + 10 }]}>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, color: theme.surface.t1 }]}
               placeholder={mode === 'practice' ? "Type your answer..." : "Ask Dilly anything..."}
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
               defaultValue=""
               onChangeText={t => { inputRef.current = t; }}
               multiline={false}
@@ -742,8 +747,8 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               editable={!isTyping && !streamRef.current}
               ref={inputFieldRef}
             />
-            <TouchableOpacity style={[s.sendBtn, isTyping && s.sendBtnDisabled]} onPress={sendMessage} disabled={isTyping} activeOpacity={0.8}>
-              <Ionicons name="arrow-up" size={18} color={colors.bg} />
+            <TouchableOpacity style={[s.sendBtn, { backgroundColor: theme.accent }, isTyping && s.sendBtnDisabled]} onPress={sendMessage} disabled={isTyping} activeOpacity={0.8}>
+              <Ionicons name="arrow-up" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -751,11 +756,11 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
 
       {/* History overlay */}
       {showHistory && (
-        <View style={s.historyOverlay}>
+        <View style={[s.historyOverlay, { backgroundColor: theme.surface.bg }]}>
           <View style={[s.historyHeader, { paddingTop: insets.top + 10 }]}>
-            <Text style={s.historyTitle}>Past Conversations</Text>
+            <Text style={[s.historyTitle, { color: theme.surface.t1 }]}>Past Conversations</Text>
             <TouchableOpacity onPress={() => setShowHistory(false)} hitSlop={12}>
-              <Ionicons name="close" size={20} color={colors.t2} />
+              <Ionicons name="close" size={20} color={theme.surface.t2} />
             </TouchableOpacity>
           </View>
           <ScrollView style={s.historyList}>
