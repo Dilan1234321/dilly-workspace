@@ -205,7 +205,7 @@ function MockChat({ theme }: { theme: ResolvedTheme }) {
           maxWidth: '90%',
         }}>
           <Text style={{ fontSize: 12, color: theme.surface.t1, lineHeight: 17 }}>
-            Watch Lenny Rachitsky's "How to get your first PM role" — it's the clearest map out there:{' '}
+            Watch Lenny Rachitsky's "How to get your first PM role". It's the clearest map out there:{' '}
             <Text style={{ color: theme.accent, textDecorationLine: 'underline', fontWeight: '700' }}>
               https://youtu.be/lenny-pm-intro
             </Text>
