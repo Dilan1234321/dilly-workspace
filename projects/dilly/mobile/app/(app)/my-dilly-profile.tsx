@@ -2011,6 +2011,10 @@ function tenureLabel(months: number): string {
 
 function HolderCareer() {
   const insets = useSafeAreaInsets();
+  // Holder layout reads theme so the entire My Career surface
+  // respects dark mode. All the hc.* styles below lock in light
+  // palette values at module load; we override at the call sites.
+  const theme = useResolvedTheme();
   // Session-cached: renders instantly from the prior fetch on remount
   // (tab switches, mode flips), revalidates in background only if the
   // cached copy is older than 60s.
@@ -2073,40 +2077,40 @@ function HolderCareer() {
   }
 
   return (
-    <View style={[hc.container, { paddingTop: insets.top }]}>
+    <View style={[hc.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       <ScrollView
         contentContainerStyle={[hc.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={HOLDER_ACCENT} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
       >
         {/* Header: name, role, company, photo */}
         <View style={hc.idRow}>
           <View style={{ flex: 1 }}>
-            <Text style={hc.eyebrow}>MY CAREER</Text>
-            <Text style={hc.name}>{identity.name || firstName}</Text>
+            <Text style={[hc.eyebrow, { color: theme.accent }]}>MY CAREER</Text>
+            <Text style={[hc.name, { color: theme.surface.t1 }]}>{identity.name || firstName}</Text>
             {identity.current_role ? (
-              <Text style={hc.role}>
+              <Text style={[hc.role, { color: theme.surface.t2 }]}>
                 {identity.current_role}
                 {identity.current_company ? ` · ${identity.current_company}` : ''}
               </Text>
             ) : null}
             <View style={hc.metaRow}>
               {identity.years_experience ? (
-                <Text style={hc.meta}>{identity.years_experience} yrs</Text>
+                <Text style={[hc.meta, { color: theme.surface.t3 }]}>{identity.years_experience} yrs</Text>
               ) : null}
               {identity.tenure_months ? (
                 <>
-                  <View style={hc.metaDot} />
-                  <Text style={hc.meta}>{tenureLabel(identity.tenure_months)}</Text>
+                  <View style={[hc.metaDot, { backgroundColor: theme.surface.t3 }]} />
+                  <Text style={[hc.meta, { color: theme.surface.t3 }]}>{tenureLabel(identity.tenure_months)}</Text>
                 </>
               ) : null}
             </View>
           </View>
           {photoFull ? (
-            <Image source={{ uri: photoFull }} style={hc.photo} />
+            <Image source={{ uri: photoFull }} style={[hc.photo, { backgroundColor: theme.surface.s1 }]} />
           ) : (
-            <View style={[hc.photo, hc.photoPlaceholder]}>
-              <Ionicons name="person" size={28} color={colors.t3} />
+            <View style={[hc.photo, hc.photoPlaceholder, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Ionicons name="person" size={28} color={theme.surface.t3} />
             </View>
           )}
         </View>
@@ -2233,7 +2237,7 @@ function HolderCareer() {
         {/* Trajectory timeline */}
         {trajectory.length > 0 ? (
           <FadeInView delay={80}>
-            <Text style={hc.sectionLabel}>TRAJECTORY</Text>
+            <Text style={[hc.sectionLabel, { color: theme.surface.t3 }]}>TRAJECTORY</Text>
             <View style={hc.trajWrap}>
               {trajectory.map((t, i) => {
                 const last = i === trajectory.length - 1;
@@ -2241,19 +2245,19 @@ function HolderCareer() {
                   <View key={`${t.company}-${i}`} style={hc.trajRow}>
                     {/* Rail */}
                     <View style={hc.trajRail}>
-                      <View style={[hc.trajDot, i === 0 && hc.trajDotActive]} />
-                      {!last && <View style={hc.trajLine} />}
+                      <View style={[hc.trajDot, { backgroundColor: theme.surface.border, borderColor: theme.surface.bg }, i === 0 && { backgroundColor: theme.accent }]} />
+                      {!last && <View style={[hc.trajLine, { backgroundColor: theme.surface.border }]} />}
                     </View>
                     {/* Content */}
                     <View style={hc.trajContent}>
-                      {t.role ? <Text style={hc.trajRole}>{t.role}</Text> : null}
-                      <Text style={hc.trajCompany}>
+                      {t.role ? <Text style={[hc.trajRole, { color: theme.surface.t1 }]}>{t.role}</Text> : null}
+                      <Text style={[hc.trajCompany, { color: theme.surface.t2 }]}>
                         {t.company}
-                        {t.date ? <Text style={hc.trajDate}>   ·  {t.date}</Text> : null}
+                        {t.date ? <Text style={[hc.trajDate, { color: theme.surface.t3 }]}>   ·  {t.date}</Text> : null}
                       </Text>
-                      {t.location ? <Text style={hc.trajLocation}>{t.location}</Text> : null}
+                      {t.location ? <Text style={[hc.trajLocation, { color: theme.surface.t3 }]}>{t.location}</Text> : null}
                       {(t.bullets || []).slice(0, 3).map((b: string, j: number) => (
-                        <Text key={j} style={hc.trajBullet} numberOfLines={2}>• {b}</Text>
+                        <Text key={j} style={[hc.trajBullet, { color: theme.surface.t2 }]} numberOfLines={2}>• {b}</Text>
                       ))}
                     </View>
                   </View>
@@ -2272,26 +2276,26 @@ function HolderCareer() {
         <FadeInView delay={100}>
           <View style={hc.powerDuo}>
             <AnimatedPressable
-              style={[hc.powerCard, hc.powerCardLeft]}
+              style={[hc.powerCard, hc.powerCardLeft, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
               scaleDown={0.97}
               onPress={() => router.push('/(app)/raise-brief' as any)}
             >
               <View style={[hc.powerIcon, { backgroundColor: '#FACC15' + '22' }]}>
                 <Ionicons name="trending-up" size={18} color="#CA8A04" />
               </View>
-              <Text style={hc.powerLabel}>RAISE BRIEF</Text>
-              <Text style={hc.powerSub}>Your pre-meeting playbook.</Text>
+              <Text style={[hc.powerLabel, { color: theme.surface.t1 }]}>RAISE BRIEF</Text>
+              <Text style={[hc.powerSub, { color: theme.surface.t2 }]}>Your pre-meeting playbook.</Text>
             </AnimatedPressable>
             <AnimatedPressable
-              style={[hc.powerCard, hc.powerCardRight]}
+              style={[hc.powerCard, hc.powerCardRight, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
               scaleDown={0.97}
               onPress={() => router.push('/(app)/escape-hatch' as any)}
             >
               <View style={[hc.powerIcon, { backgroundColor: '#60A5FA' + '22' }]}>
                 <Ionicons name="compass" size={18} color="#2563EB" />
               </View>
-              <Text style={hc.powerLabel}>ESCAPE HATCH</Text>
-              <Text style={hc.powerSub}>Quiet read on what's out there.</Text>
+              <Text style={[hc.powerLabel, { color: theme.surface.t1 }]}>ESCAPE HATCH</Text>
+              <Text style={[hc.powerSub, { color: theme.surface.t2 }]}>Quiet read on what's out there.</Text>
             </AnimatedPressable>
           </View>
         </FadeInView>
@@ -2299,11 +2303,11 @@ function HolderCareer() {
         {/* Skills arsenal */}
         {skills.length > 0 ? (
           <FadeInView delay={120}>
-            <Text style={hc.sectionLabel}>SKILLS ARSENAL</Text>
+            <Text style={[hc.sectionLabel, { color: theme.surface.t3 }]}>SKILLS ARSENAL</Text>
             <View style={hc.skillsGrid}>
               {skills.map((s, i) => (
-                <View key={`${s}-${i}`} style={hc.skillChip}>
-                  <Text style={hc.skillText} numberOfLines={1}>{s}</Text>
+                <View key={`${s}-${i}`} style={[hc.skillChip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                  <Text style={[hc.skillText, { color: theme.accent }]} numberOfLines={1}>{s}</Text>
                 </View>
               ))}
             </View>
@@ -2316,29 +2320,26 @@ function HolderCareer() {
             we have something reasonable to say. */}
         {identity.tenure_months && identity.tenure_months >= 1 ? (
           <FadeInView delay={140}>
-            <Text style={hc.sectionLabel}>TENURE READ</Text>
-            <View style={hc.tenureCard}>
+            <Text style={[hc.sectionLabel, { color: theme.surface.t3 }]}>TENURE READ</Text>
+            <View style={[hc.tenureCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <View style={hc.tenureRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={hc.tenureNum}>
+                  <Text style={[hc.tenureNum, { color: theme.surface.t1 }]}>
                     {identity.tenure_months >= 12
                       ? `${(identity.tenure_months / 12).toFixed(1)} yrs`
                       : `${identity.tenure_months} mo`}
                   </Text>
-                  <Text style={hc.tenureLabel}>
+                  <Text style={[hc.tenureLabel, { color: theme.surface.t3 }]}>
                     in {identity.current_role || 'your current role'}
                   </Text>
                 </View>
                 <View style={hc.tenureRight}>
-                  <Text style={hc.tenureRightPct}>
-                    {/* Rough read: people who stay 3+ yrs are "sticky",
-                        18-36 mo is "typical", under 18 mo is "early".
-                        These anchor the coaching tone, not precision. */}
+                  <Text style={[hc.tenureRightPct, { color: theme.accent }]}>
                     {identity.tenure_months >= 36 ? 'STICKY'
                       : identity.tenure_months >= 18 ? 'TYPICAL'
                       : 'EARLY'}
                   </Text>
-                  <Text style={hc.tenureRightSub}>
+                  <Text style={[hc.tenureRightSub, { color: theme.surface.t2 }]}>
                     {identity.tenure_months >= 36 ? 'promotion or move worth a look'
                       : identity.tenure_months >= 18 ? 'on track for this role'
                       : 'building credibility here'}
@@ -2353,7 +2354,7 @@ function HolderCareer() {
             for holders. Kills the "nothing's here" feeling on fresh
             accounts and teaches what Dilly is actually for. */}
         <FadeInView delay={180}>
-          <Text style={hc.sectionLabel}>WHAT TO ASK DILLY</Text>
+          <Text style={[hc.sectionLabel, { color: theme.surface.t3 }]}>WHAT TO ASK DILLY</Text>
           <View style={{ gap: 8 }}>
             {[
               {
@@ -2374,15 +2375,15 @@ function HolderCareer() {
             ].map(prompt => (
               <AnimatedPressable
                 key={prompt.title}
-                style={hc.promptCard}
+                style={[hc.promptCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
                 scaleDown={0.98}
                 onPress={() => openDillyOverlay({ isPaid: true, initialMessage: prompt.seed })}
               >
-                <View style={hc.promptIcon}>
-                  <Ionicons name={prompt.icon} size={16} color={HOLDER_ACCENT} />
+                <View style={[hc.promptIcon, { backgroundColor: theme.accentSoft }]}>
+                  <Ionicons name={prompt.icon} size={16} color={theme.accent} />
                 </View>
-                <Text style={hc.promptText}>{prompt.title}</Text>
-                <Ionicons name="arrow-forward" size={14} color={colors.t3} />
+                <Text style={[hc.promptText, { color: theme.surface.t1 }]}>{prompt.title}</Text>
+                <Ionicons name="arrow-forward" size={14} color={theme.surface.t3} />
               </AnimatedPressable>
             ))}
           </View>
@@ -2391,18 +2392,18 @@ function HolderCareer() {
         {/* Ask Dilly */}
         <FadeInView delay={220}>
           <AnimatedPressable
-            style={hc.askCard}
+            style={[hc.askCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
             scaleDown={0.98}
             onPress={() => openDillyOverlay({ isPaid: true })}
           >
-            <View style={hc.askIcon}>
-              <Ionicons name="chatbubbles" size={18} color={HOLDER_ACCENT} />
+            <View style={[hc.askIcon, { backgroundColor: theme.accentSoft }]}>
+              <Ionicons name="chatbubbles" size={18} color={theme.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={hc.askTitle}>Talk to Dilly</Text>
-              <Text style={hc.askSub}>Negotiate a raise, plan your next move, or stress-test a job offer.</Text>
+              <Text style={[hc.askTitle, { color: theme.surface.t1 }]}>Talk to Dilly</Text>
+              <Text style={[hc.askSub, { color: theme.surface.t2 }]}>Negotiate a raise, plan your next move, or stress-test a job offer.</Text>
             </View>
-            <Ionicons name="arrow-forward" size={16} color={HOLDER_ACCENT} />
+            <Ionicons name="arrow-forward" size={16} color={theme.accent} />
           </AnimatedPressable>
         </FadeInView>
 
