@@ -236,6 +236,9 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   const [error, setError] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(preloaded ? 1 : 0)).current;
   const fetched = useRef(!!preloaded);
+  // Theme-aware colors so the narrative panel respects dark mode even
+  // though module-level StyleSheet is frozen at light values.
+  const theme = useResolvedTheme();
 
   // Free-tier check: /jobs/fit-narrative returns 402 for starter users.
   // Calling it on every job expansion fires the global paywall every
@@ -376,7 +379,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   const BULLET_DOT = VIOLET;
 
   return (
-    <Animated.View style={[s.narrativeWrap, { opacity: fadeAnim }]}>
+    <Animated.View style={[s.narrativeWrap, { opacity: fadeAnim, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
       <View style={s.narrativeColumns}>
         {/* Left: What you have */}
         <View style={s.narrativeCol}>
@@ -384,7 +387,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
           {haveBullets.map((b, i) => (
             <View key={i} style={s.narrativeBulletRow}>
               <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BULLET_DOT, marginTop: 7 }} />
-              <Text style={s.narrativeBulletText}>{b}</Text>
+              <Text style={[s.narrativeBulletText, { color: theme.surface.t1 }]}>{b}</Text>
             </View>
           ))}
         </View>
@@ -395,12 +398,12 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
           {nothingMissing ? (
             <View style={s.narrativeBulletRow}>
               <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BULLET_DOT, marginTop: 7 }} />
-              <Text style={s.narrativeBulletText}>Nothing major</Text>
+              <Text style={[s.narrativeBulletText, { color: theme.surface.t1 }]}>Nothing major</Text>
             </View>
           ) : missingBullets.map((b, i) => (
             <View key={i} style={s.narrativeBulletRow}>
               <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: BULLET_DOT, marginTop: 7 }} />
-              <Text style={s.narrativeBulletText}>{b}</Text>
+              <Text style={[s.narrativeBulletText, { color: theme.surface.t1 }]}>{b}</Text>
             </View>
           ))}
         </View>
@@ -409,7 +412,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
       {/* What to do. full width */}
       <View style={{ marginTop: 8 }}>
         <Text style={[s.narrativeLabel, { color: LABEL_COLOR }]}>WHAT TO DO</Text>
-        <Text style={[s.narrativeBulletText, { marginTop: 2 }]}>{data.what_to_do}</Text>
+        <Text style={[s.narrativeBulletText, { color: theme.surface.t1, marginTop: 2 }]}>{data.what_to_do}</Text>
       </View>
     </Animated.View>
   );
@@ -700,6 +703,13 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
 }) {
   const toast = useInlineToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
+  // Theme-aware colors. The module-level StyleSheet at the bottom of
+  // this file is frozen at module load with whatever palette was active
+  // then, so it doesn't repaint on dark/light flip. We inline-override
+  // the hot styles (card bg, border, text colors, expanded section
+  // divider) so the job card actually respects the current theme —
+  // including the expanded view users see when they tap a job.
+  const theme = useResolvedTheme();
 
   const loc = listing.location || [listing.location_city, listing.location_state].filter(Boolean).join(', ');
   const applyUrl = listing.apply_url || listing.url || '';
@@ -742,7 +752,17 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
 
   return (
     <>
-    <AnimatedPressable style={[s.jobCard, expanded && s.jobCardExpanded]} onPress={onToggle} scaleDown={0.985}>
+    <AnimatedPressable
+      style={[
+        s.jobCard,
+        expanded && s.jobCardExpanded,
+        // Theme overrides — makes the card respect dark mode even
+        // though the module-level StyleSheet is frozen at light.
+        { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+      ]}
+      onPress={onToggle}
+      scaleDown={0.985}
+    >
       {/* No colored fit rail. Dilly doesn't rank jobs as ready/stretch
           anymore. Card layout is clean, one-line read carries the signal. */}
       <View style={s.jobContent}>
@@ -756,16 +776,16 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
             borderRadius={10}
           />
           <View style={{ flex: 1 }}>
-            <Text style={s.jobTitle} numberOfLines={2}>{listing.title}</Text>
-            <Text style={s.jobCompany}>{listing.company}</Text>
+            <Text style={[s.jobTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{listing.title}</Text>
+            <Text style={[s.jobCompany, { color: theme.surface.t2 }]}>{listing.company}</Text>
             {loc ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
-                <Ionicons name="location-outline" size={10} color={colors.t3} />
-                <Text style={{ fontSize: 11, color: colors.t3 }} numberOfLines={1}>{loc}</Text>
+                <Ionicons name="location-outline" size={10} color={theme.surface.t3} />
+                <Text style={{ fontSize: 11, color: theme.surface.t3 }} numberOfLines={1}>{loc}</Text>
                 {listing.posted_date ? (
                   <>
-                    <Text style={{ fontSize: 11, color: colors.t3, marginHorizontal: 4 }}>•</Text>
-                    <Text style={{ fontSize: 11, color: colors.t3 }}>{daysAgo(listing.posted_date)}</Text>
+                    <Text style={{ fontSize: 11, color: theme.surface.t3, marginHorizontal: 4 }}>•</Text>
+                    <Text style={{ fontSize: 11, color: theme.surface.t3 }}>{daysAgo(listing.posted_date)}</Text>
                   </>
                 ) : null}
               </View>
@@ -779,7 +799,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
             scaleDown={0.85}
             hitSlop={10}
           >
-            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={18} color={isSaved ? COBALT : colors.t3} />
+            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={18} color={isSaved ? theme.accent : theme.surface.t3} />
           </AnimatedPressable>
         </View>
 
@@ -795,7 +815,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
 
         {/* Expanded: Narrative + Quick Glance + Actions */}
         {expanded && (
-          <View style={s.expandedSection}>
+          <View style={[s.expandedSection, { borderTopColor: theme.surface.border }]}>
             {/* Fit Narrative */}
             {/* FitNarrative is a "how you match this job" explainer.
                 For holders we skip it entirely. they're scanning the
@@ -805,12 +825,12 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
 
             {/* Quick Glance bullets */}
             {listing.quick_glance && listing.quick_glance.length > 0 && (
-              <View style={s.quickGlance}>
-                <Text style={s.quickGlanceLabel}>QUICK GLANCE</Text>
+              <View style={[s.quickGlance, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+                <Text style={[s.quickGlanceLabel, { color: theme.surface.t3 }]}>QUICK GLANCE</Text>
                 {listing.quick_glance.map((b, i) => (
                   <View key={i} style={s.quickGlanceBullet}>
-                    <View style={s.quickGlanceDot} />
-                    <Text style={s.quickGlanceText}>{b}</Text>
+                    <View style={[s.quickGlanceDot, { backgroundColor: theme.accent }]} />
+                    <Text style={[s.quickGlanceText, { color: theme.surface.t1 }]}>{b}</Text>
                   </View>
                 ))}
               </View>
@@ -819,16 +839,16 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
             {/* Full description (collapsible) */}
             {desc ? (
               <AnimatedPressable
-                style={s.descToggle}
+                style={[s.descToggle, { backgroundColor: theme.surface.s2 }]}
                 onPress={() => setShowFullDesc(prev => !prev)}
                 scaleDown={0.98}
               >
-                <Ionicons name={showFullDesc ? 'chevron-up' : 'document-text-outline'} size={13} color={colors.t3} />
-                <Text style={s.descToggleText}>{showFullDesc ? 'Hide description' : 'Full description'}</Text>
+                <Ionicons name={showFullDesc ? 'chevron-up' : 'document-text-outline'} size={13} color={theme.surface.t3} />
+                <Text style={[s.descToggleText, { color: theme.surface.t2 }]}>{showFullDesc ? 'Hide description' : 'Full description'}</Text>
               </AnimatedPressable>
             ) : null}
             {showFullDesc && desc ? (
-              <Text style={s.descFull}>{desc.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}</Text>
+              <Text style={[s.descFull, { color: theme.surface.t2 }]}>{desc.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}</Text>
             ) : null}
 
             {/* Action buttons */}
