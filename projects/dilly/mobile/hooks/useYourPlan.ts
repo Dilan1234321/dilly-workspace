@@ -84,13 +84,25 @@ function today(): string {
  * should see the same plan all day no matter how many times they
  * open the app.
  */
+// Guard against garbage profile values sneaking into template copy.
+// We've had single-character / whitespace-only values land here from
+// partial extractions, which produced lines like "take the first step
+// toward 'S'". A meaningful value is >= 4 chars AND (contains a space
+// OR is >= 8 chars) — that passes "your role" but rejects "S", "a",
+// "job", etc.
+function _meaningful(s: string | null | undefined): boolean {
+  const t = (s || '').trim();
+  return t.length >= 4 && (t.includes(' ') || t.length >= 8);
+}
+
 function generatePlan(i: PlanInputs): YourPlan {
   const { mode, userPath, firstName, appCount = 0, factCount = 0,
     interviewingCount = 0, currentRole, recentDeadline } = i;
 
-  // Priority 1: a near-term deadline ALWAYS wins the headline slot.
-  // "You have an interview in 2 days" beats any generic nudge.
-  if (recentDeadline && recentDeadline.daysUntil <= 3) {
+  // Priority 1: a near-term deadline ALWAYS wins the headline slot,
+  // but only if the label is substantive enough to not look broken.
+  // "Final round at Ramp" → in. "R" or "job" → fall through.
+  if (recentDeadline && recentDeadline.daysUntil <= 3 && _meaningful(recentDeadline.label)) {
     return {
       mode,
       pathKey: userPath,
@@ -124,16 +136,21 @@ function generatePlan(i: PlanInputs): YourPlan {
   // for each path when there's no urgent deadline / interview.
   if (mode === 'holder') {
     // Holder — career acceleration while employed. Plan frames
-    // growth, not job search.
+    // growth, not job search. _meaningful() guards against garbage
+    // role values (e.g. "a", "SE", "-") that would produce broken
+    // copy like "Sharpen one edge as a S this week."
+    const roleIsReal = _meaningful(currentRole);
     return {
       mode,
       pathKey: userPath,
-      headline: currentRole
+      headline: roleIsReal
         ? `Sharpen one edge as a ${currentRole} this week.`
         : 'Sharpen one edge in your field this week.',
       followup: 'Read the weekly signal, then run one growth conversation with Dilly.',
       cta: 'See this week',
-      initialMessage: `I'm a ${currentRole || 'professional'}. Based on this week's field signal, what's ONE concrete move I should make to stay ahead?`,
+      initialMessage: roleIsReal
+        ? `I'm a ${currentRole}. Based on this week's field signal, what's ONE concrete move I should make to stay ahead?`
+        : "Based on this week's field signal, what's ONE concrete move I should make to stay ahead?",
       generatedAt: today(),
     };
   }

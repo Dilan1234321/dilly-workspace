@@ -148,12 +148,22 @@ def _one_thing_to_prep(profile: dict, facts: list[dict], path: str) -> str | Non
       3. Path-specific action tuned to the user's situation.
       4. Growth nudge when profile is still thin.
     """
+    # Guard: a valid string value must have real content, not just a
+    # single character or a whitespace scrap. Profile facts have had
+    # garbage like "S" or "a" land here from partial extractions, and
+    # the resulting "take the first concrete step toward 'S'" copy
+    # made the app look broken. Minimum 4 chars + at least one space
+    # (so multi-word phrases pass but "goal" / "job" / "S" don't).
+    def _meaningful(s: str) -> bool:
+        s = (s or "").strip()
+        return len(s) >= 4 and (" " in s or len(s) >= 8)
+
     # Named goal first — translate to a concrete this-week action.
     for f in facts:
         cat = (f.get("category") or "").lower()
         if cat == "goal":
             value = (f.get("value") or f.get("label") or "").strip()
-            if value:
+            if _meaningful(value):
                 return f"This week, take the first concrete step toward '{value[:60]}'. Ask Dilly to name it."
     # Near-term deadline as a prep window.
     deadlines = profile.get("deadlines") or []
@@ -161,7 +171,7 @@ def _one_thing_to_prep(profile: dict, facts: list[dict], path: str) -> str | Non
         first = deadlines[0]
         if isinstance(first, dict):
             label = (first.get("label") or first.get("name") or "").strip()
-            if label:
+            if _meaningful(label):
                 return f"Deadline approaching: {label[:60]}. Block 30 minutes today to prep it."
     # Path-specific actions — each one names the action, not the feeling.
     if path == "student":

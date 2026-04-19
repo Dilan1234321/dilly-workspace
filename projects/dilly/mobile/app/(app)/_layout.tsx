@@ -84,6 +84,40 @@ function AppLayoutInner() {
   // seam between content and chrome disappears.
   const theme = useResolvedTheme();
 
+  // Icon-only nav (Duolingo / Instagram pattern). Labels removed
+  // because they were training wheels that added visual clutter
+  // after the first 10 minutes. Active state is conveyed by:
+  //   1. filled vs outline icon
+  //   2. accent-colored soft pill behind the active icon
+  //   3. icon size bump from 22 to 24 (space we gained by
+  //      dropping labels)
+  // The pill makes the active tab unambiguous at a glance
+  // without needing text.
+  const renderTabIcon = (
+    iconActive: keyof typeof Ionicons.glyphMap,
+    iconInactive: keyof typeof Ionicons.glyphMap,
+  ) => ({ focused }: { focused: boolean; color: string }) => (
+    <View
+      style={{
+        width: 44,
+        height: 34,
+        borderRadius: 17,
+        backgroundColor: focused ? theme.accentSoft : 'transparent',
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Nudge down a touch so the pill centers inside the tab
+        // bar's padding. iOS gives ~6-8px top padding to tab icons.
+        marginTop: -2,
+      }}
+    >
+      <Ionicons
+        name={focused ? iconActive : iconInactive}
+        size={24}
+        color={focused ? theme.accent : theme.surface.t3}
+      />
+    </View>
+  );
+
   return (
     <Tabs
       // Per-mode landing tab: holders land on Arena (their hero),
@@ -96,101 +130,62 @@ function AppLayoutInner() {
           borderTopWidth: 1,
           borderTopColor: theme.surface.border,
           paddingBottom: insets.bottom,
-          paddingTop: 6,
-          height: 49 + insets.bottom,
+          paddingTop: 8,
+          height: 56 + insets.bottom,
         },
-        tabBarActiveTintColor: theme.accent,
-        tabBarInactiveTintColor: theme.surface.t3,
-        tabBarLabelStyle: {
-          fontSize: 9,
-          fontWeight: '500',
-          marginTop: 2,
-        },
+        // Labels are hidden everywhere. Icons + active-pill
+        // communicate which tab you're on.
+        tabBarShowLabel: false,
         animation: 'shift',
       }}
     >
-      {/* -- Tab 1: Career Center / Home -- renamed for holders.
-           Holder mode treats this tab as the Weekly Brief surface;
-           seekers/students see it as the full Career Center. */}
+      {/* Tab 1: Home / Career Center. Filled home for the
+          universal "I am here" feel; newspaper for holders
+          because their tab IS a weekly-brief surface, not a
+          journey center. */}
       <Tabs.Screen
         name="index"
         options={{
           title: isHolder ? 'Weekly' : 'Career Center',
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={isHolder
-                ? (focused ? 'newspaper' : 'newspaper-outline')
-                : (focused ? 'home' : 'home-outline')}
-              size={20}
-              color={color}
-            />
+          tabBarIcon: renderTabIcon(
+            isHolder ? 'newspaper' : 'home',
+            isHolder ? 'newspaper-outline' : 'home-outline',
           ),
         }}
       />
 
-      {/* -- Tab 2: AI Arena (renamed to 'Arena' for holders since it's
-           their home; 'AI Arena' for seekers/students as a feature). */}
+      {/* Tab 2: AI Arena / Field. Shield carries "defend your
+          career / know the threats" meaning — both modes. */}
       <Tabs.Screen
         name="ai-arena"
         options={{
           title: isHolder ? 'Field' : 'AI Arena',
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={focused ? 'shield' : 'shield-outline'}
-              size={20}
-              color={color}
-            />
-          ),
-          tabBarActiveTintColor: '#F0F0F0',
-          tabBarInactiveTintColor: '#6B7280',
-          tabBarStyle: {
-            backgroundColor: '#111827',
-            borderTopWidth: 1,
-            borderTopColor: '#374151',
-            paddingBottom: insets.bottom,
-            paddingTop: 6,
-            height: 49 + insets.bottom,
-          },
-          tabBarLabelStyle: {
-            fontSize: 9,
-            fontWeight: '500',
-            marginTop: 2,
-          },
+          tabBarIcon: renderTabIcon('shield', 'shield-outline'),
         }}
       />
 
-      {/* -- Tab 3: Profile -- "My Career" for holders (trajectory
-           tracking), "My Dilly" for seekers/students (identity). */}
+      {/* Tab 3: Profile. Person for seekers/students (identity
+          focus), analytics chart for holders (trajectory focus). */}
       <Tabs.Screen
         name="my-dilly-profile"
         options={{
           title: isHolder ? 'My Career' : 'My Dilly',
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={isHolder
-                ? (focused ? 'analytics' : 'analytics-outline')
-                : (focused ? 'person-circle' : 'person-circle-outline')}
-              size={isHolder ? 20 : 22}
-              color={color}
-            />
+          tabBarIcon: renderTabIcon(
+            isHolder ? 'analytics' : 'person-circle',
+            isHolder ? 'analytics-outline' : 'person-circle-outline',
           ),
         }}
       />
 
-      {/* -- Tab 4: Jobs / The Market -- reframed for holders. Same
-           feed, different label + mental model (benchmark vs. apply). */}
+      {/* Tab 4: Jobs / Market. Briefcase for apply-mode seekers;
+          trending-up for holders benchmarking their field. */}
       <Tabs.Screen
         name="jobs"
         options={{
           title: isHolder ? 'The Market' : 'Jobs',
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={isHolder
-                ? (focused ? 'trending-up' : 'trending-up-outline')
-                : (focused ? 'briefcase' : 'briefcase-outline')}
-              size={20}
-              color={color}
-            />
+          tabBarIcon: renderTabIcon(
+            isHolder ? 'trending-up' : 'briefcase',
+            isHolder ? 'trending-up-outline' : 'briefcase-outline',
           ),
         }}
       />
