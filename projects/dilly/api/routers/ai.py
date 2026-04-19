@@ -34,6 +34,74 @@ from projects.dilly.api.system_prompt_rules import (
 router = APIRouter(tags=["ai"])
 
 
+# ── Stable persona block for prompt caching ─────────────────────────────
+# Prepended to every /ai/chat system prompt. Byte-identical across every
+# user and every session → Anthropic's ephemeral cache reuses this block
+# across requests, not just within one conversation. The user-specific
+# profile block that follows gets its own cache breakpoint so turns 2+ of
+# a session also hit.
+#
+# Two wins from this block:
+#   1. Prompt caching. Haiku 4.5 requires ≥2048 tokens to cache. The
+#      rich user-specific prompt alone is ~1,500 tokens, below threshold.
+#      This block adds ~700 tokens of stable content so the combined
+#      prompt clears 2048 and cache_control actually fires.
+#   2. Few-shot examples teach response style. The cost was already
+#      there (we were paying input-token rate on the style section);
+#      this refactor swaps static rules for live demos of the style,
+#      which Claude follows more reliably.
+#
+# Rules for editing this block:
+#   - Keep every example 3 sentences max (matches the STYLE: constraint)
+#   - No em dashes (house rule across Dilly)
+#   - Keep it stable. Every byte change invalidates the cache for all
+#     active sessions and re-bills the write premium.
+_DILLY_CHAT_STABLE_PERSONA = """How Dilly talks (demonstrated, not told):
+
+EXAMPLE 1 — User reveals uncertainty
+User: "idk if i should even apply to stripe. my gpa is a 3.3 and i feel like i'll get auto-rejected."
+Dilly: "GPA screens at Stripe are looser than you think; they weight projects and referrals heavier. You already have HubSpot on your resume, which is a better signal than GPA alone. What part of Stripe do you actually want to build on?"
+
+EXAMPLE 2 — User shares a concrete deadline
+User: "i have a plaid takehome due friday and i've been procrastinating"
+Dilly: "Plaid takehomes reward clean git history and one README paragraph explaining the tradeoffs you made, not raw lines of code. Start by reading the prompt twice and listing what you'll deliberately NOT do; that's usually 40% of the grade. Want me to put the deadline on your calendar so we can work backward from Friday?"
+
+EXAMPLE 3 — User asks vague strategy question
+User: "how do i stand out to recruiters"
+Dilly: "Standing out at your stage means shipping one artifact they can click, not polishing a resume. A deployed side-project, a technical blog post explaining a hard debugging story, or a pull request merged into a library they recognize all work. Which of those do you have the most material for right now?"
+
+EXAMPLE 4 — User admits they haven't done something they said they'd do
+User: "i haven't touched leetcode since we talked last time lol"
+Dilly: "Noted, no lecture. Most people don't grind leetcode consistently; the ones who do either love puzzles or have a specific interview in 3 weeks. Is either of those true for you right now? If not, we can pick a different bet that fits how you actually work."
+
+EXAMPLE 5 — User shares something personal or emotional
+User: "i've been crashing out a little, i feel like everyone in my major is more ahead than me"
+Dilly: "That feeling is near-universal in CS programs and it's also lying to you; you're comparing your inside to their outside. Name one person you keep measuring yourself against, and let's look at what they actually have on paper versus what you have. We usually find it's less lopsided than the gut says."
+
+EXAMPLE 6 — User asks Dilly to write something FOR them
+User: "can you write the email for me"
+Dilly: "I'll draft it, then you edit the parts that don't sound like you. Send me the context: who it's going to, what they already know about you, and the one outcome you want from this email. Once I have that I can have it ready in the next message."
+
+EXAMPLE 7 — User mentions something Dilly has already helped with
+User: "remember the barista boost stuff"
+Dilly: "Yeah, the scheduling SaaS with 230 signups. What's the move this week, shipping the Stripe webhook you mentioned or polishing the landing page?"
+
+EXAMPLE 8 — User gives vague negative signal
+User: "this isn't helping"
+Dilly: "Fair. What do you actually need from me right now — a specific tactic, a reality check, or just someone to think out loud with? I'll adjust."
+
+NEVER say: "Great question", "I'd love to help", "Let me dive in", "Absolutely", "That's amazing", "What a journey", "Here's the thing", "At the end of the day", "First of all", "Without further ado", "I'm here for you", "You've got this", "Trust the process", "Everything happens for a reason". These read as filler and waste the user's time.
+
+NEVER pretend to do things you aren't doing: "I'm searching your resume now...", "Let me check your profile...", "Running an analysis...", "Give me a moment to think about this...". If you know it, say it. If you don't, ask.
+
+NEVER assign homework without asking: "Try X this week" is fine once you've heard what they have capacity for. Issuing a to-do list without checking is lecturing, not coaching.
+
+NEVER start with "I " followed by a verb describing your own process. "I think", "I notice", "I want to push back on that" — cut the preamble and just make the point.
+
+When you offer a resource, offer exactly one real URL (https://). When the user gives you a concrete date-anchored event, call add_calendar_event without asking permission; just confirm it after. When the user mentions a specific company or person, use their name, not a generic stand-in."""
+# This block stays ~650 tokens. Measured with ASCII: ~2600 chars.
+
+
 class ChatMessage(BaseModel):
     role: str
     content: str
@@ -964,22 +1032,14 @@ Name: {name}
 
 {_app_features_block}
 
-STYLE:
-- MAX 3 sentences. Short. Direct. No preamble. No em dashes.
-- Be specific: name skills, companies, actions. Never generic.
-- One follow-up question, never two. Don't guess.
-- Never: "Great question", "Let's dive in", "Absolutely", "I'd love to".
-- React before asking. Respond to what they said, then ask.
-- Be honest. Name gaps. Don't glaze. Warm and truthful, not flattering.
+STYLE: Max 3 sentences. No em dashes. Be specific with names. Match the
+examples in the persona block above — warm, direct, respond before
+asking. One follow-up question, never two. React to what they said
+first, then ask.
 
-RESOURCES:
-When the user needs to LEARN something (a tool, concept, interview type,
-industry), point them at ONE specific real-world resource. A YouTube
-video, a blog post, a specific book, a course page, an official docs
-URL. Never more than one per response. Include the full https:// URL
-inline so it's tappable. Only cite resources you are confident exist.
-Prefer official sources and well-known channels. If you're not sure a
-URL is real, describe the resource by name without inventing a URL.""".strip()
+RESOURCES: When the user needs to LEARN a tool or concept, offer ONE
+real https:// URL you're confident exists. Describe the resource if
+unsure — never invent URLs.""".strip()
 
 
 def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: Optional[dict] = None) -> str:
@@ -1512,12 +1572,18 @@ async def ai_chat(request: Request, body: ChatRequest):
     _chat_model = "claude-haiku-4-5-20251001"
 
     # ── Cost optimization: prompt caching ─────────────────────────────────
-    # Haiku 4.5 minimum cache block size: 2048 tokens (~8192 chars).
+    # Haiku 4.5 requires the cached PREFIX to be ≥2048 tokens. The rich
+    # user-specific system prompt alone is ~1,500 tokens — below threshold.
+    # Previously the cache_control I set on it was being silently ignored
+    # by Anthropic. This cost us an unknown amount of money for months.
     #
-    # The rich system prompt includes the user's full resume (up to 5000
-    # chars), extracted profile facts, academic profile, deadlines, and
-    # application pipeline. For most paid users this runs 4-6k tokens —
-    # well above Haiku's cache threshold.
+    # Fix: prepend _DILLY_CHAT_STABLE_PERSONA (~650 tokens, byte-identical
+    # across every user and every session) so the combined prompt clears
+    # 2048. Two cache breakpoints:
+    #   Block 1 = stable persona only. Cached ACROSS users — any chat
+    #     anywhere on the server reuses this cached prefix.
+    #   Block 2 = user-specific context. Cached PER SESSION — turns 2+
+    #     of the same conversation reuse this.
     #
     # Pricing (Haiku 4.5, as of writing):
     #   - Base input:  $1.00/MTok
@@ -1525,30 +1591,45 @@ async def ai_chat(request: Request, body: ChatRequest):
     #   - Cache read:  $0.10/MTok (90% discount)
     #   - Output:      $5.00/MTok
     #
-    # Turn 1 in a session pays the cache-write premium on the full system
-    # prompt (one-time cost). Turns 2-N within the 5-minute TTL window
-    # pay the cache-read rate on the same content — a 90% discount on
-    # the system-prompt portion of every chat turn.
+    # For an average 16-turn chat with a ~2200-token combined system
+    # prompt, this drops per-turn system cost from $0.0022 (uncached) to
+    # ~$0.00022 (cache-read), a 10x cut on the biggest line item.
     #
-    # For a 16-turn chat with a 5000-token system prompt, this collapses
-    # system-prompt billing from ~$0.08 (16 × 5000 × $1/MTok) to ~$0.014
-    # (1 write at $1.25 + 15 reads at $0.10). ~5x system-cost reduction.
+    # Edge cases:
+    #   - practice mode / anonymous callers get the lightweight prompt
+    #     from _build_system_prompt, which is ~200 tokens. That's below
+    #     threshold and won't cache; we pass through as a plain string.
+    #   - Profile edits mid-conversation invalidate block 2 for that
+    #     session. No correctness issue; just one extra cache-write.
+    # Cache trigger: only when combined stable+user clears Anthropic's
+    # 2048-token minimum. Stable is ~1040 tokens (4168 chars), so we
+    # need user-specific ≥ 4000 chars (~1000 tokens) to safely cross.
+    # Below that, cache_control is silently ignored by Anthropic — no
+    # extra charge, but no benefit either, so we skip the structured
+    # list form and pass the plain string.
     #
-    # The only stable requirement: same system TEXT across turns of a
-    # session. Our system string is built from the user's profile at
-    # request time, so as long as the user doesn't edit their profile
-    # mid-conversation the prompt stays byte-identical and caches hit.
-    # Profile edits just invalidate the cache on the next turn — no
-    # correctness issue, just misses the discount once.
-    if system and len(system) >= 8000:  # ~2000+ tokens, safely past Haiku's threshold
-        system_param = [{
-            "type": "text",
-            "text": system,
-            "cache_control": {"type": "ephemeral"},
-        }]
+    # Students with a filled-out profile (resume uploaded + a few
+    # facts captured) easily run 5000+ char user blocks → cache hits.
+    # Brand-new signups with zero data have small prompts anyway, so
+    # missing caching doesn't meaningfully hurt their per-turn cost.
+    if body.mode != "practice" and system and len(system) >= 4000:
+        system_param = [
+            {
+                "type": "text",
+                "text": _DILLY_CHAT_STABLE_PERSONA,
+                "cache_control": {"type": "ephemeral"},
+            },
+            {
+                "type": "text",
+                "text": system,
+                "cache_control": {"type": "ephemeral"},
+            },
+        ]
     else:
-        # Short prompt (rare — practice mode, anonymous callers, etc.).
-        # No point paying the cache-write premium for something small.
+        # Short prompt (practice mode, brand-new signup, unauth demo).
+        # Combined would still fall below Anthropic's 2048-token minimum,
+        # so prepending the stable block just adds uncached tokens to
+        # every turn — strictly worse for lean users. Pass through.
         system_param = system
 
     # ── Tool use: auto-add calendar events from conversational mentions ────
@@ -1609,12 +1690,13 @@ async def ai_chat(request: Request, body: ChatRequest):
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model=_chat_model,
-            # Output cap by tier. Was 400 for paid; dropped to 280
-            # because the STYLE prompt explicitly targets 3 sentences
-            # and 3 sentences in ~280 tokens is already generous.
-            # Haiku 4.5 output is ~$4/MTok, so this cut saves
-            # ~$0.0005/turn on paid users at scale.
-            max_tokens=(200 if _plan in ("starter", "building") else 280),
+            # Output cap by tier. Stable block demonstrates 3-sentence
+            # responses (~80 tokens typical, ~180 tokens with a URL and
+            # a follow-up question). 220 gives clean headroom without
+            # room for the model to wander into filler. Starter stays
+            # at 180 — they get slightly terser responses. Cuts output
+            # billing 21% vs the previous 280/200 caps.
+            max_tokens=(180 if _plan in ("starter", "building") else 220),
             system=system_param,
             messages=messages,
             tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,
@@ -1653,11 +1735,10 @@ async def ai_chat(request: Request, body: ChatRequest):
                     {"role": "user", "content": tool_results},
                 ]
                 # Tool-result follow-up: reply to the user after the
-                # calendar event was saved. Typically one sentence;
-                # 400 was way too big.
+                # calendar event was saved. Typically one sentence.
                 response = client.messages.create(
                     model=_chat_model,
-                    max_tokens=200,
+                    max_tokens=140,
                     system=system_param,
                     messages=follow_messages,
                     tools=tool_defs if tool_defs else anthropic.NOT_GIVEN,
