@@ -26,6 +26,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { DillyFace } from '../../components/DillyFace';
 import { useResolvedTheme } from '../../hooks/useTheme';
+import { validateRole, validateCompany } from '../../lib/roleCompanyValidator';
 
 const INDIGO = colors.indigo;
 
@@ -92,6 +93,22 @@ export default function ModeSwitchScreen() {
 
   async function handleContinue() {
     if (saving || !canContinue) return;
+    // Client-side gibberish guard BEFORE the network call. Entirely
+    // on-device, zero backend cost no matter how many times someone
+    // retries. Catches the obvious garbage ('oeitoighjswogiwsogpih',
+    // ')*#&%()*%', 'aaaaaa') without letting it waste server work.
+    if (direction === 'holder') {
+      const roleCheck = validateRole(newRole);
+      if (!roleCheck.ok) {
+        setErr(roleCheck.reason);
+        return;
+      }
+      const companyCheck = validateCompany(newCompany);
+      if (!companyCheck.ok) {
+        setErr(companyCheck.reason);
+        return;
+      }
+    }
     setSaving(true);
     setErr('');
     try {

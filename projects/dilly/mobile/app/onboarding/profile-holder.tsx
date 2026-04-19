@@ -30,6 +30,7 @@ import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { authHeaders } from '../../lib/auth';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { useResolvedTheme } from '../../hooks/useTheme';
+import { validateRole, validateCompany } from '../../lib/roleCompanyValidator';
 
 const INDIGO = colors.indigo;
 const TOTAL_STEPS = 5;
@@ -146,6 +147,17 @@ export default function ProfileHolderScreen() {
 
   function advance() {
     if (!canAdvance() || saving) return;
+    // Step 2 is role + company. Run the client-side gibberish guard
+    // before letting the user past this step. Zero server cost, no
+    // LLM call — just heuristics. Stops the obvious 'asdfghjkl' and
+    // ')*#&%' inputs from ever reaching the backend.
+    if (step === 2) {
+      const roleCheck = validateRole(role);
+      if (!roleCheck.ok) { setErr(roleCheck.reason); return; }
+      const companyCheck = validateCompany(company);
+      if (!companyCheck.ok) { setErr(companyCheck.reason); return; }
+      setErr('');
+    }
     if (step < 4) {
       const next = (step + 1) as Step;
       setStep(next);
