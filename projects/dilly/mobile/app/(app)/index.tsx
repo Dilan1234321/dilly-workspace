@@ -679,6 +679,20 @@ function SeniorResetHome() {
   const d = data;
   const firstName = d?.identity?.first_name || 'there';
 
+  // Plan anchor for senior-reset path. Mode=seeker; useYourPlan has
+  // a dedicated senior_reset branch that produces the "warm up one
+  // past colleague" anchor copy.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath: 'senior_reset',
+    firstName,
+    factCount: 0,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
   return (
     <View style={[sr.container, { paddingTop: insets.top }]}>
       <ScrollView
@@ -701,6 +715,12 @@ function SeniorResetHome() {
             <Ionicons name="settings-outline" size={20} color={colors.t3} />
           </AnimatedPressable>
         </View>
+
+        {/* Your Plan anchor — senior-reset users are searching; the
+            "warm up one past colleague" copy is exactly right here. */}
+        <FadeInView delay={10}>
+          <YourPlanCard plan={plan} firstName={firstName} />
+        </FadeInView>
 
         {/* Regroup card. calm and warm. Varies by weeks since layoff. */}
         {d?.regroup ? (

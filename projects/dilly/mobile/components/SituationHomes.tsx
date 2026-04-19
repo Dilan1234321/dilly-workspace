@@ -36,6 +36,8 @@ import { dilly } from '../lib/dilly';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
 import { useAccent, useResolvedTheme } from '../hooks/useTheme';
 import { useSpacing } from './Themed';
+import { YourPlanCard } from './YourPlanCard';
+import { useYourPlan } from '../hooks/useYourPlan';
 
 const INDIGO = colors.indigo;
 
@@ -283,6 +285,18 @@ export function ExploringHome() {
   const resumeCount = data?.resumeCount ?? 0;
   const marketCount = data?.marketCount ?? null;
 
+  // Your Plan anchor. Mode=seeker because exploring path is a
+  // "I'm searching" user, not an employed holder.
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath: 'exploring',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
   return (
     <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={accent}>
       <Greeting
@@ -291,6 +305,11 @@ export function ExploringHome() {
         line="let's narrow it down."
         eyebrowColor={accent}
       />
+
+      {/* Your Plan for this week — always top. */}
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
 
       {/* Hero — 3 concrete next moves, picked for explorers. */}
       <FadeInView delay={40}>
@@ -377,6 +396,19 @@ export function DropoutHome() {
   // Green-forward palette — dropouts need to feel backed, not pitied.
   const PROOF = '#0E9F6E';
 
+  // Plan anchor. Mode=student because the dropout path is a
+  // "building-proof" first-job-ish user. useYourPlan has a dedicated
+  // dropout branch that produces the "ship one visible thing" copy.
+  const plan = useYourPlan({
+    mode: 'student',
+    userPath: 'dropout',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
   return (
     <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={PROOF}>
       <Greeting
@@ -385,6 +417,10 @@ export function DropoutHome() {
         line="let's show what you can actually do."
         eyebrowColor={PROOF}
       />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
 
       <FadeInView delay={40}>
         <HeroCard tintColor={PROOF}>
@@ -472,6 +508,19 @@ export function LaidOffHome() {
   // Coral/amber palette — urgency without panic.
   const RESET = '#C2410C';
 
+  // Plan anchor. Mode=seeker (laid_off path). useYourPlan falls
+  // through to the default seeker anchor ("apply to 5 strong
+  // matches") which is exactly right for this user.
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath: 'laid_off',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
   return (
     <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={RESET}>
       <Greeting
@@ -480,6 +529,10 @@ export function LaidOffHome() {
         line="momentum matters more than perfect."
         eyebrowColor={RESET}
       />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
 
       {/* Regroup card — calm but moving. */}
       <FadeInView delay={40}>
@@ -576,6 +629,19 @@ export function VisaHome() {
   // Blue/violet palette — trustworthy, serious, considered.
   const VISA = '#4338CA';
 
+  // Plan anchor. useYourPlan has a dedicated international_grad
+  // branch that produces the "research one sponsor-friendly
+  // company" copy, which matches this home's framing.
+  const plan = useYourPlan({
+    mode: 'student',
+    userPath: 'international_grad',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
   return (
     <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={VISA}>
       <Greeting
@@ -584,6 +650,10 @@ export function VisaHome() {
         line="sponsors and cutoffs first."
         eyebrowColor={VISA}
       />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
 
       <FadeInView delay={40}>
         <HeroCard tintColor={VISA}>
