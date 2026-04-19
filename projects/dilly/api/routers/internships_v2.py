@@ -217,7 +217,32 @@ def _readiness(student_smart, student_grit, student_build,
 
 
 def _rank_score(student_smart, student_grit, student_build,
-                req_smart, req_grit, req_build, quality_score) -> float:
+                req_smart, req_grit, req_build, quality_score,
+                profile_boost: float = 0.0, has_audit: bool = True) -> float:
+    """Compute a per-job rank score for a student/user.
+
+    Three signals, combined:
+      1. profile_boost (0-100): how well the job matches the user's
+         EXPRESSED preferences — target companies, goals, skills,
+         preferred locations. Derived from profile facts. Most
+         important signal because it's what the user actually told
+         us they want.
+      2. margin (0-100): how far the user's Smart/Grit/Build scores
+         exceed the job's requirements. Worthless when the user has
+         never completed an audit (all scores = 0).
+      3. quality_score (0-100): per-job quality signal set at ingest
+         time (company reputation, role recency, etc.).
+
+    Weighting:
+      - Audited user:    profile 0.5 + margin 0.3 + quality 0.2
+      - No audit yet:    profile 0.7 + quality 0.3 (margin zeroed
+        because it's random noise without real scores).
+
+    Before this change, ranking was 0.6*margin + 0.4*quality — which
+    ignored the user's profile entirely and gave every non-audited
+    user near-random ordering. That's the "top match" the coach
+    mark previously couldn't honestly claim.
+    """
     s = float(student_smart or 0)
     g = float(student_grit  or 0)
     b = float(student_build or 0)
@@ -225,7 +250,177 @@ def _rank_score(student_smart, student_grit, student_build,
     rg = float(req_grit  or 0)
     rb = float(req_build or 0)
     margin = (max(s - rs, 0) + max(g - rg, 0) + max(b - rb, 0)) / 3
-    return round(margin * 0.6 + float(quality_score or 0) * 0.4, 4)
+    pb = float(profile_boost or 0)
+    q  = float(quality_score or 0)
+    if has_audit:
+        return round(pb * 0.5 + margin * 0.3 + q * 0.2, 4)
+    # No audit — margin is noise. Lean on profile + quality only.
+    return round(pb * 0.7 + q * 0.3, 4)
+
+
+def _build_profile_signals(email: str) -> dict:
+    """Read the user's profile + memory surface, extract ranking
+    signals. Zero-LLM. Cheap — runs once per feed request.
+
+    Returns a dict ready to pass into _profile_boost() for each job:
+        {
+          "target_companies": {"stripe", "ramp", ...},  # lowercased
+          "target_keywords":  {"fintech", "devtools", ...},  # goal/industry words
+          "user_cities":      {"austin", "nyc", ...},  # lowercased
+          "skill_keywords":   {"python", "kubernetes", ...},
+        }
+    """
+    empty = {
+        "target_companies": set(),
+        "target_keywords": set(),
+        "user_cities": set(),
+        "skill_keywords": set(),
+    }
+    try:
+        from projects.dilly.api.profile_store import get_profile as _gp
+        from projects.dilly.api.memory_surface_store import get_memory_surface
+    except Exception:
+        return empty
+    try:
+        prof = _gp(email) or {}
+    except Exception:
+        prof = {}
+    try:
+        surface = get_memory_surface(email) or {}
+        facts = surface.get("items") or []
+    except Exception:
+        facts = []
+
+    target_companies: set[str] = set()
+    target_keywords: set[str] = set()
+    user_cities: set[str] = set()
+    skill_keywords: set[str] = set()
+
+    # Target companies: both the `target_companies` profile field AND
+    # any fact in category=target_company.
+    for c in (prof.get("target_companies") or []):
+        if c:
+            target_companies.add(str(c).strip().lower())
+    for f in facts:
+        cat = (f.get("category") or "").lower()
+        label = (f.get("label") or "").lower()
+        value = (f.get("value") or "").lower()
+        if cat == "target_company":
+            # Fact values/labels often have the "Target: " prefix. Strip.
+            raw = (value or label).replace("target:", "").strip()
+            if raw:
+                target_companies.add(raw)
+        elif cat in ("goal", "career_interest"):
+            # Split into keyword tokens for partial-match boost.
+            tokens = (label + " " + value).replace(",", " ").split()
+            for tok in tokens:
+                tok = tok.strip(".,:;!?()[]").lower()
+                if len(tok) >= 4 and tok not in _STOPWORDS:
+                    target_keywords.add(tok)
+        elif cat in ("skill", "skill_unlisted", "project_detail"):
+            tokens = (label + " " + value).replace(",", " ").split()
+            for tok in tokens:
+                tok = tok.strip(".,:;!?()[]").lower()
+                if len(tok) >= 3 and tok not in _STOPWORDS:
+                    skill_keywords.add(tok)
+
+    # Career goal / industry target — same tokenization treatment.
+    for field in ("career_goal", "industry_target"):
+        val = (prof.get(field) or "").lower()
+        for tok in val.replace(",", " ").split():
+            tok = tok.strip(".,:;!?()[]")
+            if len(tok) >= 4 and tok not in _STOPWORDS:
+                target_keywords.add(tok)
+
+    # Location preference.
+    for city in (prof.get("job_locations") or []):
+        if city:
+            user_cities.add(str(city).strip().lower())
+
+    return {
+        "target_companies": target_companies,
+        "target_keywords": target_keywords,
+        "user_cities": user_cities,
+        "skill_keywords": skill_keywords,
+    }
+
+
+# Very short stopword list — just enough to keep "the", "and" etc.
+# from polluting the keyword sets. Kept small on purpose; a longer
+# list risks filtering out real signal words.
+_STOPWORDS = {
+    "the", "and", "for", "with", "that", "this", "from", "into",
+    "have", "want", "need", "them", "they", "your", "yours",
+    "work", "role", "roles", "job", "jobs", "a", "an", "i", "me",
+    "my", "as", "in", "on", "at", "to", "of", "or", "but", "be",
+    "is", "are", "was", "were", "been", "being", "so", "if",
+}
+
+
+def _profile_boost(job_title: str, job_description: str, job_company: str,
+                   job_city: str, job_state: str,
+                   signals: dict) -> float:
+    """Score a single job against the user's profile signals.
+    Returns a 0-100 float. Each signal contributes independently,
+    capped so one strong match doesn't dominate.
+
+    Weights (additive, 0-100 scale, capped at 100):
+      - target company exact match: +60
+      - any skill keyword match in title/desc: +15 (cap 30)
+      - target keyword match in title: +20 (cap 30)
+      - target keyword match in description: +5 (cap 10)
+      - user-city match: +10
+
+    Max possible boost: 100 (company + skills + goal + city).
+    Typical engaged user with 2-3 matches: 35-60.
+    User with sparse profile: 0-15.
+    """
+    if not signals:
+        return 0.0
+    title = (job_title or "").lower()
+    desc = (job_description or "")[:4000].lower()  # cap description scan
+    company = (job_company or "").lower()
+    city = (job_city or "").lower()
+    state = (job_state or "").lower()
+    score = 0.0
+
+    # 1. Target company — by far the strongest signal. If the user
+    # explicitly named this company as a target, they want it ranked
+    # high regardless of S/G/B fit.
+    for tc in signals["target_companies"]:
+        if tc and tc in company:
+            score += 60
+            break  # only count once
+
+    # 2. Skill keywords in title/description.
+    skill_hits = 0
+    for sk in signals["skill_keywords"]:
+        if sk in title or sk in desc:
+            skill_hits += 1
+            if skill_hits >= 2:
+                break
+    score += min(skill_hits * 15, 30)
+
+    # 3. Career goal / industry target — title match weighs much
+    # more than description match because a keyword in the title
+    # means the job IS about that thing.
+    title_goal_hits = 0
+    desc_goal_hits = 0
+    for kw in signals["target_keywords"]:
+        if kw in title:
+            title_goal_hits += 1
+        elif kw in desc:
+            desc_goal_hits += 1
+    score += min(title_goal_hits * 20, 30)
+    score += min(desc_goal_hits * 5, 10)
+
+    # 4. Location preference.
+    for uc in signals["user_cities"]:
+        if uc and (uc in city or uc in state):
+            score += 10
+            break
+
+    return min(score, 100.0)
 
 
 def _cohort_readiness(
@@ -319,8 +514,15 @@ def _fallback_feed(
     h1b_sponsor: Optional[bool] = None,
     fair_chance: Optional[bool] = None,
     remote_only: Optional[bool] = None,
+    profile_signals: Optional[dict] = None,
+    has_audit: bool = True,
 ):
-    """Serve the feed using on-the-fly scoring (no match_scores rows needed)."""
+    """Serve the feed using on-the-fly scoring (no match_scores rows needed).
+
+    profile_signals + has_audit are threaded in so _rank_score can
+    weight by the user's expressed preferences (target companies,
+    goals, skills, cities) — not just Smart/Grit/Build margin.
+    """
     where = ["i.status = 'active'", "i.description IS NOT NULL", "length(i.description) > 100"]
     params: list = []
 
@@ -488,9 +690,22 @@ def _fallback_feed(
         if readiness_filter and rd != readiness_filter:
             continue
 
+        # Profile boost: matches this job against target_companies,
+        # goals, skills, preferred cities from the user's profile.
+        # Zero cost (no LLM, pure string-containment checks on a
+        # cap'd description size). 0 when profile_signals wasn't
+        # built (defensive no-op).
+        pb = _profile_boost(
+            r["title"], r["description"], r["company_name"],
+            r["location_city"], r["location_state"],
+            profile_signals,
+        ) if profile_signals else 0.0
+
         rk = _rank_score(student_smart, student_grit, student_build,
                          r["required_smart"], r["required_grit"], r["required_build"],
-                         r["quality_score"])
+                         r["quality_score"],
+                         profile_boost=pb,
+                         has_audit=has_audit)
         listings.append({
             "id": r["id"],
             "title": r["title"],
@@ -665,6 +880,17 @@ async def get_internship_feed(
     )
     has_precomputed = cur.fetchone()["cnt"] > 0
 
+    # Build profile signals ONCE per request. Zero-LLM cheap read
+    # from memory_surface + profile. These drive the ranker's
+    # "match against what the user actually told us they want"
+    # logic — target companies, goals, skills, cities.
+    _profile_signals = _build_profile_signals(email)
+
+    # Has the user ever completed an audit? If all three S/G/B
+    # scores are 0, treat as no-audit and rely on profile signals
+    # + quality score for ranking (margin math would be noise).
+    _has_audit = bool(s_smart or s_grit or s_build)
+
     if not has_precomputed:
         result = _fallback_feed(
             cur, student_id, s_smart, s_grit, s_build, _student_cohorts,
@@ -675,6 +901,8 @@ async def get_internship_feed(
             h1b_sponsor=h1b_sponsor,
             fair_chance=fair_chance,
             remote_only=remote_only,
+            profile_signals=_profile_signals,
+            has_audit=_has_audit,
         )
         conn.close()
         return {**result, "tab": tab,
@@ -827,6 +1055,14 @@ async def get_internship_feed(
     """, params)
     total = cur.fetchone()["cnt"]
 
+    # Over-fetch so we can re-rank in Python with profile_boost. The
+    # SQL `rank_score` is purely S/G/B-margin + quality; it doesn't
+    # know about target companies, goals, skills, or cities from the
+    # user's profile. Pulling 3x the asked-for limit means the top
+    # results after re-ranking include jobs that match the user's
+    # profile even when their raw rank_score was mid-pack.
+    # Capped at 200 to keep the fetch cheap on big result sets.
+    _overfetch_limit = min(200, max(limit * 3, limit + 60))
     cur.execute(f"""
         SELECT
             i.id, i.title, i.description, i.location_city, i.location_state,
@@ -841,7 +1077,7 @@ async def get_internship_feed(
         WHERE {where_sql}
         ORDER BY {order}
         LIMIT %s OFFSET %s
-    """, params + [limit, offset])
+    """, params + [_overfetch_limit, offset])
     rows = cur.fetchall()
 
     cur.execute("SELECT internship_id FROM dismissals WHERE student_id = %s", (student_id,))
@@ -892,6 +1128,38 @@ async def get_internship_feed(
             "description_preview": re.sub(r"<[^>]+>", "", (r["description"] or ""))[:300].strip(),
             "quick_glance": json.loads(r["quick_glance"]) if isinstance(r.get("quick_glance"), str) else (r.get("quick_glance") or []),
         })
+
+    # Profile-aware re-rank. Combine each listing's pre-computed
+    # rank_score (margin + quality) with a profile_boost derived
+    # from the user's target_companies, goals, skills, and cities.
+    # Jobs at target companies, or matching the user's goal keywords
+    # in the title, now bubble to the top even if their raw
+    # rank_score was mid-pack. Users with no profile signal at all
+    # (boost = 0) still see the original ordering.
+    #
+    # Weighting kept conservative here (0.6 raw + 0.4 boost) because
+    # the pre-computed rank_score already captures the audit-fit
+    # dimension well. The fallback path uses a stronger profile
+    # weighting because it has no pre-computed baseline.
+    if _profile_signals and sort == "rank":
+        for listing in listings:
+            pb = _profile_boost(
+                listing.get("title") or "",
+                listing.get("description") or "",
+                listing.get("company") or "",
+                listing.get("location_city") or "",
+                listing.get("location_state") or "",
+                _profile_signals,
+            )
+            # Scale pre-computed score to roughly match the 0-100
+            # boost scale. match_scores.rank_score historically sits
+            # in the 0-100 range, but we cap defensively.
+            base = min(float(listing["rank_score"] or 0), 100.0)
+            listing["_composite_rank"] = round(base * 0.6 + pb * 0.4, 4)
+            listing["_profile_boost"] = pb
+        listings.sort(key=lambda x: -x.get("_composite_rank", 0))
+        # Trim back to the caller's requested limit after re-ranking.
+        listings = listings[:limit]
 
     # Diversity cap: no more than MAX_PER_COMPANY_PER_PAGE roles from
     # a single employer in one response. Preserves rank order.
