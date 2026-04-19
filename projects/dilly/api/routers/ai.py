@@ -1999,6 +1999,25 @@ async def ai_chat_flush(request: Request, body: ChatFlushRequest):
     if not messages or not conv_id or len(messages) < 2:
         return {"added": [], "updated": [], "count": 0, "skipped": True}
 
+    # ── Decide if this flush earns an LLM extraction ─────────────────────
+    # Single gate: conversation must have at least
+    # LLM_EXTRACTION_MIN_USER_MSGS user messages. Mirrored in the mobile
+    # UI as "Dilly is listening (X of 5)" so users understand the bar.
+    # Shorter chats still run regex extraction, just skip the Haiku call.
+    #
+    # No daily cap — if someone is genuinely using Dilly a lot, they
+    # should keep getting memory capture. The message-count gate is
+    # a strong enough quality/cost filter on its own.
+    #
+    # Accidental close/reopen within the same session is not dedup'd
+    # because the existing-fact-key dedupe inside run_extraction already
+    # prevents duplicate facts from being saved — the only waste is
+    # one redundant Haiku call (~$0.003), not worth the complexity of
+    # a cross-request dedupe ledger.
+    from projects.dilly.api.memory_extraction import LLM_EXTRACTION_MIN_USER_MSGS
+    user_msg_count = sum(1 for m in messages if (m.get("role") or "") == "user")
+    use_llm = user_msg_count >= LLM_EXTRACTION_MIN_USER_MSGS
+
     # Snapshot existing item IDs so we can diff — the extractor returns
     # the full new list + `item_ids` of new rows, but we want to return
     # actual fact objects to the mobile client for the animation.
@@ -2016,7 +2035,8 @@ async def ai_chat_flush(request: Request, body: ChatFlushRequest):
     added: list[dict[str, Any]] = []
     try:
         from projects.dilly.api.memory_extraction import run_extraction
-        result = await asyncio.to_thread(run_extraction, email, conv_id, messages[-30:])
+        result = await asyncio.to_thread(run_extraction, email, conv_id, messages[-30:], use_llm)
+
         new_ids = set(result.get("item_ids") or [])
         # Read the updated surface to return the actual fact payloads.
         after = get_memory_surface(email) or {}

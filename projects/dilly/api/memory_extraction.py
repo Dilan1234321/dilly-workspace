@@ -191,17 +191,45 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
     return out
 
 
-def extract_memory_items(uid: str, conv_id: str, messages: list[dict[str, Any]], existing_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+# Minimum USER messages a conversation must have before we pay Haiku to
+# extract facts from it. Mirrored in the mobile UI as a progress hint
+# ("Dilly is listening… 2 of 5") so the user sees the bar and feels
+# the gate as a feature, not a surprise.
+LLM_EXTRACTION_MIN_USER_MSGS = 5
+
+
+def extract_memory_items(
+    uid: str,
+    conv_id: str,
+    messages: list[dict[str, Any]],
+    existing_items: list[dict[str, Any]],
+    use_llm: bool = False,
+) -> list[dict[str, Any]]:
     # Cost gate: skip trivial exchanges entirely.
     if not _messages_worth_extracting(messages):
         return []
 
-    # Regex-first (zero LLM cost). For now we disable the LLM branch
-    # entirely in chat context because the cost was the single biggest
-    # line item on the bill. Onboarding resume parse + user edits in
-    # My Dilly still populate the structured-fact store, so we're not
-    # blind — just not paying for inference on every 5th chat turn.
-    new_items = _regex_extract_from_user_turns(messages)
+    # Two extraction paths:
+    #   use_llm=False (default, called per-turn from /ai/chat) — regex
+    #     only. Zero LLM cost. Catches obvious literal facts ("I work
+    #     at X", "my goal is Y") and nothing else.
+    #   use_llm=True (on chat close via /ai/chat/flush) — Haiku
+    #     extraction. One call per qualifying conversation. Catches
+    #     inferential facts regex can't: emotional context, implied
+    #     goals, mentioned-but-not-done, personality tells, rejections,
+    #     soft skills, etc. This is the "she actually remembers me"
+    #     differentiator paid users are buying.
+    #
+    # The flush endpoint is the only caller that passes use_llm=True,
+    # and it gates that on:
+    #   - >= LLM_EXTRACTION_MIN_USER_MSGS user messages (quality bar)
+    #   - daily cap per user (cost bar)
+    #   - no re-flush within 5 min for the same conv_id (dedup)
+    # so we can't run away with cost even if a user hammers the overlay.
+    if use_llm:
+        new_items = _extract_memory_items_llm(uid, conv_id, messages, existing_items)
+    else:
+        new_items = _regex_extract_from_user_turns(messages)
 
     # Dedup against existing memory (same category+label).
     existing_keys = {
@@ -478,11 +506,16 @@ Write the narrative now. 3-5 sentences, specific, no hollow phrases."""
     return (raw or "").strip()
 
 
-def run_extraction(uid: str, conv_id: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
+def run_extraction(
+    uid: str,
+    conv_id: str,
+    messages: list[dict[str, Any]],
+    use_llm: bool = False,
+) -> dict[str, Any]:
     profile = get_profile(uid) or {}
     surface = get_memory_surface(uid)
     existing_items = surface.get("items") or []
-    new_items = extract_memory_items(uid, conv_id, messages, existing_items)
+    new_items = extract_memory_items(uid, conv_id, messages, existing_items, use_llm=use_llm)
 
     items_all = list(existing_items)
     item_ids: list[str] = []

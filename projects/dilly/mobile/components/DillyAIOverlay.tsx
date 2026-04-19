@@ -741,6 +741,29 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
             )}
           </ScrollView>
 
+          {/* Memory progress pill — shows user how close they are to
+              the threshold where Dilly actually saves things to their
+              profile on chat close. Matches LLM_EXTRACTION_MIN_USER_MSGS
+              on the backend (currently 5). Framed as Dilly "listening"
+              so the bar feels like a product feature, not a cost gate.
+              Disappears once threshold is hit. Never shown when typing
+              or when suggestion chips are visible (reduces bottom-bar
+              clutter). */}
+          {(() => {
+            const THRESHOLD = 5;
+            const userMsgs = messages.filter(m => m.role === 'user').length;
+            if (userMsgs >= THRESHOLD || isTyping) return null;
+            if (userMsgs === 0) return null; // hide until they've sent at least one
+            return (
+              <View style={[s.memoryPill, { borderTopColor: theme.surface.border }]}>
+                <Ionicons name="ear-outline" size={13} color={theme.surface.t3} />
+                <Text style={[s.memoryPillText, { color: theme.surface.t3 }]}>
+                  Dilly is listening. She'll save what she learns after {THRESHOLD - userMsgs} more message{THRESHOLD - userMsgs === 1 ? '' : 's'}.
+                </Text>
+              </View>
+            );
+          })()}
+
           {/* Suggestion chips */}
           {suggestions.length > 0 && (
             <Animated.View style={{ opacity: suggestionsOpacity }}>
@@ -901,6 +924,15 @@ const s = StyleSheet.create({
   sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: GOLD, alignItems: 'center', justifyContent: 'center' },
   sendBtnDisabled: { opacity: 0.35 },
   suggestionWrap: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)' },
+  memoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+  },
+  memoryPillText: { fontSize: 11, fontStyle: 'italic', flex: 1 },
   suggestionRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   suggestionChip: { backgroundColor: colors.s2, borderRadius: 10, borderWidth: 1, borderColor: colors.b2, paddingHorizontal: 14, paddingVertical: 8 },
   suggestionChipText: { color: colors.t1, fontSize: 13, fontWeight: '500' },
