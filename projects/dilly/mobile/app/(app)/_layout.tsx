@@ -13,6 +13,7 @@ import DillyPaywallFullScreen from '../../components/DillyPaywallFullScreen';
 import { usePaywallState } from '../../hooks/usePaywall';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import useCelebration from '../../hooks/useCelebration';
+import { AhaPrompt } from '../../components/AhaPrompt';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -267,6 +268,11 @@ export default function AppLayout() {
           <DillyGateWrapper />
           <DillyPaywallWrapper />
           <CelebrationWrapper />
+          {/* AhaPrompt — fires once per user, ~5 minutes into first
+              session. Collects the "oh I GET it" signal so we can
+              rebuild the app around recreating that moment. Handles
+              its own visibility logic; mount-and-forget. */}
+          <AhaPrompt />
         </>
       </ErrorBoundary>
     </SubscriptionProvider>
