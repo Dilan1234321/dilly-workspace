@@ -134,6 +134,11 @@ export default function SettingsScreen() {
   const [appModeOverride, setAppModeOverride] = useState<string | null>(null);
   const [userPath, setUserPath] = useState<string>('');
   const [appModeSaving, setAppModeSaving] = useState(false);
+  // Promo code redemption. Open expands an input row under Plan; on
+  // submit we hit /auth/redeem-promo-code which flips plan locally.
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoSubmitting, setPromoSubmitting] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -206,6 +211,36 @@ export default function SettingsScreen() {
       await primeAppMode(rollback);
     } finally {
       setAppModeSaving(false);
+    }
+  }
+
+  async function handleRedeemPromo() {
+    const raw = promoCode.trim();
+    if (!raw || promoSubmitting) return;
+    setPromoSubmitting(true);
+    try {
+      const res = await dilly.fetch('/auth/redeem-promo-code', {
+        method: 'POST',
+        body: JSON.stringify({ code: raw }),
+      });
+      const body = await res.json().catch(() => ({} as any));
+      if (!res.ok) {
+        const detail = body?.detail;
+        const msg = typeof detail === 'string' ? detail
+          : detail?.message || "That code isn't valid.";
+        Alert.alert('Promo code', msg);
+        return;
+      }
+      // Success — refresh local plan + collapse the input.
+      setPlan(body?.plan || plan);
+      setPromoCode('');
+      setPromoOpen(false);
+      Alert.alert('Unlocked', body?.message || 'Welcome.');
+      fetchProfile();
+    } catch {
+      Alert.alert('Promo code', "Couldn't reach the server. Try again.");
+    } finally {
+      setPromoSubmitting(false);
     }
   }
 
@@ -399,6 +434,65 @@ export default function SettingsScreen() {
                   <Text style={s.upgradeBtnText}>See plans</Text>
                 </AnimatedPressable>
               </>
+            )}
+            {/* Promo code row. Always visible so paying users can still
+                upgrade via code; collapses into a compact link until
+                tapped so it doesn't clutter the Plan card. */}
+            <Divider />
+            {!promoOpen ? (
+              <AnimatedPressable
+                style={[s.row, { justifyContent: 'center' }]}
+                onPress={() => setPromoOpen(true)}
+                scaleDown={0.98}
+              >
+                <Text style={[s.rowValue, { color: theme.accent, fontWeight: '600' }]}>
+                  Have a promo code?
+                </Text>
+              </AnimatedPressable>
+            ) : (
+              <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+                <TextInput
+                  value={promoCode}
+                  onChangeText={setPromoCode}
+                  placeholder="Enter code"
+                  placeholderTextColor={theme.surface.t3}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  editable={!promoSubmitting}
+                  style={{
+                    backgroundColor: theme.surface.s2,
+                    borderWidth: 1,
+                    borderColor: theme.surface.border,
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    fontSize: 15,
+                    color: theme.surface.t1,
+                    letterSpacing: 1,
+                  }}
+                  onSubmitEditing={handleRedeemPromo}
+                  returnKeyType="go"
+                />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <AnimatedPressable
+                    style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: theme.accent, opacity: !promoCode.trim() || promoSubmitting ? 0.5 : 1 }}
+                    onPress={handleRedeemPromo}
+                    disabled={!promoCode.trim() || promoSubmitting}
+                    scaleDown={0.97}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>
+                      {promoSubmitting ? 'Redeeming…' : 'Redeem'}
+                    </Text>
+                  </AnimatedPressable>
+                  <AnimatedPressable
+                    style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center' }}
+                    onPress={() => { setPromoOpen(false); setPromoCode(''); }}
+                    scaleDown={0.97}
+                  >
+                    <Text style={{ fontSize: 14, color: theme.surface.t2 }}>Cancel</Text>
+                  </AnimatedPressable>
+                </View>
+              </View>
             )}
           </View>
         </FadeInView>

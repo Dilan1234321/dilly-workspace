@@ -342,6 +342,58 @@ async def redeem_gift(request: Request, body: RedeemGiftRequest):
 
 
 # ---------------------------------------------------------------------------
+# Promo codes. Hardcoded allowlist — only the codes in _PROMO_CODES grant
+# access. Anything else returns 400. This isn't a "generate infinitely many
+# codes" system; it's a "Dilan wanted two specific free-comp codes for
+# Tampa students" feature. Rename the codes here if we roll more.
+#
+# Each code maps to (plan, message). Setting plan also flips `subscribed`
+# on so all the downstream gating already works.
+# ---------------------------------------------------------------------------
+
+_PROMO_CODES = {
+    "DILANTAMPAPRO": ("pro", "Dilly Pro unlocked. Welcome."),
+    "DILANTAMPAPLUS": ("dilly", "Dilly unlocked. Welcome."),
+}
+
+
+@router.post("/redeem-promo-code")
+async def redeem_promo_code(request: Request, body: dict = Body(...)):
+    """Redeem a promo code. Body: { code }. Requires sign-in.
+
+    Valid codes (hardcoded):
+      DILANTAMPAPRO  -> grants Dilly Pro
+      DILANTAMPAPLUS -> grants Dilly
+
+    Codes are case-insensitive. No Stripe involved — this just flips
+    the profile flags locally, same way gift redemption does. These
+    are intended as comp codes, not a distribution mechanism.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized("Sign in to redeem.")
+    raw = (body.get("code") or "").strip().upper()
+    if not raw:
+        raise errors.validation_error("Enter a code.")
+    mapping = _PROMO_CODES.get(raw)
+    if not mapping:
+        # Generic message on purpose — don't confirm or deny which codes
+        # exist. Discourages fishing.
+        raise errors.bad_request("That code isn't valid.")
+    plan, message = mapping
+    try:
+        from projects.dilly.api.auth_store import set_subscribed
+        from projects.dilly.api.profile_store import ensure_profile_exists, save_profile
+        ensure_profile_exists(email)
+        set_subscribed(email, True)
+        save_profile(email, {"plan": plan, "profileStatus": "active"})
+        return {"ok": True, "plan": plan, "message": message}
+    except Exception:
+        raise errors.internal("Could not redeem code.")
+
+
+# ---------------------------------------------------------------------------
 # Stripe event idempotency. Stripe retries webhook deliveries until we return
 # 2xx, so the same event.id can arrive multiple times. We keep a tiny table
 # keyed by event.id and bail early on duplicates. Lazy-create the table on

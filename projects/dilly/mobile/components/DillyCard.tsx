@@ -621,17 +621,26 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
     }).start(() => setShowBack(!showBack));
   }
 
-  // Swipe-to-flip gesture. Threshold of 40pt horizontal movement OR
-  // a fast flick (>0.3 px/ms) triggers the flip. Only horizontal
-  // swipes grab — vertical scrolls pass through so the card doesn't
-  // fight the parent ScrollView. PanResponder is memoized in a ref
-  // and reads handleFlip via a ref so it always invokes the latest
-  // (showBack is stale inside the one-time closure otherwise).
+  // Swipe-to-flip gesture. Previous version used onMoveShouldSetPanResponder
+  // on the outer wrapper — but the inner TouchableOpacity claims the gesture
+  // on Touch Start first, so the outer pan responder never saw the horizontal
+  // swipe. Fix: use the CAPTURE variant so we grab the gesture on the capture
+  // phase BEFORE children get a chance. Taps (dx<10) still pass through to
+  // TouchableOpacity; meaningful horizontal drags are claimed by the outer.
+  // handleFlip is proxied through a ref so the one-time PanResponder closure
+  // always sees the latest (showBack is otherwise stale inside the closure).
   const handleFlipRef = useRef(handleFlip);
   handleFlipRef.current = handleFlip;
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+      // Capture phase — runs before TouchableOpacity's grab. Return true
+      // ONLY for meaningful horizontal drags so we don't eat taps or
+      // vertical scrolls meant for the parent ScrollView.
+      onMoveShouldSetPanResponderCapture: (_e, g) =>
+        Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.3,
+      // Keep the responder once we grab it; otherwise the child
+      // TouchableOpacity can steal mid-drag.
+      onPanResponderTerminationRequest: () => false,
       onPanResponderRelease: (_e, g) => {
         if (Math.abs(g.dx) > 40 || Math.abs(g.vx) > 0.3) {
           handleFlipRef.current();
