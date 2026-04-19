@@ -233,18 +233,22 @@ export default function SettingsScreen() {
         return;
       }
       // Success — refresh local plan + collapse the input. Fire the
-      // celebration overlay (earned-pride vibe, full-screen) instead
-      // of a plain alert. Overlay is mounted globally at the app layer
-      // via CelebrationWrapper, so the trigger reaches it from here.
+      // celebration overlay on an UPGRADE to a paid tier. For starter
+      // codes (like DILLYTAMPAFREE which flips back to free) we skip
+      // the celebration and just toast — nothing to celebrate about
+      // going free.
       const newPlan = body?.plan || plan;
       setPlan(newPlan);
       setPromoCode('');
       setPromoOpen(false);
-      // Small delay so the input's collapse animation finishes before
-      // the celebration takes over the screen.
-      setTimeout(() => {
-        triggerCelebration(newPlan === 'pro' ? 'unlocked-pro' : 'unlocked-dilly');
-      }, 250);
+      if (newPlan === 'pro' || newPlan === 'dilly') {
+        // Delay so the input collapse finishes before the overlay.
+        setTimeout(() => {
+          triggerCelebration(newPlan === 'pro' ? 'unlocked-pro' : 'unlocked-dilly');
+        }, 250);
+      } else {
+        Alert.alert('Plan updated', body?.message || 'Plan changed.');
+      }
       fetchProfile();
     } catch {
       Alert.alert('Promo code', "Couldn't reach the server. Try again.");

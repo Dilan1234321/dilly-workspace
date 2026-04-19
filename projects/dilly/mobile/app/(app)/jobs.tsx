@@ -379,7 +379,7 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
   const BULLET_DOT = VIOLET;
 
   return (
-    <Animated.View style={[s.narrativeWrap, { opacity: fadeAnim, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+    <Animated.View style={[s.narrativeWrap, { opacity: fadeAnim, backgroundColor: 'transparent', borderColor: 'transparent' }]}>
       <View style={s.narrativeColumns}>
         {/* Left: What you have */}
         <View style={s.narrativeCol}>
@@ -823,9 +823,12 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
                 section (full description, action row) still renders. */}
             {!isHolder && <FitNarrative listing={listing} preloaded={narrativeCache} />}
 
-            {/* Quick Glance bullets */}
+            {/* Quick Glance bullets. Flush with the card background.
+                borderColor 'transparent' removes the panel feel and lets
+                the bullets read as part of the expanded card rather
+                than a nested panel. */}
             {listing.quick_glance && listing.quick_glance.length > 0 && (
-              <View style={[s.quickGlance, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+              <View style={[s.quickGlance, { backgroundColor: 'transparent', borderColor: 'transparent' }]}>
                 <Text style={[s.quickGlanceLabel, { color: theme.surface.t3 }]}>QUICK GLANCE</Text>
                 {listing.quick_glance.map((b, i) => (
                   <View key={i} style={s.quickGlanceBullet}>
@@ -836,20 +839,13 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
               </View>
             )}
 
-            {/* Full description (collapsible) */}
-            {desc ? (
-              <AnimatedPressable
-                style={[s.descToggle, { backgroundColor: theme.surface.s2 }]}
-                onPress={() => setShowFullDesc(prev => !prev)}
-                scaleDown={0.98}
-              >
-                <Ionicons name={showFullDesc ? 'chevron-up' : 'document-text-outline'} size={13} color={theme.surface.t3} />
-                <Text style={[s.descToggleText, { color: theme.surface.t2 }]}>{showFullDesc ? 'Hide description' : 'Full description'}</Text>
-              </AnimatedPressable>
-            ) : null}
-            {showFullDesc && desc ? (
-              <Text style={[s.descFull, { color: theme.surface.t2 }]}>{desc.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}</Text>
-            ) : null}
+            {/* Full description toggle removed per product direction:
+                expanded card now shows only the fit narrative + quick
+                glance + apply/ask/tailor actions. The full job text was
+                creating a wall of scraped HTML that made cards feel
+                like a listing page instead of a decision surface. If
+                the user wants the real description they hit Apply and
+                see it on the employer's site. */}
 
             {/* Action buttons */}
             <View style={s.actionRow}>
@@ -1069,6 +1065,14 @@ export default function JobsScreen() {
   // User-chosen theme — container bg, header typography, refresh
   // tint all read from here so Customize paints this tab too.
   const theme = useResolvedTheme();
+  // Filter pill theme overrides. Module-level StyleSheet froze the
+  // bg/border/text at light values, so we apply these on top of the
+  // base style at each call site. Active uses the current accent so
+  // the selected filter matches the user's picked color.
+  const fpBase = { backgroundColor: theme.surface.s2, borderColor: theme.surface.border };
+  const fpActive = { backgroundColor: theme.accent, borderColor: theme.accent };
+  const fpText = { color: theme.surface.t2 };
+  const fpTextActive = { color: '#FFFFFF' };
   // Career mode reshapes this whole tab: jobholders see a market
   // benchmark (no apply CTAs, "The Market" framing); seekers see the
   // classic apply-focused feed.
@@ -1483,11 +1487,11 @@ export default function JobsScreen() {
             This is the #1 thing a dropout wants when they open the jobs page. */}
         {userPath === 'dropout' && (
           <AnimatedPressable
-            style={[s.filterPill, noDegreeFilter && s.filterPillActive]}
+            style={[s.filterPill, fpBase, noDegreeFilter && fpActive]}
             onPress={() => { setNoDegreeFilter(v => !v); setLoading(true); }}
             scaleDown={0.95}
           >
-            <Text style={[s.filterPillText, noDegreeFilter && s.filterPillTextActive]}>No degree required</Text>
+            <Text style={[s.filterPillText, fpText,noDegreeFilter && fpTextActive]}>No degree required</Text>
           </AnimatedPressable>
         )}
 
@@ -1495,11 +1499,11 @@ export default function JobsScreen() {
             open the app for" priority as the dropout pill. */}
         {userPath === 'international_grad' && (
           <AnimatedPressable
-            style={[s.filterPill, h1bFilter && s.filterPillActive]}
+            style={[s.filterPill, fpBase, h1bFilter && fpActive]}
             onPress={() => { setH1bFilter(v => !v); setLoading(true); }}
             scaleDown={0.95}
           >
-            <Text style={[s.filterPillText, h1bFilter && s.filterPillTextActive]}>Sponsors H-1B</Text>
+            <Text style={[s.filterPillText, fpText,h1bFilter && fpTextActive]}>Sponsors H-1B</Text>
           </AnimatedPressable>
         )}
 
@@ -1508,22 +1512,22 @@ export default function JobsScreen() {
             overlap with fair-chance employer lists. */}
         {(userPath === 'formerly_incarcerated' || userPath === 'refugee') && (
           <AnimatedPressable
-            style={[s.filterPill, fairChanceFilter && s.filterPillActive]}
+            style={[s.filterPill, fpBase, fairChanceFilter && fpActive]}
             onPress={() => { setFairChanceFilter(v => !v); setLoading(true); }}
             scaleDown={0.95}
           >
-            <Text style={[s.filterPillText, fairChanceFilter && s.filterPillTextActive]}>Fair chance</Text>
+            <Text style={[s.filterPillText, fpText,fairChanceFilter && fpTextActive]}>Fair chance</Text>
           </AnimatedPressable>
         )}
 
         {/* Remote only. universal pill. Anyone can use it, pre-selected
             for rural_remote_only users on their first load. */}
         <AnimatedPressable
-          style={[s.filterPill, remoteOnlyFilter && s.filterPillActive]}
+          style={[s.filterPill, fpBase, remoteOnlyFilter && fpActive]}
           onPress={() => { setRemoteOnlyFilter(v => !v); setLoading(true); }}
           scaleDown={0.95}
         >
-          <Text style={[s.filterPillText, remoteOnlyFilter && s.filterPillTextActive]}>Remote only</Text>
+          <Text style={[s.filterPillText, fpText,remoteOnlyFilter && fpTextActive]}>Remote only</Text>
         </AnimatedPressable>
 
         {/* Job type pills. multi-select. Tapping 'All' clears other
@@ -1546,7 +1550,7 @@ export default function JobsScreen() {
           return (
             <AnimatedPressable
               key={t.key}
-              style={[s.filterPill, active && s.filterPillActive]}
+              style={[s.filterPill, fpBase, active && fpActive]}
               onPress={() => {
                 setTabs(prev => {
                   const next = new Set(prev);
@@ -1569,7 +1573,7 @@ export default function JobsScreen() {
               }}
               scaleDown={0.95}
             >
-              <Text style={[s.filterPillText, active && s.filterPillTextActive]}>{t.label}</Text>
+              <Text style={[s.filterPillText, fpText,active && fpTextActive]}>{t.label}</Text>
             </AnimatedPressable>
           );
         })}
@@ -1597,20 +1601,20 @@ export default function JobsScreen() {
             return (
               <AnimatedPressable
                 key={city}
-                style={[s.filterPill, active && s.filterPillActive]}
+                style={[s.filterPill, fpBase, active && fpActive]}
                 onPress={() => setSelectedCities(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city])}
                 scaleDown={0.95}
               >
-                <Text style={[s.filterPillText, active && s.filterPillTextActive]}>{city.replace(/,\s*\w{2}$/, '')}</Text>
+                <Text style={[s.filterPillText, fpText,active && fpTextActive]}>{city.replace(/,\s*\w{2}$/, '')}</Text>
               </AnimatedPressable>
             );
           })}
           <AnimatedPressable
-            style={[s.filterPill, { borderStyle: 'dashed', borderColor: VIOLET + '50' }]}
+            style={[s.filterPill, fpBase, { borderStyle: 'dashed', borderColor: VIOLET + '50' }]}
             onPress={() => router.push('/(app)/my-dilly-profile' as any)}
             scaleDown={0.95}
           >
-            <Text style={[s.filterPillText, { color: VIOLET, fontWeight: '700' }]}>+ Edit</Text>
+            <Text style={[s.filterPillText, fpText,{ color: VIOLET, fontWeight: '700' }]}>+ Edit</Text>
           </AnimatedPressable>
         </ScrollView>
       )}

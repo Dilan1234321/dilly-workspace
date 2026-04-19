@@ -354,6 +354,10 @@ async def redeem_gift(request: Request, body: RedeemGiftRequest):
 _PROMO_CODES = {
     "DILANTAMPAPRO": ("pro", "Dilly Pro unlocked. Welcome."),
     "DILANTAMPAPLUS": ("dilly", "Dilly unlocked. Welcome."),
+    # DILLYTAMPAFREE flips the user to Starter (the free tier). Useful
+    # for resetting a test account off a paid plan without touching
+    # Stripe. No celebration fires since it's not an upgrade.
+    "DILLYTAMPAFREE": ("starter", "Starter tier set. You're on the free plan."),
 }
 
 
@@ -386,7 +390,12 @@ async def redeem_promo_code(request: Request, body: dict = Body(...)):
         from projects.dilly.api.auth_store import set_subscribed
         from projects.dilly.api.profile_store import ensure_profile_exists, save_profile
         ensure_profile_exists(email)
-        set_subscribed(email, True)
+        # Starter means 'not subscribed'. Paid tiers (dilly, pro) mean
+        # subscribed=True. This lets DILLYTAMPAFREE correctly push a
+        # user down to free without leaving them stuck in subscribed
+        # state. Paid codes still flip subscribed on as before.
+        is_paid = plan != "starter"
+        set_subscribed(email, is_paid)
         save_profile(email, {"plan": plan, "profileStatus": "active"})
         return {"ok": True, "plan": plan, "message": message}
     except Exception:

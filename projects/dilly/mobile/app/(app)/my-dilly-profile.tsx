@@ -646,30 +646,31 @@ function SeekerProfileScreen() {
                 }}
                 scaleDown={0.95}
               >
-                {/* Photo OR grayed-out "add photo" placeholder. We
-                    can't rely on profile_slug alone because every
-                    user has one from signup — that made the old code
-                    always render an <Image> at /profile/public/{slug}
-                    /photo even when the user had never uploaded, so
-                    they saw a broken thumbnail. Use photo_url to
-                    decide: if it's populated we trust it; otherwise
-                    render the camera placeholder. */}
-                {p.photo_url ? (
-                  <Image
-                    source={{
-                      uri: String(p.photo_url).startsWith('http')
-                        ? `${p.photo_url}?_t=${Date.now()}`
-                        : `${API_BASE}${p.photo_url}?_t=${Date.now()}`,
-                    }}
-                    style={d.editPhotoImg}
-                  />
-                ) : (
-                  <View style={d.editPhotoPlaceholder}>
-                    <Ionicons name="camera" size={28} color={colors.t3} />
-                  </View>
-                )}
+                {/* Photo OR grayed-out 'add photo' placeholder. Reads
+                    the URL from whichever source has it first. The
+                    full profile (p.photo_url) can be slow to hydrate
+                    while the dashboard identity already knows the
+                    photo exists, which is why users were seeing the
+                    camera icon even though they had a photo: we were
+                    checking p.photo_url only, and it was still
+                    undefined on first render. Coalescing across
+                    identity + p fixes that. */}
+                {(() => {
+                  const photoUrl = identity.photo_url || p.photo_url || '';
+                  if (!photoUrl) {
+                    return (
+                      <View style={d.editPhotoPlaceholder}>
+                        <Ionicons name="camera" size={28} color={colors.t3} />
+                      </View>
+                    );
+                  }
+                  const uri = String(photoUrl).startsWith('http')
+                    ? `${photoUrl}?_t=${Date.now()}`
+                    : `${API_BASE}${photoUrl}?_t=${Date.now()}`;
+                  return <Image source={{ uri }} style={d.editPhotoImg} />;
+                })()}
                 <Text style={d.editPhotoLabel}>
-                  {p.photo_url ? 'Change photo' : 'Add a photo'}
+                  {(identity.photo_url || p.photo_url) ? 'Change photo' : 'Add a photo'}
                 </Text>
               </AnimatedPressable>
 
