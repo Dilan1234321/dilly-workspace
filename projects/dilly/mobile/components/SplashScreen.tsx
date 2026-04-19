@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DillyFace } from './DillyFace';
 import { colors, API_BASE } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 import { getToken } from '../lib/auth';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
 
@@ -118,6 +119,10 @@ function Skeleton() {
 }
 
 export default function SplashScreen({ onDismiss }: Props) {
+  // Signed-in users hitting this splash on cold start expect to see
+  // their theme, not a jarring white flash. Theming the bg + orb +
+  // text so Midnight users get a proper dark splash.
+  const theme = useResolvedTheme();
   const insets = useSafeAreaInsets();
 
   const [splashData, setSplashData] = useState<SplashState | null>(null);
@@ -221,13 +226,17 @@ export default function SplashScreen({ onDismiss }: Props) {
       style={[ss.root, { opacity: exitOpacity, transform: [{ translateY: exitTranslateY }] }]}
       {...panResponder.panHandlers}
     >
-      <View style={ss.bg} />
+      <View style={[ss.bg, { backgroundColor: theme.surface.bg }]} />
 
       <Animated.View style={[ss.orbWrap, { transform: [{ scale: orbScale }] }]}>
         <RippleRing delay={0} />
         <RippleRing delay={1000} />
+        {/* Orb outer is transparent so ripple rings show; inner is
+            flush with the screen bg (not a white cutout) so on
+            Midnight the DillyFace reads as floating on the dark
+            backdrop instead of sitting in a bright circle. */}
         <View style={ss.orbOuter}>
-          <View style={ss.orbInner}>
+          <View style={[ss.orbInner, { backgroundColor: theme.surface.bg, borderColor: theme.accent }]}>
             <DillyFace size={156} />
           </View>
         </View>
@@ -242,7 +251,7 @@ export default function SplashScreen({ onDismiss }: Props) {
               {splashData.eyebrow.toUpperCase()}
             </Text>
             <Headline text={splashData.headline} goldPortion={splashData.headline_gold} />
-            <Text style={ss.sub}>{splashData.sub}</Text>
+            <Text style={[ss.sub, { color: theme.surface.t2 }]}>{splashData.sub}</Text>
           </View>
         ) : null}
       </Animated.View>

@@ -234,7 +234,6 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
-      <StatusBar style="dark" />
       <ErrorBoundary surface="Dilly" resetKey={pathname}>
         <ThemedAppStack pathname={pathname} />
       </ErrorBoundary>
@@ -247,20 +246,25 @@ export default function RootLayout() {
  * (content background between animations, status-bar-safe regions)
  * picks up the user's accent/surface. Kept separate from RootLayout
  * because RootLayout also renders in pre-auth phases where reading
- * theme would pull DEFAULT_CONFIG for all users. */
+ * theme would pull DEFAULT_CONFIG for all users. Also owns the
+ * StatusBar so the iPhone time/signal/battery flip to white on
+ * Midnight and back to black on light surfaces. */
 function ThemedAppStack({ pathname }: { pathname: string }) {
   const theme = useResolvedTheme();
   return (
-    <Stack screenOptions={{
-      headerShown: false,
-      contentStyle: { backgroundColor: theme.surface.bg },
-      animation: 'fade',
-      animationDuration: 250,
-    }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="(app)" />
-    </Stack>
+    <>
+      <StatusBar style={theme.surface.dark ? 'light' : 'dark'} />
+      <Stack screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.surface.bg },
+        animation: 'fade',
+        animationDuration: 250,
+      }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(app)" />
+      </Stack>
+    </>
   );
 }
 
