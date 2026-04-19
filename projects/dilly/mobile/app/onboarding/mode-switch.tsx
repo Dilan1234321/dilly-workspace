@@ -223,17 +223,19 @@ export default function ModeSwitchScreen() {
 
           {/* Holder-only form. captures role + company before the
               mode flip so Career Center / My Career / Market Radar
-              show real data the moment we land in the app. */}
+              show real data the moment we land in the app. Inputs and
+              labels now read theme so Midnight users see readable
+              fields instead of white boxes with invisible text. */}
           {direction === 'holder' ? (
             <Animated.View style={{ opacity: fadeText, gap: 10, marginTop: 26 }}>
               <View>
-                <Text style={s.fieldLabel}>What's your new role?</Text>
+                <Text style={[s.fieldLabel, { color: theme.surface.t3 }]}>What's your new role?</Text>
                 <TextInput
-                  style={s.input}
+                  style={[s.input, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
                   value={newRole}
                   onChangeText={setNewRole}
                   placeholder="e.g. Senior Product Manager"
-                  placeholderTextColor={colors.t3}
+                  placeholderTextColor={theme.surface.t3}
                   autoCapitalize="words"
                   autoCorrect={false}
                   returnKeyType="next"
@@ -241,13 +243,13 @@ export default function ModeSwitchScreen() {
                 />
               </View>
               <View>
-                <Text style={s.fieldLabel}>Where?</Text>
+                <Text style={[s.fieldLabel, { color: theme.surface.t3 }]}>Where?</Text>
                 <TextInput
-                  style={s.input}
+                  style={[s.input, { color: theme.surface.t1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
                   value={newCompany}
                   onChangeText={setNewCompany}
                   placeholder="Company name"
-                  placeholderTextColor={colors.t3}
+                  placeholderTextColor={theme.surface.t3}
                   autoCapitalize="words"
                   autoCorrect={false}
                   returnKeyType="done"
@@ -259,10 +261,12 @@ export default function ModeSwitchScreen() {
 
           {err ? <Text style={s.err}>{err}</Text> : null}
 
-          {/* Spacer so the last field isn't flush against the CTA
-              button (which sits below this ScrollView). Gives the
-              user 24px of breathing room on keyboard-expanded views. */}
-          <View style={{ height: 24 }} />
+          {/* Big bottom padding so the last field scrolls past the
+              fixed CTA when the keyboard is up. Was 24 — on iPhone
+              with the company field focused, the CTA + keyboard
+              together covered the input. 120 gives enough slack so
+              the user can always see what they're typing. */}
+          <View style={{ height: 120 }} />
         </ScrollView>
 
         <Animated.View
