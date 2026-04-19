@@ -25,6 +25,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setColorsDarkMode } from '../lib/tokens';
 
 const STORAGE_KEY = 'dilly_theme_v2';
 
@@ -296,7 +297,16 @@ function darken(hex: string, amount: number = 0.15): string {
 export function resolveTheme(config: ThemeConfig, systemIsDark: boolean): ResolvedTheme {
   const shouldForceDark = config.autoDark && systemIsDark;
   const surfaceId: SurfaceId = shouldForceDark ? 'midnight' : config.surface;
+  const surface = SURFACE_PRESETS[surfaceId];
   const accent = accentFor(config.accent);
+
+  // Flip the global `colors` Proxy to dark when the resolved surface
+  // is dark. Every file that reads `colors.t1` / `colors.bg` will now
+  // read from the dark palette without needing per-screen theme wiring.
+  // This is the one side-effect in resolveTheme — kept here so the
+  // switch happens in the same frame as the theme change, avoiding a
+  // flash of the wrong palette.
+  setColorsDarkMode(!!surface.dark);
 
   return {
     config,
@@ -304,7 +314,7 @@ export function resolveTheme(config: ThemeConfig, systemIsDark: boolean): Resolv
     accent,
     accentSoft: hexToAlpha(accent, 0.10),
     accentBorder: hexToAlpha(accent, 0.30),
-    surface: SURFACE_PRESETS[surfaceId],
+    surface,
     shape: SHAPE_PRESETS[config.shape],
     type: TYPE_PRESETS[config.type],
     density: DENSITY_PRESETS[config.density].scale,
