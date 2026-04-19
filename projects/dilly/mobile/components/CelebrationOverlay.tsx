@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { DillyFace } from './DillyFace';
 import { colors } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -132,6 +133,10 @@ const RING_CONTAINER = FACE_SIZE + RING_PADDING * 2; // 124
 export function CelebrationOverlay({ milestone, onDismiss }: Props) {
   const [ctaVisible, setCtaVisible] = useState(false);
   const [particles,  setParticles]  = useState<ParticleConfig[]>([]);
+  // Theme-aware container + text. Previously the overlay was hard-
+  // white with dark text, so on Midnight it looked jarring and out
+  // of place. Now it paints into the user's active surface.
+  const theme = useResolvedTheme();
 
   // Content fade
   const contentOpacity = useRef(new Animated.Value(0)).current;
@@ -263,7 +268,7 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
 
   return (
     <Modal transparent animationType="fade" visible>
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
 
         {/* ── Confetti layer ─────────────────────────────────────────────── */}
         {particles.map((p, i) => (
@@ -288,21 +293,23 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
         {/* ── Content layer (fades in after 300ms) ──────────────────────── */}
         <Animated.View style={[s.content, { opacity: contentOpacity }]}>
 
-          {/* Face with pulsing gold ring */}
-          <Animated.View style={[s.faceContainer, { transform: [{ scale: faceScale }] }]}>
-            {/* Ring as absolute overlay  -  separate so its opacity doesn't dim the face */}
-            <Animated.View style={[s.ring, { opacity: ringOpacity }]} />
+          {/* Face with pulsing accent ring. Ring + tint now follow
+              the user's accent so the whole celebration feels like
+              an extension of their chosen theme rather than stock
+              indigo. */}
+          <Animated.View style={[s.faceContainer, { transform: [{ scale: faceScale }], backgroundColor: theme.accentSoft }]}>
+            <Animated.View style={[s.ring, { opacity: ringOpacity, borderColor: theme.accent }]} />
             <DillyFace size={FACE_SIZE} />
           </Animated.View>
 
-          <Text style={[s.eyebrow, { color: cfg.accentColor }]}>{cfg.eyebrow}</Text>
-          <Text style={s.headline}>{cfg.headline}</Text>
-          <Text style={s.sub}>{cfg.sub}</Text>
+          <Text style={[s.eyebrow, { color: theme.accent }]}>{cfg.eyebrow}</Text>
+          <Text style={[s.headline, { color: theme.surface.t1 }]}>{cfg.headline}</Text>
+          <Text style={[s.sub, { color: theme.surface.t2 }]}>{cfg.sub}</Text>
 
           {/* Reserve exact height so layout never shifts during 3s wait */}
           <View style={s.ctaPlaceholder}>
             {ctaVisible && (
-              <TouchableOpacity style={s.cta} onPress={onDismiss} activeOpacity={0.85}>
+              <TouchableOpacity style={[s.cta, { backgroundColor: theme.accent }]} onPress={onDismiss} activeOpacity={0.85}>
                 <Text style={s.ctaText}>{cfg.ctaLabel}</Text>
               </TouchableOpacity>
             )}
@@ -319,7 +326,6 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },

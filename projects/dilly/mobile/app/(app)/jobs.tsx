@@ -1461,12 +1461,12 @@ export default function JobsScreen() {
           OR description. This replaces the old 2-field substring
           match with something that feels like a real search engine. */}
       <View style={s.searchRow}>
-        <View style={s.searchBox}>
-          <Ionicons name="search" size={16} color={VIOLET} />
+        <View style={[s.searchBox, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+          <Ionicons name="search" size={16} color={theme.accent} />
           <TextInput
-            style={s.searchInput}
+            style={[s.searchInput, { color: theme.surface.t1 }]}
             placeholder="Search jobs, companies, skills, cities..."
-            placeholderTextColor={colors.t3}
+            placeholderTextColor={theme.surface.t3}
             value={search}
             onChangeText={setSearch}
             autoCapitalize="none"

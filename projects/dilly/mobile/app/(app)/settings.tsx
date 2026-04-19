@@ -429,11 +429,11 @@ export default function SettingsScreen() {
         <FadeInView delay={40}>
           <SectionLabel text="PLAN" />
           <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+            {/* Removed the 'CURRENT' badge — redundant, the user
+                knows this row shows their plan. Name now reads theme
+                so it stays legible on Midnight. */}
             <View style={s.planRow}>
-              <Text style={s.planName}>{planLabel}</Text>
-              <View style={[s.planBadge, plan !== 'starter' && { backgroundColor: INDIGO + '15', borderColor: INDIGO + '30' }]}>
-                <Text style={[s.planBadgeText, plan !== 'starter' && { color: INDIGO }]}>CURRENT</Text>
-              </View>
+              <Text style={[s.planName, { color: theme.surface.t1 }]}>{planLabel}</Text>
             </View>
             {plan === 'starter' && (
               <>
@@ -595,18 +595,18 @@ export default function SettingsScreen() {
           <AnimatedPressable
             onPress={() => router.push('/(app)/customize' as any)}
             scaleDown={0.98}
-            style={s.customizeHero}
+            style={[s.customizeHero, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
           >
-            <View style={s.customizeGlyph}>
-              <Ionicons name="color-palette" size={22} color={INDIGO} />
+            <View style={[s.customizeGlyph, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+              <Ionicons name="color-palette" size={22} color={theme.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.customizeTitle}>Customize Dilly</Text>
-              <Text style={s.customizeSub}>
-                Accent, surface, shape, type, density. Preview live on every screen.
+              <Text style={[s.customizeTitle, { color: theme.surface.t1 }]}>Customize Dilly</Text>
+              <Text style={[s.customizeSub, { color: theme.surface.t3 }]}>
+                Accent, theme, shape, type, density. Preview live on every screen.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.t3} />
+            <Ionicons name="chevron-forward" size={18} color={theme.surface.t3} />
           </AnimatedPressable>
         </FadeInView>
 
@@ -708,7 +708,7 @@ export default function SettingsScreen() {
             <Divider />
             <Row label="Contact us" onPress={() => Linking.openURL('mailto:ceo@hellodilly.com')} />
           </View>
-          <Text style={s.versionText}>Dilly v{APP_VERSION}</Text>
+          <Text style={[s.versionText, { color: theme.surface.t3 }]}>Dilly v{APP_VERSION}</Text>
         </FadeInView>
 
         {/* Sign out */}
@@ -722,14 +722,14 @@ export default function SettingsScreen() {
         {/* Delete */}
         <FadeInView delay={240}>
           <AnimatedPressable style={s.deleteBtn} onPress={handleDeleteAccount} scaleDown={0.97}>
-            <Ionicons name="trash-outline" size={12} color={colors.t3} />
-            <Text style={s.deleteText}>Delete account</Text>
+            <Ionicons name="trash-outline" size={12} color={theme.surface.t3} />
+            <Text style={[s.deleteText, { color: theme.surface.t3 }]}>Delete account</Text>
           </AnimatedPressable>
         </FadeInView>
 
         {/* AI Disclaimer */}
         <View style={{ paddingVertical: 24, paddingHorizontal: 8 }}>
-          <Text style={s.disclaimer}>
+          <Text style={[s.disclaimer, { color: theme.surface.t3 }]}>
             Dilly uses AI to generate career insights, fit assessments, and resume content. AI-generated content may not always be accurate. Always verify important information independently. Dilly is not a substitute for professional career advice.
           </Text>
         </View>
