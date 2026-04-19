@@ -495,10 +495,14 @@ export default function SettingsScreen() {
         <FadeInView delay={40}>
           <SectionLabel text="PLAN" />
           {plan === 'starter' ? (
-            // ── Starter: sell the upgrade. ───────────────────────
-            // Accent-washed hero with the value prop and a single
-            // confident CTA. Kept visually heavier than the rest of
-            // Settings so it draws the eye without screaming.
+            // ── Starter: loss-aversion upgrade frame. ────────────
+            // The copy focuses on what the user CAN'T do yet, not on
+            // feature names. Loss aversion > feature touting for
+            // conversion. Visual: three locked rows that look like
+            // real product items dimmed behind a soft gate. The
+            // headline uses social proof ('most people upgrade in
+            // the first week') without naming a specific number so
+            // we don't tie ourselves to a stat that can age.
             <View style={{
               borderRadius: 18,
               borderWidth: 1,
@@ -507,35 +511,47 @@ export default function SettingsScreen() {
               padding: 20,
               overflow: 'hidden',
             }}>
-              {/* Small brand eyebrow */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <Ionicons name="sparkles" size={12} color={theme.accent} />
+                <Ionicons name="lock-closed" size={11} color={theme.accent} />
                 <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 1.8, color: theme.accent }}>
-                  YOU'RE ON STARTER
+                  LIMITED ACCESS
                 </Text>
               </View>
               <Text style={{ fontSize: 26, fontWeight: '900', letterSpacing: -0.6, color: theme.surface.t1, lineHeight: 30 }}>
-                Unlock Dilly.
+                You're seeing a fraction.
               </Text>
               <Text style={{ fontSize: 14, color: theme.surface.t2, marginTop: 8, lineHeight: 20 }}>
-                The version most people never see.
+                There's a version of Dilly built for serious moves. Most people upgrade in their first week.
               </Text>
 
-              {/* Three concrete perks. Written as sentences not bullets. */}
+              {/* Locked rows. Each shows a real feature + its Starter
+                  constraint, dimmed so it reads as 'you almost have
+                  this.' Triggers the click: 'I already want that, I
+                  just don't have it.' */}
               <View style={{ gap: 10, marginTop: 18 }}>
                 {[
-                  'Fit reads on every job. Personal, honest, no scores.',
-                  'Resumes tailored per role. Not a weekend task anymore.',
-                  'A coach that remembers every chat and every decision.',
-                ].map((line, i) => (
-                  <View key={i} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.accent, marginTop: 7 }} />
-                    <Text style={{ flex: 1, fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>{line}</Text>
+                  { label: 'Fit reads on every job', limit: 'Locked on Starter' },
+                  { label: 'Resumes tailored per role', limit: '1 / month on Starter' },
+                  { label: 'A coach that remembers you', limit: 'Basic memory on Starter' },
+                ].map((row, i) => (
+                  <View key={i} style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10,
+                    backgroundColor: theme.surface.s1,
+                    borderWidth: 1, borderColor: theme.surface.border,
+                  }}>
+                    <Ionicons name="lock-closed" size={13} color={theme.surface.t3} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: theme.surface.t1 }}>{row.label}</Text>
+                      <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 1 }}>{row.limit}</Text>
+                    </View>
                   </View>
                 ))}
               </View>
 
-              {/* CTA + price row */}
+              {/* CTA. Unambiguous verb, accent bg, arrow to signal
+                  forward motion. The price line underneath is small
+                  enough to look like a note, not a price tag. */}
               <AnimatedPressable
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -548,7 +564,7 @@ export default function SettingsScreen() {
                 scaleDown={0.97}
               >
                 <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.2 }}>
-                  See what's inside
+                  Upgrade to Dilly
                 </Text>
                 <Ionicons name="arrow-forward" size={16} color="#fff" />
               </AnimatedPressable>
@@ -581,43 +597,62 @@ export default function SettingsScreen() {
               )}
             </View>
           ) : (
-            // ── Dilly or Pro: celebrate the status. ──────────────
-            // Premium feel. Accent-wash bg + accent border so the
-            // card announces they've already unlocked. Pro gets a
-            // slightly fancier eyebrow. Dilly users get a subtle
-            // 'go deeper' nudge toward Pro.
+            // ── Dilly or Pro: member-pride card. ─────────────────
+            // Framing shifts from 'feature list' to 'earned status'.
+            // The user isn't a customer with a receipt, they're a
+            // member of something. Pro gets a more ornate treatment
+            // (double-border, diamond icon, 'PRO' all-caps member
+            // mark). Dilly gets a simpler mark that still feels
+            // special. Both include an earned-pride line the user
+            // can read in a quiet moment and feel good about.
             <View style={{
               borderRadius: 18,
-              borderWidth: 1,
-              borderColor: theme.accentBorder,
+              borderWidth: plan === 'pro' ? 2 : 1,
+              borderColor: theme.accent,
               backgroundColor: theme.accentSoft,
-              padding: 20,
+              padding: 22,
               overflow: 'hidden',
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name={plan === 'pro' ? 'diamond' : 'checkmark-circle'} size={12} color={theme.accent} />
-                  <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 1.8, color: theme.accent }}>
-                    {plan === 'pro' ? 'DILLY PRO' : 'DILLY'}
-                  </Text>
-                </View>
+              {/* Pro gets a top accent bar for a badge-y feel. Dilly
+                  skips it so the two tiers read as different levels
+                  of earned status. */}
+              {plan === 'pro' && (
                 <View style={{
-                  paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
+                  position: 'absolute', top: 0, left: 0, right: 0, height: 3,
                   backgroundColor: theme.accent,
-                }}>
-                  <Text style={{ fontSize: 9, fontWeight: '900', letterSpacing: 1.2, color: '#fff' }}>
-                    ACTIVE
+                }} />
+              )}
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name={plan === 'pro' ? 'diamond' : 'star'} size={13} color={theme.accent} />
+                  <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 2.2, color: theme.accent }}>
+                    {plan === 'pro' ? 'DILLY PRO · MEMBER' : 'DILLY · MEMBER'}
                   </Text>
                 </View>
               </View>
-              <Text style={{ fontSize: 24, fontWeight: '900', letterSpacing: -0.4, color: theme.surface.t1, lineHeight: 28 }}>
-                {plan === 'pro' ? "You're on Dilly Pro." : "You're on Dilly."}
+
+              <Text style={{ fontSize: plan === 'pro' ? 28 : 26, fontWeight: '900', letterSpacing: -0.6, color: theme.surface.t1, lineHeight: plan === 'pro' ? 32 : 30 }}>
+                {plan === 'pro' ? 'Dilly Pro is yours.' : 'Dilly is yours.'}
               </Text>
-              <Text style={{ fontSize: 13, color: theme.surface.t2, marginTop: 6, lineHeight: 19 }}>
+              <Text style={{ fontSize: 14, color: theme.surface.t2, marginTop: 8, lineHeight: 20 }}>
                 {plan === 'pro'
-                  ? 'Unlimited everything. No caps, no limits. Dilly at its sharpest.'
-                  : 'Unlimited fit reads, tailored resumes, and a coach that knows you.'}
+                  ? 'The sharpest Dilly there is. No caps, no ceilings, no gates.'
+                  : 'Unlimited fit reads. Resumes tailored per role. A coach that remembers you.'}
               </Text>
+
+              {/* Earned-pride line. Quietly confers status. Not in
+                  the user's face, but there when they scroll past. */}
+              <View style={{
+                marginTop: 16, paddingTop: 14,
+                borderTopWidth: 1, borderTopColor: theme.accentBorder,
+              }}>
+                <Text style={{ fontSize: 12, color: theme.surface.t2, fontStyle: 'italic', lineHeight: 17 }}>
+                  {plan === 'pro'
+                    ? 'You took it as far as it goes. Very few do.'
+                    : 'You took your career seriously. Most people don\'t.'}
+                </Text>
+              </View>
 
               {/* Dilly users see a subtle Pro upsell. Pro users get
                   no upsell — they're already at the top. */}
@@ -625,7 +660,7 @@ export default function SettingsScreen() {
                 <AnimatedPressable
                   style={{
                     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    marginTop: 16,
+                    marginTop: 14,
                     paddingVertical: 11,
                     borderRadius: 12,
                     borderWidth: 1,
