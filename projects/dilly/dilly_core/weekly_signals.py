@@ -41,7 +41,7 @@ SIGNALS: dict[str, dict] = {
         "headline": "GitHub Copilot Agent now handles 34% of merged PRs at major tech firms.",
         "source": "Stack Overflow Developer Survey · April 2026",
         "data_point": "Junior dev hiring down 39% YoY across S&P 500 tech",
-        "move": "Ship a side project that requires architectural judgment — not just code.",
+        "move": "Ship a side project that requires architectural judgment, not just code.",
     },
     "data_analyst": {
         "iso_week": _CURRENT_WEEK,
@@ -59,7 +59,7 @@ SIGNALS: dict[str, dict] = {
     },
     "marketing_manager": {
         "iso_week": _CURRENT_WEEK,
-        "headline": "Publicis acquired Typeface for $2.1B — AI content tooling goes in-house.",
+        "headline": "Publicis acquired Typeface for $2.1B; AI content tooling goes in-house.",
         "source": "AdAge · April 9, 2026",
         "data_point": "Copywriter postings down 34% across top 50 agencies",
         "move": "Lead one positioning or segmentation project you can talk about.",
@@ -80,14 +80,14 @@ SIGNALS: dict[str, dict] = {
     },
     "teacher": {
         "iso_week": _CURRENT_WEEK,
-        "headline": "46 US states still report severe teacher shortages — offers up 14%.",
+        "headline": "46 US states still report severe teacher shortages; offers up 14%.",
         "source": "Learning Policy Institute · April 2026",
         "data_point": "Signing bonuses hitting $8-15k for math, SPED, ELL",
         "move": "Specialize in SPED, ELL, or math to lock in bonus-tier openings.",
     },
     "nurse": {
         "iso_week": _CURRENT_WEEK,
-        "headline": "US nursing shortage projected to hit 450k by 2030 — salaries up 14%.",
+        "headline": "US nursing shortage projected to hit 450k by 2030; salaries up 14%.",
         "source": "American Nurses Association · April 2026",
         "data_point": "ICU, L&D, and OR specialty nurses see 18-25% premium",
         "move": "Start a specialty cert track (ICU, L&D, CRNA) this quarter.",
@@ -146,14 +146,14 @@ SIGNALS: dict[str, dict] = {
         "headline": "Linear + Asana AI now auto-generate 78% of status reports.",
         "source": "PMI Pulse of the Profession · April 2026",
         "data_point": "PMO coordinator postings down 36% YoY; TPM up 14%",
-        "move": "Build engineering fluency — TPMs are the surviving role.",
+        "move": "Build engineering fluency. TPMs are the surviving role.",
     },
     "executive_leader": {
         "iso_week": _CURRENT_WEEK,
         "headline": "Fortune 500 middle-management layoffs at 12-year high; VP+ roles stable.",
         "source": "Challenger, Gray & Christmas · April 2026",
         "data_point": "Director-level roles down 14%; C-suite stable",
-        "move": "Think COO/CEO jump — market won't reward middle management much longer.",
+        "move": "Think COO/CEO jump. Market won't reward middle management much longer.",
     },
     "freelancer_generic": {
         "iso_week": _CURRENT_WEEK,
@@ -179,10 +179,10 @@ SIGNALS: dict[str, dict] = {
     # Fallback when no role-specific signal exists
     "all_roles": {
         "iso_week": _CURRENT_WEEK,
-        "headline": "AI job impact accelerating across every sector — pace varies by role.",
+        "headline": "AI job impact accelerating across every sector; pace varies by role.",
         "source": "BLS Employment Projections · April 2026",
         "data_point": "70% of knowledge workers say AI changed their role in the last year",
-        "move": "Identify one task in your week AI can't do — make that 50% of your work.",
+        "move": "Identify one task in your week AI can't do. Make that 50% of your work.",
     },
 }
 

@@ -144,6 +144,7 @@ type HolderHomeData = {
   yearsExperience: string;
   threat: any | null;
   weekly: any | null;
+  weeklyRoleDisplay: string | null;
   marketCount: number | null;
   trajectoryFacts: Array<{ category: string; label: string; value: string }>;
   factCount: number;
@@ -168,6 +169,7 @@ async function _fetchHolderHomeData(): Promise<HolderHomeData | null> {
     yearsExperience: str(profileRes?.years_experience),
     threat: threatRes?.report ?? null,
     weekly: weeklyRes?.signal ?? null,
+    weeklyRoleDisplay: weeklyRes?.role_display ?? null,
     marketCount:
       feedRes && typeof (feedRes as any).total === 'number'
         ? (feedRes as any).total
@@ -210,6 +212,7 @@ function HolderHome() {
     : '';
   const threat           = data?.threat ?? null;
   const weekly           = data?.weekly ?? null;
+  const weeklyRoleDisplay = data?.weeklyRoleDisplay ?? null;
   const marketCount      = data?.marketCount ?? null;
   const trajectoryFacts  = data?.trajectoryFacts ?? [];
   const factCount        = data?.factCount ?? 0;
@@ -274,7 +277,11 @@ function HolderHome() {
           >
             <View style={h.heroPulse}>
               <View style={[h.pulseDot, { backgroundColor: threatColor }]} />
-              <Text style={[h.pulseLabel, { color: threatColor }]}>THIS WEEK · LIVE</Text>
+              <Text style={[h.pulseLabel, { color: threatColor }]}>
+                {weeklyRoleDisplay
+                  ? `THIS WEEK · ${weeklyRoleDisplay.toUpperCase()}`
+                  : 'THIS WEEK · LIVE'}
+              </Text>
             </View>
             <Text style={h.heroHeadline} numberOfLines={2}>
               {weekly?.headline || 'Your field is shifting. Dilly is tracking it for you.'}

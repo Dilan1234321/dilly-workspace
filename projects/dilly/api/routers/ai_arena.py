@@ -105,7 +105,16 @@ async def get_weekly_signal(request: Request, role: str = ""):
         except Exception:
             pass  # anonymous is fine; fall through to all_roles
 
-    return {"ok": True, "role_key": role_key, "signal": signal_for_role(role_key)}
+    # Surface the role display name so the UI can show "This week in
+    # Accounting" and the user sees their content is personalized.
+    from dilly_core.ai_threat_report import ROLE_THREAT_REPORT
+    role_display = (ROLE_THREAT_REPORT.get(role_key or "") or {}).get("display") if role_key else None
+    return {
+        "ok": True,
+        "role_key": role_key,
+        "role_display": role_display,
+        "signal": signal_for_role(role_key),
+    }
 
 
 @router.get("/ai-arena/threat-report/infer")
