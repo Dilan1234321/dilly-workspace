@@ -77,28 +77,34 @@ function containsKnownFragment(s: string): boolean {
  */
 function baseline(value: string, kind: 'role' | 'company'): ValidationResult {
   const v = value.trim();
+  // Error copy avoids ever saying a job or company 'isn't real'. A
+  // niche startup or obscure role could false-positive these rules
+  // and we don't want to insult the user. All messages frame the
+  // issue as typing/formatting so the user can fix it without feeling
+  // judged.
+  const noun = kind === 'role' ? 'role' : 'company';
   if (v.length < 2) {
-    return { ok: false, reason: `${kind === 'role' ? 'Role' : 'Company'} is too short.` };
+    return { ok: false, reason: `Type a bit more for the ${noun}.` };
   }
   if (v.length > 80) {
-    return { ok: false, reason: `Keep the ${kind} under 80 characters.` };
+    return { ok: false, reason: `A bit shorter for the ${noun}?` };
   }
   if (!ALLOWED_CHARS.test(v)) {
-    return { ok: false, reason: `That ${kind} has characters that don't belong in a real name.` };
+    return { ok: false, reason: `Stick to letters, numbers, and basic punctuation for the ${noun}.` };
   }
   if (!hasVowel(v)) {
-    return { ok: false, reason: `That ${kind} doesn't look right. Did you mistype?` };
+    return { ok: false, reason: `Looks like a typo. Double-check the ${noun}?` };
   }
   if (longestRepeat(v) > 3) {
-    return { ok: false, reason: `That ${kind} has too many repeated characters.` };
+    return { ok: false, reason: `Looks like a typo. Double-check the ${noun}?` };
   }
   if (longestConsonantRun(v) > 5) {
-    return { ok: false, reason: `That ${kind} doesn't look right. Did you mistype?` };
+    return { ok: false, reason: `Looks like a typo. Double-check the ${noun}?` };
   }
   // All-numeric rejection. A role or company that's just digits is
   // almost never legitimate.
   if (/^\d+$/.test(v)) {
-    return { ok: false, reason: `${kind === 'role' ? 'Role' : 'Company'} can't be just numbers.` };
+    return { ok: false, reason: `Add a few letters to the ${noun}.` };
   }
   return { ok: true };
 }
@@ -115,14 +121,15 @@ export function validateRole(value: string): ValidationResult {
   const v = value.trim();
   const words = v.split(/\s+/).filter(Boolean);
   if (words.length > 6) {
-    return { ok: false, reason: 'Keep the role to a few words.' };
+    return { ok: false, reason: 'A bit shorter? A few words works best.' };
   }
-  // If it's a short input (1-2 words) AND has no recognizable
-  // fragment, flag it. Longer inputs get more benefit of the doubt
-  // since real multi-word roles can span niche terminology.
-  if (words.length <= 2 && !containsKnownFragment(v)) {
-    return { ok: false, reason: "That doesn't look like a real role. Try the full title." };
-  }
+  // Intentionally skipping a fragment-match requirement for short
+  // inputs. We were blocking legit single-word roles ('Barista',
+  // 'Surgeon', 'Pianist') because they didn't contain any word from
+  // the known-fragment list. Baseline checks (consonant-run, repeat,
+  // char-set, vowel presence) already catch the common accidental
+  // garbage, and user explicitly asked that nobody see a 'your job
+  // isn't real' message.
   return { ok: true };
 }
 
@@ -138,7 +145,7 @@ export function validateCompany(value: string): ValidationResult {
   const v = value.trim();
   const words = v.split(/\s+/).filter(Boolean);
   if (words.length > 5) {
-    return { ok: false, reason: 'Keep the company name to a few words.' };
+    return { ok: false, reason: 'A bit shorter? A few words works best.' };
   }
   // For SINGLE-word companies (e.g. 'Stripe', 'Google'), require
   // either a known fragment OR a length >= 3 with at least one
@@ -147,7 +154,7 @@ export function validateCompany(value: string): ValidationResult {
   // almost certainly fine. We don't gate single-word companies on
   // fragment match since most real startups are single made-up words.
   if (words.length === 1 && v.length < 3) {
-    return { ok: false, reason: 'That company name is too short.' };
+    return { ok: false, reason: 'A little longer for the company name?' };
   }
   return { ok: true };
 }
