@@ -20,10 +20,18 @@ import { colors } from '../lib/tokens';
 import SplashScreen from '../components/SplashScreen';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { useResolvedTheme } from '../hooks/useTheme';
 
 const GOLD = '#2B3A8E';
 
-function LoadingScreen({ onComplete }: { onComplete: () => void }) {
+// Signed-in users see their chosen theme on the loading screen —
+// signed-out users still see the brand white/indigo since they have
+// no theme yet and we want the first impression to be consistent.
+function LoadingScreen({ onComplete, themed }: { onComplete: () => void; themed: boolean }) {
+  const theme = useResolvedTheme();
+  const bg = themed ? theme.surface.bg : '#FFFFFF';
+  const fill = themed ? theme.accent : GOLD;
+  const taglineColor = themed ? theme.surface.t2 : colors.t2;
   const wordmarkOpacity    = useRef(new Animated.Value(0)).current;
   const wordmarkTranslateY = useRef(new Animated.Value(6)).current;
   const taglineOpacity     = useRef(new Animated.Value(0)).current;
@@ -86,7 +94,7 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
   });
 
   return (
-    <View style={ls.root}>
+    <View style={[ls.root, { backgroundColor: bg }]}>
       <Animated.View style={[
         ls.content,
         { opacity: exitOpacity, transform: [{ translateY: exitTranslateY }] },
@@ -98,14 +106,15 @@ function LoadingScreen({ onComplete }: { onComplete: () => void }) {
         </Animated.View>
         <Animated.Text style={[
           ls.tagline,
+          { color: taglineColor },
           { opacity: taglineOpacity, transform: [{ translateY: taglineTranslateY }] },
         ]}>
           Career readiness, measured.
         </Animated.Text>
         <Animated.View style={[ls.barWrap, { opacity: barTrackOpacity }]}>
-          <Animated.View style={[ls.barGlow, { opacity: glowOpacity }]} />
+          <Animated.View style={[ls.barGlow, { opacity: glowOpacity, backgroundColor: fill }]} />
           <View style={ls.barTrack}>
-            <Animated.View style={[ls.barFill, { width: barWidthPct }]} />
+            <Animated.View style={[ls.barFill, { width: barWidthPct, backgroundColor: fill }]} />
           </View>
         </Animated.View>
       </Animated.View>
@@ -173,6 +182,9 @@ export default function RootLayout() {
   }, []);
 
   if (!fontsLoaded) {
+    // Can't read theme yet (not even in tree) — keep brand white so the
+    // font-loading flash is consistent across all users. This is at most
+    // ~200ms before fonts resolve.
     return (
       <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
         <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34 }} resizeMode="contain" />
@@ -181,8 +193,12 @@ export default function RootLayout() {
   }
 
   if (phase === 'loading') {
+    // Once we know if the user is signed in, let them see their theme
+    // on the loading screen. Fresh/signed-out users see the brand white
+    // since they haven't chosen a theme yet.
     return (
       <LoadingScreen
+        themed={checkedAuth && isReturning}
         onComplete={() => {
           setPhase('splash');
         }}
@@ -220,19 +236,36 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <ErrorBoundary surface="Dilly" resetKey={pathname}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'fade', animationDuration: 250 }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="(app)" />
-        </Stack>
+        <ThemedAppStack pathname={pathname} />
       </ErrorBoundary>
     </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
+/** Inner Stack that reads the resolved theme so the screen chrome
+ * (content background between animations, status-bar-safe regions)
+ * picks up the user's accent/surface. Kept separate from RootLayout
+ * because RootLayout also renders in pre-auth phases where reading
+ * theme would pull DEFAULT_CONFIG for all users. */
+function ThemedAppStack({ pathname }: { pathname: string }) {
+  const theme = useResolvedTheme();
+  return (
+    <Stack screenOptions={{
+      headerShown: false,
+      contentStyle: { backgroundColor: theme.surface.bg },
+      animation: 'fade',
+      animationDuration: 250,
+    }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="onboarding" />
+      <Stack.Screen name="(app)" />
+    </Stack>
+  );
+}
+
 const ls = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  root:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { alignItems: 'center' },
   logoImage: {
     width: 130,

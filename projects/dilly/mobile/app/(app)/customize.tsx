@@ -91,13 +91,15 @@ export default function CustomizeStudio() {
   const screenLabel = MOCK_SCREENS.find(s => s.id === screen)?.label || 'Preview';
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
-      {/* Top bar */}
-      <View style={s.topBar}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
+      {/* Top bar. Reads theme so the Customize studio itself respects
+          the user's current surface — on Midnight, the top bar and
+          container become dark; on Mint, pastel. */}
+      <View style={[s.topBar, { backgroundColor: theme.surface.bg, borderBottomColor: theme.surface.border }]}>
         <AnimatedPressable onPress={() => router.back()} hitSlop={12} scaleDown={0.9}>
-          <Ionicons name="close" size={22} color="#1A1A2E" />
+          <Ionicons name="close" size={22} color={theme.surface.t1} />
         </AnimatedPressable>
-        <Text style={s.topTitle}>Customize Dilly</Text>
+        <Text style={[s.topTitle, { color: theme.surface.t1 }]}>Customize Dilly</Text>
         <AnimatedPressable
           onPress={handleSave}
           scaleDown={0.95}

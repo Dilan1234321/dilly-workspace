@@ -326,12 +326,45 @@ let _hydrated = false;
 async function _hydrate() {
   if (_hydrated) return;
   _hydrated = true;
+  // 1. Local cache first — fast, ensures no flicker on cold start.
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    _config = { ...DEFAULT_CONFIG, ...parsed };
-    _listeners.forEach(l => l(_config));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      _config = { ...DEFAULT_CONFIG, ...parsed };
+      _listeners.forEach(l => l(_config));
+    }
+  } catch {}
+  // 2. Server profile — authoritative across devices. If the user
+  // signs in on a new device, this is how their theme follows them.
+  // Fire-and-forget, swallow any auth/network error so no-auth boot
+  // doesn't break anything.
+  try {
+    const { dilly } = await import('../lib/dilly');
+    const profile: any = await dilly.get('/profile');
+    const serverTheme = profile?.theme;
+    if (serverTheme && typeof serverTheme === 'object') {
+      const merged = { ...DEFAULT_CONFIG, ..._config, ...serverTheme };
+      // Only apply if it's genuinely different from what we already have.
+      if (JSON.stringify(merged) !== JSON.stringify(_config)) {
+        _config = merged;
+        _listeners.forEach(l => l(_config));
+        try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_config)); } catch {}
+      }
+    }
+  } catch {}
+}
+
+/** Push the current theme to the user's profile on the backend, so
+ * it follows them to any device where they sign in. Fire-and-forget;
+ * failures here don't rollback the local change. */
+async function _persistToBackend(config: ThemeConfig) {
+  try {
+    const { dilly } = await import('../lib/dilly');
+    await dilly.fetch('/profile', {
+      method: 'PATCH',
+      body: JSON.stringify({ theme: config }),
+    });
   } catch {}
 }
 
@@ -340,6 +373,18 @@ export async function patchTheme(patch: Partial<ThemeConfig>) {
   _config = { ..._config, ...patch };
   _listeners.forEach(l => l(_config));
   try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_config)); } catch {}
+  // Don't await — let the UI update instantly, PATCH happens in the
+  // background. The server copy is eventual; AsyncStorage is the hot path.
+  _persistToBackend(_config);
+}
+
+/** Clear cached theme — call on sign-out so the next account on this
+ * device hydrates from their own profile, not the previous user's. */
+export async function clearThemeCache() {
+  _hydrated = false;
+  _config = { ...DEFAULT_CONFIG };
+  _listeners.forEach(l => l(_config));
+  try { await AsyncStorage.removeItem(STORAGE_KEY); } catch {}
 }
 
 /** Legacy shim — kept so the simple swatch picker in Settings still works. */

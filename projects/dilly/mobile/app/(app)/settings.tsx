@@ -15,6 +15,7 @@ import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { getAppMode, modeLabel, modeDescription, ALL_MODES, type AppMode } from '../../lib/appMode';
 import { primeAppMode, clearAppModeCache } from '../../hooks/useAppMode';
+import { clearThemeCache } from '../../hooks/useTheme';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -219,6 +220,10 @@ export default function SettingsScreen() {
           // Clear cached mode + session data so the next user doesn't
           // inherit this user's mode, dashboard, or market radar.
           await clearAppModeCache();
+          // Theme is now server-backed and tied to account — clear the
+          // local cache so the next sign-in hydrates from THEIR profile,
+          // not the prior user's accent/surface choices.
+          await clearThemeCache();
           clearSessionCache();
           // Clear onboarding state so they see the situation options again.
           // IMPORTANT: dilly_tutorial_shown MUST be cleared here so the
