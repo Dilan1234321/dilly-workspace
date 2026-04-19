@@ -29,6 +29,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, radius, API_BASE } from '../../lib/tokens';
 import { authHeaders } from '../../lib/auth';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { useResolvedTheme } from '../../hooks/useTheme';
 
 const INDIGO = colors.indigo;
 const TOTAL_STEPS = 5;
@@ -68,6 +69,7 @@ const CONCERN_OPTIONS: { key: string; label: string }[] = [
 
 export default function ProfileHolderScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
   const [step, setStep] = useState<Step>(0);
 
   const [photo, setPhoto] = useState<string | null>(null);
@@ -231,7 +233,7 @@ export default function ProfileHolderScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
+      style={{ flex: 1, backgroundColor: theme.surface.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[s.container, { paddingTop: insets.top }]}>
@@ -263,8 +265,8 @@ export default function ProfileHolderScreen() {
           {step === 0 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>FIRST, YOUR FACE</Text>
-              <Text style={s.title}>Add a professional photo.</Text>
-              <Text style={s.sub}>
+              <Text style={[s.title, { color: theme.surface.t1 }]}>Add a professional photo.</Text>
+              <Text style={[s.sub, { color: theme.surface.t2 }]}>
                 Use something you'd put on LinkedIn. clear headshot,
                 good lighting, looking at the camera. Shows up on your
                 Dilly card and profile page.
@@ -306,8 +308,8 @@ export default function ProfileHolderScreen() {
           {step === 1 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>YOUR NAME</Text>
-              <Text style={s.title}>What should Dilly call you?</Text>
-              <Text style={s.sub}>Full name please. This is just for Dilly.</Text>
+              <Text style={[s.title, { color: theme.surface.t1 }]}>What should Dilly call you?</Text>
+              <Text style={[s.sub, { color: theme.surface.t2 }]}>Full name please. This is just for Dilly.</Text>
               <TextInput
                 style={s.input}
                 value={name}
@@ -325,8 +327,8 @@ export default function ProfileHolderScreen() {
           {step === 2 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>YOUR ROLE</Text>
-              <Text style={s.title}>What do you do right now?</Text>
-              <Text style={s.sub}>
+              <Text style={[s.title, { color: theme.surface.t1 }]}>What do you do right now?</Text>
+              <Text style={[s.sub, { color: theme.surface.t2 }]}>
                 The title works. If you do something that doesn't fit a
                 standard title, just describe it.
               </Text>
@@ -386,8 +388,8 @@ export default function ProfileHolderScreen() {
           {step === 3 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>EXPERIENCE</Text>
-              <Text style={s.title}>How long have you been doing this?</Text>
-              <Text style={s.sub}>
+              <Text style={[s.title, { color: theme.surface.t1 }]}>How long have you been doing this?</Text>
+              <Text style={[s.sub, { color: theme.surface.t2 }]}>
                 Type the exact number of years so Dilly can benchmark
                 your comp precisely. A rough bucket works too.
               </Text>
@@ -407,22 +409,22 @@ export default function ProfileHolderScreen() {
                     if (cleaned) setExperience('');
                   }}
                   placeholder="e.g. 5 or 3.5"
-                  placeholderTextColor={colors.t3}
+                  placeholderTextColor={theme.surface.t3}
                   keyboardType="decimal-pad"
                   maxLength={4}
                   style={{
-                    borderWidth: 1, borderColor: colors.b1,
+                    borderWidth: 1, borderColor: theme.surface.border,
                     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
-                    fontSize: 17, fontWeight: '700', color: colors.t1,
-                    backgroundColor: '#fff',
+                    fontSize: 17, fontWeight: '700', color: theme.surface.t1,
+                    backgroundColor: theme.surface.s2,
                   }}
                 />
-                <Text style={{ fontSize: 11, color: colors.t3, marginTop: 6, marginLeft: 4 }}>
+                <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 6, marginLeft: 4 }}>
                   Years (use decimals for fractions, e.g. 3.5)
                 </Text>
               </View>
 
-              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.2, color: colors.t3, marginTop: 14, marginBottom: 2 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.2, color: theme.surface.t3, marginTop: 14, marginBottom: 2 }}>
                 OR PICK A RANGE
               </Text>
               <View style={{ gap: 10, marginTop: 4 }}>
@@ -454,8 +456,8 @@ export default function ProfileHolderScreen() {
           {step === 4 && (
             <View style={{ gap: 12 }}>
               <Text style={s.eyebrow}>WHAT'S ON YOUR MIND</Text>
-              <Text style={s.title}>What brought you here?</Text>
-              <Text style={s.sub}>
+              <Text style={[s.title, { color: theme.surface.t1 }]}>What brought you here?</Text>
+              <Text style={[s.sub, { color: theme.surface.t2 }]}>
                 Pick any that feel true. Dilly uses this to frame your
                 first read on your field. You can change it later.
               </Text>

@@ -157,16 +157,19 @@ export default function ModeSwitchScreen() {
         const { primeAppMode } = await import('../../hooks/useAppMode');
         await primeAppMode(direction);
       } catch {}
-      // Route into the mode-specific tutorial. The user's identity
-      // just flipped (holder ↔ seeker), which means the app they're
-      // about to see is effectively a new product to them — every
-      // tab changes, every CTA changes, every copy string changes.
-      // Running the 5-card intro on each flip is cheap and orients
-      // them in the new experience. The tutorial reads
-      // `dilly_tutorial_shown` and bails if already seen; we cleared
-      // it above so it will play.
+      // Route into the mode-specific tutorial with a transition hint.
+      // Tutorial uses the `transition` param to play a dedicated
+      // 5-card acknowledgement deck (congrats on the new role / sorry
+      // you're here) instead of the generic mode tour — a generic
+      // product-feature deck in a moment that carries real emotional
+      // weight would feel tone-deaf. We cleared `dilly_tutorial_shown`
+      // above so tutorial will play.
+      const transitionKind = direction === 'holder' ? 'got_job' : 'laid_off';
       try {
-        router.replace('/onboarding/tutorial');
+        router.replace({
+          pathname: '/onboarding/tutorial',
+          params: { transition: transitionKind },
+        });
       } catch (navErr: any) {
         setErr(navErr?.message || 'Saved, but the app didn\'t open. Pull down to refresh.');
         setSaving(false);

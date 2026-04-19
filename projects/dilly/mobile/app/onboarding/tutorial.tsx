@@ -17,7 +17,7 @@ import {
   View, Text, ScrollView, StyleSheet, Dimensions,
   TouchableOpacity, Animated, Easing,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -153,6 +153,97 @@ const CARDS: Record<AppMode, CardSpec[]> = {
       body: "Dilly walks the path with you. Every week has one move. Every month you know where you stand.",
       cta: "Let's start",
       illustration: 'first_job',
+    },
+  ],
+};
+
+// ── Transition scripts ──────────────────────────────────────────────
+// Played only when a user flips modes mid-session (got a new job OR
+// just got laid off / parted ways with a job). These are the moments
+// that carry the most emotional weight in a career product, and a
+// generic product-feature deck feels tone-deaf here. Each transition
+// gets its own 5-card arc: acknowledge the moment → what changes →
+// what to do first → your edge → go.
+//
+// Keyed by the `transition` query param that mode-switch.tsx passes
+// on the replace-to-tutorial call. Falls back to the mode script if
+// no transition param is present.
+
+type TransitionKind = 'got_job' | 'laid_off';
+
+const CARDS_TRANSITION: Record<TransitionKind, CardSpec[]> = {
+  got_job: [
+    {
+      eyebrow: 'NEW CHAPTER',
+      headline: "Congrats on\nthe new role.",
+      body: "Dilly is yours in a different way now. Less job search. More career building.",
+      cta: 'Keep going',
+      illustration: 'wow',
+    },
+    {
+      eyebrow: 'WHAT CHANGES',
+      headline: "No more job feed.\nNo more fit reads.",
+      body: "Dilly flips to your field's weekly read, your role benchmark, and a coach that tracks what you're shipping.",
+      cta: 'Got it',
+      illustration: 'week',
+    },
+    {
+      eyebrow: 'FIRST 90 DAYS',
+      headline: "Dilly watches\nthe ramp.",
+      body: "New roles have a honeymoon window. Dilly helps you spot what to establish, what to ignore, and what to quietly fix.",
+      cta: 'Next',
+      illustration: 'journey',
+    },
+    {
+      eyebrow: 'YOUR MARKET',
+      headline: "Know what you're\nworth right here.",
+      body: "Role and tenure benchmarks, comp bands, ladder. Live, and for your exact seat.",
+      cta: 'Keep going',
+      illustration: 'market',
+    },
+    {
+      eyebrow: "YOU'RE IN",
+      headline: "Take a breath.\nThen let's go.",
+      body: "One small move this week, then another next week. That's how good careers are built.",
+      cta: 'Open Dilly',
+      illustration: 'ritual',
+    },
+  ],
+  laid_off: [
+    {
+      eyebrow: 'TOUGH MOMENT',
+      headline: "Sorry you're\nhere.",
+      body: "A layoff is not a verdict on you. It is a bad week you didn't cause. Dilly will help you move.",
+      cta: 'Keep going',
+      illustration: 'profile',
+    },
+    {
+      eyebrow: 'WHAT CHANGES',
+      headline: "Dilly flips back\nto job search.",
+      body: "Fit reads on every role. Tailored resumes per job. A coach who knows your full history, not just your latest title.",
+      cta: 'Got it',
+      illustration: 'jobs',
+    },
+    {
+      eyebrow: 'FIRST WEEK',
+      headline: "Ship 5 strong apps,\nnot 50 bad ones.",
+      body: "Dilly reads every job against your full profile and tells you which ones are worth the swing. No spray. No burnout.",
+      cta: 'Next',
+      illustration: 'fit',
+    },
+    {
+      eyebrow: 'YOUR EDGE',
+      headline: "Your prior role\nis an asset.",
+      body: "Your trajectory, the problems you solved, the comp band you hit. Dilly uses all of it to make your next move faster than the last.",
+      cta: 'Keep going',
+      illustration: 'resume',
+    },
+    {
+      eyebrow: "YOU'VE GOT THIS",
+      headline: "One move\nat a time.",
+      body: "Today, one thing. Tomorrow, one thing. Dilly will be here every morning until you land.",
+      cta: "Let's start",
+      illustration: 'apply',
     },
   ],
 };
@@ -387,6 +478,16 @@ function Illustration({ kind }: { kind: CardSpec['illustration'] }) {
 
 export default function TutorialScreen() {
   const insets = useSafeAreaInsets();
+  // Transition param comes from mode-switch.tsx. When present we play
+  // a dedicated acknowledgement-first card arc instead of the generic
+  // mode tour — big difference in emotional register for got_job vs
+  // laid_off. Absent for fresh signups, which fall through to the
+  // mode-based CARDS record below.
+  const { transition: transitionParam } = useLocalSearchParams<{ transition?: string }>();
+  const transition: TransitionKind | null =
+    transitionParam === 'got_job' ? 'got_job'
+    : transitionParam === 'laid_off' ? 'laid_off'
+    : null;
   const [mode, setMode] = useState<AppMode>('seeker');
   const [ready, setReady] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -418,7 +519,11 @@ export default function TutorialScreen() {
     })();
   }, []);
 
-  const cards = CARDS[mode];
+  // Transition decks always win over mode decks. If the user came
+  // from mode-switch (got_job / laid_off), play the acknowledgement
+  // arc. Otherwise it's a fresh signup, fall through to the mode
+  // tour that matches their resolved profile mode.
+  const cards = transition ? CARDS_TRANSITION[transition] : CARDS[mode];
   const total = cards.length;
 
   // Progress bar animated width. MUST live above the `if (!ready) return`
