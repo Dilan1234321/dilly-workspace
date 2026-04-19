@@ -679,15 +679,230 @@ _ROLE_ALIASES: dict[str, str] = {
 }
 
 
+# Role keywords — weighted signal tokens used as a FALLBACK when the exact
+# + substring alias matchers miss. Each (phrase, weight) contributes its
+# weight to the role's total when the phrase appears in the normalized
+# input. Highest-scoring role wins if it clears the MIN_SCORE threshold.
+#
+# Weights:
+#   10 = unambiguous signal (role word itself, unique abbrev)
+#    8 = strong domain word (almost always this role)
+#    5 = medium signal (often this role but could be adjacent)
+#    3 = weak signal (contextual hint only)
+#    2 = very weak (only used to break ties)
+#
+# Tuned so single-word titles land on the right role AND long real-world
+# titles like "Senior Director of Product Marketing, West Region" resolve
+# to marketing_manager (domain word "marketing" at 10 beats "director" at 3).
+_ROLE_KEYWORDS: dict[str, list[tuple[str, int]]] = {
+    "software_engineer": [
+        ("software engineer", 10), ("software developer", 10), ("swe", 10), ("sde", 10),
+        ("engineering manager", 10), ("engineer", 5), ("engineering", 5),
+        ("developer", 10), ("programmer", 10), ("coder", 8),
+        ("frontend", 8), ("front end", 8), ("backend", 8), ("back end", 8),
+        ("full stack", 8), ("fullstack", 8), ("full-stack", 8),
+        ("mobile dev", 10), ("ios developer", 10), ("android developer", 10),
+        ("web developer", 10), ("devops", 10), ("sre", 10),
+        ("site reliability", 10), ("platform engineer", 10), ("infrastructure engineer", 10),
+        ("systems engineer", 8), ("embedded engineer", 10), ("firmware", 8),
+        ("ml engineer", 10), ("machine learning engineer", 10), ("ai engineer", 10),
+        ("staff engineer", 10), ("principal engineer", 10),
+    ],
+    "data_analyst": [
+        ("data analyst", 10), ("analytics engineer", 10), ("data scientist", 10),
+        ("business analyst", 10), ("bi analyst", 10), ("business intelligence", 8),
+        ("data engineer", 10), ("quant", 8), ("quantitative analyst", 10),
+        ("research analyst", 8), ("analyst", 5), ("analytics", 5),
+        ("reporting analyst", 10), ("statistician", 10),
+    ],
+    "accountant": [
+        ("accountant", 10), ("accounting", 10), ("cpa", 10),
+        ("bookkeeper", 10), ("bookkeeping", 10),
+        ("auditor", 10), ("audit", 8), ("tax preparer", 10),
+        ("tax analyst", 10), ("tax associate", 10), ("tax manager", 10),
+        ("tax", 5), ("controller", 8), ("financial controller", 10),
+        ("financial analyst", 8), ("fp&a", 8), ("fpa", 8),
+        ("ledger", 5), ("payroll", 5),
+    ],
+    "marketing_manager": [
+        ("marketing manager", 10), ("marketing director", 10),
+        ("marketing", 10), ("marketer", 10), ("brand manager", 10),
+        ("brand director", 10), ("brand", 5), ("advertising", 8),
+        ("digital marketing", 10), ("content marketing", 8),
+        ("growth marketer", 10), ("growth manager", 8),
+        ("seo", 5), ("sem", 5), ("performance marketing", 10),
+        ("cmo", 10), ("demand gen", 10), ("demand generation", 10),
+    ],
+    "sales_rep": [
+        ("sales", 10), ("account executive", 10), ("ae", 8),
+        ("sdr", 10), ("bdr", 10), ("sales development", 10),
+        ("business development", 8), ("salesperson", 10),
+        ("sales rep", 10), ("sales representative", 10),
+        ("sales manager", 8), ("sales director", 8),
+        ("quota", 3), ("inside sales", 10), ("outside sales", 10),
+    ],
+    "customer_support": [
+        ("customer support", 10), ("customer service", 10),
+        ("customer success", 10), ("csm", 10), ("cs manager", 10),
+        ("help desk", 10), ("service desk", 8), ("technical support", 10),
+        ("support engineer", 10), ("support specialist", 10),
+        ("client services", 8), ("call center", 10), ("support agent", 10),
+    ],
+    "teacher": [
+        ("teacher", 10), ("teaching", 10), ("educator", 10),
+        ("professor", 10), ("instructor", 10), ("lecturer", 10),
+        ("tutor", 8), ("faculty", 8), ("substitute teacher", 10),
+        ("adjunct", 8), ("k-12", 8), ("k12", 8), ("kindergarten", 8),
+        ("preschool", 8), ("school counselor", 8), ("principal", 3),
+    ],
+    "nurse": [
+        ("nurse", 10), ("nursing", 10), ("rn", 10), ("bsn", 10),
+        ("lpn", 10), ("lvn", 10), ("cna", 8), ("np", 8),
+        ("registered nurse", 10), ("nurse practitioner", 10),
+        ("icu", 3), ("er nurse", 10), ("charge nurse", 10),
+        ("triage nurse", 10),
+    ],
+    "lawyer": [
+        ("lawyer", 10), ("attorney", 10), ("paralegal", 10),
+        ("counsel", 8), ("legal counsel", 10), ("general counsel", 10),
+        ("associate attorney", 10), ("litigator", 10), ("litigation", 8),
+        ("esq", 8), ("jd", 3), ("judge", 10), ("prosecutor", 10),
+        ("public defender", 10),
+    ],
+    "truck_driver": [
+        ("truck driver", 10), ("trucker", 10), ("trucking", 10),
+        ("cdl", 10), ("hauler", 8), ("owner operator", 10),
+        ("long haul", 10), ("delivery driver", 10), ("courier", 8),
+        ("freight", 5), ("dispatcher", 5),
+    ],
+    "retail_worker": [
+        ("retail", 10), ("cashier", 10), ("sales associate", 10),
+        ("stocker", 10), ("store associate", 10), ("store manager", 8),
+        ("barista", 10), ("waiter", 10), ("waitress", 10),
+        ("server", 5), ("bartender", 10), ("line cook", 10),
+        ("clerk", 8), ("host", 5), ("hostess", 5), ("shift lead", 8),
+    ],
+    "recruiter": [
+        ("recruiter", 10), ("recruiting", 10), ("sourcer", 10),
+        ("talent acquisition", 10), ("headhunter", 10),
+        ("technical recruiter", 10), ("university recruiter", 10),
+        ("ta specialist", 10), ("ta manager", 10),
+    ],
+    "graphic_designer": [
+        ("graphic designer", 10), ("graphic design", 10),
+        ("ux designer", 10), ("ui designer", 10), ("product designer", 10),
+        ("visual designer", 10), ("web designer", 10),
+        ("designer", 5), ("illustrator", 8), ("art director", 10),
+        ("creative director", 10), ("motion designer", 10),
+        ("industrial designer", 10),
+    ],
+    "writer_copywriter": [
+        ("writer", 10), ("copywriter", 10), ("copywriting", 10),
+        ("journalist", 10), ("reporter", 10), ("author", 8),
+        ("content writer", 10), ("technical writer", 10), ("blogger", 8),
+        ("editor", 8), ("editorial", 8), ("ghostwriter", 10),
+        ("content strategist", 8),
+    ],
+    "hr_generalist": [
+        ("hr generalist", 10), ("hr manager", 10), ("hr business partner", 10),
+        ("hrbp", 10), ("human resources", 10), ("people ops", 10),
+        ("people operations", 10), ("chief people officer", 10), ("chro", 10),
+        ("employee relations", 10), ("compensation manager", 10),
+        ("benefits manager", 10), ("learning and development", 8),
+        ("l&d manager", 10), ("training manager", 8), ("hr", 5),
+    ],
+    "project_manager": [
+        ("project manager", 10), ("program manager", 10),
+        ("product manager", 10), ("product owner", 10),
+        ("scrum master", 10), ("agile coach", 10), ("pmp", 10),
+        ("technical program manager", 10), ("tpm", 10),
+        ("delivery manager", 10), ("associate product manager", 10),
+        ("apm", 8),
+    ],
+    "executive_leader": [
+        ("ceo", 10), ("cto", 10), ("cfo", 10), ("cmo", 10), ("cpo", 10),
+        ("chief executive", 10), ("chief technology", 10), ("chief financial", 10),
+        ("chief marketing", 10), ("president", 10), ("founder", 10),
+        ("co-founder", 10), ("cofounder", 10), ("managing director", 10),
+        ("vice president", 8), ("vp", 5), ("svp", 8), ("evp", 8),
+        ("director", 3), ("executive", 5),
+    ],
+    "freelancer_generic": [
+        ("freelancer", 10), ("freelance", 10), ("consultant", 8),
+        ("contractor", 10), ("self employed", 10), ("self-employed", 10),
+        ("independent contractor", 10), ("gig", 5), ("solopreneur", 10),
+        ("advisor", 5),
+    ],
+    "operations": [
+        ("operations manager", 10), ("operations analyst", 10),
+        ("head of operations", 10), ("head of ops", 10), ("ops manager", 10),
+        ("supply chain", 10), ("logistics manager", 10), ("coo", 10),
+        ("business operations", 10), ("biz ops", 10), ("bizops", 10),
+        ("operations", 8), ("ops", 5), ("warehouse manager", 10),
+        ("procurement", 8),
+    ],
+    "student_general": [
+        ("college student", 10), ("undergrad", 10), ("undergraduate", 10),
+        ("new grad", 10), ("recent graduate", 10), ("student", 8),
+        ("intern", 5), ("summer intern", 10), ("grad student", 8),
+        ("graduate student", 8), ("phd student", 8), ("mba student", 8),
+    ],
+}
+
+# Score threshold. Below this, we return None rather than guess a wrong role.
+_MIN_SCORE = 8
+
+
+def _score_roles(q: str) -> tuple[str, int] | None:
+    """Run the weighted keyword matcher. Returns (role_key, score) for
+    the highest-scoring role, or None if nothing clears the threshold.
+
+    Each role's score is the sum of weights of its keywords present in
+    the normalized query as a substring. Ties broken by length of the
+    longest matched phrase (more specific wins).
+    """
+    best_key: str | None = None
+    best_score = 0
+    best_specificity = 0
+    for role_key, keywords in _ROLE_KEYWORDS.items():
+        score = 0
+        longest = 0
+        for phrase, weight in keywords:
+            # Word-boundary-ish check for short abbreviations so "rn" in
+            # "learn" doesn't trigger a nurse match. Long phrases (>= 4
+            # chars) use plain substring since collisions are rare.
+            if len(phrase) < 4:
+                import re as _re
+                if _re.search(rf"(?:^|\W){_re.escape(phrase)}(?:$|\W)", q):
+                    score += weight
+                    if len(phrase) > longest:
+                        longest = len(phrase)
+            else:
+                if phrase in q:
+                    score += weight
+                    if len(phrase) > longest:
+                        longest = len(phrase)
+        if score > best_score or (score == best_score and longest > best_specificity):
+            best_key = role_key
+            best_score = score
+            best_specificity = longest
+    if best_key and best_score >= _MIN_SCORE:
+        return (best_key, best_score)
+    return None
+
+
 def lookup(query: str) -> dict | None:
     """Find a role threat report by free-form user input.
 
-    Normalization: lowercase, strip punctuation. Tries exact match against
-    both canonical keys and aliases. Falls back to substring match so
-    "I'm a senior software engineer" resolves to software_engineer.
+    Resolution order (first hit wins):
+      1. Exact canonical key match
+      2. Exact alias match
+      3. Substring alias match (longest alias wins)
+      4. Weighted keyword scoring across all roles (fallback)
 
     Returns the full report dict plus a resolved `role_key` field, or None
-    if no match. Caller decides whether to return a generic fallback.
+    if nothing clears the keyword-score threshold. Caller decides whether
+    to return a generic fallback.
     """
     if not query:
         return None
@@ -697,21 +912,34 @@ def lookup(query: str) -> dict | None:
         if q.startswith(prefix):
             q = q[len(prefix):]
 
-    # Direct canonical key
+    # 1. Direct canonical key
     if q in ROLE_THREAT_REPORT:
         return {**ROLE_THREAT_REPORT[q], "role_key": q}
-    # Alias
+    # 2. Exact alias
     if q in _ROLE_ALIASES:
         key = _ROLE_ALIASES[q]
         return {**ROLE_THREAT_REPORT[key], "role_key": key}
-    # Substring — longest alias wins
+    # 3. Substring alias — longest alias wins. Short aliases (<4 chars,
+    #    e.g. "rn", "vp", "hr") must match on word boundaries so "rn"
+    #    doesn't fire inside "intern" and "vp" doesn't fire inside "advp".
+    import re as _re
     hits = []
     for alias, key in _ROLE_ALIASES.items():
-        if alias in q:
-            hits.append((len(alias), alias, key))
+        if len(alias) < 4:
+            if _re.search(rf"(?:^|\W){_re.escape(alias)}(?:$|\W)", q):
+                hits.append((len(alias), alias, key))
+        else:
+            if alias in q:
+                hits.append((len(alias), alias, key))
     if hits:
         hits.sort(reverse=True)
         _, _, key = hits[0]
+        return {**ROLE_THREAT_REPORT[key], "role_key": key}
+    # 4. Keyword-weight fallback — catches long real-world titles like
+    #    "VP of Engineering", "Senior Director, Product Marketing", etc.
+    scored = _score_roles(q)
+    if scored:
+        key, _ = scored
         return {**ROLE_THREAT_REPORT[key], "role_key": key}
     return None
 
