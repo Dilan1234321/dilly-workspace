@@ -421,6 +421,23 @@ export default function TutorialScreen() {
   const cards = CARDS[mode];
   const total = cards.length;
 
+  // Progress bar animated width. MUST live above the `if (!ready) return`
+  // below, otherwise on the first render (ready=false) these two hooks
+  // aren't called, and on the second render (ready=true) they are —
+  // which is the 'Rendered more hooks than during the previous render'
+  // crash users hit during onboarding. Hook order has to be identical
+  // on every render.
+  const progressFraction = (idx + 1) / total;
+  const progressAnim = useRef(new Animated.Value(progressFraction)).current;
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progressFraction,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progressFraction, progressAnim]);
+
   async function finish() {
     try {
       await AsyncStorage.setItem(TUTORIAL_SEEN_KEY, 'true');
@@ -441,19 +458,6 @@ export default function TutorialScreen() {
   if (!ready) {
     return <View style={s.container} />;
   }
-
-  // Progress bar fills proportionally: 50% done => bar halfway across.
-  // Uses an animated width so advancing feels smooth instead of jumping.
-  const progressFraction = (idx + 1) / total;
-  const progressAnim = useRef(new Animated.Value(progressFraction)).current;
-  useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: progressFraction,
-      duration: 320,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [progressFraction, progressAnim]);
 
   return (
     <View style={[s.container, { paddingTop: insets.top }]}>
