@@ -358,6 +358,57 @@ export default function SettingsScreen() {
     ]);
   }
 
+  async function handleCancelSubscription() {
+    // Standalone cancel — ends Stripe billing but keeps the account
+    // and all data. Tester feedback: cancellation was buried inside
+    // delete-account, which terrified people who just wanted to stop
+    // paying. One alert, one confirm, done.
+    const planName = plan === 'pro' ? 'Dilly Pro' : 'Dilly';
+    Alert.alert(
+      `Cancel ${planName}?`,
+      'Your subscription ends now. You keep your profile and everything Dilly has learned about you. You can resubscribe anytime.',
+      [
+        { text: 'Keep subscription', style: 'cancel' },
+        {
+          text: 'Cancel subscription',
+          style: 'destructive',
+          onPress: async () => {
+            let res: Response | null = null;
+            try {
+              res = await dilly.fetch('/subscription/cancel', { method: 'POST' });
+            } catch {
+              Alert.alert(
+                'Could not cancel',
+                'We could not reach the server. Check your connection and try again.',
+              );
+              return;
+            }
+            if (!res.ok) {
+              let msg = 'Please try again in a minute.';
+              try {
+                const body = await res.clone().json();
+                const detail = body?.detail;
+                if (typeof detail === 'string') msg = detail;
+                else if (detail?.message) msg = detail.message;
+              } catch {}
+              Alert.alert('Could not cancel', msg);
+              return;
+            }
+            // Flip the local plan state immediately so the Plan
+            // section re-renders as Starter without a manual reload.
+            // The backend is authoritative but we already know the
+            // outcome from the 200 response.
+            setPlan('starter');
+            Alert.alert(
+              'Subscription cancelled',
+              "You're on Dilly Starter now. Your profile is safe.",
+            );
+          },
+        },
+      ],
+    );
+  }
+
   async function handleDeleteAccount() {
     // Two-step confirm. The first alert names the consequences in plain
     // language; the second is a final "are you absolutely sure". Paying
@@ -904,6 +955,26 @@ export default function SettingsScreen() {
           <Text style={[s.versionText, { color: theme.surface.t3 }]}>Dilly v{APP_VERSION}</Text>
         </FadeInView>
 
+        {/* Cancel subscription — ONLY for paid users. Placed above
+            Sign out / Delete so a user looking for a way out finds
+            the least-destructive option first. Tester feedback:
+            cancellation used to be buried inside Delete Account,
+            which scared people who just wanted to stop paying. */}
+        {(plan === 'dilly' || plan === 'pro') && (
+          <FadeInView delay={190}>
+            <AnimatedPressable
+              style={[s.cancelSubBtn, { borderColor: theme.surface.border }]}
+              onPress={handleCancelSubscription}
+              scaleDown={0.97}
+            >
+              <Ionicons name="close-circle-outline" size={14} color={theme.surface.t2} />
+              <Text style={[s.cancelSubText, { color: theme.surface.t2 }]}>
+                Cancel subscription
+              </Text>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
         {/* Sign out */}
         <FadeInView delay={200}>
           <AnimatedPressable style={s.signOutBtn} onPress={handleSignOut} scaleDown={0.97}>
@@ -992,9 +1063,16 @@ const s = StyleSheet.create({
 
   versionText: { fontSize: 11, color: colors.t3, textAlign: 'center', marginTop: 12 },
 
+  cancelSubBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 12, marginTop: 20, marginHorizontal: 16,
+    borderWidth: 1, borderRadius: radius.md,
+  },
+  cancelSubText: { fontSize: 13, fontWeight: '600' },
+
   signOutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 14, marginTop: 24,
+    paddingVertical: 14, marginTop: 12,
   },
   signOutText: { fontSize: 14, fontWeight: '600', color: '#FF453A' },
 

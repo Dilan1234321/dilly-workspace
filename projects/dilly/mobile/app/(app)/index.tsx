@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getToken } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { DillyFace } from '../../components/DillyFace';
+import { TierBadge } from '../../components/TierBadge';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -254,10 +255,16 @@ function HolderHome() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={INDIGO} />}
       >
-        {/* Greeting + settings */}
+        {/* Greeting + settings. Paid users see a TierBadge next to the
+            eyebrow — the ambient signal that tells them the app they
+            paid for is different from the free one, without being an
+            ad in their face every session. */}
         <View style={h.greetRow}>
           <View style={{ flex: 1 }}>
-            <Text style={h.eyebrow}>CAREER WATCH</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Text style={h.eyebrow}>CAREER WATCH</Text>
+              <TierBadge />
+            </View>
             <Text style={h.greeting}>Welcome back, {firstName}.</Text>
             {currentRole ? (
               <Text style={h.roleLine}>{currentRole}{yoeDisplay ? ` · ${yoeDisplay}` : ''}</Text>
@@ -595,7 +602,10 @@ function SeniorResetHome() {
         {/* Grounded greeting. No "Welcome back!", no exclamation. */}
         <View style={sr.greetRow}>
           <View style={{ flex: 1 }}>
-            <Text style={sr.eyebrow}>YOUR RESET</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Text style={sr.eyebrow}>YOUR RESET</Text>
+              <TierBadge />
+            </View>
             <Text style={sr.greeting}>
               {firstName}, here's where you are today.
             </Text>
@@ -1077,9 +1087,12 @@ function SeekerHome() {
               }]}>
                 Welcome, <Text style={{ color: accent }}>{firstName || 'there'}</Text>.
               </Text>
-              <Text style={[s.headerSub, { color: theme.surface.t3, fontFamily: theme.type.body }]}>
-                Welcome to your career center.
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                <Text style={[s.headerSub, { color: theme.surface.t3, fontFamily: theme.type.body }]}>
+                  Welcome to your career center.
+                </Text>
+                <TierBadge />
+              </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <AnimatedPressable

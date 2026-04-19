@@ -885,6 +885,65 @@ async def delete_profile_photo_endpoint(request: Request):
     return {"ok": True}
 
 
+@router.post("/subscription/cancel")
+async def cancel_subscription(request: Request):
+    """Cancel the user's paid subscription WITHOUT deleting their account.
+
+    Tester feedback: cancellation was buried inside "delete account,"
+    which most users don't want — they want to stop paying but keep
+    their profile and data. This endpoint does just the Stripe cancel
+    and flips the profile plan back to "starter." Everything else
+    (profile, resume, facts, history) stays intact. If the user comes
+    back later, their Dilly remembers them.
+
+    Idempotent: calling this with no active subscription is a no-op
+    that returns success. Stripe's API tolerates cancelling an already-
+    cancelled subscription (returns the prior state), which is also
+    treated as success.
+    """
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.validation_error("Email required.")
+
+    from projects.dilly.api.profile_store import get_profile as _get_profile, save_profile
+    profile = _get_profile(email) or {}
+    sub_id = (profile.get("stripe_subscription_id") or "").strip()
+    current_plan = (profile.get("plan") or "starter").lower().strip()
+
+    if not sub_id or current_plan == "starter":
+        # Nothing to cancel. Still normalize the profile so the client
+        # UI reflects a clean starter state.
+        if current_plan != "starter":
+            save_profile(email, {"plan": "starter", "stripe_subscription_id": ""})
+        return {"ok": True, "already_cancelled": True, "plan": "starter"}
+
+    stripe_configured = bool(os.environ.get("STRIPE_SECRET_KEY", "").strip())
+    if not stripe_configured:
+        # Dev env without Stripe configured. Still flip the plan so
+        # testing works, but flag so we don't silently fail in prod.
+        save_profile(email, {"plan": "starter", "stripe_subscription_id": ""})
+        return {"ok": True, "plan": "starter", "note": "dev_mode"}
+
+    try:
+        import stripe
+        stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+        stripe.Subscription.cancel(sub_id)
+        print(f"[SUB-CANCEL] email={email[:6]}*** sub={sub_id} → cancelled", flush=True)
+    except Exception as exc:
+        print(f"[SUB-CANCEL-FAIL] email={email[:6]}*** err={exc}", flush=True)
+        raise errors.service_unavailable(
+            "Could not cancel your subscription right now. Please try again in a minute."
+        )
+
+    # Flip plan locally. The Stripe webhook for customer.subscription.deleted
+    # will also fire and do the same update, but racing with the UI means
+    # we should reflect the change immediately so the user sees Starter
+    # when they come back to the settings screen.
+    save_profile(email, {"plan": "starter", "stripe_subscription_id": ""})
+    return {"ok": True, "plan": "starter"}
+
+
 @router.post("/account/delete")
 async def delete_account(request: Request):
     """

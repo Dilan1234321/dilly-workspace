@@ -824,7 +824,17 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
                 can't blank the entire jobs page. */}
             {!isHolder && (
               <ErrorBoundary surface="this read" resetKey={listing.id}>
-                <FitNarrative listing={listing} preloaded={narrativeCache} />
+                {/* preloaded must be the SINGLE entry for this listing,
+                    not the whole cache dict. Previously we passed the
+                    whole Record<string, FitNarrativeData>, which the
+                    child stored as `data` and then tried to render as
+                    if it were a single narrative. The shape mismatch
+                    hit the ErrorBoundary and surfaced as "narratives
+                    don't load" in user testing. */}
+                <FitNarrative
+                  listing={listing}
+                  preloaded={narrativeCache?.[listing.id] || null}
+                />
               </ErrorBoundary>
             )}
 

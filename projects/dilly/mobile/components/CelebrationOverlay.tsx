@@ -25,6 +25,12 @@ interface MilestoneConfig {
   sub: string;
   accentColor: string;
   ctaLabel: string;
+  // Optional: small list of concrete unlocks shown below the sub-copy.
+  // Exists for upgrade milestones so the user sees, at a glance, what
+  // the app can do for them now. Deliberately 3 items max — any more
+  // turns into a feature-list ad, which is what we're trying to avoid.
+  // Each entry is a one-line phrase, not a tutorial step.
+  unlocks?: string[];
 }
 
 // ── Milestone definitions ──────────────────────────────────────────────────────
@@ -84,13 +90,23 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
     sub: "Most people stay on the free side their whole career. You chose differently, and you'll feel the difference on the next job you touch.",
     accentColor: colors.gold,
     ctaLabel: "Let's go",
+    unlocks: [
+      "Fit reads on every job that tell you what you have and what's missing",
+      "Resumes tailored per role, written off everything Dilly knows about you",
+      "Dilly AI remembers what you said last time and builds on it",
+    ],
   },
   'unlocked-pro': {
     eyebrow: "PRO UNLOCKED",
     headline: "You just gave\nyourself an edge.",
-    sub: "Unlimited fit reads. Tailored resumes on demand. A coach that never caps out. This is the version of Dilly most people never see.",
+    sub: "This is the version of Dilly most people never see. No caps, no ceilings, no gates.",
     accentColor: '#A78BFA',
     ctaLabel: "Let's get to work",
+    unlocks: [
+      "Unlimited fit reads, resume tailoring, and AI chat",
+      "AI Arena: scan any job against your full career context",
+      "Interview practice that uses your real roles and target companies",
+    ],
   },
 };
 
@@ -305,6 +321,48 @@ export function CelebrationOverlay({ milestone, onDismiss }: Props) {
           <Text style={[s.eyebrow, { color: theme.accent }]}>{cfg.eyebrow}</Text>
           <Text style={[s.headline, { color: theme.surface.t1 }]}>{cfg.headline}</Text>
           <Text style={[s.sub, { color: theme.surface.t2 }]}>{cfg.sub}</Text>
+
+          {/* Unlocks list — only present for upgrade milestones.
+              Deliberately quiet styling: no icon flourishes, no "NEW"
+              badges, just a clean 3-row list that says "here's what
+              this version of Dilly does for you." Functions as a
+              reveal, not a tutorial. User's own feedback: apps
+              designed well shouldn't need walkthroughs. */}
+          {cfg.unlocks && cfg.unlocks.length > 0 && (
+            <View style={{ marginTop: 18, alignSelf: 'stretch', paddingHorizontal: 8 }}>
+              {cfg.unlocks.map((line, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    paddingVertical: 6,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: 2.5,
+                      backgroundColor: theme.accent,
+                      marginTop: 8,
+                    }}
+                  />
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 13,
+                      lineHeight: 19,
+                      color: theme.surface.t2,
+                    }}
+                  >
+                    {line}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Reserve exact height so layout never shifts during 3s wait */}
           <View style={s.ctaPlaceholder}>
