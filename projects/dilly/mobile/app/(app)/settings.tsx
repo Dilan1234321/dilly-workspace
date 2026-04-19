@@ -67,6 +67,70 @@ function Divider() {
   return <View style={s.divider} />;
 }
 
+/** Promo code expander. Shared between the starter upgrade hero and
+ * the paid status card so both plan states have the same redeem UX.
+ * Owns no state; parent passes everything in. */
+function PromoCodeForm({
+  theme, promoCode, setPromoCode, promoSubmitting, handleRedeemPromo, onCancel,
+}: {
+  theme: any;
+  promoCode: string;
+  setPromoCode: (v: string) => void;
+  promoSubmitting: boolean;
+  handleRedeemPromo: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <View style={{ gap: 10 }}>
+      <TextInput
+        value={promoCode}
+        onChangeText={setPromoCode}
+        placeholder="Enter code"
+        placeholderTextColor={theme.surface.t3}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        editable={!promoSubmitting}
+        style={{
+          backgroundColor: theme.surface.s2,
+          borderWidth: 1,
+          borderColor: theme.surface.border,
+          borderRadius: 10,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          fontSize: 15,
+          color: theme.surface.t1,
+          letterSpacing: 1,
+        }}
+        onSubmitEditing={handleRedeemPromo}
+        returnKeyType="go"
+      />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <AnimatedPressable
+          style={{
+            flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center',
+            backgroundColor: theme.accent,
+            opacity: !promoCode.trim() || promoSubmitting ? 0.5 : 1,
+          }}
+          onPress={handleRedeemPromo}
+          disabled={!promoCode.trim() || promoSubmitting}
+          scaleDown={0.97}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>
+            {promoSubmitting ? 'Redeeming...' : 'Redeem'}
+          </Text>
+        </AnimatedPressable>
+        <AnimatedPressable
+          style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center' }}
+          onPress={onCancel}
+          scaleDown={0.97}
+        >
+          <Text style={{ fontSize: 14, color: theme.surface.t2 }}>Cancel</Text>
+        </AnimatedPressable>
+      </View>
+    </View>
+  );
+}
+
 /** Horizontal swatch picker. Selected theme gets a ring + checkmark. */
 function ThemePicker() {
   const current = useTheme();
@@ -425,89 +489,183 @@ export default function SettingsScreen() {
           </View>
         </FadeInView>
 
-        {/* Plan */}
+        {/* Plan — 3 visual states (starter / dilly / pro). Starter
+            gets a dedicated upgrade hero. Paid tiers get a premium
+            status card celebrating what they already have. */}
         <FadeInView delay={40}>
           <SectionLabel text="PLAN" />
-          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-            {/* Removed the 'CURRENT' badge — redundant, the user
-                knows this row shows their plan. Name now reads theme
-                so it stays legible on Midnight. */}
-            <View style={s.planRow}>
-              <Text style={[s.planName, { color: theme.surface.t1 }]}>{planLabel}</Text>
-            </View>
-            {plan === 'starter' && (
-              <>
-                <Divider />
+          {plan === 'starter' ? (
+            // ── Starter: sell the upgrade. ───────────────────────
+            // Accent-washed hero with the value prop and a single
+            // confident CTA. Kept visually heavier than the rest of
+            // Settings so it draws the eye without screaming.
+            <View style={{
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: theme.accentBorder,
+              backgroundColor: theme.accentSoft,
+              padding: 20,
+              overflow: 'hidden',
+            }}>
+              {/* Small brand eyebrow */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Ionicons name="sparkles" size={12} color={theme.accent} />
+                <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 1.8, color: theme.accent }}>
+                  YOU'RE ON STARTER
+                </Text>
+              </View>
+              <Text style={{ fontSize: 26, fontWeight: '900', letterSpacing: -0.6, color: theme.surface.t1, lineHeight: 30 }}>
+                Unlock Dilly.
+              </Text>
+              <Text style={{ fontSize: 14, color: theme.surface.t2, marginTop: 8, lineHeight: 20 }}>
+                The version most people never see.
+              </Text>
+
+              {/* Three concrete perks. Written as sentences not bullets. */}
+              <View style={{ gap: 10, marginTop: 18 }}>
+                {[
+                  'Fit reads on every job. Personal, honest, no scores.',
+                  'Resumes tailored per role. Not a weekend task anymore.',
+                  'A coach that remembers every chat and every decision.',
+                ].map((line, i) => (
+                  <View key={i} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.accent, marginTop: 7 }} />
+                    <Text style={{ flex: 1, fontSize: 13, color: theme.surface.t1, lineHeight: 19 }}>{line}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* CTA + price row */}
+              <AnimatedPressable
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  backgroundColor: theme.accent,
+                  borderRadius: 14,
+                  paddingVertical: 14,
+                  marginTop: 18,
+                }}
+                onPress={() => Linking.openURL('https://hellodilly.com/pricing')}
+                scaleDown={0.97}
+              >
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.2 }}>
+                  See what's inside
+                </Text>
+                <Ionicons name="arrow-forward" size={16} color="#fff" />
+              </AnimatedPressable>
+              <Text style={{ fontSize: 11, color: theme.surface.t3, textAlign: 'center', marginTop: 8 }}>
+                $9.99/mo. Cancel anytime.
+              </Text>
+
+              {/* Promo code row — keeps the 'Have a promo code?' affordance
+                  accessible even inside the upgrade hero. */}
+              <View style={{ height: 1, backgroundColor: theme.accentBorder, marginVertical: 14 }} />
+              {!promoOpen ? (
                 <AnimatedPressable
-                  style={s.upgradeBtn}
+                  style={{ alignItems: 'center', paddingVertical: 6 }}
+                  onPress={() => setPromoOpen(true)}
+                  scaleDown={0.98}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: theme.accent }}>
+                    Have a promo code?
+                  </Text>
+                </AnimatedPressable>
+              ) : (
+                <PromoCodeForm
+                  theme={theme}
+                  promoCode={promoCode}
+                  setPromoCode={setPromoCode}
+                  promoSubmitting={promoSubmitting}
+                  handleRedeemPromo={handleRedeemPromo}
+                  onCancel={() => { setPromoOpen(false); setPromoCode(''); }}
+                />
+              )}
+            </View>
+          ) : (
+            // ── Dilly or Pro: celebrate the status. ──────────────
+            // Premium feel. Accent-wash bg + accent border so the
+            // card announces they've already unlocked. Pro gets a
+            // slightly fancier eyebrow. Dilly users get a subtle
+            // 'go deeper' nudge toward Pro.
+            <View style={{
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: theme.accentBorder,
+              backgroundColor: theme.accentSoft,
+              padding: 20,
+              overflow: 'hidden',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name={plan === 'pro' ? 'diamond' : 'checkmark-circle'} size={12} color={theme.accent} />
+                  <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 1.8, color: theme.accent }}>
+                    {plan === 'pro' ? 'DILLY PRO' : 'DILLY'}
+                  </Text>
+                </View>
+                <View style={{
+                  paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
+                  backgroundColor: theme.accent,
+                }}>
+                  <Text style={{ fontSize: 9, fontWeight: '900', letterSpacing: 1.2, color: '#fff' }}>
+                    ACTIVE
+                  </Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 24, fontWeight: '900', letterSpacing: -0.4, color: theme.surface.t1, lineHeight: 28 }}>
+                {plan === 'pro' ? "You're on Dilly Pro." : "You're on Dilly."}
+              </Text>
+              <Text style={{ fontSize: 13, color: theme.surface.t2, marginTop: 6, lineHeight: 19 }}>
+                {plan === 'pro'
+                  ? 'Unlimited everything. No caps, no limits. Dilly at its sharpest.'
+                  : 'Unlimited fit reads, tailored resumes, and a coach that knows you.'}
+              </Text>
+
+              {/* Dilly users see a subtle Pro upsell. Pro users get
+                  no upsell — they're already at the top. */}
+              {plan === 'dilly' && (
+                <AnimatedPressable
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    marginTop: 16,
+                    paddingVertical: 11,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: theme.accent,
+                    backgroundColor: 'transparent',
+                  }}
                   onPress={() => Linking.openURL('https://hellodilly.com/pricing')}
                   scaleDown={0.97}
                 >
-                  <Ionicons name="diamond" size={14} color="#fff" />
-                  <Text style={s.upgradeBtnText}>See plans</Text>
+                  <Ionicons name="diamond-outline" size={13} color={theme.accent} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.accent }}>
+                    Go deeper with Dilly Pro
+                  </Text>
                 </AnimatedPressable>
-              </>
-            )}
-            {/* Promo code row. Always visible so paying users can still
-                upgrade via code; collapses into a compact link until
-                tapped so it doesn't clutter the Plan card. */}
-            <Divider />
-            {!promoOpen ? (
-              <AnimatedPressable
-                style={[s.row, { justifyContent: 'center' }]}
-                onPress={() => setPromoOpen(true)}
-                scaleDown={0.98}
-              >
-                <Text style={[s.rowValue, { color: theme.accent, fontWeight: '600' }]}>
-                  Have a promo code?
-                </Text>
-              </AnimatedPressable>
-            ) : (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
-                <TextInput
-                  value={promoCode}
-                  onChangeText={setPromoCode}
-                  placeholder="Enter code"
-                  placeholderTextColor={theme.surface.t3}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  editable={!promoSubmitting}
-                  style={{
-                    backgroundColor: theme.surface.s2,
-                    borderWidth: 1,
-                    borderColor: theme.surface.border,
-                    borderRadius: 10,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    fontSize: 15,
-                    color: theme.surface.t1,
-                    letterSpacing: 1,
-                  }}
-                  onSubmitEditing={handleRedeemPromo}
-                  returnKeyType="go"
+              )}
+
+              {/* Promo code row */}
+              <View style={{ height: 1, backgroundColor: theme.accentBorder, marginVertical: 14 }} />
+              {!promoOpen ? (
+                <AnimatedPressable
+                  style={{ alignItems: 'center', paddingVertical: 6 }}
+                  onPress={() => setPromoOpen(true)}
+                  scaleDown={0.98}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: theme.accent }}>
+                    Have a promo code?
+                  </Text>
+                </AnimatedPressable>
+              ) : (
+                <PromoCodeForm
+                  theme={theme}
+                  promoCode={promoCode}
+                  setPromoCode={setPromoCode}
+                  promoSubmitting={promoSubmitting}
+                  handleRedeemPromo={handleRedeemPromo}
+                  onCancel={() => { setPromoOpen(false); setPromoCode(''); }}
                 />
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <AnimatedPressable
-                    style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: theme.accent, opacity: !promoCode.trim() || promoSubmitting ? 0.5 : 1 }}
-                    onPress={handleRedeemPromo}
-                    disabled={!promoCode.trim() || promoSubmitting}
-                    scaleDown={0.97}
-                  >
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>
-                      {promoSubmitting ? 'Redeeming…' : 'Redeem'}
-                    </Text>
-                  </AnimatedPressable>
-                  <AnimatedPressable
-                    style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center' }}
-                    onPress={() => { setPromoOpen(false); setPromoCode(''); }}
-                    scaleDown={0.97}
-                  >
-                    <Text style={{ fontSize: 14, color: theme.surface.t2 }}>Cancel</Text>
-                  </AnimatedPressable>
-                </View>
-              </View>
-            )}
-          </View>
+              )}
+            </View>
+          )}
         </FadeInView>
 
         {/* ── Career Status ───────────────────────────────────────────
