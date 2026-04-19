@@ -1518,9 +1518,12 @@ async def generate_slug_endpoint(request: Request):
     email = (user.get("email") or "").strip().lower()
     if not email:
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    from projects.dilly.api.profile_store import generate_readable_slug
+    from projects.dilly.api.profile_store import (
+        generate_readable_slug,
+        get_profile as _get_profile,
+    )
     slug = generate_readable_slug(email)
-    profile = get_profile(email) or {}
+    profile = _get_profile(email) or {}
     user_type = profile.get("user_type") or "student"
     is_student = user_type not in ("general", "professional")
     prefix = "s" if is_student else "p"
@@ -1547,9 +1550,9 @@ def _toggle_fact_visibility(request: Request, body: dict, hide: bool) -> dict:
         fact_id = str(body.get("fact_id") or "").strip()
         if not fact_id:
             raise HTTPException(status_code=400, detail="fact_id required.")
-        from projects.dilly.api.profile_store import save_profile
+        from projects.dilly.api.profile_store import save_profile, get_profile as _get_profile
         print(f"{tag} reading profile…", flush=True)
-        profile = get_profile(email) or {}
+        profile = _get_profile(email) or {}
         print(f"{tag} profile keys={list(profile.keys())[:10]} web_settings_type={type(profile.get('web_profile_settings')).__name__}", flush=True)
         web_settings_raw = profile.get("web_profile_settings") or {}
         # Defensive: if someone ever saved this as a string, coerce back to dict.
