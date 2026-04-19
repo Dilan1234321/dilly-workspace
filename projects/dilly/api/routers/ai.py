@@ -1513,19 +1513,43 @@ async def ai_chat(request: Request, body: ChatRequest):
 
     # ── Cost optimization: prompt caching ─────────────────────────────────
     # Haiku 4.5 minimum cache block size: 2048 tokens (~8192 chars).
-    # Smaller prompts get cache_control silently ignored. We ran for
-    # months with len(system) > 800 thinking we were caching — we
-    # weren't. Every chat was billing full input price.
     #
-    # After the slim pass the system prompt is ~800 tokens — still
-    # below Haiku's cache threshold. So instead of forcing the cache
-    # (which would waste a cache_create that never reads), we DON'T
-    # set cache_control. Small prompt = small bill, no cache overhead.
+    # The rich system prompt includes the user's full resume (up to 5000
+    # chars), extracted profile facts, academic profile, deadlines, and
+    # application pipeline. For most paid users this runs 4-6k tokens —
+    # well above Haiku's cache threshold.
     #
-    # If we later decide to include the full resume in every system
-    # prompt (~1,500 tokens more), we'd cross 2,048 and caching would
-    # start winning. For now, slim + uncached is cheaper.
-    system_param = system
+    # Pricing (Haiku 4.5, as of writing):
+    #   - Base input:  $1.00/MTok
+    #   - Cache write: $1.25/MTok (25% premium, 5-min TTL)
+    #   - Cache read:  $0.10/MTok (90% discount)
+    #   - Output:      $5.00/MTok
+    #
+    # Turn 1 in a session pays the cache-write premium on the full system
+    # prompt (one-time cost). Turns 2-N within the 5-minute TTL window
+    # pay the cache-read rate on the same content — a 90% discount on
+    # the system-prompt portion of every chat turn.
+    #
+    # For a 16-turn chat with a 5000-token system prompt, this collapses
+    # system-prompt billing from ~$0.08 (16 × 5000 × $1/MTok) to ~$0.014
+    # (1 write at $1.25 + 15 reads at $0.10). ~5x system-cost reduction.
+    #
+    # The only stable requirement: same system TEXT across turns of a
+    # session. Our system string is built from the user's profile at
+    # request time, so as long as the user doesn't edit their profile
+    # mid-conversation the prompt stays byte-identical and caches hit.
+    # Profile edits just invalidate the cache on the next turn — no
+    # correctness issue, just misses the discount once.
+    if system and len(system) >= 8000:  # ~2000+ tokens, safely past Haiku's threshold
+        system_param = [{
+            "type": "text",
+            "text": system,
+            "cache_control": {"type": "ephemeral"},
+        }]
+    else:
+        # Short prompt (rare — practice mode, anonymous callers, etc.).
+        # No point paying the cache-write premium for something small.
+        system_param = system
 
     # ── Tool use: auto-add calendar events from conversational mentions ────
     # Dilly listens for "the career fair on the 3rd" / "interview Monday" /
