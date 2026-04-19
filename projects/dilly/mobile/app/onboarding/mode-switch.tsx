@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { DillyFace } from '../../components/DillyFace';
+import { useResolvedTheme } from '../../hooks/useTheme';
 
 const INDIGO = colors.indigo;
 
@@ -47,6 +48,7 @@ const COPY: Record<Direction, { eyebrow: string; headline: string; body: string;
 
 export default function ModeSwitchScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
   const { to } = useLocalSearchParams<{ to?: string }>();
 
   const direction: Direction = to === 'holder' ? 'holder' : 'seeker';
@@ -182,7 +184,7 @@ export default function ModeSwitchScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
+      style={{ flex: 1, backgroundColor: theme.surface.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       // Offset the KeyboardAvoidingView so the scroll content fully
       // clears the keyboard AND the CTA sits visibly above it. Without
@@ -269,9 +271,9 @@ export default function ModeSwitchScreen() {
             paddingHorizontal: spacing.xl,
             paddingBottom: insets.bottom + 14,
             paddingTop: 12,
-            backgroundColor: colors.bg,
+            backgroundColor: theme.surface.bg,
             borderTopWidth: 1,
-            borderTopColor: colors.b1,
+            borderTopColor: theme.surface.border,
           }}
         >
           <TouchableOpacity

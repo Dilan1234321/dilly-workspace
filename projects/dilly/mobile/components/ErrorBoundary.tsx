@@ -8,6 +8,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { colors, spacing } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 
 const GOLD = '#2B3A8E';
 const CORAL = '#FF453A';
@@ -84,43 +85,53 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (!this.state.hasError) return this.props.children;
 
-    const surface = this.props.surface || 'this screen';
-    const message = this.state.error?.message || 'An unexpected error happened.';
-
     return (
-      <View style={styles.container}>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Big sad Dilly face - matches the app launch splash layout */}
-          <SadDillyFace size={120} />
-
-          <Text style={styles.heading}>Something's off with {surface}.</Text>
-          <Text style={styles.sub}>
-            Dilly hit an unexpected hiccup. Nothing you did caused this. Tap below to try again.
-          </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={this.handleReset}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.buttonText}>Try again</Text>
-          </TouchableOpacity>
-          {/* Always show error message for beta testers */}
-          <Text style={styles.devDetails} numberOfLines={6}>
-            {message}
-          </Text>
-        </ScrollView>
-      </View>
+      <ErrorView
+        surface={this.props.surface || 'this screen'}
+        message={this.state.error?.message || 'An unexpected error happened.'}
+        onReset={this.handleReset}
+      />
     );
   }
+}
+
+/** Functional wrapper so we can use the theme hook. Class components
+ * can't consume hooks directly. Theme-aware error screen: container
+ * bg follows surface, body/heading text colors swap for dark mode,
+ * try-again button picks up the user's accent. */
+function ErrorView({ surface, message, onReset }: { surface: string; message: string; onReset: () => void }) {
+  const theme = useResolvedTheme();
+  return (
+    <View style={[styles.container, { backgroundColor: theme.surface.bg }]}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <SadDillyFace size={120} />
+        <Text style={[styles.heading, { color: theme.surface.t1 }]}>
+          Something's off with {surface}.
+        </Text>
+        <Text style={[styles.sub, { color: theme.surface.t2 }]}>
+          Dilly hit an unexpected hiccup. Nothing you did caused this. Tap below to try again.
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.accent }]}
+          onPress={onReset}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.buttonText}>Try again</Text>
+        </TouchableOpacity>
+        <Text style={[styles.devDetails, { color: theme.surface.t3 }]} numberOfLines={6}>
+          {message}
+        </Text>
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg,
   },
   scroll: {
     flexGrow: 1,
