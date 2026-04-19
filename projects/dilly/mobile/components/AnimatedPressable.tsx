@@ -25,7 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { lightHaptic } from '../lib/haptics';
+import { lightHaptic, mediumHaptic } from '../lib/haptics';
 
 interface Props {
   children: ReactNode;
@@ -37,6 +37,10 @@ interface Props {
   damping?: number;
   disabled?: boolean;
   hitSlop?: number | { top?: number; bottom?: number; left?: number; right?: number };
+  /** Haptic intensity on press. Defaults to 'light'. Pro tier passes
+   *  'medium' for a more tactile, premium-feeling press. Pass false to
+   *  disable haptics entirely (rare). */
+  haptic?: boolean | 'light' | 'medium';
 }
 
 export default function AnimatedPressable({
@@ -49,6 +53,7 @@ export default function AnimatedPressable({
   damping = 20,
   disabled = false,
   hitSlop,
+  haptic,
 }: Props) {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
@@ -67,7 +72,18 @@ export default function AnimatedPressable({
     })
     .onEnd(() => {
       'worklet';
-      runOnJS(lightHaptic)();
+      // Haptic feedback by tier:
+      //   haptic === 'medium' (or true from Pro tier via useTierFeel)
+      //     fires the stronger impact — reads as "deliberate / premium"
+      //   haptic === 'light' / unset / false → default light impact
+      // We always fire SOMETHING so the press still feels responsive,
+      // but Pro gets the meatier version. Cost to add: one extra API
+      // call, zero ongoing.
+      if (haptic === 'medium' || haptic === true) {
+        runOnJS(mediumHaptic)();
+      } else {
+        runOnJS(lightHaptic)();
+      }
       if (onPress) {
         runOnJS(onPress)();
       }

@@ -20,6 +20,7 @@ import { triggerCelebration } from '../../hooks/useCelebration';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
+import { CancelGoodbyeModal } from '../../components/CancelGoodbyeModal';
 import { THEMES, useTheme, setTheme, useResolvedTheme } from '../../hooks/useTheme';
 
 const INDIGO = colors.indigo;
@@ -196,6 +197,14 @@ export default function SettingsScreen() {
     const t = setTimeout(() => setSettingsBanner(null), 4000);
     return () => clearTimeout(t);
   }, [settingsBanner]);
+
+  // Goodbye modal — shown AFTER a successful cancel instead of a
+  // plain "subscription cancelled" alert. Gives the moment the
+  // weight it deserves + offers a 60s uncancel window.
+  const [goodbyeState, setGoodbyeState] = useState<{
+    visible: boolean;
+    previousPlan: 'dilly' | 'pro';
+  } | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [deadlineReminders, setDeadlineReminders] = useState(true);
   const [webProfileOn, setWebProfileOn] = useState(true);
@@ -424,17 +433,33 @@ export default function SettingsScreen() {
               setSettingsBanner({ kind: 'error', message: msg });
               return;
             }
+            // Capture the previous plan BEFORE flipping so the
+            // goodbye modal can tailor its copy (Pro users had more
+            // to lose, so they see a slightly longer list).
+            const prevPlan: 'dilly' | 'pro' = plan === 'pro' ? 'pro' : 'dilly';
             // Flip the local plan state immediately so the Plan
             // section re-renders as Starter without a manual reload.
             setPlan('starter');
-            setSettingsBanner({
-              kind: 'success',
-              message: "You're on Dilly Starter now. Your profile is safe.",
-            });
+            // Goodbye modal takes over from here — replaces the
+            // plain Alert with a calm, considered moment that names
+            // what the user is pausing and offers a 60s uncancel.
+            setGoodbyeState({ visible: true, previousPlan: prevPlan });
           },
         },
       ],
     );
+  }
+
+  // Reverse a cancel by reopening the checkout flow. Called from the
+  // goodbye modal's "Actually, keep my subscription" link. This is
+  // the same path as a normal upgrade — the user just goes back
+  // through Stripe checkout. Cost to them: a second card charge,
+  // but Stripe prorates so they're not double-billed.
+  async function handleUncancel() {
+    setGoodbyeState(null);
+    // Route to the pricing page where upgrade happens. The user who
+    // hit Uncancel almost certainly wants their previous tier back.
+    Linking.openURL('https://hellodilly.com/pricing');
   }
 
   async function handleDeleteAccount() {
@@ -1095,6 +1120,20 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Cancel goodbye moment. Full-screen modal shown AFTER a
+          successful cancel. Replaces the plain Alert with a calm,
+          considered treatment that names what the user is pausing
+          and offers a 60s uncancel link. Intentionally designed
+          NOT to be a retention trap — just a dignified goodbye. */}
+      {goodbyeState && (
+        <CancelGoodbyeModal
+          visible={goodbyeState.visible}
+          previousPlan={goodbyeState.previousPlan}
+          onUncancel={handleUncancel}
+          onDismiss={() => setGoodbyeState(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

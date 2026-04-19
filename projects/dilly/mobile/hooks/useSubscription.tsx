@@ -155,6 +155,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       // moment would pass silently.
       try {
         const LAST_SEEN_KEY = 'dilly_last_seen_plan_v1';
+        const UPGRADED_AT_KEY = 'dilly_upgraded_at_v1';
         const lastSeen = await AsyncStorage.getItem(LAST_SEEN_KEY);
         const current = localOverride === 'true' && backendPlan === 'starter' ? 'dilly' : backendPlan;
         // Fire only on the transition (starter → dilly, starter → pro,
@@ -165,6 +166,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             triggerCelebration(current === 'pro' ? 'unlocked-pro' : 'unlocked-dilly');
           }, 500);
+          // Stamp the upgrade time so the home screen can show a
+          // subtle "Welcome to Dilly" line for the first 24 hours.
+          // After 24h this expires and the home renders normally.
+          // Read by useRecentUpgrade (components/useRecentUpgrade.ts).
+          await AsyncStorage.setItem(UPGRADED_AT_KEY, String(Date.now()));
+        }
+        // If the user downgrades back to starter, clear the upgrade
+        // stamp so they don't see a welcome line from a past upgrade.
+        if (current === 'starter') {
+          await AsyncStorage.removeItem(UPGRADED_AT_KEY);
         }
         await AsyncStorage.setItem(LAST_SEEN_KEY, current);
       } catch {}

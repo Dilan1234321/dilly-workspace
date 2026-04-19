@@ -11,6 +11,8 @@ import { getToken } from '../../lib/auth';
 import { dilly } from '../../lib/dilly';
 import { DillyFace } from '../../components/DillyFace';
 import { TierBadge } from '../../components/TierBadge';
+import { useTierFeel } from '../../hooks/useTierFeel';
+import { useRecentUpgrade } from '../../hooks/useRecentUpgrade';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -189,6 +191,16 @@ async function _fetchHolderHomeData(): Promise<HolderHomeData | null> {
 
 function HolderHome() {
   const insets = useSafeAreaInsets();
+  // Ambient premium feel: borders, typography, press feedback vary by
+  // tier. Starter gets baseline; Dilly is slightly heavier; Pro has
+  // thicker borders + 900-weight headings + letter-spacing bump.
+  // Same features, different hold-feel.
+  const feel = useTierFeel();
+  // Recent upgrade: true for 24h after a starter→paid transition.
+  // Drives a subtle "welcome to Dilly" line under the greeting that
+  // fades out of existence on day two. No dismiss button — it just
+  // expires. Makes day one feel distinct without becoming an ad.
+  const recentUpgrade = useRecentUpgrade();
   // Session-cached: renders instantly from the previous fetch on
   // remount (tab switches, mode flips, coming back from the chat
   // overlay). 60s TTL before a background revalidation fires. Cuts
@@ -265,7 +277,22 @@ function HolderHome() {
               <Text style={h.eyebrow}>CAREER WATCH</Text>
               <TierBadge />
             </View>
-            <Text style={h.greeting}>Welcome back, {firstName}.</Text>
+            <Text style={[h.greeting, { fontWeight: feel.headingWeight, letterSpacing: -0.5 + feel.headingTracking }]}>
+              Welcome back, {firstName}.
+            </Text>
+            {/* First 24h after upgrade: subtle welcome line that
+                expires without needing a dismiss button. Day-one
+                feels distinct from day-seven without permanent UI. */}
+            {recentUpgrade.isRecent && (
+              <Text style={{
+                fontSize: 11,
+                fontStyle: 'italic',
+                color: colors.t3,
+                marginTop: 4,
+              }}>
+                Good to have you in here.
+              </Text>
+            )}
             {currentRole ? (
               <Text style={h.roleLine}>{currentRole}{yoeDisplay ? ` · ${yoeDisplay}` : ''}</Text>
             ) : null}
@@ -278,19 +305,50 @@ function HolderHome() {
         {/* ── 1. Weekly pulse hero ───────────────────────────────── */}
         <FadeInView delay={40}>
           <AnimatedPressable
-            scaleDown={0.98}
+            scaleDown={feel.pressScaleDown}
+            haptic={feel.pressHaptic}
             onPress={() => router.push('/(app)/ai-arena' as any)}
-            style={[h.heroCard, { borderColor: threatColor + '30', shadowColor: threatColor }]}
+            style={[
+              h.heroCard,
+              {
+                borderColor: threatColor + '30',
+                borderWidth: feel.cardBorder,
+                shadowColor: threatColor,
+              },
+            ]}
           >
+            {/* Pro users get a subtle accent bar across the top of
+                the hero — the same trick the Plan card uses in
+                settings. Reads as "this card was made for you". */}
+            {feel.proAccentBar && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  backgroundColor: threatColor,
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                }}
+              />
+            )}
             <View style={h.heroPulse}>
               <View style={[h.pulseDot, { backgroundColor: threatColor }]} />
-              <Text style={[h.pulseLabel, { color: threatColor }]}>
+              <Text style={[h.pulseLabel, { color: threatColor, letterSpacing: 1.4 + feel.headingTracking }]}>
                 {weeklyRoleDisplay
                   ? `THIS WEEK · ${weeklyRoleDisplay.toUpperCase()}`
                   : 'THIS WEEK · LIVE'}
               </Text>
             </View>
-            <Text style={h.heroHeadline} numberOfLines={2}>
+            <Text
+              style={[
+                h.heroHeadline,
+                { fontWeight: feel.headingWeight, letterSpacing: -0.2 + feel.headingTracking },
+              ]}
+              numberOfLines={2}
+            >
               {weekly?.headline || 'Your field is shifting. Dilly is tracking it for you.'}
             </Text>
             {weekly?.source ? (
@@ -862,6 +920,9 @@ function SeekerHome() {
   // accent swatch on the name, which is what it was before).
   const theme = useResolvedTheme();
   const accent = theme.accent;
+  // Tier feel: starter stays clean, paid tiers lean heavier via
+  // headingWeight + letter-spacing and thicker card borders.
+  const feel = useTierFeel();
   // Per-situation copy — greeting, eyebrow, CTA verb, empty states
   // all key off the user's user_path via sessionCache.
   const situationCopy = useSituationCopy();
@@ -1082,8 +1143,12 @@ function SeekerHome() {
               <Text style={[s.headerName, {
                 color: theme.surface.t1,
                 fontFamily: theme.type.display,
-                fontWeight: theme.type.heroWeight,
-                letterSpacing: theme.type.heroTracking,
+                // Pro tier adds 100 weight and +0.2 letter-spacing on top
+                // of whatever the Customize type preset already chose.
+                // Reads as "heavier, more considered" without needing
+                // users to notice why.
+                fontWeight: feel.headingWeight,
+                letterSpacing: theme.type.heroTracking + feel.headingTracking,
               }]}>
                 Welcome, <Text style={{ color: accent }}>{firstName || 'there'}</Text>.
               </Text>
