@@ -98,7 +98,18 @@ def _cost_usd(
 
 def _conn():
     """Short-lived connection. The ledger write is cheap — one INSERT —
-    so we don't bother pooling here."""
+    so we don't bother pooling here.
+
+    Supports both env-var layouts so either local dev (DILLY_DB_HOST
+    et al.) or Railway (single DATABASE_URL) works without code
+    changes. Railway never sets the individual DILLY_DB_* vars; when
+    they're missing psycopg2 falls back to connecting to a local Unix
+    socket that doesn't exist, producing the "connection to server on
+    socket /var/run/postgresql/.s.PGSQL.5432" error seen in logs.
+    """
+    db_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if db_url:
+        return psycopg2.connect(db_url, sslmode="require", connect_timeout=3)
     return psycopg2.connect(
         host=os.environ.get("DILLY_DB_HOST", ""),
         database=os.environ.get("DILLY_DB_NAME", "dilly"),
