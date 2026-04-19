@@ -24,6 +24,7 @@ import DillyFooter from '../../components/DillyFooter';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { DillyFace } from '../../components/DillyFace';
 import { useAppMode } from '../../hooks/useAppMode';
+import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 
 const W = Dimensions.get('window').width;
 
@@ -371,6 +372,19 @@ export default function AIArenaScreen() {
 
   return (
     <KeyboardAvoidingView style={[a.container, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* First-visit coach mark. Dismisses on any tap, never
+          returns. ID is versioned: bumping to v2 re-shows it. */}
+      <FirstVisitCoach
+        id={isHolder ? 'arena-holder-v1' : 'arena-seeker-v1'}
+        iconName="shield-checkmark"
+        headline={isHolder
+          ? 'What AI is about to change about your field.'
+          : 'The real threats to your next job, and how to answer them.'}
+        subline={isHolder
+          ? "Dilly reads your role and shows what's shifting this quarter."
+          : 'Dilly scans the market and names what to build next so you stay ahead.'}
+      />
+
       <ScrollView keyboardShouldPersistTaps="handled"
         contentContainerStyle={[a.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}

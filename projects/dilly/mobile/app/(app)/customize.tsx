@@ -24,6 +24,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import {
   useThemeConfig, resolveTheme, patchTheme, resetTheme, surpriseTheme,
   ACCENT_PRESETS, SURFACE_PRESETS, SHAPE_PRESETS, TYPE_PRESETS,
@@ -92,6 +93,17 @@ export default function CustomizeStudio() {
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
+      {/* First-visit coach — Customize Dilly. Clarifies this is
+          aesthetic-only (product rule: customization changes LOOK,
+          not behavior). Tester confusion risk: "did I break
+          something?" after picking a theme. */}
+      <FirstVisitCoach
+        id="customize-v1"
+        iconName="color-palette"
+        headline="Make Dilly look how you want."
+        subline="Color, shape, type, density — your choices. None of this changes what Dilly does."
+      />
+
       {/* Top bar. Reads theme so the Customize studio itself respects
           the user's current surface — on Midnight, the top bar and
           container become dark; on Mint, pastel. */}

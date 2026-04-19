@@ -39,6 +39,7 @@ import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { useSubscription } from '../../hooks/useSubscription';
+import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import { openPaywall } from '../../hooks/usePaywall';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
@@ -1080,6 +1081,12 @@ export default function JobsScreen() {
   // User-chosen theme — container bg, header typography, refresh
   // tint all read from here so Customize paints this tab too.
   const theme = useResolvedTheme();
+  // Pull the current plan so the Jobs first-visit coach mark only
+  // fires for paid users (their version is substantively different:
+  // they can chat with Dilly about any job, generate tailored
+  // resumes, and see fit narratives — none of which the starter
+  // tier has). Starter users would see promises that don't apply.
+  const { isPaid: _isPaid } = useSubscription();
   // Filter pill theme overrides. Module-level StyleSheet froze the
   // bg/border/text at light values, so we apply these on top of the
   // base style at each call site. Active uses the current accent so
@@ -1412,6 +1419,19 @@ export default function JobsScreen() {
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
+      {/* First-visit coach — paid users only. Their version of this
+          tab is materially different: fit narratives, ask-Dilly chat
+          on any job, tailored resume generation. Starter users get
+          the teaser flow and would find the coach's promises
+          misleading, so we gate with `disabled={!_isPaid}`. */}
+      <FirstVisitCoach
+        id="jobs-paid-v1"
+        iconName="briefcase"
+        headline="Every job here, read against you."
+        subline="Tap any job for a fit read. Ask Dilly anything. Tailor a resume in one tap."
+        disabled={!_isPaid}
+      />
+
       {/* Header. mode-aware framing. Holders see a market benchmark
           ("The Market"), seekers see the classic "your next move" feed. */}
       <View style={s.header}>

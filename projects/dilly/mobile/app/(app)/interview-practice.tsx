@@ -40,6 +40,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
@@ -397,6 +398,14 @@ export default function InterviewPracticeScreen() {
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: isDark ? NIGHT_BG : colors.bg }]}>
+      {/* First-visit coach — The Room. */}
+      <FirstVisitCoach
+        id="interview-room-v1"
+        iconName="mic"
+        headline="A real interviewer for a real job."
+        subline="She asks, you answer. Real-time feedback on structure, specificity, and pace."
+      />
+
       <NavBar dark={isDark} onBack={() => router.back()} phase={phase} currentIdx={currentIdx} total={questions.length} />
 
       {phase === 'setup' && (

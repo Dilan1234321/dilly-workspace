@@ -36,6 +36,7 @@ import { useCachedFetch } from '../../lib/sessionCache';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
 import DillyCardEditor, { type CardData } from '../../components/DillyCard';
@@ -527,6 +528,14 @@ function SeekerProfileScreen() {
 
   return (
     <View style={[d.container, { backgroundColor: theme.surface.bg }]}>
+      {/* First-visit coach mark — seekers/students. */}
+      <FirstVisitCoach
+        id="my-dilly-seeker-v1"
+        iconName="person-circle"
+        headline="Everything Dilly knows about you."
+        subline="The more she learns, the sharper your fit reads and tailored resumes get."
+      />
+
       {/* Toast overlay. absolute, top-most z-index */}
       <InlineToastView
         {...toast.props}
@@ -2141,6 +2150,15 @@ function HolderCareer() {
 
   return (
     <View style={[hc.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
+      {/* First-visit coach — holders see their career dashboard
+          here. Different id/copy than the seeker variant. */}
+      <FirstVisitCoach
+        id="my-dilly-holder-v1"
+        iconName="analytics"
+        headline="Your career, tracked."
+        subline="Your trajectory, raise brief, escape hatch, and everything Dilly is learning about you on the job."
+      />
+
       <ScrollView
         contentContainerStyle={[hc.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}

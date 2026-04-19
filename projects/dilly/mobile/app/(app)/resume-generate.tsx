@@ -54,6 +54,7 @@ import Animated, {
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
 import { DillyFeatureBanner } from '../../components/DillyFeatureBanner';
 import { useSubscription } from '../../hooks/useSubscription';
@@ -462,6 +463,14 @@ export default function ResumeGenerateScreen() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* First-visit coach — Resume Forge. */}
+      <FirstVisitCoach
+        id="forge-v1"
+        iconName="construct"
+        headline="One resume, rebuilt per job."
+        subline="Dilly reads the role, mines your profile for the matches, and writes the bullets from scratch."
+      />
+
       <Header
         insetsTop={insets.top}
         usage={resumeUsage}
