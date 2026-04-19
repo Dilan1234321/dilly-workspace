@@ -315,6 +315,38 @@ function SeekerProfileScreen() {
     saving: boolean;
   }>({ visible: false, category: '', categoryLabel: '', label: '', value: '', saving: false });
 
+  // Mount-lifecycle animation for the Add-Fact modal. `mounted`
+  // stays true through the exit fade so the card can animate OUT
+  // instead of being yanked from the tree. `anim` drives opacity
+  // + scale. This replaces the old pattern where the modal appeared
+  // instantly — tester feedback: "every single popup should have a
+  // smooth animation coming in and coming out."
+  const [addFactMounted, setAddFactMounted] = useState(false);
+  const addFactAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (addFactModal.visible) {
+      setAddFactMounted(true);
+      Animated.timing(addFactAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else if (addFactMounted) {
+      Animated.timing(addFactAnim, {
+        toValue: 0,
+        duration: 180,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setAddFactMounted(false);
+      });
+    }
+    // addFactMounted intentionally excluded from deps — we only want
+    // to react to visible changes, not the unmount settle cycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addFactModal.visible, addFactAnim]);
+
   function openAddFactModal(category: string, categoryLabel: string) {
     setAddFactModal({
       visible: true,
@@ -1796,14 +1828,42 @@ function SeekerProfileScreen() {
           Inline theme overrides are required because the base
           StyleSheet freezes the colors proxy at module load and
           would otherwise render white-on-white in dark mode. */}
-      {addFactModal.visible && (
+      {addFactMounted && (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <TouchableOpacity
-            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
-            activeOpacity={1}
-            onPress={() => { Keyboard.dismiss(); setAddFactModal(prev => ({ ...prev, visible: false })); }}
-          />
-          <View style={[d.inlineEditor, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+          {/* Animated backdrop — fades opacity in sync with the card. */}
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                opacity: addFactAnim,
+              },
+            ]}
+            pointerEvents={addFactModal.visible ? 'auto' : 'none'}
+          >
+            <TouchableOpacity
+              style={StyleSheet.absoluteFillObject}
+              activeOpacity={1}
+              onPress={() => { Keyboard.dismiss(); setAddFactModal(prev => ({ ...prev, visible: false })); }}
+            />
+          </Animated.View>
+          {/* Animated card — fade + subtle scale-up from 0.96. */}
+          <Animated.View
+            style={[
+              d.inlineEditor,
+              {
+                backgroundColor: theme.surface.s1,
+                borderColor: theme.surface.border,
+                opacity: addFactAnim,
+                transform: [{
+                  scale: addFactAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.96, 1],
+                  }),
+                }],
+              },
+            ]}
+          >
             {/* Category picker — tap the pill to change bucket
                 without closing the modal. Makes the top-level
                 "Add a fact" button genuinely useful. */}
@@ -1869,7 +1929,7 @@ function SeekerProfileScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       )}
 

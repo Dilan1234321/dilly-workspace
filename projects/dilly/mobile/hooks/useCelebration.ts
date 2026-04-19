@@ -33,10 +33,25 @@ export default function useCelebration() {
 
   /**
    * Show a celebration overlay for the given milestone.
-   * Checks AsyncStorage first — if this milestone was already shown ever,
-   * does nothing. Otherwise shows the overlay and persists the milestone.
+   *
+   * Re-fire policy:
+   *  - Subscription unlocks (unlocked-dilly, unlocked-pro) ALWAYS fire,
+   *    every time the user converts. A user who cancels and later
+   *    resubscribes (or redeems a paid promo) should feel the moment
+   *    again. Muting these after first-ever view was the bug.
+   *  - True one-time achievement milestones (first-audit, cleared-bar,
+   *    top-25, top-10, score-jump, applied-job) remain one-shot. Those
+   *    reward progression that can only happen once.
    */
   const celebrate = useCallback(async (milestone: MilestoneType) => {
+    // Subscription unlocks always fire — conversion is the moment the
+    // user pays for Dilly, and we want to celebrate it every single
+    // time they convert (first signup, resubscribe, promo-code upgrade).
+    const alwaysFire = milestone === 'unlocked-dilly' || milestone === 'unlocked-pro';
+    if (alwaysFire) {
+      setActiveMilestone(milestone);
+      return;
+    }
     try {
       const raw  = await AsyncStorage.getItem(STORAGE_KEY);
       const seen: MilestoneType[] = raw ? JSON.parse(raw) : [];

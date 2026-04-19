@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl, Image, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform,
+  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl, Image, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Easing,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -191,12 +191,35 @@ export default function SettingsScreen() {
   // errors, and anything else that shouldn't feel like an iOS system
   // alert. Tester feedback: the stock Alert popups broke the Dilly
   // aesthetic and read as "generic phone UI," not a premium app.
+  //
+  // Banner mount pattern: we keep the banner MOUNTED through the exit
+  // animation so it can fade out cleanly (instead of the jarring
+  // conditional-render pop-out). `visible` controls the slide/fade
+  // animation; `message` is what's rendered; both clear together on
+  // unmount via the end-of-fade callback.
   const [settingsBanner, setSettingsBanner] = useState<{ kind: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const bannerAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!settingsBanner) return;
-    const t = setTimeout(() => setSettingsBanner(null), 4000);
+    // Fade in + slide down from -8px.
+    Animated.timing(bannerAnim, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+    const t = setTimeout(() => {
+      Animated.timing(bannerAnim, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setSettingsBanner(null);
+      });
+    }, 3800);
     return () => clearTimeout(t);
-  }, [settingsBanner]);
+  }, [settingsBanner, bannerAnim]);
 
   // Goodbye modal — shown AFTER a successful cancel instead of a
   // plain "subscription cancelled" alert. Gives the moment the
@@ -560,9 +583,10 @@ export default function SettingsScreen() {
       {/* Global in-app banner for Settings. Shows success/error
           messages (cancel confirmation, promo errors, etc.) as an
           inline strip at the top of the scroll view, replacing the
-          generic iOS Alert popups. Auto-dismisses after 4s. */}
+          generic iOS Alert popups. Animated fade + slide-down on
+          mount; fade + slide-up on exit. 4s auto-dismiss. */}
       {settingsBanner && (
-        <View
+        <Animated.View
           style={{
             marginHorizontal: 16,
             marginTop: 8,
@@ -573,6 +597,13 @@ export default function SettingsScreen() {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 10,
+            opacity: bannerAnim,
+            transform: [{
+              translateY: bannerAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [-8, 0],
+              }),
+            }],
             backgroundColor:
               settingsBanner.kind === 'error'
                 ? '#FEE2E2'
@@ -615,7 +646,7 @@ export default function SettingsScreen() {
           <TouchableOpacity onPress={() => setSettingsBanner(null)} hitSlop={8}>
             <Ionicons name="close" size={14} color={theme.surface.t3} />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       )}
 
       <ScrollView
