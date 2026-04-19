@@ -2,11 +2,11 @@
  * Settings - clean, simple, every button works.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl, Image, TextInput,
+  View, Text, ScrollView, StyleSheet, Switch, Alert, Linking, RefreshControl, Image, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Share } from 'react-native';
@@ -185,6 +185,17 @@ export default function SettingsScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [plan, setPlan] = useState('starter');
+  // In-app banner for confirmations and errors. Auto-dismisses after
+  // 4 seconds. Used for cancel-subscription success, promo-code
+  // errors, and anything else that shouldn't feel like an iOS system
+  // alert. Tester feedback: the stock Alert popups broke the Dilly
+  // aesthetic and read as "generic phone UI," not a premium app.
+  const [settingsBanner, setSettingsBanner] = useState<{ kind: 'success' | 'error' | 'info'; message: string } | null>(null);
+  useEffect(() => {
+    if (!settingsBanner) return;
+    const t = setTimeout(() => setSettingsBanner(null), 4000);
+    return () => clearTimeout(t);
+  }, [settingsBanner]);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [deadlineReminders, setDeadlineReminders] = useState(true);
   const [webProfileOn, setWebProfileOn] = useState(true);
@@ -238,6 +249,23 @@ export default function SettingsScreen() {
   }, []);
 
   useEffect(() => { fetchProfile(); }, []);
+
+  // Scroll to top whenever Settings gains focus. Without this, the
+  // ScrollView preserves position from the last visit — so a user
+  // who scrolled to Delete Account, then tapped Settings from the
+  // header icon, would land back at the bottom instead of seeing
+  // Edit Profile / Plan first. Tester feedback: "pressing the
+  // settings icon should always start at the top of settings."
+  const scrollRef = useRef<ScrollView>(null);
+  useFocusEffect(
+    useCallback(() => {
+      // Run after next frame so the list has mounted / laid out.
+      const id = requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+      });
+      return () => cancelAnimationFrame(id);
+    }, [])
+  );
 
   async function savePref(key: string, value: any) {
     try {
@@ -293,14 +321,14 @@ export default function SettingsScreen() {
         const detail = body?.detail;
         const msg = typeof detail === 'string' ? detail
           : detail?.message || "That code isn't valid.";
-        Alert.alert('Promo code', msg);
+        setSettingsBanner({ kind: 'error', message: msg });
         return;
       }
       // Success — refresh local plan + collapse the input. Fire the
       // celebration overlay on an UPGRADE to a paid tier. For starter
       // codes (like DILLYTAMPAFREE which flips back to free) we skip
-      // the celebration and just toast — nothing to celebrate about
-      // going free.
+      // the celebration and show the in-app banner instead — nothing
+      // to celebrate about going free.
       const newPlan = body?.plan || plan;
       setPlan(newPlan);
       setPromoCode('');
@@ -311,11 +339,11 @@ export default function SettingsScreen() {
           triggerCelebration(newPlan === 'pro' ? 'unlocked-pro' : 'unlocked-dilly');
         }, 250);
       } else {
-        Alert.alert('Plan updated', body?.message || 'Plan changed.');
+        setSettingsBanner({ kind: 'success', message: body?.message || 'Plan updated.' });
       }
       fetchProfile();
     } catch {
-      Alert.alert('Promo code', "Couldn't reach the server. Try again.");
+      setSettingsBanner({ kind: 'error', message: "Couldn't reach the server. Try again." });
     } finally {
       setPromoSubmitting(false);
     }
@@ -360,9 +388,11 @@ export default function SettingsScreen() {
 
   async function handleCancelSubscription() {
     // Standalone cancel — ends Stripe billing but keeps the account
-    // and all data. Tester feedback: cancellation was buried inside
-    // delete-account, which terrified people who just wanted to stop
-    // paying. One alert, one confirm, done.
+    // and all data. Tester feedback: the iOS "Subscription cancelled"
+    // system alert felt like a stock OS confirmation instead of part
+    // of Dilly, which broke the premium feel. Confirmation step still
+    // uses Alert (hard-stop decision point), but SUCCESS is now an
+    // in-app banner shown at the top of Settings that auto-dismisses.
     const planName = plan === 'pro' ? 'Dilly Pro' : 'Dilly';
     Alert.alert(
       `Cancel ${planName}?`,
@@ -377,10 +407,10 @@ export default function SettingsScreen() {
             try {
               res = await dilly.fetch('/subscription/cancel', { method: 'POST' });
             } catch {
-              Alert.alert(
-                'Could not cancel',
-                'We could not reach the server. Check your connection and try again.',
-              );
+              setSettingsBanner({
+                kind: 'error',
+                message: "We couldn't reach the server. Check your connection and try again.",
+              });
               return;
             }
             if (!res.ok) {
@@ -391,18 +421,16 @@ export default function SettingsScreen() {
                 if (typeof detail === 'string') msg = detail;
                 else if (detail?.message) msg = detail.message;
               } catch {}
-              Alert.alert('Could not cancel', msg);
+              setSettingsBanner({ kind: 'error', message: msg });
               return;
             }
             // Flip the local plan state immediately so the Plan
             // section re-renders as Starter without a manual reload.
-            // The backend is authoritative but we already know the
-            // outcome from the 200 response.
             setPlan('starter');
-            Alert.alert(
-              'Subscription cancelled',
-              "You're on Dilly Starter now. Your profile is safe.",
-            );
+            setSettingsBanner({
+              kind: 'success',
+              message: "You're on Dilly Starter now. Your profile is safe.",
+            });
           },
         },
       ],
@@ -482,7 +510,14 @@ export default function SettingsScreen() {
   const planLabel = plan === 'pro' ? 'Dilly Pro' : plan === 'dilly' ? 'Dilly' : 'Dilly Starter';
 
   return (
-    <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
+    // KeyboardAvoidingView so TextInputs (promo code, edit profile
+    // fields) lift above the keyboard. Tester feedback: fields were
+    // getting covered on iOS, forcing users to blind-type.
+    <KeyboardAvoidingView
+      style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
       {/* Header */}
       <View style={[s.header, { borderBottomColor: theme.surface.border }]}>
         <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
@@ -497,7 +532,69 @@ export default function SettingsScreen() {
         <View style={{ width: 22 }} />
       </View>
 
+      {/* Global in-app banner for Settings. Shows success/error
+          messages (cancel confirmation, promo errors, etc.) as an
+          inline strip at the top of the scroll view, replacing the
+          generic iOS Alert popups. Auto-dismisses after 4s. */}
+      {settingsBanner && (
+        <View
+          style={{
+            marginHorizontal: 16,
+            marginTop: 8,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            borderRadius: 12,
+            borderWidth: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor:
+              settingsBanner.kind === 'error'
+                ? '#FEE2E2'
+                : settingsBanner.kind === 'success'
+                ? theme.accentSoft
+                : theme.surface.s2,
+            borderColor:
+              settingsBanner.kind === 'error'
+                ? '#FCA5A5'
+                : settingsBanner.kind === 'success'
+                ? theme.accent
+                : theme.surface.border,
+          }}
+        >
+          <Ionicons
+            name={
+              settingsBanner.kind === 'error'
+                ? 'alert-circle'
+                : settingsBanner.kind === 'success'
+                ? 'checkmark-circle'
+                : 'information-circle'
+            }
+            size={16}
+            color={
+              settingsBanner.kind === 'error'
+                ? '#B91C1C'
+                : settingsBanner.kind === 'success'
+                ? theme.accent
+                : theme.surface.t2
+            }
+          />
+          <Text style={{
+            flex: 1,
+            fontSize: 13,
+            fontWeight: '600',
+            color: settingsBanner.kind === 'error' ? '#B91C1C' : theme.surface.t1,
+          }}>
+            {settingsBanner.message}
+          </Text>
+          <TouchableOpacity onPress={() => setSettingsBanner(null)} hitSlop={8}>
+            <Ionicons name="close" size={14} color={theme.surface.t3} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 60 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await fetchProfile(); setRefreshing(false); }} />}
@@ -998,7 +1095,7 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

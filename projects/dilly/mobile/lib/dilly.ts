@@ -80,20 +80,52 @@ const _baseClient = createDillyClient({
  * body themselves (some screens need the error detail for toasts).
  */
 const _origFetch = _baseClient.fetch.bind(_baseClient);
+
+// Paths that should NEVER auto-fire the global paywall on 402.
+// These are background/polling endpoints that run without the user
+// asking. If the user just downgraded or cancelled, these return 402
+// and would open the paywall at random moments — which testers saw
+// as "the paywall appears when not prompted randomly, at random times"
+// after cancelling. The screens that own these endpoints handle the
+// 402 locally (usually by rendering an inline upgrade teaser instead
+// of the global modal).
+const _PAYWALL_SILENT_PATHS = [
+  '/jobs/fit-narrative/usage',       // polled on Jobs tab mount
+  '/jobs/fit-narrative',             // warm-on-expand; screen renders teaser
+  '/holder/market-radar',            // holder home background fetch
+  '/ai/context',                     // AI overlay open
+  '/ai/chat-history',                // history panel fetch
+];
+
+// Debounce the global paywall so bursts of 402s only trigger one
+// modal open. 5s is long enough to absorb a page's worth of parallel
+// GETs but short enough that a real second paywall trigger (e.g.
+// tap a paid button, close, tap another) still feels responsive.
+let _lastPaywallAt = 0;
+const _PAYWALL_COOLDOWN_MS = 5000;
+
 async function fetchWithPaywall(path: string, init?: RequestInit): Promise<Response> {
   const res = await _origFetch(path, init);
   if (res.status === 402) {
-    let ctx: { surface?: string; promise?: string } | undefined;
-    try {
-      const body = await res.clone().json();
-      ctx = {
-        surface: body?.feature || body?.detail?.feature,
-        promise: body?.message || body?.detail?.message || body?.error,
-      };
-    } catch {
-      // body wasn't JSON — show the default paywall copy
+    // Silent-path guard: let the caller handle the 402 inline.
+    const isSilentPath = _PAYWALL_SILENT_PATHS.some(p => path.startsWith(p));
+    // Cooldown guard: don't re-open within the window.
+    const now = Date.now();
+    const inCooldown = now - _lastPaywallAt < _PAYWALL_COOLDOWN_MS;
+    if (!isSilentPath && !inCooldown) {
+      _lastPaywallAt = now;
+      let ctx: { surface?: string; promise?: string } | undefined;
+      try {
+        const body = await res.clone().json();
+        ctx = {
+          surface: body?.feature || body?.detail?.feature,
+          promise: body?.message || body?.detail?.message || body?.error,
+        };
+      } catch {
+        // body wasn't JSON — show the default paywall copy
+      }
+      openPaywall(ctx);
     }
-    openPaywall(ctx);
   }
   return res;
 }

@@ -381,12 +381,6 @@ export default function AIArenaScreen() {
             who already have a job: it's the same question either way. */}
         <FadeInView delay={0}>
           <View style={{ paddingTop: 8, paddingBottom: 18 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT }} />
-              <Text style={{ fontSize: 10, fontWeight: '900', color: ACCENT, letterSpacing: 1.8 }}>
-                {isHolder ? 'FIELD INTELLIGENCE · LIVE' : 'AI ARENA · LIVE'}
-              </Text>
-            </View>
             <Text style={{ fontSize: 26, fontWeight: '900', color: TEXT, lineHeight: 32, letterSpacing: -0.6 }}>
               {isHolder
                 ? 'Where your field is going.'

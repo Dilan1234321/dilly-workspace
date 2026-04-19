@@ -201,10 +201,15 @@ export interface TypePreset {
 }
 
 export const TYPE_PRESETS: Record<TypeId, TypePreset> = {
-  dilly:     { id: 'dilly',     label: 'Dilly',     display: 'Cinzel_700Bold', body: undefined, heroTracking: -0.4, heroWeight: '700' },
-  modern:    { id: 'modern',    label: 'Modern',    display: undefined,        body: undefined, heroTracking: -0.8, heroWeight: '900' },
-  editorial: { id: 'editorial', label: 'Editorial', display: 'Cinzel_700Bold', body: undefined, heroTracking:  0.2, heroWeight: '700' },
-  playful:   { id: 'playful',   label: 'Playful',   display: undefined,        body: undefined, heroTracking: -0.2, heroWeight: '800' },
+  // Dilly = Cinzel (Roman capitals, serif, carved-in-stone feel).
+  // Editorial = Playfair Display (high-contrast serif, magazine/book
+  // feel — totally different shape language from Cinzel). Tester
+  // feedback flagged that the two presets looked identical because
+  // they were both Cinzel with tracking tweaks. Now genuinely distinct.
+  dilly:     { id: 'dilly',     label: 'Dilly',     display: 'Cinzel_700Bold',          body: undefined, heroTracking: -0.4, heroWeight: '700' },
+  modern:    { id: 'modern',    label: 'Modern',    display: undefined,                 body: undefined, heroTracking: -0.8, heroWeight: '900' },
+  editorial: { id: 'editorial', label: 'Editorial', display: 'PlayfairDisplay_900Black', body: undefined, heroTracking:  0.2, heroWeight: '900' },
+  playful:   { id: 'playful',   label: 'Playful',   display: undefined,                 body: undefined, heroTracking: -0.2, heroWeight: '800' },
 };
 
 export interface DensityPreset {

@@ -137,44 +137,48 @@ def _count_new_jobs_this_week(email: str, profile: dict) -> int:
 
 
 def _one_thing_to_prep(profile: dict, facts: list[dict], path: str) -> str | None:
-    """Pick one concrete, small, do-this-week thing based on what Dilly
-    knows. Priorities:
-      1. If user has a pending interview (from applications): prep for it.
-      2. If profile has a near-term deadline: work toward it.
-      3. If user has a named goal: next small step toward it.
-      4. If user has a JD in their recent history: tailor a resume for it.
-      5. Generic path-appropriate 'add one more fact' nudge."""
-    # Look at explicit goals first
+    """Pick one concrete, do-this-week thing based on what Dilly knows.
+    Replaces the old "one small move" phrasing which testers flagged
+    as vague filler. Every branch returns a specific action the user
+    can start today, not a motivational sentence.
+
+    Priority order:
+      1. Named goal in profile facts: translate to a this-week action.
+      2. Near-term deadline: frame as a prep window.
+      3. Path-specific action tuned to the user's situation.
+      4. Growth nudge when profile is still thin.
+    """
+    # Named goal first — translate to a concrete this-week action.
     for f in facts:
         cat = (f.get("category") or "").lower()
         if cat == "goal":
             value = (f.get("value") or f.get("label") or "").strip()
             if value:
-                return f"One small move toward '{value[:60]}'. Dilly can help you pick it."
-    # Look at deadlines
+                return f"This week, take the first concrete step toward '{value[:60]}'. Ask Dilly to name it."
+    # Near-term deadline as a prep window.
     deadlines = profile.get("deadlines") or []
     if isinstance(deadlines, list) and deadlines:
         first = deadlines[0]
         if isinstance(first, dict):
             label = (first.get("label") or first.get("name") or "").strip()
             if label:
-                return f"Deadline approaching: {label[:60]}. Carve out 30 minutes."
-    # Path-specific fallback
+                return f"Deadline approaching: {label[:60]}. Block 30 minutes today to prep it."
+    # Path-specific actions — each one names the action, not the feeling.
     if path == "student":
-        return "Reach out to one person in your target field this week. One message, nothing heavier."
+        return "Message one person in your target field this week. Short, specific, honest."
     if path == "dropout":
         return "Ship one visible thing this week. Commit, post, demo. Receipts beat resumes."
     if path == "senior_reset":
-        return "One warm intro this week. People in your network hire first."
+        return "Warm up one past colleague this week. People in your network hire first."
     if path == "veteran":
-        return "Translate one military achievement into a civilian-language bullet."
+        return "Translate one military achievement into a civilian-language bullet this week."
     if path == "parent_returning":
-        return "One coffee chat with someone in your target field this week."
+        return "Set one coffee chat with someone in your target field this week."
     if path == "career_switch":
-        return "One skill transfer proof this week. A short project, a case study, a writeup."
+        return "Publish one skill-transfer proof this week. A short project or case study works."
     if path == "international_grad":
-        return "One sponsor-friendly company researched deeply this week."
-    return "Tell Dilly one more thing about your career. Every fact sharpens the guidance."
+        return "Research one sponsor-friendly company deeply this week and save it to your target list."
+    return "Add one more fact to your Dilly Profile this week. Every fact sharpens the guidance."
 
 
 def _generate_brief(email: str, profile: dict) -> dict:

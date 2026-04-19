@@ -1218,6 +1218,15 @@ export default function JobsScreen() {
           const allowed: Tab[] = ['internship', 'entry_level'];
           const next = new Set<Tab>(Array.from(prev).filter(t => allowed.includes(t)));
           if (next.size === 0) next.add('internship');
+          // CRITICAL: return the SAME reference if the filtered set has
+          // identical contents. Otherwise we create a new Set on every
+          // fetchData call, which is a dependency of the useEffect that
+          // fires fetchData → infinite refresh loop. This matched the
+          // "jobs page keeps refreshing, doesn't stop" bug. Equality is
+          // size + subset check since Tab is a simple string union.
+          if (next.size === prev.size && Array.from(next).every(t => prev.has(t))) {
+            return prev;
+          }
           return next;
         });
       }

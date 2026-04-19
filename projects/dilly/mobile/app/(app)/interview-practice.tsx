@@ -506,7 +506,7 @@ function SetupPhase({
             <Text style={s.heroKicker}>STEP INTO</Text>
             <Text style={s.heroTitle}>The Interview Room</Text>
             <Text style={s.heroSub}>
-              This isn't a chatbot. Dilly reads the job, builds five questions they'll actually ask, and tracks your answers in real time — structure, specificity, and pace — against the way companies like this actually hire.
+              This isn't a chatbot. Dilly reads the job, builds five questions they'll actually ask, and tracks your answers in real time (structure, specificity, pace) against the way companies like this actually hire.
             </Text>
             <View style={s.heroProofRow}>
               <ProofChip icon="flash" text="5 questions" />

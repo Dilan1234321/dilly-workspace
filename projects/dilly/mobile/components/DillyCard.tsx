@@ -869,35 +869,37 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
         <Text style={c.shareBtnText}>Share your Dilly Card</Text>
       </TouchableOpacity>
 
-      {/* Print section */}
-      <View style={c.printSection}>
+      {/* Print section. Inline theme overrides required because the
+          static styles below hardcode #F9FAFB / #E5E7EB backgrounds
+          and DARK/GRAY text, which blow out in dark mode. */}
+      <View style={[c.printSection, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <Ionicons name="print-outline" size={14} color={GRAY} />
-          <Text style={{ fontSize: 12, fontWeight: '600', color: DARK }}>Save for printing</Text>
+          <Ionicons name="print-outline" size={14} color={theme.surface.t3} />
+          <Text style={{ fontSize: 12, fontWeight: '600', color: theme.surface.t1 }}>Save for printing</Text>
         </View>
-        <Text style={{ fontSize: 11, color: GRAY, lineHeight: 16, marginBottom: 10 }}>
+        <Text style={{ fontSize: 11, color: theme.surface.t3, lineHeight: 16, marginBottom: 10 }}>
           Save high-quality images to your photos. Upload to Vistaprint, Moo, or your local print shop. Standard size: 3.5" x 2".
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity
-            style={c.printBtn}
+            style={[c.printBtn, { borderColor: theme.accent + '30', backgroundColor: theme.accent + '14' }]}
             onPress={() => captureAndShare(frontRef, cardFileName('Front'))}
             activeOpacity={0.8}
           >
-            <Ionicons name="download-outline" size={14} color={DILLY_BLUE} />
-            <Text style={c.printBtnText}>Front</Text>
+            <Ionicons name="download-outline" size={14} color={theme.accent} />
+            <Text style={[c.printBtnText, { color: theme.accent }]}>Front</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={c.printBtn}
+            style={[c.printBtn, { borderColor: theme.accent + '30', backgroundColor: theme.accent + '14' }]}
             onPress={() => captureAndShare(backRef, cardFileName('Back'))}
             activeOpacity={0.8}
           >
-            <Ionicons name="download-outline" size={14} color={DILLY_BLUE} />
-            <Text style={c.printBtnText}>Back</Text>
+            <Ionicons name="download-outline" size={14} color={theme.accent} />
+            <Text style={[c.printBtnText, { color: theme.accent }]}>Back</Text>
           </TouchableOpacity>
         </View>
-        <Text style={{ fontSize: 9, color: LIGHT_GRAY, marginTop: 6 }}>
-          Tip: Upload both files to vistaprint.com &rarr; Business Cards &rarr; Upload Your Design
+        <Text style={{ fontSize: 9, color: theme.surface.t3, marginTop: 6 }}>
+          Tip: Upload both files to vistaprint.com, Business Cards, Upload Your Design
         </Text>
       </View>
     </View>

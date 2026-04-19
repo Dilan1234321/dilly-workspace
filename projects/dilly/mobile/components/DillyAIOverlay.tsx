@@ -372,8 +372,8 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           setIsTyping(false);
           const { upgrade_plan } = detail;
           const breather = upgrade_plan === 'pro'
-            ? "We've covered a lot today. Let me process everything you've shared — I'll be sharper tomorrow. If you want unlimited runway, Pro removes the daily breather."
-            : "We've covered a lot today. Let me process everything you've shared — I'll be sharper tomorrow.";
+            ? "We've covered a lot today. Let me process everything you've shared. I'll be sharper tomorrow. If you want unlimited runway, Pro removes the daily breather."
+            : "We've covered a lot today. Let me process everything you've shared. I'll be sharper tomorrow.";
           setMessages([...newHistory, {
             id: ++_msgId,
             role: 'assistant',

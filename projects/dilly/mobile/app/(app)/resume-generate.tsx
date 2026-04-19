@@ -578,7 +578,7 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
         <Text style={styles.heroKicker}>FORGE</Text>
         <Text style={styles.heroTitle}>One role.{'\n'}One company.{'\n'}One resume.</Text>
         <Text style={styles.heroSub}>
-          Not a template. Not a rewrite. Dilly reads the job you're applying to, mines your profile for the matches, and builds a resume from scratch — ATS-parsed and tailored to this specific opening.
+          Not a template. Not a rewrite. Dilly reads the job you're applying to, mines your profile for the matches, and builds a resume from scratch, ATS-parsed and tailored to this specific opening.
         </Text>
         <View style={styles.heroProofRow}>
           <ProofChip icon="shield-checkmark" text="ATS-aware" />
@@ -877,7 +877,7 @@ function DonePhase({
             <Text style={{ fontWeight: '700', color: colors.t1 }}>
               {(atsInfo.missing_keywords as string[]).slice(0, 4).join(', ')}
             </Text>
-            {' '}— none of these are in your profile yet. If you actually have experience with them, tell Dilly and the next forge will include them.
+            {' '}(none of these are in your profile yet). If you actually have experience with them, tell Dilly and the next forge will include them.
           </Text>
           <AnimatedPressable
             style={styles.warnCta}
@@ -900,7 +900,7 @@ function DonePhase({
             <Text style={styles.warnTitle}>Gaps detected</Text>
           </View>
           {atsInfo.gaps.map((g: string, i: number) => (
-            <Text key={i} style={styles.warnBullet}>— {g}</Text>
+            <Text key={i} style={styles.warnBullet}>• {g}</Text>
           ))}
         </View>
       )}
@@ -921,7 +921,7 @@ function DonePhase({
             style={styles.weakestCta}
             onPress={() => openDillyOverlay({
               isPaid: true,
-              initialMessage: `In my resume for ${jobTitle} at ${company}, this bullet feels thin: "${weakestBullet.text}" (from ${weakestBullet.where}). Ask me the specifics — numbers, outcomes, what changed — so we can rewrite it with real impact.`,
+              initialMessage: `In my resume for ${jobTitle} at ${company}, this bullet feels thin: "${weakestBullet.text}" (from ${weakestBullet.where}). Ask me the specifics (numbers, outcomes, what changed) so we can rewrite it with real impact.`,
             })}
             scaleDown={0.97}
           >

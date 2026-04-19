@@ -1792,15 +1792,18 @@ function SeekerProfileScreen() {
       {/* Manual add-fact modal. Reuses the inline-editor look for
           consistency. This is the escape hatch for free-tier users
           who didn't upload a resume — they can still grow their
-          profile without being gated into the paid chat surface. */}
+          profile without being gated into the paid chat surface.
+          Inline theme overrides are required because the base
+          StyleSheet freezes the colors proxy at module load and
+          would otherwise render white-on-white in dark mode. */}
       {addFactModal.visible && (
         <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <TouchableOpacity
-            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.15)' }]}
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
             activeOpacity={1}
             onPress={() => { Keyboard.dismiss(); setAddFactModal(prev => ({ ...prev, visible: false })); }}
           />
-          <View style={d.inlineEditor}>
+          <View style={[d.inlineEditor, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             {/* Category picker — tap the pill to change bucket
                 without closing the modal. Makes the top-level
                 "Add a fact" button genuinely useful. */}
@@ -1814,35 +1817,35 @@ function SeekerProfileScreen() {
                     scaleDown={0.95}
                     style={{
                       paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
-                      backgroundColor: active ? cfg.color + '22' : colors.s2,
-                      borderWidth: 1, borderColor: active ? cfg.color + '55' : colors.b1,
+                      backgroundColor: active ? cfg.color + '22' : theme.surface.s2,
+                      borderWidth: 1, borderColor: active ? cfg.color + '55' : theme.surface.border,
                     }}
                   >
-                    <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? cfg.color : colors.t2 }}>
+                    <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? cfg.color : theme.surface.t2 }}>
                       {cfg.label}
                     </Text>
                   </AnimatedPressable>
                 );
               })}
             </ScrollView>
-            <Text style={d.inlineEditorFieldLabel}>Title</Text>
+            <Text style={[d.inlineEditorFieldLabel, { color: theme.surface.t3 }]}>Title</Text>
             <TextInput
-              style={d.inlineEditorLabelInput}
+              style={[d.inlineEditorLabelInput, { color: theme.surface.t1, borderColor: theme.surface.border, backgroundColor: theme.surface.s2 }]}
               value={addFactModal.label}
               onChangeText={(v) => setAddFactModal(prev => ({ ...prev, label: v }))}
               placeholder="e.g. Team Lead at University Data Lab"
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
               autoFocus
               returnKeyType="next"
               maxLength={80}
             />
-            <Text style={[d.inlineEditorFieldLabel, { marginTop: 12 }]}>Details</Text>
+            <Text style={[d.inlineEditorFieldLabel, { marginTop: 12, color: theme.surface.t3 }]}>Details</Text>
             <TextInput
-              style={d.inlineEditorInput}
+              style={[d.inlineEditorInput, { color: theme.surface.t1, borderColor: theme.surface.border, backgroundColor: theme.surface.s2 }]}
               value={addFactModal.value}
               onChangeText={(v) => setAddFactModal(prev => ({ ...prev, value: v }))}
               placeholder="What happened, what you did, what you learned."
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
               multiline
               returnKeyType="done"
               blurOnSubmit
@@ -1850,14 +1853,14 @@ function SeekerProfileScreen() {
             />
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
               <TouchableOpacity
-                style={d.inlineEditorCancel}
+                style={[d.inlineEditorCancel, { backgroundColor: theme.surface.s2 }]}
                 onPress={() => setAddFactModal(prev => ({ ...prev, visible: false }))}
                 disabled={addFactModal.saving}
               >
-                <Text style={{ fontSize: 13, color: colors.t2 }}>Cancel</Text>
+                <Text style={{ fontSize: 13, color: theme.surface.t2 }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[d.inlineEditorSave, (!addFactModal.label.trim() || !addFactModal.value.trim() || addFactModal.saving) && { opacity: 0.5 }]}
+                style={[d.inlineEditorSave, { backgroundColor: theme.accent }, (!addFactModal.label.trim() || !addFactModal.value.trim() || addFactModal.saving) && { opacity: 0.5 }]}
                 onPress={submitAddFact}
                 disabled={!addFactModal.label.trim() || !addFactModal.value.trim() || addFactModal.saving}
               >

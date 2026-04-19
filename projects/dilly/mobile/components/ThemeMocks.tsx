@@ -28,10 +28,12 @@ export interface MockScreenMeta {
 }
 
 export const MOCK_SCREENS: MockScreenMeta[] = [
+  // Profile and Room mocks removed per user request — they weren't
+  // useful previews of what the theme actually feels like. The
+  // remaining three (career, chat, forge) cover the high-traffic
+  // surfaces a theme change will actually affect.
   { id: 'career',  label: 'Career Center' },
   { id: 'chat',    label: 'Chat with Dilly' },
-  { id: 'profile', label: 'My Dilly' },
-  { id: 'room',    label: 'Interview · The Room' },
   { id: 'forge',   label: 'Resume · The Forge' },
 ];
 

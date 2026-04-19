@@ -110,16 +110,19 @@ export default function CustomizeStudio() {
         </AnimatedPressable>
       </View>
 
-      {/* Screen picker */}
+      {/* Screen picker. Inline theme overrides so the row reads
+          correctly on Midnight/dark surfaces. */}
       <View style={s.screenPickerRow}>
         <AnimatedPressable
-          style={s.screenPickerBtn}
+          style={[s.screenPickerBtn, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
           onPress={() => setScreenPickerOpen(true)}
           scaleDown={0.97}
         >
-          <Ionicons name="phone-portrait" size={13} color="#1A1A2E" />
-          <Text style={s.screenPickerLabel}>Previewing: <Text style={{ fontWeight: '800' }}>{screenLabel}</Text></Text>
-          <Ionicons name="chevron-down" size={14} color="#8A8AA0" />
+          <Ionicons name="phone-portrait" size={13} color={theme.surface.t1} />
+          <Text style={[s.screenPickerLabel, { color: theme.surface.t1 }]}>
+            Previewing: <Text style={{ fontWeight: '800' }}>{screenLabel}</Text>
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={theme.surface.t3} />
         </AnimatedPressable>
         <AnimatedPressable
           onPress={handleSurprise}
@@ -132,21 +135,20 @@ export default function CustomizeStudio() {
       </View>
 
       {/* Live preview — phone frame clamped so it never blocks the
-          top bar. maxHeight accounts for: top bar (~56) + screen-picker
-          row (~60) + panel (~280) + bottom safe area (~34) so the
-          phone never crowds into the Close/Save buttons on short
-          screens (SE, older iPhones). */}
-      <View style={s.previewWrap}>
+          top bar. The preview area uses a subtle surface tint so the
+          phone frame reads against it in both light and dark modes. */}
+      <View style={[s.previewWrap, { backgroundColor: theme.surface.s1 }]}>
         <View style={[s.previewPhone, {
           height: Math.min(360, W * 1.25),
           width: Math.min(210, W * 0.52),
+          borderColor: theme.surface.t1,
         }]}>
           <MockFrame theme={theme} screen={screen} />
         </View>
       </View>
 
       {/* Panel */}
-      <View style={[s.panel, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      <View style={[s.panel, { paddingBottom: Math.max(insets.bottom, 12), backgroundColor: theme.surface.bg, borderTopColor: theme.surface.border }]}>
         {/* Axis tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.axisRow}>
           {AXES.map(a => {
@@ -156,13 +158,14 @@ export default function CustomizeStudio() {
                 key={a.id}
                 style={[
                   s.axisTab,
+                  { backgroundColor: theme.surface.s2, borderColor: theme.surface.border },
                   active && { backgroundColor: theme.accent, borderColor: theme.accent },
                 ]}
                 onPress={() => setAxis(a.id)}
                 scaleDown={0.95}
               >
-                <Ionicons name={a.icon} size={12} color={active ? '#fff' : '#1A1A2E'} />
-                <Text style={[s.axisTabText, active && { color: '#fff' }]}>{a.label}</Text>
+                <Ionicons name={a.icon} size={12} color={active ? '#fff' : theme.surface.t1} />
+                <Text style={[s.axisTabText, { color: theme.surface.t1 }, active && { color: '#fff' }]}>{a.label}</Text>
               </AnimatedPressable>
             );
           })}
@@ -181,8 +184,8 @@ export default function CustomizeStudio() {
         {/* Footer — reset */}
         <View style={s.footer}>
           <AnimatedPressable onPress={handleReset} scaleDown={0.95} style={s.resetBtn}>
-            <Ionicons name="refresh" size={13} color="#8A8AA0" />
-            <Text style={s.resetBtnText}>Reset to Dilly default</Text>
+            <Ionicons name="refresh" size={13} color={theme.surface.t3} />
+            <Text style={[s.resetBtnText, { color: theme.surface.t3 }]}>Reset to Dilly default</Text>
           </AnimatedPressable>
         </View>
       </View>
@@ -190,8 +193,8 @@ export default function CustomizeStudio() {
       {/* Screen picker modal */}
       <Modal visible={screenPickerOpen} transparent animationType="fade" onRequestClose={() => setScreenPickerOpen(false)}>
         <Pressable style={s.sheetBackdrop} onPress={() => setScreenPickerOpen(false)}>
-          <View style={s.sheetCard}>
-            <Text style={s.sheetTitle}>Preview screen</Text>
+          <View style={[s.sheetCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, borderWidth: 1 }]}>
+            <Text style={[s.sheetTitle, { color: theme.surface.t1 }]}>Preview screen</Text>
             {MOCK_SCREENS.map(ms => {
               const selected = ms.id === screen;
               return (
@@ -201,7 +204,7 @@ export default function CustomizeStudio() {
                   onPress={() => { setScreen(ms.id); setScreenPickerOpen(false); }}
                   scaleDown={0.97}
                 >
-                  <Text style={[s.sheetRowText, selected && { color: theme.accent, fontWeight: '800' }]}>
+                  <Text style={[s.sheetRowText, { color: theme.surface.t1 }, selected && { color: theme.accent, fontWeight: '800' }]}>
                     {ms.label}
                   </Text>
                   {selected && <Ionicons name="checkmark" size={16} color={theme.accent} />}
@@ -415,14 +418,26 @@ function ShapePanel({ pending, patch, theme }: AxisProps) {
 }
 
 function TypePanel({ pending, patch, theme }: AxisProps) {
+  // ScrollView-wrapped so four vertically-stacked options never push
+  // the phone preview up into the top bar on small screens. Before,
+  // the panel grew to fit all four rows and could cover the Close /
+  // Save buttons. maxHeight lets the user scroll within the panel.
   return (
-    <View style={s.optionColumn}>
+    <ScrollView
+      style={{ maxHeight: 220 }}
+      contentContainerStyle={s.optionColumn}
+      showsVerticalScrollIndicator={false}
+    >
       {Object.values(TYPE_PRESETS).map(tp => {
         const selected = pending.type === tp.id;
         return (
           <AnimatedPressable
             key={tp.id}
-            style={[s.optionRowCard, selected && { borderColor: theme.accent, backgroundColor: theme.accentSoft }]}
+            style={[
+              s.optionRowCard,
+              { backgroundColor: theme.surface.s2, borderColor: theme.surface.border },
+              selected && { borderColor: theme.accent, backgroundColor: theme.accentSoft },
+            ]}
             onPress={() => patch({ type: tp.id as TypeId })}
             scaleDown={0.98}
           >
@@ -432,11 +447,11 @@ function TypePanel({ pending, patch, theme }: AxisProps) {
                 fontWeight: tp.heroWeight,
                 letterSpacing: tp.heroTracking,
                 fontSize: 18,
-                color: selected ? theme.accent : '#1A1A2E',
+                color: selected ? theme.accent : theme.surface.t1,
               }}>
                 {tp.label}
               </Text>
-              <Text style={{ fontSize: 10, color: '#8A8AA0', marginTop: 2 }}>
+              <Text style={{ fontSize: 10, color: theme.surface.t3, marginTop: 2 }}>
                 {tp.id === 'dilly' ? 'Cinzel display + system body' :
                  tp.id === 'modern' ? 'All sans, extra condensed' :
                  tp.id === 'editorial' ? 'Serif display, open tracking' :
@@ -447,7 +462,7 @@ function TypePanel({ pending, patch, theme }: AxisProps) {
           </AnimatedPressable>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
