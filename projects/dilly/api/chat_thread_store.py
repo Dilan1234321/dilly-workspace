@@ -36,6 +36,10 @@ _THREADS_FILENAME = "chat_threads.json"
 _MAX_THREADS = 100
 _PREVIEW_LEN = 160         # user-message preview length
 _ASSISTANT_PREVIEW_LEN = 220
+# Full-transcript cap per thread. Keeps file size bounded so the
+# overlay's "past conversations → tap to replay" feature doesn't
+# balloon a user's profile folder. 40 turns ≈ 80 messages ≈ ~20KB.
+_MAX_MESSAGES_PER_THREAD = 80
 
 
 def _now_iso() -> str:
@@ -124,7 +128,22 @@ def record_turn(
                 row["first_user_message"] = user_preview
             if mode and not row.get("mode"):
                 row["mode"] = mode
+            # Append the full messages to the rolling transcript so
+            # "past conversations → tap to replay" can render them.
+            msgs = row.get("messages") or []
+            if user_message:
+                msgs.append({"role": "user",      "content": user_message, "at": now})
+            if assistant_message:
+                msgs.append({"role": "assistant", "content": assistant_message, "at": now})
+            if len(msgs) > _MAX_MESSAGES_PER_THREAD:
+                msgs = msgs[-_MAX_MESSAGES_PER_THREAD:]
+            row["messages"] = msgs
         else:
+            first_msgs: list[dict[str, Any]] = []
+            if user_message:
+                first_msgs.append({"role": "user",      "content": user_message, "at": now})
+            if assistant_message:
+                first_msgs.append({"role": "assistant", "content": assistant_message, "at": now})
             threads.append({
                 "conv_id":                conv_id,
                 "first_user_message":     user_preview,
@@ -133,6 +152,7 @@ def record_turn(
                 "last_turn_at":           now,
                 "turn_count":             1,
                 "mode":                   mode or "coaching",
+                "messages":               first_msgs,
             })
         _save(email, threads)
     except Exception:
@@ -155,6 +175,20 @@ def get_thread(email: str, conv_id: str) -> dict[str, Any] | None:
         if r.get("conv_id") == conv_id:
             return r
     return None
+
+
+def get_thread_messages(email: str, conv_id: str) -> list[dict[str, Any]]:
+    """Return the full turn-by-turn message list for a conversation,
+    in chronological order. Empty list if the thread has no stored
+    transcript (older threads recorded before the `messages` field
+    was added will return empty)."""
+    row = get_thread(email, conv_id)
+    if not row:
+        return []
+    msgs = row.get("messages") or []
+    if not isinstance(msgs, list):
+        return []
+    return [m for m in msgs if isinstance(m, dict) and (m.get("content") or "").strip()]
 
 
 def delete_thread(email: str, conv_id: str) -> bool:

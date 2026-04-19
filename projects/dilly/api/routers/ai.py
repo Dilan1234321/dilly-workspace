@@ -1159,6 +1159,28 @@ async def delete_ai_chat_thread(request: Request, conv_id: str):
     return {"ok": ok}
 
 
+@router.get("/ai/chat-history/{conv_id}/messages")
+async def get_ai_chat_thread_messages(request: Request, conv_id: str):
+    """Full transcript for one past thread. Feeds the overlay's
+    "past conversations → tap to open" flow. Zero LLM."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    try:
+        from projects.dilly.api.chat_thread_store import get_thread_messages, get_thread  # type: ignore
+        msgs = get_thread_messages(email, conv_id)
+        thread = get_thread(email, conv_id) or {}
+    except Exception:
+        msgs, thread = [], {}
+    return {
+        "conv_id": conv_id,
+        "mode": thread.get("mode") or "coaching",
+        "messages": msgs,
+        "count": len(msgs),
+    }
+
+
 @router.get("/ai/context")
 async def get_ai_context(request: Request):
     user = deps.require_auth(request)

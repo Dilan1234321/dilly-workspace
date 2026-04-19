@@ -130,25 +130,48 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   // as part of Dilly on Midnight instead of flashing white.
   const theme = useResolvedTheme();
 
+  // Device corner radius estimate. Tuned for iPhones:
+  //   top inset 59+ (14 Pro / 15 / 16 Pro) → 55px physical radius
+  //   top inset 47-55 (Pro / X / 11 / 12 / 13) → 47px
+  //   top inset 44 (older notched) → 42px
+  //   top inset 20 (SE, iPad) → 0
   const top = insets.top || 44;
   const R =
-    top <= 20 ? 0 : top <= 44 ? 39 : top <= 48 ? 42
-    : top <= 50 ? 44 : top <= 55 ? 47 : top <= 61 ? 55 : 62;
+    top <= 20 ? 0 : top <= 44 ? 42 : top <= 48 ? 47
+    : top <= 50 ? 50 : top <= 55 ? 52 : top <= 61 ? 55 : 60;
+
+  // The glow ring needs to sit FULLY INSIDE the viewport. If the path
+  // runs along x=0..W the outer half of the stroke gets clipped and the
+  // corners look rectangular since the curve radius extends off-screen
+  // where it's invisible. We inset the path by half the outermost stroke
+  // so the entire glow is visible AND the corner arc hugs the device.
+  const STROKE_OUTER = 30;
+  const INSET = STROKE_OUTER / 2; // 15
+  const cornerR = Math.max(0, R - INSET);
+  const x0 = INSET;
+  const y0 = INSET;
+  const x1 = SCREEN_W - INSET;
+  const y1 = SCREEN_H - INSET;
 
   const W = SCREEN_W;
   const H = SCREEN_H;
-  const HALF_PATH_LEN = W + H + R * (Math.PI - 2);
+  const HALF_PATH_LEN =
+    (x1 - x0) + (y1 - y0) + cornerR * (Math.PI - 2);
 
+  // Each half starts at the bottom-center and walks up one side to the
+  // top-center. Inset by INSET on all edges; corners use quadratic bezier
+  // with the pre-inset screen corner as the control point so the arc
+  // matches the phone's physical curve.
   const LEFT_PATH = [
-    `M ${W / 2} ${H}`, `L ${R} ${H}`,
-    `Q 0 ${H} 0 ${H - R}`, `L 0 ${R}`,
-    `Q 0 0 ${R} 0`, `L ${W / 2} 0`,
+    `M ${W / 2} ${y1}`, `L ${x0 + cornerR} ${y1}`,
+    `Q ${x0} ${y1} ${x0} ${y1 - cornerR}`, `L ${x0} ${y0 + cornerR}`,
+    `Q ${x0} ${y0} ${x0 + cornerR} ${y0}`, `L ${W / 2} ${y0}`,
   ].join(' ');
 
   const RIGHT_PATH = [
-    `M ${W / 2} ${H}`, `L ${W - R} ${H}`,
-    `Q ${W} ${H} ${W} ${H - R}`, `L ${W} ${R}`,
-    `Q ${W} 0 ${W - R} 0`, `L ${W / 2} 0`,
+    `M ${W / 2} ${y1}`, `L ${x1 - cornerR} ${y1}`,
+    `Q ${x1} ${y1} ${x1} ${y1 - cornerR}`, `L ${x1} ${y0 + cornerR}`,
+    `Q ${x1} ${y0} ${x1 - cornerR} ${y0}`, `L ${W / 2} ${y0}`,
   ].join(' ');
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -341,20 +364,20 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           return;
         }
 
-        // Daily quota hit (paid tier exhausted). Different message
-        // because the user already pays. Route them to Pro instead.
+        // Daily quota hit (paid tier exhausted). Never expose the
+        // raw cap number — that reads like a paywall and our paid
+        // users reacted badly to it. Soft, in-character message;
+        // Dilly "needs a breather" and everything resumes tomorrow.
         if (res.status === 429 && typeof detail === 'object' && detail?.code === 'DAILY_CHAT_CAP') {
           setIsTyping(false);
-          const { used, cap, upgrade_plan } = detail;
-          const quotaMsg =
-            `You've used all ${cap} chats today (resets at midnight UTC).\n\n` +
-            (upgrade_plan === 'pro'
-              ? `For unlimited conversations, upgrade to Pro.`
-              : `Come back tomorrow, or upgrade your plan in Settings.`);
+          const { upgrade_plan } = detail;
+          const breather = upgrade_plan === 'pro'
+            ? "We've covered a lot today. Let me process everything you've shared — I'll be sharper tomorrow. If you want unlimited runway, Pro removes the daily breather."
+            : "We've covered a lot today. Let me process everything you've shared — I'll be sharper tomorrow.";
           setMessages([...newHistory, {
             id: ++_msgId,
             role: 'assistant',
-            content: quotaMsg,
+            content: breather,
           }]);
           return;
         }
@@ -564,12 +587,12 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Animated.View style={[StyleSheet.absoluteFill, { opacity: combinedOpacity }]}>
             <Svg width={SCREEN_W} height={SCREEN_H}>
-              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={BLUE} strokeWidth={22} strokeOpacity={0.12} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={BLUE} strokeWidth={10} strokeOpacity={0.40} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={GOLD} strokeWidth={4}  strokeOpacity={1}    strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={BLUE} strokeWidth={22} strokeOpacity={0.12} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={BLUE} strokeWidth={10} strokeOpacity={0.40} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
-              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={GOLD} strokeWidth={4}  strokeOpacity={1}    strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={BLUE} strokeWidth={STROKE_OUTER} strokeOpacity={0.12} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={BLUE} strokeWidth={14} strokeOpacity={0.42} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={LEFT_PATH}  fill="none" stroke={GOLD} strokeWidth={5}  strokeOpacity={1}    strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={BLUE} strokeWidth={STROKE_OUTER} strokeOpacity={0.12} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={BLUE} strokeWidth={14} strokeOpacity={0.42} strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
+              <AnimatedPath d={RIGHT_PATH} fill="none" stroke={GOLD} strokeWidth={5}  strokeOpacity={1}    strokeLinecap="round" strokeDasharray={`${HALF_PATH_LEN} ${HALF_PATH_LEN}`} strokeDashoffset={strokeOffset} />
               <AnimatedCircle cx={W / 2} cy={0} r={flashR} fill="none" stroke={GOLD} strokeWidth={2} opacity={flashOp} />
             </Svg>
           </Animated.View>
@@ -616,7 +639,11 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 // even after dozens of chats. See
                 // api/chat_thread_store.py for the storage format.
                 try {
-                  const res = await dilly.fetch('/ai/chat-history?limit=30');
+                  // Cap at the 5 most recent. Pro users might have
+                  // hundreds of past threads and the list becomes
+                  // overwhelming; 5 covers "my last chat or two" which
+                  // is the common need.
+                  const res = await dilly.fetch('/ai/chat-history?limit=5');
                   if (res.ok) {
                     const data = await res.json();
                     setHistory(data?.items || []);
@@ -766,7 +793,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       {/* History overlay */}
       {showHistory && (
         <View style={[s.historyOverlay, { backgroundColor: theme.surface.bg }]}>
-          <View style={[s.historyHeader, { paddingTop: insets.top + 10 }]}>
+          <View style={[s.historyHeader, { paddingTop: insets.top + 10, borderBottomColor: theme.surface.border }]}>
             <Text style={[s.historyTitle, { color: theme.surface.t1 }]}>Past Conversations</Text>
             <TouchableOpacity onPress={() => setShowHistory(false)} hitSlop={12}>
               <Ionicons name="close" size={20} color={theme.surface.t2} />
@@ -774,7 +801,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           </View>
           <ScrollView style={s.historyList}>
             {history.length === 0 ? (
-              <Text style={s.historyEmpty}>No past conversations yet.</Text>
+              <Text style={[s.historyEmpty, { color: theme.surface.t3 }]}>No past conversations yet.</Text>
             ) : (
               history.map((item: any, i: number) => {
                 // Shape from /ai/chat-history:
@@ -795,13 +822,37 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 return (
                   <TouchableOpacity
                     key={item.conv_id || i}
-                    style={s.historyItem}
-                    onPress={() => setShowHistory(false)}
+                    style={[s.historyItem, { borderBottomColor: theme.surface.border }]}
+                    onPress={async () => {
+                      // Load the full transcript and replace the
+                      // current message list so the user can actually
+                      // read what was said. Threads stored before the
+                      // full-transcript field was added will come back
+                      // empty — fall back to just closing in that case.
+                      if (!item.conv_id) { setShowHistory(false); return; }
+                      try {
+                        const res = await dilly.fetch(`/ai/chat-history/${item.conv_id}/messages`);
+                        if (res.ok) {
+                          const data = await res.json();
+                          const msgs: any[] = Array.isArray(data?.messages) ? data.messages : [];
+                          if (msgs.length > 0) {
+                            setMessages(msgs.map((m) => ({
+                              id: ++_msgId,
+                              role: (m.role === 'assistant' ? 'assistant' : 'user') as 'assistant' | 'user',
+                              content: String(m.content || ''),
+                            })));
+                            convIdRef.current = item.conv_id;
+                            setSuggestions([]);
+                          }
+                        }
+                      } catch {}
+                      setShowHistory(false);
+                    }}
                   >
-                    <Text style={s.historyItemTitle} numberOfLines={1}>
+                    <Text style={[s.historyItemTitle, { color: theme.surface.t1 }]} numberOfLines={1}>
                       {title}
                     </Text>
-                    <Text style={s.historyItemDate}>
+                    <Text style={[s.historyItemDate, { color: theme.surface.t3 }]}>
                       {whenLabel}{turns ? `  ·  ${turns} turn${turns === 1 ? '' : 's'}` : ''}
                     </Text>
                   </TouchableOpacity>
