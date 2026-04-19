@@ -13,6 +13,8 @@ import { DillyFace } from '../../components/DillyFace';
 import { TierBadge } from '../../components/TierBadge';
 import { useTierFeel } from '../../hooks/useTierFeel';
 import { useRecentUpgrade } from '../../hooks/useRecentUpgrade';
+import { YourPlanCard } from '../../components/YourPlanCard';
+import { useYourPlan } from '../../hooks/useYourPlan';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -236,6 +238,23 @@ function HolderHome() {
   const _nameLooksReal = !!name && !name.includes('@') && !/^\d/.test(name);
   const firstName = (_nameLooksReal ? name.split(/\s+/)[0] : '').replace(/@.*$/, '') || 'there';
 
+  // ── Your Plan for this week ─────────────────────────────────
+  // Anchor card that sits above every other home card. Mode +
+  // path drive what it says; deadlines / interviews override
+  // defaults. Zero LLM cost. Regenerates daily via AsyncStorage.
+  const plan = useYourPlan({
+    mode: 'holder',
+    userPath: 'holder',
+    firstName,
+    factCount,
+    currentRole,
+    // Holder mode doesn't track applications; pass 0 so the plan
+    // never nudges about applying.
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
   // Threat-level color for the hero pulse ring. Defaults to violet when
   // we haven't resolved a role yet so the card still looks alive.
   const threatColor = threat?.threat_level === 'severe' ? '#DC2626'
@@ -302,7 +321,17 @@ function HolderHome() {
           </AnimatedPressable>
         </View>
 
-        {/* ── 1. Weekly pulse hero ───────────────────────────────── */}
+        {/* ── 1. YOUR PLAN anchor ─────────────────────────────────
+            The product promise in one card: "Dilly turns your
+            career confusion into a plan." Sits above every other
+            card on home because that's the mental model — Dilly
+            makes the plan, everything else (jobs, arena, profile)
+            is where the plan gets executed or sharpened. */}
+        <FadeInView delay={20}>
+          <YourPlanCard plan={plan} firstName={firstName} />
+        </FadeInView>
+
+        {/* ── 2. Weekly pulse hero ───────────────────────────────── */}
         <FadeInView delay={40}>
           <AnimatedPressable
             scaleDown={feel.pressScaleDown}
@@ -1073,6 +1102,23 @@ function SeekerHome() {
     '';
   const firstName = firstNameRaw.replace(/@.*$/, '');
 
+  // Your Plan for this week. Anchor card at the top of every home.
+  // Mode here is inferred from is_student — anyone who hits SeekerHome
+  // is either an actual seeker (laid-off, career-switch, parent-
+  // returning, etc.) or a student. The user_path value drives the
+  // path-specific copy inside the plan generator.
+  const _seekerUserPath = String(p.user_path || '').toLowerCase() || 'exploring';
+  const _seekerMode = p.is_student ? 'student' : 'seeker';
+  const plan = useYourPlan({
+    mode: _seekerMode,
+    userPath: _seekerUserPath,
+    firstName,
+    appCount,
+    factCount,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
   // Journey steps
   const journeySteps: JourneyStep[] = [
     {
@@ -1172,6 +1218,15 @@ function SeekerHome() {
               </AnimatedPressable>
             </View>
           </View>
+        </FadeInView>
+
+        {/* ── YOUR PLAN anchor (seeker + student paths) ─────────
+            The product promise in one card: "Dilly turns your career
+            confusion into a plan." Sits above every other block so
+            the mental model is inescapable: Dilly makes the plan,
+            the rest of the app is where it gets executed. */}
+        <FadeInView delay={10}>
+          <YourPlanCard plan={plan} firstName={firstName} />
         </FadeInView>
 
         {/* ── Situation hero card ─────────────────────────────
