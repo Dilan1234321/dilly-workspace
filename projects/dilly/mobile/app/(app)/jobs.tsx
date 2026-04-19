@@ -33,6 +33,7 @@ import FadeInView from '../../components/FadeInView';
 import { DillyFace } from '../../components/DillyFace';
 import DillyFooter from '../../components/DillyFooter';
 import InlineToastView, { useInlineToast } from '../../components/InlineToast';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
@@ -702,7 +703,6 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
   isHolder?: boolean;
 }) {
   const toast = useInlineToast();
-  const [showFullDesc, setShowFullDesc] = useState(false);
   // Theme-aware colors. The module-level StyleSheet at the bottom of
   // this file is frozen at module load with whatever palette was active
   // then, so it doesn't repaint on dark/light flip. We inline-override
@@ -819,9 +819,14 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
             {/* Fit Narrative */}
             {/* FitNarrative is a "how you match this job" explainer.
                 For holders we skip it entirely. they're scanning the
-                market, not being sold on fit. The rest of the expanded
-                section (full description, action row) still renders. */}
-            {!isHolder && <FitNarrative listing={listing} preloaded={narrativeCache} />}
+                market, not being sold on fit. Wrapped in a local
+                ErrorBoundary so a render error in one card's narrative
+                can't blank the entire jobs page. */}
+            {!isHolder && (
+              <ErrorBoundary surface="this read" resetKey={listing.id}>
+                <FitNarrative listing={listing} preloaded={narrativeCache} />
+              </ErrorBoundary>
+            )}
 
             {/* Quick Glance bullets. Flush with the card background.
                 borderColor 'transparent' removes the panel feel and lets
@@ -1677,7 +1682,15 @@ export default function JobsScreen() {
               <View style={[s.jobCard, { marginTop: 8 }]}>
                 <View style={s.jobContent}>
                   <View style={s.expandedSection}>
-                    <FitNarrative listing={topMatch} preloaded={narrativeCache[topMatch.id] || null} />
+                    {/* Local boundary so a bad narrative payload can't
+                        blank the whole jobs tab. Without this, one
+                        malformed fit-narrative response would crash
+                        JobsScreen at render and leave the user on a
+                        blank page — which matched the intermittent
+                        'jobs page goes blank' reports. */}
+                    <ErrorBoundary surface="this read" resetKey={topMatch.id}>
+                      <FitNarrative listing={topMatch} preloaded={narrativeCache[topMatch.id] || null} />
+                    </ErrorBoundary>
                   </View>
                 </View>
               </View>
