@@ -1572,64 +1572,50 @@ async def ai_chat(request: Request, body: ChatRequest):
     _chat_model = "claude-haiku-4-5-20251001"
 
     # ── Cost optimization: prompt caching ─────────────────────────────────
-    # Haiku 4.5 requires the cached PREFIX to be ≥2048 tokens. The rich
-    # user-specific system prompt alone is ~1,500 tokens — below threshold.
-    # Previously the cache_control I set on it was being silently ignored
-    # by Anthropic. This cost us an unknown amount of money for months.
+    # Haiku 4.5 requires the cached PREFIX to be ≥4096 tokens (verified
+    # against Anthropic's prompt-caching docs). Rich paid-user prompts
+    # run ~7000 tokens (full resume + profile facts + academic + apps
+    # pipeline + deadlines). That's comfortably above threshold, so
+    # one cache breakpoint on the full system prompt is sufficient.
     #
-    # Fix: prepend _DILLY_CHAT_STABLE_PERSONA (~650 tokens, byte-identical
-    # across every user and every session) so the combined prompt clears
-    # 2048. Two cache breakpoints:
-    #   Block 1 = stable persona only. Cached ACROSS users — any chat
-    #     anywhere on the server reuses this cached prefix.
-    #   Block 2 = user-specific context. Cached PER SESSION — turns 2+
-    #     of the same conversation reuse this.
-    #
-    # Pricing (Haiku 4.5, as of writing):
+    # Pricing (Haiku 4.5, verified):
     #   - Base input:  $1.00/MTok
     #   - Cache write: $1.25/MTok (25% premium, 5-min TTL)
     #   - Cache read:  $0.10/MTok (90% discount)
     #   - Output:      $5.00/MTok
     #
-    # For an average 16-turn chat with a ~2200-token combined system
-    # prompt, this drops per-turn system cost from $0.0022 (uncached) to
-    # ~$0.00022 (cache-read), a 10x cut on the biggest line item.
+    # For a 16-turn chat with a ~7000-token prompt:
+    #   Before caching: 16 × 7000 × $1/MTok = $0.112 on system alone
+    #   With caching:   1 × 7000 × $1.25/MTok + 15 × 7000 × $0.10/MTok
+    #                 = $0.00875 + $0.0105 = $0.019 on system alone
+    #   ~5.9x cheaper on the biggest line item. A 16-turn chat drops
+    #   from roughly $0.13 to ~$0.035.
     #
     # Edge cases:
-    #   - practice mode / anonymous callers get the lightweight prompt
-    #     from _build_system_prompt, which is ~200 tokens. That's below
-    #     threshold and won't cache; we pass through as a plain string.
-    #   - Profile edits mid-conversation invalidate block 2 for that
+    #   - practice mode and anonymous demos use the lightweight prompt
+    #     (~200 tokens). Way below threshold. Pass through uncached.
+    #   - Profile edits mid-conversation invalidate the cache for that
     #     session. No correctness issue; just one extra cache-write.
-    # Cache trigger: only when combined stable+user clears Anthropic's
-    # 2048-token minimum. Stable is ~1040 tokens (4168 chars), so we
-    # need user-specific ≥ 4000 chars (~1000 tokens) to safely cross.
-    # Below that, cache_control is silently ignored by Anthropic — no
-    # extra charge, but no benefit either, so we skip the structured
-    # list form and pass the plain string.
+    #   - 5-minute TTL. Long pauses mid-chat (>5 min) force a second
+    #     cache-write. Cost impact: <$0.01/session. Accepted.
     #
-    # Students with a filled-out profile (resume uploaded + a few
-    # facts captured) easily run 5000+ char user blocks → cache hits.
-    # Brand-new signups with zero data have small prompts anyway, so
-    # missing caching doesn't meaningfully hurt their per-turn cost.
-    if body.mode != "practice" and system and len(system) >= 4000:
-        system_param = [
-            {
-                "type": "text",
-                "text": _DILLY_CHAT_STABLE_PERSONA,
-                "cache_control": {"type": "ephemeral"},
-            },
-            {
-                "type": "text",
-                "text": system,
-                "cache_control": {"type": "ephemeral"},
-            },
-        ]
+    # The _DILLY_CHAT_STABLE_PERSONA block is no longer prepended — it
+    # was ~1040 tokens, too small to cache on its own, and added
+    # uncached cost to every lean-user session. Keeping it as a module
+    # constant in case we want to expand it to 4096+ tokens later and
+    # cache it cross-user as a separate breakpoint.
+    if body.mode != "practice" and system and len(system) >= 16000:
+        # 16000 chars ≈ 4000 tokens, conservative floor. Anthropic's
+        # actual threshold is 4096 tokens (~16384 chars); if we're
+        # under, cache_control is silently ignored (no cost, no
+        # benefit). At 16000 we're safely above.
+        system_param = [{
+            "type": "text",
+            "text": system,
+            "cache_control": {"type": "ephemeral"},
+        }]
     else:
-        # Short prompt (practice mode, brand-new signup, unauth demo).
-        # Combined would still fall below Anthropic's 2048-token minimum,
-        # so prepending the stable block just adds uncached tokens to
-        # every turn — strictly worse for lean users. Pass through.
+        # Below threshold — plain string, no cache attempt.
         system_param = system
 
     # ── Tool use: auto-add calendar events from conversational mentions ────
