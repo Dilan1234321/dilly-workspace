@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CelebrationOverlay, MilestoneType } from '../components/CelebrationOverlay';
@@ -6,6 +6,25 @@ import { CelebrationOverlay, MilestoneType } from '../components/CelebrationOver
 // ── Storage key ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'dilly_celebrated_milestones';
+
+// ── Module-level trigger ───────────────────────────────────────────────────────
+// Any code anywhere (promo code success handler, profile transition
+// detector, Stripe-success handler) can call triggerCelebration() and
+// any mounted CelebrationPortal will show the overlay. Subscribers add
+// themselves to the listener set on mount and remove on unmount. If no
+// one is mounted the call is a no-op — that's fine, milestones are
+// persisted to AsyncStorage and will fire on the next Settings mount.
+type Listener = (m: MilestoneType) => void;
+const _listeners = new Set<Listener>();
+
+/** Fire a celebration overlay anywhere in the app. Idempotent per
+ * milestone (persisted to AsyncStorage) so you can call it on every
+ * boot without re-showing the same celebration. */
+export function triggerCelebration(milestone: MilestoneType) {
+  _listeners.forEach(cb => {
+    try { cb(milestone); } catch {}
+  });
+}
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
 
@@ -33,6 +52,14 @@ export default function useCelebration() {
   const handleDismiss = useCallback(() => {
     setActiveMilestone(null);
   }, []);
+
+  // Subscribe to module-level triggers so triggerCelebration() from
+  // anywhere in the app shows the overlay here.
+  useEffect(() => {
+    const cb: Listener = (m) => celebrate(m);
+    _listeners.add(cb);
+    return () => { _listeners.delete(cb); };
+  }, [celebrate]);
 
   /**
    * CelebrationPortal — render this component in the screen's root View JSX.

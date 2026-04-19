@@ -14,7 +14,9 @@ export type MilestoneType =
   | 'top-25'
   | 'top-10'
   | 'score-jump'
-  | 'applied-job';
+  | 'applied-job'
+  | 'unlocked-dilly'
+  | 'unlocked-pro';
 
 interface MilestoneConfig {
   eyebrow: string;
@@ -68,6 +70,26 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
     sub: "You applied. Most students never do. That's the whole game.",
     accentColor: colors.green,
     ctaLabel: 'Find more jobs',
+  },
+  // Subscription unlocks. These are the moments the user becomes a paying
+  // customer (or jumps tiers). Tone here is earned-pride, not celebration
+  // for the sake of it. Copy says: "most people stay free — you didn't,
+  // that was the right move, here's what's yours now." No "🎉 Yay!!"
+  // shouting; this is supposed to feel like the quiet pride of someone
+  // who just made a decisive career move.
+  'unlocked-dilly': {
+    eyebrow: "YOU'RE IN",
+    headline: "Welcome to\nDilly.",
+    sub: "Most people stay on the free side their whole career. You chose differently — and you'll feel the difference on the next job you touch.",
+    accentColor: colors.gold,
+    ctaLabel: "Let's go",
+  },
+  'unlocked-pro': {
+    eyebrow: "PRO UNLOCKED",
+    headline: "You just gave\nyourself an edge.",
+    sub: "Unlimited fit reads. Tailored resumes on demand. A coach that never caps out. This is the version of Dilly most people never see.",
+    accentColor: '#A78BFA',
+    ctaLabel: "Let's get to work",
   },
 };
 

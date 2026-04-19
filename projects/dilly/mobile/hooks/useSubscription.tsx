@@ -148,6 +148,27 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         setPlan(backendPlan);
       }
 
+      // Detect a plan upgrade since last refresh and fire the
+      // celebration overlay. This is the Stripe-checkout path: the
+      // user pays on hellodilly.com, comes back to the app, we refresh
+      // /profile and see the plan flipped. Without this detector, the
+      // moment would pass silently.
+      try {
+        const LAST_SEEN_KEY = 'dilly_last_seen_plan_v1';
+        const lastSeen = await AsyncStorage.getItem(LAST_SEEN_KEY);
+        const current = localOverride === 'true' && backendPlan === 'starter' ? 'dilly' : backendPlan;
+        // Fire only on the transition (starter → dilly, starter → pro,
+        // or dilly → pro). useCelebration persists per-milestone so
+        // repeated triggers on each refresh are a no-op after the first.
+        if (lastSeen !== current && current !== 'starter') {
+          const { triggerCelebration } = await import('./useCelebration');
+          setTimeout(() => {
+            triggerCelebration(current === 'pro' ? 'unlocked-pro' : 'unlocked-dilly');
+          }, 500);
+        }
+        await AsyncStorage.setItem(LAST_SEEN_KEY, current);
+      } catch {}
+
       setIsStudent(!!profile?.is_student);
 
       // Count audits from history

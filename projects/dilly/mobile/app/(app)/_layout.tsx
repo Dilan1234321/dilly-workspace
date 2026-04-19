@@ -12,6 +12,7 @@ import DillyGate from '../../components/DillyGate';
 import DillyPaywallFullScreen from '../../components/DillyPaywallFullScreen';
 import { usePaywallState } from '../../hooks/usePaywall';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import useCelebration from '../../hooks/useCelebration';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -41,6 +42,14 @@ function DillyGateWrapper() {
 function DillyPaywallWrapper() {
   const { visible, context, close } = usePaywallState();
   return <DillyPaywallFullScreen visible={visible} onDismiss={close} context={context} />;
+}
+
+/** Mounts useCelebration at the app root so triggerCelebration() fired
+ * from any screen (promo code redeem, Stripe success callback, plan
+ * transition detector) actually shows the overlay on top of the tabs. */
+function CelebrationWrapper() {
+  const { CelebrationPortal } = useCelebration();
+  return <CelebrationPortal />;
 }
 
 function DillyTabIcon({ focused }: { focused: boolean }) {
@@ -257,6 +266,7 @@ export default function AppLayout() {
           <DillyAIOverlayWrapper />
           <DillyGateWrapper />
           <DillyPaywallWrapper />
+          <CelebrationWrapper />
         </>
       </ErrorBoundary>
     </SubscriptionProvider>

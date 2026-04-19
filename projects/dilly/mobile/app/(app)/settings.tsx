@@ -16,6 +16,7 @@ import { colors, spacing, radius } from '../../lib/tokens';
 import { getAppMode, modeLabel, modeDescription, ALL_MODES, type AppMode } from '../../lib/appMode';
 import { primeAppMode, clearAppModeCache } from '../../hooks/useAppMode';
 import { clearThemeCache } from '../../hooks/useTheme';
+import { triggerCelebration } from '../../hooks/useCelebration';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
@@ -231,11 +232,19 @@ export default function SettingsScreen() {
         Alert.alert('Promo code', msg);
         return;
       }
-      // Success — refresh local plan + collapse the input.
-      setPlan(body?.plan || plan);
+      // Success — refresh local plan + collapse the input. Fire the
+      // celebration overlay (earned-pride vibe, full-screen) instead
+      // of a plain alert. Overlay is mounted globally at the app layer
+      // via CelebrationWrapper, so the trigger reaches it from here.
+      const newPlan = body?.plan || plan;
+      setPlan(newPlan);
       setPromoCode('');
       setPromoOpen(false);
-      Alert.alert('Unlocked', body?.message || 'Welcome.');
+      // Small delay so the input's collapse animation finishes before
+      // the celebration takes over the screen.
+      setTimeout(() => {
+        triggerCelebration(newPlan === 'pro' ? 'unlocked-pro' : 'unlocked-dilly');
+      }, 250);
       fetchProfile();
     } catch {
       Alert.alert('Promo code', "Couldn't reach the server. Try again.");
