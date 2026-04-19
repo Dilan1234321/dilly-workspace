@@ -584,7 +584,13 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
             </View>
             <View style={s.modePills}>
               {(['coaching', 'practice'] as ChatMode[]).map(m => (
-                <TouchableOpacity key={m} style={[s.modePill, mode === m && s.modePillActive]} onPress={() => {
+                <TouchableOpacity
+                  key={m}
+                  style={[
+                    s.modePill,
+                    mode === m && { backgroundColor: theme.accent },
+                  ]}
+                  onPress={() => {
                   if (mode === m) return;
                   setMode(m);
                   setMessages([]);
@@ -592,7 +598,10 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                   setSuggestions(getInitialSuggestions(studentContext, m));
                   suggestionsOpacity.setValue(1);
                 }}>
-                  <Text style={[s.modePillText, mode === m && s.modePillTextActive]}>
+                  <Text style={[
+                    s.modePillText,
+                    { color: mode === m ? '#FFFFFF' : theme.surface.t3 },
+                  ]}>
                     {m === 'coaching' ? 'COACH' : 'PRACTICE'}
                   </Text>
                 </TouchableOpacity>
@@ -618,11 +627,11 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               hitSlop={12}
               style={{ marginRight: 8 }}
             >
-              <Ionicons name="time-outline" size={20} color={colors.t2} />
+              <Ionicons name="time-outline" size={20} color={theme.surface.t2} />
             </TouchableOpacity>
             <TouchableOpacity style={s.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <View style={s.closeBtnCircle}>
-                <Ionicons name="close" size={18} color={colors.t1} />
+              <View style={[s.closeBtnCircle, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+                <Ionicons name="close" size={18} color={theme.surface.t1} />
               </View>
             </TouchableOpacity>
           </View>
@@ -639,9 +648,9 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               <View style={s.emptyWrap}>
                 {mode === 'practice' ? (
                   <>
-                    <Ionicons name="mic" size={32} color={GOLD} style={{ marginBottom: 12, opacity: 0.6 }} />
-                    <Text style={s.emptyText}>Mock interview mode.</Text>
-                    <Text style={[s.emptyText, { marginTop: 4, opacity: 0.6, fontSize: 13 }]}>
+                    <Ionicons name="mic" size={32} color={theme.accent} style={{ marginBottom: 12, opacity: 0.6 }} />
+                    <Text style={[s.emptyText, { color: theme.surface.t3 }]}>Mock interview mode.</Text>
+                    <Text style={[s.emptyText, { color: theme.surface.t3, marginTop: 4, opacity: 0.6, fontSize: 13 }]}>
                       I'll play the interviewer. You answer. I give feedback after each response, then ask the next question.
                     </Text>
                   </>
@@ -652,7 +661,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                     <View style={{ width: 90, height: 90, alignItems: 'center', justifyContent: 'center' }}>
                       <DillyFace size={70} />
                     </View>
-                    <Text style={[s.emptyText, { marginTop: 16 }]}>
+                    <Text style={[s.emptyText, { color: theme.surface.t3, marginTop: 16 }]}>
                       Ask me anything: your strengths, what to fix, where to apply.
                     </Text>
                   </>
@@ -694,11 +703,11 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               // "something is happening" affordance, way more
               // personality. The pencil scribbles while the
               // response streams.
-              <View style={[s.msgRow, { justifyContent: 'flex-start', alignItems: 'center', gap: 8 }]}>
-                <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
-                  <DillyFace size={40} mood="writing" accessory="pencil" />
+              <View style={[s.msgRow, { justifyContent: 'flex-start', alignItems: 'center', gap: 12, marginTop: 8, marginBottom: 4 }]}>
+                <View style={{ width: 68, height: 68, alignItems: 'center', justifyContent: 'center' }}>
+                  <DillyFace size={68} mood="writing" accessory="pencil" />
                 </View>
-                <Text style={{ fontSize: 11, color: colors.t3, fontStyle: 'italic' }}>
+                <Text style={{ fontSize: 15, color: theme.surface.t3, fontStyle: 'italic' }}>
                   Dilly is writing…
                 </Text>
               </View>

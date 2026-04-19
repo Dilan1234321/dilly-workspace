@@ -1204,7 +1204,7 @@ function SeekerHome() {
             })}
             scaleDown={0.99}
           >
-            <Text style={s.dillyMessage}>
+            <Text style={[s.dillyMessage, { color: theme.surface.t1 }]}>
               {showJourney
                 ? `Hey ${firstName || 'there'}, let me get to know you so I can help you land your next opportunity.`
                 : dillyTake
@@ -1213,7 +1213,7 @@ function SeekerHome() {
             </Text>
           </AnimatedPressable>
           <AnimatedPressable
-            style={s.talkBtn}
+            style={[s.talkBtn, { backgroundColor: theme.accent }]}
             onPress={() => openDillyOverlay({
               name: firstName,
               isPaid: false,
@@ -1233,36 +1233,36 @@ function SeekerHome() {
         {factCount > 0 && factCount <= 12 && (
           <FadeInView delay={90}>
             <AnimatedPressable
-              style={s.dillySeesCard}
+              style={[s.dillySeesCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '26' }]}
               onPress={() => openDillyOverlay({ name: firstName, isPaid: false })}
               scaleDown={0.99}
             >
               <View style={s.dillySeesHeader}>
-                <View style={s.dillySeesEye}>
-                  <Ionicons name="eye" size={13} color={colors.indigo} />
+                <View style={[s.dillySeesEye, { backgroundColor: theme.accent + '15' }]}>
+                  <Ionicons name="eye" size={13} color={theme.accent} />
                 </View>
-                <Text style={s.dillySeesTitle}>DILLY SEES</Text>
-                <Text style={s.dillySeesCount}>{factCount} {factCount === 1 ? 'thing' : 'things'} so far</Text>
+                <Text style={[s.dillySeesTitle, { color: theme.accent }]}>DILLY SEES</Text>
+                <Text style={[s.dillySeesCount, { color: theme.surface.t3 }]}>{factCount} {factCount === 1 ? 'thing' : 'things'} so far</Text>
               </View>
               {topFacts.length > 0 ? (
                 <View style={s.dillySeesList}>
                   {topFacts.slice(0, 4).map((f, i) => (
                     <View key={i} style={s.dillySeesRow}>
-                      <View style={s.dillySeesDot} />
-                      <Text style={s.dillySeesRowText} numberOfLines={2}>
+                      <View style={[s.dillySeesDot, { backgroundColor: theme.accent }]} />
+                      <Text style={[s.dillySeesRowText, { color: theme.surface.t1 }]} numberOfLines={2}>
                         {f.label || f.value}
                       </Text>
                     </View>
                   ))}
                 </View>
               ) : null}
-              <View style={s.dillySeesFooter}>
-                <Text style={s.dillySeesFooterText}>
+              <View style={[s.dillySeesFooter, { borderTopColor: theme.surface.border }]}>
+                <Text style={[s.dillySeesFooterText, { color: theme.surface.t3 }]}>
                   The more Dilly learns, the sharper your fit narratives and resumes get.
                 </Text>
                 <View style={s.dillySeesCta}>
-                  <Ionicons name="chatbubble" size={11} color={colors.indigo} />
-                  <Text style={s.dillySeesCtaText}>Tell Dilly one more thing</Text>
+                  <Ionicons name="chatbubble" size={11} color={theme.accent} />
+                  <Text style={[s.dillySeesCtaText, { color: theme.accent }]}>Tell Dilly one more thing</Text>
                 </View>
               </View>
             </AnimatedPressable>
@@ -1303,21 +1303,21 @@ function SeekerHome() {
               return (
                 <FadeInView delay={100}>
                   <AnimatedPressable
-                    style={s.lifeCard}
+                    style={[s.lifeCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '26' }]}
                     onPress={() => openDillyOverlay({
                       name: firstName, isPaid: false,
                       initialMessage: `I graduate in ${months > 0 ? `${months} months` : `${diffDays} days`}. Build me a plan for the time I have left.`,
                     })}
                     scaleDown={0.99}
                   >
-                    <View style={s.lifeIcon}>
-                      <Ionicons name="calendar" size={16} color={colors.indigo} />
+                    <View style={[s.lifeIcon, { backgroundColor: theme.accent + '15' }]}>
+                      <Ionicons name="calendar" size={16} color={theme.accent} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={s.lifeTitle}>{title}</Text>
-                      <Text style={s.lifeMessage}>{message}</Text>
+                      <Text style={[s.lifeTitle, { color: theme.surface.t1 }]}>{title}</Text>
+                      <Text style={[s.lifeMessage, { color: theme.surface.t2 }]}>{message}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.t3} />
+                    <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />
                   </AnimatedPressable>
                 </FadeInView>
               );
@@ -1332,21 +1332,21 @@ function SeekerHome() {
             return (
               <FadeInView delay={100}>
                 <AnimatedPressable
-                  style={s.lifeCard}
+                  style={[s.lifeCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '26' }]}
                   onPress={() => openDillyOverlay({
                     name: firstName, isPaid: false,
                     initialMessage: `It's ${period} performance review season. Help me prep and gather evidence of what I've delivered this cycle.`,
                   })}
                   scaleDown={0.99}
                 >
-                  <View style={s.lifeIcon}>
-                    <Ionicons name="stats-chart" size={16} color={colors.indigo} />
+                  <View style={[s.lifeIcon, { backgroundColor: theme.accent + '15' }]}>
+                    <Ionicons name="stats-chart" size={16} color={theme.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.lifeTitle}>{period} review season is here</Text>
-                    <Text style={s.lifeMessage}>Want Dilly to help you prep and gather your wins?</Text>
+                    <Text style={[s.lifeTitle, { color: theme.surface.t1 }]}>{period} review season is here</Text>
+                    <Text style={[s.lifeMessage, { color: theme.surface.t2 }]}>Want Dilly to help you prep and gather your wins?</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.t3} />
+                  <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />
                 </AnimatedPressable>
               </FadeInView>
             );
@@ -1362,18 +1362,18 @@ function SeekerHome() {
             return (
               <FadeInView delay={100}>
                 <AnimatedPressable
-                  style={s.lifeCard}
+                  style={[s.lifeCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '26' }]}
                   onPress={() => { router.push('/(app)/jobs'); }}
                   scaleDown={0.99}
                 >
-                  <View style={s.lifeIcon}>
-                    <Ionicons name="compass" size={16} color={colors.indigo} />
+                  <View style={[s.lifeIcon, { backgroundColor: theme.accent + '15' }]}>
+                    <Ionicons name="compass" size={16} color={theme.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.lifeTitle}>This week</Text>
-                    <Text style={s.lifeMessage}>{cta}</Text>
+                    <Text style={[s.lifeTitle, { color: theme.surface.t1 }]}>This week</Text>
+                    <Text style={[s.lifeMessage, { color: theme.surface.t2 }]}>{cta}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.t3} />
+                  <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />
                 </AnimatedPressable>
               </FadeInView>
             );
