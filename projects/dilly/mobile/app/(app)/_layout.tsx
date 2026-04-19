@@ -53,22 +53,22 @@ function CelebrationWrapper() {
 }
 
 function DillyTabIcon({ focused }: { focused: boolean }) {
+  // Reads the user's current theme accent so if they pick teal/rose/
+  // etc., the Dilly tab chip matches — previously this was hard-coded
+  // indigo regardless of the user's customization.
+  const theme = useResolvedTheme();
   return (
     <View style={{
       width: 26,
       height: 26,
       borderRadius: 13,
-      backgroundColor: focused
-        ? 'rgba(94,92,230,0.25)'
-        : colors.idim,
+      backgroundColor: focused ? theme.accentBorder : theme.accentSoft,
       borderWidth: 1,
-      borderColor: focused
-        ? 'rgba(94,92,230,0.5)'
-        : colors.ibdr,
+      borderColor: focused ? theme.accent : theme.accentBorder,
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <Ionicons name="school" size={12} color={colors.indigo} />
+      <Ionicons name="school" size={12} color={theme.accent} />
     </View>
   );
 }

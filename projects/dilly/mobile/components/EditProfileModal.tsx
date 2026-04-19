@@ -340,13 +340,20 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
                     <Text style={es.photoInitial}>{initial}</Text>
                   </View>
                 )}
-                <View style={es.cameraBadge}>
-                  {uploading ? (
-                    <ActivityIndicator size={10} color="#fff" />
-                  ) : (
-                    <Ionicons name="camera" size={12} color="#fff" />
-                  )}
-                </View>
+                {/* Camera badge only shows when there's no photo (it's
+                    the add-photo affordance). Once the user has a photo
+                    the badge disappears — 'Remove photo' below handles
+                    changing. Also shown while uploading so the user
+                    has feedback. */}
+                {(!displayPhoto || uploading) && (
+                  <View style={es.cameraBadge}>
+                    {uploading ? (
+                      <ActivityIndicator size={10} color="#fff" />
+                    ) : (
+                      <Ionicons name="camera" size={12} color="#fff" />
+                    )}
+                  </View>
+                )}
               </TouchableOpacity>
               {displayPhoto ? (
                 <TouchableOpacity onPress={removePhoto} style={es.removeBtn}>
