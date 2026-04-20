@@ -292,6 +292,70 @@ async def pulse_submit(request: Request):
         "streak": shared_streak,
     })
 
+    # Feed the pulse response through the regex extraction pipeline so
+    # reflective entries auto-populate profile facts. A user writing
+    # "Today I finished my first Python project" in a Pulse should
+    # produce a project_detail fact without requiring them to also
+    # type it into Dilly's chat. Zero LLM cost — extract_memory_items
+    # with use_llm=False runs pattern matching only, same cheap path
+    # used on every chat turn. Previously Pulse was a parallel data
+    # silo that never made it into memory_surface; the profile grid
+    # read from memory_surface, so Pulse content was invisible on the
+    # profile page. This closes the loop.
+    facts_added: list[dict] = []
+    if is_new_today:
+        try:
+            from projects.dilly.api.memory_extraction import extract_memory_items
+            from projects.dilly.api.memory_surface_store import (
+                get_memory_surface, save_memory_surface,
+            )
+            # Wrap the pulse response as a one-turn chat batch so it
+            # flows through the same extraction machinery as /ai/chat
+            # does. The prompt is included as context only (not
+            # extracted from) — the regex extractor only scans user
+            # messages anyway.
+            synth_messages = [{"role": "user", "content": response}]
+            surface = get_memory_surface(email) or {}
+            existing = surface.get("items") or []
+            new_items = extract_memory_items(
+                email,
+                f"pulse-{today}-{entry['id'][:8]}",
+                synth_messages,
+                existing,
+                use_llm=False,
+            )
+            if new_items:
+                # Merge + dedup at the category+label grain, same rule
+                # run_extraction uses. Kept inline (not via
+                # run_extraction) because we want to tag the new
+                # items with a 'pulse' source so a later UI could
+                # surface "from today's Pulse" provenance.
+                for it in new_items:
+                    it.setdefault("source", "pulse")
+                items_all = [*new_items, *existing]
+                dedup: dict[tuple[str, str], dict] = {}
+                for item in items_all:
+                    key = (
+                        str(item.get("category") or "").lower(),
+                        str(item.get("label") or "").strip().lower(),
+                    )
+                    if not key[0] or not key[1]:
+                        continue
+                    if key not in dedup:
+                        dedup[key] = item
+                items_all = list(dedup.values())[:400]
+                save_memory_surface(
+                    email,
+                    items=items_all,
+                    narrative=surface.get("narrative"),
+                    narrative_updated_at=None,
+                )
+                facts_added = new_items
+        except Exception:
+            # Never let extraction failure block the pulse save. The
+            # entry is already on disk; extraction is a nice-to-have.
+            facts_added = []
+
     return {
         "ok": True,
         "entry": entry,
@@ -301,6 +365,7 @@ async def pulse_submit(request: Request):
             "last_date": new_streak.get("last_date"),
         },
         "is_new_today": is_new_today,
+        "facts_added": facts_added,
     }
 
 
