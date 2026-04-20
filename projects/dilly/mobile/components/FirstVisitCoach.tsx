@@ -32,7 +32,7 @@
  * That's it. Mount-and-forget. Component handles its own visibility.
  */
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated, Easing, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Animated, Easing, Pressable, StyleSheet, Dimensions, Modal, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useResolvedTheme } from '../hooks/useTheme';
@@ -133,15 +133,26 @@ export function FirstVisitCoach({
     ? 'rgba(0,0,0,0.72)'
     : 'rgba(15,15,25,0.82)';
 
+  // Wrap in a native Modal so the coach overlays EVERYTHING — the
+  // tab bar, any floating FABs, etc. Without this, the tab bar sits
+  // on top and users see the navbar peeking through the dim, which
+  // breaks the "pause, read this one sentence" intent.
   return (
-    <Animated.View
-      pointerEvents={visible ? 'auto' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { opacity: anim, zIndex: 9999 }]}
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={dismiss}
     >
-      <Pressable
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: backdropColor }]}
-        onPress={dismiss}
+      <Animated.View
+        pointerEvents={visible ? 'auto' : 'none'}
+        style={[StyleSheet.absoluteFillObject, { opacity: anim }]}
       >
+        <Pressable
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: backdropColor }]}
+          onPress={dismiss}
+        >
         <View style={s.centerWrap}>
           <Animated.View
             style={{
@@ -213,8 +224,9 @@ export function FirstVisitCoach({
             </Text>
           </Animated.View>
         </View>
-      </Pressable>
-    </Animated.View>
+        </Pressable>
+      </Animated.View>
+    </Modal>
   );
 }
 

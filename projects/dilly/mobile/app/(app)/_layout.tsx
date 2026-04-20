@@ -117,6 +117,16 @@ function AppLayoutInner() {
     </View>
   );
 
+  // AI Arena uses a fixed dark-navy BG regardless of theme surface.
+  // If the navbar kept using theme.surface.bg there, light-mode users
+  // would see a jarring white strip underneath a dark page. Mirror
+  // the route-specific background here so the navbar blends in.
+  // pathname lookup is fast; the whole component re-renders on tab
+  // change anyway, so this is free.
+  const onAIArena = !!pathname && pathname.includes('/ai-arena');
+  const navBarBg = onAIArena ? '#111827' : theme.surface.bg;
+  const navBarBorder = onAIArena ? '#1F2937' : theme.surface.border;
+
   return (
     <Tabs
       // Per-mode landing tab: holders land on Arena (their hero),
@@ -125,9 +135,9 @@ function AppLayoutInner() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: theme.surface.bg,
+          backgroundColor: navBarBg,
           borderTopWidth: 1,
-          borderTopColor: theme.surface.border,
+          borderTopColor: navBarBorder,
           paddingBottom: insets.bottom,
           paddingTop: 8,
           height: 56 + insets.bottom,
@@ -135,7 +145,12 @@ function AppLayoutInner() {
         // Labels are hidden everywhere. Icons + active-pill
         // communicate which tab you're on.
         tabBarShowLabel: false,
-        animation: 'shift',
+        // Disable the slide transition between tabs. The animation
+        // was what made the navbar background appear to "lag" when
+        // switching between a light-surface page and AI Arena (the
+        // old color stayed painted during the slide). Swapping to
+        // no animation makes the color change instant.
+        animation: 'none',
       }}
     >
       {/* Tab 1: Home / Career Center. Filled home for the

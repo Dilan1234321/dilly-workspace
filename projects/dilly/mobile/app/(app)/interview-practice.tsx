@@ -569,7 +569,7 @@ function SetupPhase({
               onChangeText={setCompany}
               placeholder="e.g. Stripe"
               placeholderTextColor={colors.t3}
-              autoFocus={!company}
+              autoFocus={false}
             />
             <FieldLabel text="Role" required top />
             <TextInput

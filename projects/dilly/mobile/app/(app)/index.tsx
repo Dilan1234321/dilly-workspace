@@ -1218,9 +1218,13 @@ function SeekerHome() {
 
   // Activity feed items
   const activities: { icon: string; color: string; title: string; subtitle: string; onPress: () => void }[] = [];
-  if (factCount > 0) activities.push({ icon: 'person', color: colors.indigo, title: `${factCount} facts in your profile`, subtitle: 'Dilly is learning about you', onPress: () => router.push('/(app)/my-dilly-profile') });
-  if (appCount > 0) activities.push({ icon: 'briefcase', color: colors.blue, title: `${appCount} job${appCount === 1 ? '' : 's'} in your pipeline`, subtitle: 'Track your applications', onPress: () => router.push('/(app)/internship-tracker') });
-  if (topJobs.length > 0) activities.push({ icon: 'sparkles', color: colors.green, title: `${topJobs.length}+ jobs match your profile`, subtitle: 'New opportunities waiting for you', onPress: () => router.push('/(app)/jobs') });
+  // All WHAT'S HAPPENING icons now follow the user's accent from
+  // Customize Dilly. Previously each row had its own baked-in color
+  // (indigo / blue / green) which looked inconsistent the moment a
+  // user picked a non-indigo accent.
+  if (factCount > 0) activities.push({ icon: 'person', color: theme.accent, title: `${factCount} facts in your profile`, subtitle: 'Dilly is learning about you', onPress: () => router.push('/(app)/my-dilly-profile') });
+  if (appCount > 0) activities.push({ icon: 'briefcase', color: theme.accent, title: `${appCount} job${appCount === 1 ? '' : 's'} in your pipeline`, subtitle: 'Track your applications', onPress: () => router.push('/(app)/internship-tracker') });
+  if (topJobs.length > 0) activities.push({ icon: 'sparkles', color: theme.accent, title: `${topJobs.length}+ jobs match your profile`, subtitle: 'New opportunities waiting for you', onPress: () => router.push('/(app)/jobs') });
 
   if (loading) {
     return (
