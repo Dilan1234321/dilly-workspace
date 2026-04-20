@@ -8,44 +8,54 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '../../lib/tokens';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
 export default function NewAuditScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
+  const onAccent = (() => {
+    const hex = (theme.accent || '').replace('#', '');
+    if (hex.length !== 6) return '#fff';
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0B1426' : '#FFFFFF';
+  })();
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
-      <View style={s.header}>
-        <AnimatedPressable onPress={() => router.back()} style={s.backBtn} scaleDown={0.9}>
-          <Ionicons name="chevron-back" size={22} color={colors.t1} />
+    <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
+      <View style={[s.header, { borderBottomColor: theme.surface.border }]}>
+        <AnimatedPressable onPress={() => router.back()} style={[s.backBtn, { backgroundColor: theme.surface.s1 }]} scaleDown={0.9}>
+          <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
         </AnimatedPressable>
-        <Text style={s.headerTitle}>Your Profile</Text>
+        <Text style={[s.headerTitle, { color: theme.surface.t1 }]}>Your Profile</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <View style={s.content}>
         <FadeInView delay={0}>
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             <Ionicons name="checkmark-circle" size={48} color={colors.green} />
-            <Text style={s.title}>Your profile is always up to date.</Text>
-            <Text style={s.sub}>
+            <Text style={[s.title, { color: theme.surface.t1 }]}>Your profile is always up to date.</Text>
+            <Text style={[s.sub, { color: theme.surface.t2 }]}>
               Dilly evaluates your fit for each job individually, based on everything in your profile. No overall score needed.
             </Text>
           </View>
         </FadeInView>
 
         <FadeInView delay={100}>
-          <AnimatedPressable style={s.primaryBtn} onPress={() => router.push('/(app)/jobs')} scaleDown={0.97}>
-            <Ionicons name="briefcase" size={18} color="#fff" />
-            <Text style={s.primaryBtnText}>Go to Jobs</Text>
+          <AnimatedPressable style={[s.primaryBtn, { backgroundColor: theme.accent }]} onPress={() => router.push('/(app)/jobs')} scaleDown={0.97}>
+            <Ionicons name="briefcase" size={18} color={onAccent} />
+            <Text style={[s.primaryBtnText, { color: onAccent }]}>Go to Jobs</Text>
           </AnimatedPressable>
         </FadeInView>
 
         <FadeInView delay={200}>
-          <AnimatedPressable style={s.secondaryBtn} onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.97}>
-            <Ionicons name="person-circle" size={18} color={colors.indigo} />
-            <Text style={s.secondaryBtnText}>View My Profile</Text>
+          <AnimatedPressable style={[s.secondaryBtn, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]} onPress={() => router.push('/(app)/my-dilly-profile')} scaleDown={0.97}>
+            <Ionicons name="person-circle" size={18} color={theme.accent} />
+            <Text style={[s.secondaryBtnText, { color: theme.accent }]}>View My Profile</Text>
           </AnimatedPressable>
         </FadeInView>
       </View>
