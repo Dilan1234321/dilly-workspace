@@ -15,7 +15,7 @@
  * device. Makes Cancel (X) a clean no-op.
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
   Platform, Dimensions, Animated, Easing,
@@ -24,6 +24,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AnimatedPressable from '../../components/AnimatedPressable';
+import { dilly } from '../../lib/dilly';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import {
   useThemeConfig, resolveTheme, patchTheme, resetTheme, surpriseTheme,
@@ -37,7 +38,7 @@ import { MockFrame, MOCK_SCREENS, type MockScreenId } from '../../components/The
 
 const { width: W } = Dimensions.get('window');
 
-type AxisId = 'accent' | 'surface' | 'shape' | 'type' | 'density' | 'style';
+type AxisId = 'accent' | 'surface' | 'shape' | 'type' | 'density' | 'style' | 'advisor';
 const AXES: { id: AxisId; label: string; icon: any }[] = [
   { id: 'accent',  label: 'Accent',  icon: 'color-palette' },
   { id: 'surface', label: 'Theme', icon: 'layers' },
@@ -45,6 +46,12 @@ const AXES: { id: AxisId; label: string; icon: any }[] = [
   { id: 'type',    label: 'Type',    icon: 'text' },
   { id: 'density', label: 'Density', icon: 'resize' },
   { id: 'style',   label: 'Style',   icon: 'sparkles' },
+  // The advisor axis is NOT a theme config field — it writes to
+  // profile.advisor_persona via /profile PATCH. It shapes the
+  // Chapter prompt's voice (warm / sharp / direct) without changing
+  // any visual theme. Lives in Customize so users have one place
+  // for "make Dilly feel like mine" decisions.
+  { id: 'advisor', label: 'Advisor', icon: 'chatbubbles' },
 ];
 
 export default function CustomizeStudio() {
@@ -256,6 +263,7 @@ export default function CustomizeStudio() {
           {axis === 'type'    && <TypePanel    pending={pending} patch={patch} theme={theme} />}
           {axis === 'density' && <DensityPanel pending={pending} patch={patch} theme={theme} />}
           {axis === 'style'   && <StylePanel   pending={pending} patch={patch} theme={theme} />}
+          {axis === 'advisor' && <AdvisorPanel theme={theme} pulseSaved={pulseSaved} />}
         </View>
 
         {/* Footer — reset */}
@@ -606,6 +614,133 @@ function StylePanel({ pending, patch, theme }: AxisProps) {
 /* ─────────────────────────────────────────────────────────────── */
 /* Styles                                                          */
 /* ─────────────────────────────────────────────────────────────── */
+
+/**
+ * AdvisorPanel — Chapter persona picker.
+ *
+ * Not a theme-config axis. Saves to profile.advisor_persona via
+ * /profile PATCH so the Chapter prompt on the backend can inject
+ * the matching persona block (see dilly_core/chapter_persona.py).
+ * Three options plus default (unset). Default keeps the current
+ * neutral advisor voice. Picking warm / sharp / direct reshapes
+ * how every future Chapter reads for this user.
+ */
+function AdvisorPanel({ theme, pulseSaved }: { theme: ResolvedTheme; pulseSaved: () => void }) {
+  const [selected, setSelected] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+
+  // Hydrate from profile on mount so the current pick shows active.
+  useEffect(() => {
+    (async () => {
+      try {
+        const p: any = await dilly.get('/profile');
+        setSelected(String(p?.advisor_persona || '').toLowerCase());
+      } catch (_e) {
+        // Fail soft — leave blank. User can still pick.
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const OPTIONS: Array<{ id: string; title: string; blurb: string; icon: any }> = [
+    { id: '',       title: 'Default',
+      blurb: 'Balanced advisor voice. Warm but honest. No strong lean.',
+      icon: 'ellipsis-horizontal' },
+    { id: 'warm',   title: 'Warmer',
+      blurb: 'Leads with what is working. Pairs hard truths with belief in you. Ends forward, not flat.',
+      icon: 'heart' },
+    { id: 'sharp',  title: 'Sharper',
+      blurb: 'The honest mirror. Lean hard on the question you are avoiding. Rigorous, not mean.',
+      icon: 'flash' },
+    { id: 'direct', title: 'Direct',
+      blurb: 'Sixty-second version. No preamble, no soft landing. Every sentence is a move.',
+      icon: 'return-down-forward' },
+  ];
+
+  const commit = async (id: string) => {
+    // Optimistic — paint the new selection instantly, pulse the
+    // Saved badge, then write to the server. If the write fails we
+    // silently roll the selection back so the user notices next
+    // Chapter that nothing changed. Matches the other axes' feel.
+    const prev = selected;
+    setSelected(id);
+    pulseSaved();
+    try {
+      const res = await dilly.fetch('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ advisor_persona: id || null }),
+      });
+      if (!res.ok) setSelected(prev);
+    } catch (_e) {
+      setSelected(prev);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: theme.surface.t3 }}>Loading…</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ gap: 10, paddingTop: 4 }}>
+      <Text style={{ fontSize: 12, color: theme.surface.t2, fontFamily: theme.type.body, lineHeight: 18, marginBottom: 4 }}>
+        How do you want Dilly to advise you in your weekly Chapter?
+      </Text>
+      {OPTIONS.map(o => {
+        const active = o.id === selected;
+        return (
+          <AnimatedPressable
+            key={o.id || 'default'}
+            onPress={() => commit(o.id)}
+            scaleDown={0.98}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 12,
+              padding: 14,
+              borderRadius: theme.shape.md,
+              backgroundColor: active ? theme.accentSoft : theme.surface.s1,
+              borderWidth: 1,
+              borderColor: active ? theme.accent : theme.surface.border,
+            }}
+          >
+            <View style={{
+              width: 32, height: 32, borderRadius: 16,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: active ? theme.accent : theme.surface.s2,
+            }}>
+              <Ionicons name={o.icon} size={14} color={active ? '#FFFFFF' : theme.surface.t3} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{
+                fontSize: 14, fontWeight: '800',
+                color: active ? theme.accent : theme.surface.t1,
+                fontFamily: theme.type.body,
+                marginBottom: 3,
+              }}>
+                {o.title}
+              </Text>
+              <Text style={{
+                fontSize: 12, lineHeight: 17,
+                color: theme.surface.t2,
+                fontFamily: theme.type.body,
+              }}>
+                {o.blurb}
+              </Text>
+            </View>
+            {active ? (
+              <Ionicons name="checkmark-circle" size={16} color={theme.accent} style={{ marginTop: 2 }} />
+            ) : null}
+          </AnimatedPressable>
+        );
+      })}
+    </View>
+  );
+}
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
