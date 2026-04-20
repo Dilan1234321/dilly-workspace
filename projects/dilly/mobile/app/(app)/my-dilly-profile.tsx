@@ -1443,15 +1443,15 @@ function SeekerProfileScreen() {
                       <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>View</Text>
                     </AnimatedPressable>
                     <AnimatedPressable
-                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.s2, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.b1 }}
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.accentSoft, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: theme.accentBorder }}
                       onPress={() => {
                         const { Share } = require('react-native');
                         Share.share({ message: `https://hellodilly.com/${profilePrefix}/${readableSlug}` });
                       }}
                       scaleDown={0.97}
                     >
-                      <Ionicons name="share-outline" size={14} color={colors.t1} />
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.t1 }}>Share</Text>
+                      <Ionicons name="share-outline" size={14} color={theme.accent} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: theme.accent }}>Share</Text>
                     </AnimatedPressable>
                   </View>
                 </View>
@@ -1465,7 +1465,7 @@ function SeekerProfileScreen() {
         {/* ── 2. Talk to Dilly (rotating prompt) ───────────────── */}
         <FadeInView delay={80}>
           <AnimatedPressable
-            style={d.talkCard}
+            style={[d.talkCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
             onPress={() => openDillyOverlay({
               isPaid: true,
               initialMessage: starter.prompt,
@@ -1473,14 +1473,14 @@ function SeekerProfileScreen() {
             scaleDown={0.98}
           >
             <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: starterOpacity }}>
-              <View style={d.talkIcon}>
-                <Ionicons name={starter.icon as any} size={18} color={COBALT} />
+              <View style={[d.talkIcon, { backgroundColor: theme.accent + '22' }]}>
+                <Ionicons name={starter.icon as any} size={18} color={theme.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={d.talkPrompt}>{starter.display}</Text>
-                <Text style={d.talkHint}>Tap to tell Dilly</Text>
+                <Text style={[d.talkPrompt, { color: theme.surface.t1 }]}>{starter.display}</Text>
+                <Text style={[d.talkHint, { color: theme.accent }]}>Tap to tell Dilly</Text>
               </View>
-              <Ionicons name="chatbubble-ellipses" size={20} color={COBALT} />
+              <Ionicons name="chatbubble-ellipses" size={20} color={theme.accent} />
             </Animated.View>
           </AnimatedPressable>
         </FadeInView>
@@ -1652,26 +1652,26 @@ function SeekerProfileScreen() {
           <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR MILESTONES</Text>
           <View style={{ gap: 6 }}>
             {totalFacts > 0 && (
-              <View style={d.milestoneRow}>
+              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
                 <Ionicons name="checkmark-circle" size={16} color={colors.green} />
-                <Text style={d.milestoneText}>{totalFacts} fact{totalFacts !== 1 ? 's' : ''} in your Dilly Profile</Text>
+                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{totalFacts} fact{totalFacts !== 1 ? 's' : ''} in your Dilly Profile</Text>
               </View>
             )}
             {resumes.length > 0 && (
-              <View style={d.milestoneRow}>
+              <View style={[d.milestoneRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
                 <Ionicons name="checkmark-circle" size={16} color={colors.green} />
-                <Text style={d.milestoneText}>{resumes.length} tailored resume{resumes.length !== 1 ? 's' : ''} generated</Text>
+                <Text style={[d.milestoneText, { color: theme.surface.t2 }]}>{resumes.length} tailored resume{resumes.length !== 1 ? 's' : ''} generated</Text>
               </View>
             )}
             {totalFacts === 0 && resumes.length === 0 && (
               <AnimatedPressable
-                style={d.milestoneRow}
+                style={[d.milestoneRow, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
                 onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'I just joined Dilly. Help me get started building my profile. Ask me about my experiences, skills, and goals.' })}
                 scaleDown={0.98}
               >
-                <Ionicons name="chatbubble" size={16} color={colors.indigo} />
-                <Text style={[d.milestoneText, { color: colors.indigo }]}>Start telling Dilly about yourself to unlock milestones</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.indigo} />
+                <Ionicons name="chatbubble" size={16} color={theme.accent} />
+                <Text style={[d.milestoneText, { color: theme.accent }]}>Start telling Dilly about yourself to unlock milestones</Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.accent} />
               </AnimatedPressable>
             )}
           </View>

@@ -98,9 +98,9 @@ function AppLayoutInner() {
   ) => ({ focused }: { focused: boolean; color: string }) => (
     <View
       style={{
-        width: 52,
-        height: 40,
-        borderRadius: 20,
+        width: 60,
+        height: 44,
+        borderRadius: 22,
         backgroundColor: focused ? theme.accentSoft : 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
@@ -111,7 +111,7 @@ function AppLayoutInner() {
     >
       <Ionicons
         name={focused ? iconActive : iconInactive}
-        size={28}
+        size={32}
         color={focused ? theme.accent : theme.surface.t3}
       />
     </View>
@@ -224,11 +224,20 @@ function AppLayoutInner() {
         options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
-        name="feedback"
+        name="interview-practice"
         options={{ href: null, animation: 'fade' }}
       />
+      {/* Chapter (weekly scheduled session) lives entirely off the
+          navbar. Accessed from the ChapterCard on Home, with notes
+          and schedule reachable from within that flow. */}
       <Tabs.Screen
-        name="interview-practice"
+        name="chapter"
+        options={{ href: null, animation: 'fade' }}
+      />
+      {/* Collection detail page. Reached by tapping a collection in
+          the bookmark sheet on Jobs. Not a top-level tab. */}
+      <Tabs.Screen
+        name="collection"
         options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen

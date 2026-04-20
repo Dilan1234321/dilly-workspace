@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
 import { openPaywall } from '../hooks/usePaywall';
+import { openDillyOverlay } from '../hooks/useDillyOverlay';
 
 export interface ChapterCardState {
   plan: string;
@@ -127,12 +128,15 @@ export default function ChapterCard({ state, theme }: Props) {
           Before your first Chapter, Dilly needs to know you a bit. Add {remaining} more {remaining === 1 ? 'fact' : 'facts'} to your profile to unlock it.
         </Text>
         <AnimatedPressable
-          style={[s.ghostBtn, { borderColor: theme.accentBorder }]}
-          onPress={() => router.push('/(app)/my-dilly-profile')}
+          style={[s.ghostBtn, { borderColor: theme.accentBorder, backgroundColor: theme.accentSoft }]}
+          onPress={() => openDillyOverlay({
+            isPaid: false,
+            initialMessage: `I want to unlock my first Chapter with Dilly. Help me add ${remaining} more ${remaining === 1 ? 'fact' : 'facts'} to my profile. Ask me one good question at a time about my background, skills, or goals, and write the answers to my Dilly Profile.`,
+          })}
           scaleDown={0.97}
         >
-          <Text style={[s.ghostBtnText, { color: theme.accent }]}>Build your profile</Text>
-          <Ionicons name="arrow-forward" size={13} color={theme.accent} />
+          <Ionicons name="chatbubbles" size={13} color={theme.accent} />
+          <Text style={[s.ghostBtnText, { color: theme.accent }]}>Build your profile with Dilly</Text>
         </AnimatedPressable>
       </View>
     );

@@ -1297,8 +1297,10 @@ function SeekerHome() {
         {/* Chapter card. The weekly scheduled session with Dilly.
             Renders one of seven evolving states depending on plan
             tier, profile depth, schedule, and whether a new Chapter
-            is due right now. Sits right under the Your Plan anchor
-            so the weekly ritual is a visible part of Home. */}
+            is due right now. Sits under the Your Plan anchor with a
+            generous gap so the two cards read as distinct rituals
+            instead of one mashed stack. */}
+        <View style={{ height: 20 }} />
         <FadeInView delay={15}>
           <ChapterCard state={chapterState} theme={theme} />
         </FadeInView>
