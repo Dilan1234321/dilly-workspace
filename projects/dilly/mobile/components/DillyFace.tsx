@@ -242,9 +242,9 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const pinnedPencil = mood === 'writing' && accessory === 'pencil'
   // Outer wrapper has room for the pencil to extend past the ring.
   // Accessory SVG is normally the same size as the face; we pad the
-  // wrapper by ~40% of the face size on the bottom-right so the
-  // pencil body has somewhere to live.
-  const pencilPad = pinnedPencil ? Math.round(size * 0.4) : 0
+  // wrapper by ~60% of the face size on the bottom-right to fit the
+  // 1.8x-scaled pencil comfortably.
+  const pencilPad = pinnedPencil ? Math.round(size * 0.6) : 0
   const outerW = size + pencilPad
   const outerH = size + pencilPad
 
@@ -307,7 +307,10 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
       {/* Pencil layer — OUTSIDE the ring. Rendered in its own Svg
           positioned so the pencil tip just touches the ring's
           bottom-right edge and the body extends into the padding
-          area. Static: Dilly moves, pencil doesn't. */}
+          area. Static: Dilly moves, pencil doesn't.
+          Scaled up 1.8x from the default Accessory size because the
+          old "face-hand-zone" pencil was tiny. The Accessory SVG
+          coords don't change — we just pass a larger `s` value. */}
       {pinnedPencil && (
         <View
           pointerEvents="none"
@@ -327,7 +330,7 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
               kind="pencil"
               cx={cx}
               cy={cy}
-              s={s}
+              s={s * 1.8}
               color={accessoryColor || faceInk}
               scribbleAnim={scribbleAnim}
             />

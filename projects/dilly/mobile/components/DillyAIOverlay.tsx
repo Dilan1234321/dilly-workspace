@@ -264,6 +264,10 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   const userScrolledUp = useRef(false);
   const streamRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutsRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // Timestamp of when the current send started. Used to enforce a
+  // minimum "thinking" delay so fast server responses don't feel
+  // like an instant lookup.
+  const sendMessageWithTextStartedAt = useRef<number>(0);
 
   // Auto-scroll to bottom when keyboard opens
   useEffect(() => {
@@ -318,6 +322,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
     setSuggestions([]);
     suggestionsOpacity.setValue(0);
     setIsTyping(true);
+    sendMessageWithTextStartedAt.current = Date.now();
     userScrolledUp.current = false;
     timeoutsRef.current.push(setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50));
 
@@ -401,12 +406,32 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       const visual: VisualPayload | undefined = data.visual || undefined;
       const fullText = data.content as string;
 
+      // Synthetic thinking delay. The server response usually comes
+      // back in ~1.5-3s; for short/cached turns it can return in
+      // under a second, which makes Dilly feel like a lookup engine
+      // rather than an advisor thinking things through. We hold the
+      // typing indicator for a minimum floor (~1.4s) so every turn
+      // feels considered. Only applies when the response came back
+      // faster than the floor — no delay added on already-slow
+      // responses.
+      const MIN_THINK_MS = 1400;
+      const thinkStart = (sendMessageWithTextStartedAt.current || Date.now());
+      const elapsed = Date.now() - thinkStart;
+      if (elapsed < MIN_THINK_MS) {
+        await new Promise(r => setTimeout(r, MIN_THINK_MS - elapsed));
+      }
+
       setIsTyping(false);
       setMessages([...newHistory, { id: ++_msgId, role: 'assistant', content: '', visual: undefined }]);
 
+      // Typing animation. Previously 8 chars per tick every 45ms
+      // (≈180 chars/sec). Dropped to 4 chars per tick every 55ms
+      // (≈72 chars/sec) so Dilly's replies feel like real typing
+      // instead of a page-load. Matches the cadence of a person
+      // writing quickly but thoughtfully.
       let i = 0;
       streamRef.current = setInterval(() => {
-        i += 8;
+        i += 4;
         const done = i >= fullText.length;
         const chunk = done ? fullText : fullText.slice(0, i);
         setMessages(prev => {
@@ -427,7 +452,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         } else if (!userScrolledUp.current) {
           scrollRef.current?.scrollToEnd({ animated: false });
         }
-      }, 45);
+      }, 55);
 
     } catch (err: any) {
       setIsTyping(false);
