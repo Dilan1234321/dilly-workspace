@@ -93,18 +93,13 @@ function AppLayoutInner() {
   //      dropping labels)
   // The pill makes the active tab unambiguous at a glance
   // without needing text.
-  // AI Arena uses a fixed dark-navy BG regardless of theme surface.
-  // If the navbar kept using theme.surface.bg there, light-mode users
-  // would see a jarring white strip underneath a dark page. Mirror
-  // the route-specific background here so the navbar blends in.
-  // Must be computed BEFORE renderTabIcon so the icon colors can
-  // adapt to the dark navbar (otherwise surface.t3 in light mode is
-  // a near-black grey that disappears on the dark navbar).
-  const onAIArena = !!pathname && pathname.includes('/ai-arena');
-  const navBarBg = onAIArena ? '#111827' : theme.surface.bg;
-  const navBarBorder = onAIArena ? '#1F2937' : theme.surface.border;
-  const navInactiveIcon = onAIArena ? 'rgba(255,255,255,0.55)' : theme.surface.t3;
-  const navActiveIcon = onAIArena ? '#ffffff' : theme.accent;
+  // AI Arena now honors the theme surface too, so we can drop the
+  // old dark-navy override for its route. Navbar just mirrors the
+  // user's Customize Dilly surface on every tab.
+  const navBarBg = theme.surface.bg;
+  const navBarBorder = theme.surface.border;
+  const navInactiveIcon = theme.surface.t3;
+  const navActiveIcon = theme.accent;
 
   // Icon component with a subtle pop animation when focused changes
   // to true. Scale bounces 1 -> 1.2 -> 1 over ~260ms using a cubic

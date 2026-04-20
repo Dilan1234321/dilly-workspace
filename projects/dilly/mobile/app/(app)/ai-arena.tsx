@@ -25,6 +25,7 @@ import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { DillyFace } from '../../components/DillyFace';
 import { useAppMode } from '../../hooks/useAppMode';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
+import { useResolvedTheme } from '../../hooks/useTheme';
 
 const W = Dimensions.get('window').width;
 
@@ -208,6 +209,12 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
 
 export default function AIArenaScreen() {
   const insets = useSafeAreaInsets();
+  // AI Arena now follows the user's Customize Dilly theme. Everything
+  // that was hardcoded dark navy (BG/CARD/BORDER/TEXT/SUB/DIM) gets
+  // an inline override from the resolved theme at each render site.
+  // The file-level constants stay for StyleSheet fallbacks (proxy
+  // freeze) but the JSX overrides them where it matters.
+  const theme = useResolvedTheme();
   // Holders get a calmer, coach-style tone. "field intelligence" and
   // "this quarter's play" instead of "threat" and "replace". Seekers/
   // students keep the existing arena/anxiety framing that powers
@@ -424,7 +431,7 @@ export default function AIArenaScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={[a.container, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[a.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* First-visit coach mark. Dismisses on any tap, never
           returns. ID is versioned: bumping to v2 re-shows it. */}
       <FirstVisitCoach
@@ -441,19 +448,19 @@ export default function AIArenaScreen() {
       <ScrollView keyboardShouldPersistTaps="handled"
         contentContainerStyle={[a.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={ACCENT} progressBackgroundColor={BG} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} progressBackgroundColor={theme.surface.bg} />}
       >
 
         {/* Header. command-center framing. Works for students AND people
             who already have a job: it's the same question either way. */}
         <FadeInView delay={0}>
           <View style={{ paddingTop: 8, paddingBottom: 18 }}>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: TEXT, lineHeight: 32, letterSpacing: -0.6 }}>
+            <Text style={{ fontSize: 26, fontWeight: '900', color: theme.surface.t1, lineHeight: 32, letterSpacing: -0.6 }}>
               {isHolder
                 ? 'Where your field is going.'
                 : 'Your career intelligence, updated live.'}
             </Text>
-            <Text style={{ fontSize: 13, color: SUB, marginTop: 6, lineHeight: 19 }}>
+            <Text style={{ fontSize: 13, color: theme.surface.t2, marginTop: 6, lineHeight: 19 }}>
               {isHolder
                 ? "What's shifting, what to invest in this quarter, and where your moat is."
                 : "What AI is doing to your role, what it isn't, and exactly what to do this month."}
@@ -469,12 +476,12 @@ export default function AIArenaScreen() {
 
         {threatReport ? (
           <FadeInView delay={20}>
-            <View style={threatCard.card}>
+            <View style={[threatCard.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               {/* Top: role + threat level */}
               <View style={threatCard.topRow}>
                 <View>
-                  <Text style={threatCard.eyebrow}>{isHolder ? 'FIELD REPORT' : 'AI THREAT REPORT'}</Text>
-                  <Text style={threatCard.role}>{threatReport.display}</Text>
+                  <Text style={[threatCard.eyebrow, { color: theme.accent }]}>{isHolder ? 'FIELD REPORT' : 'AI THREAT REPORT'}</Text>
+                  <Text style={[threatCard.role, { color: theme.surface.t1 }]}>{threatReport.display}</Text>
                 </View>
                 <View style={[threatCard.levelBadge, {
                   backgroundColor: (
@@ -505,57 +512,57 @@ export default function AIArenaScreen() {
 
               {/* Big number + headline */}
               <View style={threatCard.bigRow}>
-                <Text style={threatCard.bigPct}>{threatReport.threat_pct}%</Text>
-                <Text style={threatCard.headline}>{threatReport.headline}</Text>
+                <Text style={[threatCard.bigPct, { color: theme.surface.t1 }]}>{threatReport.threat_pct}%</Text>
+                <Text style={[threatCard.headline, { color: theme.surface.t2 }]}>{threatReport.headline}</Text>
               </View>
 
               {/* Recent signal. the scary news point */}
-              <View style={threatCard.signalBox}>
-                <Ionicons name="newspaper-outline" size={12} color={ACCENT} />
-                <Text style={threatCard.signalText}>{threatReport.recent_signal}</Text>
+              <View style={[threatCard.signalBox, { backgroundColor: theme.surface.s2, borderLeftColor: theme.accent }]}>
+                <Ionicons name="newspaper-outline" size={12} color={theme.accent} />
+                <Text style={[threatCard.signalText, { color: theme.surface.t1 }]}>{threatReport.recent_signal}</Text>
               </View>
 
               {/* Vulnerable tasks */}
-              <Text style={threatCard.sectionLabel}>{isHolder ? "WHAT'S SHIFTING" : 'MOST AT RISK'}</Text>
+              <Text style={[threatCard.sectionLabel, { color: theme.surface.t3 }]}>{isHolder ? "WHAT'S SHIFTING" : 'MOST AT RISK'}</Text>
               {(threatReport.vulnerable_tasks || []).slice(0, 4).map((t: string, i: number) => (
                 <View key={`v${i}`} style={threatCard.bulletRow}>
                   <View style={[threatCard.bulletDot, { backgroundColor: '#EA580C' }]} />
-                  <Text style={threatCard.bulletText}>{t}</Text>
+                  <Text style={[threatCard.bulletText, { color: theme.surface.t2 }]}>{t}</Text>
                 </View>
               ))}
 
               {/* Safe tasks */}
-              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>{isHolder ? 'YOUR MOAT' : "WHERE YOU'RE SAFE"}</Text>
+              <Text style={[threatCard.sectionLabel, { marginTop: 12, color: theme.surface.t3 }]}>{isHolder ? 'YOUR MOAT' : "WHERE YOU'RE SAFE"}</Text>
               {(threatReport.safe_tasks || []).slice(0, 4).map((t: string, i: number) => (
                 <View key={`s${i}`} style={threatCard.bulletRow}>
                   <View style={[threatCard.bulletDot, { backgroundColor: '#16A34A' }]} />
-                  <Text style={threatCard.bulletText}>{t}</Text>
+                  <Text style={[threatCard.bulletText, { color: theme.surface.t2 }]}>{t}</Text>
                 </View>
               ))}
 
               {/* What to learn */}
-              <Text style={[threatCard.sectionLabel, { marginTop: 12 }]}>{isHolder ? "THIS QUARTER'S PLAYS" : 'WHAT TO LEARN NEXT'}</Text>
+              <Text style={[threatCard.sectionLabel, { marginTop: 12, color: theme.surface.t3 }]}>{isHolder ? "THIS QUARTER'S PLAYS" : 'WHAT TO LEARN NEXT'}</Text>
               {(threatReport.what_to_learn || []).slice(0, 3).map((t: string, i: number) => (
                 <View key={`l${i}`} style={threatCard.bulletRow}>
-                  <View style={[threatCard.bulletDot, { backgroundColor: ACCENT }]} />
-                  <Text style={threatCard.bulletText}>{t}</Text>
+                  <View style={[threatCard.bulletDot, { backgroundColor: theme.accent }]} />
+                  <Text style={[threatCard.bulletText, { color: theme.surface.t2 }]}>{t}</Text>
                 </View>
               ))}
 
               {/* 2-year forecast */}
-              <View style={threatCard.forecastBox}>
-                <Text style={threatCard.forecastLabel}>2-YEAR FORECAST</Text>
-                <Text style={threatCard.forecastText}>{threatReport.forecast_2yr}</Text>
+              <View style={[threatCard.forecastBox, { backgroundColor: theme.surface.s2 }]}>
+                <Text style={[threatCard.forecastLabel, { color: theme.accent }]}>2-YEAR FORECAST</Text>
+                <Text style={[threatCard.forecastText, { color: theme.surface.t1 }]}>{threatReport.forecast_2yr}</Text>
               </View>
 
               {/* Dilly's take CTA */}
-              <View style={threatCard.dillyTake}>
-                <Ionicons name="sparkles" size={14} color={ACCENT} />
-                <Text style={threatCard.dillyTakeText}>{threatReport.dilly_take}</Text>
+              <View style={[threatCard.dillyTake, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                <Ionicons name="sparkles" size={14} color={theme.accent} />
+                <Text style={[threatCard.dillyTakeText, { color: theme.surface.t1 }]}>{threatReport.dilly_take}</Text>
               </View>
 
               <AnimatedPressable
-                style={threatCard.ctaBtn}
+                style={[threatCard.ctaBtn, { backgroundColor: theme.accent }]}
                 onPress={() => openDillyOverlay({
                   isPaid: false,
                   initialMessage: isHolder
@@ -574,17 +581,17 @@ export default function AIArenaScreen() {
         ) : (
           /* No role resolved. show a prompt to tell us what you do */
           <FadeInView delay={20}>
-            <View style={threatCard.promptCard}>
-              <Text style={threatCard.promptEyebrow}>GET YOUR AI THREAT REPORT</Text>
-              <Text style={threatCard.promptTitle}>What do you do right now?</Text>
-              <Text style={threatCard.promptSub}>
+            <View style={[threatCard.promptCard, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
+              <Text style={[threatCard.promptEyebrow, { color: theme.accent }]}>GET YOUR AI THREAT REPORT</Text>
+              <Text style={[threatCard.promptTitle, { color: theme.surface.t1 }]}>What do you do right now?</Text>
+              <Text style={[threatCard.promptSub, { color: theme.surface.t2 }]}>
                 Tell Dilly your role (or the one you're aiming for). You'll get a personalized
                 read on how AI is reshaping it. what's at risk, what's safe, what to learn.
               </Text>
               <TextInput
-                style={threatCard.promptInput}
+                style={[threatCard.promptInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }]}
                 placeholder="e.g. software engineer, accountant, teacher"
-                placeholderTextColor={DIM}
+                placeholderTextColor={theme.surface.t3}
                 value={threatRoleInput}
                 onChangeText={setThreatRoleInput}
                 autoCapitalize="none"
@@ -614,30 +621,30 @@ export default function AIArenaScreen() {
 
         {weeklySignal && (
           <FadeInView delay={30}>
-            <View style={weekly.card}>
+            <View style={[weekly.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <View style={weekly.topRow}>
-                <View style={weekly.eyebrowPill}>
-                  <View style={weekly.livePulse} />
-                  <Text style={weekly.eyebrowText}>THIS WEEK IN YOUR FIELD</Text>
+                <View style={[weekly.eyebrowPill, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                  <View style={[weekly.livePulse, { backgroundColor: theme.accent }]} />
+                  <Text style={[weekly.eyebrowText, { color: theme.accent }]}>THIS WEEK IN YOUR FIELD</Text>
                 </View>
                 {weeklySignal.iso_week ? (
-                  <Text style={weekly.weekLabel}>{weeklySignal.iso_week}</Text>
+                  <Text style={[weekly.weekLabel, { color: theme.surface.t3 }]}>{weeklySignal.iso_week}</Text>
                 ) : null}
               </View>
-              <Text style={weekly.headline}>{weeklySignal.headline}</Text>
+              <Text style={[weekly.headline, { color: theme.surface.t1 }]}>{weeklySignal.headline}</Text>
               {weeklySignal.source ? (
-                <Text style={weekly.source}>{weeklySignal.source}</Text>
+                <Text style={[weekly.source, { color: theme.surface.t3 }]}>{weeklySignal.source}</Text>
               ) : null}
               {weeklySignal.data_point ? (
-                <View style={weekly.dataBox}>
-                  <Ionicons name="pulse" size={12} color="#22D3EE" />
-                  <Text style={weekly.dataText}>{weeklySignal.data_point}</Text>
+                <View style={[weekly.dataBox, { backgroundColor: theme.surface.s2 }]}>
+                  <Ionicons name="pulse" size={12} color={theme.accent} />
+                  <Text style={[weekly.dataText, { color: theme.surface.t1 }]}>{weeklySignal.data_point}</Text>
                 </View>
               ) : null}
               {weeklySignal.move ? (
-                <View style={weekly.moveBox}>
-                  <Text style={weekly.moveLabel}>YOUR MOVE</Text>
-                  <Text style={weekly.moveText}>{weeklySignal.move}</Text>
+                <View style={[weekly.moveBox, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                  <Text style={[weekly.moveLabel, { color: theme.accent }]}>YOUR MOVE</Text>
+                  <Text style={[weekly.moveText, { color: theme.surface.t1 }]}>{weeklySignal.move}</Text>
                 </View>
               ) : null}
             </View>
@@ -653,20 +660,20 @@ export default function AIArenaScreen() {
             ════════════════════════════════════════════════════════ */}
 
         <FadeInView delay={40}>
-          <View style={nm.card}>
+          <View style={[nm.card, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
             <View style={nm.eyebrowRow}>
-              <View style={nm.eyebrowDot} />
-              <Text style={nm.eyebrow}>YOUR NEXT MOVE</Text>
+              <View style={[nm.eyebrowDot, { backgroundColor: theme.accent, shadowColor: theme.accent }]} />
+              <Text style={[nm.eyebrow, { color: theme.accent }]}>YOUR NEXT MOVE</Text>
               {moves.length > 1 ? (
-                <Text style={nm.indexText}>{(moveIndex % moves.length) + 1} / {moves.length}</Text>
+                <Text style={[nm.indexText, { color: theme.surface.t3 }]}>{(moveIndex % moves.length) + 1} / {moves.length}</Text>
               ) : null}
             </View>
 
-            <Text style={nm.verb}>{currentMove.verb}</Text>
-            <Text style={nm.why}>{currentMove.why}</Text>
+            <Text style={[nm.verb, { color: theme.surface.t1 }]}>{currentMove.verb}</Text>
+            <Text style={[nm.why, { color: theme.surface.t2 }]}>{currentMove.why}</Text>
 
             <AnimatedPressable
-              style={nm.primaryBtn}
+              style={[nm.primaryBtn, { backgroundColor: theme.accent }]}
               onPress={() => openDillyOverlay({
                 isPaid: false,
                 initialMessage: currentMove.msg,
@@ -684,8 +691,8 @@ export default function AIArenaScreen() {
                 scaleDown={0.97}
                 hitSlop={8}
               >
-                <Ionicons name="refresh" size={13} color={SUB} />
-                <Text style={nm.ghostBtnText}>Show me another move</Text>
+                <Ionicons name="refresh" size={13} color={theme.surface.t2} />
+                <Text style={[nm.ghostBtnText, { color: theme.surface.t2 }]}>Show me another move</Text>
               </AnimatedPressable>
             ) : null}
           </View>
@@ -703,16 +710,16 @@ export default function AIArenaScreen() {
         {!isHolder && shield && shield.tools_unlocked === false ? (
           /* Free tier gate. Tight "locked" card, no separate tools header. */
           <FadeInView delay={80}>
-            <View style={nm.lockedCard}>
+            <View style={[nm.lockedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="lock-closed" size={14} color={ACCENT} />
-                <Text style={nm.lockedTitle}>AI TOOLS LOCKED</Text>
+                <Ionicons name="lock-closed" size={14} color={theme.accent} />
+                <Text style={[nm.lockedTitle, { color: theme.surface.t1 }]}>AI TOOLS LOCKED</Text>
               </View>
-              <Text style={nm.lockedBody}>
+              <Text style={[nm.lockedBody, { color: theme.surface.t2 }]}>
                 Threat Scanner, Replace Me, Career Sim, and the rest are part of Dilly. Your next move above is always free.
               </Text>
               <AnimatedPressable
-                style={nm.lockedBtn}
+                style={[nm.lockedBtn, { backgroundColor: theme.accent }]}
                 onPress={() => router.push('/(app)/settings')}
                 scaleDown={0.97}
               >
@@ -727,9 +734,9 @@ export default function AIArenaScreen() {
           <>
             <FadeInView delay={80}>
               <View style={nm.proveRow}>
-                <Text style={nm.sectionEyebrow}>PROVE IT</Text>
+                <Text style={[nm.sectionEyebrow, { color: theme.surface.t3 }]}>PROVE IT</Text>
                 {shield.next_refresh ? (
-                  <Text style={nm.refreshText}>{shield.next_refresh}</Text>
+                  <Text style={[nm.refreshText, { color: theme.surface.t3 }]}>{shield.next_refresh}</Text>
                 ) : null}
               </View>
             </FadeInView>
@@ -742,7 +749,7 @@ export default function AIArenaScreen() {
                 icon="scan"
                 title="Threat Scanner"
                 sub="See which bullets AI can replace"
-                color={ACCENT}
+                color={theme.accent}
                 onPress={() => toggleFeature('scan')}
                 active={activeFeature === 'scan'}
               />
