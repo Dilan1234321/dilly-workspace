@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ATSDeepScan, { RewriteSuggestion, KeywordCell, ATSScoreV2 } from '../../components/ATSDeepScan';
@@ -143,6 +144,10 @@ function KeywordRow({ keyword, count, status }: { keyword: string; count: number
 
 export default function ATSScreen() {
   const insets = useSafeAreaInsets();
+  // Customize Dilly theme. ATS had 41 frozen colors refs and zero
+  // theme integration — threading useResolvedTheme so the shell
+  // (root, navbar, tab selector) picks up the user's surface choice.
+  const theme = useResolvedTheme();
   const toast = useInlineToast();
   const [tab, setTab] = useState<TabMode>('scan');
   const [loading, setLoading] = useState(false);
@@ -476,37 +481,47 @@ export default function ATSScreen() {
   }
 
   return (
-    <View style={[ss.container, { paddingTop: insets.top }]}>
+    <View style={[ss.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
 
       {/* Nav */}
       <FadeInView delay={0}>
-        <View style={ss.navBar}>
+        <View style={[ss.navBar, { borderBottomColor: theme.surface.border }]}>
           <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={colors.t1} />
+            <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
-          <Text style={ss.navTitle}>ATS Scanner</Text>
+          <Text style={[ss.navTitle, { color: theme.surface.t1 }]}>ATS Scanner</Text>
           <View style={{ width: 22 }} />
         </View>
       </FadeInView>
 
       {/* Tab selector */}
       <FadeInView delay={40}>
-        <View style={ss.tabRow}>
+        <View style={[ss.tabRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
           {([
             { key: 'scan' as TabMode, label: 'Universal Scan', icon: 'shield-checkmark' },
             { key: 'company' as TabMode, label: 'Company', icon: 'business' },
             { key: 'match' as TabMode, label: 'Job Match', icon: 'git-compare' },
-          ]).map(t => (
-            <AnimatedPressable
-              key={t.key}
-              style={[ss.tab, tab === t.key && ss.tabActive]}
-              onPress={() => setTab(t.key)}
-              scaleDown={0.95}
-            >
-              <Ionicons name={t.icon as any} size={12} color={tab === t.key ? GOLD : colors.t3} />
-              <Text style={[ss.tabText, tab === t.key && ss.tabTextActive]}>{t.label}</Text>
-            </AnimatedPressable>
-          ))}
+          ]).map(t => {
+            const active = tab === t.key;
+            return (
+              <AnimatedPressable
+                key={t.key}
+                style={[
+                  ss.tab,
+                  active && [ss.tabActive, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }],
+                ]}
+                onPress={() => setTab(t.key)}
+                scaleDown={0.95}
+              >
+                <Ionicons name={t.icon as any} size={12} color={active ? theme.accent : theme.surface.t3} />
+                <Text style={[
+                  ss.tabText,
+                  { color: theme.surface.t2 },
+                  active && [ss.tabTextActive, { color: theme.accent }],
+                ]}>{t.label}</Text>
+              </AnimatedPressable>
+            );
+          })}
         </View>
       </FadeInView>
 
