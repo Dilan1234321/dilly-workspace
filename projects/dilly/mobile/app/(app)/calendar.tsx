@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import { openAddToCalendar, openSubscribeToDillyCalendar } from '../../lib/calendar';
 import { remindDeadline, remindInterview, remindMeLater } from '../../lib/reminders';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -788,6 +789,13 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
 
 export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
+  // Calendar had no theme integration — all 63 frozen colors refs
+  // meant Midnight / Cream / Blush users saw a permanently light
+  // surface. Pulling resolved theme here and threading it through
+  // the main screen's key surfaces (container bg, navbar, month
+  // label, loading text). Full StyleSheet overhaul is bigger than
+  // this session allows; this covers the shell every user sees.
+  const theme = useResolvedTheme();
 
   const [events, setEvents]         = useState<CalendarEvent[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -1055,15 +1063,15 @@ export default function CalendarScreen() {
 
   if (loading) {
     return (
-      <View style={[cs.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }]}>
+      <View style={[cs.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }]}>
         <DillyFace size={100} />
-        <Text style={{ color: colors.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your calendar...</Text>
+        <Text style={{ color: theme.surface.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your calendar...</Text>
       </View>
     );
   }
 
   return (
-    <View style={[cs.container, { paddingTop: insets.top }]}>
+    <View style={[cs.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
 
       {/* Prep Deck Modal */}
       {prepDeck && <PrepDeckModalMobile deck={prepDeck} onClose={() => setPrepDeck(null)} />}
@@ -1072,9 +1080,9 @@ export default function CalendarScreen() {
       <FadeInView delay={0}>
         <View style={cs.navBar}>
           <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={colors.t1} />
+            <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
-          <Text style={cs.navTitle}>Calendar</Text>
+          <Text style={[cs.navTitle, { color: theme.surface.t1 }]}>Calendar</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {/* Build-78: sync to native calendar */}
             <TouchableOpacity onPress={openSubscribeToDillyCalendar} hitSlop={8}>
@@ -1121,7 +1129,7 @@ export default function CalendarScreen() {
         <FadeInView delay={120}>
           <View style={cs.monthNav}>
             <AnimatedPressable onPress={prevMonth} scaleDown={0.9} hitSlop={12}>
-              <Ionicons name="chevron-back" size={18} color={colors.t2} />
+              <Ionicons name="chevron-back" size={18} color={theme.surface.t2} />
             </AnimatedPressable>
             <AnimatedPressable
               onPress={() => {
@@ -1131,10 +1139,10 @@ export default function CalendarScreen() {
               }}
               scaleDown={0.95}
             >
-              <Text style={cs.monthLabel}>{MONTHS[viewMonth]} {viewYear}</Text>
+              <Text style={[cs.monthLabel, { color: theme.surface.t1 }]}>{MONTHS[viewMonth]} {viewYear}</Text>
             </AnimatedPressable>
             <AnimatedPressable onPress={nextMonth} scaleDown={0.9} hitSlop={12}>
-              <Ionicons name="chevron-forward" size={18} color={colors.t2} />
+              <Ionicons name="chevron-forward" size={18} color={theme.surface.t2} />
             </AnimatedPressable>
             {/* Build-78: Today pill  -  one tap jumps back to current month */}
             {(viewMonth !== now.getMonth() || viewYear !== now.getFullYear()) && (
