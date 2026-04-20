@@ -11,22 +11,27 @@ export default async function LibraryPage() {
 
   if (!session) {
     return (
-      <div className="space-y-6 pt-4">
-        <header>
-          <h1 className="text-3xl font-semibold">{t(lang, "library.title")}</h1>
-          <p className="mt-2 text-[color:var(--color-muted)]">
+      <div className="container-app pb-16 pt-14 sm:pt-20">
+        <div className="max-w-2xl">
+          <div className="eyebrow">Your library</div>
+          <h1 className="editorial mt-3 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+            {t(lang, "library.title")}
+          </h1>
+          <p className="mt-4 text-lg leading-relaxed text-[color:var(--color-muted)]">
             {t(lang, "library.blurb_unauthed")}
           </p>
-        </header>
-        <AccountNudge
-          headline={t(lang, "library.nudge.headline")}
-          body={t(lang, "library.nudge.body")}
-          ctaLabel={t(lang, "nudge.cta")}
-          nextPath="/library"
-        />
-        <div className="text-sm text-[color:var(--color-muted)]">
+        </div>
+        <div className="mt-8">
+          <AccountNudge
+            headline={t(lang, "library.nudge.headline")}
+            body={t(lang, "library.nudge.body")}
+            ctaLabel={t(lang, "nudge.cta")}
+            nextPath="/library"
+          />
+        </div>
+        <div className="mt-6 text-sm text-[color:var(--color-muted)]">
           {t(lang, "library.already")}{" "}
-          <Link href="/sign-in?next=/library" className="underline hover:text-white">
+          <Link href="/sign-in?next=/library" className="underline decoration-[color:var(--color-accent)]/40 underline-offset-4 hover:text-white">
             {t(lang, "nav.sign_in")}
           </Link>
           .
@@ -38,18 +43,21 @@ export default async function LibraryPage() {
   const saved = await listSavedVideos().catch(() => []);
 
   return (
-    <div className="space-y-6 pt-4">
-      <header>
-        <h1 className="text-3xl font-semibold">{t(lang, "library.title")}</h1>
-        <p className="mt-2 text-[color:var(--color-muted)]">
+    <div className="container-app pb-16 pt-14 sm:pt-20">
+      <div className="max-w-2xl">
+        <div className="eyebrow">Your library</div>
+        <h1 className="editorial mt-3 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+          {t(lang, "library.title")}
+        </h1>
+        <p className="mt-4 text-lg text-[color:var(--color-muted)]">
           {saved.length === 0
             ? t(lang, "library.blurb_authed_empty")
             : t(lang, "library.blurb_authed_count", { count: saved.length })}
         </p>
-      </header>
+      </div>
 
       {saved.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {saved.map((v) => (
             <VideoCard key={v.id} video={v} lang={lang} />
           ))}
