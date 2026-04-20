@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Video } from "@/lib/types";
+import type { LangCode } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 import { formatDuration, formatViews, timeAgo } from "@/lib/utils";
 
-export function VideoCard({ video }: { video: Video }) {
+export function VideoCard({ video, lang }: { video: Video; lang: LangCode }) {
   const thumb =
     video.thumbnail_url ||
     `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
@@ -29,13 +31,13 @@ export function VideoCard({ video }: { video: Video }) {
           {video.channel_title}
         </div>
         <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--color-muted)]">
-          <span>{formatViews(video.view_count)} views</span>
+          <span>{formatViews(video.view_count)} {t(lang, "video.views")}</span>
           <span>·</span>
           <span>{timeAgo(video.published_at)}</span>
           {video.quality_score >= 75 && (
             <>
               <span>·</span>
-              <span className="text-[color:var(--color-accent)]">high signal</span>
+              <span className="text-[color:var(--color-accent)]">{t(lang, "video.high_signal")}</span>
             </>
           )}
         </div>

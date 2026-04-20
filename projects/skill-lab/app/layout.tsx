@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { getSession } from "@/lib/api";
+import { getLang } from "@/lib/lang-server";
+import { t } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Skill Lab by Dilly",
@@ -19,18 +21,19 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const lang = await getLang();
   const session = await getSession().catch(() => null);
   return (
-    <html lang="en">
+    <html lang={lang}>
       <body>
-        <Nav session={session} />
+        <Nav session={session} lang={lang} />
         <main className="container-app pb-24 pt-6">{children}</main>
         <footer className="container-app py-10 text-sm text-[color:var(--color-muted)]">
-          Skill Lab is a free product by{" "}
+          {t(lang, "footer.tagline")}{" "}
           <a href="https://dilly.app" className="underline hover:text-white">
             Dilly
           </a>
-          . Videos are embedded from YouTube and remain the property of their creators.
+          . {t(lang, "footer.disclaimer")}
         </footer>
       </body>
     </html>

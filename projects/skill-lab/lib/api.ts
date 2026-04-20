@@ -41,12 +41,18 @@ async function api<T>(
 
 export async function listVideosByCohort(
   cohortSlug: string,
-  opts: { limit?: number; sort?: "best" | "newest"; maxDurationMin?: number } = {},
+  opts: {
+    limit?: number;
+    sort?: "best" | "newest";
+    maxDurationMin?: number;
+    lang?: string;
+  } = {},
 ): Promise<Video[]> {
   const params = new URLSearchParams({ cohort: cohortSlug });
   if (opts.limit) params.set("limit", String(opts.limit));
   if (opts.sort) params.set("sort", opts.sort);
   if (opts.maxDurationMin) params.set("max_duration_min", String(opts.maxDurationMin));
+  if (opts.lang) params.set("lang", opts.lang);
   const data = await api<{ videos: Video[] }>(`/skill-lab/videos?${params.toString()}`);
   return data?.videos ?? [];
 }
@@ -56,8 +62,10 @@ export async function getVideo(id: string): Promise<Video | null> {
   return data?.video ?? null;
 }
 
-export async function listTrending(limit = 12): Promise<Video[]> {
-  const data = await api<{ videos: Video[] }>(`/skill-lab/trending?limit=${limit}`);
+export async function listTrending(limit = 12, lang?: string): Promise<Video[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (lang) params.set("lang", lang);
+  const data = await api<{ videos: Video[] }>(`/skill-lab/trending?${params.toString()}`);
   return data?.videos ?? [];
 }
 
