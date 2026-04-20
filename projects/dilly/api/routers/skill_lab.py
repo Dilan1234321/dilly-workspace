@@ -288,3 +288,119 @@ def unsave_video(video_id: str, user: dict = Depends(require_auth)):
                 (email, video_id),
             )
     return {"ok": True}
+
+
+# ── Learning receipts ─────────────────────────────────────────────────────────
+# The evidence trail behind skill claims. One row per (user, video).
+# seconds_engaged accumulates across sessions; articulation is the user's
+# one-sentence takeaway.
+
+@router.post("/receipts")
+def record_receipt(body: dict = Body(...), user: dict = Depends(require_auth)):
+    email = (user.get("email") or "").strip().lower()
+    video_id = str(body.get("video_id") or "").strip()
+    if not _valid_video_id(video_id):
+        raise HTTPException(status_code=400, detail="Invalid video id")
+
+    raw_seconds = body.get("seconds_engaged")
+    seconds = 0
+    try:
+        seconds = int(raw_seconds) if raw_seconds is not None else 0
+    except (TypeError, ValueError):
+        seconds = 0
+    # Cap a single beacon at 30 min so a client can't inflate the counter
+    seconds = max(0, min(seconds, 30 * 60))
+
+    articulation_raw = body.get("articulation")
+    articulation = (
+        str(articulation_raw).strip()[:500] if isinstance(articulation_raw, str) else None
+    )
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT cohort FROM skill_lab_videos WHERE id = %s",
+                (video_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Video not found")
+            cohort = row[0]
+
+            cur.execute(
+                """
+                INSERT INTO skill_lab_learning_receipts (
+                    user_email, video_id, cohort, seconds_engaged, articulation
+                ) VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (user_email, video_id) DO UPDATE SET
+                    seconds_engaged = skill_lab_learning_receipts.seconds_engaged + EXCLUDED.seconds_engaged,
+                    articulation = COALESCE(NULLIF(EXCLUDED.articulation, ''), skill_lab_learning_receipts.articulation),
+                    last_seen_at = NOW()
+                """,
+                (email, video_id, cohort, seconds, articulation),
+            )
+    return {"ok": True}
+
+
+@router.get("/receipts/me")
+def my_receipts(user: dict = Depends(require_auth)):
+    """Returns aggregate + per-cohort + per-day rollups of a user's receipts."""
+    email = (user.get("email") or "").strip().lower()
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    COALESCE(SUM(seconds_engaged), 0)::BIGINT AS total_seconds,
+                    COUNT(*)::INTEGER AS videos_engaged,
+                    COUNT(DISTINCT cohort)::INTEGER AS cohorts_touched,
+                    COUNT(articulation) FILTER (WHERE articulation IS NOT NULL)::INTEGER AS articulations
+                  FROM skill_lab_learning_receipts
+                 WHERE user_email = %s
+                """,
+                (email,),
+            )
+            totals = cur.fetchone() or (0, 0, 0, 0)
+
+            cur.execute(
+                """
+                SELECT cohort,
+                       SUM(seconds_engaged)::BIGINT AS seconds,
+                       COUNT(*)::INTEGER AS videos
+                  FROM skill_lab_learning_receipts
+                 WHERE user_email = %s
+                 GROUP BY cohort
+                 ORDER BY seconds DESC
+                """,
+                (email,),
+            )
+            by_cohort = [
+                {"cohort": c, "seconds": int(s or 0), "videos": int(v or 0)}
+                for (c, s, v) in cur.fetchall()
+            ]
+
+            cur.execute(
+                """
+                SELECT DATE(last_seen_at) AS day,
+                       SUM(seconds_engaged)::BIGINT AS seconds
+                  FROM skill_lab_learning_receipts
+                 WHERE user_email = %s
+                   AND last_seen_at > NOW() - INTERVAL '60 days'
+                 GROUP BY DATE(last_seen_at)
+                 ORDER BY day DESC
+                """,
+                (email,),
+            )
+            daily = [
+                {"day": d.isoformat(), "seconds": int(s or 0)}
+                for (d, s) in cur.fetchall()
+            ]
+
+    return {
+        "total_seconds": int(totals[0] or 0),
+        "videos_engaged": int(totals[1] or 0),
+        "cohorts_touched": int(totals[2] or 0),
+        "articulations": int(totals[3] or 0),
+        "by_cohort": by_cohort,
+        "daily": daily,
+    }

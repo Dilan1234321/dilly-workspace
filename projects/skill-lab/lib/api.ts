@@ -125,4 +125,18 @@ export async function serverSignOut(): Promise<void> {
   await api(`/auth/logout`, { method: "POST", auth: true });
 }
 
+/**
+ * Patches the Dilly profile with what Skill Lab collected during sign-up.
+ * Uses the same PATCH /profile endpoint the mobile app uses, so the created
+ * profile is a real first-class Dilly profile.
+ */
+export async function patchProfile(payload: Record<string, unknown>): Promise<boolean> {
+  const data = await api<{ ok: boolean }>(`/profile`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+    auth: true,
+  });
+  return Boolean(data?.ok ?? data);
+}
+
 export { SESSION_COOKIE };

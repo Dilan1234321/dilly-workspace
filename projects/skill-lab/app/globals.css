@@ -1,43 +1,231 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Skill Lab design system — aligned with hellodilly.com (light theme).
+   Warm cream background, deep navy for type and buttons, soft lavender for
+   secondary chips, green/amber for semantic status. Editorial serif for
+   headlines, sans for UI chrome.
+   ────────────────────────────────────────────────────────────────────────── */
+
 @theme {
-  --color-bg: #0b0b0f;
-  --color-surface: #111117;
-  --color-surface-2: #171720;
-  --color-border: #23232e;
-  --color-text: #ececf1;
-  --color-muted: #8a8a99;
-  --color-accent: #e8ff5c;
-  --color-accent-fg: #0b0b0f;
-  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Warm cream base — not pure white, has a slight ochre cast */
+  --color-bg: #f4f1ea;
+  --color-bg-soft: #ece8df;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-border: rgba(26, 32, 80, 0.10);
+  --color-border-strong: rgba(26, 32, 80, 0.22);
+
+  /* Deep navy text, matching hellodilly.com's headline tone */
+  --color-text: #171c44;
+  --color-muted: rgba(23, 28, 68, 0.60);
+  --color-dim: rgba(23, 28, 68, 0.38);
+
+  /* Primary navy accent (buttons, links) */
+  --color-accent: #1c2264;
+  --color-accent-soft: #3b4694;
+  --color-lavender: #e5e5f5;         /* soft tag background */
+  --color-lavender-border: #cfd0e8;
+
+  /* Semantic status colors — for the cohort/profile strength chips */
+  --color-green: #4c9a5a;
+  --color-green-bg: #e2f0e4;
+  --color-amber: #c88a2b;
+  --color-amber-bg: #f5ead2;
+  --color-red: #c24a4a;
+  --color-red-bg: #f5dada;
+
+  /* Satoshi — the rounded geometric sans hellodilly.com uses. Both headlines
+     and body now share this face so the brand feel is consistent everywhere;
+     "editorial" moments just shift to a heavier weight. */
+  --font-display: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+  --font-editorial: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 18px;
 }
 
-html, body { background: var(--color-bg); color: var(--color-text); }
-body { font-family: var(--font-display); -webkit-font-smoothing: antialiased; }
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+body {
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+}
 
-.container-app { max-width: 1200px; margin-inline: auto; padding-inline: 1.25rem; }
+/* "Editorial" = heavier weight + tighter tracking. Same face as body. */
+.editorial {
+  font-family: var(--font-editorial);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.editorial.italic { font-style: italic; font-weight: 500; }
 
+/* Containers scale with screen width */
+.container-app {
+  max-width: 1720px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 768px) { .container-app { padding-inline: 2rem; } }
+@media (min-width: 1280px) { .container-app { padding-inline: 3rem; } }
+@media (min-width: 1680px) { .container-app { padding-inline: 4rem; } }
+
+.container-narrow {
+  max-width: 820px;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 768px) { .container-narrow { padding-inline: 2rem; } }
+
+/* Glass nav — cream with light blur so content reads through subtly */
+.glass {
+  background: rgba(244, 241, 234, 0.88);
+  backdrop-filter: saturate(150%) blur(10px);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Cards are pure white on cream, with a subtle border */
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-radius: var(--radius);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
-.card:hover { border-color: #323242; }
+.card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: 0 8px 24px -16px rgba(23, 28, 68, 0.15);
+}
 
+.card-featured {
+  position: relative;
+  border: 1px solid rgba(28, 34, 100, 0.22);
+  background: var(--color-surface);
+  box-shadow: 0 20px 60px -30px rgba(28, 34, 100, 0.18);
+}
+.card-featured::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(28, 34, 100, 0.5), transparent);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* Buttons — navy primary, subtle ghost */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 0.55rem 1rem; border-radius: 10px; font-weight: 600;
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 999px; /* hellodilly uses pill buttons */
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1;
   border: 1px solid transparent;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
-.btn-primary { background: var(--color-accent); color: var(--color-accent-fg); }
-.btn-primary:hover { transform: translateY(-1px); }
-.btn-ghost { background: transparent; color: var(--color-text); border-color: var(--color-border); }
-.btn-ghost:hover { background: var(--color-surface-2); }
+.btn-primary {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+.btn-primary:hover { transform: translateY(-1px); background: #13173f; }
 
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+.btn-ghost:hover {
+  background: #ffffff;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Chips — soft lavender, like the hellodilly feature tags */
 .chip {
-  display: inline-flex; align-items: center; gap: 0.375rem;
-  padding: 0.25rem 0.625rem; border-radius: 999px;
-  background: var(--color-surface-2); border: 1px solid var(--color-border);
-  font-size: 0.75rem; color: var(--color-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: var(--color-lavender);
+  border: 1px solid var(--color-lavender-border);
+  font-size: 0.72rem;
+  color: var(--color-accent);
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+.chip-accent {
+  background: var(--color-accent);
+  color: #ffffff;
+  border-color: var(--color-accent);
+}
+.chip-mint {
+  color: var(--color-green);
+  background: var(--color-green-bg);
+  border-color: rgba(76, 154, 90, 0.3);
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.rule {
+  height: 1px;
+  background: var(--color-border);
+  margin-block: 2.5rem;
+}
+
+/* Numbered step indicator — navy circle, cream background */
+.step-number {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-lavender);
+  border: 1px solid var(--color-lavender-border);
+  color: var(--color-accent);
+  font-family: var(--font-editorial);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.step-number-inline {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: var(--color-accent);
+  font-family: var(--font-editorial);
+  font-weight: 700;
+  font-size: 0.7rem;
+  margin-right: 0.2rem;
+}
+
+/* Scrollbar — warm, visible only on hover */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+
+:focus:not(:focus-visible) { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
