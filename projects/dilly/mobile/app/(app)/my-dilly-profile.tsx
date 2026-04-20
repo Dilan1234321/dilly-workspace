@@ -854,7 +854,11 @@ function SeekerProfileScreen() {
                     undefined on first render. Coalescing across
                     identity + p fixes that. */}
                 {(() => {
-                  const photoUrl = identity.photo_url || p.photo_url || '';
+                  // Coalesce across the dashboard identity (fast) and the
+                  // full profile (authoritative). data.identity is the
+                  // dashboard payload loaded from /memory/surface; p
+                  // comes from /profile. Either may hydrate first.
+                  const photoUrl = (data?.identity as any)?.photo_url || p.photo_url || '';
                   if (!photoUrl) {
                     return (
                       <View style={d.editPhotoPlaceholder}>
@@ -868,7 +872,7 @@ function SeekerProfileScreen() {
                   return <Image source={{ uri }} style={d.editPhotoImg} />;
                 })()}
                 <Text style={d.editPhotoLabel}>
-                  {(identity.photo_url || p.photo_url) ? 'Change photo' : 'Add a photo'}
+                  {((data?.identity as any)?.photo_url || p.photo_url) ? 'Change photo' : 'Add a photo'}
                 </Text>
               </AnimatedPressable>
 
