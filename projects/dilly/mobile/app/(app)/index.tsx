@@ -17,6 +17,7 @@ import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
 import DailyPulseCard from '../../components/DailyPulseCard';
+import RememberedCard from '../../components/RememberedCard';
 import { scheduleChapterNotifications } from '../../hooks/useChapterNotifications';
 import { useExtractionState } from '../../hooks/useExtractionPending';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
@@ -1330,6 +1331,16 @@ function SeekerHome() {
             cost that drives return. */}
         <FadeInView delay={18}>
           <DailyPulseCard />
+        </FadeInView>
+
+        {/* Dilly Remembered You — proof the AI is actually tracking.
+            Surfaces a specific callback to a recent pulse / Chapter
+            commitment / upcoming deadline. Tapping opens the chat
+            seeded with a follow-up so the reminder becomes a
+            conversation. Hides itself entirely when there's no
+            meaningful signal yet. */}
+        <FadeInView delay={22}>
+          <RememberedCard />
         </FadeInView>
 
         {/* ── Situation hero card ─────────────────────────────
