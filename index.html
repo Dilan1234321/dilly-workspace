@@ -40,7 +40,6 @@
                     <span class="nav-dropdown-label">Your resume</span>
                     <a href="features.html" class="nav-dropdown-link" data-nav-feature="overview">All features</a>
                     <a href="feature-dilly-score.html" class="nav-dropdown-link" data-nav-feature="score">Dilly Score</a>
-                    <a href="feature-resume-editor.html" class="nav-dropdown-link" data-nav-feature="editor">Resume editor</a>
                     <a href="feature-ats.html" class="nav-dropdown-link" data-nav-feature="ats">ATS scanner</a>
                   </div>
                 </div>
@@ -61,13 +60,12 @@
               </div>
             </li>
             <li class="nav-dropdown">
-              <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach &amp; compete</button>
-              <div class="nav-dropdown-panel" role="region" aria-label="Coach and compete">
+              <button type="button" class="nav-item nav-item--dropdown" aria-expanded="false" aria-haspopup="true">Coach</button>
+              <div class="nav-dropdown-panel" role="region" aria-label="Coach">
                 <div class="nav-dropdown-inner">
                   <div class="nav-dropdown-col">
                     <span class="nav-dropdown-label">Guidance</span>
                     <a href="feature-ai-coach.html" class="nav-dropdown-link" data-nav-feature="coach">AI coach</a>
-                    <a href="feature-leaderboard.html" class="nav-dropdown-link" data-nav-feature="leaderboard">Peer leaderboard</a>
                   </div>
                 </div>
               </div>
@@ -154,10 +152,6 @@
           <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">ATS Scanner  -  see exactly what recruiters see</p>
         </div>
         <div style="min-width:100%;padding:0 clamp(1.5rem,5vw,4rem);box-sizing:border-box">
-          <img src="screenshot-resume.png" alt="Resume Editor" style="width:100%;max-width:1100px;display:block;margin:0 auto;border-radius:16px;box-shadow:0 24px 80px rgba(0,20,60,0.13)">
-          <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">Resume Editor  -  every bullet scored and improved</p>
-        </div>
-        <div style="min-width:100%;padding:0 clamp(1.5rem,5vw,4rem);box-sizing:border-box">
           <img src="screenshot-score.png" alt="Dilly Score" style="width:100%;max-width:1100px;display:block;margin:0 auto;border-radius:16px;box-shadow:0 24px 80px rgba(0,20,60,0.13)">
           <p style="text-align:center;margin:1.5rem 0 0;font-family:Montserrat,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(26,26,34,0.35)">Dilly Score  -  know where you stand vs your cohort</p>
         </div>
@@ -178,12 +172,11 @@
       <button onclick="carouselGo(1)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
       <button onclick="carouselGo(2)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
       <button onclick="carouselGo(3)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
-      <button onclick="carouselGo(4)" class="cdot" style="width:8px;height:8px;border-radius:50%;border:none;cursor:pointer;padding:0;background:#001b44;opacity:0.2;transition:opacity 0.2s"></button>
     </div>
   </section>
   <script>
   (function(){
-    var idx=0,total=5;
+    var idx=0,total=4;
     var track=document.getElementById('carousel-track');
     var dots=document.querySelectorAll('.cdot');
     function go(n){
@@ -374,21 +367,6 @@
           <span class="toolkit-card-link">See matching <span aria-hidden="true">→</span></span>
         </a>
 
-        <a class="toolkit-card toolkit-card--editor" href="feature-resume-editor.html">
-          <span class="toolkit-card-shine" aria-hidden="true"></span>
-          <span class="toolkit-card-idx" aria-hidden="true">04</span>
-          <div class="toolkit-card-icon" aria-hidden="true">
-            <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28 10l10 10-16 16H12v-10L28 10Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M22 16l10 10M18 28l4 4" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity="0.45"/></svg>
-          </div>
-          <span class="toolkit-card-tag">Editor</span>
-          <h3 class="toolkit-card-title">Live bullet scoring</h3>
-          <p class="toolkit-card-desc">Every line graded as you type, with AI rewrites aimed at quantified impact.</p>
-          <div class="toolkit-card-chips">
-            <span class="chip">Real-time</span><span class="chip">Before / after</span>
-          </div>
-          <span class="toolkit-card-link">Open editor <span aria-hidden="true">→</span></span>
-        </a>
-
         <a class="toolkit-card toolkit-card--coach" href="feature-ai-coach.html">
           <span class="toolkit-card-shine" aria-hidden="true"></span>
           <span class="toolkit-card-idx" aria-hidden="true">05</span>
@@ -411,8 +389,8 @@
             <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 14h8v8h-8v-8ZM28 14h8v8h-8v-8ZM12 28h8v8h-8v-8ZM28 28h8v8h-8v-8Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round" opacity="0.9"/><path d="M20 18h8M20 32h8M18 20v8M32 20v8" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" opacity="0.35"/></svg>
           </div>
           <span class="toolkit-card-tag">More</span>
-          <h3 class="toolkit-card-title">Leaderboard, tracker, calendar</h3>
-          <p class="toolkit-card-desc">Peer rankings by track, pipeline CRM from Saved to Offer, and nudges that respect your week.</p>
+          <h3 class="toolkit-card-title">Tracker, calendar, and more</h3>
+          <p class="toolkit-card-desc">Pipeline CRM from Saved to Offer, deadline nudges, and everything else inside the toolkit.</p>
           <div class="toolkit-card-chips">
             <span class="chip">Full feature hub →</span>
           </div>
@@ -476,7 +454,6 @@
             <tr><td>Full-profile coach (resume + scores + apps + deadlines)</td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-partial">~</td><td class="compare-partial">~</td><td class="compare-partial">~</td></tr>
             <tr><td>Live bullet scoring &amp; rewrite suggestions</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td></tr>
             <tr class="compare-row--key"><td><strong>Application tracker + career calendar</strong></td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td><td class="compare-no">✗</td></tr>
-            <tr class="compare-row--key"><td><strong>Peer leaderboard &amp; track rankings</strong></td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-partial">~</td><td class="compare-partial">~</td><td class="compare-no">✗</td></tr>
             <tr><td>AI mock interviews</td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-partial">~</td></tr>
             <tr><td>Native mobile apps (iOS &amp; Android)</td><td class="compare-yes">✓</td><td class="compare-no">✗</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td><td class="compare-yes">✓</td></tr>
             <tr><td>From</td><td class="mono">$9.99/mo</td><td class="mono">$49.95/mo</td><td class="mono">$119/yr</td><td>Campus pricing</td><td>Free + paid tiers</td></tr>
