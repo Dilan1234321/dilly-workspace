@@ -38,6 +38,7 @@ import { DillyFace } from '../../../components/DillyFace';
 import AnimatedPressable from '../../../components/AnimatedPressable';
 import { cancelMissReminder, scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
 import { scheduleOutcomePushes } from '../../../hooks/useOutcomePushes';
+import { triggerCelebration } from '../../../hooks/useCelebration';
 
 interface Screen { slot: string; body: string; }
 interface Chapter {
@@ -291,7 +292,22 @@ export default function ChapterSessionScreen() {
         setChatBlocked(null);
       }
     } else {
-      // End of Chapter. Close back to Home.
+      // End of Chapter. Close back to Home. Fire a milestone overlay
+      // on completion of milestone chapters (4/12/26/52) so users
+      // feel the weekly ritual's compounding. Delayed slightly so the
+      // close animation lands first and the overlay isn't stacked on
+      // top of a mid-dismiss Chapter screen.
+      const ct = chapter?.count || 0;
+      const chapterMilestones: Record<number, string> = {
+        4:  'chapter-4',
+        12: 'chapter-12',
+        26: 'chapter-26',
+        52: 'chapter-52',
+      };
+      const hit = chapterMilestones[ct];
+      if (hit) {
+        setTimeout(() => triggerCelebration(hit as any), 420);
+      }
       router.back();
     }
   }
