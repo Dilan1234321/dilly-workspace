@@ -20,10 +20,18 @@ import { CAREER_FIELDS, fieldToCohorts, COHORT_META } from '../../lib/cohorts';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 
+// apiValue must be one of the canonical application_target values the
+// backend accepts: internship | full_time | exploring. The older keys
+// (new_role, career_pivot, growth) were removed from the allowlist but
+// the UI options remained, so picking them returned a 400 with
+// 'application_target must be one of: internship, full_time, exploring'
+// on the onboarding screen. Mapping each human-readable label to a
+// valid apiValue while keeping key distinct so the UI radio keeps its
+// previous selection semantics.
 const TARGET_OPTIONS = [
-  { key: 'new_role', label: 'Looking for a new role', apiValue: 'new_role' },
-  { key: 'career_pivot', label: 'Making a career pivot', apiValue: 'career_pivot' },
-  { key: 'growth', label: 'Growing in my current field', apiValue: 'growth' },
+  { key: 'new_role', label: 'Looking for a new role', apiValue: 'full_time' },
+  { key: 'career_pivot', label: 'Making a career pivot', apiValue: 'full_time' },
+  { key: 'growth', label: 'Growing in my current field', apiValue: 'full_time' },
   { key: 'exploring', label: 'Just exploring', apiValue: 'exploring' },
 ];
 
@@ -99,7 +107,7 @@ export default function ProfileProScreen() {
           cohort: primaryCohort,
           cohorts: detectedCohorts,
           track: primaryCohort,
-          application_target: TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'new_role',
+          application_target: TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'exploring',
           user_type: 'general',
           onboarding_complete: false,
         }),
@@ -118,7 +126,7 @@ export default function ProfileProScreen() {
         ['dilly_onboarding_name', fullName.trim()],
         ['dilly_onboarding_cohort', primaryCohort],
         ['dilly_onboarding_track', primaryCohort],
-        ['dilly_onboarding_target', TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'new_role'],
+        ['dilly_onboarding_target', TARGET_OPTIONS.find(o => o.key === targetKey)?.apiValue ?? 'exploring'],
       ]);
 
       // Go to upload (optional)

@@ -366,7 +366,17 @@ export default function ChooseSituationScreen() {
               College freshman. CEO. Truck driver. Nurse. Dropout. Returning parent. Refugee. Founder reset. You.
             </Text>
             <Text style={styles.subBold}>
-              Every path here is its own app. Pick yours.
+              Pick where you are right now.
+            </Text>
+            {/* Multi-identity clarifier. Paths are structured as
+                mutually-exclusive buckets, but plenty of people fit
+                more than one (a college student who wants LGBTQ+
+                inclusive employers, a veteran who's also returning
+                to school, etc). Making it explicit upfront that the
+                other identities become FILTERS later prevents the
+                'what if I'm X and Y' confusion that testers flagged. */}
+            <Text style={styles.clarifier}>
+              You can only pick one. Anything else about you — LGBTQ+ focus, remote-only, fair-chance, visa timing — you'll set as a filter once you're in.
             </Text>
           </View>
         </FadeInView>
@@ -547,6 +557,17 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginTop: 10,
     letterSpacing: -0.1,
+  },
+  // Multi-identity clarifier line. Sits right below the 'Pick where
+  // you are right now' subBold so the reassurance lands before the
+  // user starts scanning cards and hits the 'what if I'm X AND Y'
+  // question that testers flagged.
+  clarifier: {
+    fontSize: 12,
+    color: colors.t2,
+    lineHeight: 17,
+    marginTop: 8,
+    letterSpacing: 0,
   },
 
   card: {

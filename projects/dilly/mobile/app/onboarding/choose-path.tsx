@@ -134,11 +134,14 @@ export default function ChoosePathScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
+        {/* Hero. Tightened per tester feedback — the old subtitle was
+            marketing-y and the footer repeated the same idea. One line
+            here is enough; the email field itself tells users what
+            this screen is for. */}
         <FadeInView delay={0}>
           <Text style={s.headline}>Your career.{'\n'}Your guide.{'\n'}Your move.</Text>
           <Text style={s.sub}>
-            Dilly builds a deep profile of who you are, then guides you through the AI-driven job market.
+            Enter your email to get started.
           </Text>
         </FadeInView>
 
@@ -150,7 +153,7 @@ export default function ChoosePathScreen() {
         <FadeInView delay={100}>
           {showStudentFirst ? (
             <View style={s.section}>
-              <Text style={s.sectionLabel}>Enter your .edu email</Text>
+              <Text style={s.sectionLabel}>Your .edu email</Text>
               <View style={s.inputWrapper}>
                 <TextInput
                   ref={eduInputRef}
@@ -184,7 +187,7 @@ export default function ChoosePathScreen() {
             </View>
           ) : (
             <View style={s.section}>
-              <Text style={s.sectionLabel}>Enter your email</Text>
+              <Text style={s.sectionLabel}>Your email</Text>
               <View style={s.inputWrapper}>
                 <TextInput
                   ref={generalInputRef}
@@ -312,12 +315,10 @@ export default function ChoosePathScreen() {
           </>
         ) : null}
 
-        {/* Footer */}
-        <FadeInView delay={400}>
-          <Text style={s.footer}>
-            AI is reshaping the job market. Dilly shows you where you stand and what to do next.
-          </Text>
-        </FadeInView>
+        {/* Footer removed per tester feedback — the sentence was
+            repeating the value prop already on the splash screen
+            and was contributing to the 'wordy' complaint. The email
+            field is self-explanatory; nothing extra needed here. */}
       </ScrollView>
     </KeyboardAvoidingView>
   );
