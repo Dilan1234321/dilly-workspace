@@ -674,6 +674,7 @@ type SeniorResetData = {
 
 function SeniorResetHome() {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
   const { data, loading, refreshing, refresh } = useCachedFetch<SeniorResetData>(
     'senior-reset:dashboard',
     async () => {
@@ -713,25 +714,25 @@ function SeniorResetHome() {
   });
 
   return (
-    <View style={[sr.container, { paddingTop: insets.top }]}>
+    <View style={[sr.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       <ScrollView
         contentContainerStyle={[sr.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={INDIGO} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={theme.accent} />}
       >
         {/* Grounded greeting. No "Welcome back!", no exclamation. */}
         <View style={sr.greetRow}>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <Text style={sr.eyebrow}>YOUR RESET</Text>
+              <Text style={[sr.eyebrow, { color: theme.accent }]}>YOUR RESET</Text>
               <TierBadge />
             </View>
-            <Text style={sr.greeting}>
+            <Text style={[sr.greeting, { color: theme.surface.t1 }]}>
               {firstName}, here's where you are today.
             </Text>
           </View>
           <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} scaleDown={0.9} hitSlop={10}>
-            <Ionicons name="settings-outline" size={20} color={colors.t3} />
+            <Ionicons name="settings-outline" size={20} color={theme.surface.t3} />
           </AnimatedPressable>
         </View>
 
@@ -744,13 +745,13 @@ function SeniorResetHome() {
         {/* Regroup card. calm and warm. Varies by weeks since layoff. */}
         {d?.regroup ? (
           <FadeInView delay={40}>
-            <View style={sr.regroupCard}>
-              <Text style={sr.regroupHead}>{d.regroup.headline}</Text>
-              <Text style={sr.regroupBody}>{d.regroup.body}</Text>
+            <View style={[sr.regroupCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[sr.regroupHead, { color: theme.surface.t1 }]}>{d.regroup.headline}</Text>
+              <Text style={[sr.regroupBody, { color: theme.surface.t2 }]}>{d.regroup.body}</Text>
               {d.regroup.weeks_since_layoff != null ? (
-                <View style={sr.weekPill}>
-                  <View style={sr.weekDot} />
-                  <Text style={sr.weekPillText}>
+                <View style={[sr.weekPill, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                  <View style={[sr.weekDot, { backgroundColor: theme.accent }]} />
+                  <Text style={[sr.weekPillText, { color: theme.accent }]}>
                     Week {d.regroup.weeks_since_layoff + 1} of the reset
                   </Text>
                 </View>
@@ -762,15 +763,15 @@ function SeniorResetHome() {
         {/* Your moat. the quantified leverage card. */}
         {d?.moat ? (
           <FadeInView delay={80}>
-            <Text style={sr.sectionLabel}>YOUR MOAT</Text>
-            <View style={sr.moatCard}>
-              <Text style={sr.moatHead}>{d.moat.headline}</Text>
-              <Text style={sr.moatLev}>{d.moat.leverage_sentence}</Text>
+            <Text style={[sr.sectionLabel, { color: theme.surface.t3 }]}>YOUR MOAT</Text>
+            <View style={[sr.moatCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[sr.moatHead, { color: theme.surface.t1 }]}>{d.moat.headline}</Text>
+              <Text style={[sr.moatLev, { color: theme.surface.t2 }]}>{d.moat.leverage_sentence}</Text>
               {d.moat.ai_resistant_skills.length > 0 ? (
                 <View style={sr.moatSkillsWrap}>
                   {d.moat.ai_resistant_skills.slice(0, 4).map(s => (
-                    <View key={s} style={sr.moatSkillChip}>
-                      <Text style={sr.moatSkillText} numberOfLines={1}>{s}</Text>
+                    <View key={s} style={[sr.moatSkillChip, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+                      <Text style={[sr.moatSkillText, { color: theme.surface.t2 }]} numberOfLines={1}>{s}</Text>
                     </View>
                   ))}
                 </View>
@@ -782,23 +783,23 @@ function SeniorResetHome() {
         {/* Today's ONE move. Replaces the dashboard noise. */}
         {d?.today_move ? (
           <FadeInView delay={120}>
-            <Text style={sr.sectionLabel}>TODAY</Text>
+            <Text style={[sr.sectionLabel, { color: theme.surface.t3 }]}>TODAY</Text>
             <AnimatedPressable
-              style={sr.todayCard}
+              style={[sr.todayCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
               scaleDown={0.98}
               onPress={() => openDillyOverlay({
                 isPaid: false,
                 initialMessage: d.today_move.chat_seed,
               })}
             >
-              <View style={sr.todayIcon}>
-                <Ionicons name="arrow-forward-circle-outline" size={22} color={INDIGO} />
+              <View style={[sr.todayIcon, { backgroundColor: theme.accentSoft }]}>
+                <Ionicons name="arrow-forward-circle-outline" size={22} color={theme.accent} />
               </View>
-              <Text style={sr.todayTitle}>{d.today_move.title}</Text>
-              <Text style={sr.todayBody}>{d.today_move.body}</Text>
+              <Text style={[sr.todayTitle, { color: theme.surface.t1 }]}>{d.today_move.title}</Text>
+              <Text style={[sr.todayBody, { color: theme.surface.t2 }]}>{d.today_move.body}</Text>
               <View style={sr.todayCtaRow}>
-                <Text style={sr.todayCta}>Talk it through with Dilly</Text>
-                <Ionicons name="arrow-forward" size={14} color={INDIGO} />
+                <Text style={[sr.todayCta, { color: theme.accent }]}>Talk it through with Dilly</Text>
+                <Ionicons name="arrow-forward" size={14} color={theme.accent} />
               </View>
             </AnimatedPressable>
           </FadeInView>
@@ -807,10 +808,10 @@ function SeniorResetHome() {
         {/* Your network is the market. */}
         {d?.network ? (
           <FadeInView delay={160}>
-            <Text style={sr.sectionLabel}>NETWORK</Text>
-            <View style={sr.networkCard}>
-              <Text style={sr.networkHead}>{d.network.headline}</Text>
-              <Text style={sr.networkSub}>
+            <Text style={[sr.sectionLabel, { color: theme.surface.t3 }]}>NETWORK</Text>
+            <View style={[sr.networkCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[sr.networkHead, { color: theme.surface.t1 }]}>{d.network.headline}</Text>
+              <Text style={[sr.networkSub, { color: theme.surface.t2 }]}>
                 Most senior roles fill through people, not job boards.
                 Dilly can help you pattern-match. Tap a prompt.
               </Text>
@@ -818,15 +819,15 @@ function SeniorResetHome() {
                 {d.network.prompts.map((p, i) => (
                   <AnimatedPressable
                     key={i}
-                    style={sr.networkPromptRow}
+                    style={[sr.networkPromptRow, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
                     scaleDown={0.98}
                     onPress={() => openDillyOverlay({
                       isPaid: false,
                       initialMessage: `I'm thinking about my network. Question: ${p} Help me think through who comes to mind and what to say.`,
                     })}
                   >
-                    <Text style={sr.networkPromptText}>{p}</Text>
-                    <Ionicons name="chatbubble-outline" size={14} color={colors.t3} />
+                    <Text style={[sr.networkPromptText, { color: theme.surface.t1 }]}>{p}</Text>
+                    <Ionicons name="chatbubble-outline" size={14} color={theme.surface.t3} />
                   </AnimatedPressable>
                 ))}
               </View>
@@ -1312,7 +1313,7 @@ function SeekerHome() {
                 <Ionicons name="qr-code" size={20} color={accent} />
               </AnimatedPressable>
               <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
-                <Ionicons name="settings-outline" size={20} color={colors.t3} />
+                <Ionicons name="settings-outline" size={20} color={theme.surface.t3} />
               </AnimatedPressable>
             </View>
           </View>
