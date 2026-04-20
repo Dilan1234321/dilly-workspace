@@ -33,6 +33,7 @@ import { mediumHaptic } from '../../lib/haptics';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch } from '../../lib/sessionCache';
+import { applyPathOverrides } from '../../lib/pathCategories';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { useExtractionState } from '../../hooks/useExtractionPending';
@@ -81,7 +82,13 @@ interface MemorySurface {
 // vanish on white — swapped to darker amber / brown-gold tones
 // that hold contrast on both themes while still feeling warm.
 // Same swap applied to coral and any other light-on-light case.
-const STRENGTH_CATEGORIES: Record<string, { icon: string; label: string; color: string }> = {
+// Base strength categories. These labels + icons apply to every
+// user_path by default. The render path overlays per-path renames
+// via applyPathOverrides() below — e.g. a veteran sees
+// 'life_context' as "Service & Mission" with a medal icon instead of
+// the generic "Background". Facts still live under the canonical
+// category keys so the extraction pipeline is untouched.
+const STRENGTH_CATEGORIES_BASE: Record<string, { icon: string; label: string; color: string }> = {
   achievement:          { icon: 'trophy',        label: 'Achievements',   color: '#B7791F' },
   goal:                 { icon: 'flag',          label: 'Goals',          color: '#15803D' },
   target_company:       { icon: 'business',      label: 'Target Cos',     color: COBALT },
@@ -545,6 +552,11 @@ function SeekerProfileScreen() {
   ];
 
   // Strength categories that have facts
+  // Derive the path-aware category map from the base. A veteran's
+  // grid relabels some tiles; a dropout's, a parent_returning's, etc.
+  // Facts still live under the canonical keys so extraction logic is
+  // unchanged — this is a presentation-layer remap only.
+  const STRENGTH_CATEGORIES = applyPathOverrides(STRENGTH_CATEGORIES_BASE, (profile as any)?.user_path);
   const strengthCats = Object.keys(STRENGTH_CATEGORIES).filter(k => (data?.grouped?.[k]?.length ?? 0) > 0);
 
   // Share a resume card
