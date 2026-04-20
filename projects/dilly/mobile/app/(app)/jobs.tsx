@@ -1529,7 +1529,7 @@ export default function JobsScreen() {
         {/* Collections bookmark */}
         <AnimatedPressable onPress={() => setShowCollections(true)} scaleDown={0.9} hitSlop={6}
           style={{ width: 32, height: 28, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="bookmark" size={18} color={COBALT} />
+          <Ionicons name="bookmark" size={18} color={theme.accent} />
         </AnimatedPressable>
 
         {/* Dropout-only 'No degree required' pill. FIRST, most visible.

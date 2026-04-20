@@ -15,10 +15,10 @@
  * device. Makes Cancel (X) a clean no-op.
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  Platform, Dimensions,
+  Platform, Dimensions, Animated, Easing,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,43 +61,54 @@ export default function CustomizeStudio() {
   const screen: MockScreenId = 'career';
 
   const theme: ResolvedTheme = resolveTheme(pending, systemIsDark);
-  const dirty = JSON.stringify(pending) !== JSON.stringify(committed);
 
   function patch(p: Partial<ThemeConfig>) {
-    // Apply to the live global theme immediately so the navbar and
-    // any other already-mounted surface (the DillyAI overlay, the
-    // Home card underneath a modal, etc.) flash the new choice in
-    // real time. `pending` still tracks the edit so the Save/Cancel
-    // UI stays meaningful: tapping the X will revert on navigation
-    // back (the committed config rehydrates).
+    // Auto-save: apply to the live global theme immediately. Every
+    // preset tap commits; there is no manual Save. `pending` still
+    // mirrors the live config so the preview reflects reality.
+    // A "Saved" pulse fires in the top bar so the user feels the
+    // commit happening even though they never pressed a button.
     setPending(prev => {
       const next = { ...prev, ...p };
       patchTheme(p).catch(() => {});
       return next;
     });
+    pulseSaved();
   }
 
-  async function handleSave() {
-    await patchTheme(pending);
-    router.back();
+  // Auto-save pulse. Every time `patch()` fires, we kick a short
+  // "Saved" animation in the top bar so the user sees the app is
+  // quietly committing their change. No more manual Save button.
+  const savedPulse = useRef(new Animated.Value(0)).current;
+  const [savedFlash, setSavedFlash] = useState(false);
+  function pulseSaved() {
+    setSavedFlash(true);
+    savedPulse.setValue(0);
+    Animated.sequence([
+      Animated.timing(savedPulse, { toValue: 1, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.delay(900),
+      Animated.timing(savedPulse, { toValue: 0, duration: 240, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+    ]).start(({ finished }) => { if (finished) setSavedFlash(false); });
   }
 
   async function handleReset() {
-    setPending({ ...DEFAULT_CONFIG });
+    // Reset is itself an edit — apply live + pulse.
+    patch(DEFAULT_CONFIG);
   }
 
   async function handleSurprise() {
-    // Apply surprise-me directly to the pending config so the preview
-    // animates. Commit only happens on Save.
+    // Route through patch() so the live theme broadcasts to all
+    // subscribers (navbar, overlays, etc.) the instant Surprise Me
+    // is tapped. Previously this only set pending, so the navbar
+    // sat on the old theme until the user manually committed.
     const rand = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
-    setPending(prev => ({
-      ...prev,
+    patch({
       accent: rand(ACCENT_PRESETS).id,
       surface: rand(Object.values(SURFACE_PRESETS)).id,
       shape: rand(Object.values(SHAPE_PRESETS)).id,
       type: rand(Object.values(TYPE_PRESETS)).id,
       accentStyle: rand(Object.values(ACCENT_STYLE_PRESETS)).id,
-    }));
+    });
   }
 
   return (
@@ -115,20 +126,44 @@ export default function CustomizeStudio() {
 
       {/* Top bar. Reads theme so the Customize studio itself respects
           the user's current surface — on Midnight, the top bar and
-          container become dark; on Mint, pastel. */}
+          container become dark; on Mint, pastel.
+
+          UX: everything auto-saves. Left nav is a back arrow (not an
+          X) because there is nothing to discard — changes already
+          committed. The right side is a live "Saved" indicator: it
+          fades in with a filled check after every patch, holds for
+          about a second, then fades out. High-tech "we handled it"
+          feel, zero clicks required. */}
       <View style={[s.topBar, { backgroundColor: theme.surface.bg, borderBottomColor: theme.surface.border }]}>
         <AnimatedPressable onPress={() => router.back()} hitSlop={12} scaleDown={0.9}>
-          <Ionicons name="close" size={22} color={theme.surface.t1} />
+          <Ionicons name="chevron-back" size={24} color={theme.surface.t1} />
         </AnimatedPressable>
         <Text style={[s.topTitle, { color: theme.surface.t1 }]}>Customize Dilly</Text>
-        <AnimatedPressable
-          onPress={handleSave}
-          scaleDown={0.95}
-          style={[s.saveBtn, { backgroundColor: theme.accent }, !dirty && { opacity: 0.4 }]}
-          disabled={!dirty}
+        <Animated.View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 999,
+            backgroundColor: theme.accentSoft,
+            borderWidth: 1,
+            borderColor: theme.accentBorder,
+            opacity: savedPulse,
+            transform: [{
+              scale: savedPulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }),
+            }],
+          }}
+          pointerEvents="none"
         >
-          <Text style={s.saveBtnText}>Save</Text>
-        </AnimatedPressable>
+          {savedFlash && (
+            <>
+              <Ionicons name="checkmark-circle" size={14} color={theme.accent} />
+              <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, letterSpacing: 0.5 }}>SAVED</Text>
+            </>
+          )}
+        </Animated.View>
       </View>
 
       {/* Screen picker removed. Only Home preview remains, so a
