@@ -37,6 +37,7 @@ import { useResolvedTheme } from '../../../hooks/useTheme';
 import { DillyFace } from '../../../components/DillyFace';
 import AnimatedPressable from '../../../components/AnimatedPressable';
 import { cancelMissReminder, scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
+import { scheduleOutcomePushes } from '../../../hooks/useOutcomePushes';
 
 interface Screen { slot: string; body: string; }
 interface Chapter {
@@ -423,14 +424,25 @@ export default function ChapterSessionScreen() {
       const date = new Date();
       date.setDate(date.getDate() + 7);
       date.setHours(9, 0, 0, 0);
+      const title = `Chapter homework: ${oneMove.body.slice(0, 60)}`;
       await dilly.fetch('/calendar/events', {
         method: 'POST',
         body: JSON.stringify({
-          title: `Chapter homework: ${oneMove.body.slice(0, 60)}`,
+          title,
           notes: oneMove.body,
           type: 'deadline',
           date_iso: date.toISOString(),
         }),
+      }).catch(() => {});
+      // Outcome push: T-18h prep nudge + day-of "good luck" ping.
+      // The prep nudge opens the chat overlay seeded with the move
+      // body so the user lands in a prep conversation instead of a
+      // cold Home screen.
+      scheduleOutcomePushes({
+        id: `chapter-move-${chapter.id || 'session'}-${date.toISOString().slice(0, 10)}`,
+        title,
+        at: date,
+        prepPrompt: `My Chapter homework is due tomorrow: "${oneMove.body}". Help me prep — what should I actually do in the next hour to make sure I do this?`,
       }).catch(() => {});
       Alert.alert('Added', "I've put this on your calendar for next week.");
     } catch {
