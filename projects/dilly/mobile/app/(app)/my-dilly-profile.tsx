@@ -1515,12 +1515,20 @@ function SeekerProfileScreen() {
         </FadeInView>
 
         {/* ── 3. Strengths Map ─────────────────────────────────── */}
-        {strengthCats.length > 0 && (
-          <FadeInView delay={200}>
+        {/* Always render — even when no facts exist yet. Free-tier
+            users who skipped the resume upload previously saw a
+            blank profile because the whole section was gated on
+            strengthCats.length > 0. Rendering the 16 empty
+            category tiles with an "add" affordance gives them a
+            way to populate without the resume and without hitting
+            the paid chat gate. */}
+        <FadeInView delay={200}>
             {/* Section header with a prominent always-visible Add
                 button. Users were missing the in-tile +s before. */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>WHAT WE KNOW ABOUT YOU</Text>
+              <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>
+                {strengthCats.length > 0 ? 'WHAT WE KNOW ABOUT YOU' : 'BUILD YOUR PROFILE'}
+              </Text>
               {/* 'Add a fact' is a rounded rectangle (not a pill) and
                   follows the user's accent from Customize Dilly. Radius
                   pulls from theme.shape.sm so shape axis actually
@@ -1545,6 +1553,19 @@ function SeekerProfileScreen() {
                 <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, letterSpacing: 0.2 }}>Add a fact</Text>
               </AnimatedPressable>
             </View>
+            {/* Empty-state hint — only shown when no facts exist.
+                Makes the grid of 16 empty tiles read as an
+                invitation, not a void. */}
+            {strengthCats.length === 0 && (
+              <Text style={{
+                fontSize: 12,
+                lineHeight: 18,
+                color: theme.surface.t2,
+                marginBottom: 10,
+              }}>
+                Tap any category to add a fact. No resume needed — you can build your profile one small thing at a time.
+              </Text>
+            )}
             <View style={d.strengthGrid}>
               {Object.entries(STRENGTH_CATEGORIES).map(([key, cfg]) => {
                 const facts = data?.grouped?.[key] || [];
@@ -1617,7 +1638,6 @@ function SeekerProfileScreen() {
               </View>
             )}
           </FadeInView>
-        )}
 
         {/* ── 4. Skills Cloud ──────────────────────────────────── */}
         {allSkills.length > 0 && (
