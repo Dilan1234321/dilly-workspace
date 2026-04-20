@@ -16,6 +16,7 @@ import { useRecentUpgrade } from '../../hooks/useRecentUpgrade';
 import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
+import DailyPulseCard from '../../components/DailyPulseCard';
 import { scheduleChapterNotifications } from '../../hooks/useChapterNotifications';
 import { useExtractionState } from '../../hooks/useExtractionPending';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
@@ -1320,6 +1321,15 @@ function SeekerHome() {
         <View style={{ height: 20 }} />
         <FadeInView delay={15}>
           <ChapterCard state={chapterState} theme={theme} />
+        </FadeInView>
+
+        {/* Daily Pulse — the between-Chapter heartbeat.
+            Weekly Chapter is the deep ritual; this is the daily
+            habit that brings users back in between. 30-60 second
+            reflection, streak counter, breaking the streak is the
+            cost that drives return. */}
+        <FadeInView delay={18}>
+          <DailyPulseCard />
         </FadeInView>
 
         {/* ── Situation hero card ─────────────────────────────
