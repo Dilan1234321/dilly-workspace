@@ -774,17 +774,18 @@ function PowerStat({ n, label }: { n: string; label: string }) {
 /* ─────────────────────────────────────────────────────────────── */
 
 function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, progressStyle }: any) {
+  const theme = useResolvedTheme();
   const visibleKeyword = keywords.length > 0 ? keywords[keywordTick % keywords.length] : '…';
   return (
     <FadeInView>
-      <View style={styles.forgeCard}>
-        <View style={styles.forgeAnvil}>
-          <Ionicons name="flame" size={32} color={INDIGO} />
+      <View style={[styles.forgeCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+        <View style={[styles.forgeAnvil, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <Ionicons name="flame" size={32} color={theme.accent} />
         </View>
-        <Text style={styles.forgeCardKicker}>
+        <Text style={[styles.forgeCardKicker, { color: theme.accent }]}>
           FORGING FOR {(company || '').toUpperCase()}
         </Text>
-        <Text style={styles.forgeCardRole}>{jobTitle}</Text>
+        <Text style={[styles.forgeCardRole, { color: theme.surface.t1 }]}>{jobTitle}</Text>
 
         {/* Stages */}
         <View style={styles.forgeStages}>
@@ -794,17 +795,17 @@ function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, p
             return (
               <View key={i} style={styles.forgeStageRow}>
                 <View style={[styles.forgeBullet, {
-                  backgroundColor: done ? INDIGO : active ? INDIGO + '30' : colors.s3,
-                  borderColor: done || active ? INDIGO : colors.b1,
+                  backgroundColor: done ? theme.accent : active ? theme.accent + '30' : theme.surface.s2,
+                  borderColor: done || active ? theme.accent : theme.surface.border,
                 }]}>
                   {done
                     ? <Ionicons name="checkmark" size={11} color="#fff" />
                     : active
-                      ? <View style={styles.forgePulse} />
+                      ? <View style={[styles.forgePulse, { backgroundColor: theme.accent }]} />
                       : null}
                 </View>
                 <Text style={[styles.forgeStageText, {
-                  color: done ? colors.t2 : active ? colors.t1 : colors.t3,
+                  color: done ? theme.surface.t2 : active ? theme.surface.t1 : theme.surface.t3,
                   fontWeight: active ? '700' : '500',
                 }]}>
                   {st.text}
@@ -815,15 +816,15 @@ function GeneratingPhase({ stageIdx, keywordTick, keywords, jobTitle, company, p
         </View>
 
         {/* Progress bar */}
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, progressStyle]} />
+        <View style={[styles.progressTrack, { backgroundColor: theme.surface.s2 }]}>
+          <Animated.View style={[styles.progressFill, { backgroundColor: theme.accent }, progressStyle]} />
         </View>
 
         {/* Keyword ticker — watch Dilly extract the JD */}
-        <View style={styles.kwTickerWrap}>
-          <View style={styles.kwTickerDot} />
-          <Text style={styles.kwTickerLabel}>EXTRACTED</Text>
-          <Text style={styles.kwTickerWord}>{visibleKeyword}</Text>
+        <View style={[styles.kwTickerWrap, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <View style={[styles.kwTickerDot, { backgroundColor: theme.accent }]} />
+          <Text style={[styles.kwTickerLabel, { color: theme.accent }]}>EXTRACTED</Text>
+          <Text style={[styles.kwTickerWord, { color: theme.surface.t1 }]}>{visibleKeyword}</Text>
         </View>
       </View>
     </FadeInView>
@@ -839,6 +840,7 @@ function DonePhase({
   matchedKeywords, totalKeywords, weakestBullet,
   saved, onDownload, onReset,
 }: any) {
+  const theme = useResolvedTheme();
   // Derived scorecard values. Prefer server-provided signals when
   // present; fall back to local heuristics so the panel never feels
   // empty. 4 axes:
@@ -865,26 +867,26 @@ function DonePhase({
     <FadeInView>
       {/* Forged headline — this is the moment */}
       <View style={styles.forgedHero}>
-        <View style={styles.forgedGlyph}>
-          <Ionicons name="ribbon" size={22} color={INDIGO} />
+        <View style={[styles.forgedGlyph, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <Ionicons name="ribbon" size={22} color={theme.accent} />
         </View>
-        <Text style={styles.forgedKicker}>FORGED</Text>
-        <Text style={styles.forgedTitle}>
+        <Text style={[styles.forgedKicker, { color: theme.accent }]}>FORGED</Text>
+        <Text style={[styles.forgedTitle, { color: theme.surface.t1 }]}>
           for {jobTitle}
           {'\n'}
-          <Text style={{ color: INDIGO }}>at {company}</Text>
+          <Text style={{ color: theme.accent }}>at {company}</Text>
         </Text>
         {saved ? (
-          <View style={styles.savedStrip}>
-            <Ionicons name="bookmark" size={11} color={INDIGO} />
-            <Text style={styles.savedStripText}>Saved to your Resume Variants</Text>
+          <View style={[styles.savedStrip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+            <Ionicons name="bookmark" size={11} color={theme.accent} />
+            <Text style={[styles.savedStripText, { color: theme.accent }]}>Saved to your Resume Variants</Text>
           </View>
         ) : null}
       </View>
 
       {/* Scorecard — reads like a hiring rubric */}
-      <Text style={styles.sectionHeader}>ATS READINESS</Text>
-      <View style={styles.scorecardCard}>
+      <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>ATS READINESS</Text>
+      <View style={[styles.scorecardCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         {Object.entries(scorecard).map(([label, value]) => (
           <ScoreRow key={label} label={label} value={value as number} />
         ))}
@@ -892,80 +894,80 @@ function DonePhase({
 
       {/* Gaps / missing keyword warnings — only when present */}
       {atsInfo?.keyword_warning && Array.isArray(atsInfo?.missing_keywords) && atsInfo.missing_keywords.length > 0 && (
-        <View style={styles.warnCard}>
+        <View style={[styles.warnCard, { backgroundColor: theme.surface.s1, borderColor: AMBER + '40' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="warning" size={14} color={AMBER} />
-            <Text style={styles.warnTitle}>
+            <Text style={[styles.warnTitle, { color: theme.surface.t1 }]}>
               Missing some JD terms ({atsInfo.keyword_coverage_pct || 0}% match)
             </Text>
           </View>
-          <Text style={styles.warnBody}>
+          <Text style={[styles.warnBody, { color: theme.surface.t2 }]}>
             The JD asks for{' '}
-            <Text style={{ fontWeight: '700', color: colors.t1 }}>
+            <Text style={{ fontWeight: '700', color: theme.surface.t1 }}>
               {(atsInfo.missing_keywords as string[]).slice(0, 4).join(', ')}
             </Text>
             {' '}(none of these are in your profile yet). If you actually have experience with them, tell Dilly and the next forge will include them.
           </Text>
           <AnimatedPressable
-            style={styles.warnCta}
+            style={[styles.warnCta, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
             onPress={() => openDillyOverlay({
               isPaid: true,
               initialMessage: `For my ${jobTitle} resume at ${company}, Dilly doesn't have enough about me for: ${(atsInfo.missing_keywords as string[]).slice(0, 5).join(', ')}. Ask me about each one so you can add them to my profile.`,
             })}
             scaleDown={0.97}
           >
-            <Ionicons name="chatbubble" size={11} color={INDIGO} />
-            <Text style={styles.warnCtaText}>Tell Dilly about these</Text>
+            <Ionicons name="chatbubble" size={11} color={theme.accent} />
+            <Text style={[styles.warnCtaText, { color: theme.accent }]}>Tell Dilly about these</Text>
           </AnimatedPressable>
         </View>
       )}
 
       {atsInfo?.readiness === 'gaps' && Array.isArray(atsInfo?.gaps) && atsInfo.gaps.length > 0 && (
-        <View style={styles.warnCard}>
+        <View style={[styles.warnCard, { backgroundColor: theme.surface.s1, borderColor: AMBER + '40' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="alert-circle" size={14} color={AMBER} />
-            <Text style={styles.warnTitle}>Gaps detected</Text>
+            <Text style={[styles.warnTitle, { color: theme.surface.t1 }]}>Gaps detected</Text>
           </View>
           {atsInfo.gaps.map((g: string, i: number) => (
-            <Text key={i} style={styles.warnBullet}>• {g}</Text>
+            <Text key={i} style={[styles.warnBullet, { color: theme.surface.t2 }]}>• {g}</Text>
           ))}
         </View>
       )}
 
       {/* Weakest bullet spotlight — one bullet that could be stronger */}
       {weakestBullet && (
-        <View style={styles.weakestCard}>
+        <View style={[styles.weakestCard, { backgroundColor: theme.surface.s1, borderColor: AMBER + '40' }]}>
           <View style={styles.weakestKicker}>
             <Ionicons name="scan" size={11} color={AMBER} />
             <Text style={styles.weakestKickerText}>WEAKEST BULLET</Text>
           </View>
-          <Text style={styles.weakestWhere}>{weakestBullet.where}</Text>
-          <Text style={styles.weakestText}>"{weakestBullet.text}"</Text>
-          <Text style={styles.weakestWhy}>
+          <Text style={[styles.weakestWhere, { color: theme.surface.t3 }]}>{weakestBullet.where}</Text>
+          <Text style={[styles.weakestText, { color: theme.surface.t1 }]}>"{weakestBullet.text}"</Text>
+          <Text style={[styles.weakestWhy, { color: theme.surface.t2 }]}>
             This one could use a metric or a concrete outcome. Strong bullets pin a number or a named result.
           </Text>
           <AnimatedPressable
-            style={styles.weakestCta}
+            style={[styles.weakestCta, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
             onPress={() => openDillyOverlay({
               isPaid: true,
               initialMessage: `In my resume for ${jobTitle} at ${company}, this bullet feels thin: "${weakestBullet.text}" (from ${weakestBullet.where}). Ask me the specifics (numbers, outcomes, what changed) so we can rewrite it with real impact.`,
             })}
             scaleDown={0.97}
           >
-            <Ionicons name="sparkles" size={11} color={INDIGO} />
-            <Text style={styles.weakestCtaText}>Strengthen with Dilly</Text>
+            <Ionicons name="sparkles" size={11} color={theme.accent} />
+            <Text style={[styles.weakestCtaText, { color: theme.accent }]}>Strengthen with Dilly</Text>
           </AnimatedPressable>
         </View>
       )}
 
       {/* Resume preview with keyword highlighting */}
       <View style={styles.previewHeaderRow}>
-        <Text style={styles.sectionHeader}>YOUR RESUME</Text>
-        <Text style={styles.previewHighlightLegend}>
-          <Text style={{ color: INDIGO, fontWeight: '800' }}>•</Text> JD match
+        <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>YOUR RESUME</Text>
+        <Text style={[styles.previewHighlightLegend, { color: theme.surface.t3 }]}>
+          <Text style={{ color: theme.accent, fontWeight: '800' }}>•</Text> JD match
         </Text>
       </View>
-      <View style={styles.previewCard}>
+      <View style={[styles.previewCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         {sections.map((sec: GeneratedSection, si: number) => (
           <SectionView
             key={sec.key ?? si}
@@ -976,14 +978,14 @@ function DonePhase({
       </View>
 
       {/* Actions */}
-      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={onDownload}>
+      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary, { backgroundColor: theme.accent }]} onPress={onDownload}>
         <Ionicons name="download" size={17} color="#fff" />
         <Text style={styles.actionBtnText}>Export · PDF or DOCX</Text>
       </AnimatedPressable>
 
-      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={onReset}>
-        <Ionicons name="flame" size={17} color={INDIGO} />
-        <Text style={[styles.actionBtnText, { color: INDIGO }]}>Forge another</Text>
+      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]} onPress={onReset}>
+        <Ionicons name="flame" size={17} color={theme.accent} />
+        <Text style={[styles.actionBtnText, { color: theme.accent }]}>Forge another</Text>
       </AnimatedPressable>
     </FadeInView>
   );
@@ -1102,25 +1104,26 @@ function Highlighted({ text, keywords, style }: { text: string; keywords: Set<st
 /* ─────────────────────────────────────────────────────────────── */
 
 function NotReadyPhase({ atsInfo, jobTitle, company, onReset }: any) {
+  const theme = useResolvedTheme();
   return (
     <FadeInView>
-      <View style={styles.notReadyCard}>
-        <View style={styles.notReadyGlyph}>
-          <Ionicons name="hand-left" size={26} color={INDIGO} />
+      <View style={[styles.notReadyCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+        <View style={[styles.notReadyGlyph, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <Ionicons name="hand-left" size={26} color={theme.accent} />
         </View>
-        <Text style={styles.notReadyKicker}>DILLY WON'T INVENT</Text>
-        <Text style={styles.notReadyTitle}>Tell Dilly more first.</Text>
-        <Text style={styles.notReadySub}>
+        <Text style={[styles.notReadyKicker, { color: theme.accent }]}>DILLY WON'T INVENT</Text>
+        <Text style={[styles.notReadyTitle, { color: theme.surface.t1 }]}>Tell Dilly more first.</Text>
+        <Text style={[styles.notReadySub, { color: theme.surface.t2 }]}>
           {atsInfo.summary || "Dilly doesn't know enough about you to build an honest resume for this role yet. Fill the gaps, then forge again."}
         </Text>
 
         {Array.isArray(atsInfo.gaps) && atsInfo.gaps.length > 0 && (
-          <View style={styles.notReadyGapsBlock}>
-            <Text style={styles.notReadyGapsLabel}>WHAT'S MISSING</Text>
+          <View style={[styles.notReadyGapsBlock, { borderTopColor: theme.surface.border }]}>
+            <Text style={[styles.notReadyGapsLabel, { color: theme.surface.t3 }]}>WHAT'S MISSING</Text>
             {atsInfo.gaps.map((g: string, i: number) => (
               <View key={i} style={styles.notReadyGapRow}>
-                <View style={styles.notReadyGapDot} />
-                <Text style={styles.notReadyGapText}>{g}</Text>
+                <View style={[styles.notReadyGapDot, { backgroundColor: theme.accent }]} />
+                <Text style={[styles.notReadyGapText, { color: theme.surface.t2 }]}>{g}</Text>
               </View>
             ))}
           </View>
@@ -1129,20 +1132,20 @@ function NotReadyPhase({ atsInfo, jobTitle, company, onReset }: any) {
 
       {Array.isArray(atsInfo.tell_dilly_prompts) && atsInfo.tell_dilly_prompts.length > 0 && (
         <>
-          <Text style={styles.sectionHeader}>FASTEST WAY TO FIX</Text>
+          <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>FASTEST WAY TO FIX</Text>
           <View style={{ gap: 8 }}>
             {(atsInfo.tell_dilly_prompts as string[]).slice(0, 5).map((prompt, i) => (
               <AnimatedPressable
                 key={i}
-                style={styles.promptRow}
+                style={[styles.promptRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
                 onPress={() => openDillyOverlay({ isPaid: true, initialMessage: prompt })}
                 scaleDown={0.98}
               >
-                <View style={styles.promptDot}>
-                  <Ionicons name="chatbubble" size={11} color={INDIGO} />
+                <View style={[styles.promptDot, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                  <Ionicons name="chatbubble" size={11} color={theme.accent} />
                 </View>
-                <Text style={styles.promptText}>{prompt}</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                <Text style={[styles.promptText, { color: theme.surface.t1 }]}>{prompt}</Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
               </AnimatedPressable>
             ))}
           </View>
@@ -1150,18 +1153,21 @@ function NotReadyPhase({ atsInfo, jobTitle, company, onReset }: any) {
       )}
 
       <AnimatedPressable
-        style={[styles.actionBtn, styles.actionBtnSecondary, { marginTop: 14 }]}
+        style={[styles.actionBtn, styles.actionBtnSecondary, { marginTop: 14, backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
         onPress={() => openDillyOverlay({
           isPaid: true,
           initialMessage: `I tried to forge a resume for ${jobTitle} at ${company} but I'm not ready yet. Walk me through each gap one by one so I can tell you about them and build out my profile.`,
         })}
       >
-        <Ionicons name="chatbubble" size={17} color={INDIGO} />
-        <Text style={[styles.actionBtnText, { color: INDIGO }]}>Talk it through with Dilly</Text>
+        <Ionicons name="chatbubble" size={17} color={theme.accent} />
+        <Text style={[styles.actionBtnText, { color: theme.accent }]}>Talk it through with Dilly</Text>
       </AnimatedPressable>
-      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={onReset}>
-        <Ionicons name="refresh" size={17} color={INDIGO} />
-        <Text style={[styles.actionBtnText, { color: INDIGO }]}>Try a different role</Text>
+      <AnimatedPressable
+        style={[styles.actionBtn, styles.actionBtnSecondary, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+        onPress={onReset}
+      >
+        <Ionicons name="refresh" size={17} color={theme.accent} />
+        <Text style={[styles.actionBtnText, { color: theme.accent }]}>Try a different role</Text>
       </AnimatedPressable>
     </FadeInView>
   );
@@ -1172,24 +1178,34 @@ function NotReadyPhase({ atsInfo, jobTitle, company, onReset }: any) {
 /* ─────────────────────────────────────────────────────────────── */
 
 function ErrorPhase({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const theme = useResolvedTheme();
+  const onAccent = (() => {
+    const hex = (theme.accent || '').replace('#', '');
+    if (hex.length !== 6) return '#fff';
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#0B1426' : '#FFFFFF';
+  })();
   return (
     <FadeInView>
-      <View style={styles.errorCard}>
+      <View style={[styles.errorCard, { backgroundColor: theme.surface.s1 }]}>
         <Ionicons name="alert-circle" size={32} color={AMBER} />
-        <Text style={styles.errorTitle}>The forge cooled off.</Text>
-        <Text style={styles.errorSub}>
+        <Text style={[styles.errorTitle, { color: theme.surface.t1 }]}>The forge cooled off.</Text>
+        <Text style={[styles.errorSub, { color: theme.surface.t2 }]}>
           Something went sideways mid-generation. Usually a one-tap retry fixes it.
         </Text>
         {!!error && (
-          <View style={styles.errorDetailBlock}>
-            <Text style={styles.errorDetailLabel}>ERROR DETAIL</Text>
-            <Text style={styles.errorDetailText} selectable>{error}</Text>
+          <View style={[styles.errorDetailBlock, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+            <Text style={[styles.errorDetailLabel, { color: theme.surface.t3 }]}>ERROR DETAIL</Text>
+            <Text style={[styles.errorDetailText, { color: theme.surface.t2 }]} selectable>{error}</Text>
           </View>
         )}
       </View>
-      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary]} onPress={onRetry}>
-        <Ionicons name="refresh" size={17} color="#fff" />
-        <Text style={styles.actionBtnText}>Try again</Text>
+      <AnimatedPressable style={[styles.actionBtn, styles.actionBtnPrimary, { backgroundColor: theme.accent }]} onPress={onRetry}>
+        <Ionicons name="refresh" size={17} color={onAccent} />
+        <Text style={[styles.actionBtnText, { color: onAccent }]}>Try again</Text>
       </AnimatedPressable>
     </FadeInView>
   );
