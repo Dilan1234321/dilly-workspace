@@ -39,6 +39,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
@@ -147,6 +148,11 @@ const AVG_WORDS_PER_SEC = 2.3;
 export default function InterviewPracticeScreen() {
   const toast = useInlineToast();
   const insets = useSafeAreaInsets();
+  // Interview Prep had zero theme integration — every surface was
+  // frozen at module load via the colors proxy. Pulling the resolved
+  // theme here and propagating to child phase components so Customize
+  // Dilly actually applies across this screen.
+  const theme = useResolvedTheme();
   const { company: paramCompany, role: paramRole } = useLocalSearchParams<{ company?: string; role?: string }>();
 
   const [phase, setPhase] = useState<Phase>('setup');
@@ -397,7 +403,7 @@ export default function InterviewPracticeScreen() {
   const isDark = phase === 'practice';
 
   return (
-    <View style={[s.container, { paddingTop: insets.top, backgroundColor: isDark ? NIGHT_BG : colors.bg }]}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: isDark ? NIGHT_BG : theme.surface.bg }]}>
       {/* First-visit coach — The Room. */}
       <FirstVisitCoach
         id="interview-room-v1"
@@ -496,6 +502,10 @@ function SetupPhase({
   jobUrl, setJobUrl, urlLoading, urlError, onUrlFetch,
   jdTooShort, jdQuality, canGenerate, onStart, insetsBottom,
 }: any) {
+  // Resolved theme so the setup form surfaces (card bg, inputs,
+  // hero copy) adapt to Customize Dilly. Static StyleSheet colors
+  // remain as fallbacks; inline overrides take precedence.
+  const theme = useResolvedTheme();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 60 }]}>
@@ -512,9 +522,9 @@ function SetupPhase({
                 <Ionicons name="mic" size={28} color={INDIGO} />
               </View>
             </View>
-            <Text style={s.heroKicker}>STEP INTO</Text>
-            <Text style={s.heroTitle}>The Interview Room</Text>
-            <Text style={s.heroSub}>
+            <Text style={[s.heroKicker, { color: theme.accent }]}>STEP INTO</Text>
+            <Text style={[s.heroTitle, { color: theme.surface.t1 }]}>The Interview Room</Text>
+            <Text style={[s.heroSub, { color: theme.surface.t2 }]}>
               This isn't a chatbot. Dilly reads the job, builds five questions they'll actually ask, and tracks your answers in real time (structure, specificity, pace) against the way companies like this actually hire.
             </Text>
             <View style={s.heroProofRow}>
@@ -526,18 +536,18 @@ function SetupPhase({
         </FadeInView>
 
         <FadeInView delay={80}>
-          <Text style={s.sectionHeader}>PASTE THE ROLE</Text>
+          <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>PASTE THE ROLE</Text>
 
-          <View style={s.inputCard}>
+          <View style={[s.inputCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             {/* URL primary — one tap, everything fills. */}
             <FieldLabel text="Job URL" hint="Fastest way in" />
             <View style={s.urlRow}>
               <TextInput
-                style={[s.input, { flex: 1 }]}
+                style={[s.input, { flex: 1, backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
                 value={jobUrl}
                 onChangeText={setJobUrl}
                 placeholder="Paste a Greenhouse, Lever, or careers page URL"
-                placeholderTextColor={colors.t3}
+                placeholderTextColor={theme.surface.t3}
                 autoCapitalize="none"
                 keyboardType="url"
                 returnKeyType="go"
@@ -557,27 +567,27 @@ function SetupPhase({
             {urlError ? <Text style={s.urlError}>{urlError}</Text> : null}
 
             <View style={s.dividerRow}>
-              <View style={s.dividerLine} />
-              <Text style={s.dividerText}>OR ENTER MANUALLY</Text>
-              <View style={s.dividerLine} />
+              <View style={[s.dividerLine, { backgroundColor: theme.surface.border }]} />
+              <Text style={[s.dividerText, { color: theme.surface.t3 }]}>OR ENTER MANUALLY</Text>
+              <View style={[s.dividerLine, { backgroundColor: theme.surface.border }]} />
             </View>
 
             <FieldLabel text="Company" required />
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
               value={company}
               onChangeText={setCompany}
               placeholder="e.g. Stripe"
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
               autoFocus={false}
             />
             <FieldLabel text="Role" required top />
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
               value={role}
               onChangeText={setRole}
               placeholder="e.g. Senior Product Engineer"
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
             />
 
             <View style={{ marginTop: 14 }}>
@@ -589,11 +599,11 @@ function SetupPhase({
                 </View>
               </View>
               <TextInput
-                style={[s.input, { minHeight: 140, textAlignVertical: 'top' }]}
+                style={[s.input, { minHeight: 140, textAlignVertical: 'top', backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
                 value={jobDescription}
                 onChangeText={setJobDescription}
                 placeholder="Paste the full description. The more detail, the sharper the questions."
-                placeholderTextColor={colors.t3}
+                placeholderTextColor={theme.surface.t3}
                 multiline
               />
               <View style={s.jdQualityTrack}>
@@ -618,7 +628,7 @@ function SetupPhase({
             <Text style={s.enterBtnText}>Step into the Room</Text>
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
           </AnimatedPressable>
-          <Text style={s.enterFootnote}>
+          <Text style={[s.enterFootnote, { color: theme.surface.t3 }]}>
             No recruiter hears this session. It's yours.
           </Text>
         </FadeInView>
