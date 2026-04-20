@@ -49,10 +49,10 @@ interface DillyFaceProps {
 const AnimatedPath = Animated.createAnimatedComponent(Path)
 const AnimatedG = Animated.createAnimatedComponent(G)
 
-const FACE_INK_LIGHT = '#2B3A8E'
-// On Midnight (dark) surfaces the dark-indigo ink disappears into the bg.
-// Light sky blue makes Dilly's face pop against black.
-const FACE_INK_DARK = '#8AB4FF'
+// Historical defaults, kept only as a fallback if theme resolution
+// somehow returns nothing. The active ink comes from theme.accent so
+// Dilly's eyes + smile follow the user's Customize Dilly accent.
+const FACE_INK_FALLBACK = '#2B3A8E'
 
 /* ─────────────────────────────────────────────────────────────── */
 /* Mood → spring targets                                           */
@@ -99,10 +99,12 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
 
-  // Ink color tracks the active theme surface: dark-indigo on light
-  // surfaces, light sky-blue on Midnight so the face pops against black.
+  // Ink color follows the user's accent so the face adapts to
+  // Customize Dilly — rose gets a rose face, teal gets a teal face,
+  // etc. Previously hardcoded to indigo regardless of theme, which
+  // is what users were seeing as "the face doesn't match the theme".
   const theme = useResolvedTheme()
-  const faceInk = theme.surface.dark ? FACE_INK_DARK : FACE_INK_LIGHT
+  const faceInk = theme.accent || FACE_INK_FALLBACK
 
   const shape = shapeFor(mood)
 
@@ -528,14 +530,30 @@ function MagnifierAccessory({ cx, cy, s, color }: Omit<AccessoryProps, 'kind' | 
   const handleY1 = lensY + Math.sin(Math.PI / 4) * lensR
   const handleX2 = handleX1 + 4 * s
   const handleY2 = handleY1 + 4 * s
+  // Lens fill used to be a fixed indigo rgba, which looked off on
+  // non-indigo accents. Derive it from the stroke color instead so
+  // the magnifier tints with the rest of the face.
+  const lensFill = hexWithAlpha(color, 0.08)
   return (
     <>
-      <Circle cx={lensX} cy={lensY} r={lensR} stroke={color} strokeWidth={1.6 * s} fill="rgba(43,58,142,0.08)" />
+      <Circle cx={lensX} cy={lensY} r={lensR} stroke={color} strokeWidth={1.6 * s} fill={lensFill} />
       {/* Sparkle glint */}
       <Circle cx={lensX - lensR * 0.35} cy={lensY - lensR * 0.35} r={0.7 * s} fill="#FFFFFF" opacity={0.9} />
       <Line x1={handleX1} y1={handleY1} x2={handleX2} y2={handleY2} stroke={color} strokeWidth={2 * s} strokeLinecap="round" />
     </>
   )
+}
+
+// Small util: accept "#RRGGBB" hex, return "rgba(r,g,b,a)". Falls
+// back to semi-transparent neutral if input isn't a clean hex.
+function hexWithAlpha(hex: string, alpha: number): string {
+  const m = typeof hex === 'string' && hex.match(/^#?([0-9a-fA-F]{6})$/)
+  if (!m) return `rgba(43,58,142,${alpha})`
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 0xff
+  const g = (n >> 8) & 0xff
+  const b = n & 0xff
+  return `rgba(${r},${g},${b},${alpha})`
 }
 
 /** Paintbrush — wooden handle + colored tip. Tip color follows the

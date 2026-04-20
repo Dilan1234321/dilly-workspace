@@ -1,6 +1,6 @@
 import { Tabs, usePathname, router } from 'expo-router';
 import { View, Animated, Easing } from 'react-native';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../lib/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +53,54 @@ function CelebrationWrapper() {
   return <CelebrationPortal />;
 }
 
+/** Animated tab icon — hoisted to module scope so it doesn't get
+ *  re-created on every render of AppLayoutInner. Previously this was
+ *  an inner function (`TabIcon` below), which meant each tab switch
+ *  (pathname change → AppLayoutInner re-render) produced a NEW
+ *  component reference for every tab, and Expo Router would remount
+ *  icons instead of just re-rendering them. That remount is what
+ *  showed up as a delay when pressing a tab. */
+const TabIcon = ({
+  focused,
+  iconActive,
+  iconInactive,
+  activeColor,
+  inactiveColor,
+}: {
+  focused: boolean;
+  iconActive: keyof typeof Ionicons.glyphMap;
+  iconInactive: keyof typeof Ionicons.glyphMap;
+  activeColor: string;
+  inactiveColor: string;
+}) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!focused) return;
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 1.2, duration: 130, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 130, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+  }, [focused, scale]);
+  return (
+    <Animated.View
+      style={{
+        width: 60,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: -2,
+        transform: [{ scale }],
+      }}
+    >
+      <Ionicons
+        name={focused ? iconActive : iconInactive}
+        size={32}
+        color={focused ? activeColor : inactiveColor}
+      />
+    </Animated.View>
+  );
+};
+
 function DillyTabIcon({ focused }: { focused: boolean }) {
   // Reads the user's current theme accent so if they pick teal/rose/
   // etc., the Dilly tab chip matches — previously this was hard-coded
@@ -101,61 +149,45 @@ function AppLayoutInner() {
   const navInactiveIcon = theme.surface.t3;
   const navActiveIcon = theme.accent;
 
-  // Icon component with a subtle pop animation when focused changes
-  // to true. Scale bounces 1 -> 1.2 -> 1 over ~260ms using a cubic
-  // ease, which reads as "something just happened" without being
-  // cartoony. Focused state changes on tab press, so this fires
-  // every time the user navigates.
-  //
-  // No pill background — the user asked for the transparent outside
-  // bg to go. Active state is conveyed by filled vs outline icon +
-  // color change alone.
-  const TabIcon = ({
-    focused,
-    iconActive,
-    iconInactive,
-  }: {
-    focused: boolean;
-    iconActive: keyof typeof Ionicons.glyphMap;
-    iconInactive: keyof typeof Ionicons.glyphMap;
-  }) => {
-    const scale = useRef(new Animated.Value(1)).current;
-    useEffect(() => {
-      if (!focused) return;
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 1.2, duration: 130, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1, duration: 130, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
-      ]).start();
-    }, [focused, scale]);
-
-    return (
-      <Animated.View
-        style={{
-          width: 60,
-          height: 44,
-          alignItems: 'center',
-          justifyContent: 'center',
-          // Nudge down a touch so the icon centers inside the tab
-          // bar's padding. iOS gives ~6-8px top padding to tab icons.
-          marginTop: -2,
-          transform: [{ scale }],
-        }}
-      >
-        <Ionicons
-          name={focused ? iconActive : iconInactive}
-          size={32}
-          color={focused ? navActiveIcon : navInactiveIcon}
+  // Precompute every tabBarIcon once, memoized on the bits that
+  // actually change (mode + theme colors). Previously the icon
+  // factory was rebuilt on every render, which meant every
+  // pathname change (and usePathname() forces one on each tab
+  // press) handed Expo Router a new `tabBarIcon` function and it
+  // remounted the icon subtree. That mount is the delay the user
+  // sees. These memoized components keep referential stability.
+  const tabIcons = useMemo(() => {
+    const make = (
+      iconActive: keyof typeof Ionicons.glyphMap,
+      iconInactive: keyof typeof Ionicons.glyphMap,
+    ) => {
+      const Cmp = ({ focused }: { focused: boolean; color: string }) => (
+        <TabIcon
+          focused={focused}
+          iconActive={iconActive}
+          iconInactive={iconInactive}
+          activeColor={navActiveIcon}
+          inactiveColor={navInactiveIcon}
         />
-      </Animated.View>
-    );
-  };
-
-  const renderTabIcon = (
-    iconActive: keyof typeof Ionicons.glyphMap,
-    iconInactive: keyof typeof Ionicons.glyphMap,
-  ) => ({ focused }: { focused: boolean; color: string }) => (
-    <TabIcon focused={focused} iconActive={iconActive} iconInactive={iconInactive} />
-  );
+      );
+      return Cmp;
+    };
+    return {
+      home: make(
+        isHolder ? 'newspaper' : 'home',
+        isHolder ? 'newspaper-outline' : 'home-outline',
+      ),
+      arena: make('shield', 'shield-outline'),
+      profile: make(
+        isHolder ? 'analytics' : 'person-circle',
+        isHolder ? 'analytics-outline' : 'person-circle-outline',
+      ),
+      jobs: make(
+        isHolder ? 'trending-up' : 'briefcase',
+        isHolder ? 'trending-up-outline' : 'briefcase-outline',
+      ),
+    };
+  }, [isHolder, navActiveIcon, navInactiveIcon]);
 
   // Chapter session is a full-screen ritual; hide the tab bar on
   // any /chapter route so users don't see app chrome while they're
@@ -198,10 +230,7 @@ function AppLayoutInner() {
         name="index"
         options={{
           title: isHolder ? 'Weekly' : 'Career Center',
-          tabBarIcon: renderTabIcon(
-            isHolder ? 'newspaper' : 'home',
-            isHolder ? 'newspaper-outline' : 'home-outline',
-          ),
+          tabBarIcon: tabIcons.home,
         }}
       />
 
@@ -211,7 +240,7 @@ function AppLayoutInner() {
         name="ai-arena"
         options={{
           title: isHolder ? 'Field' : 'AI Arena',
-          tabBarIcon: renderTabIcon('shield', 'shield-outline'),
+          tabBarIcon: tabIcons.arena,
         }}
       />
 
@@ -221,10 +250,7 @@ function AppLayoutInner() {
         name="my-dilly-profile"
         options={{
           title: isHolder ? 'My Career' : 'My Dilly',
-          tabBarIcon: renderTabIcon(
-            isHolder ? 'analytics' : 'person-circle',
-            isHolder ? 'analytics-outline' : 'person-circle-outline',
-          ),
+          tabBarIcon: tabIcons.profile,
         }}
       />
 
@@ -234,10 +260,7 @@ function AppLayoutInner() {
         name="jobs"
         options={{
           title: isHolder ? 'The Market' : 'Jobs',
-          tabBarIcon: renderTabIcon(
-            isHolder ? 'trending-up' : 'briefcase',
-            isHolder ? 'trending-up-outline' : 'briefcase-outline',
-          ),
+          tabBarIcon: tabIcons.jobs,
         }}
       />
 
