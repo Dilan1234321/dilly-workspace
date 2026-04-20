@@ -1208,26 +1208,26 @@ function SeekerProfileScreen() {
         {/* ── 1b. Your Public Profile ──────────────────────────── */}
         <FadeInView delay={40}>
           <AnimatedPressable
-            style={{ backgroundColor: colors.s1, borderRadius: 14, borderWidth: 1, borderColor: colors.b1, padding: 16, marginBottom: 4 }}
+            style={{ backgroundColor: theme.accentSoft, borderRadius: 14, borderWidth: 1, borderColor: theme.accentBorder, padding: 16, marginBottom: 4 }}
             onPress={() => setShowWebProfile(!showWebProfile)}
             scaleDown={0.98}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Ionicons name="globe-outline" size={18} color={theme.accent} />
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.t1 }}>Your Public Profile</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: theme.surface.t1 }}>Your Public Profile</Text>
               </View>
-              <Ionicons name={showWebProfile ? 'chevron-up' : 'chevron-down'} size={16} color={colors.t3} />
+              <Ionicons name={showWebProfile ? 'chevron-up' : 'chevron-down'} size={16} color={theme.surface.t3} />
             </View>
             {readableSlug ? (
-              <Text style={{ fontSize: 11, color: colors.t3, marginTop: 4, marginLeft: 28 }}>
+              <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 4, marginLeft: 28 }}>
                 hellodilly.com/{profilePrefix}/{readableSlug}
               </Text>
             ) : null}
           </AnimatedPressable>
 
           {showWebProfile && (
-            <View style={{ backgroundColor: colors.s1, borderRadius: 14, borderWidth: 1, borderColor: colors.b1, padding: 16, gap: 14 }}>
+            <View style={{ backgroundColor: theme.accentSoft, borderRadius: 14, borderWidth: 1, borderColor: theme.accentBorder, padding: 16, gap: 14 }}>
               {/* Tagline */}
               <View>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.t3, letterSpacing: 1, marginBottom: 6 }}>TAGLINE</Text>

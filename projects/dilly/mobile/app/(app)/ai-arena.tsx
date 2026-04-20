@@ -142,11 +142,16 @@ function ToolRow({ icon, title, sub, color, onPress, active }: {
   icon: string; title: string; sub: string; color: string;
   onPress: () => void; active: boolean;
 }) {
+  // Reads theme so the row is legible in light mode. Static styles
+  // froze colors against the dark AI Arena bg and read as invisible
+  // text-on-white the moment the page flipped to a light surface.
+  const theme = useResolvedTheme();
   return (
     <AnimatedPressable
       style={[
         a.toolRow,
-        active && { borderLeftColor: color, borderLeftWidth: 4, backgroundColor: color + '06' },
+        { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+        active && { borderLeftColor: color, borderLeftWidth: 4, backgroundColor: color + '10' },
       ]}
       onPress={onPress}
       scaleDown={0.98}
@@ -155,10 +160,10 @@ function ToolRow({ icon, title, sub, color, onPress, active }: {
         <Ionicons name={icon as any} size={18} color={color} />
       </View>
       <View style={a.toolTextWrap}>
-        <Text style={a.toolTitle}>{title}</Text>
-        <Text style={a.toolSub} numberOfLines={1}>{sub}</Text>
+        <Text style={[a.toolTitle, { color: theme.surface.t1 }]}>{title}</Text>
+        <Text style={[a.toolSub, { color: theme.surface.t2 }]} numberOfLines={1}>{sub}</Text>
       </View>
-      <Ionicons name={active ? 'chevron-down' : 'chevron-forward'} size={16} color={active ? color : DIM} />
+      <Ionicons name={active ? 'chevron-down' : 'chevron-forward'} size={16} color={active ? color : theme.surface.t3} />
     </AnimatedPressable>
   );
 }
@@ -757,9 +762,9 @@ export default function AIArenaScreen() {
 
             {activeFeature === 'scan' && (
               <FadeInView delay={0}>
-                <View style={a.expandedCard}>
-                  <Text style={a.expandedTitle}>Threat Scanner</Text>
-                  <Text style={a.expandedSub}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
+                <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                  <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Threat Scanner</Text>
+                  <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
                   {!scanResults && !scanLoading && (
                     <AnimatedPressable style={a.actionBtn} onPress={runScan} scaleDown={0.97}>
                       <Ionicons name="flash" size={16} color="#0B1426" />
@@ -845,9 +850,9 @@ export default function AIArenaScreen() {
 
         {activeFeature === 'replace' && (
           <FadeInView delay={0}>
-            <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Can AI Replace You?</Text>
-              <Text style={a.expandedSub}>Paste a bullet. AI will try to write it. See if it can.</Text>
+            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Can AI Replace You?</Text>
+              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>Paste a bullet. AI will try to write it. See if it can.</Text>
               <TextInput style={a.input} defaultValue="" onChangeText={t => { replaceInputRef.current = t; }}
                 placeholder="Paste a bullet from your profile..." placeholderTextColor={DIM} multiline ref={replaceFieldRef} />
               <AnimatedPressable
@@ -903,9 +908,9 @@ export default function AIArenaScreen() {
 
         {activeFeature === 'simulate' && (
           <FadeInView delay={0}>
-            <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Career Simulator</Text>
-              <Text style={a.expandedSub}>See how AI transforms your dream role over 5 years.</Text>
+            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Career Simulator</Text>
+              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>See how AI transforms your dream role over 5 years.</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TextInput style={[a.input, { flex: 1 }]} defaultValue="" onChangeText={t => { simJobRef.current = t; }}
                   placeholder="Job title (e.g. Data Scientist)" placeholderTextColor={DIM} ref={simFieldRef} />
@@ -955,9 +960,9 @@ export default function AIArenaScreen() {
 
         {activeFeature === 'vault' && shield && (
           <FadeInView delay={0}>
-            <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Skill Vault</Text>
-              <Text style={a.expandedSub}>AI-proof skills for your field. Unlocked = in your profile. Locked = develop next.</Text>
+            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Skill Vault</Text>
+              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>AI-proof skills for your field. Unlocked = in your profile. Locked = develop next.</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                 {(shield.resistant_signals || []).slice(0, 5).map((s: string, i: number) => (
                   <View key={`u-${i}`} style={a.skillUnlocked}>
@@ -986,9 +991,9 @@ export default function AIArenaScreen() {
 
         {activeFeature === 'firewall' && (
           <FadeInView delay={0}>
-            <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Profile Firewall</Text>
-              <Text style={a.expandedSub}>How would an AI recruiter evaluate your profile? Find vulnerabilities before you apply.</Text>
+            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Profile Firewall</Text>
+              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>How would an AI recruiter evaluate your profile? Find vulnerabilities before you apply.</Text>
               <AnimatedPressable style={[a.actionBtn, { backgroundColor: AMBER }]}
                 onPress={() => openDillyOverlay({
                   isPaid: true,
@@ -1007,8 +1012,8 @@ export default function AIArenaScreen() {
 
         {activeFeature === 'index' && shield && (
           <FadeInView delay={0}>
-            <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Displacement Index</Text>
+            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Displacement Index</Text>
               <View style={{ alignItems: 'center', paddingVertical: 16 }}>
                 <Text style={[a.bigNum, { color: disruptionPct >= 40 ? AMBER : disruptionPct >= 25 ? AMBER : GREEN }]}>{disruptionPct}%</Text>
                 <Text style={{ fontSize: 12, color: SUB }}>of entry-level {(shield.cohort || '').split(' ')[0]} roles disrupted</Text>

@@ -248,14 +248,13 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const outerW = size + pencilPad
   const outerH = size + pencilPad
 
-  // Inner face is inset from the ring so Dilly has room to drift
-  // around without her face clipping at the circle edge. ~14% inset
-  // on each side — enough margin for the full TRAVEL range plus a
-  // bit of buffer, while still filling the ring with personality.
-  const innerSize = Math.round(size * 0.86)
-  const innerCx = innerSize / 2
-  const innerCy = innerSize / 2
-  const innerS = (innerSize * 0.44 / 2) / 19
+  // Face renders at its natural size inside the ring. The earlier
+  // attempt to inset the SVG (86% of ring) made the smile look off
+  // and didn't even address the real issue — the RING itself was
+  // clipping at the edge of the parent screen, not Dilly's face
+  // inside the ring. That gets fixed at the wrapper level below
+  // with a margin. Here we keep the face coords unchanged so it
+  // looks right.
 
   return (
     <View style={{ width: outerW, height: outerH }}>
@@ -274,8 +273,8 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
       >
         <Animated.View
           style={{
-            width: innerSize,
-            height: innerSize,
+            width: size,
+            height: size,
             transform: [
               { translateX: posX },
               { translateY: posY },
@@ -283,11 +282,11 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
             ],
           }}
         >
-          <Svg width={innerSize} height={innerSize}>
+          <Svg width={size} height={size}>
             <EyesAndSmile
-              cx={innerCx}
-              cy={innerCy}
-              s={innerS}
+              cx={cx}
+              cy={cy}
+              s={s}
               eyeScaleAnim={eyeScaleAnim}
               eyeLiftAnim={eyeLiftAnim}
               browLiftAnim={browLiftAnim}
@@ -302,9 +301,9 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
             {accessory !== 'none' && !pinnedPencil && (
               <Accessory
                 kind={accessory}
-                cx={innerCx}
-                cy={innerCy}
-                s={innerS}
+                cx={cx}
+                cy={cy}
+                s={s}
                 color={accessoryColor || faceInk}
                 scribbleAnim={mood === 'writing' ? scribbleAnim : null}
               />

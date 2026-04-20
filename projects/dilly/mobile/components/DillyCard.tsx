@@ -882,7 +882,7 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
       {/* Print section. Inline theme overrides required because the
           static styles below hardcode #F9FAFB / #E5E7EB backgrounds
           and DARK/GRAY text, which blow out in dark mode. */}
-      <View style={[c.printSection, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+      <View style={[c.printSection, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
           <Ionicons name="print-outline" size={14} color={theme.surface.t3} />
           <Text style={{ fontSize: 12, fontWeight: '600', color: theme.surface.t1 }}>Save for printing</Text>

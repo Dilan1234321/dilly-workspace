@@ -648,18 +648,15 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           {/* Header */}
           <View style={[s.header, { paddingTop: insets.top + 10 }]}>
             <View style={s.wordmark}>
-              {/* Tint the logo PNG with the user's accent. tintColor
-                  recolors every visible pixel of the image. Same
-                  treatment applied to the "AI" wordmark next to it
-                  so the whole mark reads as one unit in the user's
-                  accent. AI was already Cinzel — matches the logo
-                  typeface so the lockup looks clean. */}
+              {/* Removed the "AI" wordmark next to the logo — the
+                  surface is already clearly the chat overlay (input,
+                  mode pills, past conversations icon). The extra
+                  "AI" was noise. Just the accent-tinted logo now. */}
               <Image
                 source={require('../assets/logo.png')}
                 style={[s.wordmarkLogo, { tintColor: theme.accent }]}
                 resizeMode="contain"
               />
-              <Text style={[s.wordmarkAI, { color: theme.accent }]}>AI</Text>
             </View>
             <View style={s.modePills}>
               {(['coaching', 'practice'] as ChatMode[]).map(m => (
@@ -786,10 +783,14 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               // "something is happening" affordance, way more
               // personality. The pencil scribbles while the
               // response streams.
-              <View style={[s.msgRow, { justifyContent: 'flex-start', alignItems: 'center', gap: 12, marginTop: 8, marginBottom: 4 }]}>
-                <View style={{ width: 68, height: 68, alignItems: 'center', justifyContent: 'center' }}>
-                  <DillyFace size={68} mood="writing" accessory="pencil" />
-                </View>
+              <View style={[s.msgRow, { justifyContent: 'flex-start', alignItems: 'center', gap: 12, marginTop: 8, marginBottom: 4, paddingLeft: 8 }]}>
+                {/* DillyFace sizes itself: the outer wrapper expands
+                    to fit the external pencil. No fixed width/height
+                    container around it, or the pencil (which lives
+                    in the bottom-right padding) gets clipped by the
+                    parent. Left padding keeps the ring off the
+                    screen edge. */}
+                <DillyFace size={68} mood="writing" accessory="pencil" />
                 <Text style={{ fontSize: 15, color: theme.surface.t3, fontStyle: 'italic' }}>
                   Dilly is writing…
                 </Text>
