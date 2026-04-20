@@ -873,7 +873,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
                 // replaces the primary CTA and uses the same collections
                 // primitive under the hood.
                 <AnimatedPressable
-                  style={s.applyBtn}
+                  style={[s.applyBtn, { backgroundColor: theme.accent }]}
                   onPress={(e: any) => { e?.stopPropagation?.(); onBookmark?.(listing); }}
                   scaleDown={0.97}
                 >
@@ -881,17 +881,21 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
                   <Text style={s.applyBtnText}>{isSaved ? 'Watching' : 'Save to Watch'}</Text>
                 </AnimatedPressable>
               ) : (
-                <AnimatedPressable style={s.applyBtn} onPress={handleApply} scaleDown={0.97}>
+                <AnimatedPressable style={[s.applyBtn, { backgroundColor: theme.accent }]} onPress={handleApply} scaleDown={0.97}>
                   <Ionicons name="send" size={14} color="#fff" />
                   <Text style={s.applyBtnText}>Apply</Text>
                 </AnimatedPressable>
               )}
-              <AnimatedPressable style={s.dillyBtn} onPress={handleAskDilly} scaleDown={0.97}>
-                <Ionicons name="sparkles" size={14} color={COBALT} />
-                <Text style={s.dillyBtnText}>{isHolder ? 'Ask Dilly' : 'Ask Dilly'}</Text>
+              <AnimatedPressable
+                style={[s.dillyBtn, { borderColor: theme.accentBorder, backgroundColor: theme.accentSoft }]}
+                onPress={handleAskDilly}
+                scaleDown={0.97}
+              >
+                <Ionicons name="sparkles" size={14} color={theme.accent} />
+                <Text style={[s.dillyBtnText, { color: theme.accent }]}>Ask Dilly</Text>
               </AnimatedPressable>
               <AnimatedPressable
-                style={s.tailorBtn}
+                style={[s.tailorBtn, { borderColor: theme.surface.border }]}
                 onPress={() => router.push({
                   pathname: '/(app)/resume-generate',
                   params: {
@@ -903,8 +907,8 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
                 })}
                 scaleDown={0.97}
               >
-                <Ionicons name="sparkles" size={14} color={colors.t2} />
-                <Text style={s.tailorBtnText}>Tailor</Text>
+                <Ionicons name="sparkles" size={14} color={theme.surface.t2} />
+                <Text style={[s.tailorBtnText, { color: theme.surface.t2 }]}>Tailor</Text>
               </AnimatedPressable>
             </View>
           </View>
@@ -1679,14 +1683,32 @@ export default function JobsScreen() {
           <FadeInView>
             <View style={s.emptyCard}>
               <Ionicons name="briefcase-outline" size={40} color={colors.t3} />
+              {/* Empty-state copy tailored to the active filter so it
+                  doesn't feel like the app is just broken. Remote-only
+                  is the single most common filter to go empty, and
+                  "still loading the feed" was misleading — the feed is
+                  loaded, just no remote jobs made it through. */}
               <Text style={s.emptyTitle}>
                 {search.trim()
                   ? `No jobs matching "${search}"`
-                  : situationCopy.empty_jobs}
+                  : remoteOnlyFilter
+                    ? 'No fully-remote jobs in your pool yet'
+                    : situationCopy.empty_jobs}
               </Text>
               <Text style={s.emptySub}>
-                We are adding more jobs daily. Try a different filter or check back soon.
+                {remoteOnlyFilter
+                  ? 'Turn off Remote only to see hybrid and in-person roles, or check back as Dilly adds new postings.'
+                  : 'We are adding more jobs daily. Try a different filter or check back soon.'}
               </Text>
+              {remoteOnlyFilter ? (
+                <AnimatedPressable
+                  style={{ marginTop: 14, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: theme.accent }}
+                  onPress={() => setRemoteOnlyFilter(false)}
+                  scaleDown={0.97}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff' }}>Turn off Remote only</Text>
+                </AnimatedPressable>
+              ) : null}
             </View>
           </FadeInView>
         )}

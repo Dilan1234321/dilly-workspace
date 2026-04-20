@@ -527,11 +527,21 @@ def _fallback_feed(
     params: list = []
 
     # Filter: US/Canada only
+    # International exclusion for US/Canada feed. Added 'Bangalore'
+    # alt-spelling (some postings use that instead of Bengaluru),
+    # plus a wider sweep of common international job-posting cities
+    # so users don't see "Software Engineer · Bangalore, India" in a
+    # supposedly US feed.
     _intl_exclude = [
-        'India', 'Bengaluru', 'Mumbai', 'London', 'England', 'United Kingdom',
-        'Dublin', 'Ireland', 'Singapore', 'Tokyo', 'Japan', 'Berlin', 'Germany',
-        'Paris', 'France', 'Amsterdam', 'Sydney', 'Australia', 'Tel Aviv', 'Israel',
-        'Seoul', 'South Korea', 'Shanghai', 'Beijing', 'China', 'Sao Paulo', 'Brazil',
+        'India', 'Bengaluru', 'Bangalore', 'Hyderabad', 'Chennai', 'Pune', 'Gurgaon', 'Gurugram', 'Noida', 'Delhi', 'Kolkata',
+        'Mumbai', 'Ahmedabad', 'Jaipur',
+        'London', 'England', 'United Kingdom', 'UK', 'Manchester', 'Edinburgh',
+        'Dublin', 'Ireland', 'Singapore', 'Tokyo', 'Osaka', 'Japan',
+        'Berlin', 'Munich', 'Germany', 'Paris', 'Lyon', 'France',
+        'Amsterdam', 'Netherlands', 'Sydney', 'Melbourne', 'Australia',
+        'Tel Aviv', 'Israel', 'Seoul', 'South Korea',
+        'Shanghai', 'Beijing', 'Shenzhen', 'Hong Kong', 'China',
+        'Sao Paulo', 'Brazil', 'Mexico City', 'Buenos Aires', 'Argentina',
     ]
     _intl_clauses = " AND ".join([f"COALESCE(i.location_city,'') || ' ' || COALESCE(i.location_state,'') NOT ILIKE %s" for _ in _intl_exclude])
     if _intl_clauses:
