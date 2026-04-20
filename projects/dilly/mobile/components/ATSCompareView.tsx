@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 import { dilly } from '../lib/dilly';
 import AnimatedPressable from './AnimatedPressable';
 
@@ -83,6 +84,7 @@ export default function ATSCompareView({
   visible: boolean;
   onClose: () => void;
 }) {
+  const theme = useResolvedTheme();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<CompareResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,36 +106,36 @@ export default function ATSCompareView({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: theme.surface.bg }]}>
         {/* Nav */}
-        <View style={s.navBar}>
+        <View style={[s.navBar, { borderBottomColor: theme.surface.border }]}>
           <AnimatedPressable onPress={onClose} scaleDown={0.9} hitSlop={12}>
-            <Ionicons name="close" size={22} color={colors.t1} />
+            <Ionicons name="close" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
-          <Text style={s.navTitle}>Compare Versions</Text>
+          <Text style={[s.navTitle, { color: theme.surface.t1 }]}>Compare Versions</Text>
           <View style={{ width: 22 }} />
         </View>
 
         <ScrollView contentContainerStyle={s.scroll}>
           {loading && (
             <View style={s.loadingWrap}>
-              <ActivityIndicator size="large" color={GOLD} />
-              <Text style={s.loadingText}>Re-scoring your audits…</Text>
+              <ActivityIndicator size="large" color={theme.accent} />
+              <Text style={[s.loadingText, { color: theme.surface.t3 }]}>Re-scoring your audits…</Text>
             </View>
           )}
 
           {error && (
             <View style={s.errorWrap}>
               <Ionicons name="alert-circle" size={24} color={CORAL} />
-              <Text style={s.errorText}>{error}</Text>
+              <Text style={[s.errorText, { color: theme.surface.t2 }]}>{error}</Text>
             </View>
           )}
 
           {data && data.message && data.versions.length < 2 && (
             <View style={s.emptyWrap}>
-              <Ionicons name="git-compare-outline" size={40} color={colors.t3 + '80'} />
-              <Text style={s.emptyTitle}>Need more audits</Text>
-              <Text style={s.emptyText}>
+              <Ionicons name="git-compare-outline" size={40} color={theme.surface.t3 + '80'} />
+              <Text style={[s.emptyTitle, { color: theme.surface.t1 }]}>Need more audits</Text>
+              <Text style={[s.emptyText, { color: theme.surface.t3 }]}>
                 Upload at least 2 resume versions so we can show you which one the ATS prefers.
               </Text>
             </View>
@@ -143,13 +145,13 @@ export default function ATSCompareView({
             <>
               {/* ── Overall delta headline ───────────────────────────── */}
               {data.deltas.length > 0 && (
-                <View style={s.headlineWrap}>
-                  <Text style={s.headlineLabel}>LATEST VS PREVIOUS</Text>
+                <View style={[s.headlineWrap, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                  <Text style={[s.headlineLabel, { color: theme.surface.t3 }]}>LATEST VS PREVIOUS</Text>
                   {data.deltas.map((d, i) => (
                     <View key={i} style={s.headlineRow}>
-                      <Text style={s.headlineLabelText}>{d.to_label}</Text>
-                      <Ionicons name="arrow-back" size={12} color={colors.t3} />
-                      <Text style={s.headlineLabelText}>{d.from_label}</Text>
+                      <Text style={[s.headlineLabelText, { color: theme.surface.t1 }]}>{d.to_label}</Text>
+                      <Ionicons name="arrow-back" size={12} color={theme.surface.t3} />
+                      <Text style={[s.headlineLabelText, { color: theme.surface.t1 }]}>{d.from_label}</Text>
                       <View
                         style={[
                           s.headlineDeltaPill,

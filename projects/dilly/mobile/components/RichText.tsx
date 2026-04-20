@@ -18,12 +18,12 @@
 
 import React from 'react';
 import { Text, TextStyle, Linking } from 'react-native';
+import { useResolvedTheme } from '../hooks/useTheme';
 
 // Matches http(s) URLs. Used to auto-linkify resource suggestions
 // Dilly makes (YouTube videos, docs, blog posts). The URL can include
 // query params and fragments; trailing punctuation is stripped below.
 const URL_RX = /(https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]])/gi;
-const LINK_COLOR = '#2B3A8E';
 
 const GOLD  = '#2B3A8E';
 const GREEN = '#34C759';
@@ -159,7 +159,9 @@ interface RichTextProps {
 }
 
 export default function RichText({ text, baseStyle }: RichTextProps) {
+  const theme = useResolvedTheme();
   const tokens = parse(text);
+  const linkColor = theme.accent;
 
   return (
     <Text style={baseStyle}>
@@ -175,7 +177,12 @@ export default function RichText({ text, baseStyle }: RichTextProps) {
         if (token.underline) style.textDecorationLine = 'underline';
         if (token.strike)    style.textDecorationLine = 'line-through';
         if (token.color) {
-          style.color      = token.color;
+          // The default "gold" highlight (no explicit color prefix) now
+          // follows theme.accent so the Customize Dilly accent reaches
+          // emphasis text. Named colors (green/amber/blue/coral/red) stay
+          // semantic — they mean success/warning/info/error regardless.
+          const isDefaultGold = token.color === GOLD;
+          style.color      = isDefaultGold ? theme.accent : token.color;
           style.fontWeight = '700';
         }
 
@@ -188,7 +195,7 @@ export default function RichText({ text, baseStyle }: RichTextProps) {
               part.url ? (
                 <Text
                   key={pi}
-                  style={{ color: LINK_COLOR, textDecorationLine: 'underline', fontWeight: '600' }}
+                  style={{ color: linkColor, textDecorationLine: 'underline', fontWeight: '600' }}
                   onPress={() => { Linking.openURL(part.url!).catch(() => {}); }}
                 >
                   {part.text}
