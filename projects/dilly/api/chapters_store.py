@@ -205,6 +205,23 @@ def clear_override(email: str) -> None:
 
 # ---------- chapter ops -----------------------------------------------------
 
+def count_chapters(email: str) -> int:
+    """Total Chapters the user has ever had. Drives the streak
+    label ("Chapter 4 · 4 weeks together") on the session screen.
+    Cheap — single COUNT query."""
+    try:
+        with _conn() as c:
+            with c.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM chapters WHERE email = %s",
+                    (email.lower().strip(),),
+                )
+                row = cur.fetchone()
+                return int(row[0]) if row else 0
+    except Exception:
+        return 0
+
+
 def get_latest_chapter(email: str) -> Optional[dict[str, Any]]:
     """Most recent Chapter, or None if the user has never had one."""
     try:

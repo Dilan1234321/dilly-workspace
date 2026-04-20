@@ -195,6 +195,13 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
 # extract facts from it. Mirrored in the mobile UI as a progress hint
 # ("Dilly is listening… 2 of 5") so the user sees the bar and feels
 # the gate as a feature, not a surprise.
+# Product call: LLM extraction runs after 5 user messages in a
+# conversation. Shorter chats still run regex-only extraction so
+# obvious facts ("I work at X") get captured, but the richer
+# inferential extraction (emotional context, implied goals,
+# personality tells) gates on substantive chat length.
+# The mobile UI shows a progress pill ("Dilly needs X more messages
+# to save what she's learning") so users know the bar exists.
 LLM_EXTRACTION_MIN_USER_MSGS = 5
 
 

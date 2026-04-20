@@ -235,7 +235,34 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   const [mode,     setMode]     = useState<ChatMode>('coaching');
   const [isTyping, setIsTyping] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyMounted, setHistoryMounted] = useState(false);
+  const historySlide = useRef(new Animated.Value(0)).current; // 0 = offscreen right, 1 = visible
   const [history, setHistory] = useState<any[]>([]);
+
+  // Slide history panel in from the right when showHistory flips
+  // true, slide out and unmount when it flips false. Keeps the
+  // panel mounted through the exit animation so the transition
+  // isn't a hard cut. 240ms in, 200ms out feels native-like.
+  useEffect(() => {
+    if (showHistory) {
+      setHistoryMounted(true);
+      Animated.timing(historySlide, {
+        toValue: 1,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else if (historyMounted) {
+      Animated.timing(historySlide, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setHistoryMounted(false);
+      });
+    }
+  }, [showHistory, historyMounted, historySlide]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const suggestionsOpacity = useRef(new Animated.Value(0)).current;
   const initialMessageSent = useRef(false);
@@ -414,7 +441,12 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       // feels considered. Only applies when the response came back
       // faster than the floor — no delay added on already-slow
       // responses.
-      const MIN_THINK_MS = 1400;
+      // Bumped from 1400ms -> 2200ms per product direction: user
+      // wants Dilly to "think" a bit longer to sell the illusion
+      // of deliberation. Only applies when the server came back
+      // faster than the floor — slow responses pass through
+      // unchanged.
+      const MIN_THINK_MS = 2200;
       const thinkStart = (sendMessageWithTextStartedAt.current || Date.now());
       const elapsed = Date.now() - thinkStart;
       if (elapsed < MIN_THINK_MS) {
@@ -425,13 +457,14 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       setMessages([...newHistory, { id: ++_msgId, role: 'assistant', content: '', visual: undefined }]);
 
       // Typing animation. Previously 8 chars per tick every 45ms
-      // (≈180 chars/sec). Dropped to 4 chars per tick every 55ms
-      // (≈72 chars/sec) so Dilly's replies feel like real typing
-      // instead of a page-load. Matches the cadence of a person
-      // writing quickly but thoughtfully.
+      // (≈180 chars/sec), then 4 chars / 55ms (≈72 c/s). Dropped
+      // further to 3 chars per tick every 65ms (≈46 c/s) for a
+      // slightly-faster-than-human feel. Human typing ≈ 35-40 c/s,
+      // so 46 c/s reads as "quick but considered." Any slower and
+      // long replies take too long.
       let i = 0;
       streamRef.current = setInterval(() => {
-        i += 4;
+        i += 3;
         const done = i >= fullText.length;
         const chunk = done ? fullText : fullText.slice(0, i);
         setMessages(prev => {
@@ -452,7 +485,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         } else if (!userScrolledUp.current) {
           scrollRef.current?.scrollToEnd({ animated: false });
         }
-      }, 55);
+      }, 65);
 
     } catch (err: any) {
       setIsTyping(false);
@@ -791,9 +824,18 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                     parent. Left padding keeps the ring off the
                     screen edge. */}
                 <DillyFace size={68} mood="writing" accessory="pencil" />
-                <Text style={{ fontSize: 15, color: theme.surface.t3, fontStyle: 'italic' }}>
-                  Dilly is writing…
-                </Text>
+                {/* Wrapped the label in a fixed-height View matching
+                    the DillyFace ring (68) and centered vertically
+                    so the baseline sits at the middle of the ring
+                    — the text alone was riding the alignItems:'center'
+                    of the parent row but the DillyFace outer wrapper
+                    is taller (68 + pencil pad) so the label was
+                    nudged low. */}
+                <View style={{ height: 68, justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 15, color: theme.surface.t3, fontStyle: 'italic' }}>
+                    Dilly is writing…
+                  </Text>
+                </View>
               </View>
             )}
           </ScrollView>
@@ -807,22 +849,29 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               or when suggestion chips are visible (reduces bottom-bar
               clutter). */}
           {(() => {
-            // The old hint said "save what she learns after N more
-            // messages," which was wrong — extraction actually runs
-            // any time you say something substantial, not gated by
-            // message count. Copy updated to match reality. We only
-            // show this reassurance between the 1st and 5th user
-            // message, after which the user has clearly figured out
-            // how the chat works.
-            const HIDE_AFTER = 5;
+            // Memory progress pill. Mirrors the backend gate
+            // (LLM_EXTRACTION_MIN_USER_MSGS = 5) so the user knows
+            // how close they are to having this conversation
+            // actually written to their profile. Under the bar:
+            // shows a countdown so the ask feels finite. Above the
+            // bar: swaps to a "she's writing" reassurance. Hides
+            // while Dilly is typing so the bar doesn't flicker.
+            const THRESHOLD = 5;
             const userMsgs = messages.filter(m => m.role === 'user').length;
-            if (userMsgs >= HIDE_AFTER || isTyping) return null;
-            if (userMsgs === 0) return null;
+            if (userMsgs === 0 || isTyping) return null;
+            const remaining = THRESHOLD - userMsgs;
+            const atBar = remaining <= 0;
             return (
               <View style={[s.memoryPill, { borderTopColor: theme.surface.border }]}>
-                <Ionicons name="ear-outline" size={13} color={theme.surface.t3} />
-                <Text style={[s.memoryPillText, { color: theme.surface.t3 }]}>
-                  Dilly is listening. The more you share, the better she gets at helping you.
+                <Ionicons
+                  name={atBar ? 'bookmark' : 'ear-outline'}
+                  size={13}
+                  color={atBar ? theme.accent : theme.surface.t3}
+                />
+                <Text style={[s.memoryPillText, { color: atBar ? theme.accent : theme.surface.t3 }]}>
+                  {atBar
+                    ? "Dilly will save what she's learning when you close this chat."
+                    : `Dilly saves what she learns after ${remaining} more message${remaining === 1 ? '' : 's'}.`}
                 </Text>
               </View>
             );
@@ -877,9 +926,24 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         </KeyboardAvoidingView>
       </Animated.View>
 
-      {/* History overlay */}
-      {showHistory && (
-        <View style={[s.historyOverlay, { backgroundColor: theme.surface.bg }]}>
+      {/* History overlay. Animated slide-in from the right. Kept
+          mounted through the exit animation so the transition is
+          smooth in both directions. */}
+      {historyMounted && (
+        <Animated.View
+          style={[
+            s.historyOverlay,
+            {
+              backgroundColor: theme.surface.bg,
+              transform: [{
+                translateX: historySlide.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [SCREEN_W, 0],
+                }),
+              }],
+            },
+          ]}
+        >
           {/* First-visit coach inside the history panel. Explains the
               5-cap and the Keep button before the user wonders where
               their old chats went. Fires once, uniquely for this
@@ -935,6 +999,17 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                       // full-transcript field was added will come back
                       // empty — fall back to just closing in that case.
                       if (!item.conv_id) { setShowHistory(false); return; }
+                      // If Dilly is mid-reply when the user opens
+                      // another thread, kill the in-flight stream
+                      // and the typing indicator immediately. Without
+                      // this, the streaming characters of the OLD
+                      // reply would keep appending to the NEW thread
+                      // the user just loaded.
+                      if (streamRef.current) {
+                        clearInterval(streamRef.current);
+                        streamRef.current = null;
+                      }
+                      setIsTyping(false);
                       try {
                         const res = await dilly.fetch(`/ai/chat-history/${item.conv_id}/messages`);
                         if (res.ok) {
@@ -995,7 +1070,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               })
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       )}
     </Modal>
   );

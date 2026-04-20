@@ -157,6 +157,11 @@ function AppLayoutInner() {
     <TabIcon focused={focused} iconActive={iconActive} iconInactive={iconInactive} />
   );
 
+  // Chapter session is a full-screen ritual; hide the tab bar on
+  // any /chapter route so users don't see app chrome while they're
+  // reading through the session.
+  const onChapter = !!pathname && pathname.includes('/chapter');
+
   return (
     <Tabs
       // Per-mode landing tab: holders land on Arena (their hero),
@@ -164,14 +169,16 @@ function AppLayoutInner() {
       initialRouteName={isHolder ? 'ai-arena' : 'index'}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: navBarBg,
-          borderTopWidth: 1,
-          borderTopColor: navBarBorder,
-          paddingBottom: insets.bottom,
-          paddingTop: 8,
-          height: 56 + insets.bottom,
-        },
+        tabBarStyle: onChapter
+          ? { display: 'none' }
+          : {
+              backgroundColor: navBarBg,
+              borderTopWidth: 1,
+              borderTopColor: navBarBorder,
+              paddingBottom: insets.bottom,
+              paddingTop: 8,
+              height: 56 + insets.bottom,
+            },
         // Labels are hidden everywhere. Icons + active-pill
         // communicate which tab you're on.
         tabBarShowLabel: false,

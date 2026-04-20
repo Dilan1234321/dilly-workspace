@@ -305,6 +305,7 @@ async def chapters_current(request: Request):
     schedule = chapters_store.get_schedule(email)
     facts = _fact_count(email)
     due = _cycle_due(latest, plan, schedule.get("next_override_at"))
+    count = chapters_store.count_chapters(email)
 
     return {
         "plan": plan,
@@ -313,6 +314,10 @@ async def chapters_current(request: Request):
         "first_session_gate": 20,
         "schedule": schedule,
         "latest": latest,
+        # Total Chapters the user has had, including the most recent.
+        # Powers the "Chapter N · N weeks together" streak label in
+        # the session UI.
+        "count": count,
         "generation_eligible": bool(due and plan in ("dilly", "pro") and facts >= 20),
     }
 
@@ -404,32 +409,61 @@ async def chapters_generate(request: Request):
     # cost anything; the notes themselves feed into the prompt.
     open_notes = chapters_store.list_open_notes(email)
 
+    # Compute a friendly time-of-day greeting the prompt can weave
+    # into the cold_open. Backend time only — we don't know the user's
+    # tz reliably, so this is approximate.
+    from datetime import datetime as _dt
+    _hr = _dt.utcnow().hour
+    _greeting = (
+        "Good morning" if 5 <= _hr < 12 else
+        "Good afternoon" if 12 <= _hr < 18 else
+        "Good evening"
+    )
+
     # Build the structured prompt.
+    # The Chapter bar is "a real advisor wrote this for me this week."
+    # Three things get you most of the way there:
+    #   1. A specific callback to something the user said before —
+    #      prove you remember.
+    #   2. An honest push — ask the thing they haven't wanted to say
+    #      out loud.
+    #   3. A small citation style so users trust the claims.
     system_prompt = (
         "You are Dilly, writing a weekly one-to-one session for someone you have been mentoring. "
         "This is their Chapter for the week. You have their full profile. Write like a thoughtful advisor "
-        "who remembers the small details.\n\n"
+        "who remembers the small details and doesn't flinch from the hard question.\n\n"
         "HARD STYLE RULES:\n"
         "- Never use em dashes. Never use semicolons. Use periods or commas.\n"
         "- Cite the user's actual experiences, companies, skills by name. No generic advice.\n"
+        "- When you reference something specific from their profile, append the tag (from your profile) "
+        "right after the reference. Example: \"your Rangers internship (from your profile)\". Use sparingly, "
+        "only where citing builds trust. Never more than twice in one Chapter.\n"
         "- Every screen body is MAX 2 short sentences. Punchy. Specific.\n"
         "- Warm, grounded tone. Not corporate, not therapist, not overly upbeat.\n"
         "- The Chapter title is 2 to 4 words. Evocative, not clinical. Examples: "
         "\"The Reset\", \"Sharpening Your Edge\", \"Quiet Confidence\", \"Cards On The Table\".\n\n"
         "OUTPUT SHAPE: a Chapter has a title and exactly 7 screens, in this order:\n"
-        "  1. cold_open     A one-sentence opener. Use the user's first name. Something like \"Good evening, <name>. I've been thinking about you.\"\n"
-        "  2. noticed       One specific observation you noticed this week about them. Cite something concrete.\n"
-        "  3. working       One thing that's working for them. Strength angle.\n"
-        "  4. push_on       One thing you would push them on. Growth angle, honest but not harsh.\n"
-        "  5. one_move      The single concrete action they should take before next session. Specific enough that they know what to do tomorrow.\n"
-        "  6. question      A question you'd like them to sit with. Opens a chat next to continue the conversation.\n"
+        f"  1. cold_open     Start with \"{_greeting}, <first_name>.\" Then in the SAME screen, reference "
+        "ONE specific thing from their profile that shows you remember them. Not a summary. A callback. "
+        "Example: \"Good evening, Dilan. I keep coming back to what you said about leaving consulting.\"\n"
+        "  2. noticed       One specific observation from NEW facts this week. Cite something concrete. "
+        "If the user left notes, address the strongest one here.\n"
+        "  3. working       One thing that's working for them. Strength angle. Cite a specific win.\n"
+        "  4. push_on       The harder question you would push on if you were their advisor. Not harsh, "
+        "but the honest one they probably haven't asked themselves. The kind of line a real coach earns "
+        "the right to say. Example: \"You've talked about leaving for a year. What's the story you're "
+        "telling yourself about why you haven't?\"\n"
+        "  5. one_move      The single concrete action they should take before next session. Specific "
+        "enough that they know what to do tomorrow.\n"
+        "  6. question      A question you'd like them to sit with. Opens an inline chat so they can "
+        "respond to you right there. Max 20 words.\n"
         "  7. close         A closing line. Warm. Forward-looking. Reference the next Chapter.\n\n"
         "If the user left NOTES for this Chapter, address at least one of them in noticed, push_on, or one_move.\n\n"
         "Return ONLY this JSON, no prose outside it:\n"
         "{\n"
         "  \"title\": \"<2-4 word Chapter title>\",\n"
         "  \"screens\": [\n"
-        "    { \"slot\": \"cold_open\",  \"body\": \"<one short sentence>\" },\n"
+        "    { \"slot\": \"cold_open\",  \"body\": \"<greeting + callback, 1-2 short sentences>\" },\n"
         "    { \"slot\": \"noticed\",    \"body\": \"<max 2 sentences>\" },\n"
         "    { \"slot\": \"working\",    \"body\": \"<max 2 sentences>\" },\n"
         "    { \"slot\": \"push_on\",    \"body\": \"<max 2 sentences>\" },\n"

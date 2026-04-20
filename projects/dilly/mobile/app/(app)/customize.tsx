@@ -201,27 +201,52 @@ export default function CustomizeStudio() {
 
       {/* Panel */}
       <View style={[s.panel, { paddingBottom: Math.max(insets.bottom, 12), backgroundColor: theme.surface.bg, borderTopColor: theme.surface.border }]}>
-        {/* Axis tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.axisRow}>
-          {AXES.map(a => {
-            const active = axis === a.id;
-            return (
-              <AnimatedPressable
-                key={a.id}
-                style={[
-                  s.axisTab,
-                  { backgroundColor: theme.surface.s2, borderColor: theme.surface.border },
-                  active && { backgroundColor: theme.accent, borderColor: theme.accent },
-                ]}
-                onPress={() => setAxis(a.id)}
-                scaleDown={0.95}
-              >
-                <Ionicons name={a.icon} size={12} color={active ? '#fff' : theme.surface.t1} />
-                <Text style={[s.axisTabText, { color: theme.surface.t1 }, active && { color: '#fff' }]}>{a.label}</Text>
-              </AnimatedPressable>
-            );
-          })}
-        </ScrollView>
+        {/* Axis tabs. Wrapped in a relative container with a right-
+            edge gradient mask so the user sees the row is scrollable
+            — the last visible tab fades out, making it obvious there
+            are more tabs off-screen to the right. showsHorizontal
+            ScrollIndicator stays off for cleanliness; the fade is
+            the affordance. */}
+        <View style={{ position: 'relative' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.axisRow}>
+            {AXES.map(a => {
+              const active = axis === a.id;
+              return (
+                <AnimatedPressable
+                  key={a.id}
+                  style={[
+                    s.axisTab,
+                    { backgroundColor: theme.surface.s2, borderColor: theme.surface.border },
+                    active && { backgroundColor: theme.accent, borderColor: theme.accent },
+                  ]}
+                  onPress={() => setAxis(a.id)}
+                  scaleDown={0.95}
+                >
+                  <Ionicons name={a.icon} size={12} color={active ? '#fff' : theme.surface.t1} />
+                  <Text style={[s.axisTabText, { color: theme.surface.t1 }, active && { color: '#fff' }]}>{a.label}</Text>
+                </AnimatedPressable>
+              );
+            })}
+          </ScrollView>
+          {/* Right-edge fade. Stacked translucent strips create a
+              soft gradient without needing a gradient lib. Matches
+              the panel's surface color so it blends with the page
+              regardless of light/dark theme. */}
+          <View pointerEvents="none" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 36, flexDirection: 'row' }}>
+            <View style={{ flex: 1, backgroundColor: theme.surface.bg, opacity: 0.35 }} />
+            <View style={{ flex: 1, backgroundColor: theme.surface.bg, opacity: 0.65 }} />
+            <View style={{ flex: 1, backgroundColor: theme.surface.bg, opacity: 0.9 }} />
+          </View>
+          {/* Tiny chevron that pulses gently to signal "scroll for
+              more". Shows only while there are unseen tabs; a proper
+              on-scroll hide would require tracking scroll offset,
+              which is more than this needs. Kept static: the fade
+              mask plus the chevron together make scrollability
+              obvious. */}
+          <View pointerEvents="none" style={{ position: 'absolute', right: 6, top: 0, bottom: 0, justifyContent: 'center' }}>
+            <Ionicons name="chevron-forward" size={12} color={theme.surface.t3} />
+          </View>
+        </View>
 
         {/* Axis content */}
         <View style={s.axisContent}>
@@ -520,6 +545,23 @@ function DensityPanel({ pending, patch, theme }: AxisProps) {
 }
 
 function StylePanel({ pending, patch, theme }: AxisProps) {
+  // Build a preview gradient stop regardless of whether gradient is
+  // currently selected. theme.gradient is null when the user is on
+  // solid, so the gradient preview card had nothing to compare
+  // against. We simulate the second stop locally here with a simple
+  // darker tint so BOTH cards always show a clear visual difference.
+  const gradientStop = (() => {
+    // Parse #RRGGBB to rgb and darken by ~30%.
+    const hex = theme.accent.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const dr = Math.max(0, Math.round(r * 0.65));
+    const dg = Math.max(0, Math.round(g * 0.65));
+    const db = Math.max(0, Math.round(b * 0.65));
+    return `rgb(${dr}, ${dg}, ${db})`;
+  })();
+
   return (
     <View style={s.optionRow}>
       {Object.values(ACCENT_STYLE_PRESETS).map(asp => {
@@ -531,20 +573,29 @@ function StylePanel({ pending, patch, theme }: AxisProps) {
             onPress={() => patch({ accentStyle: asp.id as AccentStyleId })}
             scaleDown={0.97}
           >
+            {/* Larger swatch so the difference is obvious: 120x36
+                with sharper gradient rendering. Solid is one flat
+                color; gradient fades from accent to 35%-darker over
+                the full width for a clear left-to-right transition. */}
             <View style={{
-              width: 80, height: 24, borderRadius: 6,
+              width: 120, height: 36, borderRadius: 8,
               backgroundColor: theme.accent,
               overflow: 'hidden',
             }}>
               {asp.id === 'gradient' && (
-                <View style={{
-                  position: 'absolute', top: 0, bottom: 0, right: 0, width: '55%',
-                  backgroundColor: theme.gradient ? theme.gradient[1] : theme.accent,
-                  opacity: 0.9,
-                }} />
+                <>
+                  {/* 4-stop fake gradient built from overlapping
+                      translucent rectangles. RN doesn't have a
+                      gradient primitive out of the box; this reads
+                      as a smooth left->right fade. */}
+                  <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '40%', backgroundColor: theme.accent }} />
+                  <View style={{ position: 'absolute', left: '30%', top: 0, bottom: 0, width: '40%', backgroundColor: theme.accent, opacity: 0.7 }} />
+                  <View style={{ position: 'absolute', left: '55%', top: 0, bottom: 0, width: '45%', backgroundColor: gradientStop, opacity: 0.85 }} />
+                  <View style={{ position: 'absolute', left: '75%', top: 0, bottom: 0, width: '25%', backgroundColor: gradientStop }} />
+                </>
               )}
             </View>
-            <Text style={[s.optionLabel, selected && { color: theme.accent, fontWeight: '800' }]}>{asp.label}</Text>
+            <Text style={[s.optionLabel, { color: theme.surface.t1 }, selected && { color: theme.accent, fontWeight: '800' }]}>{asp.label}</Text>
           </AnimatedPressable>
         );
       })}
