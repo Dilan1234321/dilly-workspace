@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
 
 const GOLD = '#2B3A8E';
@@ -132,19 +133,20 @@ function statusIcon(s: string): keyof typeof Ionicons.glyphMap {
 // ── Hero score ──────────────────────────────────────────────────────────────
 
 function HeroScore({ overall, forecast }: { overall: FactorScore; forecast: number }) {
+  const theme = useResolvedTheme();
   const delta = forecast - overall.value;
   return (
-    <View style={s.heroWrap}>
+    <View style={[s.heroWrap, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
       <View style={s.heroScoreRow}>
         <View>
-          <Text style={s.heroLabel}>ATS COMPATIBILITY</Text>
+          <Text style={[s.heroLabel, { color: theme.surface.t3 }]}>ATS COMPATIBILITY</Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
             <Text style={[s.heroNumber, { color: scoreColor(overall.value) }]}>
               {Math.round(overall.value)}
             </Text>
-            <Text style={s.heroSuffix}>/100</Text>
+            <Text style={[s.heroSuffix, { color: theme.surface.t3 }]}>/100</Text>
           </View>
-          <Text style={s.heroBand}>
+          <Text style={[s.heroBand, { color: theme.surface.t3 }]}>
             Confidence: {Math.round(overall.low)}-{Math.round(overall.high)}
           </Text>
         </View>
@@ -156,7 +158,7 @@ function HeroScore({ overall, forecast }: { overall: FactorScore; forecast: numb
         )}
       </View>
       {/* Progress bar */}
-      <View style={s.heroBar}>
+      <View style={[s.heroBar, { backgroundColor: theme.surface.border }]}>
         <View
           style={[
             s.heroBarFill,
@@ -180,16 +182,17 @@ function HeroScore({ overall, forecast }: { overall: FactorScore; forecast: numb
 // ── File red flags ──────────────────────────────────────────────────────────
 
 function FileRedFlags({ flags }: { flags: ATSScoreV2['file_redflags'] }) {
+  const theme = useResolvedTheme();
   if (!flags || flags.length === 0) return null;
   return (
     <View style={s.redFlagsWrap}>
-      <Text style={s.sectionLabel}>FILE RED FLAGS</Text>
+      <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>FILE RED FLAGS</Text>
       {flags.map((rf, i) => (
         <View
           key={`${rf.title}-${i}`}
           style={[
             s.redFlagCard,
-            { borderLeftColor: rf.level === 'critical' ? CORAL : rf.level === 'high' ? AMBER : BLUE },
+            { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, borderLeftColor: rf.level === 'critical' ? CORAL : rf.level === 'high' ? AMBER : BLUE },
           ]}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -198,9 +201,9 @@ function FileRedFlags({ flags }: { flags: ATSScoreV2['file_redflags'] }) {
               size={14}
               color={rf.level === 'critical' ? CORAL : AMBER}
             />
-            <Text style={s.redFlagTitle}>{rf.title}</Text>
+            <Text style={[s.redFlagTitle, { color: theme.surface.t1 }]}>{rf.title}</Text>
           </View>
-          <Text style={s.redFlagDetail}>{rf.detail}</Text>
+          <Text style={[s.redFlagDetail, { color: theme.surface.t2 }]}>{rf.detail}</Text>
         </View>
       ))}
     </View>
@@ -214,6 +217,7 @@ function VendorCard({ vendor, onFixPress, pinned }: {
   onFixPress?: (vendorName: string, issue: { title: string; fix: string; lift: number }) => void;
   pinned?: boolean;
 }) {
+  const theme = useResolvedTheme();
   const [expanded, setExpanded] = useState(!!pinned);
   const color = scoreColor(vendor.composite.value);
   const ev = vendor.extraction_view;
@@ -226,7 +230,7 @@ function VendorCard({ vendor, onFixPress, pinned }: {
   const lift = vendor.forecast_if_all_fixed - vendor.composite.value;
 
   return (
-    <Pressable onPress={() => setExpanded(e => !e)} style={[s.vendorCard, pinned && s.vendorCardPinned]}>
+    <Pressable onPress={() => setExpanded(e => !e)} style={[s.vendorCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }, pinned && s.vendorCardPinned]}>
       {pinned && (
         <View style={s.pinnedBadge}>
           <Ionicons name="pin" size={10} color="#FFFFFF" />
@@ -236,8 +240,8 @@ function VendorCard({ vendor, onFixPress, pinned }: {
       {/* Header */}
       <View style={s.vendorHeader}>
         <View style={{ flex: 1 }}>
-          <Text style={s.vendorName}>{vendor.vendor_display}</Text>
-          <Text style={s.vendorNotes} numberOfLines={expanded ? undefined : 1}>
+          <Text style={[s.vendorName, { color: theme.surface.t1 }]}>{vendor.vendor_display}</Text>
+          <Text style={[s.vendorNotes, { color: theme.surface.t3 }]} numberOfLines={expanded ? undefined : 1}>
             {vendor.notes}
           </Text>
         </View>
@@ -345,18 +349,19 @@ function VendorCard({ vendor, onFixPress, pinned }: {
       )}
 
       <View style={s.vendorCollapseHint}>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.t3} />
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={theme.surface.t3} />
       </View>
     </Pressable>
   );
 }
 
 function FactorBar({ label, score }: { label: string; score: number }) {
+  const theme = useResolvedTheme();
   const color = scoreColor(score);
   return (
     <View style={s.factorBarCol}>
-      <Text style={s.factorBarLabel}>{label}</Text>
-      <View style={s.factorBarTrack}>
+      <Text style={[s.factorBarLabel, { color: theme.surface.t3 }]}>{label}</Text>
+      <View style={[s.factorBarTrack, { backgroundColor: theme.surface.border }]}>
         <View style={[s.factorBarFill, { width: `${Math.max(0, Math.min(100, score))}%`, backgroundColor: color }]} />
       </View>
       <Text style={[s.factorBarValue, { color }]}>{Math.round(score)}</Text>
@@ -370,6 +375,7 @@ function GlobalFixList({ issues, onFixPress }: {
   issues: ATSScoreV2['issues'];
   onFixPress?: (iss: ATSScoreV2['issues'][0]) => void;
 }) {
+  const theme = useResolvedTheme();
   const ranked = useMemo(
     () => [...issues].sort(
       (a, b) => {
@@ -383,35 +389,35 @@ function GlobalFixList({ issues, onFixPress }: {
 
   if (ranked.length === 0) {
     return (
-      <View style={s.allClearWrap}>
+      <View style={[s.allClearWrap, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         <Ionicons name="checkmark-circle" size={18} color={GREEN} />
-        <Text style={s.allClearText}>No blocking issues detected. Your resume parses cleanly.</Text>
+        <Text style={[s.allClearText, { color: theme.surface.t1 }]}>No blocking issues detected. Your resume parses cleanly.</Text>
       </View>
     );
   }
 
   return (
     <View style={s.globalFixWrap}>
-      <Text style={s.sectionLabel}>YOUR TOP FIXES (RANKED BY IMPACT)</Text>
+      <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>YOUR TOP FIXES (RANKED BY IMPACT)</Text>
       {ranked.map((iss, i) => {
         const lifts = Object.entries(iss.lift_per_vendor || {}).filter(([, v]) => v > 0);
         const total = lifts.reduce((sum, [, v]) => sum + v, 0);
         return (
           <Pressable
             key={`${iss.id}-${i}`}
-            style={s.globalFixCard}
+            style={[s.globalFixCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
             onPress={() => onFixPress && onFixPress(iss)}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <View style={[s.rankBadge, { backgroundColor: severityColor(iss.severity) + '20' }]}>
                 <Text style={[s.rankBadgeText, { color: severityColor(iss.severity) }]}>{i + 1}</Text>
               </View>
-              <Text style={s.globalFixTitle} numberOfLines={2}>{iss.title}</Text>
+              <Text style={[s.globalFixTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{iss.title}</Text>
               <View style={[s.fixLiftPill, { backgroundColor: GREEN + '18', marginLeft: 8 }]}>
                 <Text style={[s.fixLiftText, { color: GREEN }]}>+{Math.round(total / Math.max(lifts.length, 1))}</Text>
               </View>
             </View>
-            <Text style={s.globalFixBody} numberOfLines={3}>{iss.fix}</Text>
+            <Text style={[s.globalFixBody, { color: theme.surface.t2 }]} numberOfLines={3}>{iss.fix}</Text>
             {lifts.length > 0 && (
               <View style={s.liftChipRow}>
                 {lifts.slice(0, 4).map(([vkey, lift]) => (
