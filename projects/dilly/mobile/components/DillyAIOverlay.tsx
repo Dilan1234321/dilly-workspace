@@ -679,7 +679,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           {/* Header */}
-          <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+          <View style={[s.header, { paddingTop: insets.top + 10, borderBottomColor: theme.surface.border }]}>
             <View style={s.wordmark}>
               {/* Removed the "AI" wordmark next to the logo — the
                   surface is already clearly the chat overlay (input,
@@ -795,7 +795,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 ) : (
                   <View style={s.assistantBlock}>
                     <View style={s.msgRow}>
-                      <View style={s.assistantDot} />
+                      <View style={[s.assistantDot, { backgroundColor: theme.accent }]} />
                       <View style={[s.assistantBubble, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
                         <RichText text={msg.content} baseStyle={[s.msgText, { color: theme.surface.t1 }]} />
                       </View>
@@ -903,7 +903,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           )}
 
           {/* Input */}
-          <View style={[s.inputBar, { paddingBottom: insets.bottom + 10 }]}>
+          <View style={[s.inputBar, { paddingBottom: insets.bottom + 10, borderTopColor: theme.surface.border }]}>
             <TextInput
               style={[s.input, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, color: theme.surface.t1 }]}
               placeholder={mode === 'practice' ? "Type your answer..." : "Ask Dilly anything..."}
