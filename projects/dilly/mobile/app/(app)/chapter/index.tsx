@@ -339,7 +339,14 @@ export default function ChapterSessionScreen() {
         body: JSON.stringify({
           // Map to the /ai/chat API shape.
           messages: nextHistory.map(m => ({ role: m.role, content: m.content })),
-          mode: 'coaching',
+          // Tag the mode so chat_thread_store can record this as a
+          // Chapter conversation (as opposed to a regular coaching
+          // chat). The history panel on the AI overlay uses the
+          // conv_id prefix 'chapter-' to prepend 'Chapter · ' to
+          // the entry title; mode='chapter' gives any future
+          // downstream analytics / filters a cleaner signal than
+          // having to re-parse the conv_id.
+          mode: 'chapter',
           // Tag the conv as a Chapter question conv so flush extraction
           // associates facts with the right session.
           conv_id: `chapter-${chapter?.id || 'session'}-q`,
