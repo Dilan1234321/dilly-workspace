@@ -35,7 +35,7 @@ import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch } from '../../lib/sessionCache';
 import { applyPathOverrides } from '../../lib/pathCategories';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
-import { useResolvedTheme } from '../../hooks/useTheme';
+import { useResolvedTheme, ResolvedTheme } from '../../hooks/useTheme';
 import { useExtractionState } from '../../hooks/useExtractionPending';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
@@ -152,6 +152,119 @@ function StrengthRing({ pct, size = 56 }: { pct: number; size?: number }) {
 }
 
 // ── Fact Row (measures own position for inline popup) ────────────────────────
+
+/**
+ * PulseTimelineSection — chronological feed of the user's daily
+ * pulse entries. Hits /pulse/history, renders up to 20 as a
+ * simple list with date + mood + response. Expands on tap to show
+ * the full text; collapsed rows show 2 lines. No LLM, no
+ * pagination beyond the first 20 (users who want more deserve a
+ * dedicated 'all pulses' screen later).
+ */
+function PulseTimelineSection({ theme }: { theme: ResolvedTheme }) {
+  interface PulseEntry {
+    id: string;
+    date: string;
+    prompt: string;
+    response: string;
+    mood?: string | null;
+  }
+  const [entries, setEntries] = useState<PulseEntry[] | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await dilly.get('/pulse/history?limit=20') as any;
+        if (Array.isArray(r?.entries)) setEntries(r.entries);
+        else setEntries([]);
+      } catch {
+        setEntries([]);
+      }
+    })();
+  }, []);
+
+  if (entries === null) return null;
+  if (entries.length === 0) return null;
+
+  const relativeDate = (iso: string): string => {
+    try {
+      const d = new Date(iso.slice(0, 10) + 'T00:00:00');
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const diff = Math.round((now.getTime() - d.getTime()) / 86400000);
+      if (diff === 0) return 'Today';
+      if (diff === 1) return 'Yesterday';
+      if (diff < 7) return `${diff}d ago`;
+      if (diff < 30) return `${Math.floor(diff / 7)}w ago`;
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch { return ''; }
+  };
+
+  return (
+    <>
+      <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR PULSES</Text>
+      <View style={{ gap: 6 }}>
+        {entries.map(e => {
+          const expanded = expandedId === e.id;
+          return (
+            <AnimatedPressable
+              key={e.id}
+              onPress={() => setExpandedId(expanded ? null : e.id)}
+              scaleDown={0.98}
+              style={{
+                backgroundColor: theme.surface.s1,
+                borderColor: theme.surface.border,
+                borderWidth: 1,
+                borderRadius: 10,
+                padding: 12,
+                flexDirection: 'column',
+                gap: 6,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{
+                  width: 6, height: 6, borderRadius: 3, backgroundColor: theme.accent,
+                }} />
+                <Text style={{
+                  fontSize: 11, fontWeight: '700', color: theme.surface.t3,
+                  letterSpacing: 0.5,
+                }}>
+                  {relativeDate(e.date)}
+                </Text>
+                {e.mood ? (
+                  <View style={{
+                    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8,
+                    backgroundColor: theme.accentSoft, borderColor: theme.accentBorder, borderWidth: 1,
+                  }}>
+                    <Text style={{ fontSize: 9, fontWeight: '700', color: theme.accent, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                      {e.mood}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text
+                style={{
+                  fontSize: 13, lineHeight: 19,
+                  color: theme.surface.t2, fontStyle: 'italic',
+                }}
+                numberOfLines={expanded ? undefined : 1}
+              >
+                {e.prompt}
+              </Text>
+              <Text
+                style={{ fontSize: 14, lineHeight: 20, color: theme.surface.t1 }}
+                numberOfLines={expanded ? undefined : 2}
+              >
+                {e.response}
+              </Text>
+            </AnimatedPressable>
+          );
+        })}
+      </View>
+    </>
+  );
+}
 
 function FactRow({ fact, color, onPress }: { fact: FactItem; color: string; onPress: (anchor: { x: number; y: number }) => void }) {
   const rowRef = useRef<View>(null);
@@ -1737,6 +1850,16 @@ function SeekerProfileScreen() {
             )}
           </View>
         </FadeInView>
+        {/* ── 6. Pulse timeline ─────────────────────────────────
+            Surfaces the user's daily pulse reflections as a
+            chronological body of work. Makes the daily habit
+            visible — users can see how they were feeling two weeks
+            ago, what they were working on a month back. Zero LLM.
+            Hides entirely when no pulses exist yet. */}
+        <FadeInView delay={380}>
+          <PulseTimelineSection theme={theme} />
+        </FadeInView>
+
         {/* ── 7. My Resumes ──────────────────────────────────── */}
         {resumes.length > 0 && (
           <FadeInView delay={400}>
