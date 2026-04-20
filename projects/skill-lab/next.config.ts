@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    // Next 16 Cache Components — opt in so we can use 'use cache' directives
-    // for cohort pages and video lists.
-    cacheComponents: true,
+  // Silence the multi-lockfile warning — this project's root is skill-lab/,
+  // not the monorepo root.
+  turbopack: {
+    root: path.resolve(__dirname),
   },
   images: {
     remotePatterns: [
