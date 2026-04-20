@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import AnimatedPressable from '../../../components/AnimatedPressable';
+import { scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
 
 const DAYS = [
   { idx: 0, label: 'Mon' },
@@ -72,6 +73,10 @@ export default function ChapterScheduleScreen() {
         body: JSON.stringify({ day_of_week: day, hour }),
       });
       if (res.ok) {
+        // Reschedule local notifications now that the cadence changed.
+        // Fire-and-forget; a notification error should never block the
+        // user from going back.
+        scheduleChapterNotifications({ day_of_week: day, hour, next_override_at: null }).catch(() => {});
         router.back();
       } else {
         Alert.alert('Not now', 'Could not save your schedule right now.');

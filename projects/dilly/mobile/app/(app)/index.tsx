@@ -16,6 +16,7 @@ import { useRecentUpgrade } from '../../hooks/useRecentUpgrade';
 import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
+import { scheduleChapterNotifications } from '../../hooks/useChapterNotifications';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -1021,6 +1022,17 @@ function SeekerHome() {
     }, [])
   );
 
+  // Refresh Chapter state when the user returns to Home. Covers the
+  // "opened a Chapter, came back, card still says Ready" case.
+  useFocusEffect(
+    useCallback(() => {
+      dilly.get('/chapters/current').then((data: ChapterCardState | null) => {
+        if (data) setChapterState(data);
+      }).catch(() => {});
+      return () => {};
+    }, [])
+  );
+
   // Load data
   useEffect(() => {
     (async () => {
@@ -1094,9 +1106,16 @@ function SeekerHome() {
         }).catch(() => {});
 
         // Chapter (weekly scheduled session) state. Single cheap GET,
-        // no LLM. Drives the ChapterCard on Home.
+        // no LLM. Drives the ChapterCard on Home. After we learn the
+        // user's schedule, re-arm local notifications so "Chapter ready"
+        // fires even if they haven't opened the schedule page in weeks.
         dilly.get('/chapters/current').then((data: ChapterCardState | null) => {
-          if (data) setChapterState(data);
+          if (data) {
+            setChapterState(data);
+            if (data.has_access && data.schedule) {
+              scheduleChapterNotifications(data.schedule).catch(() => {});
+            }
+          }
         }).catch(() => {});
 
         // Top jobs

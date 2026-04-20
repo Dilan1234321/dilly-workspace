@@ -26,6 +26,7 @@ import { useResolvedTheme } from '../../../hooks/useTheme';
 import { openDillyOverlay } from '../../../hooks/useDillyOverlay';
 import { DillyFace } from '../../../components/DillyFace';
 import AnimatedPressable from '../../../components/AnimatedPressable';
+import { cancelMissReminder, scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
 
 interface Screen { slot: string; body: string; }
 interface Chapter { title: string; screens: Screen[]; generated_at?: string; fetched_at?: string; }
@@ -60,6 +61,15 @@ export default function ChapterSessionScreen() {
           if (res.ok) {
             const body = await res.json();
             setChapter(body);
+            // Successful generation means this cycle is done. Cancel
+            // the nag-24h-later reminder and re-arm notifications for
+            // the NEXT cycle based on the schedule (server clears any
+            // one-time override on generate so cadence is back to
+            // normal). Fire-and-forget.
+            cancelMissReminder().catch(() => {});
+            if (cur?.schedule) {
+              scheduleChapterNotifications({ ...cur.schedule, next_override_at: null }).catch(() => {});
+            }
           } else if (cur?.latest) {
             setChapter(cur.latest);
           } else {
@@ -67,6 +77,9 @@ export default function ChapterSessionScreen() {
           }
         } else if (cur?.latest) {
           setChapter(cur.latest);
+          // Replay. The user opened what they already had, which means
+          // we should also drop the 24h-miss nag for good measure.
+          cancelMissReminder().catch(() => {});
         } else {
           setError("You don't have a Chapter yet. Come back at your scheduled time.");
         }
