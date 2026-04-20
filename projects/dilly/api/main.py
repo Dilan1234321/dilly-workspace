@@ -161,9 +161,11 @@ from projects.dilly.api.routers import interview_feedback as interview_feedback_
 from projects.dilly.api.routers import insights as insights_router
 from projects.dilly.api.routers import weekly_brief as weekly_brief_router
 from projects.dilly.api.routers import aha_signals as aha_signals_router
+from projects.dilly.api.routers import chapters as chapters_router
 from projects.dilly.api.routers import cron_jobs_cleanup
 app.include_router(cron_jobs_cleanup.router)
 app.include_router(aha_signals_router.router)
+app.include_router(chapters_router.router)
 app.include_router(auth_router.router)
 app.include_router(recruiter_router.router)
 app.include_router(profile_router.router)

@@ -323,6 +323,7 @@ class FEATURES:
     AI_ARENA              = "ai_arena"
     WEEKLY_BRIEF          = "weekly_brief"
     WWT_LETTER            = "wwt_letter"
+    CHAPTER               = "chapter"          # weekly scheduled session
     THREAT_SCAN           = "threat_scan"
     AUDIT                 = "audit"
     JOBS_NARRATIVE        = "jobs_narrative"

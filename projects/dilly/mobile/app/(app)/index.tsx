@@ -15,6 +15,7 @@ import { useTierFeel } from '../../hooks/useTierFeel';
 import { useRecentUpgrade } from '../../hooks/useRecentUpgrade';
 import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
+import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -987,6 +988,10 @@ function SeekerHome() {
   // Counts toward the "Save your first job" onboarding step so the
   // checkmark flips after saving, not after applying.
   const [savedJobCount, setSavedJobCount] = useState(0);
+  // Chapter (weekly scheduled session) state. Fed to ChapterCard.
+  // Null until the first fetch lands; the card renders a quiet
+  // skeleton in that window.
+  const [chapterState, setChapterState] = useState<ChapterCardState | null>(null);
   // Weekly brief. personalized Monday-morning card with a headline +
   // 3 bullets + deep links. Fetched on mount, cached server-side per
   // ISO week. Cheap to fetch (no LLM call).
@@ -1086,6 +1091,12 @@ function SeekerHome() {
           const cols = Array.isArray(data) ? data : (data?.collections || []);
           const total = cols.reduce((n: number, c: any) => n + (Array.isArray(c?.jobs) ? c.jobs.length : 0), 0);
           setSavedJobCount(total);
+        }).catch(() => {});
+
+        // Chapter (weekly scheduled session) state. Single cheap GET,
+        // no LLM. Drives the ChapterCard on Home.
+        dilly.get('/chapters/current').then((data: ChapterCardState | null) => {
+          if (data) setChapterState(data);
         }).catch(() => {});
 
         // Top jobs
@@ -1262,6 +1273,15 @@ function SeekerHome() {
             the rest of the app is where it gets executed. */}
         <FadeInView delay={10}>
           <YourPlanCard plan={plan} firstName={firstName} />
+        </FadeInView>
+
+        {/* Chapter card. The weekly scheduled session with Dilly.
+            Renders one of seven evolving states depending on plan
+            tier, profile depth, schedule, and whether a new Chapter
+            is due right now. Sits right under the Your Plan anchor
+            so the weekly ritual is a visible part of Home. */}
+        <FadeInView delay={15}>
+          <ChapterCard state={chapterState} theme={theme} />
         </FadeInView>
 
         {/* ── Situation hero card ─────────────────────────────
@@ -1578,9 +1598,11 @@ function SeekerHome() {
           <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>QUICK TOOLS</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.toolRow}>
             {[
+              // "What We Think" removed. It was an on-demand LLM button that
+              // could be hammered. Replaced with the weekly Chapters ritual
+              // surfaced via ChapterCard higher up on Home.
               { icon: 'sparkles' as const, color: colors.indigo, label: 'Generate', onPress: () => router.push('/(app)/resume-generate') },
               { icon: 'clipboard' as const, color: colors.gold, label: 'Tracker', onPress: () => router.push('/(app)/internship-tracker') },
-              { icon: 'chatbubbles' as const, color: colors.green, label: 'What We Think', onPress: () => router.push('/(app)/feedback') },
               { icon: 'mic' as const, color: '#AF52DE', label: 'Interview', onPress: () => router.push('/(app)/interview-practice') },
               { icon: 'calendar' as const, color: colors.blue, label: 'Calendar', onPress: () => router.push('/(app)/calendar' as any) },
               { icon: 'shield-checkmark' as const, color: '#00C853', label: 'AI Arena', onPress: () => router.push('/(app)/ai-arena') },
