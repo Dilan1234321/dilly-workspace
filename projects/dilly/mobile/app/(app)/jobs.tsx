@@ -430,6 +430,7 @@ function DillyScanPulse({ totalJobs, matchesFound, title, sub }: {
   title?: string;
   sub?: string;
 }) {
+  const theme = useResolvedTheme();
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const ringRotate = useRef(new Animated.Value(0)).current;
 
@@ -451,11 +452,12 @@ function DillyScanPulse({ totalJobs, matchesFound, title, sub }: {
 
   return (
     <View style={scan.wrap}>
-      {/* Ambient animated rings */}
+      {/* Ambient animated rings. Colored from the user's accent so
+          the pulse, ring, and core all follow Customize Dilly. */}
       <View style={scan.orbWrap}>
-        <Animated.View style={[scan.orbPulse, { transform: [{ scale }], opacity }]} />
-        <Animated.View style={[scan.orbRing, { transform: [{ rotate }] }]} />
-        <View style={scan.orbCore}>
+        <Animated.View style={[scan.orbPulse, { backgroundColor: theme.accent, transform: [{ scale }], opacity }]} />
+        <Animated.View style={[scan.orbRing, { borderColor: theme.accent, transform: [{ rotate }] }]} />
+        <View style={[scan.orbCore, { backgroundColor: theme.accent, shadowColor: theme.accent }]}>
           <Ionicons name="sparkles" size={14} color="#fff" />
         </View>
       </View>
@@ -1480,19 +1482,21 @@ export default function JobsScreen() {
         </View>
       </View>
 
-      {/* Dilly scanning pulse. convinces the user the AI is actively
-          working the market for them in real time. Extra bottom padding
-          gives breathing room between the pulse and the search bar. */}
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: 6, paddingBottom: 14 }}>
-        <DillyScanPulse
-          totalJobs={Math.max(listings.length * 23, 1200)}
-          matchesFound={filtered.length}
-          title={isHolder ? 'Dilly is tracking your market' : undefined}
-          sub={isHolder
-            ? `${filtered.length} role${filtered.length === 1 ? '' : 's'} like yours hiring from ${Math.max(listings.length * 23, 1200).toLocaleString()} live postings`
-            : undefined}
-        />
-      </View>
+      {/* Dilly scanning pulse — holder-only now. Seekers and students
+          said the scan banner felt like noise on top of the actual
+          job feed below, so we removed it for them. Holders keep
+          the "tracking your market" framing since their Jobs tab IS
+          a market-watch surface, not an apply feed. */}
+      {isHolder && (
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: 6, paddingBottom: 14 }}>
+          <DillyScanPulse
+            totalJobs={Math.max(listings.length * 23, 1200)}
+            matchesFound={filtered.length}
+            title="Dilly is tracking your market"
+            sub={`${filtered.length} role${filtered.length === 1 ? '' : 's'} like yours hiring from ${Math.max(listings.length * 23, 1200).toLocaleString()} live postings`}
+          />
+        </View>
+      )}
 
       {/* Powerful search: accepts natural-language queries like
           "remote Python jobs" or "AI research in SF". The front-end
@@ -1655,11 +1659,11 @@ export default function JobsScreen() {
             );
           })}
           <AnimatedPressable
-            style={[s.filterPill, fpBase, { borderStyle: 'dashed', borderColor: VIOLET + '50' }]}
+            style={[s.filterPill, fpBase, { borderStyle: 'dashed', borderColor: theme.accent + '50' }]}
             onPress={() => router.push('/(app)/my-dilly-profile' as any)}
             scaleDown={0.95}
           >
-            <Text style={[s.filterPillText, fpText,{ color: VIOLET, fontWeight: '700' }]}>+ Edit</Text>
+            <Text style={[s.filterPillText, fpText, { color: theme.accent, fontWeight: '700' }]}>+ Edit</Text>
           </AnimatedPressable>
         </ScrollView>
       )}

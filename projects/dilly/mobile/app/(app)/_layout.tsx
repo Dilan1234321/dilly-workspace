@@ -1,5 +1,6 @@
 import { Tabs, usePathname, router } from 'expo-router';
-import { View } from 'react-native';
+import { View, Animated, Easing } from 'react-native';
+import { useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../lib/tokens';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -103,32 +104,62 @@ function AppLayoutInner() {
   const navBarBg = onAIArena ? '#111827' : theme.surface.bg;
   const navBarBorder = onAIArena ? '#1F2937' : theme.surface.border;
   const navInactiveIcon = onAIArena ? 'rgba(255,255,255,0.55)' : theme.surface.t3;
-  const navActivePill = onAIArena ? 'rgba(255,255,255,0.12)' : theme.accentSoft;
   const navActiveIcon = onAIArena ? '#ffffff' : theme.accent;
+
+  // Icon component with a subtle pop animation when focused changes
+  // to true. Scale bounces 1 -> 1.2 -> 1 over ~260ms using a cubic
+  // ease, which reads as "something just happened" without being
+  // cartoony. Focused state changes on tab press, so this fires
+  // every time the user navigates.
+  //
+  // No pill background — the user asked for the transparent outside
+  // bg to go. Active state is conveyed by filled vs outline icon +
+  // color change alone.
+  const TabIcon = ({
+    focused,
+    iconActive,
+    iconInactive,
+  }: {
+    focused: boolean;
+    iconActive: keyof typeof Ionicons.glyphMap;
+    iconInactive: keyof typeof Ionicons.glyphMap;
+  }) => {
+    const scale = useRef(new Animated.Value(1)).current;
+    useEffect(() => {
+      if (!focused) return;
+      Animated.sequence([
+        Animated.timing(scale, { toValue: 1.2, duration: 130, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 130, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    }, [focused, scale]);
+
+    return (
+      <Animated.View
+        style={{
+          width: 60,
+          height: 44,
+          alignItems: 'center',
+          justifyContent: 'center',
+          // Nudge down a touch so the icon centers inside the tab
+          // bar's padding. iOS gives ~6-8px top padding to tab icons.
+          marginTop: -2,
+          transform: [{ scale }],
+        }}
+      >
+        <Ionicons
+          name={focused ? iconActive : iconInactive}
+          size={32}
+          color={focused ? navActiveIcon : navInactiveIcon}
+        />
+      </Animated.View>
+    );
+  };
 
   const renderTabIcon = (
     iconActive: keyof typeof Ionicons.glyphMap,
     iconInactive: keyof typeof Ionicons.glyphMap,
   ) => ({ focused }: { focused: boolean; color: string }) => (
-    <View
-      style={{
-        width: 60,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: focused ? navActivePill : 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-        // Nudge down a touch so the pill centers inside the tab
-        // bar's padding. iOS gives ~6-8px top padding to tab icons.
-        marginTop: -2,
-      }}
-    >
-      <Ionicons
-        name={focused ? iconActive : iconInactive}
-        size={32}
-        color={focused ? navActiveIcon : navInactiveIcon}
-      />
-    </View>
+    <TabIcon focused={focused} iconActive={iconActive} iconInactive={iconInactive} />
   );
 
   return (

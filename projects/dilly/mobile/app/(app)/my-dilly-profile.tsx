@@ -167,9 +167,17 @@ function FactRow({ fact, color, onPress }: { fact: FactItem; color: string; onPr
 
 function SkillTag({ skill, conf, onPress }: { skill: FactItem; conf: number; onPress: (anchor: { x: number; y: number }) => void }) {
   const tagRef = useRef<View>(null);
+  const theme = useResolvedTheme();
   return (
     <AnimatedPressable
-      style={[d.skillTag, { opacity: 0.5 + conf * 0.5 }]}
+      style={[
+        d.skillTag,
+        {
+          opacity: 0.5 + conf * 0.5,
+          backgroundColor: theme.accent + '14',
+          borderColor: theme.accent + '33',
+        },
+      ]}
       onPress={() => {
         tagRef.current?.measureInWindow((x, y, w, h) => {
           onPress({ x: x + w / 2, y: y + h });
@@ -177,8 +185,11 @@ function SkillTag({ skill, conf, onPress }: { skill: FactItem; conf: number; onP
       }}
       scaleDown={0.95}
     >
-      <View ref={tagRef}>
-        <Text style={[d.skillTagText, { fontSize: 11 + conf * 3 }]}>{skill.label || skill.value}</Text>
+      <View ref={tagRef} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Text style={[d.skillTagText, { fontSize: 11 + conf * 3, color: theme.accent }]}>{skill.label || skill.value}</Text>
+        {/* Tiny pencil glyph so users know the tag is editable.
+            Faint on purpose — it's an affordance cue, not a button. */}
+        <Ionicons name="create-outline" size={10} color={theme.accent} style={{ opacity: 0.55 }} />
       </View>
     </AnimatedPressable>
   );
@@ -601,7 +612,7 @@ function SeekerProfileScreen() {
             setEditMode(true);
           }
         }} scaleDown={0.95} hitSlop={8}>
-          <Text style={{ fontSize: 13, fontWeight: '600', color: editMode ? colors.green : colors.indigo }}>{editMode ? 'Save' : 'Edit'}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: editMode ? colors.green : theme.accent }}>{editMode ? 'Save' : 'Edit'}</Text>
         </AnimatedPressable>
         <Text style={[d.headerTitle, {
           color: theme.surface.t1,
@@ -616,7 +627,7 @@ function SeekerProfileScreen() {
             disabled={!readableSlug}
             style={{ opacity: readableSlug ? 1 : 0.35 }}
           >
-            <Ionicons name="qr-code" size={20} color={colors.indigo} />
+            <Ionicons name="qr-code" size={20} color={theme.accent} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/(app)/settings')} hitSlop={12}>
             <Ionicons name="settings-outline" size={20} color={colors.t3} />
@@ -1190,7 +1201,7 @@ function SeekerProfileScreen() {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Ionicons name="globe-outline" size={18} color={colors.indigo} />
+                <Ionicons name="globe-outline" size={18} color={theme.accent} />
                 <Text style={{ fontSize: 15, fontWeight: '700', color: colors.t1 }}>Your Public Profile</Text>
               </View>
               <Ionicons name={showWebProfile ? 'chevron-up' : 'chevron-down'} size={16} color={colors.t3} />

@@ -1404,7 +1404,12 @@ function SeekerHome() {
           </FadeInView>
         )}
 
-        {/* DillyFace + message */}
+        {/* DillyFace + message.
+            Message is rendered as a pull-quote, not body copy. Big
+            serif display type, italic, ornamental opening accent
+            quote mark. Reads as something Dilly said, not status
+            text. Kept tap-to-open-chat so the whole block is still
+            an interactive surface. */}
         <FadeInView delay={60}>
           <View style={{ alignItems: 'center', marginVertical: 16 }}>
             <DillyFace size={showJourney ? 100 : 80} />
@@ -1417,13 +1422,61 @@ function SeekerHome() {
             })}
             scaleDown={0.99}
           >
-            <Text style={[s.dillyMessage, { color: theme.surface.t1 }]}>
-              {showJourney
-                ? `Hey ${firstName || 'there'}, let me get to know you so I can help you land your next opportunity.`
-                : dillyTake
-                  ? `Hey ${firstName || 'there'}, ${dillyTake.charAt(0).toLowerCase()}${dillyTake.slice(1)}`
-                  : situationCopy.greetingResolved}
-            </Text>
+            <View style={{ paddingHorizontal: 28, alignItems: 'center', marginTop: 4 }}>
+              {/* Ornamental opening quote. Big, accent-colored, sits
+                  above the line so the quote reads as ambient art. */}
+              <Text
+                style={{
+                  fontSize: 46,
+                  lineHeight: 36,
+                  color: theme.accent,
+                  fontFamily: theme.type.display,
+                  fontWeight: '900',
+                  opacity: 0.85,
+                  marginBottom: -4,
+                }}
+              >
+                {'\u201C'}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 19,
+                  lineHeight: 28,
+                  color: theme.surface.t1,
+                  fontFamily: theme.type.display,
+                  fontWeight: '600',
+                  fontStyle: 'italic',
+                  letterSpacing: -0.2,
+                  textAlign: 'center',
+                }}
+              >
+                {showJourney ? (
+                  <>
+                    Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName || 'there'}</Text>, let me get to know you so I can help you land your next opportunity.
+                  </>
+                ) : dillyTake ? (
+                  <>
+                    Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName || 'there'}</Text>, {dillyTake.charAt(0).toLowerCase()}{dillyTake.slice(1)}
+                  </>
+                ) : (
+                  situationCopy.greetingResolved
+                )}
+              </Text>
+              {/* Tiny byline underneath. Names who said it — it's a
+                  quote from Dilly, so the attribution earns the
+                  ornament. */}
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 2,
+                  color: theme.surface.t3,
+                  marginTop: 10,
+                }}
+              >
+                {'\u2014 '}DILLY
+              </Text>
+            </View>
           </AnimatedPressable>
           <AnimatedPressable
             style={[s.talkBtn, { backgroundColor: theme.accent }]}
@@ -1734,7 +1787,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: spacing.xl },
 
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   headerName: { fontSize: 18, fontWeight: '800', color: colors.t1 },
   headerSub: { fontSize: 12, color: colors.t3, marginTop: 2 },
 

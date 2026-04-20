@@ -698,7 +698,7 @@ export default function SettingsScreen() {
                   <Ionicons name="camera" size={24} color={colors.t3} />
                 </View>
               )}
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.indigo }}>Change photo</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>Change photo</Text>
             </AnimatedPressable>
             <Divider />
             <Row label="Name" value={name || 'Not set'} />

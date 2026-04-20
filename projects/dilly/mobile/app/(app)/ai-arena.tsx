@@ -755,7 +755,7 @@ export default function AIArenaScreen() {
                   <Text style={a.expandedSub}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
                   {!scanResults && !scanLoading && (
                     <AnimatedPressable style={a.actionBtn} onPress={runScan} scaleDown={0.97}>
-                      <Ionicons name="flash" size={16} color="#fff" />
+                      <Ionicons name="flash" size={16} color="#0B1426" />
                       <Text style={a.actionBtnText}>Scan My Profile</Text>
                     </AnimatedPressable>
                   )}
@@ -1320,7 +1320,11 @@ const a = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: ACCENT,
   },
-  actionBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  // Dark text because ACCENT is near-white (#F0F0F0). White-on-white
+  // made "Scan My Profile" disappear. Navy picks up enough contrast
+  // against both the near-white ACCENT and the AMBER variant that
+  // some action buttons override to.
+  actionBtnText: { fontSize: 14, fontWeight: '700', color: '#0B1426' },
 
   // Input
   input: {
