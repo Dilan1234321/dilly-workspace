@@ -64,7 +64,17 @@ export default function CustomizeStudio() {
   const dirty = JSON.stringify(pending) !== JSON.stringify(committed);
 
   function patch(p: Partial<ThemeConfig>) {
-    setPending(prev => ({ ...prev, ...p }));
+    // Apply to the live global theme immediately so the navbar and
+    // any other already-mounted surface (the DillyAI overlay, the
+    // Home card underneath a modal, etc.) flash the new choice in
+    // real time. `pending` still tracks the edit so the Save/Cancel
+    // UI stays meaningful: tapping the X will revert on navigation
+    // back (the committed config rehydrates).
+    setPending(prev => {
+      const next = { ...prev, ...p };
+      patchTheme(p).catch(() => {});
+      return next;
+    });
   }
 
   async function handleSave() {

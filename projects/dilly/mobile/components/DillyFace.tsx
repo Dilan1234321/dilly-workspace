@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { Animated, Easing } from 'react-native'
+import { Animated, Easing, View } from 'react-native'
 import Svg, { Circle, Path, G, Line, Rect } from 'react-native-svg'
 import { useResolvedTheme } from '../hooks/useTheme'
 
@@ -227,16 +227,16 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     outputRange: ['-10deg', '10deg'],
   })
 
-  // Accent-colored perimeter ring behind Dilly. Rendered on the
-  // Animated.View (not inside the SVG) so the ring stays stationary
-  // even while the face drifts/tilts inside it. Reads the theme
-  // accent so it follows Customize. Stroke width scales with size
-  // so a 32pt mini Dilly gets a subtle 1.5px ring and a 120pt hero
-  // gets a proportional 3px ring.
+  // Accent-colored perimeter ring behind Dilly. The ring + fill must
+  // stay STATIC — only the face (eyes/smile/tilt) inside should move.
+  // So the ring goes on an outer View with no transforms, and the
+  // face SVG sits inside an Animated.View that carries the drift
+  // and tilt. Reading from theme so the ring follows Customize.
+  // Stroke width scales with size: 1.5px min, ~3px on hero.
   const ringBorder = Math.max(1.5, Math.round(size * 0.025))
 
   return (
-    <Animated.View
+    <View
       style={{
         width: size,
         height: size,
@@ -246,13 +246,20 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
         backgroundColor: theme.accentSoft,
         alignItems: 'center',
         justifyContent: 'center',
-        transform: [
-          { translateX: posX },
-          { translateY: posY },
-          { rotate: tiltRotate },
-        ],
+        overflow: 'hidden',
       }}
     >
+      <Animated.View
+        style={{
+          width: size,
+          height: size,
+          transform: [
+            { translateX: posX },
+            { translateY: posY },
+            { rotate: tiltRotate },
+          ],
+        }}
+      >
       <Svg width={size} height={size}>
         <EyesAndSmile
           cx={cx}
@@ -276,7 +283,8 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
           />
         )}
       </Svg>
-    </Animated.View>
+      </Animated.View>
+    </View>
   )
 }
 
