@@ -17,6 +17,7 @@ import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
 import { scheduleChapterNotifications } from '../../hooks/useChapterNotifications';
+import { useExtractionState } from '../../hooks/useExtractionPending';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -1032,6 +1033,18 @@ function SeekerHome() {
       return () => {};
     }, [])
   );
+
+  // Also refresh when Dilly AI extraction completes. Users who
+  // talk to Dilly to push past the 20-fact Chapter gate need the
+  // card to unlock the moment extraction lands, not on cold
+  // reload.
+  const chapterExtraction = useExtractionState();
+  useEffect(() => {
+    if (chapterExtraction.seq === 0) return;
+    dilly.get('/chapters/current').then((data: ChapterCardState | null) => {
+      if (data) setChapterState(data);
+    }).catch(() => {});
+  }, [chapterExtraction.seq]);
 
   // Load data
   useEffect(() => {

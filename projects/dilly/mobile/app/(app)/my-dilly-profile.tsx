@@ -35,6 +35,7 @@ import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch } from '../../lib/sessionCache';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useResolvedTheme } from '../../hooks/useTheme';
+import { useExtractionState } from '../../hooks/useExtractionPending';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
@@ -477,6 +478,18 @@ function SeekerProfileScreen() {
 
   // Re-fetch when tab becomes active (after AI conversation adds new facts)
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
+
+  // Re-fetch whenever the Dilly AI overlay finishes extracting new
+  // facts. Without this, the user would close the overlay, land on
+  // My Dilly, and see the OLD fact count because the extraction
+  // /ai/chat/flush call runs async in the background after close.
+  // useExtractionState broadcasts a seq bump when flush resolves;
+  // we key off that to pull the fresh profile + memory.
+  const extraction = useExtractionState();
+  useEffect(() => {
+    if (extraction.seq === 0) return;
+    fetchData();
+  }, [extraction.seq, fetchData]);
 
   // Auto-retry if profile has zero facts (resume extraction may still be running)
   const retryRef = useRef(0);
