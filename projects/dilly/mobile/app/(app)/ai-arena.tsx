@@ -740,15 +740,19 @@ export default function AIArenaScreen() {
             ════════════════════════════════════════════════════════ */}
 
         {!isHolder && shield && shield.tools_unlocked === false ? (
-          /* Free tier gate. Tight "locked" card, no separate tools header. */
+          /* Free tier gate for LLM TOOLS ONLY. Skill Vault + Disruption
+             Index render below for everyone — they are profile-derived
+             and lookup-based, no LLM call. This card is about the tools
+             that DO call Haiku (Threat Scanner, Replace Me, Career Sim,
+             Firewall) which stay paid. */
           <FadeInView delay={80}>
             <View style={[nm.lockedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="lock-closed" size={14} color={theme.accent} />
-                <Text style={[nm.lockedTitle, { color: theme.surface.t1 }]}>AI TOOLS LOCKED</Text>
+                <Text style={[nm.lockedTitle, { color: theme.surface.t1 }]}>LIVE AI TOOLS LOCKED</Text>
               </View>
               <Text style={[nm.lockedBody, { color: theme.surface.t2 }]}>
-                Threat Scanner, Replace Me, Career Sim, and the rest are part of Dilly. Your next move above is always free.
+                Threat Scanner, Replace Me, Career Sim, and Firewall run live on your profile with Dilly. Your Skill Vault and Disruption Index below are always free.
               </Text>
               <AnimatedPressable
                 style={[nm.lockedBtn, { backgroundColor: theme.accent }]}
@@ -756,7 +760,7 @@ export default function AIArenaScreen() {
                 scaleDown={0.97}
               >
                 <Ionicons name="sparkles" size={13} color="#0B1426" />
-                <Text style={nm.lockedBtnText}>Unlock with Dilly</Text>
+                <Text style={nm.lockedBtnText}>Unlock the live tools</Text>
               </AnimatedPressable>
             </View>
           </FadeInView>
@@ -984,38 +988,6 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* 4. Skill Vault */}
-        <FadeInView delay={520}>
-          <ToolRow icon="lock-closed" title="Skill Vault" sub="Your AI-proof skills vs the ones you need" color={GREEN} onPress={() => toggleFeature('vault')} active={activeFeature === 'vault'} />
-        </FadeInView>
-
-        {activeFeature === 'vault' && shield && (
-          <FadeInView delay={0}>
-            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Skill Vault</Text>
-              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>AI-proof skills for your field. Unlocked = in your profile. Locked = develop next.</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                {(shield.resistant_signals || []).slice(0, 5).map((s: string, i: number) => (
-                  <View key={`u-${i}`} style={[a.skillUnlocked, { backgroundColor: GREEN + '12', borderColor: GREEN + '40' }]}>
-                    <Ionicons name="lock-open" size={11} color={GREEN} />
-                    <Text style={[a.skillUnlockedText, { color: GREEN }]} numberOfLines={1}>{s.slice(0, 40)}</Text>
-                  </View>
-                ))}
-                {(shield.ai_resistant_skills || []).slice(0, 5).map((s: string, i: number) => (
-                  <AnimatedPressable key={`l-${i}`}
-                    style={[a.skillLocked, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
-                    onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `I need to develop "${s}" as an AI-proof skill. How do I build this and add it to my Dilly Profile?` })}
-                    scaleDown={0.95}>
-                    <Ionicons name="lock-closed" size={11} color={theme.surface.t3} />
-                    <Text style={[a.skillLockedText, { color: theme.surface.t2 }]} numberOfLines={1}>{s}</Text>
-                    <Ionicons name="sparkles" size={9} color={theme.accent} style={{ opacity: 0.6 }} />
-                  </AnimatedPressable>
-                ))}
-              </View>
-            </View>
-          </FadeInView>
-        )}
-
         {/* 5. Firewall */}
         <FadeInView delay={540}>
           <ToolRow icon="shield-half" title="Firewall" sub="How would an AI recruiter judge you?" color={AMBER} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
@@ -1037,43 +1009,135 @@ export default function AIArenaScreen() {
           </FadeInView>
         )}
 
-        {/* 6. Disruption Index */}
-        <FadeInView delay={560}>
-          <ToolRow icon="bar-chart" title="Disruption Index" sub="How much AI is disrupting your field" color={AMBER} onPress={() => toggleFeature('index')} active={activeFeature === 'index'} />
-        </FadeInView>
-
-        {activeFeature === 'index' && shield && (
-          <FadeInView delay={0}>
-            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Displacement Index</Text>
-              <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-                <Text style={[a.bigNum, { color: disruptionPct >= 40 ? AMBER : disruptionPct >= 25 ? AMBER : GREEN }]}>{disruptionPct}%</Text>
-                <Text style={{ fontSize: 12, color: SUB }}>of entry-level {(shield.cohort || '').split(' ')[0]} roles disrupted</Text>
-              </View>
-              {shield.disruption_headline && (
-                <View style={a.quoteBox}><Text style={a.quoteText}>{shield.disruption_headline}</Text></View>
-              )}
-              {(shield.ai_resistant_skills?.length > 0 || shield.ai_vulnerable_skills?.length > 0) && (
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                  <View style={[a.compCol, { backgroundColor: GREEN + '08', borderColor: GREEN + '20' }]}>
-                    <Text style={[a.compLabel, { color: GREEN }]}>AI-PROOF</Text>
-                    {(shield.ai_resistant_skills || []).slice(0, 4).map((s: string, i: number) => (
-                      <Text key={i} style={a.compItem}>{s}</Text>
-                    ))}
-                  </View>
-                  <View style={[a.compCol, { backgroundColor: AMBER + '08', borderColor: AMBER + '20' }]}>
-                    <Text style={[a.compLabel, { color: AMBER }]}>AT RISK</Text>
-                    {(shield.ai_vulnerable_skills || []).slice(0, 4).map((s: string, i: number) => (
-                      <Text key={i} style={a.compItem}>{s}</Text>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
-          </FadeInView>
-        )}
         </>)}
         {/* /isHolder + tools_unlocked + showMoreTools gate on the drawer */}
+
+        {/* ════════════════════════════════════════════════════════
+            FREE TOOLS — render for EVERYONE (free + paid), non-holder.
+            Skill Vault + Disruption Index are profile-derived and
+            role-lookup-based respectively. Neither calls an LLM, so
+            there's no cost reason to gate them. Previously sat inside
+            the paid-only drawer; free users saw nothing. User asked
+            for this split: non-LLM tools are free, LLM tools stay paid.
+            ════════════════════════════════════════════════════════ */}
+
+        {!isHolder && shield ? (
+          <>
+            <FadeInView delay={600}>
+              <View style={nm.proveRow}>
+                <Text style={[nm.sectionEyebrow, { color: theme.surface.t3 }]}>FREE FOR YOU</Text>
+              </View>
+            </FadeInView>
+
+            {/* Skill Vault. Pure profile render. The locked-skill pill
+                used to openDillyOverlay({isPaid:true}) which would
+                trigger the paywall for free users — on free tier we
+                route to My Dilly Profile where the user can manually
+                add a fact for that skill. Paid users keep the chat
+                route so they can riff with Dilly about developing it. */}
+            <FadeInView delay={620}>
+              <ToolRow
+                icon="lock-closed"
+                title="Skill Vault"
+                sub="Your AI-proof skills vs the ones you need"
+                color={GREEN}
+                onPress={() => toggleFeature('vault')}
+                active={activeFeature === 'vault'}
+              />
+            </FadeInView>
+
+            {activeFeature === 'vault' && (
+              <FadeInView delay={0}>
+                <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                  <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Skill Vault</Text>
+                  <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>AI-proof skills for your field. Unlocked = in your profile. Locked = develop next.</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                    {(shield.resistant_signals || []).slice(0, 5).map((s: string, i: number) => (
+                      <View key={`u-${i}`} style={[a.skillUnlocked, { backgroundColor: GREEN + '12', borderColor: GREEN + '40' }]}>
+                        <Ionicons name="lock-open" size={11} color={GREEN} />
+                        <Text style={[a.skillUnlockedText, { color: GREEN }]} numberOfLines={1}>{s.slice(0, 40)}</Text>
+                      </View>
+                    ))}
+                    {(shield.ai_resistant_skills || []).slice(0, 5).map((s: string, i: number) => {
+                      const isPaid = shield.tools_unlocked === true;
+                      return (
+                        <AnimatedPressable
+                          key={`l-${i}`}
+                          style={[a.skillLocked, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
+                          onPress={() => {
+                            if (isPaid) {
+                              openDillyOverlay({
+                                isPaid: true,
+                                initialMessage: `I need to develop "${s}" as an AI-proof skill. How do I build this and add it to my Dilly Profile?`,
+                              });
+                            } else {
+                              // Free tier: no paid chat. Route to My Dilly
+                              // where they can manually add a fact for it.
+                              router.push('/(app)/my-dilly-profile' as any);
+                            }
+                          }}
+                          scaleDown={0.95}>
+                          <Ionicons name="lock-closed" size={11} color={theme.surface.t3} />
+                          <Text style={[a.skillLockedText, { color: theme.surface.t2 }]} numberOfLines={1}>{s}</Text>
+                          <Ionicons
+                            name={isPaid ? 'sparkles' : 'add-circle-outline'}
+                            size={9}
+                            color={theme.accent}
+                            style={{ opacity: 0.6 }}
+                          />
+                        </AnimatedPressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              </FadeInView>
+            )}
+
+            {/* Disruption Index. Pure data render from shield payload —
+                role-lookup on the backend, no LLM. Free for everyone. */}
+            <FadeInView delay={660}>
+              <ToolRow
+                icon="bar-chart"
+                title="Disruption Index"
+                sub="How much AI is disrupting your field"
+                color={AMBER}
+                onPress={() => toggleFeature('index')}
+                active={activeFeature === 'index'}
+              />
+            </FadeInView>
+
+            {activeFeature === 'index' && (
+              <FadeInView delay={0}>
+                <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                  <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Displacement Index</Text>
+                  <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                    <Text style={[a.bigNum, { color: disruptionPct >= 40 ? AMBER : disruptionPct >= 25 ? AMBER : GREEN }]}>{disruptionPct}%</Text>
+                    <Text style={{ fontSize: 12, color: SUB }}>of entry-level {(shield.cohort || '').split(' ')[0]} roles disrupted</Text>
+                  </View>
+                  {shield.disruption_headline && (
+                    <View style={a.quoteBox}><Text style={a.quoteText}>{shield.disruption_headline}</Text></View>
+                  )}
+                  {(shield.ai_resistant_skills?.length > 0 || shield.ai_vulnerable_skills?.length > 0) && (
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                      <View style={[a.compCol, { backgroundColor: GREEN + '08', borderColor: GREEN + '20' }]}>
+                        <Text style={[a.compLabel, { color: GREEN }]}>AI-PROOF</Text>
+                        {(shield.ai_resistant_skills || []).slice(0, 4).map((s: string, i: number) => (
+                          <Text key={i} style={a.compItem}>{s}</Text>
+                        ))}
+                      </View>
+                      <View style={[a.compCol, { backgroundColor: AMBER + '08', borderColor: AMBER + '20' }]}>
+                        <Text style={[a.compLabel, { color: AMBER }]}>AT RISK</Text>
+                        {(shield.ai_vulnerable_skills || []).slice(0, 4).map((s: string, i: number) => (
+                          <Text key={i} style={a.compItem}>{s}</Text>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </FadeInView>
+            )}
+          </>
+        ) : null}
 
         {/* ── Footer ──────────────────────────────────────────── */}
         <DillyFooter />
