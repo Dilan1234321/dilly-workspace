@@ -475,16 +475,23 @@ export default function InterviewPracticeScreen() {
 
 function NavBar({ dark, onBack, phase, currentIdx, total }:
   { dark: boolean; onBack: () => void; phase: Phase; currentIdx: number; total: number }) {
+  const theme = useResolvedTheme();
   const title =
     phase === 'practice' ? `${currentIdx + 1} / ${total}` :
     phase === 'analyzing' ? 'Debriefing...' :
     phase === 'review' ? 'Debrief' : 'The Room';
+  // `dark` phase is the practice room which intentionally stays dark
+  // regardless of the user's theme (immersive interview feel). For
+  // every other phase we pull navbar colors from the resolved theme
+  // so the navbar matches the rest of the app chrome.
+  const borderColor = dark ? NIGHT_BORDER : theme.surface.border;
+  const textColor = dark ? NIGHT_TEXT : theme.surface.t1;
   return (
-    <View style={[s.navBar, { borderBottomColor: dark ? NIGHT_BORDER : colors.b1 }]}>
+    <View style={[s.navBar, { borderBottomColor: borderColor }]}>
       <AnimatedPressable onPress={onBack} scaleDown={0.9} hitSlop={12}>
-        <Ionicons name="chevron-back" size={22} color={dark ? NIGHT_TEXT : colors.t1} />
+        <Ionicons name="chevron-back" size={22} color={textColor} />
       </AnimatedPressable>
-      <Text style={[s.navTitle, { color: dark ? NIGHT_TEXT : colors.t1 }]}>
+      <Text style={[s.navTitle, { color: textColor }]}>
         {title}
       </Text>
       <View style={{ width: 22 }} />
@@ -661,13 +668,23 @@ function FieldLabel({ text, required, top, hint, inline }:
 /* ─────────────────────────────────────────────────────────────── */
 
 function LoadingPhase({ company, role, stage }: { company: string; role: string; stage: number }) {
+  // Theme-aware — the loading card was frozen to light-mode colors,
+  // so Midnight users saw a white card on a dark screen. Every color
+  // that was static is now pulled from the resolved theme.
+  const theme = useResolvedTheme();
   return (
     <View style={s.loadingWrap}>
-      <View style={s.loadingCardLight}>
-        <View style={s.loadingRing}>
-          <ActivityIndicator size="small" color={INDIGO} />
+      <View style={[s.loadingCardLight, {
+        backgroundColor: theme.surface.s1,
+        borderColor: theme.surface.border,
+      }]}>
+        <View style={[s.loadingRing, {
+          backgroundColor: theme.accentSoft,
+          borderColor: theme.accentBorder,
+        }]}>
+          <ActivityIndicator size="small" color={theme.accent} />
         </View>
-        <Text style={s.loadingCompany}>
+        <Text style={[s.loadingCompany, { color: theme.surface.t3 }]}>
           {company.toUpperCase()} · {role}
         </Text>
         <View style={{ gap: 10, marginTop: 20, width: '100%' }}>
@@ -677,17 +694,17 @@ function LoadingPhase({ company, role, stage }: { company: string; role: string;
             return (
               <View key={i} style={s.loaderRow}>
                 <View style={[s.loaderBullet, {
-                  backgroundColor: done ? INDIGO : active ? INDIGO + '30' : colors.s3,
-                  borderColor: done || active ? INDIGO : colors.b1,
+                  backgroundColor: done ? theme.accent : active ? theme.accent + '30' : theme.surface.s2,
+                  borderColor: done || active ? theme.accent : theme.surface.border,
                 }]}>
                   {done
                     ? <Ionicons name="checkmark" size={10} color="#fff" />
                     : active
-                      ? <View style={s.loaderPulse} />
+                      ? <View style={[s.loaderPulse, { backgroundColor: theme.accent }]} />
                       : null}
                 </View>
                 <Text style={[s.loaderText, {
-                  color: done ? colors.t2 : active ? colors.t1 : colors.t3,
+                  color: done ? theme.surface.t2 : active ? theme.surface.t1 : theme.surface.t3,
                   fontWeight: active ? '700' : '500',
                 }]}>
                   {st.text}
@@ -914,6 +931,7 @@ function CategoryTag({ category, probability }: { category: string; probability:
 /* ─────────────────────────────────────────────────────────────── */
 
 function AnalyzingPhase({ company, line }: { company: string; line: number }) {
+  const theme = useResolvedTheme();
   const spin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
@@ -924,13 +942,16 @@ function AnalyzingPhase({ company, line }: { company: string; line: number }) {
 
   return (
     <View style={s.loadingWrap}>
-      <View style={s.loadingCardLight}>
+      <View style={[s.loadingCardLight, {
+        backgroundColor: theme.surface.s1,
+        borderColor: theme.surface.border,
+      }]}>
         <Animated.View style={[s.analyzingGlyph, { transform: [{ rotate }] }]}>
-          <Ionicons name="aperture" size={38} color={INDIGO} />
+          <Ionicons name="aperture" size={38} color={theme.accent} />
         </Animated.View>
-        <Text style={s.analyzingHeadline}>Debriefing your {company} round</Text>
-        <Text style={s.analyzingLine}>{ANALYZING_NARRATION[line]}...</Text>
-        <Text style={s.analyzingFooter}>
+        <Text style={[s.analyzingHeadline, { color: theme.surface.t1 }]}>Debriefing your {company} round</Text>
+        <Text style={[s.analyzingLine, { color: theme.surface.t2 }]}>{ANALYZING_NARRATION[line]}...</Text>
+        <Text style={[s.analyzingFooter, { color: theme.surface.t3 }]}>
           Takes about 30 seconds. Worth it.
         </Text>
       </View>
@@ -946,22 +967,35 @@ function ReviewPhase({
   feedback, questions, answers, company, role,
   expandedCards, onToggle, onRetry, onDone, insetsBottom,
 }: any) {
+  // Full theme wiring — every card / text / border / CTA in the
+  // Review phase was frozen at the colors proxy, so Midnight /
+  // Cream / Blush users saw a light-mode debrief inside a themed
+  // shell. Inline overrides hang on top of the static StyleSheet.
+  const theme = useResolvedTheme();
   if (!feedback) {
     return (
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
-        <View style={s.debriefCard}>
+        <View style={[s.debriefCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
           <Ionicons name="alert-circle" size={24} color={AMBER} />
-          <Text style={s.verdictHeadline}>Practice complete</Text>
-          <Text style={s.verdictSub}>
+          <Text style={[s.verdictHeadline, { color: theme.surface.t1 }]}>Practice complete</Text>
+          <Text style={[s.verdictSub, { color: theme.surface.t2 }]}>
             Couldn't generate AI feedback this time. You answered {answers.filter((a: string) => a.length > 0).length} of {questions.length} at {company}.
           </Text>
         </View>
         <View style={s.reviewActions}>
-          <AnimatedPressable style={s.retryBtn} onPress={onRetry} scaleDown={0.97}>
-            <Ionicons name="refresh" size={14} color={INDIGO} />
-            <Text style={s.retryBtnText}>Run it back</Text>
+          <AnimatedPressable
+            style={[s.retryBtn, { borderColor: theme.accentBorder, backgroundColor: theme.accentSoft }]}
+            onPress={onRetry}
+            scaleDown={0.97}
+          >
+            <Ionicons name="refresh" size={14} color={theme.accent} />
+            <Text style={[s.retryBtnText, { color: theme.accent }]}>Run it back</Text>
           </AnimatedPressable>
-          <AnimatedPressable style={s.doneBtn} onPress={onDone} scaleDown={0.97}>
+          <AnimatedPressable
+            style={[s.doneBtn, { backgroundColor: theme.accent }]}
+            onPress={onDone}
+            scaleDown={0.97}
+          >
             <Text style={s.doneBtnText}>Done</Text>
           </AnimatedPressable>
         </View>
@@ -994,7 +1028,7 @@ function ReviewPhase({
     <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
       <FadeInView delay={0}>
         {/* Verdict headline — the one thing the user looks at first */}
-        <View style={[s.verdictCard, { borderColor: verdict.color + '50' }]}>
+        <View style={[s.verdictCard, { backgroundColor: theme.surface.s1, borderColor: verdict.color + '50' }]}>
           <View style={[s.verdictGlyph, { backgroundColor: verdict.color + '15', borderColor: verdict.color + '40' }]}>
             <Ionicons
               name={feedback.verdict === 'ready' ? 'trophy' : feedback.verdict === 'almost' ? 'time' : 'barbell'}
@@ -1003,34 +1037,34 @@ function ReviewPhase({
             />
           </View>
           <Text style={[s.verdictHeadline, { color: verdict.color }]}>{verdict.label}</Text>
-          <Text style={s.verdictSub}>{verdict.sub}</Text>
-          <View style={s.verdictDivider} />
-          <Text style={s.verdictBody}>{feedback.overall}</Text>
+          <Text style={[s.verdictSub, { color: theme.surface.t2 }]}>{verdict.sub}</Text>
+          <View style={[s.verdictDivider, { backgroundColor: theme.surface.border }]} />
+          <Text style={[s.verdictBody, { color: theme.surface.t1 }]}>{feedback.overall}</Text>
         </View>
 
         {/* Scorecard — feels like a hiring rubric */}
-        <Text style={s.sectionHeader}>SCORECARD</Text>
-        <View style={s.scorecardCard}>
-          <ScoreRow label="Clarity"     value={scorecard.clarity} />
-          <ScoreRow label="Specificity" value={scorecard.specificity} />
-          <ScoreRow label="Structure"   value={scorecard.structure} />
-          <ScoreRow label="Confidence"  value={scorecard.confidence} />
+        <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>SCORECARD</Text>
+        <View style={[s.scorecardCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+          <ScoreRow label="Clarity"     value={scorecard.clarity} theme={theme} />
+          <ScoreRow label="Specificity" value={scorecard.specificity} theme={theme} />
+          <ScoreRow label="Structure"   value={scorecard.structure} theme={theme} />
+          <ScoreRow label="Confidence"  value={scorecard.confidence} theme={theme} />
         </View>
 
         {/* Strength / Gap — side by side, not buried */}
         <View style={s.sgRow}>
-          <View style={[s.sgCard, { borderColor: GREEN + '40' }]}>
+          <View style={[s.sgCard, { backgroundColor: theme.surface.s1, borderColor: GREEN + '40' }]}>
             <Text style={[s.sgLabel, { color: GREEN }]}>WHAT WORKED</Text>
-            <Text style={s.sgText}>{feedback.top_strength}</Text>
+            <Text style={[s.sgText, { color: theme.surface.t1 }]}>{feedback.top_strength}</Text>
           </View>
-          <View style={[s.sgCard, { borderColor: AMBER + '40' }]}>
+          <View style={[s.sgCard, { backgroundColor: theme.surface.s1, borderColor: AMBER + '40' }]}>
             <Text style={[s.sgLabel, { color: AMBER }]}>CLOSE THIS GAP</Text>
-            <Text style={s.sgText}>{feedback.priority_fix}</Text>
+            <Text style={[s.sgText, { color: theme.surface.t1 }]}>{feedback.priority_fix}</Text>
           </View>
         </View>
 
         {/* Per-question — side-by-side answer upgrade */}
-        <Text style={s.sectionHeader}>QUESTION BY QUESTION</Text>
+        <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>QUESTION BY QUESTION</Text>
         {questions.map((qq: PrepQuestion, i: number) => {
           const pq = feedback.per_question[i];
           const rating = pq?.rating || 'skipped';
@@ -1041,44 +1075,44 @@ function ReviewPhase({
           return (
             <AnimatedPressable
               key={i}
-              style={s.debriefCard}
+              style={[s.debriefCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
               onPress={() => onToggle(i)}
               scaleDown={0.98}
             >
               <View style={s.debriefHeader}>
-                <Text style={s.debriefQNum}>Q{i + 1}</Text>
-                <Text style={s.debriefQ} numberOfLines={isExpanded ? undefined : 2}>{qq.question}</Text>
+                <Text style={[s.debriefQNum, { color: theme.accent }]}>Q{i + 1}</Text>
+                <Text style={[s.debriefQ, { color: theme.surface.t1 }]} numberOfLines={isExpanded ? undefined : 2}>{qq.question}</Text>
                 <View style={[s.ratingPill, { backgroundColor: config.color + '15', borderColor: config.color + '40' }]}>
                   <Text style={[s.ratingPillText, { color: config.color }]}>{config.label}</Text>
                 </View>
               </View>
               <View style={s.debriefExpandRow}>
-                <Text style={s.debriefExpandHint}>{isExpanded ? 'Tap to collapse' : 'Tap to see the upgrade'}</Text>
-                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.t3} />
+                <Text style={[s.debriefExpandHint, { color: theme.surface.t3 }]}>{isExpanded ? 'Tap to collapse' : 'Tap to see the upgrade'}</Text>
+                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={theme.surface.t3} />
               </View>
 
               {isExpanded && (
                 <View style={s.debriefExpanded}>
                   {/* Side by side answer diff */}
                   <View style={s.diffRow}>
-                    <View style={[s.diffCol, { borderColor: colors.b1 }]}>
-                      <Text style={[s.diffLabel, { color: colors.t3 }]}>YOUR ANSWER</Text>
-                      <Text style={s.diffTextYours}>
-                        {userAnswer || <Text style={{ fontStyle: 'italic' }}>Skipped</Text>}
+                    <View style={[s.diffCol, { backgroundColor: theme.surface.bg, borderColor: theme.surface.border }]}>
+                      <Text style={[s.diffLabel, { color: theme.surface.t3 }]}>YOUR ANSWER</Text>
+                      <Text style={[s.diffTextYours, { color: theme.surface.t1 }]}>
+                        {userAnswer || <Text style={{ fontStyle: 'italic', color: theme.surface.t3 }}>Skipped</Text>}
                       </Text>
                     </View>
                     <View style={[s.diffCol, { borderColor: GREEN + '40', backgroundColor: GREEN + '08' }]}>
                       <Text style={[s.diffLabel, { color: GREEN }]}>STRONGER ANSWER</Text>
-                      <Text style={s.diffTextModel}>
+                      <Text style={[s.diffTextModel, { color: theme.surface.t1 }]}>
                         {pq?.model_answer || '...'}
                       </Text>
                     </View>
                   </View>
 
                   {pq?.feedback ? (
-                    <View style={s.coachBlock}>
-                      <View style={s.coachBullet} />
-                      <Text style={s.coachText}>{pq.feedback}</Text>
+                    <View style={[s.coachBlock, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                      <View style={[s.coachBullet, { backgroundColor: theme.accent }]} />
+                      <Text style={[s.coachText, { color: theme.surface.t1 }]}>{pq.feedback}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -1090,23 +1124,27 @@ function ReviewPhase({
         {/* Action items */}
         {feedback.action_items && feedback.action_items.length > 0 && (
           <>
-            <Text style={s.sectionHeader}>BEFORE THE REAL INTERVIEW</Text>
-            <View style={s.actionsCardLight}>
+            <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>BEFORE THE REAL INTERVIEW</Text>
+            <View style={[s.actionsCardLight, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               {feedback.action_items.map((item: string, i: number) => (
                 <AnimatedPressable
                   key={i}
-                  style={[s.actionItemLight, i === feedback.action_items.length - 1 && { borderBottomWidth: 0 }]}
+                  style={[
+                    s.actionItemLight,
+                    { borderBottomColor: theme.surface.border },
+                    i === feedback.action_items.length - 1 && { borderBottomWidth: 0 },
+                  ]}
                   onPress={() => openDillyOverlay({
                     isPaid: true,
                     initialMessage: `I'm preparing for the ${role} role at ${company}. One of my action items is: "${item}". Help me work on this. What specific steps should I take?`,
                   })}
                   scaleDown={0.98}
                 >
-                  <View style={s.actionBulletLight}>
-                    <Text style={s.actionBulletTextLight}>{i + 1}</Text>
+                  <View style={[s.actionBulletLight, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                    <Text style={[s.actionBulletTextLight, { color: theme.accent }]}>{i + 1}</Text>
                   </View>
-                  <Text style={s.actionItemTextLight}>{item}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                  <Text style={[s.actionItemTextLight, { color: theme.surface.t1 }]}>{item}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
                 </AnimatedPressable>
               ))}
             </View>
@@ -1114,11 +1152,19 @@ function ReviewPhase({
         )}
 
         <View style={s.reviewActions}>
-          <AnimatedPressable style={s.retryBtn} onPress={onRetry} scaleDown={0.97}>
-            <Ionicons name="refresh" size={14} color={INDIGO} />
-            <Text style={s.retryBtnText}>Run it back</Text>
+          <AnimatedPressable
+            style={[s.retryBtn, { borderColor: theme.accentBorder, backgroundColor: theme.accentSoft }]}
+            onPress={onRetry}
+            scaleDown={0.97}
+          >
+            <Ionicons name="refresh" size={14} color={theme.accent} />
+            <Text style={[s.retryBtnText, { color: theme.accent }]}>Run it back</Text>
           </AnimatedPressable>
-          <AnimatedPressable style={s.doneBtn} onPress={onDone} scaleDown={0.97}>
+          <AnimatedPressable
+            style={[s.doneBtn, { backgroundColor: theme.accent }]}
+            onPress={onDone}
+            scaleDown={0.97}
+          >
             <Text style={s.doneBtnText}>Done</Text>
           </AnimatedPressable>
         </View>
@@ -1127,12 +1173,17 @@ function ReviewPhase({
   );
 }
 
-function ScoreRow({ label, value }: { label: string; value: number }) {
+function ScoreRow({ label, value, theme }: { label: string; value: number; theme?: any }) {
   const color = value >= 80 ? GREEN : value >= 55 ? AMBER : CORAL;
+  // theme prop optional so ScoreRow still works at standalone call
+  // sites; when passed (from ReviewPhase) label text + track bg
+  // adapt to Customize Dilly surface colors.
+  const labelColor = theme?.surface?.t2 || colors.t2;
+  const trackBg = theme?.surface?.s2 || colors.s2;
   return (
     <View style={s.scoreRow}>
-      <Text style={s.scoreLabel}>{label}</Text>
-      <View style={s.scoreTrack}>
+      <Text style={[s.scoreLabel, { color: labelColor }]}>{label}</Text>
+      <View style={[s.scoreTrack, { backgroundColor: trackBg }]}>
         <View style={[s.scoreFill, { width: `${value}%`, backgroundColor: color }]} />
       </View>
       <Text style={[s.scoreValue, { color }]}>{value}</Text>
