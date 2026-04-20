@@ -58,6 +58,7 @@ import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
 import { DillyFeatureBanner } from '../../components/DillyFeatureBanner';
 import { useSubscription } from '../../hooks/useSubscription';
+import { useResolvedTheme } from '../../hooks/useTheme';
 
 const W = Dimensions.get('window').width;
 const INDIGO = colors.indigo;
@@ -172,6 +173,9 @@ function PulsingDot({ delay = 0 }: { delay?: number }) {
 
 export default function ResumeGenerateScreen() {
   const insets = useSafeAreaInsets();
+  // Full theme so the Forge flips with Customize Dilly. Minimum pass:
+  // root surface + container bg respect the user's surface choice.
+  const theme = useResolvedTheme();
   const { jobTitle: paramTitle, company: paramCompany, jd: paramJd, viewId } = useLocalSearchParams<{ jobTitle?: string; company?: string; jd?: string; viewId?: string }>();
   const [stage, setStage] = useState<Stage>(viewId ? 'done' : 'idle');
   const [generateError, setGenerateError] = useState<string>('');
@@ -460,7 +464,7 @@ export default function ResumeGenerateScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
+      style={{ flex: 1, backgroundColor: theme.surface.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* First-visit coach — Resume Forge. Version bumped to v2 to

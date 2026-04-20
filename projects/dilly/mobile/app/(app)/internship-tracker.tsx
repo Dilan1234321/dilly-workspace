@@ -22,6 +22,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { openAddToCalendar } from '../../lib/calendar';
+import { useResolvedTheme } from '../../hooks/useTheme';
 
 const GOLD   = '#2B3A8E';
 const GREEN  = '#34C759';
@@ -359,6 +360,10 @@ function AddAppModal({ visible, onClose, onAdd }: {
 
 export default function InternshipTrackerScreen() {
   const insets = useSafeAreaInsets();
+  // Full theme so the tracker flips with Customize Dilly. Previously
+  // the page used frozen colors.bg / colors.s1 via StyleSheet which
+  // meant it stayed dark-themed regardless of user preference.
+  const theme = useResolvedTheme();
 
   const [apps, setApps]             = useState<Application[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -484,7 +489,7 @@ export default function InternshipTrackerScreen() {
 
   if (loading) {
     return (
-      <View style={[ts.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }]}>
+      <View style={[ts.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80, backgroundColor: theme.surface.bg }]}>
         <DillyFace size={100} />
         <Text style={{ color: colors.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your pipeline...</Text>
       </View>
@@ -492,7 +497,7 @@ export default function InternshipTrackerScreen() {
   }
 
   return (
-    <View style={[ts.container, { paddingTop: insets.top }]}>
+    <View style={[ts.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
 
       {/* Nav bar */}
       <FadeInView delay={0}>

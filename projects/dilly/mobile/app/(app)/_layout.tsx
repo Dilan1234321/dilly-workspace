@@ -92,6 +92,20 @@ function AppLayoutInner() {
   //      dropping labels)
   // The pill makes the active tab unambiguous at a glance
   // without needing text.
+  // AI Arena uses a fixed dark-navy BG regardless of theme surface.
+  // If the navbar kept using theme.surface.bg there, light-mode users
+  // would see a jarring white strip underneath a dark page. Mirror
+  // the route-specific background here so the navbar blends in.
+  // Must be computed BEFORE renderTabIcon so the icon colors can
+  // adapt to the dark navbar (otherwise surface.t3 in light mode is
+  // a near-black grey that disappears on the dark navbar).
+  const onAIArena = !!pathname && pathname.includes('/ai-arena');
+  const navBarBg = onAIArena ? '#111827' : theme.surface.bg;
+  const navBarBorder = onAIArena ? '#1F2937' : theme.surface.border;
+  const navInactiveIcon = onAIArena ? 'rgba(255,255,255,0.55)' : theme.surface.t3;
+  const navActivePill = onAIArena ? 'rgba(255,255,255,0.12)' : theme.accentSoft;
+  const navActiveIcon = onAIArena ? '#ffffff' : theme.accent;
+
   const renderTabIcon = (
     iconActive: keyof typeof Ionicons.glyphMap,
     iconInactive: keyof typeof Ionicons.glyphMap,
@@ -101,7 +115,7 @@ function AppLayoutInner() {
         width: 60,
         height: 44,
         borderRadius: 22,
-        backgroundColor: focused ? theme.accentSoft : 'transparent',
+        backgroundColor: focused ? navActivePill : 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
         // Nudge down a touch so the pill centers inside the tab
@@ -112,20 +126,10 @@ function AppLayoutInner() {
       <Ionicons
         name={focused ? iconActive : iconInactive}
         size={32}
-        color={focused ? theme.accent : theme.surface.t3}
+        color={focused ? navActiveIcon : navInactiveIcon}
       />
     </View>
   );
-
-  // AI Arena uses a fixed dark-navy BG regardless of theme surface.
-  // If the navbar kept using theme.surface.bg there, light-mode users
-  // would see a jarring white strip underneath a dark page. Mirror
-  // the route-specific background here so the navbar blends in.
-  // pathname lookup is fast; the whole component re-renders on tab
-  // change anyway, so this is free.
-  const onAIArena = !!pathname && pathname.includes('/ai-arena');
-  const navBarBg = onAIArena ? '#111827' : theme.surface.bg;
-  const navBarBorder = onAIArena ? '#1F2937' : theme.surface.border;
 
   return (
     <Tabs
