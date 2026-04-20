@@ -308,3 +308,77 @@ async def calendar_single_event_ics(
             "Cache-Control": "no-store",
         },
     )
+
+
+# ── /calendar/events — direct write to profile.deadlines ─────────────
+#
+# The Chapter session screen has a "Put this on my calendar" button on
+# the one_move screen. It calls this endpoint to persist the homework
+# into the user's own deadlines list so it shows up in the Home agenda
+# and the generated ICS feed. No LLM, no quota — just a write.
+
+@router.post("/calendar/events")
+async def add_calendar_event(request: Request):
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+
+    title = str(body.get("title") or "").strip()
+    if not title:
+        raise errors.bad_request("title is required")
+
+    # Accept either date (YYYY-MM-DD) or date_iso (full ISO timestamp).
+    raw_date = str(body.get("date") or body.get("date_iso") or "").strip()
+    if not raw_date:
+        raise errors.bad_request("date is required")
+    date_str = raw_date[:10]
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise errors.bad_request(f"invalid date: {raw_date}")
+
+    ev_type = str(body.get("type") or "custom").strip() or "custom"
+    company = str(body.get("company") or "").strip()
+    notes = str(body.get("notes") or "").strip()
+
+    from projects.dilly.api.profile_store import get_profile, save_profile
+
+    profile = get_profile(email) or {}
+    existing = profile.get("deadlines")
+    if not isinstance(existing, list):
+        existing = []
+
+    # Dedup by (title, date, company) so repeat taps don't pile up.
+    dedup_key = (title.lower(), date_str, company.lower())
+    for d in existing:
+        if not isinstance(d, dict):
+            continue
+        k = (
+            str(d.get("title") or d.get("label") or "").lower(),
+            str(d.get("date") or "")[:10],
+            str(d.get("company") or "").lower(),
+        )
+        if k == dedup_key:
+            return {"ok": True, "duplicate": True}
+
+    new_event = {
+        "id": str(_uuid.uuid4()),
+        "title": title,
+        "date": date_str,
+        "type": ev_type,
+        "notes": notes,
+        "company": company,
+        "completedAt": None,
+        "createdBy": body.get("createdBy") or "chapter",
+    }
+    existing.append(new_event)
+    save_profile(email, {"deadlines": existing})
+    return {"ok": True, "event": new_event}

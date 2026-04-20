@@ -1077,31 +1077,6 @@ export default function SettingsScreen() {
                   />
                   {webProfileOn && (
                     <>
-                      <Divider />
-                      <View style={s.row}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[s.rowLabel, { color: theme.surface.t1 }]}>Tagline</Text>
-                          <TextInput
-                            // Inline theme override. The static style
-                            // had color: colors.t2 which is proxy-frozen
-                            // at module load, so the tagline value
-                            // stayed dark-theme even after a light-
-                            // mode flip. Pull from theme each render.
-                            style={{ fontSize: 13, color: theme.surface.t2, marginTop: 4, padding: 0 }}
-                            value={webTagline}
-                            onChangeText={setWebTagline}
-                            onEndEditing={() => {
-                              setTaglineSaving(true);
-                              savePref('profile_tagline', webTagline.trim()).then(() => setTaglineSaving(false));
-                            }}
-                            placeholder="e.g. Data Science Student | Builder"
-                            placeholderTextColor={theme.surface.t3}
-                            maxLength={80}
-                            returnKeyType="done"
-                          />
-                        </View>
-                        {taglineSaving && <Text style={{ fontSize: 10, color: theme.surface.t3 }}>Saving...</Text>}
-                      </View>
                       {slug ? (
                         <>
                           <Divider />

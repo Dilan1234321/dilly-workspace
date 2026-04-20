@@ -854,8 +854,10 @@ export default function AIArenaScreen() {
             <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Can AI Replace You?</Text>
               <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>Paste a bullet. AI will try to write it. See if it can.</Text>
-              <TextInput style={a.input} defaultValue="" onChangeText={t => { replaceInputRef.current = t; }}
-                placeholder="Paste a bullet from your profile..." placeholderTextColor={DIM} multiline ref={replaceFieldRef} />
+              <TextInput
+                style={[a.input, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }]}
+                defaultValue="" onChangeText={t => { replaceInputRef.current = t; }}
+                placeholder="Paste a bullet from your profile..." placeholderTextColor={theme.surface.t3} multiline ref={replaceFieldRef} />
               <AnimatedPressable
                 style={[a.actionBtn, { backgroundColor: AMBER }]}
                 onPress={runReplace} disabled={replaceLoading} scaleDown={0.97}
@@ -913,8 +915,10 @@ export default function AIArenaScreen() {
               <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Career Simulator</Text>
               <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>See how AI transforms your dream role over 5 years.</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TextInput style={[a.input, { flex: 1 }]} defaultValue="" onChangeText={t => { simJobRef.current = t; }}
-                  placeholder="Job title (e.g. Data Scientist)" placeholderTextColor={DIM} ref={simFieldRef} />
+                <TextInput
+                  style={[a.input, { flex: 1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }]}
+                  defaultValue="" onChangeText={t => { simJobRef.current = t; }}
+                  placeholder="Job title (e.g. Data Scientist)" placeholderTextColor={theme.surface.t3} ref={simFieldRef} />
                 <AnimatedPressable
                   style={[a.actionBtn, { paddingHorizontal: 16, backgroundColor: AMBER }]}
                   onPress={runSim} disabled={simLoading} scaleDown={0.97}>
@@ -966,18 +970,19 @@ export default function AIArenaScreen() {
               <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>AI-proof skills for your field. Unlocked = in your profile. Locked = develop next.</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                 {(shield.resistant_signals || []).slice(0, 5).map((s: string, i: number) => (
-                  <View key={`u-${i}`} style={a.skillUnlocked}>
+                  <View key={`u-${i}`} style={[a.skillUnlocked, { backgroundColor: GREEN + '12', borderColor: GREEN + '40' }]}>
                     <Ionicons name="lock-open" size={11} color={GREEN} />
-                    <Text style={a.skillUnlockedText} numberOfLines={1}>{s.slice(0, 40)}</Text>
+                    <Text style={[a.skillUnlockedText, { color: GREEN }]} numberOfLines={1}>{s.slice(0, 40)}</Text>
                   </View>
                 ))}
                 {(shield.ai_resistant_skills || []).slice(0, 5).map((s: string, i: number) => (
-                  <AnimatedPressable key={`l-${i}`} style={a.skillLocked}
+                  <AnimatedPressable key={`l-${i}`}
+                    style={[a.skillLocked, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
                     onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `I need to develop "${s}" as an AI-proof skill. How do I build this and add it to my Dilly Profile?` })}
                     scaleDown={0.95}>
-                    <Ionicons name="lock-closed" size={11} color={DIM} />
-                    <Text style={a.skillLockedText} numberOfLines={1}>{s}</Text>
-                    <Ionicons name="sparkles" size={9} color={ACCENT} style={{ opacity: 0.4 }} />
+                    <Ionicons name="lock-closed" size={11} color={theme.surface.t3} />
+                    <Text style={[a.skillLockedText, { color: theme.surface.t2 }]} numberOfLines={1}>{s}</Text>
+                    <Ionicons name="sparkles" size={9} color={theme.accent} style={{ opacity: 0.6 }} />
                   </AnimatedPressable>
                 ))}
               </View>

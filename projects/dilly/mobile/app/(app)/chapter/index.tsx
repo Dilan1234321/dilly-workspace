@@ -60,10 +60,11 @@ const SLOT_LABELS: Record<string, string> = {
 };
 
 // Typing speed: slightly faster than human (human ≈ 40 c/s, this is
-// ~55 c/s). Each tick writes ~3 chars. Matches the feel tuned for
-// the AI overlay so users read Chapter text the same way.
-const TYPE_CHARS_PER_TICK = 3;
-const TYPE_TICK_MS = 55;
+// ~55 c/s). We drive the stream with requestAnimationFrame so updates
+// land on frame boundaries — setInterval drifted between frames and
+// made text appear in visible "jumps". With rAF, the character count
+// is computed from elapsed time, so the motion looks continuous.
+const TYPE_CHARS_PER_SEC = 55;
 
 export default function ChapterSessionScreen() {
   const insets = useSafeAreaInsets();
@@ -75,7 +76,15 @@ export default function ChapterSessionScreen() {
   // Typed-text state for the current screen. Rebuilds on index change.
   const [typedBody, setTypedBody] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const typeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Typing cancel handle. We now use requestAnimationFrame, but the
+  // cancel path is abstracted so the question-screen and reply
+  // streams can share the same plumbing. Calling typeRef.current?.()
+  // stops whatever animation is running.
+  const typeRef = useRef<(() => void) | null>(null);
+  // Remembers which screen indices have already been fully typed once.
+  // If the user taps Back then Continue, previously-typed screens
+  // paint instantly instead of re-typing.
+  const typedScreens = useRef<Set<number>>(new Set());
   const fade = useRef(new Animated.Value(0)).current;
 
   // Chat thread for the question screen (slot === 'question'). When
@@ -125,64 +134,82 @@ export default function ChapterSessionScreen() {
   // Typing animation: whenever the screen index changes, reset the
   // typed body and stream characters onto it. DillyFace flips to
   // writing mood while isTyping is true, back to idle after.
+  //
+  // Driver: requestAnimationFrame. We compute the character target
+  // from elapsed ms so the motion looks continuous instead of
+  // jumping in fixed-size chunks at irregular frame intervals.
+  //
+  // If the user has ALREADY seen this screen typed out once
+  // (tracked in typedScreens), we skip the animation entirely and
+  // paint the full text immediately — no repeated typing on Back.
   useEffect(() => {
     if (!chapter) return;
     const currentScreen = chapter.screens[index];
     if (!currentScreen) return;
     const fullText = currentScreen.body || '';
 
-    // Clear any prior interval so rapid Back/Continue doesn't
-    // leave two streams running at once.
-    if (typeRef.current) { clearInterval(typeRef.current); typeRef.current = null; }
+    // Cancel any in-flight rAF loop from the prior screen.
+    if (typeRef.current) { typeRef.current(); typeRef.current = null; }
 
-    setTypedBody('');
-    setIsTyping(true);
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
 
-    // Special case: question screen. Seed the chat with Dilly's
-    // question as her first assistant message, then let the user
-    // reply. Skip the typing animation for the question body since
-    // the chat takes over the interaction.
-    if (currentScreen.slot === 'question') {
-      // The question text streams INTO the first chat message so it
-      // still feels written, not printed. One message only.
-      setChatMessages([{ id: ++chatMsgId.current, role: 'assistant', content: '' }]);
-      let i = 0;
-      typeRef.current = setInterval(() => {
-        i += TYPE_CHARS_PER_TICK;
-        const done = i >= fullText.length;
-        const chunk = done ? fullText : fullText.slice(0, i);
-        setChatMessages(prev => {
-          if (prev.length === 0) return prev;
-          const updated = [...prev];
-          updated[0] = { ...updated[0], content: chunk };
-          return updated;
-        });
-        if (done) {
-          clearInterval(typeRef.current!);
-          typeRef.current = null;
-          setIsTyping(false);
-        }
-      }, TYPE_TICK_MS);
-      // Regular-body typedBody stays empty so the main body render
-      // skips. The chat renders below.
-      return () => { if (typeRef.current) { clearInterval(typeRef.current); typeRef.current = null; } };
+    // Fast-path: already typed once. Paint immediately.
+    if (typedScreens.current.has(index)) {
+      if (currentScreen.slot === 'question') {
+        setChatMessages([{ id: ++chatMsgId.current, role: 'assistant', content: fullText }]);
+      } else {
+        setTypedBody(fullText);
+      }
+      setIsTyping(false);
+      return;
     }
 
-    // Normal screen: type into typedBody character-by-character.
-    let i = 0;
-    typeRef.current = setInterval(() => {
-      i += TYPE_CHARS_PER_TICK;
-      const done = i >= fullText.length;
-      setTypedBody(done ? fullText : fullText.slice(0, i));
-      if (done) {
-        clearInterval(typeRef.current!);
-        typeRef.current = null;
-        setIsTyping(false);
+    setIsTyping(true);
+    const isQuestionSlot = currentScreen.slot === 'question';
+    if (isQuestionSlot) {
+      setChatMessages([{ id: ++chatMsgId.current, role: 'assistant', content: '' }]);
+    } else {
+      setTypedBody('');
+    }
+
+    // rAF-driven stream. On each frame, compute how many chars should
+    // be visible based on wall-clock elapsed time. This keeps the
+    // perceived cadence stable even if a frame is skipped.
+    const startMs = Date.now();
+    let rafId = 0;
+    let lastCount = -1;
+    const tick = () => {
+      const elapsed = Date.now() - startMs;
+      const target = Math.min(fullText.length, Math.floor((elapsed / 1000) * TYPE_CHARS_PER_SEC));
+      if (target !== lastCount) {
+        lastCount = target;
+        const done = target >= fullText.length;
+        const chunk = done ? fullText : fullText.slice(0, target);
+        if (isQuestionSlot) {
+          setChatMessages(prev => {
+            if (prev.length === 0) return prev;
+            const updated = [...prev];
+            updated[0] = { ...updated[0], content: chunk };
+            return updated;
+          });
+        } else {
+          setTypedBody(chunk);
+        }
+        if (done) {
+          typedScreens.current.add(index);
+          setIsTyping(false);
+          return;
+        }
       }
-    }, TYPE_TICK_MS);
-    return () => { if (typeRef.current) { clearInterval(typeRef.current); typeRef.current = null; } };
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
+    typeRef.current = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+    return () => { if (typeRef.current) { typeRef.current(); typeRef.current = null; } };
     // chapter + index drive this effect; chatMsgId is a ref
   }, [chapter, index, fade]);
 
@@ -197,9 +224,10 @@ export default function ChapterSessionScreen() {
   function advance() {
     if (!chapter) return;
     if (isTyping) {
-      // Finish the current typing immediately. Stop the interval
-      // and paint the full text. Second tap will advance.
-      if (typeRef.current) { clearInterval(typeRef.current); typeRef.current = null; }
+      // Finish the current typing immediately. Cancel rAF loop and
+      // paint the full text. Second tap will advance. Also mark
+      // the screen as typed so a revisit paints instantly.
+      if (typeRef.current) { typeRef.current(); typeRef.current = null; }
       const fullText = chapter.screens[index]?.body || '';
       if (isQuestion) {
         setChatMessages(prev => {
@@ -211,6 +239,7 @@ export default function ChapterSessionScreen() {
       } else {
         setTypedBody(fullText);
       }
+      typedScreens.current.add(index);
       setIsTyping(false);
       return;
     }
@@ -230,7 +259,7 @@ export default function ChapterSessionScreen() {
 
   function goBack() {
     if (isFirst) return;
-    if (typeRef.current) { clearInterval(typeRef.current); typeRef.current = null; }
+    if (typeRef.current) { typeRef.current(); typeRef.current = null; }
     setIndex(i => Math.max(0, i - 1));
     setChatMessages([]);
     setChatInput('');
@@ -275,31 +304,40 @@ export default function ChapterSessionScreen() {
         setChatBlocked('Dilly stepped away. Tap Continue when you are ready.');
         return;
       }
-      // Type reply in same cadence as the rest of the Chapter.
+      // Type reply in same cadence as the rest of the Chapter. rAF
+      // driver matches the main-body stream for a consistent feel.
       const assistantMsg: ChatMsg = { id: ++chatMsgId.current, role: 'assistant', content: '' };
       setChatMessages(prev => [...prev, assistantMsg]);
       setIsTyping(true);
-      if (typeRef.current) { clearInterval(typeRef.current); typeRef.current = null; }
-      let i = 0;
-      typeRef.current = setInterval(() => {
-        i += TYPE_CHARS_PER_TICK;
-        const done = i >= reply.length;
-        const chunk = done ? reply : reply.slice(0, i);
-        setChatMessages(prev => {
-          if (prev.length === 0) return prev;
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last?.role === 'assistant') {
-            updated[updated.length - 1] = { ...last, content: chunk };
+      if (typeRef.current) { typeRef.current(); typeRef.current = null; }
+      const startMs = Date.now();
+      let rafId = 0;
+      let lastCount = -1;
+      const tick = () => {
+        const elapsed = Date.now() - startMs;
+        const target = Math.min(reply.length, Math.floor((elapsed / 1000) * TYPE_CHARS_PER_SEC));
+        if (target !== lastCount) {
+          lastCount = target;
+          const done = target >= reply.length;
+          const chunk = done ? reply : reply.slice(0, target);
+          setChatMessages(prev => {
+            if (prev.length === 0) return prev;
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last?.role === 'assistant') {
+              updated[updated.length - 1] = { ...last, content: chunk };
+            }
+            return updated;
+          });
+          if (done) {
+            setIsTyping(false);
+            return;
           }
-          return updated;
-        });
-        if (done) {
-          clearInterval(typeRef.current!);
-          typeRef.current = null;
-          setIsTyping(false);
         }
-      }, TYPE_TICK_MS);
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+      typeRef.current = () => { if (rafId) cancelAnimationFrame(rafId); };
     } catch {
       setChatBlocked('Dilly stepped away. Tap Continue when you are ready.');
     } finally {
