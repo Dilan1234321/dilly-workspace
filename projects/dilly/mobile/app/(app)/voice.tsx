@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DillyFace } from '../../components/DillyFace';
 import DillyAIOverlay, { StudentContext } from '../../components/DillyAIOverlay';
 import { colors } from '../../lib/tokens';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import { dilly } from '../../lib/dilly';
 
 const COHORT_BARS: Record<string, { bar: number; company: string }> = {
@@ -15,6 +16,7 @@ const COHORT_BARS: Record<string, { bar: number; company: string }> = {
 
 export default function VoiceScreen() {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
   const [showOverlay,    setShowOverlay]   = useState(false);
   const [studentContext, setStudentContext] = useState<StudentContext | undefined>();
   const [contextLoaded,  setContextLoaded] = useState(false);
@@ -67,7 +69,7 @@ export default function VoiceScreen() {
   }, []);
 
   return (
-    <View style={[s.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <TouchableOpacity
         style={s.faceButton}
         onPress={() => setShowOverlay(true)}
@@ -76,10 +78,10 @@ export default function VoiceScreen() {
         <View style={s.faceRing}>
           <DillyFace size={96} />
         </View>
-        <Text style={s.tapLabel}>Tap to talk to Dilly</Text>
-        <Text style={s.tapSub}>AI coaching, interview prep, career advice</Text>
+        <Text style={[s.tapLabel, { color: theme.surface.t1 }]}>Tap to talk to Dilly</Text>
+        <Text style={[s.tapSub, { color: theme.surface.t3 }]}>AI coaching, interview prep, career advice</Text>
         {!contextLoaded && (
-          <ActivityIndicator size="small" color={colors.t3} style={{ marginTop: 8 }} />
+          <ActivityIndicator size="small" color={theme.surface.t3} style={{ marginTop: 8 }} />
         )}
       </TouchableOpacity>
 
