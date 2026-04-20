@@ -23,6 +23,7 @@ import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { DillyFace } from '../../components/DillyFace';
+import FieldPulseCard from '../../components/FieldPulseCard';
 import { useAppMode } from '../../hooks/useAppMode';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import { useResolvedTheme } from '../../hooks/useTheme';
@@ -625,37 +626,17 @@ export default function AIArenaScreen() {
             when they're stable and their threat report hasn't changed.
             ════════════════════════════════════════════════════════ */}
 
-        {weeklySignal && (
-          <FadeInView delay={30}>
-            <View style={[weekly.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <View style={weekly.topRow}>
-                <View style={[weekly.eyebrowPill, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-                  <View style={[weekly.livePulse, { backgroundColor: theme.accent }]} />
-                  <Text style={[weekly.eyebrowText, { color: theme.accent }]}>THIS WEEK IN YOUR FIELD</Text>
-                </View>
-                {weeklySignal.iso_week ? (
-                  <Text style={[weekly.weekLabel, { color: theme.surface.t3 }]}>{weeklySignal.iso_week}</Text>
-                ) : null}
-              </View>
-              <Text style={[weekly.headline, { color: theme.surface.t1 }]}>{weeklySignal.headline}</Text>
-              {weeklySignal.source ? (
-                <Text style={[weekly.source, { color: theme.surface.t3 }]}>{weeklySignal.source}</Text>
-              ) : null}
-              {weeklySignal.data_point ? (
-                <View style={[weekly.dataBox, { backgroundColor: theme.surface.s2 }]}>
-                  <Ionicons name="pulse" size={12} color={theme.accent} />
-                  <Text style={[weekly.dataText, { color: theme.surface.t1 }]}>{weeklySignal.data_point}</Text>
-                </View>
-              ) : null}
-              {weeklySignal.move ? (
-                <View style={[weekly.moveBox, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-                  <Text style={[weekly.moveLabel, { color: theme.accent }]}>YOUR MOVE</Text>
-                  <Text style={[weekly.moveText, { color: theme.surface.t1 }]}>{weeklySignal.move}</Text>
-                </View>
-              ) : null}
-            </View>
-          </FadeInView>
-        )}
+        {/* Field Pulse — the weekly-return anchor.
+            Replaces the old inline Weekly Signal card. Adds a NEW
+            badge when the iso_week is newer than user's last_seen,
+            a personalized hook from their recent Pulse / wins, and
+            an explicit "Next refresh: in N days" footer so users
+            have a concrete reason to come back weekly. The old
+            weeklySignal state is still fetched for backwards-compat
+            but the UI now routes through FieldPulseCard. */}
+        <FadeInView delay={30}>
+          <FieldPulseCard />
+        </FadeInView>
 
         {/* ════════════════════════════════════════════════════════
             YOUR NEXT MOVE. replaces the old three-Act structure
