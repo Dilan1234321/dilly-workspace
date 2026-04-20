@@ -14,9 +14,9 @@
  * render; parent passes the state in, which is cheap.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, Animated, Easing,
+  View, Text, StyleSheet, Animated, Easing, TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +24,7 @@ import { ResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
 import { openPaywall } from '../hooks/usePaywall';
 import { openDillyOverlay } from '../hooks/useDillyOverlay';
+import { dilly } from '../lib/dilly';
 
 export interface ChapterCardState {
   plan: string;
@@ -215,6 +216,14 @@ export default function ChapterCard({ state, theme }: Props) {
           ? `Last: ${state.latest?.title || 'your Chapter'}. Next one lands every ${dayLabel}.`
           : `Your Chapter opens ${dayLabel} at ${hourLabel}. Drop notes for Dilly before then.`}
       </Text>
+      {/* Inline quick-add for chapter notes. Instead of sending the
+          user to a separate screen to jot down what they want to
+          bring up, the input lives right on the card — one tap to
+          focus, submit queues it for the next Chapter. The full
+          notes screen is still one tap away for users who want to
+          see / remove queued notes. */}
+      <InlineNoteAdd theme={theme} />
+
       <View style={s.ctaRow}>
         <AnimatedPressable
           style={[s.ghostBtn, { borderColor: theme.accentBorder }]}
@@ -222,7 +231,7 @@ export default function ChapterCard({ state, theme }: Props) {
           scaleDown={0.97}
         >
           <Ionicons name="journal-outline" size={13} color={theme.accent} />
-          <Text style={[s.ghostBtnText, { color: theme.accent }]}>Notes for Dilly</Text>
+          <Text style={[s.ghostBtnText, { color: theme.accent }]}>All notes</Text>
         </AnimatedPressable>
         {hasHadChapter ? (
           <AnimatedPressable
@@ -235,6 +244,99 @@ export default function ChapterCard({ state, theme }: Props) {
           </AnimatedPressable>
         ) : null}
       </View>
+    </View>
+  );
+}
+
+/**
+ * InlineNoteAdd — one-line input that queues a Chapter note.
+ *
+ * Shown inside ChapterCard in the waiting / pre-first state so users
+ * can drop notes without leaving Home. Submits to POST /chapters/notes
+ * directly, falls back gracefully on cap / cooldown errors by showing
+ * a brief hint. On success, clears the input and shows a quiet
+ * 'Noted.' ack.
+ */
+function InlineNoteAdd({ theme }: { theme: ResolvedTheme }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [ack, setAck] = useState<string | null>(null);
+  const ackAnim = useRef(new Animated.Value(0)).current;
+
+  const flash = useCallback((msg: string) => {
+    setAck(msg);
+    ackAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(ackAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1600),
+      Animated.timing(ackAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(({ finished }) => { if (finished) setAck(null); });
+  }, [ackAnim]);
+
+  const submit = useCallback(async () => {
+    const t = text.trim();
+    if (!t || busy) return;
+    setBusy(true);
+    try {
+      const res = await dilly.fetch('/chapters/notes', {
+        method: 'POST',
+        body: JSON.stringify({ text: t }),
+      });
+      if (res.ok) {
+        setText('');
+        flash('Noted for your next Chapter.');
+      } else {
+        const err = await res.json().catch(() => null);
+        const detail = err?.detail;
+        const msg = typeof detail === 'string'
+          ? detail
+          : (detail?.message || 'Full. Try again later.');
+        flash(msg.slice(0, 80));
+      }
+    } catch {
+      flash('Could not reach Dilly.');
+    } finally {
+      setBusy(false);
+    }
+  }, [text, busy, flash]);
+
+  const canSend = !!text.trim() && !busy;
+
+  return (
+    <View style={{ marginTop: 10, marginBottom: 10 }}>
+      <View style={[s.noteInputWrap, {
+        backgroundColor: theme.surface.bg,
+        borderColor: canSend ? theme.accent : theme.surface.border,
+      }]}>
+        <Ionicons name="journal-outline" size={14} color={theme.surface.t3} style={{ marginTop: 8 }} />
+        <TextInput
+          style={[s.noteInput, { color: theme.surface.t1 }]}
+          value={text}
+          onChangeText={setText}
+          placeholder="Bring this up in my next Chapter..."
+          placeholderTextColor={theme.surface.t3}
+          returnKeyType="send"
+          onSubmitEditing={submit}
+          multiline
+          maxLength={300}
+        />
+        <AnimatedPressable
+          onPress={submit}
+          disabled={!canSend}
+          scaleDown={0.9}
+          hitSlop={6}
+          style={[s.noteSendBtn, {
+            backgroundColor: canSend ? theme.accent : theme.surface.s2,
+          }]}
+        >
+          <Ionicons name="arrow-up" size={14} color={canSend ? '#fff' : theme.surface.t3} />
+        </AnimatedPressable>
+      </View>
+      {ack ? (
+        <Animated.Text style={[s.noteAck, { color: theme.accent, opacity: ackAnim }]}>
+          {ack}
+        </Animated.Text>
+      ) : null}
     </View>
   );
 }
@@ -302,4 +404,32 @@ const s = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1,
   },
   ghostBtnText: { fontSize: 12, fontWeight: '800', letterSpacing: -0.1 },
+
+  // Inline chapter-note input. Sits on ChapterCard so users can
+  // queue a note without navigating anywhere.
+  noteInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  noteInput: {
+    flex: 1,
+    minHeight: 36,
+    maxHeight: 80,
+    fontSize: 13,
+    paddingVertical: 8,
+    lineHeight: 18,
+  },
+  noteSendBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 4,
+  },
+  noteAck: {
+    fontSize: 11, fontWeight: '700', marginTop: 6, letterSpacing: 0,
+  },
 });
