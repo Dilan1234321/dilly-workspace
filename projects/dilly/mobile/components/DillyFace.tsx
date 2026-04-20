@@ -248,6 +248,15 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const outerW = size + pencilPad
   const outerH = size + pencilPad
 
+  // Inner face is inset from the ring so Dilly has room to drift
+  // around without her face clipping at the circle edge. ~14% inset
+  // on each side — enough margin for the full TRAVEL range plus a
+  // bit of buffer, while still filling the ring with personality.
+  const innerSize = Math.round(size * 0.86)
+  const innerCx = innerSize / 2
+  const innerCy = innerSize / 2
+  const innerS = (innerSize * 0.44 / 2) / 19
+
   return (
     <View style={{ width: outerW, height: outerH }}>
       <View
@@ -265,8 +274,8 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
       >
         <Animated.View
           style={{
-            width: size,
-            height: size,
+            width: innerSize,
+            height: innerSize,
             transform: [
               { translateX: posX },
               { translateY: posY },
@@ -274,11 +283,11 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
             ],
           }}
         >
-          <Svg width={size} height={size}>
+          <Svg width={innerSize} height={innerSize}>
             <EyesAndSmile
-              cx={cx}
-              cy={cy}
-              s={s}
+              cx={innerCx}
+              cy={innerCy}
+              s={innerS}
               eyeScaleAnim={eyeScaleAnim}
               eyeLiftAnim={eyeLiftAnim}
               browLiftAnim={browLiftAnim}
@@ -293,9 +302,9 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
             {accessory !== 'none' && !pinnedPencil && (
               <Accessory
                 kind={accessory}
-                cx={cx}
-                cy={cy}
-                s={s}
+                cx={innerCx}
+                cy={innerCy}
+                s={innerS}
                 color={accessoryColor || faceInk}
                 scribbleAnim={mood === 'writing' ? scribbleAnim : null}
               />

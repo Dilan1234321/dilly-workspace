@@ -102,7 +102,14 @@ function LoadingScreen({ onComplete, themed }: { onComplete: () => void; themed:
         <Animated.View style={[
           { opacity: wordmarkOpacity, transform: [{ translateY: wordmarkTranslateY }] },
         ]}>
-          <Image source={require('../assets/logo.png')} style={ls.logoImage} resizeMode="contain" />
+          {/* Tint the logo with the user's accent (falls back to
+              GOLD on sign-out per `fill` above). Image's tintColor
+              recolors every opaque pixel. */}
+          <Image
+            source={require('../assets/logo.png')}
+            style={[ls.logoImage, themed && { tintColor: fill }]}
+            resizeMode="contain"
+          />
         </Animated.View>
         <Animated.Text style={[
           ls.tagline,

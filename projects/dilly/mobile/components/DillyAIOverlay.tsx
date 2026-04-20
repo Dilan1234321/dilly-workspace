@@ -648,8 +648,18 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           {/* Header */}
           <View style={[s.header, { paddingTop: insets.top + 10 }]}>
             <View style={s.wordmark}>
-              <Image source={require('../assets/logo.png')} style={s.wordmarkLogo} resizeMode="contain" />
-              <Text style={s.wordmarkAI}>AI</Text>
+              {/* Tint the logo PNG with the user's accent. tintColor
+                  recolors every visible pixel of the image. Same
+                  treatment applied to the "AI" wordmark next to it
+                  so the whole mark reads as one unit in the user's
+                  accent. AI was already Cinzel — matches the logo
+                  typeface so the lockup looks clean. */}
+              <Image
+                source={require('../assets/logo.png')}
+                style={[s.wordmarkLogo, { tintColor: theme.accent }]}
+                resizeMode="contain"
+              />
+              <Text style={[s.wordmarkAI, { color: theme.accent }]}>AI</Text>
             </View>
             <View style={s.modePills}>
               {(['coaching', 'practice'] as ChatMode[]).map(m => (
