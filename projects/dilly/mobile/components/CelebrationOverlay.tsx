@@ -20,7 +20,13 @@ export type MilestoneType =
   | 'win-offer'
   | 'win-milestone'
   | 'unlocked-dilly'
-  | 'unlocked-pro';
+  | 'unlocked-pro'
+  | 'pulse-streak-3'
+  | 'pulse-streak-7'
+  | 'pulse-streak-14'
+  | 'pulse-streak-30'
+  | 'pulse-streak-60'
+  | 'pulse-streak-100';
 
 interface MilestoneConfig {
   eyebrow: string;
@@ -104,6 +110,52 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
     headline: "Saved to\nyour timeline.",
     sub: "These stack. One at a time is how it compounds.",
     accentColor: colors.green,
+    ctaLabel: 'Keep going',
+  },
+  // Pulse streak milestones. Celebrate the habit itself, quietly. Tone
+  // is 'you did something rare', not a shouty trophy. Each milestone
+  // has its own copy so the reward compounds — hitting day 100 doesn't
+  // feel like day 3.
+  'pulse-streak-3': {
+    eyebrow: 'THREE IN A ROW',
+    headline: "Three days of\nshowing up.",
+    sub: "Most people never make it to day three. You're in the smallest, quietest club that changes careers.",
+    accentColor: colors.green,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-7': {
+    eyebrow: 'A FULL WEEK',
+    headline: "Seven days.\nThat's a pattern.",
+    sub: "You built a daily habit in a week. That is how Dilly starts remembering who you actually are.",
+    accentColor: colors.green,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-14': {
+    eyebrow: 'TWO WEEKS',
+    headline: "You earned this\none twice.",
+    sub: "Fourteen days of showing up. This is past 'trying it out' and into 'this is what I do now.'",
+    accentColor: colors.green,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-30': {
+    eyebrow: 'ONE MONTH',
+    headline: "A full month\nof you.",
+    sub: "Thirty pulses. That's not a streak anymore — that's a practice. This is the window people look back on and say things changed here.",
+    accentColor: colors.gold,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-60': {
+    eyebrow: 'SIXTY DAYS',
+    headline: "Two months.\nThe quiet kind.",
+    sub: "You've been doing something nobody sees for sixty days. That is what careers are built on.",
+    accentColor: colors.gold,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-100': {
+    eyebrow: 'ONE HUNDRED',
+    headline: "A hundred days.\nThat's rare air.",
+    sub: "A hundred days of showing up for yourself before anyone asked. Remember this number. You'll want it back one day.",
+    accentColor: colors.gold,
     ctaLabel: 'Keep going',
   },
   // Subscription unlocks. These are the moments the user becomes a paying

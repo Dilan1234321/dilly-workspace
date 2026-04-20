@@ -26,6 +26,7 @@ import {
   resolveExtraction,
   abortExtraction,
 } from '../hooks/useExtractionPending';
+import { triggerCelebration } from '../hooks/useCelebration';
 
 interface PulseToday {
   ok: boolean;
@@ -108,6 +109,30 @@ export default function DailyPulseCard() {
         mood,
         streak: data.streak,
       } : prev);
+
+      // Streak milestone celebration. Fires only on a new entry for
+      // today (data.is_new_today) so editing today's pulse doesn't
+      // re-trigger the overlay. Matches hitting the exact day count
+      // so rebuilding a broken streak to day 7 again still celebrates.
+      if (data?.is_new_today) {
+        const days = Number(data?.streak?.current || 0);
+        const milestones: Record<number, string> = {
+          3:   'pulse-streak-3',
+          7:   'pulse-streak-7',
+          14:  'pulse-streak-14',
+          30:  'pulse-streak-30',
+          60:  'pulse-streak-60',
+          100: 'pulse-streak-100',
+        };
+        const hit = milestones[days];
+        if (hit) {
+          // Small delay so the inline "Dilly noticed N things" lands
+          // first, THEN the overlay takes the stage. Otherwise the
+          // overlay hides the fact-count reward moment.
+          setTimeout(() => triggerCelebration(hit as any), 900);
+        }
+      }
+
       setJustSaved(true);
       // Surface the extracted-facts count so users see the loop
       // close: "Dilly noticed 2 new things" tells them the Pulse

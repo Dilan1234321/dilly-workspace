@@ -54,7 +54,11 @@ export default function useCelebration() {
       milestone === 'unlocked-pro' ||
       milestone === 'win-interview' ||
       milestone === 'win-offer' ||
-      milestone === 'win-milestone';
+      milestone === 'win-milestone' ||
+      // Pulse streak milestones fire each time a user re-hits them
+      // (streak broken, then rebuilt to day 7 again). Earning it the
+      // second time should feel earned the second time.
+      milestone.startsWith('pulse-streak-');
     if (alwaysFire) {
       setActiveMilestone(milestone);
       return;
