@@ -1874,17 +1874,20 @@ export default function JobsScreen() {
                   <TouchableOpacity
                     key={c.id}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 0.5, borderColor: colors.b1 }}
-                    onPress={() => renameCollection(c.id)}
+                    /* Tap opens the collection's own screen (rename + remove
+                       live there). Long-press still deletes from here so
+                       power users can clean up without an extra navigation. */
+                    onPress={() => { setShowCollections(false); router.push(`/(app)/collection/${c.id}`); }}
                     onLongPress={() => deleteCollection(c.id)}
                   >
-                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: COBALT + '10', alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name="bookmark" size={16} color={COBALT} />
+                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: theme.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="bookmark" size={16} color={theme.accent} />
                     </View>
                     <View style={{ flex: 1, marginLeft: 12 }}>
                       <Text style={{ fontSize: 15, fontWeight: '700', color: colors.t1 }}>{c.name}</Text>
                       <Text style={{ fontSize: 12, color: colors.t3, marginTop: 2 }}>{c.jobs?.length || 0} job{(c.jobs?.length || 0) !== 1 ? 's' : ''}</Text>
                     </View>
-                    <Ionicons name="ellipsis-horizontal" size={16} color={colors.t3} />
+                    <Ionicons name="chevron-forward" size={16} color={colors.t3} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>

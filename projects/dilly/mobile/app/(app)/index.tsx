@@ -983,6 +983,10 @@ function SeekerHome() {
   const [factCount, setFactCount] = useState(0);
   const [topFacts, setTopFacts] = useState<Array<{ category: string; label: string; value: string }>>([]);
   const [appCount, setAppCount] = useState(0);
+  // Number of jobs the user has saved across all collections.
+  // Counts toward the "Save your first job" onboarding step so the
+  // checkmark flips after saving, not after applying.
+  const [savedJobCount, setSavedJobCount] = useState(0);
   // Weekly brief. personalized Monday-morning card with a headline +
   // 3 bullets + deep links. Fetched on mount, cached server-side per
   // ISO week. Cheap to fetch (no LLM call).
@@ -1071,6 +1075,17 @@ function SeekerHome() {
         dilly.get('/applications').then(data => {
           const apps = Array.isArray(data) ? data : (data?.applications || []);
           setAppCount(apps.length);
+        }).catch(() => {});
+
+        // Saved-jobs count across all collections. Powers the
+        // "Save your first job" onboarding checkmark — previously
+        // that step only flipped when the user APPLIED to something,
+        // which is wrong (its subtitle is "start building your
+        // pipeline", not "apply").
+        dilly.get('/collections').then(data => {
+          const cols = Array.isArray(data) ? data : (data?.collections || []);
+          const total = cols.reduce((n: number, c: any) => n + (Array.isArray(c?.jobs) ? c.jobs.length : 0), 0);
+          setSavedJobCount(total);
         }).catch(() => {});
 
         // Top jobs
@@ -1163,7 +1178,7 @@ function SeekerHome() {
     },
     {
       id: 'save', title: 'Save your first job', subtitle: 'Start building your pipeline.',
-      icon: 'bookmark', color: colors.amber, completed: appCount > 0,
+      icon: 'bookmark', color: colors.amber, completed: savedJobCount > 0 || appCount > 0,
       onPress: () => router.push('/(app)/jobs'),
     },
   ];
