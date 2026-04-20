@@ -99,6 +99,39 @@ export default function ChapterSessionScreen() {
   const [chatSending, setChatSending] = useState(false);
   const [chatBlocked, setChatBlocked] = useState<string | null>(null);
   const chatMsgId = useRef(0);
+  // Mirror chatMessages into a ref so the unmount cleanup below can
+  // read the final state without the effect closing over stale data.
+  const chatMessagesRef = useRef<ChatMsg[]>([]);
+  useEffect(() => { chatMessagesRef.current = chatMessages; }, [chatMessages]);
+
+  // Flush extraction on Chapter unmount. The AI overlay wraps its
+  // own close handler to call /ai/chat/flush, but the Chapter screen
+  // uses its own inline chat with a private conv_id. Without this
+  // cleanup, anything the user typed on the question screen never
+  // extracted — they'd talk to Dilly and see no new facts on the
+  // profile after the Chapter closed. Fires only if the user sent
+  // at least one message AND the chapter has an id.
+  useEffect(() => {
+    return () => {
+      const msgs = chatMessagesRef.current;
+      const chapterId = chapter?.id;
+      const userCount = msgs.filter(m => m.role === 'user').length;
+      if (!chapterId || userCount < 1) return;
+      const convId = `chapter-${chapterId}-q`;
+      // Fire and forget. The profile page's useExtractionPending
+      // listener picks up the added facts when they return.
+      dilly.fetch('/ai/chat/flush', {
+        method: 'POST',
+        body: JSON.stringify({
+          conv_id: convId,
+          messages: msgs
+            .filter(m => (m.content || '').trim().length > 0)
+            .slice(-30)
+            .map(m => ({ role: m.role, content: m.content })),
+        }),
+      }).catch(() => {});
+    };
+  }, [chapter?.id]);
 
   // Chapter load. Generate if eligible, else render latest.
   useEffect(() => {
