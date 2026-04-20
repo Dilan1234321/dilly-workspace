@@ -187,13 +187,193 @@ SIGNALS: dict[str, dict] = {
 }
 
 
+_SIGNAL_ALT_HEADLINES = False  # marker so future edits know this block starts
+
+
+# ── Alternate signals (rotation partner) ───────────────────────────
+# Same 26 roles as SIGNALS, different angle on the same AI/market
+# story. signal_for_role alternates between SIGNALS and SIGNALS_ALT
+# by ISO-week parity so users see two distinct weekly signals before
+# content repeats. iso_week is stamped dynamically at call time so
+# the Field Pulse "NEW" badge works correctly for the current week.
+
+SIGNALS_ALT: dict[str, dict] = {
+    "software_engineer": {
+        "headline": "Cursor + Windsurf hit 40% code-generated-per-PR at stage-3 startups.",
+        "source": "Y Combinator Engineering Survey · March 2026",
+        "data_point": "Staff+ engineer openings up 18%; mid-level flat",
+        "move": "Move toward ambiguous, system-design-heavy work. That's where the ceiling moved.",
+    },
+    "data_analyst": {
+        "headline": "Mode Analytics deprecates SQL-writing role; 'question-shaper' role launched.",
+        "source": "Mode Blog · March 2026",
+        "data_point": "Data science postings with 'causal inference' up 29% YoY",
+        "move": "Learn to design experiments, not just query warehouses. That is the new moat.",
+    },
+    "accountant": {
+        "headline": "Deloitte closes 60% of staff-level audit roles; advisory practice hiring surges.",
+        "source": "WSJ · March 2026",
+        "data_point": "Advisory & tax-planning partners up 26% YoY, staff auditors down 41%",
+        "move": "Pivot toward advisory or forensic. Commodity audit is not coming back.",
+    },
+    "marketing_manager": {
+        "headline": "HubSpot's Breeze Agents run full campaign cycles; human review shifts to strategy.",
+        "source": "HubSpot INBOUND · March 2026",
+        "data_point": "Brand + PMM hiring up 17% while ops marketing roles shrink",
+        "move": "Go deep on brand, positioning, and measurement. Tactical execution is table stakes.",
+    },
+    "sales_rep": {
+        "headline": "Salesforce kills Outreach; Agentforce handles top-of-funnel across its entire base.",
+        "source": "Salesforce Dreamforce · March 2026",
+        "data_point": "Enterprise AE comp up 12% YoY; SDR roles down 44%",
+        "move": "Learn multi-stakeholder enterprise cycles this quarter. Transactional sales is gone.",
+    },
+    "customer_support": {
+        "headline": "Intercom Fin 2.0 now handles multi-step refund and billing disputes solo.",
+        "source": "Intercom Product Release · March 2026",
+        "data_point": "Customer Success Manager postings up 19%; Tier-1 support down 63%",
+        "move": "Build relationship muscles — CSM, TAM, implementation are surviving roles.",
+    },
+    "teacher": {
+        "headline": "Khanmigo deployed in 4 major districts; teacher role shifts toward coaching + SEL.",
+        "source": "EdWeek · March 2026",
+        "data_point": "SPED teachers earning $12k-$18k bonuses in urban districts",
+        "move": "Deepen SEL + SPED skills. The human-relationship side of teaching is what survives.",
+    },
+    "nurse": {
+        "headline": "Ambient-AI scribes now in 58% of US hospitals; nurses reclaim 2-3 hours/shift.",
+        "source": "Becker's Hospital Review · March 2026",
+        "data_point": "Travel-nurse premium roles up 22% in ICU + L&D + OR",
+        "move": "Lean into hands-on specialty work. Documentation-heavy roles shrink; bedside doesn't.",
+    },
+    "lawyer": {
+        "headline": "Harvey + Spellbook handle 70% of contract review; transactional hours plummet.",
+        "source": "Legaltech News · March 2026",
+        "data_point": "Litigation partner comp up 21% YoY; contract attorney roles down 49%",
+        "move": "Courtroom, negotiation, regulatory. Anything AI can't sign off on with malpractice risk.",
+    },
+    "truck_driver": {
+        "headline": "Kodiak launches driver-out in 4 states; regional fleet jobs stable for 5+ yrs.",
+        "source": "FreightWaves · March 2026",
+        "data_point": "Owner-operator + specialty hauling rates up 14% YoY",
+        "move": "Go owner-operator or get tanker/HAZMAT endorsement. Long-haul OTR is the first to go.",
+    },
+    "retail_worker": {
+        "headline": "Sephora BeautyGenius counters outperform human associates on conversion.",
+        "source": "NRF Big Show Recap · March 2026",
+        "data_point": "Assistant store manager roles up 8%; cashier roles down 26% YoY",
+        "move": "Move into management track or move to a store that sells experience, not just product.",
+    },
+    "recruiter": {
+        "headline": "LinkedIn Recruiter AI auto-sources + outreaches candidates at 10x human pace.",
+        "source": "SHRM Talent Report · March 2026",
+        "data_point": "Talent-acquisition director roles up 14%; contract sourcer roles down 38%",
+        "move": "Move toward head-of-talent, talent brand, or DEI-hiring roles. Pure sourcing is dead.",
+    },
+    "graphic_designer": {
+        "headline": "Adobe Firefly 3 + Canva Magic ship brand-kit-to-campaign in minutes.",
+        "source": "Adobe MAX · March 2026",
+        "data_point": "Product designer postings up 11%; logo-focused freelancers down 52%",
+        "move": "Go upstream — brand strategy, service design, product design. Pixel work alone won't pay rent.",
+    },
+    "writer_copywriter": {
+        "headline": "Publishers increase investment in original journalism + expert voices 3x YoY.",
+        "source": "Reuters Institute Digital News Report · March 2026",
+        "data_point": "Ghostwriters with subject-matter depth earning $200+/hr premium",
+        "move": "Earn expertise first, writing skill second. Generic copywriting is commodity.",
+    },
+    "hr_generalist": {
+        "headline": "BambooHR acquires Lattice; HRIS work collapses into one automated stack.",
+        "source": "HR Dive · March 2026",
+        "data_point": "Comp + benefits specialists up 12%; HR generalist openings down 34%",
+        "move": "Pick ONE specialty this year. Generalist HR is being absorbed into the product.",
+    },
+    "project_manager": {
+        "headline": "ClickUp AI Brain auto-writes status, risk, and retro docs; coordinator roles flat.",
+        "source": "Project Management Institute · March 2026",
+        "data_point": "Technical PM (engineering, data, ML) roles up 19% YoY",
+        "move": "Earn the 'technical' prefix. PM without depth in a domain is the role being cut.",
+    },
+    "executive_leader": {
+        "headline": "Fortune 100 CEO tenure drops 18%; operator CEOs with AI fluency at a premium.",
+        "source": "Spencer Stuart CEO Study · March 2026",
+        "data_point": "CFO + COO search mandates up 23% YoY",
+        "move": "Show you can lead through technology change. Boards are filtering hard for it now.",
+    },
+    "freelancer_generic": {
+        "headline": "Toptal + MBB alumni platforms grow 40%; commodity-work marketplaces shrink.",
+        "source": "Freelance Economy Report · March 2026",
+        "data_point": "Expert-tier rate cards holding; commodity rates down 45% YoY",
+        "move": "Get into an expert network or productize a retainer. Bidding wars are a losing game now.",
+    },
+    "operations": {
+        "headline": "Ramp + Brex auto-close books + run accruals; biz-ops role shifts to strategic modeling.",
+        "source": "CFO Weekly · March 2026",
+        "data_point": "Strategic finance + biz-ops roles up 21% YoY",
+        "move": "Build modeling + forecasting muscles. Execution-ops is being automated.",
+    },
+    "student_general": {
+        "headline": "Entry-level no-experience offers down 28%; internship-to-offer stays sticky.",
+        "source": "Handshake Network Trends · March 2026",
+        "data_point": "Project-portfolio weight at top-50 employers up 2x vs 2024",
+        "move": "One real shipped thing > three added clubs. Portfolio is the new GPA.",
+    },
+    "all_roles": {
+        "headline": "Companies reporting 'AI-driven' layoffs up 220%; most are role redesigns, not cuts.",
+        "source": "Challenger, Gray & Christmas · March 2026",
+        "data_point": "Half of roles eliminated were replaced with different roles at the same company",
+        "move": "Read the re-orgs carefully. The role you want may be the one replacing yours.",
+    },
+}
+
+
+def _current_iso_week() -> str:
+    """Return the current ISO week stamp in YYYY-Www format so
+    Field Pulse's is_new_to_user gate compares cleanly against the
+    signal's iso_week field."""
+    import datetime
+    today = datetime.date.today()
+    year, week, _ = today.isocalendar()
+    return f"{year}-W{week:02d}"
+
+
+def _pick_signal_table(iso_week: str) -> dict:
+    """ISO-week parity rotation. Even weeks → SIGNALS, odd weeks →
+    SIGNALS_ALT. Falls back to SIGNALS if the alt table is missing
+    the role_key, so partial coverage never breaks a lookup."""
+    try:
+        week_num = int(iso_week.split("-W")[-1])
+    except Exception:
+        return SIGNALS
+    return SIGNALS_ALT if (week_num % 2 == 1) else SIGNALS
+
+
 def signal_for_role(role_key: str | None) -> dict:
     """Return this week's signal for a role. Falls back to `all_roles`.
 
-    Caller is expected to pass a canonical role_key from the threat
-    report's ROLE_THREAT_REPORT dict. Non-canonical input returns the
-    fallback rather than None so the UI can always render something.
+    Alternates between SIGNALS and SIGNALS_ALT by ISO-week parity so
+    users see two distinct weekly signals per role before content
+    repeats. iso_week is stamped dynamically so the Field Pulse card
+    on mobile correctly detects week changes.
     """
-    if role_key and role_key in SIGNALS:
-        return dict(SIGNALS[role_key])
-    return dict(SIGNALS["all_roles"])
+    now_week = _current_iso_week()
+    primary = _pick_signal_table(now_week)
+    other = SIGNALS_ALT if primary is SIGNALS else SIGNALS
+
+    picked: dict | None = None
+    if role_key:
+        if role_key in primary:
+            picked = dict(primary[role_key])
+        elif role_key in other:
+            # Alt-table fallback — if one of the two tables is missing
+            # this role, use whichever has it so rotation degrades
+            # gracefully to "same signal twice" instead of falling
+            # all the way back to all_roles.
+            picked = dict(other[role_key])
+    if picked is None:
+        picked = dict(primary.get("all_roles") or SIGNALS["all_roles"])
+
+    # Stamp current ISO week so the client's NEW badge fires each
+    # Monday without requiring a manual content edit here.
+    picked["iso_week"] = now_week
+    return picked

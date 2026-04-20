@@ -39,6 +39,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
@@ -147,6 +148,11 @@ const AVG_WORDS_PER_SEC = 2.3;
 export default function InterviewPracticeScreen() {
   const toast = useInlineToast();
   const insets = useSafeAreaInsets();
+  // Interview Prep had zero theme integration — every surface was
+  // frozen at module load via the colors proxy. Pulling the resolved
+  // theme here and propagating to child phase components so Customize
+  // Dilly actually applies across this screen.
+  const theme = useResolvedTheme();
   const { company: paramCompany, role: paramRole } = useLocalSearchParams<{ company?: string; role?: string }>();
 
   const [phase, setPhase] = useState<Phase>('setup');
@@ -394,10 +400,15 @@ export default function InterviewPracticeScreen() {
   }
 
   const q = questions[currentIdx];
-  const isDark = phase === 'practice';
+  // Practice phase used to force a dark NIGHT_BG container regardless
+  // of the user's Customize Dilly surface. The user asked for the whole
+  // interview experience to follow the theme, so the forced-dark flag
+  // is gone — the container and navbar pull directly from the
+  // resolved theme on every phase.
+  const isDark = false;
 
   return (
-    <View style={[s.container, { paddingTop: insets.top, backgroundColor: isDark ? NIGHT_BG : colors.bg }]}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* First-visit coach — The Room. */}
       <FirstVisitCoach
         id="interview-room-v1"
@@ -469,16 +480,23 @@ export default function InterviewPracticeScreen() {
 
 function NavBar({ dark, onBack, phase, currentIdx, total }:
   { dark: boolean; onBack: () => void; phase: Phase; currentIdx: number; total: number }) {
+  const theme = useResolvedTheme();
   const title =
     phase === 'practice' ? `${currentIdx + 1} / ${total}` :
     phase === 'analyzing' ? 'Debriefing...' :
     phase === 'review' ? 'Debrief' : 'The Room';
+  // `dark` phase is the practice room which intentionally stays dark
+  // regardless of the user's theme (immersive interview feel). For
+  // every other phase we pull navbar colors from the resolved theme
+  // so the navbar matches the rest of the app chrome.
+  const borderColor = dark ? NIGHT_BORDER : theme.surface.border;
+  const textColor = dark ? NIGHT_TEXT : theme.surface.t1;
   return (
-    <View style={[s.navBar, { borderBottomColor: dark ? NIGHT_BORDER : colors.b1 }]}>
+    <View style={[s.navBar, { borderBottomColor: borderColor }]}>
       <AnimatedPressable onPress={onBack} scaleDown={0.9} hitSlop={12}>
-        <Ionicons name="chevron-back" size={22} color={dark ? NIGHT_TEXT : colors.t1} />
+        <Ionicons name="chevron-back" size={22} color={textColor} />
       </AnimatedPressable>
-      <Text style={[s.navTitle, { color: dark ? NIGHT_TEXT : colors.t1 }]}>
+      <Text style={[s.navTitle, { color: textColor }]}>
         {title}
       </Text>
       <View style={{ width: 22 }} />
@@ -496,6 +514,10 @@ function SetupPhase({
   jobUrl, setJobUrl, urlLoading, urlError, onUrlFetch,
   jdTooShort, jdQuality, canGenerate, onStart, insetsBottom,
 }: any) {
+  // Resolved theme so the setup form surfaces (card bg, inputs,
+  // hero copy) adapt to Customize Dilly. Static StyleSheet colors
+  // remain as fallbacks; inline overrides take precedence.
+  const theme = useResolvedTheme();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 60 }]}>
@@ -507,44 +529,44 @@ function SetupPhase({
         <FadeInView delay={0}>
           {/* Hero — no logo, no chatbot framing. This is a Room. */}
           <View style={s.hero}>
-            <View style={s.heroRingOuter}>
-              <View style={s.heroRingInner}>
-                <Ionicons name="mic" size={28} color={INDIGO} />
+            <View style={[s.heroRingOuter, { backgroundColor: theme.accent + '08' }]}>
+              <View style={[s.heroRingInner, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                <Ionicons name="mic" size={28} color={theme.accent} />
               </View>
             </View>
-            <Text style={s.heroKicker}>STEP INTO</Text>
-            <Text style={s.heroTitle}>The Interview Room</Text>
-            <Text style={s.heroSub}>
+            <Text style={[s.heroKicker, { color: theme.accent }]}>STEP INTO</Text>
+            <Text style={[s.heroTitle, { color: theme.surface.t1 }]}>The Interview Room</Text>
+            <Text style={[s.heroSub, { color: theme.surface.t2 }]}>
               This isn't a chatbot. Dilly reads the job, builds five questions they'll actually ask, and tracks your answers in real time (structure, specificity, pace) against the way companies like this actually hire.
             </Text>
             <View style={s.heroProofRow}>
-              <ProofChip icon="flash" text="5 questions" />
-              <ProofChip icon="time" text="~10 min" />
-              <ProofChip icon="medal" text="Role-specific" />
+              <ProofChip icon="flash" text="5 questions" theme={theme} />
+              <ProofChip icon="time" text="~10 min" theme={theme} />
+              <ProofChip icon="medal" text="Role-specific" theme={theme} />
             </View>
           </View>
         </FadeInView>
 
         <FadeInView delay={80}>
-          <Text style={s.sectionHeader}>PASTE THE ROLE</Text>
+          <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>PASTE THE ROLE</Text>
 
-          <View style={s.inputCard}>
+          <View style={[s.inputCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
             {/* URL primary — one tap, everything fills. */}
-            <FieldLabel text="Job URL" hint="Fastest way in" />
+            <FieldLabel text="Job URL" hint="Fastest way in" theme={theme} />
             <View style={s.urlRow}>
               <TextInput
-                style={[s.input, { flex: 1 }]}
+                style={[s.input, { flex: 1, backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
                 value={jobUrl}
                 onChangeText={setJobUrl}
                 placeholder="Paste a Greenhouse, Lever, or careers page URL"
-                placeholderTextColor={colors.t3}
+                placeholderTextColor={theme.surface.t3}
                 autoCapitalize="none"
                 keyboardType="url"
                 returnKeyType="go"
                 onSubmitEditing={onUrlFetch}
               />
               <AnimatedPressable
-                style={[s.urlBtn, (!jobUrl.trim() || urlLoading) && { opacity: 0.4 }]}
+                style={[s.urlBtn, { backgroundColor: theme.accent }, (!jobUrl.trim() || urlLoading) && { opacity: 0.4 }]}
                 onPress={onUrlFetch}
                 disabled={!jobUrl.trim() || urlLoading}
                 scaleDown={0.95}
@@ -557,46 +579,46 @@ function SetupPhase({
             {urlError ? <Text style={s.urlError}>{urlError}</Text> : null}
 
             <View style={s.dividerRow}>
-              <View style={s.dividerLine} />
-              <Text style={s.dividerText}>OR ENTER MANUALLY</Text>
-              <View style={s.dividerLine} />
+              <View style={[s.dividerLine, { backgroundColor: theme.surface.border }]} />
+              <Text style={[s.dividerText, { color: theme.surface.t3 }]}>OR ENTER MANUALLY</Text>
+              <View style={[s.dividerLine, { backgroundColor: theme.surface.border }]} />
             </View>
 
-            <FieldLabel text="Company" required />
+            <FieldLabel text="Company" required theme={theme} />
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
               value={company}
               onChangeText={setCompany}
               placeholder="e.g. Stripe"
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
               autoFocus={false}
             />
-            <FieldLabel text="Role" required top />
+            <FieldLabel text="Role" required top theme={theme} />
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
               value={role}
               onChangeText={setRole}
               placeholder="e.g. Senior Product Engineer"
-              placeholderTextColor={colors.t3}
+              placeholderTextColor={theme.surface.t3}
             />
 
             <View style={{ marginTop: 14 }}>
               <View style={s.jdHeaderRow}>
-                <FieldLabel text="Job Description" required inline />
-                <View style={s.jdQualityPill}>
+                <FieldLabel text="Job Description" required inline theme={theme} />
+                <View style={[s.jdQualityPill, { backgroundColor: theme.surface.bg, borderColor: theme.surface.border }]}>
                   <View style={[s.jdQualityDot, { backgroundColor: jdQuality.color }]} />
                   <Text style={[s.jdQualityText, { color: jdQuality.color }]}>{jdQuality.label}</Text>
                 </View>
               </View>
               <TextInput
-                style={[s.input, { minHeight: 140, textAlignVertical: 'top' }]}
+                style={[s.input, { minHeight: 140, textAlignVertical: 'top', backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
                 value={jobDescription}
                 onChangeText={setJobDescription}
                 placeholder="Paste the full description. The more detail, the sharper the questions."
-                placeholderTextColor={colors.t3}
+                placeholderTextColor={theme.surface.t3}
                 multiline
               />
-              <View style={s.jdQualityTrack}>
+              <View style={[s.jdQualityTrack, { backgroundColor: theme.surface.border }]}>
                 <View style={[s.jdQualityFill, { width: `${jdQuality.pct}%`, backgroundColor: jdQuality.color }]} />
               </View>
               {jdTooShort && (
@@ -610,7 +632,7 @@ function SetupPhase({
 
         <FadeInView delay={140}>
           <AnimatedPressable
-            style={[s.enterBtn, !canGenerate && { opacity: 0.35 }]}
+            style={[s.enterBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }, !canGenerate && { opacity: 0.35 }]}
             onPress={onStart}
             disabled={!canGenerate}
             scaleDown={0.97}
@@ -618,7 +640,7 @@ function SetupPhase({
             <Text style={s.enterBtnText}>Step into the Room</Text>
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
           </AnimatedPressable>
-          <Text style={s.enterFootnote}>
+          <Text style={[s.enterFootnote, { color: theme.surface.t3 }]}>
             No recruiter hears this session. It's yours.
           </Text>
         </FadeInView>
@@ -627,21 +649,30 @@ function SetupPhase({
   );
 }
 
-function ProofChip({ icon, text }: { icon: any; text: string }) {
+function ProofChip({ icon, text, theme }: { icon: any; text: string; theme?: any }) {
+  // Theme fallback preserves standalone rendering; when theme is
+  // passed (from SetupPhase) the chip bg + text adapt to Customize
+  // Dilly accent so a Midnight / Rose / Teal user sees their color
+  // on the proof chips instead of hardcoded INDIGO.
+  const accent = theme?.accent || INDIGO;
+  const accentSoft = theme?.accentSoft || (INDIGO + '10');
+  const accentBorder = theme?.accentBorder || (INDIGO + '22');
   return (
-    <View style={s.proofChip}>
-      <Ionicons name={icon} size={11} color={INDIGO} />
-      <Text style={s.proofChipText}>{text}</Text>
+    <View style={[s.proofChip, { backgroundColor: accentSoft, borderColor: accentBorder }]}>
+      <Ionicons name={icon} size={11} color={accent} />
+      <Text style={[s.proofChipText, { color: accent }]}>{text}</Text>
     </View>
   );
 }
 
-function FieldLabel({ text, required, top, hint, inline }:
-  { text: string; required?: boolean; top?: boolean; hint?: string; inline?: boolean }) {
+function FieldLabel({ text, required, top, hint, inline, theme }:
+  { text: string; required?: boolean; top?: boolean; hint?: string; inline?: boolean; theme?: any }) {
+  const labelColor = theme?.surface?.t2 || colors.t2;
+  const hintColor = theme?.surface?.t3 || colors.t3;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: top ? 12 : (inline ? 0 : 4), marginBottom: 6 }}>
-      <Text style={s.fieldLabel}>{text}{required ? <Text style={{ color: CORAL }}> *</Text> : null}</Text>
-      {hint ? <Text style={s.fieldHint}>{hint}</Text> : null}
+      <Text style={[s.fieldLabel, { color: labelColor }]}>{text}{required ? <Text style={{ color: CORAL }}> *</Text> : null}</Text>
+      {hint ? <Text style={[s.fieldHint, { color: hintColor }]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -651,13 +682,23 @@ function FieldLabel({ text, required, top, hint, inline }:
 /* ─────────────────────────────────────────────────────────────── */
 
 function LoadingPhase({ company, role, stage }: { company: string; role: string; stage: number }) {
+  // Theme-aware — the loading card was frozen to light-mode colors,
+  // so Midnight users saw a white card on a dark screen. Every color
+  // that was static is now pulled from the resolved theme.
+  const theme = useResolvedTheme();
   return (
     <View style={s.loadingWrap}>
-      <View style={s.loadingCardLight}>
-        <View style={s.loadingRing}>
-          <ActivityIndicator size="small" color={INDIGO} />
+      <View style={[s.loadingCardLight, {
+        backgroundColor: theme.surface.s1,
+        borderColor: theme.surface.border,
+      }]}>
+        <View style={[s.loadingRing, {
+          backgroundColor: theme.accentSoft,
+          borderColor: theme.accentBorder,
+        }]}>
+          <ActivityIndicator size="small" color={theme.accent} />
         </View>
-        <Text style={s.loadingCompany}>
+        <Text style={[s.loadingCompany, { color: theme.surface.t3 }]}>
           {company.toUpperCase()} · {role}
         </Text>
         <View style={{ gap: 10, marginTop: 20, width: '100%' }}>
@@ -667,17 +708,17 @@ function LoadingPhase({ company, role, stage }: { company: string; role: string;
             return (
               <View key={i} style={s.loaderRow}>
                 <View style={[s.loaderBullet, {
-                  backgroundColor: done ? INDIGO : active ? INDIGO + '30' : colors.s3,
-                  borderColor: done || active ? INDIGO : colors.b1,
+                  backgroundColor: done ? theme.accent : active ? theme.accent + '30' : theme.surface.s2,
+                  borderColor: done || active ? theme.accent : theme.surface.border,
                 }]}>
                   {done
                     ? <Ionicons name="checkmark" size={10} color="#fff" />
                     : active
-                      ? <View style={s.loaderPulse} />
+                      ? <View style={[s.loaderPulse, { backgroundColor: theme.accent }]} />
                       : null}
                 </View>
                 <Text style={[s.loaderText, {
-                  color: done ? colors.t2 : active ? colors.t1 : colors.t3,
+                  color: done ? theme.surface.t2 : active ? theme.surface.t1 : theme.surface.t3,
                   fontWeight: active ? '700' : '500',
                 }]}>
                   {st.text}
@@ -699,6 +740,20 @@ function PracticePhase({
   scrollRef, question, company, role, currentIdx, total,
   currentAnswer, setCurrentAnswer, onSubmit, onSkip, insetsBottom,
 }: any) {
+  // Practice used to be a fixed dark "interview room". The user
+  // explicitly asked for it to adjust to Customize Dilly — so it now
+  // follows the theme. Surface text + card bg track the user's
+  // theme; we derive a handful of local aliases so the NIGHT_*
+  // sprinkled through the rest of this function have theme-aware
+  // equivalents without a full StyleSheet rewrite.
+  const theme = useResolvedTheme();
+  const PRACTICE_BG = theme.surface.bg;
+  const PRACTICE_CARD = theme.surface.s1;
+  const PRACTICE_BORDER = theme.surface.border;
+  const PRACTICE_TEXT = theme.surface.t1;
+  const PRACTICE_MUTED = theme.surface.t2;
+  const PRACTICE_DIM = theme.surface.t3;
+  const PRACTICE_ACCENT = theme.accent;
   // Derived live metrics for the performance bar.
   const metrics = useMemo(() => {
     const text = currentAnswer;
@@ -737,9 +792,9 @@ function PracticePhase({
               key={i}
               style={[
                 s.progressPip,
-                i < currentIdx && { backgroundColor: GLOW_INDIGO, opacity: 0.5 },
-                i === currentIdx && { backgroundColor: GLOW_INDIGO, width: 22 },
-                i > currentIdx && { backgroundColor: NIGHT_BORDER },
+                i < currentIdx && { backgroundColor: PRACTICE_ACCENT, opacity: 0.5 },
+                i === currentIdx && { backgroundColor: PRACTICE_ACCENT, width: 22 },
+                i > currentIdx && { backgroundColor: PRACTICE_BORDER },
               ]}
             />
           ))}
@@ -749,18 +804,18 @@ function PracticePhase({
         <FadeInView delay={0} key={currentIdx}>
           <View style={s.interviewerStrip}>
             <View style={s.interviewerDot} />
-            <Text style={s.interviewerText}>
-              Interviewing at <Text style={s.interviewerCo}>{company}</Text> for <Text style={s.interviewerCo}>{role}</Text>
+            <Text style={[s.interviewerText, { color: PRACTICE_MUTED }]}>
+              Interviewing at <Text style={[s.interviewerCo, { color: PRACTICE_TEXT }]}>{company}</Text> for <Text style={[s.interviewerCo, { color: PRACTICE_TEXT }]}>{role}</Text>
             </Text>
           </View>
 
-          <View style={s.questionCardNight}>
+          <View style={[s.questionCardNight, { backgroundColor: PRACTICE_CARD, borderColor: PRACTICE_BORDER }]}>
             <View style={s.questionHeaderRow}>
               <CategoryTag category={question.category} probability={question.probability} />
             </View>
-            <Text style={s.questionTextNight}>{question.question}</Text>
+            <Text style={[s.questionTextNight, { color: PRACTICE_TEXT }]}>{question.question}</Text>
             {question.why_flagged ? (
-              <View style={s.whyFlaggedNight}>
+              <View style={[s.whyFlaggedNight, { borderTopColor: PRACTICE_BORDER }]}>
                 <Ionicons name="alert-circle" size={12} color={AMBER} />
                 <Text style={s.whyFlaggedNightText}>{question.why_flagged}</Text>
               </View>
@@ -772,59 +827,59 @@ function PracticePhase({
               <View style={s.tipIconBubble}>
                 <Ionicons name="bulb" size={11} color={AMBER} />
               </View>
-              <Text style={s.tipTextNight}>{question.prep_tip}</Text>
+              <Text style={[s.tipTextNight, { color: PRACTICE_TEXT }]}>{question.prep_tip}</Text>
             </View>
           ) : null}
 
           <AnimatedPressable
-            style={s.dillyHelpBtnNight}
+            style={[s.dillyHelpBtnNight, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
             onPress={() => openDillyOverlay({
               isPaid: true,
               initialMessage: `I'm practicing for the ${role} role at ${company}. I was asked: "${question.question}". Based on this job description, help me structure a strong answer. What specific experiences from my Dilly Profile should I highlight? ${question.prep_tip ? 'Tip: ' + question.prep_tip : ''}`,
             })}
             scaleDown={0.97}
           >
-            <Ionicons name="sparkles" size={12} color={GLOW_INDIGO} />
-            <Text style={s.dillyHelpBtnText}>Think it through with Dilly</Text>
+            <Ionicons name="sparkles" size={12} color={PRACTICE_ACCENT} />
+            <Text style={[s.dillyHelpBtnText, { color: PRACTICE_ACCENT }]}>Think it through with Dilly</Text>
           </AnimatedPressable>
 
-          {/* Answer surface — dark, wide, spacious */}
-          <Text style={s.yourAnswerLabel}>YOUR ANSWER</Text>
+          {/* Answer surface */}
+          <Text style={[s.yourAnswerLabel, { color: PRACTICE_MUTED }]}>YOUR ANSWER</Text>
           <TextInput
-            style={s.answerInputNight}
+            style={[s.answerInputNight, { backgroundColor: PRACTICE_CARD, borderColor: PRACTICE_BORDER, color: PRACTICE_TEXT }]}
             value={currentAnswer}
             onChangeText={setCurrentAnswer}
             placeholder="Talk it out here. Aim for 45-90 seconds when spoken aloud."
-            placeholderTextColor={NIGHT_DIM}
+            placeholderTextColor={PRACTICE_DIM}
             multiline
             textAlignVertical="top"
           />
 
           {/* Live performance bar — the thing no chatbot can do */}
-          <View style={s.perfBar}>
+          <View style={[s.perfBar, { backgroundColor: PRACTICE_CARD, borderColor: PRACTICE_BORDER }]}>
             <View style={s.perfTopRow}>
               <View style={s.perfMetric}>
                 <Text style={[s.perfValue, { color: durationColor }]}>
                   {metrics.estSec === 0 ? '0s' : `~${metrics.estSec}s`}
                 </Text>
-                <Text style={s.perfHint}>{durationHint}</Text>
+                <Text style={[s.perfHint, { color: PRACTICE_DIM }]}>{durationHint}</Text>
               </View>
               <View style={{ flex: 1 }} />
               <View style={s.perfMetric}>
-                <Text style={s.perfValue}>{metrics.words}</Text>
-                <Text style={s.perfHint}>words</Text>
+                <Text style={[s.perfValue, { color: PRACTICE_TEXT }]}>{metrics.words}</Text>
+                <Text style={[s.perfHint, { color: PRACTICE_DIM }]}>words</Text>
               </View>
               <View style={{ flex: 1 }} />
               <View style={s.perfMetric}>
-                <Text style={[s.perfValue, { color: metrics.starCount === 4 ? GREEN : metrics.starCount >= 2 ? AMBER : NIGHT_DIM }]}>
+                <Text style={[s.perfValue, { color: metrics.starCount === 4 ? GREEN : metrics.starCount >= 2 ? AMBER : PRACTICE_DIM }]}>
                   {metrics.starCount} / 4
                 </Text>
-                <Text style={s.perfHint}>STAR</Text>
+                <Text style={[s.perfHint, { color: PRACTICE_DIM }]}>STAR</Text>
               </View>
             </View>
 
             {/* Duration track — nudges toward 40-90s band */}
-            <View style={s.durationTrack}>
+            <View style={[s.durationTrack, { backgroundColor: PRACTICE_BORDER }]}>
               <View style={[s.durationBand, {
                 left: `${(TARGET_MIN_SEC / 120) * 100}%`,
                 right: `${100 - (TARGET_MAX_SEC / 120) * 100}%`,
@@ -832,6 +887,7 @@ function PracticePhase({
               <View style={[s.durationMarker, {
                 left: `${Math.min(100, (metrics.estSec / 120) * 100)}%`,
                 backgroundColor: durationColor,
+                borderColor: PRACTICE_BG,
               }]} />
             </View>
 
@@ -842,18 +898,21 @@ function PracticePhase({
                   key={letter}
                   style={[
                     s.starChip,
-                    metrics.star[letter] && { backgroundColor: GLOW_INDIGO + '25', borderColor: GLOW_INDIGO },
+                    { borderColor: PRACTICE_BORDER },
+                    metrics.star[letter] && { backgroundColor: PRACTICE_ACCENT + '25', borderColor: PRACTICE_ACCENT },
                   ]}
                 >
                   <Text style={[
                     s.starChipLetter,
-                    metrics.star[letter] && { color: '#FFFFFF' },
+                    { color: PRACTICE_DIM },
+                    metrics.star[letter] && { color: PRACTICE_ACCENT },
                   ]}>
                     {letter}
                   </Text>
                   <Text style={[
                     s.starChipLabel,
-                    metrics.star[letter] && { color: GLOW_INDIGO + 'DD' },
+                    { color: PRACTICE_DIM },
+                    metrics.star[letter] && { color: PRACTICE_ACCENT },
                   ]}>
                     {letter === 'S' ? 'Situation' : letter === 'T' ? 'Task' : letter === 'A' ? 'Action' : 'Result'}
                   </Text>
@@ -865,7 +924,7 @@ function PracticePhase({
           {/* Actions */}
           <View style={s.actionRow}>
             <AnimatedPressable
-              style={[s.submitBtnNight, !canSubmit && { opacity: 0.35 }]}
+              style={[s.submitBtnNight, { backgroundColor: PRACTICE_ACCENT, shadowColor: PRACTICE_ACCENT }, !canSubmit && { opacity: 0.35 }]}
               onPress={onSubmit}
               disabled={!canSubmit}
               scaleDown={0.97}
@@ -875,8 +934,12 @@ function PracticePhase({
               </Text>
               <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
             </AnimatedPressable>
-            <AnimatedPressable style={s.skipBtnNight} onPress={onSkip} scaleDown={0.97}>
-              <Text style={s.skipBtnNightText}>Skip</Text>
+            <AnimatedPressable
+              style={[s.skipBtnNight, { borderColor: PRACTICE_BORDER }]}
+              onPress={onSkip}
+              scaleDown={0.97}
+            >
+              <Text style={[s.skipBtnNightText, { color: PRACTICE_MUTED }]}>Skip</Text>
             </AnimatedPressable>
           </View>
         </FadeInView>
@@ -904,6 +967,7 @@ function CategoryTag({ category, probability }: { category: string; probability:
 /* ─────────────────────────────────────────────────────────────── */
 
 function AnalyzingPhase({ company, line }: { company: string; line: number }) {
+  const theme = useResolvedTheme();
   const spin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
@@ -914,13 +978,16 @@ function AnalyzingPhase({ company, line }: { company: string; line: number }) {
 
   return (
     <View style={s.loadingWrap}>
-      <View style={s.loadingCardLight}>
+      <View style={[s.loadingCardLight, {
+        backgroundColor: theme.surface.s1,
+        borderColor: theme.surface.border,
+      }]}>
         <Animated.View style={[s.analyzingGlyph, { transform: [{ rotate }] }]}>
-          <Ionicons name="aperture" size={38} color={INDIGO} />
+          <Ionicons name="aperture" size={38} color={theme.accent} />
         </Animated.View>
-        <Text style={s.analyzingHeadline}>Debriefing your {company} round</Text>
-        <Text style={s.analyzingLine}>{ANALYZING_NARRATION[line]}...</Text>
-        <Text style={s.analyzingFooter}>
+        <Text style={[s.analyzingHeadline, { color: theme.surface.t1 }]}>Debriefing your {company} round</Text>
+        <Text style={[s.analyzingLine, { color: theme.surface.t2 }]}>{ANALYZING_NARRATION[line]}...</Text>
+        <Text style={[s.analyzingFooter, { color: theme.surface.t3 }]}>
           Takes about 30 seconds. Worth it.
         </Text>
       </View>
@@ -936,22 +1003,35 @@ function ReviewPhase({
   feedback, questions, answers, company, role,
   expandedCards, onToggle, onRetry, onDone, insetsBottom,
 }: any) {
+  // Full theme wiring — every card / text / border / CTA in the
+  // Review phase was frozen at the colors proxy, so Midnight /
+  // Cream / Blush users saw a light-mode debrief inside a themed
+  // shell. Inline overrides hang on top of the static StyleSheet.
+  const theme = useResolvedTheme();
   if (!feedback) {
     return (
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
-        <View style={s.debriefCard}>
+        <View style={[s.debriefCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
           <Ionicons name="alert-circle" size={24} color={AMBER} />
-          <Text style={s.verdictHeadline}>Practice complete</Text>
-          <Text style={s.verdictSub}>
+          <Text style={[s.verdictHeadline, { color: theme.surface.t1 }]}>Practice complete</Text>
+          <Text style={[s.verdictSub, { color: theme.surface.t2 }]}>
             Couldn't generate AI feedback this time. You answered {answers.filter((a: string) => a.length > 0).length} of {questions.length} at {company}.
           </Text>
         </View>
         <View style={s.reviewActions}>
-          <AnimatedPressable style={s.retryBtn} onPress={onRetry} scaleDown={0.97}>
-            <Ionicons name="refresh" size={14} color={INDIGO} />
-            <Text style={s.retryBtnText}>Run it back</Text>
+          <AnimatedPressable
+            style={[s.retryBtn, { borderColor: theme.accentBorder, backgroundColor: theme.accentSoft }]}
+            onPress={onRetry}
+            scaleDown={0.97}
+          >
+            <Ionicons name="refresh" size={14} color={theme.accent} />
+            <Text style={[s.retryBtnText, { color: theme.accent }]}>Run it back</Text>
           </AnimatedPressable>
-          <AnimatedPressable style={s.doneBtn} onPress={onDone} scaleDown={0.97}>
+          <AnimatedPressable
+            style={[s.doneBtn, { backgroundColor: theme.accent }]}
+            onPress={onDone}
+            scaleDown={0.97}
+          >
             <Text style={s.doneBtnText}>Done</Text>
           </AnimatedPressable>
         </View>
@@ -984,7 +1064,7 @@ function ReviewPhase({
     <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insetsBottom + 40 }]}>
       <FadeInView delay={0}>
         {/* Verdict headline — the one thing the user looks at first */}
-        <View style={[s.verdictCard, { borderColor: verdict.color + '50' }]}>
+        <View style={[s.verdictCard, { backgroundColor: theme.surface.s1, borderColor: verdict.color + '50' }]}>
           <View style={[s.verdictGlyph, { backgroundColor: verdict.color + '15', borderColor: verdict.color + '40' }]}>
             <Ionicons
               name={feedback.verdict === 'ready' ? 'trophy' : feedback.verdict === 'almost' ? 'time' : 'barbell'}
@@ -993,34 +1073,34 @@ function ReviewPhase({
             />
           </View>
           <Text style={[s.verdictHeadline, { color: verdict.color }]}>{verdict.label}</Text>
-          <Text style={s.verdictSub}>{verdict.sub}</Text>
-          <View style={s.verdictDivider} />
-          <Text style={s.verdictBody}>{feedback.overall}</Text>
+          <Text style={[s.verdictSub, { color: theme.surface.t2 }]}>{verdict.sub}</Text>
+          <View style={[s.verdictDivider, { backgroundColor: theme.surface.border }]} />
+          <Text style={[s.verdictBody, { color: theme.surface.t1 }]}>{feedback.overall}</Text>
         </View>
 
         {/* Scorecard — feels like a hiring rubric */}
-        <Text style={s.sectionHeader}>SCORECARD</Text>
-        <View style={s.scorecardCard}>
-          <ScoreRow label="Clarity"     value={scorecard.clarity} />
-          <ScoreRow label="Specificity" value={scorecard.specificity} />
-          <ScoreRow label="Structure"   value={scorecard.structure} />
-          <ScoreRow label="Confidence"  value={scorecard.confidence} />
+        <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>SCORECARD</Text>
+        <View style={[s.scorecardCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+          <ScoreRow label="Clarity"     value={scorecard.clarity} theme={theme} />
+          <ScoreRow label="Specificity" value={scorecard.specificity} theme={theme} />
+          <ScoreRow label="Structure"   value={scorecard.structure} theme={theme} />
+          <ScoreRow label="Confidence"  value={scorecard.confidence} theme={theme} />
         </View>
 
         {/* Strength / Gap — side by side, not buried */}
         <View style={s.sgRow}>
-          <View style={[s.sgCard, { borderColor: GREEN + '40' }]}>
+          <View style={[s.sgCard, { backgroundColor: theme.surface.s1, borderColor: GREEN + '40' }]}>
             <Text style={[s.sgLabel, { color: GREEN }]}>WHAT WORKED</Text>
-            <Text style={s.sgText}>{feedback.top_strength}</Text>
+            <Text style={[s.sgText, { color: theme.surface.t1 }]}>{feedback.top_strength}</Text>
           </View>
-          <View style={[s.sgCard, { borderColor: AMBER + '40' }]}>
+          <View style={[s.sgCard, { backgroundColor: theme.surface.s1, borderColor: AMBER + '40' }]}>
             <Text style={[s.sgLabel, { color: AMBER }]}>CLOSE THIS GAP</Text>
-            <Text style={s.sgText}>{feedback.priority_fix}</Text>
+            <Text style={[s.sgText, { color: theme.surface.t1 }]}>{feedback.priority_fix}</Text>
           </View>
         </View>
 
         {/* Per-question — side-by-side answer upgrade */}
-        <Text style={s.sectionHeader}>QUESTION BY QUESTION</Text>
+        <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>QUESTION BY QUESTION</Text>
         {questions.map((qq: PrepQuestion, i: number) => {
           const pq = feedback.per_question[i];
           const rating = pq?.rating || 'skipped';
@@ -1031,44 +1111,44 @@ function ReviewPhase({
           return (
             <AnimatedPressable
               key={i}
-              style={s.debriefCard}
+              style={[s.debriefCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
               onPress={() => onToggle(i)}
               scaleDown={0.98}
             >
               <View style={s.debriefHeader}>
-                <Text style={s.debriefQNum}>Q{i + 1}</Text>
-                <Text style={s.debriefQ} numberOfLines={isExpanded ? undefined : 2}>{qq.question}</Text>
+                <Text style={[s.debriefQNum, { color: theme.accent }]}>Q{i + 1}</Text>
+                <Text style={[s.debriefQ, { color: theme.surface.t1 }]} numberOfLines={isExpanded ? undefined : 2}>{qq.question}</Text>
                 <View style={[s.ratingPill, { backgroundColor: config.color + '15', borderColor: config.color + '40' }]}>
                   <Text style={[s.ratingPillText, { color: config.color }]}>{config.label}</Text>
                 </View>
               </View>
               <View style={s.debriefExpandRow}>
-                <Text style={s.debriefExpandHint}>{isExpanded ? 'Tap to collapse' : 'Tap to see the upgrade'}</Text>
-                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={colors.t3} />
+                <Text style={[s.debriefExpandHint, { color: theme.surface.t3 }]}>{isExpanded ? 'Tap to collapse' : 'Tap to see the upgrade'}</Text>
+                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={theme.surface.t3} />
               </View>
 
               {isExpanded && (
                 <View style={s.debriefExpanded}>
                   {/* Side by side answer diff */}
                   <View style={s.diffRow}>
-                    <View style={[s.diffCol, { borderColor: colors.b1 }]}>
-                      <Text style={[s.diffLabel, { color: colors.t3 }]}>YOUR ANSWER</Text>
-                      <Text style={s.diffTextYours}>
-                        {userAnswer || <Text style={{ fontStyle: 'italic' }}>Skipped</Text>}
+                    <View style={[s.diffCol, { backgroundColor: theme.surface.bg, borderColor: theme.surface.border }]}>
+                      <Text style={[s.diffLabel, { color: theme.surface.t3 }]}>YOUR ANSWER</Text>
+                      <Text style={[s.diffTextYours, { color: theme.surface.t1 }]}>
+                        {userAnswer || <Text style={{ fontStyle: 'italic', color: theme.surface.t3 }}>Skipped</Text>}
                       </Text>
                     </View>
                     <View style={[s.diffCol, { borderColor: GREEN + '40', backgroundColor: GREEN + '08' }]}>
                       <Text style={[s.diffLabel, { color: GREEN }]}>STRONGER ANSWER</Text>
-                      <Text style={s.diffTextModel}>
+                      <Text style={[s.diffTextModel, { color: theme.surface.t1 }]}>
                         {pq?.model_answer || '...'}
                       </Text>
                     </View>
                   </View>
 
                   {pq?.feedback ? (
-                    <View style={s.coachBlock}>
-                      <View style={s.coachBullet} />
-                      <Text style={s.coachText}>{pq.feedback}</Text>
+                    <View style={[s.coachBlock, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                      <View style={[s.coachBullet, { backgroundColor: theme.accent }]} />
+                      <Text style={[s.coachText, { color: theme.surface.t1 }]}>{pq.feedback}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -1080,23 +1160,27 @@ function ReviewPhase({
         {/* Action items */}
         {feedback.action_items && feedback.action_items.length > 0 && (
           <>
-            <Text style={s.sectionHeader}>BEFORE THE REAL INTERVIEW</Text>
-            <View style={s.actionsCardLight}>
+            <Text style={[s.sectionHeader, { color: theme.surface.t3 }]}>BEFORE THE REAL INTERVIEW</Text>
+            <View style={[s.actionsCardLight, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               {feedback.action_items.map((item: string, i: number) => (
                 <AnimatedPressable
                   key={i}
-                  style={[s.actionItemLight, i === feedback.action_items.length - 1 && { borderBottomWidth: 0 }]}
+                  style={[
+                    s.actionItemLight,
+                    { borderBottomColor: theme.surface.border },
+                    i === feedback.action_items.length - 1 && { borderBottomWidth: 0 },
+                  ]}
                   onPress={() => openDillyOverlay({
                     isPaid: true,
                     initialMessage: `I'm preparing for the ${role} role at ${company}. One of my action items is: "${item}". Help me work on this. What specific steps should I take?`,
                   })}
                   scaleDown={0.98}
                 >
-                  <View style={s.actionBulletLight}>
-                    <Text style={s.actionBulletTextLight}>{i + 1}</Text>
+                  <View style={[s.actionBulletLight, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                    <Text style={[s.actionBulletTextLight, { color: theme.accent }]}>{i + 1}</Text>
                   </View>
-                  <Text style={s.actionItemTextLight}>{item}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                  <Text style={[s.actionItemTextLight, { color: theme.surface.t1 }]}>{item}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
                 </AnimatedPressable>
               ))}
             </View>
@@ -1104,11 +1188,19 @@ function ReviewPhase({
         )}
 
         <View style={s.reviewActions}>
-          <AnimatedPressable style={s.retryBtn} onPress={onRetry} scaleDown={0.97}>
-            <Ionicons name="refresh" size={14} color={INDIGO} />
-            <Text style={s.retryBtnText}>Run it back</Text>
+          <AnimatedPressable
+            style={[s.retryBtn, { borderColor: theme.accentBorder, backgroundColor: theme.accentSoft }]}
+            onPress={onRetry}
+            scaleDown={0.97}
+          >
+            <Ionicons name="refresh" size={14} color={theme.accent} />
+            <Text style={[s.retryBtnText, { color: theme.accent }]}>Run it back</Text>
           </AnimatedPressable>
-          <AnimatedPressable style={s.doneBtn} onPress={onDone} scaleDown={0.97}>
+          <AnimatedPressable
+            style={[s.doneBtn, { backgroundColor: theme.accent }]}
+            onPress={onDone}
+            scaleDown={0.97}
+          >
             <Text style={s.doneBtnText}>Done</Text>
           </AnimatedPressable>
         </View>
@@ -1117,12 +1209,17 @@ function ReviewPhase({
   );
 }
 
-function ScoreRow({ label, value }: { label: string; value: number }) {
+function ScoreRow({ label, value, theme }: { label: string; value: number; theme?: any }) {
   const color = value >= 80 ? GREEN : value >= 55 ? AMBER : CORAL;
+  // theme prop optional so ScoreRow still works at standalone call
+  // sites; when passed (from ReviewPhase) label text + track bg
+  // adapt to Customize Dilly surface colors.
+  const labelColor = theme?.surface?.t2 || colors.t2;
+  const trackBg = theme?.surface?.s2 || colors.s2;
   return (
     <View style={s.scoreRow}>
-      <Text style={s.scoreLabel}>{label}</Text>
-      <View style={s.scoreTrack}>
+      <Text style={[s.scoreLabel, { color: labelColor }]}>{label}</Text>
+      <View style={[s.scoreTrack, { backgroundColor: trackBg }]}>
         <View style={[s.scoreFill, { width: `${value}%`, backgroundColor: color }]} />
       </View>
       <Text style={[s.scoreValue, { color }]}>{value}</Text>

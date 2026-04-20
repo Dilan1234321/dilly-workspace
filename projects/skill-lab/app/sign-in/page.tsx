@@ -58,12 +58,11 @@ export default async function SignInPage({
   const isStudent = sp.t === "s";
 
   return (
-    <div className="container-narrow pb-16 pt-16 sm:pt-24">
-      <div className="eyebrow">Account</div>
-      <h1 className="editorial mt-3 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+    <div className="mx-auto max-w-md pt-10">
+      <h1 className="text-2xl font-semibold">
         {step === "email" ? t(lang, "auth.signin.title") : t(lang, "auth.code.title")}
       </h1>
-      <p className="mt-4 text-base text-[color:var(--color-muted)] sm:text-lg">
+      <p className="mt-2 text-sm text-[color:var(--color-muted)]">
         {step === "email"
           ? t(lang, "auth.signin.subtitle")
           : t(lang, "auth.code.subtitle", { email: emailPrefill })}
@@ -77,17 +76,17 @@ export default async function SignInPage({
         <form action={handleSendCode} className="mt-6 space-y-4">
           <input type="hidden" name="next" value={next} />
           <Field name="email" type="email" label={t(lang, "auth.field.email")} autoComplete="email" required defaultValue={emailPrefill} />
-          <fieldset className="card p-4">
-            <legend className="eyebrow px-1">
+          <fieldset className="rounded-lg border border-[color:var(--color-border)] p-3">
+            <legend className="px-1 text-xs uppercase tracking-wide text-[color:var(--color-muted)]">
               {t(lang, "auth.user_type.heading")}
             </legend>
-            <div className="flex flex-col gap-3 text-sm sm:flex-row sm:gap-6">
+            <div className="flex gap-4 text-sm">
               <label className="flex items-center gap-2">
-                <input type="radio" name="user_type" value="student" defaultChecked={isStudent} className="accent-[color:var(--color-accent)]" />
+                <input type="radio" name="user_type" value="student" defaultChecked={isStudent} />
                 {t(lang, "auth.user_type.student")}
               </label>
               <label className="flex items-center gap-2">
-                <input type="radio" name="user_type" value="general" defaultChecked={!isStudent} className="accent-[color:var(--color-accent)]" />
+                <input type="radio" name="user_type" value="general" defaultChecked={!isStudent} />
                 {t(lang, "auth.user_type.general")}
               </label>
             </div>
@@ -141,7 +140,7 @@ function Field(props: {
 }) {
   return (
     <label className="block">
-      <span className="eyebrow block">
+      <span className="block text-xs uppercase tracking-wide text-[color:var(--color-muted)]">
         {props.label}
       </span>
       <input
@@ -152,7 +151,7 @@ function Field(props: {
         pattern={props.pattern}
         required={props.required}
         defaultValue={props.defaultValue}
-        className="mt-2 w-full rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3.5 py-2.5 text-base text-white outline-none transition focus:border-[color:var(--color-accent)] focus:bg-[color:var(--color-surface-raised)]"
+        className="mt-1 w-full rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[color:var(--color-accent)]"
       />
     </label>
   );

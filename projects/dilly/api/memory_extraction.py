@@ -211,9 +211,18 @@ def extract_memory_items(
     messages: list[dict[str, Any]],
     existing_items: list[dict[str, Any]],
     use_llm: bool = False,
+    skip_gate: bool = False,
 ) -> list[dict[str, Any]]:
-    # Cost gate: skip trivial exchanges entirely.
-    if not _messages_worth_extracting(messages):
+    # Cost gate: skip trivial exchanges entirely for the chat path
+    # (filters out one-word replies, greetings, acks).
+    #
+    # Pulse callers should pass skip_gate=True: a pulse entry is
+    # already a deliberate user reflection passing quality through
+    # intent, not length. A user writing 'Stuck with Anthropic app'
+    # (a 22-char pulse) should still extract a target_company fact —
+    # the word-count pre-gate would reject it and we'd silently lose
+    # the signal.
+    if not skip_gate and not _messages_worth_extracting(messages):
         return []
 
     # Two extraction paths:

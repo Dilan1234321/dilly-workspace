@@ -54,7 +54,15 @@ export default function useCelebration() {
       milestone === 'unlocked-pro' ||
       milestone === 'win-interview' ||
       milestone === 'win-offer' ||
-      milestone === 'win-milestone';
+      milestone === 'win-milestone' ||
+      // Pulse streak milestones fire each time a user re-hits them
+      // (streak broken, then rebuilt to day 7 again). Earning it the
+      // second time should feel earned the second time.
+      milestone.startsWith('pulse-streak-') ||
+      // Chapter milestones re-fire too — a user who pauses Chapters
+      // for 6 months and returns should feel the 4/12/26/52-week
+      // moments the second time they earn them.
+      milestone.startsWith('chapter-');
     if (alwaysFire) {
       setActiveMilestone(milestone);
       return;

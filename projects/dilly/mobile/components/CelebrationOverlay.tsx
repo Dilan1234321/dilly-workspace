@@ -20,7 +20,17 @@ export type MilestoneType =
   | 'win-offer'
   | 'win-milestone'
   | 'unlocked-dilly'
-  | 'unlocked-pro';
+  | 'unlocked-pro'
+  | 'pulse-streak-3'
+  | 'pulse-streak-7'
+  | 'pulse-streak-14'
+  | 'pulse-streak-30'
+  | 'pulse-streak-60'
+  | 'pulse-streak-100'
+  | 'chapter-4'
+  | 'chapter-12'
+  | 'chapter-26'
+  | 'chapter-52';
 
 interface MilestoneConfig {
   eyebrow: string;
@@ -105,6 +115,83 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
     sub: "These stack. One at a time is how it compounds.",
     accentColor: colors.green,
     ctaLabel: 'Keep going',
+  },
+  // Pulse streak milestones. Celebrate the habit itself, quietly. Tone
+  // is 'you did something rare', not a shouty trophy. Each milestone
+  // has its own copy so the reward compounds — hitting day 100 doesn't
+  // feel like day 3.
+  'pulse-streak-3': {
+    eyebrow: 'THREE IN A ROW',
+    headline: "Three days of\nshowing up.",
+    sub: "Most people never make it to day three. You're in the smallest, quietest club that changes careers.",
+    accentColor: colors.green,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-7': {
+    eyebrow: 'A FULL WEEK',
+    headline: "Seven days.\nThat's a pattern.",
+    sub: "You built a daily habit in a week. That is how Dilly starts remembering who you actually are.",
+    accentColor: colors.green,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-14': {
+    eyebrow: 'TWO WEEKS',
+    headline: "You earned this\none twice.",
+    sub: "Fourteen days of showing up. This is past 'trying it out' and into 'this is what I do now.'",
+    accentColor: colors.green,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-30': {
+    eyebrow: 'ONE MONTH',
+    headline: "A full month\nof you.",
+    sub: "Thirty pulses. That's not a streak anymore — that's a practice. This is the window people look back on and say things changed here.",
+    accentColor: colors.gold,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-60': {
+    eyebrow: 'SIXTY DAYS',
+    headline: "Two months.\nThe quiet kind.",
+    sub: "You've been doing something nobody sees for sixty days. That is what careers are built on.",
+    accentColor: colors.gold,
+    ctaLabel: 'Keep going',
+  },
+  'pulse-streak-100': {
+    eyebrow: 'ONE HUNDRED',
+    headline: "A hundred days.\nThat's rare air.",
+    sub: "A hundred days of showing up for yourself before anyone asked. Remember this number. You'll want it back one day.",
+    accentColor: colors.gold,
+    ctaLabel: 'Keep going',
+  },
+  // Chapter streak milestones — weekly ritual completions. Different
+  // cadence from Pulse (monthly+) so the copy lands differently: this
+  // is about the depth of the relationship, not the habit count.
+  'chapter-4': {
+    eyebrow: 'FOUR CHAPTERS',
+    headline: "A month of\nus working together.",
+    sub: "Four weeks in. This is when most people quit coaching arrangements. You didn't. Let's see what the next month looks like.",
+    accentColor: colors.green,
+    ctaLabel: 'Open Chapter',
+  },
+  'chapter-12': {
+    eyebrow: 'A FULL QUARTER',
+    headline: "Twelve Chapters.\nA whole quarter.",
+    sub: "You have twelve weeks of Dilly knowing you specifically. The advice is sharper now because she's watched you move through a full arc.",
+    accentColor: colors.gold,
+    ctaLabel: 'Open Chapter',
+  },
+  'chapter-26': {
+    eyebrow: 'HALF A YEAR',
+    headline: "Half a year.\nThat's a career move.",
+    sub: "Twenty-six Chapters. Most people don't spend this much time thinking carefully about their career in a decade.",
+    accentColor: colors.gold,
+    ctaLabel: 'Open Chapter',
+  },
+  'chapter-52': {
+    eyebrow: 'ONE FULL YEAR',
+    headline: "A year together.\nLook back.",
+    sub: "Fifty-two Chapters. Pull up the first one. The person writing it and the person reading this are not the same person anymore.",
+    accentColor: colors.gold,
+    ctaLabel: 'Open Chapter',
   },
   // Subscription unlocks. These are the moments the user becomes a paying
   // customer (or jumps tiers). Tone here is earned-pride, not celebration

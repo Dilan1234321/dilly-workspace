@@ -224,6 +224,21 @@ export default function AIArenaScreen() {
   // The file-level constants stay for StyleSheet fallbacks (proxy
   // freeze) but the JSX overrides them where it matters.
   const theme = useResolvedTheme();
+  // Contrast-aware text color for CTAs whose background is the user's
+  // chosen accent. Hardcoded '#0B1426' worked only when the accent
+  // was pale (pre-customize-dilly default #F0F0F0). With Midnight or
+  // dark-indigo accents the navy text disappeared into the button.
+  // Simple luminance test — dark accent -> white text, light accent
+  // -> navy text. Good enough for the 10 presets in ACCENT_PRESETS.
+  const onAccentText = (() => {
+    const hex = (theme.accent || '').replace('#', '');
+    if (hex.length !== 6) return '#0B1426';
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#0B1426' : '#FFFFFF';
+  })();
   // Holders get a calmer, coach-style tone. "field intelligence" and
   // "this quarter's play" instead of "threat" and "replace". Seekers/
   // students keep the existing arena/anxiety framing that powers
@@ -623,8 +638,8 @@ export default function AIArenaScreen() {
                 })}
                 scaleDown={0.97}
               >
-                <Ionicons name="chatbubbles" size={14} color="#0B1426" />
-                <Text style={threatCard.ctaBtnText}>
+                <Ionicons name="chatbubbles" size={14} color={onAccentText} />
+                <Text style={[threatCard.ctaBtnText, { color: onAccentText }]}>
                   {isHolder ? "Talk to Dilly about this quarter" : 'Ask Dilly what to do about this'}
                 </Text>
               </AnimatedPressable>
@@ -797,9 +812,13 @@ export default function AIArenaScreen() {
                   <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Threat Scanner</Text>
                   <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
                   {!scanResults && !scanLoading && (
-                    <AnimatedPressable style={a.actionBtn} onPress={runScan} scaleDown={0.97}>
-                      <Ionicons name="flash" size={16} color="#0B1426" />
-                      <Text style={a.actionBtnText}>Scan My Profile</Text>
+                    <AnimatedPressable
+                      style={[a.actionBtn, { backgroundColor: theme.accent }]}
+                      onPress={runScan}
+                      scaleDown={0.97}
+                    >
+                      <Ionicons name="flash" size={16} color={onAccentText} />
+                      <Text style={[a.actionBtnText, { color: onAccentText }]}>Scan My Profile</Text>
                     </AnimatedPressable>
                   )}
                   {scanLoading && <ActivityIndicator size="small" color={ACCENT} style={{ paddingVertical: 20 }} />}
@@ -1023,11 +1042,18 @@ export default function AIArenaScreen() {
 
         {!isHolder && shield ? (
           <>
-            <FadeInView delay={600}>
-              <View style={nm.proveRow}>
-                <Text style={[nm.sectionEyebrow, { color: theme.surface.t3 }]}>FREE FOR YOU</Text>
-              </View>
-            </FadeInView>
+            {/* Section header — only shown to free users. Paid users
+                see these tools alongside their paid ones as part of
+                the whole Arena, so 'FREE FOR YOU' reads as awkward
+                marketing to them. On free tier it signals 'here's
+                what's yours without paying' which is the point. */}
+            {shield.tools_unlocked === false ? (
+              <FadeInView delay={600}>
+                <View style={nm.proveRow}>
+                  <Text style={[nm.sectionEyebrow, { color: theme.surface.t3 }]}>FREE FOR YOU</Text>
+                </View>
+              </FadeInView>
+            ) : null}
 
             {/* Skill Vault. Pure profile render. The locked-skill pill
                 used to openDillyOverlay({isPaid:true}) which would

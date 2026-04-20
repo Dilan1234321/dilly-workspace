@@ -1586,6 +1586,44 @@ function SeekerHome() {
             facts). Makes the empty state feel like progress. Lists the
             concrete things Dilly learned from resume/onboarding + an
             explicit ask to add one more. Tapping opens Dilly AI. */}
+        {/* Zero-fact state. Brand-new users (or users whose extraction
+            hasn't landed anything yet) need something that tells them
+            explicitly what to do to get the app to start working for
+            them. Hides the moment the first fact lands, replaced by
+            the 'Dilly sees N things' card below. */}
+        {factCount === 0 && (
+          <FadeInView delay={85}>
+            <AnimatedPressable
+              style={[s.dillySeesCard, { backgroundColor: theme.surface.s1, borderColor: theme.accent + '40' }]}
+              onPress={() => openDillyOverlay({
+                name: firstName,
+                isPaid: false,
+                initialMessage: "Hey Dilly — I'm just getting started. Help me introduce myself. Ask me one or two things you need to know.",
+              })}
+              scaleDown={0.99}
+            >
+              <View style={s.dillySeesHeader}>
+                <View style={[s.dillySeesEye, { backgroundColor: theme.accent + '15' }]}>
+                  <Ionicons name="hand-right" size={13} color={theme.accent} />
+                </View>
+                <Text style={[s.dillySeesTitle, { color: theme.accent }]}>TELL DILLY ABOUT YOU</Text>
+              </View>
+              <Text style={[s.dillySeesRowText, { color: theme.surface.t1, marginTop: 10, lineHeight: 20 }]}>
+                Right now Dilly knows nothing about you. Tell her one thing — your field, a project, a goal, anything — and every screen in this app starts getting sharper.
+              </Text>
+              <View style={[s.dillySeesFooter, { borderTopColor: theme.surface.border, marginTop: 12 }]}>
+                <Text style={[s.dillySeesFooterText, { color: theme.surface.t3 }]}>
+                  No resume upload required. Just a conversation.
+                </Text>
+                <View style={s.dillySeesCta}>
+                  <Ionicons name="chatbubble" size={11} color={theme.accent} />
+                  <Text style={[s.dillySeesCtaText, { color: theme.accent }]}>Start with Dilly</Text>
+                </View>
+              </View>
+            </AnimatedPressable>
+          </FadeInView>
+        )}
+
         {factCount > 0 && factCount <= 12 && (
           <FadeInView delay={90}>
             <AnimatedPressable

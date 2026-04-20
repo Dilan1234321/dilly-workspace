@@ -37,6 +37,8 @@ import { useResolvedTheme } from '../../../hooks/useTheme';
 import { DillyFace } from '../../../components/DillyFace';
 import AnimatedPressable from '../../../components/AnimatedPressable';
 import { cancelMissReminder, scheduleChapterNotifications } from '../../../hooks/useChapterNotifications';
+import { scheduleOutcomePushes } from '../../../hooks/useOutcomePushes';
+import { triggerCelebration } from '../../../hooks/useCelebration';
 
 interface Screen { slot: string; body: string; }
 interface Chapter {
@@ -290,7 +292,22 @@ export default function ChapterSessionScreen() {
         setChatBlocked(null);
       }
     } else {
-      // End of Chapter. Close back to Home.
+      // End of Chapter. Close back to Home. Fire a milestone overlay
+      // on completion of milestone chapters (4/12/26/52) so users
+      // feel the weekly ritual's compounding. Delayed slightly so the
+      // close animation lands first and the overlay isn't stacked on
+      // top of a mid-dismiss Chapter screen.
+      const ct = chapter?.count || 0;
+      const chapterMilestones: Record<number, string> = {
+        4:  'chapter-4',
+        12: 'chapter-12',
+        26: 'chapter-26',
+        52: 'chapter-52',
+      };
+      const hit = chapterMilestones[ct];
+      if (hit) {
+        setTimeout(() => triggerCelebration(hit as any), 420);
+      }
       router.back();
     }
   }
@@ -322,7 +339,14 @@ export default function ChapterSessionScreen() {
         body: JSON.stringify({
           // Map to the /ai/chat API shape.
           messages: nextHistory.map(m => ({ role: m.role, content: m.content })),
-          mode: 'coaching',
+          // Tag the mode so chat_thread_store can record this as a
+          // Chapter conversation (as opposed to a regular coaching
+          // chat). The history panel on the AI overlay uses the
+          // conv_id prefix 'chapter-' to prepend 'Chapter · ' to
+          // the entry title; mode='chapter' gives any future
+          // downstream analytics / filters a cleaner signal than
+          // having to re-parse the conv_id.
+          mode: 'chapter',
           // Tag the conv as a Chapter question conv so flush extraction
           // associates facts with the right session.
           conv_id: `chapter-${chapter?.id || 'session'}-q`,
@@ -423,14 +447,25 @@ export default function ChapterSessionScreen() {
       const date = new Date();
       date.setDate(date.getDate() + 7);
       date.setHours(9, 0, 0, 0);
+      const title = `Chapter homework: ${oneMove.body.slice(0, 60)}`;
       await dilly.fetch('/calendar/events', {
         method: 'POST',
         body: JSON.stringify({
-          title: `Chapter homework: ${oneMove.body.slice(0, 60)}`,
+          title,
           notes: oneMove.body,
           type: 'deadline',
           date_iso: date.toISOString(),
         }),
+      }).catch(() => {});
+      // Outcome push: T-18h prep nudge + day-of "good luck" ping.
+      // The prep nudge opens the chat overlay seeded with the move
+      // body so the user lands in a prep conversation instead of a
+      // cold Home screen.
+      scheduleOutcomePushes({
+        id: `chapter-move-${chapter.id || 'session'}-${date.toISOString().slice(0, 10)}`,
+        title,
+        at: date,
+        prepPrompt: `My Chapter homework is due tomorrow: "${oneMove.body}". Help me prep — what should I actually do in the next hour to make sure I do this?`,
       }).catch(() => {});
       Alert.alert('Added', "I've put this on your calendar for next week.");
     } catch {

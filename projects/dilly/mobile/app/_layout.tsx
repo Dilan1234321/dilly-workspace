@@ -42,13 +42,20 @@ function PreFontSplash() {
   );
 }
 
-// Signed-in users see their chosen theme on the loading screen —
-// signed-out users still see the brand white/indigo since they have
-// no theme yet and we want the first impression to be consistent.
+// Both signed-in and signed-out users see the accent tint now. The
+// `themed` flag used to gate the whole accent treatment, but the
+// pre-font splash (PreFontSplash above) already tints to accent for
+// everyone, so the signed-out loading screen flashing back to
+// brand-indigo read as inconsistent. Keeping the signed-out surface
+// bg white for brand consistency on first launch, but letting the
+// logo + bar pick up the default accent so the loading sequence
+// doesn't visually stutter.
 function LoadingScreen({ onComplete, themed }: { onComplete: () => void; themed: boolean }) {
   const theme = useResolvedTheme();
   const bg = themed ? theme.surface.bg : '#FFFFFF';
-  const fill = themed ? theme.accent : GOLD;
+  // fill tracks accent in both cases — theme.accent falls back to the
+  // default accent (indigo-violet) when no user has hydrated yet.
+  const fill = theme.accent || GOLD;
   const taglineColor = themed ? theme.surface.t2 : colors.t2;
   const wordmarkOpacity    = useRef(new Animated.Value(0)).current;
   const wordmarkTranslateY = useRef(new Animated.Value(6)).current;
@@ -125,7 +132,7 @@ function LoadingScreen({ onComplete, themed }: { onComplete: () => void; themed:
               recolors every opaque pixel. */}
           <Image
             source={require('../assets/logo.png')}
-            style={[ls.logoImage, themed && { tintColor: fill }]}
+            style={[ls.logoImage, { tintColor: fill }]}
             resizeMode="contain"
           />
         </Animated.View>

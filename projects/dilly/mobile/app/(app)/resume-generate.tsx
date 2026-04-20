@@ -553,16 +553,22 @@ export default function ResumeGenerateScreen() {
 /* ─────────────────────────────────────────────────────────────── */
 
 function Header({ insetsTop, usage, onBack }: { insetsTop: number; usage: any; onBack: () => void }) {
+  const theme = useResolvedTheme();
+  const warn = !!usage && !usage.unlimited && (usage.limit - usage.used) <= 1;
   return (
-    <View style={[styles.header, { paddingTop: insetsTop + spacing.sm }]}>
+    <View style={[styles.header, { paddingTop: insetsTop + spacing.sm, borderBottomColor: theme.surface.border }]}>
       <AnimatedPressable onPress={onBack} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={22} color={colors.t1} />
+        <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
       </AnimatedPressable>
-      <Text style={styles.headerTitle}>The Forge</Text>
+      <Text style={[styles.headerTitle, { color: theme.surface.t1 }]}>The Forge</Text>
       {usage && !usage.unlimited ? (
-        <View style={[styles.usagePill, (usage.limit - usage.used) <= 1 && { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }]}>
-          <Ionicons name="flash" size={10} color={(usage.limit - usage.used) <= 1 ? '#92400E' : colors.t2} />
-          <Text style={[styles.usageText, (usage.limit - usage.used) <= 1 && { color: '#92400E' }]}>
+        <View style={[
+          styles.usagePill,
+          { backgroundColor: theme.surface.s2, borderColor: theme.surface.border },
+          warn && { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' },
+        ]}>
+          <Ionicons name="flash" size={10} color={warn ? '#92400E' : theme.surface.t2} />
+          <Text style={[styles.usageText, { color: theme.surface.t2 }, warn && { color: '#92400E' }]}>
             {Math.max(0, usage.limit - usage.used)} left
           </Text>
         </View>
@@ -581,6 +587,7 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
   const canGenerate = jobTitle.trim().length > 0 && company.trim().length > 0 && jd.trim().length >= 100;
   const { isPaid, loading: subLoading } = useSubscription();
   const showPowerDemo = !subLoading && !isPaid;
+  const theme = useResolvedTheme();
   return (
     <FadeInView>
       {/* Free-tier nudge — banner only renders for starter users. */}
@@ -590,14 +597,14 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
       />
       {/* Hero */}
       <View style={styles.hero}>
-        <View style={styles.heroRingOuter}>
-          <View style={styles.heroRingInner}>
-            <Ionicons name="flame" size={28} color={INDIGO} />
+        <View style={[styles.heroRingOuter, { borderColor: theme.accentBorder }]}>
+          <View style={[styles.heroRingInner, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+            <Ionicons name="flame" size={28} color={theme.accent} />
           </View>
         </View>
-        <Text style={styles.heroKicker}>FORGE</Text>
-        <Text style={styles.heroTitle}>One role.{'\n'}One company.{'\n'}One resume.</Text>
-        <Text style={styles.heroSub}>
+        <Text style={[styles.heroKicker, { color: theme.accent }]}>FORGE</Text>
+        <Text style={[styles.heroTitle, { color: theme.surface.t1 }]}>One role.{'\n'}One company.{'\n'}One resume.</Text>
+        <Text style={[styles.heroSub, { color: theme.surface.t2 }]}>
           Not a template. Not a rewrite. Dilly reads the job you're applying to, mines your profile for the matches, and builds a resume from scratch, ATS-parsed and tailored to this specific opening.
         </Text>
         <View style={styles.heroProofRow}>
@@ -613,7 +620,7 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
           Paid users skip this entirely. */}
       {showPowerDemo && (
         <>
-          <Text style={styles.sectionHeader}>WHAT THE FORGE ACTUALLY DOES</Text>
+          <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>WHAT THE FORGE ACTUALLY DOES</Text>
           <View style={styles.powerGrid}>
             <PowerRow
               icon="scan"
@@ -648,23 +655,23 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
             <PowerStat n="PDF + DOCX" label="Export formats" />
           </View>
 
-          <View style={styles.lockedBadge}>
-            <Ionicons name="lock-closed" size={12} color={INDIGO} />
-            <Text style={styles.lockedBadgeText}>
+          <View style={[styles.lockedBadge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+            <Ionicons name="lock-closed" size={12} color={theme.accent} />
+            <Text style={[styles.lockedBadgeText, { color: theme.accent }]}>
               Starter: setup + preview only.  Forging unlocks with Dilly.
             </Text>
           </View>
         </>
       )}
 
-      <Text style={styles.sectionHeader}>THE JOB</Text>
+      <Text style={[styles.sectionHeader, { color: theme.surface.t3 }]}>THE JOB</Text>
 
-      <View style={styles.inputCard}>
+      <View style={[styles.inputCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         <FieldLabel text="Job Title" required />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
           placeholder="e.g. Senior Data Engineer"
-          placeholderTextColor={colors.t3}
+          placeholderTextColor={theme.surface.t3}
           value={jobTitle}
           onChangeText={setJobTitle}
           autoCapitalize="words"
@@ -672,9 +679,9 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
 
         <FieldLabel text="Company" required top />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
           placeholder="e.g. Stripe"
-          placeholderTextColor={colors.t3}
+          placeholderTextColor={theme.surface.t3}
           value={company}
           onChangeText={setCompany}
           autoCapitalize="words"
@@ -689,22 +696,22 @@ function IdleSetup({ jobTitle, setJobTitle, company, setCompany, jd, setJd, jdQu
             </View>
           </View>
           <TextInput
-            style={[styles.input, styles.jdInput]}
+            style={[styles.input, styles.jdInput, { backgroundColor: theme.surface.bg, color: theme.surface.t1, borderColor: theme.surface.border }]}
             placeholder="Paste the full job description. The more detail, the sharper the resume."
-            placeholderTextColor={colors.t3}
+            placeholderTextColor={theme.surface.t3}
             value={jd}
             onChangeText={setJd}
             multiline
             textAlignVertical="top"
           />
-          <View style={styles.jdQualityTrack}>
+          <View style={[styles.jdQualityTrack, { backgroundColor: theme.surface.s2 }]}>
             <View style={[styles.jdQualityFill, { width: `${jdQuality.pct}%`, backgroundColor: jdQuality.color }]} />
           </View>
         </View>
       </View>
 
       <AnimatedPressable
-        style={[styles.forgeBtn, !canGenerate && { opacity: 0.35 }]}
+        style={[styles.forgeBtn, { backgroundColor: theme.accent }, !canGenerate && { opacity: 0.35 }]}
         onPress={onGenerate}
         disabled={!canGenerate}
         scaleDown={0.97}

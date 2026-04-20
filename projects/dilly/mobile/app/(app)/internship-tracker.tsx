@@ -165,6 +165,7 @@ function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }
   onTailor: (app: Application) => void;
   onFollowUp: (app: Application) => void;
 }) {
+  const theme = useResolvedTheme();
   const cfg = statusConfig(app.status);
   const isInterviewing = app.status === 'interviewing';
   const appliedAge = daysAgo(app.applied_at);
@@ -191,12 +192,21 @@ function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }
   if (app.status === 'interviewing') nextStatuses.push('offer', 'rejected');
 
   return (
-    <AnimatedPressable style={[ts.appCard, isInterviewing && { borderColor: AMBER + '30' }, deadlineUrgent && { borderColor: CORAL + '30' }]} onPress={() => onEdit(app)} scaleDown={0.985}>
+    <AnimatedPressable
+      style={[
+        ts.appCard,
+        { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+        isInterviewing && { borderColor: AMBER + '30' },
+        deadlineUrgent && { borderColor: CORAL + '30' },
+      ]}
+      onPress={() => onEdit(app)}
+      scaleDown={0.985}
+    >
       {/* Header */}
       <View style={ts.appCardHeader}>
         <View style={{ flex: 1 }}>
-          <Text style={ts.appCompany} numberOfLines={1}>{app.company}</Text>
-          <Text style={ts.appRole} numberOfLines={1}>{app.role}</Text>
+          <Text style={[ts.appCompany, { color: theme.surface.t1 }]} numberOfLines={1}>{app.company}</Text>
+          <Text style={[ts.appRole, { color: theme.surface.t2 }]} numberOfLines={1}>{app.role}</Text>
         </View>
         <View style={[ts.statusBadge, { backgroundColor: cfg.color + '15', borderColor: cfg.color + '30' }]}>
           <Ionicons name={cfg.icon as any} size={10} color={cfg.color} />
@@ -207,27 +217,35 @@ function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }
       {/* Meta */}
       <View style={ts.appMeta}>
         {appliedAge ? (
-          <View style={ts.appMetaChip}>
-            <Ionicons name="time-outline" size={10} color={colors.t3} />
-            <Text style={ts.appMetaText}>{appliedAge}</Text>
+          <View style={[ts.appMetaChip, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+            <Ionicons name="time-outline" size={10} color={theme.surface.t3} />
+            <Text style={[ts.appMetaText, { color: theme.surface.t2 }]}>{appliedAge}</Text>
           </View>
         ) : null}
         {hasDeadline && deadlineDays < 999 && (
-          <View style={[ts.appMetaChip, deadlineUrgent && { backgroundColor: CORAL + '10' }]}>
-            <Ionicons name="calendar-outline" size={10} color={deadlineUrgent ? CORAL : colors.t3} />
-            <Text style={[ts.appMetaText, deadlineUrgent && { color: CORAL, fontWeight: '700' }]}>
+          <View style={[
+            ts.appMetaChip,
+            { backgroundColor: theme.surface.s2, borderColor: theme.surface.border },
+            deadlineUrgent && { backgroundColor: CORAL + '10', borderColor: CORAL + '30' },
+          ]}>
+            <Ionicons name="calendar-outline" size={10} color={deadlineUrgent ? CORAL : theme.surface.t3} />
+            <Text style={[
+              ts.appMetaText,
+              { color: theme.surface.t2 },
+              deadlineUrgent && { color: CORAL, fontWeight: '700' },
+            ]}>
               {deadlineDays === 0 ? 'Due today' : deadlineDays === 1 ? 'Due tomorrow' : deadlineDays > 0 ? `${deadlineDays}d left` : 'Overdue'}
             </Text>
           </View>
         )}
         {app.match_pct != null && (
-          <View style={ts.appMetaChip}>
-            <Ionicons name="analytics-outline" size={10} color={GOLD} />
-            <Text style={[ts.appMetaText, { color: GOLD }]}>{app.match_pct}% match</Text>
+          <View style={[ts.appMetaChip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+            <Ionicons name="analytics-outline" size={10} color={theme.accent} />
+            <Text style={[ts.appMetaText, { color: theme.accent }]}>{app.match_pct}% match</Text>
           </View>
         )}
         {isSilent && (
-          <View style={[ts.appMetaChip, { backgroundColor: CORAL + '10' }]}>
+          <View style={[ts.appMetaChip, { backgroundColor: CORAL + '10', borderColor: CORAL + '30' }]}>
             <Ionicons name="alert-circle" size={10} color={CORAL} />
             <Text style={[ts.appMetaText, { color: CORAL }]}>No response 2+ weeks</Text>
           </View>
@@ -236,17 +254,21 @@ function AppCard({ app, onStatusChange, onDelete, onEdit, onTailor, onFollowUp }
 
       {/* Notes / next action */}
       {app.next_action ? (
-        <View style={ts.nextActionRow}>
-          <Ionicons name="flash" size={10} color={GOLD} />
-          <Text style={ts.nextActionText} numberOfLines={1}>{app.next_action}</Text>
+        <View style={[ts.nextActionRow, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <Ionicons name="flash" size={10} color={theme.accent} />
+          <Text style={[ts.nextActionText, { color: theme.surface.t1 }]} numberOfLines={1}>{app.next_action}</Text>
         </View>
       ) : null}
 
       {/* Quick actions: tailor + follow-up + calendar */}
       <View style={ts.quickActionRow}>
-        <AnimatedPressable style={ts.quickAction} onPress={() => onTailor(app)} scaleDown={0.95}>
-          <Ionicons name="document-text-outline" size={11} color={INDIGO} />
-          <Text style={[ts.quickActionText, { color: INDIGO }]}>Tailor</Text>
+        <AnimatedPressable
+          style={[ts.quickAction, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+          onPress={() => onTailor(app)}
+          scaleDown={0.95}
+        >
+          <Ionicons name="document-text-outline" size={11} color={theme.accent} />
+          <Text style={[ts.quickActionText, { color: theme.accent }]}>Tailor</Text>
         </AnimatedPressable>
         {isSilent && (
           <AnimatedPressable style={ts.quickAction} onPress={() => onFollowUp(app)} scaleDown={0.95}>

@@ -1244,11 +1244,29 @@ export default function JobsScreen() {
           return next;
         });
       }
-      // rural_remote_only users have "remote only" as their whole premise.
-      // Pre-select the filter for them on first load. They can toggle off
-      // if they want to browse everything.
-      if (pathRaw === 'rural_remote_only' && !remoteOnlyFilter && userCities.length === 0) {
-        setRemoteOnlyFilter(true);
+      // Path-specific filter presets on first load. All opt-OUT — the
+      // user can toggle any of these off the moment they see the result.
+      // Only fires when userCities is empty (we don't want to steamroll
+      // a user who already has locations selected).
+      //
+      //   rural_remote_only — remote is their whole premise
+      //   parent_returning  — flex / remote is commonly the #1 ask
+      //   neurodivergent    — remote reduces sensory + commute friction
+      //   disabled_professional — same reasoning, plus access is often better remote
+      //
+      // trades_to_white_collar gets the no_degree preset since the
+      // trades path usually has no 4-year degree either. Feeds into
+      // the same backend flag as dropout uses.
+      if (userCities.length === 0) {
+        const remotePresetPaths = new Set([
+          'rural_remote_only', 'parent_returning', 'neurodivergent', 'disabled_professional',
+        ]);
+        if (remotePresetPaths.has(pathRaw) && !remoteOnlyFilter) {
+          setRemoteOnlyFilter(true);
+        }
+        if (pathRaw === 'trades_to_white_collar' && !noDegreeFilter) {
+          setNoDegreeFilter(true);
+        }
       }
 
       setListings(feedRes?.listings || []);
@@ -1536,9 +1554,13 @@ export default function JobsScreen() {
           <Ionicons name="bookmark" size={18} color={theme.accent} />
         </AnimatedPressable>
 
-        {/* Dropout-only 'No degree required' pill. FIRST, most visible.
-            This is the #1 thing a dropout wants when they open the jobs page. */}
-        {userPath === 'dropout' && (
+        {/* 'No degree required' pill. FIRST, most visible. Shown for
+            paths where degree gating is the #1 thing users hit:
+            dropout (they literally don't have the degree) and
+            trades_to_white_collar (coming from fields where degrees
+            were never the credential). For trades users this is
+            auto-enabled on first load above. */}
+        {(userPath === 'dropout' || userPath === 'trades_to_white_collar') && (
           <AnimatedPressable
             style={[s.filterPill, fpBase, noDegreeFilter && fpActive]}
             onPress={() => { setNoDegreeFilter(v => !v); setLoading(true); }}

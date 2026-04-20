@@ -21,6 +21,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { dilly } from '../lib/dilly';
 import { useResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
+import {
+  markExtractionPending,
+  resolveExtraction,
+  abortExtraction,
+} from '../hooks/useExtractionPending';
+import { triggerCelebration } from '../hooks/useCelebration';
 
 interface PulseToday {
   ok: boolean;
@@ -51,6 +57,10 @@ export default function DailyPulseCard() {
   const [mood, setMood]     = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [justSaved, setJustSaved]   = useState(false);
+  // Count of facts the backend extracted from the response. Shown
+  // briefly after save as 'Dilly noticed N new things' so users see
+  // that the Pulse actually fed into their profile.
+  const [factsAdded, setFactsAdded] = useState(0);
 
   // Subtle fade-in so the card doesn't pop when state resolves.
   const fade = useRef(new Animated.Value(0)).current;
@@ -75,6 +85,12 @@ export default function DailyPulseCard() {
     const response = input.trim();
     if (!response || submitting) return;
     setSubmitting(true);
+    // Fire the extraction-pending signal the moment the submit starts
+    // so the Profile page (if mounted) shows the "writing-down"
+    // animation just like it does on /ai/chat/flush. On success we
+    // resolve with the actual fact objects; on failure we abort so
+    // the animation doesn't hang forever.
+    markExtractionPending();
     try {
       const res = await dilly.fetch('/pulse', {
         method: 'POST',
@@ -82,6 +98,7 @@ export default function DailyPulseCard() {
       });
       if (!res.ok) {
         setError('Could not save. Try again.');
+        abortExtraction();
         return;
       }
       const data = await res.json();
@@ -92,11 +109,46 @@ export default function DailyPulseCard() {
         mood,
         streak: data.streak,
       } : prev);
+
+      // Streak milestone celebration. Fires only on a new entry for
+      // today (data.is_new_today) so editing today's pulse doesn't
+      // re-trigger the overlay. Matches hitting the exact day count
+      // so rebuilding a broken streak to day 7 again still celebrates.
+      if (data?.is_new_today) {
+        const days = Number(data?.streak?.current || 0);
+        const milestones: Record<number, string> = {
+          3:   'pulse-streak-3',
+          7:   'pulse-streak-7',
+          14:  'pulse-streak-14',
+          30:  'pulse-streak-30',
+          60:  'pulse-streak-60',
+          100: 'pulse-streak-100',
+        };
+        const hit = milestones[days];
+        if (hit) {
+          // Small delay so the inline "Dilly noticed N things" lands
+          // first, THEN the overlay takes the stage. Otherwise the
+          // overlay hides the fact-count reward moment.
+          setTimeout(() => triggerCelebration(hit as any), 900);
+        }
+      }
+
       setJustSaved(true);
+      // Surface the extracted-facts count so users see the loop
+      // close: "Dilly noticed 2 new things" tells them the Pulse
+      // fed real data into their profile, not just a diary entry.
+      const added = Array.isArray(data?.facts_added) ? data.facts_added : [];
+      setFactsAdded(added.length);
+      // Resolve the extraction signal with the actual fact list so
+      // the Profile page's writing-down animation lands on real rows.
+      resolveExtraction(added);
       // Fade the "saved" confirmation out after a beat.
       setTimeout(() => setJustSaved(false), 1600);
+      // Facts badge lingers longer so the reward moment lands.
+      if (added.length > 0) setTimeout(() => setFactsAdded(0), 6000);
     } catch (_e) {
       setError('Could not save. Try again.');
+      abortExtraction();
     } finally {
       setSubmitting(false);
     }
@@ -139,6 +191,7 @@ export default function DailyPulseCard() {
             response={today.response || ''}
             mood={today.mood || null}
             justSaved={justSaved}
+            factsAdded={factsAdded}
             onEdit={() => {
               // Allow the user to rewrite today's entry. Reopens the
               // input by flipping answered locally.
@@ -209,11 +262,13 @@ function AnsweredState({
   response,
   mood,
   justSaved,
+  factsAdded,
   onEdit,
 }: {
   response: string;
   mood: string | null;
   justSaved: boolean;
+  factsAdded: number;
   onEdit: () => void;
 }) {
   const theme = useResolvedTheme();
@@ -234,7 +289,11 @@ function AnsweredState({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Ionicons name="checkmark-circle" size={14} color={theme.accent} />
           <Text style={[s.savedLabel, { color: theme.surface.t2 }]}>
-            {justSaved ? 'Saved. See you tomorrow.' : 'Done for today.'}
+            {factsAdded > 0
+              ? `Dilly noticed ${factsAdded} new thing${factsAdded === 1 ? '' : 's'}.`
+              : justSaved
+                ? 'Saved. See you tomorrow.'
+                : 'Done for today.'}
           </Text>
         </View>
         <AnimatedPressable onPress={onEdit} scaleDown={0.95} hitSlop={8}>

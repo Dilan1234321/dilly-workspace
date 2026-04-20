@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing } from '../../lib/tokens';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import ATSDeepScan, { RewriteSuggestion, KeywordCell, ATSScoreV2 } from '../../components/ATSDeepScan';
@@ -49,16 +50,21 @@ function ATSScoreCard({ system, score, issues, onFix, onFixInEditor }: {
   onFix: (system: string, issue: string, score?: number) => void;
   onFixInEditor: (system: string, issues: string[]) => void;
 }) {
+  const theme = useResolvedTheme();
   const [expanded, setExpanded] = useState(false);
   const color = scoreColor(score);
 
   return (
-    <AnimatedPressable style={ss.scoreCard} onPress={() => setExpanded(!expanded)} scaleDown={0.98}>
+    <AnimatedPressable
+      style={[ss.scoreCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
+      onPress={() => setExpanded(!expanded)}
+      scaleDown={0.98}
+    >
       <View style={ss.scoreCardHeader}>
         <View style={[ss.systemDot, { backgroundColor: system.color }]} />
         <View style={{ flex: 1 }}>
-          <Text style={ss.systemName}>{system.name}</Text>
-          <Text style={ss.systemStrictness}>{system.strictness} parsing</Text>
+          <Text style={[ss.systemName, { color: theme.surface.t1 }]}>{system.name}</Text>
+          <Text style={[ss.systemStrictness, { color: theme.surface.t3 }]}>{system.strictness} parsing</Text>
         </View>
         <View style={[ss.scoreBadge, { backgroundColor: color + '15', borderColor: color + '30' }]}>
           <Text style={[ss.scoreBadgeText, { color }]}>{score > 0 ? `${score}%` : 'N/A'}</Text>
@@ -67,29 +73,37 @@ function ATSScoreCard({ system, score, issues, onFix, onFixInEditor }: {
 
       {/* Score bar */}
       {score > 0 ? (
-        <View style={ss.scoreBar}>
+        <View style={[ss.scoreBar, { backgroundColor: theme.surface.s2 }]}>
           <View style={[ss.scoreBarFill, { width: `${score}%`, backgroundColor: color }]} />
         </View>
       ) : (
-        <Text style={{ fontSize: 11, color: colors.t3, marginTop: 4 }}>Score unavailable</Text>
+        <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 4 }}>Score unavailable</Text>
       )}
 
       {expanded && (
-        <View style={ss.scoreCardExpanded}>
-          <Text style={ss.usedByText}>Used by: {system.usedBy}</Text>
+        <View style={[ss.scoreCardExpanded, { borderTopColor: theme.surface.border }]}>
+          <Text style={[ss.usedByText, { color: theme.surface.t3 }]}>Used by: {system.usedBy}</Text>
           {issues.length > 0 ? (
             <>
-              <Text style={ss.issuesTitle}>ISSUES FOUND</Text>
+              <Text style={[ss.issuesTitle, { color: theme.surface.t2 }]}>ISSUES FOUND</Text>
               {issues.map((issue, i) => (
                 <View key={i} style={ss.issueRow}>
                   <Ionicons name="alert-circle" size={12} color={CORAL} />
-                  <Text style={ss.issueText}>{issue}</Text>
-                  <AnimatedPressable style={ss.fixBtn} onPress={() => onFix(system.name, issue)} scaleDown={0.95}>
-                    <Text style={ss.fixBtnText}>Fix</Text>
+                  <Text style={[ss.issueText, { color: theme.surface.t1 }]}>{issue}</Text>
+                  <AnimatedPressable
+                    style={[ss.fixBtn, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+                    onPress={() => onFix(system.name, issue)}
+                    scaleDown={0.95}
+                  >
+                    <Text style={[ss.fixBtnText, { color: theme.accent }]}>Fix</Text>
                   </AnimatedPressable>
                 </View>
               ))}
-              <AnimatedPressable style={ss.applyEditorBtn} onPress={() => onFixInEditor(system.name, issues)} scaleDown={0.97}>
+              <AnimatedPressable
+                style={[ss.applyEditorBtn, { backgroundColor: theme.accent }]}
+                onPress={() => onFixInEditor(system.name, issues)}
+                scaleDown={0.97}
+              >
                 <Ionicons name="create-outline" size={13} color="#FFFFFF" />
                 <Text style={ss.applyEditorBtnText}>Apply Fixes in Editor</Text>
               </AnimatedPressable>
@@ -97,7 +111,7 @@ function ATSScoreCard({ system, score, issues, onFix, onFixInEditor }: {
           ) : (
             <View style={ss.allGoodRow}>
               <Ionicons name="checkmark-circle" size={14} color={GREEN} />
-              <Text style={ss.allGoodText}>Your resume parses well on {system.name}</Text>
+              <Text style={[ss.allGoodText, { color: theme.surface.t2 }]}>Your resume parses well on {system.name}</Text>
             </View>
           )}
         </View>
@@ -109,14 +123,15 @@ function ATSScoreCard({ system, score, issues, onFix, onFixInEditor }: {
 // ── Parse Preview ─────────────────────────────────────────────────────────────
 
 function ParsePreview({ fields }: { fields: { label: string; value: string; ok: boolean }[] }) {
+  const theme = useResolvedTheme();
   return (
-    <View style={ss.parseCard}>
-      <Text style={ss.parseTitleText}>WHAT ATS SYSTEMS SEE</Text>
+    <View style={[ss.parseCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+      <Text style={[ss.parseTitleText, { color: theme.surface.t2 }]}>WHAT ATS SYSTEMS SEE</Text>
       {fields.map((f, i) => (
         <View key={i} style={ss.parseRow}>
           <Ionicons name={f.ok ? 'checkmark-circle' : 'close-circle'} size={12} color={f.ok ? GREEN : CORAL} />
-          <Text style={ss.parseLabel}>{f.label}:</Text>
-          <Text style={[ss.parseValue, !f.ok && { color: CORAL }]} numberOfLines={1}>{f.value || 'Not found'}</Text>
+          <Text style={[ss.parseLabel, { color: theme.surface.t2 }]}>{f.label}:</Text>
+          <Text style={[ss.parseValue, { color: theme.surface.t1 }, !f.ok && { color: CORAL }]} numberOfLines={1}>{f.value || 'Not found'}</Text>
         </View>
       ))}
     </View>
@@ -126,11 +141,12 @@ function ParsePreview({ fields }: { fields: { label: string; value: string; ok: 
 // ── Keyword Match Row ─────────────────────────────────────────────────────────
 
 function KeywordRow({ keyword, count, status }: { keyword: string; count: number; status: 'strong' | 'present' | 'missing' }) {
+  const theme = useResolvedTheme();
   const cfg = { strong: { color: GREEN, icon: 'checkmark-circle' as const, label: 'Strong' }, present: { color: AMBER, icon: 'alert-circle' as const, label: 'Weak' }, missing: { color: CORAL, icon: 'close-circle' as const, label: 'Missing' } }[status];
   return (
-    <View style={ss.keywordRow}>
+    <View style={[ss.keywordRow, { borderBottomColor: theme.surface.border }]}>
       <Ionicons name={cfg.icon} size={12} color={cfg.color} />
-      <Text style={ss.keywordText}>{keyword}</Text>
+      <Text style={[ss.keywordText, { color: theme.surface.t1 }]}>{keyword}</Text>
       <Text style={[ss.keywordCount, { color: cfg.color }]}>{count > 0 ? `${count}x` : 'none'}</Text>
       <View style={[ss.keywordBadge, { backgroundColor: cfg.color + '15' }]}>
         <Text style={[ss.keywordBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -143,6 +159,10 @@ function KeywordRow({ keyword, count, status }: { keyword: string; count: number
 
 export default function ATSScreen() {
   const insets = useSafeAreaInsets();
+  // Customize Dilly theme. ATS had 41 frozen colors refs and zero
+  // theme integration — threading useResolvedTheme so the shell
+  // (root, navbar, tab selector) picks up the user's surface choice.
+  const theme = useResolvedTheme();
   const toast = useInlineToast();
   const [tab, setTab] = useState<TabMode>('scan');
   const [loading, setLoading] = useState(false);
@@ -476,37 +496,47 @@ export default function ATSScreen() {
   }
 
   return (
-    <View style={[ss.container, { paddingTop: insets.top }]}>
+    <View style={[ss.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
 
       {/* Nav */}
       <FadeInView delay={0}>
-        <View style={ss.navBar}>
+        <View style={[ss.navBar, { borderBottomColor: theme.surface.border }]}>
           <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={colors.t1} />
+            <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
-          <Text style={ss.navTitle}>ATS Scanner</Text>
+          <Text style={[ss.navTitle, { color: theme.surface.t1 }]}>ATS Scanner</Text>
           <View style={{ width: 22 }} />
         </View>
       </FadeInView>
 
       {/* Tab selector */}
       <FadeInView delay={40}>
-        <View style={ss.tabRow}>
+        <View style={[ss.tabRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
           {([
             { key: 'scan' as TabMode, label: 'Universal Scan', icon: 'shield-checkmark' },
             { key: 'company' as TabMode, label: 'Company', icon: 'business' },
             { key: 'match' as TabMode, label: 'Job Match', icon: 'git-compare' },
-          ]).map(t => (
-            <AnimatedPressable
-              key={t.key}
-              style={[ss.tab, tab === t.key && ss.tabActive]}
-              onPress={() => setTab(t.key)}
-              scaleDown={0.95}
-            >
-              <Ionicons name={t.icon as any} size={12} color={tab === t.key ? GOLD : colors.t3} />
-              <Text style={[ss.tabText, tab === t.key && ss.tabTextActive]}>{t.label}</Text>
-            </AnimatedPressable>
-          ))}
+          ]).map(t => {
+            const active = tab === t.key;
+            return (
+              <AnimatedPressable
+                key={t.key}
+                style={[
+                  ss.tab,
+                  active && [ss.tabActive, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }],
+                ]}
+                onPress={() => setTab(t.key)}
+                scaleDown={0.95}
+              >
+                <Ionicons name={t.icon as any} size={12} color={active ? theme.accent : theme.surface.t3} />
+                <Text style={[
+                  ss.tabText,
+                  { color: theme.surface.t2 },
+                  active && [ss.tabTextActive, { color: theme.accent }],
+                ]}>{t.label}</Text>
+              </AnimatedPressable>
+            );
+          })}
         </View>
       </FadeInView>
 
@@ -518,16 +548,16 @@ export default function ATSScreen() {
           <>
             <FadeInView delay={80}>
               <View style={ss.scanHeader}>
-                <Ionicons name="shield-checkmark" size={20} color={GOLD} />
+                <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
                 <View>
-                  <Text style={ss.scanTitle}>ATS Compatibility Check</Text>
-                  <Text style={ss.scanSub}>See how your resume parses across all major ATS systems</Text>
+                  <Text style={[ss.scanTitle, { color: theme.surface.t1 }]}>ATS Compatibility Check</Text>
+                  <Text style={[ss.scanSub, { color: theme.surface.t3 }]}>See how your resume parses across all major ATS systems</Text>
                 </View>
               </View>
 
               {!scanResults ? (
                 <AnimatedPressable
-                  style={[ss.scanBtn, loading && { opacity: 0.6 }]}
+                  style={[ss.scanBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }, loading && { opacity: 0.6 }]}
                   onPress={runScan}
                   disabled={loading}
                   scaleDown={0.97}
@@ -544,20 +574,20 @@ export default function ATSScreen() {
               ) : (
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                   <AnimatedPressable
-                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0 }]}
+                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0, backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
                     onPress={() => { setScanResults(null); setV2Results(null); runScan(); }}
                     scaleDown={0.97}
                   >
-                    <Ionicons name="refresh" size={14} color={GOLD} />
-                    <Text style={ss.rescanBtnText}>Re-scan</Text>
+                    <Ionicons name="refresh" size={14} color={theme.accent} />
+                    <Text style={[ss.rescanBtnText, { color: theme.accent }]}>Re-scan</Text>
                   </AnimatedPressable>
                   <AnimatedPressable
-                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0 }]}
+                    style={[ss.rescanBtn, { flex: 1, marginBottom: 0, backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
                     onPress={() => setCompareVisible(true)}
                     scaleDown={0.97}
                   >
-                    <Ionicons name="git-compare" size={14} color={GOLD} />
-                    <Text style={ss.rescanBtnText}>Compare versions</Text>
+                    <Ionicons name="git-compare" size={14} color={theme.accent} />
+                    <Text style={[ss.rescanBtnText, { color: theme.accent }]}>Compare versions</Text>
                   </AnimatedPressable>
                 </View>
               )}
@@ -619,26 +649,26 @@ export default function ATSScreen() {
           <>
             <FadeInView delay={80}>
               <View style={ss.scanHeader}>
-                <Ionicons name="business" size={20} color={GOLD} />
+                <Ionicons name="business" size={20} color={theme.accent} />
                 <View>
-                  <Text style={ss.scanTitle}>Company ATS Breakdown</Text>
-                  <Text style={ss.scanSub}>See exactly what a company's ATS sees on your resume</Text>
+                  <Text style={[ss.scanTitle, { color: theme.surface.t1 }]}>Company ATS Breakdown</Text>
+                  <Text style={[ss.scanSub, { color: theme.surface.t3 }]}>See exactly what a company's ATS sees on your resume</Text>
                 </View>
               </View>
 
-              <View style={ss.companySearchWrap}>
-                <Ionicons name="search" size={16} color={colors.t3} />
+              <View style={[ss.companySearchWrap, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+                <Ionicons name="search" size={16} color={theme.surface.t3} />
                 <TextInput
-                  style={ss.companySearchInput}
+                  style={[ss.companySearchInput, { color: theme.surface.t1 }]}
                   value={companySearch}
                   onChangeText={setCompanySearch}
                   placeholder="Type a company name..."
-                  placeholderTextColor={colors.t3}
+                  placeholderTextColor={theme.surface.t3}
                   returnKeyType="search"
                   onSubmitEditing={lookupCompany}
                 />
                 <AnimatedPressable style={ss.companySearchBtn} onPress={lookupCompany} disabled={companyLoading} scaleDown={0.95}>
-                  {companyLoading ? <ActivityIndicator size="small" color={GOLD} /> : <Ionicons name="arrow-forward" size={16} color={GOLD} />}
+                  {companyLoading ? <ActivityIndicator size="small" color={theme.accent} /> : <Ionicons name="arrow-forward" size={16} color={theme.accent} />}
                 </AnimatedPressable>
               </View>
             </FadeInView>
@@ -786,25 +816,25 @@ export default function ATSScreen() {
           <>
             <FadeInView delay={80}>
               <View style={ss.scanHeader}>
-                <Ionicons name="git-compare" size={20} color={GOLD} />
+                <Ionicons name="git-compare" size={20} color={theme.accent} />
                 <View>
-                  <Text style={ss.scanTitle}>Keyword Match</Text>
-                  <Text style={ss.scanSub}>Compare your resume against a specific job description</Text>
+                  <Text style={[ss.scanTitle, { color: theme.surface.t1 }]}>Keyword Match</Text>
+                  <Text style={[ss.scanSub, { color: theme.surface.t3 }]}>Compare your resume against a specific job description</Text>
                 </View>
               </View>
 
               <TextInput
-                style={ss.jdInput}
+                style={[ss.jdInput, { backgroundColor: theme.surface.s1, color: theme.surface.t1, borderColor: theme.surface.border }]}
                 value={jdText}
                 onChangeText={setJdText}
                 placeholder="Paste the full job description here..."
-                placeholderTextColor={colors.t3}
+                placeholderTextColor={theme.surface.t3}
                 multiline
                 textAlignVertical="top"
               />
 
               <AnimatedPressable
-                style={[ss.scanBtn, (matchLoading || jdText.length < 50) && { opacity: 0.6 }]}
+                style={[ss.scanBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }, (matchLoading || jdText.length < 50) && { opacity: 0.6 }]}
                 onPress={runKeywordMatch}
                 disabled={matchLoading || jdText.length < 50}
                 scaleDown={0.97}

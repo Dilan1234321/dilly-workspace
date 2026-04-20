@@ -20,6 +20,7 @@ import { dilly } from '../lib/dilly';
 import { useResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
 import { triggerCelebration } from '../hooks/useCelebration';
+import { scheduleOutcomePushes } from '../hooks/useOutcomePushes';
 
 type WinType = 'applied' | 'interview' | 'offer' | 'milestone';
 
@@ -170,6 +171,10 @@ function LogWinSheet({
   const [title, setTitle]     = useState('');
   const [company, setCompany] = useState('');
   const [note, setNote]       = useState('');
+  // Optional upcoming-event date for interviews / offers. YYYY-MM-DD
+  // free-text — kept simple because adding a native date picker pulls
+  // in a dependency we don't need for v1. Validated before scheduling.
+  const [upcomingDate, setUpcomingDate] = useState('');
   const [saving, setSaving]   = useState(false);
 
   const reset = () => {
@@ -177,6 +182,7 @@ function LogWinSheet({
     setTitle('');
     setCompany('');
     setNote('');
+    setUpcomingDate('');
     setSaving(false);
   };
 
@@ -199,12 +205,38 @@ function LogWinSheet({
         return;
       }
       const data = await res.json();
-      onLogged(data.win as Win);
+      const win = data.win as Win;
+
+      // Outcome push: if the user logged an interview or offer with a
+      // future date, schedule a T-18h prep nudge + day-of "good luck"
+      // ping. Tapping the prep push opens the AI chat overlay seeded
+      // with the event so they land in a prep conversation. Silently
+      // no-ops when the date is blank, malformed, in the past, or
+      // when the win type isn't one we prep for (applied, milestone).
+      if ((type === 'interview' || type === 'offer') && upcomingDate.trim()) {
+        const parsed = new Date(upcomingDate.trim() + 'T09:00:00');
+        if (!isNaN(parsed.getTime()) && parsed.getTime() > Date.now()) {
+          const pushTitle = type === 'interview'
+            ? (company.trim() ? `Interview with ${company.trim()}` : 'Interview')
+            : (company.trim() ? `Offer with ${company.trim()}` : 'Offer decision');
+          const prepSeed = type === 'interview'
+            ? `I have an interview tomorrow${company.trim() ? ` with ${company.trim()}` : ''}. Help me prep. What should I actually do tonight to be ready?`
+            : `I have an offer decision coming tomorrow${company.trim() ? ` from ${company.trim()}` : ''}. Help me think it through before I respond.`;
+          scheduleOutcomePushes({
+            id: `win-${win.id}`,
+            title: pushTitle,
+            at: parsed,
+            prepPrompt: prepSeed,
+          }).catch(() => {});
+        }
+      }
+
+      onLogged(win);
       reset();
     } catch {
       setSaving(false);
     }
-  }, [title, company, note, type, saving, onLogged]);
+  }, [title, company, note, type, upcomingDate, saving, onLogged]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -288,6 +320,36 @@ function LogWinSheet({
                 ]}
                 maxLength={80}
               />
+            </>
+          )}
+
+          {/* Upcoming-event date. Only for interview / offer types
+              where a future date unlocks prep pushes (T-18h nudge +
+              day-of "good luck"). Skipped for 'applied' (already
+              happened) and 'milestone' (not time-bound). Free-text
+              YYYY-MM-DD to avoid a date-picker dep; validated on
+              submit and silently no-ops when blank / malformed. */}
+          {(type === 'interview' || type === 'offer') && (
+            <>
+              <Text style={[s.sheetLabel, { color: theme.surface.t3, marginTop: 12 }]}>
+                When is it (optional)
+              </Text>
+              <TextInput
+                value={upcomingDate}
+                onChangeText={setUpcomingDate}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={theme.surface.t3}
+                autoCapitalize="none"
+                keyboardType="numbers-and-punctuation"
+                style={[
+                  s.input,
+                  { backgroundColor: theme.surface.bg, borderColor: theme.surface.border, color: theme.surface.t1 },
+                ]}
+                maxLength={10}
+              />
+              <Text style={{ fontSize: 10, color: theme.surface.t3, marginTop: 4, marginLeft: 2 }}>
+                Dilly will ping you the night before to help you prep.
+              </Text>
             </>
           )}
 

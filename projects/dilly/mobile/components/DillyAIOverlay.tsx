@@ -975,11 +975,22 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 //   last_turn_at, turn_count, conv_id
                 // Fall back to older voice-history shape so we
                 // don't blank out any users with leftover cached data.
-                const title =
+                //
+                // Chapter threads use conv_id 'chapter-<id>-q' and
+                // their first_user_message is whatever the user
+                // typed in the Chapter question screen — which on
+                // its own reads identical to a normal chat. Tag
+                // them explicitly so users can find their Chapter
+                // follow-up conversations in the history list.
+                const isChapterThread = typeof item.conv_id === 'string' && item.conv_id.startsWith('chapter-');
+                const rawTitle =
                   item.first_user_message ||
                   item.session_title ||
                   item.topic ||
                   'Conversation';
+                const title = isChapterThread
+                  ? `Chapter · ${rawTitle}`
+                  : rawTitle;
                 const whenIso = item.last_turn_at || item.captured_at;
                 const whenLabel = whenIso
                   ? new Date(whenIso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
