@@ -232,75 +232,95 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   // Stroke width scales with size: 1.5px min, ~3px on hero.
   const ringBorder = Math.max(1.5, Math.round(size * 0.025))
 
-  // When Dilly is "writing" with a pencil, the pencil itself stays
-  // pinned in one spot — same original SVG design, same scribble
-  // animation, just rendered in a STATIC layer overlayed on top of
-  // the animated face layer. That way Dilly's gaze drifts to the
-  // corner and finds the pencil already there, instead of the
-  // pencil moving with her face.
+  // When Dilly is "writing" with a pencil, the pencil renders in its
+  // own static SVG layer outside the perimeter ring. Same original
+  // PencilAccessory design (body, tip highlight, eraser, scribble
+  // wiggle), just translated so the tip aligns with the bottom-right
+  // of the ring while the body extends past the ring edge. Dilly's
+  // gaze locks down-right so she reads like she's looking at the
+  // pencil.
   const pinnedPencil = mood === 'writing' && accessory === 'pencil'
+  // Outer wrapper has room for the pencil to extend past the ring.
+  // Accessory SVG is normally the same size as the face; we pad the
+  // wrapper by ~40% of the face size on the bottom-right so the
+  // pencil body has somewhere to live.
+  const pencilPad = pinnedPencil ? Math.round(size * 0.4) : 0
+  const outerW = size + pencilPad
+  const outerH = size + pencilPad
 
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        borderWidth: ringBorder,
-        borderColor: theme.accent,
-        backgroundColor: theme.accentSoft,
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      <Animated.View
+    <View style={{ width: outerW, height: outerH }}>
+      <View
         style={{
           width: size,
           height: size,
-          transform: [
-            { translateX: posX },
-            { translateY: posY },
-            { rotate: tiltRotate },
-          ],
+          borderRadius: size / 2,
+          borderWidth: ringBorder,
+          borderColor: theme.accent,
+          backgroundColor: theme.accentSoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
         }}
       >
-        <Svg width={size} height={size}>
-          <EyesAndSmile
-            cx={cx}
-            cy={cy}
-            s={s}
-            eyeScaleAnim={eyeScaleAnim}
-            eyeLiftAnim={eyeLiftAnim}
-            browLiftAnim={browLiftAnim}
-            smilePath={smilePath}
-            archEyes={shape.archEyes}
-            ink={faceInk}
-          />
-          {/* Non-pencil accessories (magnifier, paintbrush) still
-              render inside the animated layer so they track with
-              the face as before. The pencil pulls out to its own
-              static layer below. */}
-          {accessory !== 'none' && !pinnedPencil && (
-            <Accessory
-              kind={accessory}
+        <Animated.View
+          style={{
+            width: size,
+            height: size,
+            transform: [
+              { translateX: posX },
+              { translateY: posY },
+              { rotate: tiltRotate },
+            ],
+          }}
+        >
+          <Svg width={size} height={size}>
+            <EyesAndSmile
               cx={cx}
               cy={cy}
               s={s}
-              color={accessoryColor || faceInk}
-              scribbleAnim={mood === 'writing' ? scribbleAnim : null}
+              eyeScaleAnim={eyeScaleAnim}
+              eyeLiftAnim={eyeLiftAnim}
+              browLiftAnim={browLiftAnim}
+              smilePath={smilePath}
+              archEyes={shape.archEyes}
+              ink={faceInk}
             />
-          )}
-        </Svg>
-      </Animated.View>
+            {/* Non-pencil accessories (magnifier, paintbrush) still
+                render inside the animated layer so they track with
+                the face as before. The pencil pulls out to its own
+                static layer below. */}
+            {accessory !== 'none' && !pinnedPencil && (
+              <Accessory
+                kind={accessory}
+                cx={cx}
+                cy={cy}
+                s={s}
+                color={accessoryColor || faceInk}
+                scribbleAnim={mood === 'writing' ? scribbleAnim : null}
+              />
+            )}
+          </Svg>
+        </Animated.View>
+      </View>
 
-      {/* Pinned pencil layer. Same original PencilAccessory (with its
-          scribble wiggle) but mounted OUTSIDE the Animated.View so
-          its position is locked to the ring, not the face. */}
+      {/* Pencil layer — OUTSIDE the ring. Rendered in its own Svg
+          positioned so the pencil tip just touches the ring's
+          bottom-right edge and the body extends into the padding
+          area. Static: Dilly moves, pencil doesn't. */}
       {pinnedPencil && (
         <View
           pointerEvents="none"
-          style={{ position: 'absolute', width: size, height: size }}
+          style={{
+            position: 'absolute',
+            // Offset so the pencil's tip (Accessory draws tip at
+            // cx+14s, cy+14s) lands right on the ring edge. Shifting
+            // the SVG by ~35% of size down-right does this cleanly.
+            left: Math.round(size * 0.35),
+            top: Math.round(size * 0.35),
+            width: size,
+            height: size,
+          }}
         >
           <Svg width={size} height={size}>
             <Accessory

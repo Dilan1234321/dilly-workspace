@@ -758,8 +758,12 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 6 }}
         activeOpacity={0.7}
       >
-        <Ionicons name={showQr ? 'qr-code' : 'qr-code-outline'} size={14} color={showQr ? DILLY_BLUE : GRAY} />
-        <Text style={{ fontSize: 11, fontWeight: '600', color: showQr ? DILLY_BLUE : GRAY }}>
+        {/* The active "QR code on" state now uses the user's accent
+            from Customize Dilly instead of the hardcoded DILLY_BLUE
+            constant. Inactive stays grey so the toggle still reads
+            as off. */}
+        <Ionicons name={showQr ? 'qr-code' : 'qr-code-outline'} size={14} color={showQr ? theme.accent : GRAY} />
+        <Text style={{ fontSize: 11, fontWeight: '600', color: showQr ? theme.accent : GRAY }}>
           {showQr ? 'QR code on' : 'Add QR code'}
         </Text>
       </TouchableOpacity>
@@ -863,8 +867,14 @@ export default function DillyCardEditor({ initialData, onSave, userType }: Dilly
 
       </>)}
 
-      {/* Share button */}
-      <TouchableOpacity style={c.shareBtn} onPress={handleShare} activeOpacity={0.85}>
+      {/* Share button. Inline theme override so the accent follows
+          Customize Dilly (c.shareBtn has a hardcoded bg that froze
+          via the colors proxy). */}
+      <TouchableOpacity
+        style={[c.shareBtn, { backgroundColor: theme.accent }]}
+        onPress={handleShare}
+        activeOpacity={0.85}
+      >
         <Ionicons name="share-outline" size={16} color="#fff" />
         <Text style={c.shareBtnText}>Share your Dilly Card</Text>
       </TouchableOpacity>

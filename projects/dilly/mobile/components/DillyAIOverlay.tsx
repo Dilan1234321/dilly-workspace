@@ -675,7 +675,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               hitSlop={12}
               style={{ marginRight: 8 }}
             >
-              <Ionicons name="time-outline" size={20} color={theme.surface.t2} />
+              <Ionicons name="time-outline" size={20} color={theme.accent} />
             </TouchableOpacity>
             <TouchableOpacity style={s.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <View style={[s.closeBtnCircle, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
@@ -771,15 +771,22 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
               or when suggestion chips are visible (reduces bottom-bar
               clutter). */}
           {(() => {
-            const THRESHOLD = 5;
+            // The old hint said "save what she learns after N more
+            // messages," which was wrong — extraction actually runs
+            // any time you say something substantial, not gated by
+            // message count. Copy updated to match reality. We only
+            // show this reassurance between the 1st and 5th user
+            // message, after which the user has clearly figured out
+            // how the chat works.
+            const HIDE_AFTER = 5;
             const userMsgs = messages.filter(m => m.role === 'user').length;
-            if (userMsgs >= THRESHOLD || isTyping) return null;
-            if (userMsgs === 0) return null; // hide until they've sent at least one
+            if (userMsgs >= HIDE_AFTER || isTyping) return null;
+            if (userMsgs === 0) return null;
             return (
               <View style={[s.memoryPill, { borderTopColor: theme.surface.border }]}>
                 <Ionicons name="ear-outline" size={13} color={theme.surface.t3} />
                 <Text style={[s.memoryPillText, { color: theme.surface.t3 }]}>
-                  Dilly is listening. She'll save what she learns after {THRESHOLD - userMsgs} more message{THRESHOLD - userMsgs === 1 ? '' : 's'}.
+                  Dilly is listening. The more you share, the better she gets at helping you.
                 </Text>
               </View>
             );
