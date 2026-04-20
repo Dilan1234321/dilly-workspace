@@ -145,11 +145,15 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   // visual width is ~4px + a few pixels of fade — any thicker and
   // it reads as a "border," which isn't the vibe.
   //
-  // Path still needs to be inset by half the widest stroke so the
-  // outer half doesn't clip at the viewport edge.
+  // Path runs ALONG the actual viewport edge (INSET = 0). The Svg
+  // clips the outer half of the stroke off-screen, leaving the inner
+  // half flush to the device edge. This is the "something stuck to
+  // the edge and glowing" look; insetting the path by the stroke
+  // radius leaves a visible sliver of background between the glow
+  // and the edge, which reads as a gap.
   const STROKE_OUTER = 10;   // soft bloom (low opacity)
-  const INSET = STROKE_OUTER / 2; // 5
-  const cornerR = Math.max(0, R - INSET);
+  const INSET = 0;
+  const cornerR = R;
   const x0 = INSET;
   const y0 = INSET;
   const x1 = SCREEN_W - INSET;
