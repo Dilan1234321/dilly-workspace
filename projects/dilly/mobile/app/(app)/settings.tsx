@@ -692,10 +692,10 @@ export default function SettingsScreen() {
               scaleDown={0.95}
             >
               {webSlug ? (
-                <Image source={{ uri: `https://api.trydilly.com/profile/web/${webSlug}/photo?_t=${Date.now()}` }} style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.s2 }} />
+                <Image source={{ uri: `https://api.trydilly.com/profile/web/${webSlug}/photo?_t=${Date.now()}` }} style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: theme.surface.s2 }} />
               ) : (
-                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.s2, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="camera" size={24} color={colors.t3} />
+                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: theme.surface.s2, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="camera" size={24} color={theme.surface.t3} />
                 </View>
               )}
               <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>Change photo</Text>
@@ -943,10 +943,10 @@ export default function SettingsScreen() {
               {appMode === 'holder' ? (
                 <>
                   <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: theme.surface.t1, marginBottom: 4 }}>
                       Did you get laid off?
                     </Text>
-                    <Text style={{ fontSize: 12, color: colors.t3, lineHeight: 17 }}>
+                    <Text style={{ fontSize: 12, color: theme.surface.t3, lineHeight: 17 }}>
                       Switch to Job Search and Dilly reshapes the app for
                       finding your next role. You can switch back any time.
                     </Text>
@@ -974,10 +974,10 @@ export default function SettingsScreen() {
               ) : (
                 <>
                   <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.t1, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: theme.surface.t1, marginBottom: 4 }}>
                       Did you land a job?
                     </Text>
-                    <Text style={{ fontSize: 12, color: colors.t3, lineHeight: 17 }}>
+                    <Text style={{ fontSize: 12, color: theme.surface.t3, lineHeight: 17 }}>
                       Switch to Career Watch and Dilly shifts into staying
                       ahead of AI, market signals, and what to learn in
                       your new role. You can switch back any time.
