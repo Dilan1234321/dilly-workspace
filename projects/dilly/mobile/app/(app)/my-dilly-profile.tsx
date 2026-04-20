@@ -799,7 +799,7 @@ function SeekerProfileScreen() {
                           {editMajors.map((m, i) => (
                             <AnimatedPressable
                               key={i}
-                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.indigo }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.accent }}
                               onPress={() => setEditMajors(editMajors.filter((_, idx) => idx !== i))}
                               scaleDown={0.95}
                             >
@@ -825,7 +825,7 @@ function SeekerProfileScreen() {
                           ))}
                         </View>
                         <AnimatedPressable onPress={() => setEditingMinor(true)} scaleDown={0.95}>
-                          <Text style={{ fontSize: 11, fontWeight: '600', color: colors.indigo }}>Changed minor?</Text>
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: theme.accent }}>Changed minor?</Text>
                         </AnimatedPressable>
                       </View>
                     ) : (
@@ -862,7 +862,7 @@ function SeekerProfileScreen() {
                           {editMinors.map((m, i) => (
                             <AnimatedPressable
                               key={i}
-                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.indigo }}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: theme.accent }}
                               onPress={() => setEditMinors(editMinors.filter((_, idx) => idx !== i))}
                               scaleDown={0.95}
                             >
@@ -1432,7 +1432,7 @@ function SeekerProfileScreen() {
                 <View style={{ gap: 10 }}>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <AnimatedPressable
-                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.indigo, paddingVertical: 12, borderRadius: 10 }}
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: theme.accent, paddingVertical: 12, borderRadius: 10 }}
                       onPress={() => {
                         const { Linking } = require('react-native');
                         Linking.openURL(`https://hellodilly.com/${profilePrefix}/${readableSlug}`);
