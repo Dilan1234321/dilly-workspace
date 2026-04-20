@@ -33,6 +33,7 @@ import { mediumHaptic } from '../../lib/haptics';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useCachedFetch } from '../../lib/sessionCache';
+import { applyPathOverrides } from '../../lib/pathCategories';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { useExtractionState } from '../../hooks/useExtractionPending';
@@ -81,7 +82,13 @@ interface MemorySurface {
 // vanish on white — swapped to darker amber / brown-gold tones
 // that hold contrast on both themes while still feeling warm.
 // Same swap applied to coral and any other light-on-light case.
-const STRENGTH_CATEGORIES: Record<string, { icon: string; label: string; color: string }> = {
+// Base strength categories. These labels + icons apply to every
+// user_path by default. The render path overlays per-path renames
+// via applyPathOverrides() below — e.g. a veteran sees
+// 'life_context' as "Service & Mission" with a medal icon instead of
+// the generic "Background". Facts still live under the canonical
+// category keys so the extraction pipeline is untouched.
+const STRENGTH_CATEGORIES_BASE: Record<string, { icon: string; label: string; color: string }> = {
   achievement:          { icon: 'trophy',        label: 'Achievements',   color: '#B7791F' },
   goal:                 { icon: 'flag',          label: 'Goals',          color: '#15803D' },
   target_company:       { icon: 'business',      label: 'Target Cos',     color: COBALT },
@@ -545,6 +552,11 @@ function SeekerProfileScreen() {
   ];
 
   // Strength categories that have facts
+  // Derive the path-aware category map from the base. A veteran's
+  // grid relabels some tiles; a dropout's, a parent_returning's, etc.
+  // Facts still live under the canonical keys so extraction logic is
+  // unchanged — this is a presentation-layer remap only.
+  const STRENGTH_CATEGORIES = applyPathOverrides(STRENGTH_CATEGORIES_BASE, (profile as any)?.user_path);
   const strengthCats = Object.keys(STRENGTH_CATEGORIES).filter(k => (data?.grouped?.[k]?.length ?? 0) > 0);
 
   // Share a resume card
@@ -1515,12 +1527,20 @@ function SeekerProfileScreen() {
         </FadeInView>
 
         {/* ── 3. Strengths Map ─────────────────────────────────── */}
-        {strengthCats.length > 0 && (
-          <FadeInView delay={200}>
+        {/* Always render — even when no facts exist yet. Free-tier
+            users who skipped the resume upload previously saw a
+            blank profile because the whole section was gated on
+            strengthCats.length > 0. Rendering the 16 empty
+            category tiles with an "add" affordance gives them a
+            way to populate without the resume and without hitting
+            the paid chat gate. */}
+        <FadeInView delay={200}>
             {/* Section header with a prominent always-visible Add
                 button. Users were missing the in-tile +s before. */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>WHAT WE KNOW ABOUT YOU</Text>
+              <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>
+                {strengthCats.length > 0 ? 'WHAT WE KNOW ABOUT YOU' : 'BUILD YOUR PROFILE'}
+              </Text>
               {/* 'Add a fact' is a rounded rectangle (not a pill) and
                   follows the user's accent from Customize Dilly. Radius
                   pulls from theme.shape.sm so shape axis actually
@@ -1545,6 +1565,19 @@ function SeekerProfileScreen() {
                 <Text style={{ fontSize: 11, fontWeight: '800', color: theme.accent, letterSpacing: 0.2 }}>Add a fact</Text>
               </AnimatedPressable>
             </View>
+            {/* Empty-state hint — only shown when no facts exist.
+                Makes the grid of 16 empty tiles read as an
+                invitation, not a void. */}
+            {strengthCats.length === 0 && (
+              <Text style={{
+                fontSize: 12,
+                lineHeight: 18,
+                color: theme.surface.t2,
+                marginBottom: 10,
+              }}>
+                Tap any category to add a fact. No resume needed — you can build your profile one small thing at a time.
+              </Text>
+            )}
             <View style={d.strengthGrid}>
               {Object.entries(STRENGTH_CATEGORIES).map(([key, cfg]) => {
                 const facts = data?.grouped?.[key] || [];
@@ -1617,7 +1650,6 @@ function SeekerProfileScreen() {
               </View>
             )}
           </FadeInView>
-        )}
 
         {/* ── 4. Skills Cloud ──────────────────────────────────── */}
         {allSkills.length > 0 && (

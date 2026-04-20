@@ -17,6 +17,8 @@ import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
 import DailyPulseCard from '../../components/DailyPulseCard';
+import RememberedCard from '../../components/RememberedCard';
+import WinsCard from '../../components/WinsCard';
 import { scheduleChapterNotifications } from '../../hooks/useChapterNotifications';
 import { useExtractionState } from '../../hooks/useExtractionPending';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
@@ -26,7 +28,12 @@ import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useAccent, useResolvedTheme } from '../../hooks/useTheme';
-import { ExploringHome, DropoutHome, LaidOffHome, VisaHome } from '../../components/SituationHomes';
+import {
+  ExploringHome, DropoutHome, LaidOffHome, VisaHome,
+  VeteranHome, ParentReturningHome, InternationalGradHome, RefugeeHome,
+  TieredSeekerHome,
+} from '../../components/SituationHomes';
+import { hasTieredSpec } from '../../lib/homeSpecs';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
@@ -197,6 +204,13 @@ async function _fetchHolderHomeData(): Promise<HolderHomeData | null> {
 
 function HolderHome() {
   const insets = useSafeAreaInsets();
+  // Customize Dilly theme. Every surface color, text color, and the
+  // accent used for icons + CTAs pulls from this so HolderHome tracks
+  // the user's theme axis (surface + accent + shape + type) the same
+  // way SeekerHome does. Previously HolderHome didn't call this at
+  // all — styles were frozen at module load via the colors proxy, so
+  // the page looked the same no matter which theme the user picked.
+  const theme = useResolvedTheme();
   // Ambient premium feel: borders, typography, press feedback vary by
   // tier. Starter gets baseline; Dilly is slightly heavier; Pro has
   // thicker borders + 900-weight headings + letter-spacing bump.
@@ -269,7 +283,7 @@ function HolderHome() {
 
   if (loading) {
     return (
-      <View style={[h.container, { paddingTop: insets.top }]}>
+      <View style={[h.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
         <View style={{ padding: spacing.xl }}>
           <Skeleton width="40%" height={12} style={{ marginBottom: 12 }} />
           <Skeleton width="90%" height={28} />
@@ -284,11 +298,11 @@ function HolderHome() {
   }
 
   return (
-    <View style={[h.container, { paddingTop: insets.top }]}>
+    <View style={[h.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
       <ScrollView
         contentContainerStyle={[h.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={INDIGO} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
       >
         {/* Greeting + settings. Paid users see a TierBadge next to the
             eyebrow — the ambient signal that tells them the app they
@@ -297,10 +311,10 @@ function HolderHome() {
         <View style={h.greetRow}>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <Text style={h.eyebrow}>CAREER WATCH</Text>
+              <Text style={[h.eyebrow, { color: theme.accent }]}>CAREER WATCH</Text>
               <TierBadge />
             </View>
-            <Text style={[h.greeting, { fontWeight: feel.headingWeight, letterSpacing: -0.5 + feel.headingTracking }]}>
+            <Text style={[h.greeting, { color: theme.surface.t1, fontWeight: feel.headingWeight, letterSpacing: -0.5 + feel.headingTracking }]}>
               Welcome back, {firstName}.
             </Text>
             {/* First 24h after upgrade: subtle welcome line that
@@ -310,18 +324,18 @@ function HolderHome() {
               <Text style={{
                 fontSize: 11,
                 fontStyle: 'italic',
-                color: colors.t3,
+                color: theme.surface.t3,
                 marginTop: 4,
               }}>
                 Good to have you in here.
               </Text>
             )}
             {currentRole ? (
-              <Text style={h.roleLine}>{currentRole}{yoeDisplay ? ` · ${yoeDisplay}` : ''}</Text>
+              <Text style={[h.roleLine, { color: theme.surface.t3 }]}>{currentRole}{yoeDisplay ? ` · ${yoeDisplay}` : ''}</Text>
             ) : null}
           </View>
           <AnimatedPressable onPress={() => router.push('/(app)/settings' as any)} scaleDown={0.9} hitSlop={10}>
-            <Ionicons name="settings-outline" size={20} color={colors.t3} />
+            <Ionicons name="settings-outline" size={20} color={theme.surface.t3} />
           </AnimatedPressable>
         </View>
 
@@ -344,6 +358,7 @@ function HolderHome() {
             style={[
               h.heroCard,
               {
+                backgroundColor: theme.surface.s1,
                 borderColor: threatColor + '30',
                 borderWidth: feel.cardBorder,
                 shadowColor: threatColor,
@@ -378,18 +393,18 @@ function HolderHome() {
             <Text
               style={[
                 h.heroHeadline,
-                { fontWeight: feel.headingWeight, letterSpacing: -0.2 + feel.headingTracking },
+                { color: theme.surface.t1, fontWeight: feel.headingWeight, letterSpacing: -0.2 + feel.headingTracking },
               ]}
               numberOfLines={2}
             >
               {weekly?.headline || 'Your field is shifting. Dilly is tracking it for you.'}
             </Text>
             {weekly?.source ? (
-              <Text style={h.heroSource} numberOfLines={1}>{weekly.source}</Text>
+              <Text style={[h.heroSource, { color: theme.surface.t3 }]} numberOfLines={1}>{weekly.source}</Text>
             ) : null}
             <View style={h.heroCtaRow}>
-              <Text style={h.heroCtaText}>Open this week's briefing</Text>
-              <Ionicons name="arrow-forward" size={15} color={INDIGO} />
+              <Text style={[h.heroCtaText, { color: theme.accent }]}>Open this week's briefing</Text>
+              <Ionicons name="arrow-forward" size={15} color={theme.accent} />
             </View>
           </AnimatedPressable>
         </FadeInView>
@@ -398,28 +413,28 @@ function HolderHome() {
         <FadeInView delay={80}>
           <View style={h.statRow}>
             <AnimatedPressable
-              style={[h.statCard, { borderColor: threatColor + '30' }]}
+              style={[h.statCard, { backgroundColor: theme.surface.s1, borderColor: threatColor + '30' }]}
               onPress={() => router.push('/(app)/ai-arena' as any)}
               scaleDown={0.97}
             >
-              <Text style={h.statEyebrow}>AI THREAT</Text>
+              <Text style={[h.statEyebrow, { color: theme.surface.t3 }]}>AI THREAT</Text>
               <Text style={[h.statBig, { color: threatColor }]}>
                 {threat?.threat_pct != null ? `${threat.threat_pct}%` : '-'}
               </Text>
-              <Text style={h.statLabel}>
+              <Text style={[h.statLabel, { color: theme.surface.t2 }]}>
                 {threat?.threat_level ? threat.threat_level.toUpperCase() : 'Open Arena'}
               </Text>
             </AnimatedPressable>
             <AnimatedPressable
-              style={h.statCard}
+              style={[h.statCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
               onPress={() => router.push('/(app)/jobs' as any)}
               scaleDown={0.97}
             >
-              <Text style={h.statEyebrow}>MARKET · YOUR ROLE</Text>
-              <Text style={[h.statBig, { color: colors.t1 }]}>
+              <Text style={[h.statEyebrow, { color: theme.surface.t3 }]}>MARKET · YOUR ROLE</Text>
+              <Text style={[h.statBig, { color: theme.surface.t1 }]}>
                 {marketCount != null ? marketCount.toLocaleString() : '-'}
               </Text>
-              <Text style={h.statLabel}>hiring now</Text>
+              <Text style={[h.statLabel, { color: theme.surface.t2 }]}>hiring now</Text>
             </AnimatedPressable>
           </View>
         </FadeInView>
@@ -427,23 +442,23 @@ function HolderHome() {
         {/* ── 3. This week's moves ───────────────────────────────── */}
         {threat?.what_to_learn && threat.what_to_learn.length > 0 && (
           <FadeInView delay={120}>
-            <Text style={h.sectionLabel}>THIS MONTH'S MOVES</Text>
+            <Text style={[h.sectionLabel, { color: theme.surface.t3 }]}>THIS MONTH'S MOVES</Text>
             <View style={{ gap: 8 }}>
               {threat.what_to_learn.slice(0, 3).map((move: string, i: number) => (
                 <AnimatedPressable
                   key={i}
-                  style={h.moveCard}
+                  style={[h.moveCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
                   onPress={() => openDillyOverlay({
                     isPaid: false,
                     initialMessage: `Help me make this move: "${move}". I'm a ${threat.display || currentRole}. What should I actually do this week to start?`,
                   })}
                   scaleDown={0.98}
                 >
-                  <View style={h.moveNum}>
-                    <Text style={h.moveNumText}>{i + 1}</Text>
+                  <View style={[h.moveNum, { backgroundColor: theme.accent + '18' }]}>
+                    <Text style={[h.moveNumText, { color: theme.accent }]}>{i + 1}</Text>
                   </View>
-                  <Text style={h.moveText}>{move}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                  <Text style={[h.moveText, { color: theme.surface.t1 }]}>{move}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
                 </AnimatedPressable>
               ))}
             </View>
@@ -452,31 +467,31 @@ function HolderHome() {
 
         {/* ── 4. Your trajectory ─────────────────────────────────── */}
         <FadeInView delay={160}>
-          <Text style={h.sectionLabel}>YOUR TRAJECTORY</Text>
+          <Text style={[h.sectionLabel, { color: theme.surface.t3 }]}>YOUR TRAJECTORY</Text>
           <AnimatedPressable
-            style={h.trajCard}
+            style={[h.trajCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
             onPress={() => router.push('/(app)/my-dilly-profile' as any)}
             scaleDown={0.98}
           >
             <View style={h.trajHeader}>
               <View style={{ flex: 1 }}>
                 {currentRole ? (
-                  <Text style={h.trajRole}>{currentRole}</Text>
+                  <Text style={[h.trajRole, { color: theme.surface.t1 }]}>{currentRole}</Text>
                 ) : (
-                  <Text style={h.trajRole}>Your career, tracked</Text>
+                  <Text style={[h.trajRole, { color: theme.surface.t1 }]}>Your career, tracked</Text>
                 )}
-                <Text style={h.trajMeta}>
+                <Text style={[h.trajMeta, { color: theme.surface.t3 }]}>
                   {yoeDisplay ? `${yoeDisplay} · ` : ''}
                   Dilly knows {factCount} {factCount === 1 ? 'thing' : 'things'} about you
                 </Text>
               </View>
-              <Ionicons name="analytics-outline" size={24} color={INDIGO} />
+              <Ionicons name="analytics-outline" size={24} color={theme.accent} />
             </View>
             {trajectoryFacts.length > 0 && (
               <View style={h.tagRow}>
                 {trajectoryFacts.map((f, i) => (
-                  <View key={i} style={h.tag}>
-                    <Text style={h.tagText} numberOfLines={1}>
+                  <View key={i} style={[h.tag, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
+                    <Text style={[h.tagText, { color: theme.surface.t2 }]} numberOfLines={1}>
                       {(f.label || f.value || '').slice(0, 32)}
                     </Text>
                   </View>
@@ -484,18 +499,18 @@ function HolderHome() {
               </View>
             )}
             <View style={h.trajCtaRow}>
-              <Text style={h.trajCtaText}>Open My Career</Text>
-              <Ionicons name="arrow-forward" size={13} color={INDIGO} />
+              <Text style={[h.trajCtaText, { color: theme.accent }]}>Open My Career</Text>
+              <Ionicons name="arrow-forward" size={13} color={theme.accent} />
             </View>
           </AnimatedPressable>
         </FadeInView>
 
         {/* ── 5. Quick tools (holder-relevant only) ──────────────── */}
         <FadeInView delay={200}>
-          <Text style={h.sectionLabel}>QUICK TOOLS</Text>
+          <Text style={[h.sectionLabel, { color: theme.surface.t3 }]}>QUICK TOOLS</Text>
           <View style={h.toolsRow}>
             {[
-              { icon: 'chatbubbles' as const, color: INDIGO, label: 'Ask Dilly',
+              { icon: 'chatbubbles' as const, color: theme.accent, label: 'Ask Dilly',
                 onPress: () => openDillyOverlay({ isPaid: true }) },
               { icon: 'shield-checkmark' as const, color: '#00C853', label: 'Threat',
                 onPress: () => router.push('/(app)/ai-arena' as any) },
@@ -508,7 +523,7 @@ function HolderHome() {
                 <View style={[h.toolIcon, { backgroundColor: t.color + '10' }]}>
                   <Ionicons name={t.icon} size={20} color={t.color} />
                 </View>
-                <Text style={h.toolLabel}>{t.label}</Text>
+                <Text style={[h.toolLabel, { color: theme.surface.t2 }]}>{t.label}</Text>
               </AnimatedPressable>
             ))}
           </View>
@@ -1332,6 +1347,24 @@ function SeekerHome() {
           <DailyPulseCard />
         </FadeInView>
 
+        {/* Dilly Remembered You — proof the AI is actually tracking.
+            Surfaces a specific callback to a recent pulse / Chapter
+            commitment / upcoming deadline. Tapping opens the chat
+            seeded with a follow-up so the reminder becomes a
+            conversation. Hides itself entirely when there's no
+            meaningful signal yet. */}
+        <FadeInView delay={22}>
+          <RememberedCard />
+        </FadeInView>
+
+        {/* Wins timeline — positive-reinforcement loop. Users open
+            the app to log good news, which builds an association
+            that THIS is where progress lives. Recent wins visible
+            on every return visit; "Log a win" triggers celebration. */}
+        <FadeInView delay={26}>
+          <WinsCard />
+        </FadeInView>
+
         {/* ── Situation hero card ─────────────────────────────
             Per-path, cohort-specific action block rendered above
             every other home block. One concrete thing the user can
@@ -1830,11 +1863,21 @@ export default function HomeScreen() {
   const userPath = String(profileCached?.user_path || '').toLowerCase();
 
   if (appMode === 'holder') return <HolderHome />;
-  if (userPath === 'senior_reset')   return <SeniorResetHome />;
-  if (userPath === 'exploring')      return <ExploringHome />;
-  if (userPath === 'dropout')        return <DropoutHome />;
-  if (userPath === 'laid_off')       return <LaidOffHome />;
-  if (userPath === 'visa')           return <VisaHome />;
+  // Full Rung-3 bespoke Homes — their own file, own sections.
+  if (userPath === 'senior_reset')        return <SeniorResetHome />;
+  if (userPath === 'exploring')           return <ExploringHome />;
+  if (userPath === 'dropout')             return <DropoutHome />;
+  if (userPath === 'laid_off')            return <LaidOffHome />;
+  if (userPath === 'visa')                return <VisaHome />;
+  if (userPath === 'veteran')             return <VeteranHome />;
+  if (userPath === 'parent_returning')    return <ParentReturningHome />;
+  if (userPath === 'international_grad')  return <InternationalGradHome />;
+  if (userPath === 'refugee')             return <RefugeeHome />;
+  // Tier-2 spec-driven Home — one component, per-path data. Covers
+  // student / career_switch / first_gen_college / trades_to_white_collar
+  // / formerly_incarcerated / neurodivergent / disabled_professional
+  // / lgbtq / rural_remote_only / ex_founder.
+  if (hasTieredSpec(userPath))            return <TieredSeekerHome userPath={userPath} />;
   return <SeekerHome />;
 }
 

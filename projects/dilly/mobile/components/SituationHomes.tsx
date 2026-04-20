@@ -38,6 +38,7 @@ import { useAccent, useResolvedTheme } from '../hooks/useTheme';
 import { useSpacing } from './Themed';
 import { YourPlanCard } from './YourPlanCard';
 import { useYourPlan } from '../hooks/useYourPlan';
+import { specForPath, HomeSpec } from '../lib/homeSpecs';
 
 const INDIGO = colors.indigo;
 
@@ -729,6 +730,500 @@ export function VisaHome() {
           <Text style={s.footerNote}>
             {factCount} facts in your profile. Add a few specifics about your field — visa-friendly recruiters screen hard.
           </Text>
+        </FadeInView>
+      ) : null}
+    </HomeShell>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 5. Veteran Home — "Translating the mission."                    */
+/* ─────────────────────────────────────────────────────────────── */
+
+export function VeteranHome() {
+  const insets = useSafeAreaInsets();
+  const accent = useAccent();
+  const { data, refreshing, refresh } = useHomeData('home:veteran');
+  const firstName = data?.firstName || 'there';
+  const factCount = data?.factCount ?? 0;
+  const marketCount = data?.marketCount ?? null;
+
+  // Stone / olive-green holds. Veterans need to feel backed, not
+  // pitied, and not performed-at with brand gratitude.
+  const VET_TONE = '#4A6B52';
+
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath: 'veteran',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
+  return (
+    <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={accent}>
+      <Greeting
+        eyebrow="TODAY'S BRIEFING"
+        firstName={firstName}
+        line="here's the field report."
+        eyebrowColor={VET_TONE}
+      />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
+
+      <FadeInView delay={40}>
+        <HeroCard tintColor={VET_TONE}>
+          <HeroText
+            kicker="TRANSLATING THE MISSION"
+            head={"Your service is a\nleadership track record."}
+            body="The hiring manager reading your resume probably hasn't served. Your job is to translate what you did into language they can act on. Dilly does that with you, line by line."
+            kickerColor={VET_TONE}
+          />
+          <TalkCta
+            label="Translate my service"
+            seed="I'm a veteran. Help me translate my service (MOS, deployments, leadership scope) into a civilian resume that a non-veteran hiring manager will actually understand. Ask me about my role and my team size."
+            accent={VET_TONE}
+          />
+        </HeroCard>
+      </FadeInView>
+
+      <FadeInView delay={100}>
+        <SectionLabel>START HERE TODAY</SectionLabel>
+        <View style={{ gap: 8 }}>
+          <PromptRow
+            text="What was my actual scope and team size?"
+            tint={VET_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'Help me name the real scope of my service — headcount I led, budget or equipment I was responsible for, geographic footprint. Turn it into one clean resume line.' })}
+          />
+          <PromptRow
+            text="How do I answer 'tell me about yourself' without military jargon?"
+            tint={VET_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: 'Help me write a 60-second interview opener that does NOT use military acronyms or insider shorthand. Ask me about my service and my target role.' })}
+          />
+          <PromptRow
+            text="Which employers actually hire veterans (not just say they do)?"
+            tint={VET_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Suggest 5 employers that meaningfully hire veterans into roles that use our leadership, not just gate-guard or logistics. Explain why each makes the list." })}
+          />
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={160}>
+        <SectionLabel>THE MARKET</SectionLabel>
+        <MarketTile
+          count={marketCount}
+          label="roles hiring leadership reps like yours"
+          accent={VET_TONE}
+          onPress={() => router.push('/(app)/jobs' as any)}
+        />
+      </FadeInView>
+
+      {factCount < 20 ? (
+        <FadeInView delay={220}>
+          <View style={s.growthNudge}>
+            <Text style={s.growthLabel}>DILLY KNOWS {factCount}</Text>
+            <Text style={s.growthBody}>
+              Tell Dilly one specific thing you led. Number of people, scope of operation, what went wrong and how you fixed it. That's the currency.
+            </Text>
+          </View>
+        </FadeInView>
+      ) : null}
+    </HomeShell>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 6. Parent Returning Home — "Back in the room."                  */
+/* ─────────────────────────────────────────────────────────────── */
+
+export function ParentReturningHome() {
+  const insets = useSafeAreaInsets();
+  const accent = useAccent();
+  const { data, refreshing, refresh } = useHomeData('home:parent_returning');
+  const firstName = data?.firstName || 'there';
+  const factCount = data?.factCount ?? 0;
+  const marketCount = data?.marketCount ?? null;
+
+  // Warm sage — calm, adult, not saccharine. No pink, no "mompreneur".
+  const RETURN_TONE = '#5B8A72';
+
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath: 'parent_returning',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
+  return (
+    <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={accent}>
+      <Greeting
+        eyebrow="BACK IN THE ROOM"
+        firstName={firstName}
+        line="the work is still yours."
+        eyebrowColor={RETURN_TONE}
+      />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
+
+      <FadeInView delay={40}>
+        <HeroCard tintColor={RETURN_TONE}>
+          <HeroText
+            kicker="THE GAP IS A SENTENCE"
+            head={"The gap is one line.\nThe rest is who you are now."}
+            body="Name the years caregiving in one plain sentence and move. The skills didn't atrophy; the confidence is rebuilding in real time. Dilly helps you write what came next."
+            kickerColor={RETURN_TONE}
+          />
+          <TalkCta
+            label="Frame the return"
+            seed="I'm returning to work after a caregiving gap. Help me write the one-sentence explanation and then a resume summary that centers what I did before and what I'm bringing back. Ask me about my last role."
+            accent={RETURN_TONE}
+          />
+        </HeroCard>
+      </FadeInView>
+
+      <FadeInView delay={100}>
+        <SectionLabel>START HERE TODAY</SectionLabel>
+        <View style={{ gap: 8 }}>
+          <PromptRow
+            text="What skills stayed sharp through the gap?"
+            tint={RETURN_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me name the skills that actually stayed sharp during my caregiving years — project management, triage, negotiation, decision under pressure. Ask me about specific moments." })}
+          />
+          <PromptRow
+            text="How do I answer 'what have you been doing for X years'?"
+            tint={RETURN_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me write a calm, non-defensive answer to the 'what have you been doing' question in interviews. One honest line, then pivot to what I'm ready for. Ask me how long my gap was." })}
+          />
+          <PromptRow
+            text="Which companies run real returnship programs?"
+            tint={RETURN_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Suggest 5 companies with real returnship or returner programs in my field, not just ones with a page that says they support returning parents. Ask me my field if you need it." })}
+          />
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={160}>
+        <SectionLabel>THE MARKET</SectionLabel>
+        <MarketTile
+          count={marketCount}
+          label="return-friendly roles Dilly is tracking"
+          accent={RETURN_TONE}
+          onPress={() => router.push('/(app)/jobs' as any)}
+        />
+      </FadeInView>
+
+      {factCount < 18 ? (
+        <FadeInView delay={220}>
+          <View style={s.growthNudge}>
+            <Text style={s.growthLabel}>DILLY KNOWS {factCount}</Text>
+            <Text style={s.growthBody}>
+              Tell Dilly about a project you ran before the gap, or something you organized during it. Both count as proof.
+            </Text>
+          </View>
+        </FadeInView>
+      ) : null}
+    </HomeShell>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 7. International Grad Home — "On two clocks."                   */
+/* ─────────────────────────────────────────────────────────────── */
+
+export function InternationalGradHome() {
+  const insets = useSafeAreaInsets();
+  const accent = useAccent();
+  const { data, refreshing, refresh } = useHomeData('home:international_grad');
+  const firstName = data?.firstName || 'there';
+  const factCount = data?.factCount ?? 0;
+  const marketCount = data?.marketCount ?? null;
+
+  // Indigo. Calm, precise, serious. Visa is a serious topic.
+  const INTL_TONE = '#3A56C7';
+
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath: 'international_grad',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
+  return (
+    <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={accent}>
+      <Greeting
+        eyebrow="ON TWO CLOCKS"
+        firstName={firstName}
+        line="let's work both of them."
+        eyebrowColor={INTL_TONE}
+      />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
+
+      <FadeInView delay={40}>
+        <HeroCard tintColor={INTL_TONE}>
+          <HeroText
+            kicker="VISA-AWARE MOVES"
+            head={"The market clock and the\nvisa clock are different clocks."}
+            body="Every move this week should be legible to both. Dilly holds the visa context while you work the resume, the network, and the interviews."
+            kickerColor={INTL_TONE}
+          />
+          <TalkCta
+            label="Map my visa moves"
+            seed="I'm an international grad on a visa track (OPT, STEM OPT, F-1, or other). Help me map what I should do this week against both the hiring timeline and my visa timeline. Ask me my status and my graduation date."
+            accent={INTL_TONE}
+          />
+        </HeroCard>
+      </FadeInView>
+
+      <FadeInView delay={100}>
+        <SectionLabel>START HERE TODAY</SectionLabel>
+        <View style={{ gap: 8 }}>
+          <PromptRow
+            text="Which companies actually sponsor in my field?"
+            tint={INTL_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Suggest 8 companies that reliably sponsor H-1B / green card in my field. Don't pad the list with 'most big tech sponsors' generalities — I want names and why. Ask my field." })}
+          />
+          <PromptRow
+            text="How do I answer 'do you need sponsorship' cleanly?"
+            tint={INTL_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me answer the sponsorship question on applications and in interviews in a clean, factual way that doesn't tank my candidacy. Ask me what status I'm on." })}
+          />
+          <PromptRow
+            text="What does my resume need to pass a US reader?"
+            tint={INTL_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me audit my resume for a US audience — format, numbers, what to add, what to drop from my home country's resume conventions. Ask me about my degree and my last role." })}
+          />
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={160}>
+        <SectionLabel>THE MARKET</SectionLabel>
+        <MarketTile
+          count={marketCount}
+          label="roles live now (filter to sponsor-friendly in Jobs)"
+          accent={INTL_TONE}
+          onPress={() => router.push('/(app)/jobs' as any)}
+        />
+      </FadeInView>
+
+      {factCount < 18 ? (
+        <FadeInView delay={220}>
+          <View style={s.growthNudge}>
+            <Text style={s.growthLabel}>DILLY KNOWS {factCount}</Text>
+            <Text style={s.growthBody}>
+              Tell Dilly your current visa status and graduation date. Every downstream suggestion gets sharper when I can read both clocks.
+            </Text>
+          </View>
+        </FadeInView>
+      ) : null}
+    </HomeShell>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 8. Refugee Home — "Translating your career."                    */
+/* ─────────────────────────────────────────────────────────────── */
+
+export function RefugeeHome() {
+  const insets = useSafeAreaInsets();
+  const accent = useAccent();
+  const { data, refreshing, refresh } = useHomeData('home:refugee');
+  const firstName = data?.firstName || 'there';
+  const factCount = data?.factCount ?? 0;
+  const marketCount = data?.marketCount ?? null;
+
+  // Warm terracotta — respectful, grounded, not corporate.
+  const BRIDGE_TONE = '#B7541F';
+
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath: 'refugee',
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
+  return (
+    <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={accent}>
+      <Greeting
+        eyebrow="TRANSLATING THE CAREER"
+        firstName={firstName}
+        line="your work counts here too."
+        eyebrowColor={BRIDGE_TONE}
+      />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
+
+      <FadeInView delay={40}>
+        <HeroCard tintColor={BRIDGE_TONE}>
+          <HeroText
+            kicker="TRANSLATE, DON'T REBUILD"
+            head={"Your career didn't start\nhere. It started somewhere."}
+            body="The US market often reads foreign experience as zero. It isn't. Dilly helps translate credentials, companies, and roles into language this market can act on — and finds the employers and programs that already recognize it."
+            kickerColor={BRIDGE_TONE}
+          />
+          <TalkCta
+            label="Translate my experience"
+            seed="I worked in my home country before coming to the US. Help me translate my experience — companies, titles, credentials — into US resume language that hiring managers here will understand. Ask me about my most recent role and how long I worked there."
+            accent={BRIDGE_TONE}
+          />
+        </HeroCard>
+      </FadeInView>
+
+      <FadeInView delay={100}>
+        <SectionLabel>START HERE TODAY</SectionLabel>
+        <View style={{ gap: 8 }}>
+          <PromptRow
+            text="How do I explain my foreign work experience to US recruiters?"
+            tint={BRIDGE_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me write a resume summary and an interview opener that contextualize my foreign work experience for US recruiters without apologizing for it. Ask me what I did and where." })}
+          />
+          <PromptRow
+            text="Is my degree recognized in the US, and what do I do if it isn't?"
+            tint={BRIDGE_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Help me check whether my foreign degree is recognized in my US target field. If it isn't fully, suggest credential evaluation services and employers who work with foreign credentials. Ask me my degree and field." })}
+          />
+          <PromptRow
+            text="Which employers actively hire immigrants and refugees?"
+            tint={BRIDGE_TONE}
+            onPress={() => openDillyOverlay({ isPaid: false, initialMessage: "Suggest 5 employers or programs that actively hire refugees and recent immigrants in professional roles in my field. Tell me what makes each legit versus performative. Ask my field if needed." })}
+          />
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={160}>
+        <SectionLabel>THE MARKET</SectionLabel>
+        <MarketTile
+          count={marketCount}
+          label="roles Dilly is tracking for your field"
+          accent={BRIDGE_TONE}
+          onPress={() => router.push('/(app)/jobs' as any)}
+        />
+      </FadeInView>
+
+      {factCount < 18 ? (
+        <FadeInView delay={220}>
+          <View style={s.growthNudge}>
+            <Text style={s.growthLabel}>DILLY KNOWS {factCount}</Text>
+            <Text style={s.growthBody}>
+              Tell Dilly about one role you held in your home country. Title, company, years, what you actually did. That's where the translation starts.
+            </Text>
+          </View>
+        </FadeInView>
+      ) : null}
+    </HomeShell>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 9. TieredSeekerHome — spec-driven Home for paths that don't    */
+/*    need a full bespoke file. Reads from lib/homeSpecs and      */
+/*    renders through the same primitives as the Rung-3 Homes.   */
+/*    Covers 10 additional paths in one component.                */
+/* ─────────────────────────────────────────────────────────────── */
+
+export function TieredSeekerHome({ userPath }: { userPath: string }) {
+  const insets = useSafeAreaInsets();
+  const accent = useAccent();
+  const spec: HomeSpec = specForPath(userPath);
+  const { data, refreshing, refresh } = useHomeData(`home:tiered:${userPath}`);
+  const firstName = data?.firstName || 'there';
+  const factCount = data?.factCount ?? 0;
+  const marketCount = data?.marketCount ?? null;
+
+  // Each path's tone color. Falls back to the user's accent when
+  // the spec doesn't name one. Greeting eyebrow uses spec tone;
+  // CTAs / hero tints do the same so the whole screen reads in
+  // one coherent palette.
+  const tone = spec.tone || accent;
+
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath,
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
+  return (
+    <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={accent}>
+      <Greeting
+        eyebrow={spec.eyebrow}
+        firstName={firstName}
+        line={spec.greetingLine}
+        eyebrowColor={tone}
+      />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
+
+      <FadeInView delay={40}>
+        <HeroCard tintColor={tone}>
+          <HeroText
+            kicker={spec.hero.kicker}
+            head={spec.hero.head}
+            body={spec.hero.body}
+            kickerColor={tone}
+          />
+          <TalkCta
+            label={spec.hero.ctaLabel}
+            seed={spec.hero.seed}
+            accent={tone}
+          />
+        </HeroCard>
+      </FadeInView>
+
+      <FadeInView delay={100}>
+        <SectionLabel>START HERE TODAY</SectionLabel>
+        <View style={{ gap: 8 }}>
+          {spec.prompts.map((p, i) => (
+            <PromptRow
+              key={i}
+              text={p.text}
+              tint={tone}
+              onPress={() => openDillyOverlay({ isPaid: false, initialMessage: p.seed })}
+            />
+          ))}
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={160}>
+        <SectionLabel>THE MARKET</SectionLabel>
+        <MarketTile
+          count={marketCount}
+          label={spec.marketLabel}
+          accent={tone}
+          onPress={() => router.push('/(app)/jobs' as any)}
+        />
+      </FadeInView>
+
+      {factCount < 18 && spec.growthNudge ? (
+        <FadeInView delay={220}>
+          <View style={s.growthNudge}>
+            <Text style={s.growthLabel}>DILLY KNOWS {factCount}</Text>
+            <Text style={s.growthBody}>{spec.growthNudge}</Text>
+          </View>
         </FadeInView>
       ) : null}
     </HomeShell>

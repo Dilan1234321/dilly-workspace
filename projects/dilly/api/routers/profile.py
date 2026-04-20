@@ -337,7 +337,7 @@ async def update_profile(request: Request, body: dict = Body(...)):
     """Update current user's profile. Merges with existing. Only allowed fields are updated."""
     user = deps.require_auth(request)
     email = user.get("email") or ""
-    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "cohorts", "career_fields", "user_type", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year", "plan", "public_profile_visible", "web_profile_settings", "web_headline", "card_template", "readable_slug", "extra_cohorts", "booking_availability", "bookings", "show_qr_button", "show_refer_button", "user_path", "years_experience", "most_recent_role", "most_recent_industry", "willing_industries", "self_taught_skills", "current_role", "current_job_title", "title", "field", "app_mode", "mission_statement"}
+    allowed = {"schoolId", "major", "majors", "minors", "pre_professional_track", "preProfessional", "track", "cohort", "cohorts", "career_fields", "user_type", "industry_target", "goals", "name", "application_target", "application_target_label", "career_goal", "deadlines", "leaderboard_opt_in", "target_school", "target_companies", "profile_background_color", "profile_tagline", "profile_bio", "linkedin_url", "voice_memory", "voice_avatar_index", "voice_save_to_profile", "job_locations", "job_location_scope", "achievements", "custom_tagline", "profile_theme", "voice_tone", "voice_notes", "share_card_achievements", "share_card_metric", "first_audit_snapshot", "first_application_at", "first_interview_at", "got_interview_at", "got_offer_at", "outcome_story_consent", "outcome_prompt_dismissed_at", "referral_code", "parent_email", "parent_milestone_opt_in", "voice_always_end_with_ask", "voice_max_recommendations", "voice_onboarding_done", "voice_onboarding_answers", "voice_biggest_concern", "experience_expansion", "beyond_resume", "nudge_preferences", "decision_log", "ritual_preferences", "dilly_profile_privacy", "dilly_profile_visible_to_recruiters", "pronouns", "push_token", "notification_prefs", "last_deep_dive_at", "weekly_review_day", "onboarding_complete", "has_run_first_audit", "interests", "education_level", "graduation_year", "plan", "public_profile_visible", "web_profile_settings", "web_headline", "card_template", "readable_slug", "extra_cohorts", "booking_availability", "bookings", "show_qr_button", "show_refer_button", "user_path", "years_experience", "most_recent_role", "most_recent_industry", "willing_industries", "self_taught_skills", "current_role", "current_job_title", "title", "field", "app_mode", "mission_statement", "advisor_persona"}
     data = {k: v for k, v in (body or {}).items() if k in allowed}
 
     # Life event append: used by the "I got laid off" / "I got a new job"
@@ -365,6 +365,19 @@ async def update_profile(request: Request, body: dict = Body(...)):
     # Validate plan field: only accept known tier values.
     if "plan" in data and data["plan"] not in ("starter", "dilly", "pro", "building"):
         data.pop("plan", None)
+    # Validate advisor_persona: empty/null clears it, otherwise must
+    # be one of the canonical persona keys. The Chapter prompt reads
+    # this to decide which persona lens to splice in, and an unknown
+    # value would silently fall through to the neutral default, so
+    # we clamp at the boundary instead of trusting the client.
+    if "advisor_persona" in data:
+        v = data["advisor_persona"]
+        if v is None or v == "":
+            data["advisor_persona"] = None
+        elif isinstance(v, str) and v.strip().lower() in ("warm", "sharp", "direct"):
+            data["advisor_persona"] = v.strip().lower()
+        else:
+            data.pop("advisor_persona", None)
     # Validate app_mode: only accept 'holder' | 'seeker' | 'student' | null.
     # null is the "reset to derived mode" signal — user wants mode to
     # follow their user_path again instead of the explicit override.

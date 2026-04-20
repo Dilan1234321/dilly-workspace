@@ -1862,15 +1862,23 @@ async def ai_chat(request: Request, body: ChatRequest):
         # extractor calls. Cuts extraction cost ~67%.
         if email and len(messages) >= 2:
             assistant_turns = sum(1 for m in raw_messages if m["role"] == "assistant") + 1  # +1 for the reply we just produced
-            # Was every 5 turns. Now every 15 — the mobile client calls
-            # /ai/chat/flush on overlay close, running extraction once
-            # per session. This mid-turn trigger is now a safety net for
-            # sessions that never close cleanly (force quit, killed in
-            # background, etc). Net cost cut ~60-70% on the median
-            # session. Still fires on turn 1 so a one-shot introduction
-            # ("I'm Sarah, I just graduated, I want X") seeds the
-            # profile even if the user never returns.
-            should_extract = (assistant_turns % 15 == 0) or (assistant_turns == 1)
+            # Per-turn extraction runs REGEX only (use_llm defaults to
+            # False in run_extraction). Regex is effectively free — no
+            # LLM call, just pattern matching on the user's turns plus
+            # a dedup + memory_surface write. Previously gated at
+            # every 15 turns + turn 1 as a "safety net" for sessions
+            # that never flush cleanly. That gating was too sparse:
+            # typical chats are 3-10 messages, so NOTHING extracted
+            # mid-chat unless the user hit exactly turn 15. Users
+            # reported "talking to Dilly doesn't add facts" because of
+            # this — the flush on overlay close was the only path that
+            # ran, and any chat that bypassed the overlay (Chapter
+            # inline chat, force-quit, background-killed session)
+            # silently dropped every fact.
+            # Now: turn 1 (one-shot intros), and every 3rd turn after.
+            # LLM extraction still gates on /ai/chat/flush + 5-user-msg
+            # bar; this is purely the cheap regex path.
+            should_extract = (assistant_turns == 1) or (assistant_turns % 3 == 0)
             # Conv id used by BOTH the memory extraction below and the
             # chat-thread store. Stable across turns of the same chat so
             # thread upserts hit the same row.

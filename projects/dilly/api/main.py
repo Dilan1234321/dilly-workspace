@@ -163,6 +163,9 @@ from projects.dilly.api.routers import weekly_brief as weekly_brief_router
 from projects.dilly.api.routers import aha_signals as aha_signals_router
 from projects.dilly.api.routers import chapters as chapters_router
 from projects.dilly.api.routers import pulse as pulse_router
+from projects.dilly.api.routers import remember as remember_router
+from projects.dilly.api.routers import wins as wins_router
+from projects.dilly.api.routers import field_pulse as field_pulse_router
 from projects.dilly.api.routers import cron_jobs_cleanup
 from projects.dilly.api.routers import skill_lab as skill_lab_router
 app.include_router(cron_jobs_cleanup.router)
@@ -170,6 +173,9 @@ app.include_router(skill_lab_router.router)
 app.include_router(aha_signals_router.router)
 app.include_router(chapters_router.router)
 app.include_router(pulse_router.router)
+app.include_router(remember_router.router)
+app.include_router(wins_router.router)
+app.include_router(field_pulse_router.router)
 app.include_router(auth_router.router)
 app.include_router(recruiter_router.router)
 app.include_router(profile_router.router)

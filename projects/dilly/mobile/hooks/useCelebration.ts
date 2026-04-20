@@ -44,10 +44,17 @@ export default function useCelebration() {
    *    reward progression that can only happen once.
    */
   const celebrate = useCallback(async (milestone: MilestoneType) => {
-    // Subscription unlocks always fire — conversion is the moment the
-    // user pays for Dilly, and we want to celebrate it every single
-    // time they convert (first signup, resubscribe, promo-code upgrade).
-    const alwaysFire = milestone === 'unlocked-dilly' || milestone === 'unlocked-pro';
+    // Always-fire milestones — re-show every time, not one-shot.
+    //   Subscription unlocks: user should feel the moment on every
+    //     conversion (first signup, resubscribe, promo upgrade).
+    //   Wins: every interview / offer / milestone is its own event;
+    //     one-shotting would cheapen every future win.
+    const alwaysFire =
+      milestone === 'unlocked-dilly' ||
+      milestone === 'unlocked-pro' ||
+      milestone === 'win-interview' ||
+      milestone === 'win-offer' ||
+      milestone === 'win-milestone';
     if (alwaysFire) {
       setActiveMilestone(milestone);
       return;

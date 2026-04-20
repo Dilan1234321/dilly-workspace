@@ -420,6 +420,21 @@ async def chapters_generate(request: Request):
         "Good evening"
     )
 
+    # Per-path advisor lens. Injects a short "who this user is" block
+    # right after the role definition so the advisor voice matches
+    # their situation. A veteran's Chapter should not read like an
+    # ex_founder's. Falls back to a neutral lens for unknown paths.
+    from dilly_core.chapter_advisor_lens import lens_block
+    advisor_lens = lens_block(profile.get("user_path"))
+
+    # Per-user advisor PERSONA. The path lens covers who the user is;
+    # the persona covers HOW they want to be advised — warm / sharp /
+    # direct. Stacks additively: a veteran + sharp reads very
+    # different from a veteran + warm. Empty string when the user
+    # hasn't picked one (default advisor voice stays in effect).
+    from dilly_core.chapter_persona import persona_block as _persona_block
+    persona_chunk = _persona_block(profile.get("advisor_persona"))
+
     # Build the structured prompt.
     # The Chapter bar is "a real advisor wrote this for me this week."
     # Three things get you most of the way there:
@@ -432,7 +447,9 @@ async def chapters_generate(request: Request):
         "You are Dilly, writing a weekly one-to-one session for someone you have been mentoring. "
         "This is their Chapter for the week. You have their full profile. Write like a thoughtful advisor "
         "who remembers the small details and doesn't flinch from the hard question.\n\n"
-        "HARD STYLE RULES:\n"
+        f"{advisor_lens}\n\n"
+        + (f"{persona_chunk}\n\n" if persona_chunk else "")
+        + "HARD STYLE RULES:\n"
         "- Never use em dashes. Never use semicolons. Use periods or commas.\n"
         "- Cite the user's actual experiences, companies, skills by name. No generic advice.\n"
         "- When you reference something specific from their profile, append the tag (from your profile) "
