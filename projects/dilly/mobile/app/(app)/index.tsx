@@ -28,7 +28,10 @@ import FadeInView from '../../components/FadeInView';
 import { useAppMode } from '../../hooks/useAppMode';
 import { useSituationCopy } from '../../hooks/useSituationCopy';
 import { useAccent, useResolvedTheme } from '../../hooks/useTheme';
-import { ExploringHome, DropoutHome, LaidOffHome, VisaHome } from '../../components/SituationHomes';
+import {
+  ExploringHome, DropoutHome, LaidOffHome, VisaHome,
+  VeteranHome, ParentReturningHome, InternationalGradHome, RefugeeHome,
+} from '../../components/SituationHomes';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
@@ -1858,11 +1861,15 @@ export default function HomeScreen() {
   const userPath = String(profileCached?.user_path || '').toLowerCase();
 
   if (appMode === 'holder') return <HolderHome />;
-  if (userPath === 'senior_reset')   return <SeniorResetHome />;
-  if (userPath === 'exploring')      return <ExploringHome />;
-  if (userPath === 'dropout')        return <DropoutHome />;
-  if (userPath === 'laid_off')       return <LaidOffHome />;
-  if (userPath === 'visa')           return <VisaHome />;
+  if (userPath === 'senior_reset')        return <SeniorResetHome />;
+  if (userPath === 'exploring')           return <ExploringHome />;
+  if (userPath === 'dropout')             return <DropoutHome />;
+  if (userPath === 'laid_off')            return <LaidOffHome />;
+  if (userPath === 'visa')                return <VisaHome />;
+  if (userPath === 'veteran')             return <VeteranHome />;
+  if (userPath === 'parent_returning')    return <ParentReturningHome />;
+  if (userPath === 'international_grad')  return <InternationalGradHome />;
+  if (userPath === 'refugee')             return <RefugeeHome />;
   return <SeekerHome />;
 }
 
