@@ -323,6 +323,12 @@ async def pulse_submit(request: Request):
                 synth_messages,
                 existing,
                 use_llm=False,
+                # Pulse reflections are already user-intent-gated by
+                # the act of writing them, so bypass the chat-path
+                # word-count pre-gate. A short but specific pulse
+                # like 'Applied to Anthropic today' should extract
+                # even though it wouldn't pass the 20-char+3-word bar.
+                skip_gate=True,
             )
             if new_items:
                 # Merge + dedup at the category+label grain, same rule
