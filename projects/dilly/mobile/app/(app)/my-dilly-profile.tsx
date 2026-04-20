@@ -142,6 +142,7 @@ function StrengthRing({ pct, size = 56 }: { pct: number; size?: number }) {
 
 function FactRow({ fact, color, onPress }: { fact: FactItem; color: string; onPress: (anchor: { x: number; y: number }) => void }) {
   const rowRef = useRef<View>(null);
+  const theme = useResolvedTheme();
   return (
     <AnimatedPressable
       style={d.factRow}
@@ -155,10 +156,10 @@ function FactRow({ fact, color, onPress }: { fact: FactItem; color: string; onPr
       <View ref={rowRef} style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
         <View style={[d.factDot, { backgroundColor: color }]} />
         <View style={{ flex: 1 }}>
-          <Text style={d.factLabel}>{fact.label}</Text>
-          <Text style={d.factValue}>{fact.value}</Text>
+          <Text style={[d.factLabel, { color: theme.surface.t1 }]}>{fact.label}</Text>
+          <Text style={[d.factValue, { color: theme.surface.t2 }]}>{fact.value}</Text>
         </View>
-        <Ionicons name="ellipsis-horizontal" size={14} color={colors.t3} />
+        <Ionicons name="ellipsis-horizontal" size={14} color={theme.surface.t3} />
       </View>
     </AnimatedPressable>
   );
@@ -629,8 +630,10 @@ function SeekerProfileScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} />}
       >
 
-        {/* Vertical business card CTA — prominent so users actually
-            find it. The header QR icon was invisible to most testers. */}
+        {/* QR Code CTA. Kept prominent here because the header icon
+            was invisible to most testers. Renamed from "Your business
+            card" to "Your Dilly QR Code" so it reads like a modern
+            credential, not a paper prop. */}
         {!editMode && readableSlug ? (
           <FadeInView delay={0}>
             <AnimatedPressable
@@ -638,28 +641,28 @@ function SeekerProfileScreen() {
               scaleDown={0.98}
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 12,
-                backgroundColor: colors.indigo + '10',
-                borderWidth: 1, borderColor: colors.indigo + '30',
+                backgroundColor: theme.accentSoft,
+                borderWidth: 1, borderColor: theme.accentBorder,
                 borderRadius: 14, padding: 14, marginBottom: 14,
               }}
             >
               <View style={{
                 width: 44, height: 44, borderRadius: 10,
                 backgroundColor: '#fff',
-                borderWidth: 1, borderColor: colors.indigo + '30',
+                borderWidth: 1, borderColor: theme.accentBorder,
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <Ionicons name="qr-code" size={22} color={colors.indigo} />
+                <Ionicons name="qr-code" size={22} color={theme.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.indigo, letterSpacing: 0.2 }}>
-                  Your business card
+                <Text style={{ fontSize: 13, fontWeight: '800', color: theme.accent, letterSpacing: 0.2 }}>
+                  Your Dilly QR Code
                 </Text>
-                <Text style={{ fontSize: 11, color: colors.t2, marginTop: 2, lineHeight: 15 }}>
-                  One scan — recruiters get your Dilly profile + contact in a tap.
+                <Text style={{ fontSize: 11, color: theme.surface.t2, marginTop: 2, lineHeight: 15 }}>
+                  Your whole career in a single scan. Recruiters tap it and land on your live Dilly profile instantly.
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.t3} />
+              <Ionicons name="chevron-forward" size={18} color={theme.surface.t3} />
             </AnimatedPressable>
           </FadeInView>
         ) : null}
@@ -1520,7 +1523,11 @@ function SeekerProfileScreen() {
                 return (
                   <AnimatedPressable
                     key={key}
-                    style={[d.strengthCard, filled && { borderColor: cfg.color + '40', backgroundColor: cfg.color + '08' }]}
+                    style={[
+                      d.strengthCard,
+                      { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+                      filled && { borderColor: cfg.color + '40', backgroundColor: cfg.color + '08' },
+                    ]}
                     onPress={() => {
                       if (filled) {
                         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -1536,16 +1543,21 @@ function SeekerProfileScreen() {
                     }}
                     scaleDown={0.96}
                   >
-                    <View style={[d.strengthIcon, { backgroundColor: filled ? cfg.color + '20' : colors.s3 }]}>
-                      <Ionicons name={cfg.icon as any} size={16} color={filled ? cfg.color : colors.t3} />
+                    <View style={[d.strengthIcon, { backgroundColor: filled ? cfg.color + '20' : theme.surface.s2 }]}>
+                      <Ionicons name={cfg.icon as any} size={16} color={filled ? cfg.color : theme.surface.t3} />
                     </View>
-                    <Text style={[d.strengthName, filled && { color: colors.t1 }]} numberOfLines={1}>{cfg.label}</Text>
+                    <Text
+                      style={[d.strengthName, { color: filled ? theme.surface.t1 : theme.surface.t3 }]}
+                      numberOfLines={1}
+                    >
+                      {cfg.label}
+                    </Text>
                     {filled ? (
                       <View style={[d.strengthBadge, { backgroundColor: cfg.color + '20' }]}>
                         <Text style={[d.strengthBadgeText, { color: cfg.color }]}>{facts.length}</Text>
                       </View>
                     ) : (
-                      <Ionicons name="add-circle-outline" size={14} color={colors.t3} />
+                      <Ionicons name="add-circle-outline" size={14} color={theme.surface.t3} />
                     )}
                   </AnimatedPressable>
                 );
@@ -1554,24 +1566,24 @@ function SeekerProfileScreen() {
 
             {/* Expanded category details */}
             {expandedCat && data?.grouped?.[expandedCat] && (
-              <View style={d.expandedFacts}>
+              <View style={[d.expandedFacts, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
                 {data.grouped[expandedCat].slice(0, 8).map((fact, i) => (
                   <FactRow
                     key={fact.id || i}
                     fact={fact}
-                    color={STRENGTH_CATEGORIES[expandedCat]?.color || colors.t3}
+                    color={STRENGTH_CATEGORIES[expandedCat]?.color || theme.surface.t3}
                     onPress={(anchor) => setPopup({ visible: true, anchor, fact })}
                   />
                 ))}
                 {/* Add new fact — manual add so free users
                     without a resume can still populate this. */}
                 <AnimatedPressable
-                  style={[d.factRow, { borderTopWidth: 1, borderTopColor: colors.b1, paddingTop: 10 }]}
+                  style={[d.factRow, { borderTopWidth: 1, borderTopColor: theme.surface.border, paddingTop: 10 }]}
                   onPress={() => openAddFactModal(expandedCat, STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat)}
                   scaleDown={0.97}
                 >
-                  <Ionicons name="add-circle" size={16} color={colors.gold} />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: colors.gold }}>Add to {STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat}</Text>
+                  <Ionicons name="add-circle" size={16} color={theme.accent} />
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: theme.accent }}>Add to {STRENGTH_CATEGORIES[expandedCat]?.label || expandedCat}</Text>
                 </AnimatedPressable>
               </View>
             )}
@@ -1618,7 +1630,7 @@ function SeekerProfileScreen() {
             ).slice(0, 4).map((item, i) => (
               <AnimatedPressable
                 key={i}
-                style={d.nudgeCard}
+                style={[d.nudgeCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
                 onPress={() => openDillyOverlay({
                   isPaid: true,
                   initialMessage: item.prompt,
@@ -1628,8 +1640,8 @@ function SeekerProfileScreen() {
                 <View style={[d.nudgeIcon, { backgroundColor: item.color + '15' }]}>
                   <Ionicons name={item.icon as any} size={16} color={item.color} />
                 </View>
-                <Text style={d.nudgeText}>{item.text}</Text>
-                <Ionicons name="chevron-forward" size={12} color={colors.t3} />
+                <Text style={[d.nudgeText, { color: theme.surface.t1 }]}>{item.text}</Text>
+                <Ionicons name="chevron-forward" size={12} color={theme.surface.t3} />
               </AnimatedPressable>
             ))}
           </ScrollView>
