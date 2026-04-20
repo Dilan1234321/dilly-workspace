@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, API_BASE } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
 import * as ImagePicker from 'expo-image-picker';
@@ -34,10 +35,11 @@ interface Props {
 // \u2500\u2500 Section header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 function SectionHeader({ icon, label }: { icon: string; label: string }) {
+  const theme = useResolvedTheme();
   return (
     <View style={es.sectionHeader}>
-      <Ionicons name={icon as any} size={12} color={GOLD} />
-      <Text style={es.sectionLabel}>{label}</Text>
+      <Ionicons name={icon as any} size={12} color={theme.accent} />
+      <Text style={[es.sectionLabel, { color: theme.accent }]}>{label}</Text>
     </View>
   );
 }
@@ -59,34 +61,35 @@ function Field({
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   keyboardType?: 'default' | 'url' | 'email-address';
 }) {
+  const theme = useResolvedTheme();
   if (disabled) {
     return (
       <View style={es.fieldGroup}>
-        <Text style={es.fieldLabel}>{label}</Text>
-        <View style={[es.fieldInput, es.fieldDisabled]}>
-          <Text style={es.fieldDisabledText}>{disabledText || ' - '}</Text>
+        <Text style={[es.fieldLabel, { color: theme.surface.t1 }]}>{label}</Text>
+        <View style={[es.fieldInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }, es.fieldDisabled]}>
+          <Text style={[es.fieldDisabledText, { color: theme.surface.t3 }]}>{disabledText || ' - '}</Text>
         </View>
-        {hint ? <Text style={es.fieldHint}>{hint}</Text> : null}
+        {hint ? <Text style={[es.fieldHint, { color: theme.surface.t3 }]}>{hint}</Text> : null}
       </View>
     );
   }
 
   return (
     <View style={es.fieldGroup}>
-      <Text style={es.fieldLabel}>{label}</Text>
+      <Text style={[es.fieldLabel, { color: theme.surface.t1 }]}>{label}</Text>
       <TextInput
-        style={[es.fieldInput, multiline && { minHeight: 64, textAlignVertical: 'top' }]}
+        style={[es.fieldInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }, multiline && { minHeight: 64, textAlignVertical: 'top' }]}
         value={value}
         onChangeText={maxLength ? (t => onChangeText?.(t.slice(0, maxLength))) : onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.t3}
+        placeholderTextColor={theme.surface.t3}
         autoCapitalize={autoCapitalize ?? 'sentences'}
         keyboardType={keyboardType ?? 'default'}
         multiline={multiline}
         maxLength={maxLength}
         returnKeyType={multiline ? 'default' : 'next'}
       />
-      {hint ? <Text style={es.fieldHint}>{hint}</Text> : null}
+      {hint ? <Text style={[es.fieldHint, { color: theme.surface.t3 }]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -95,6 +98,7 @@ function Field({
 
 export default function EditProfileModal({ visible, onClose, profile, photoUri, onSaved }: Props) {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
 
   // Personal
   const [name,     setName]     = useState('');
@@ -283,20 +287,20 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} statusBarTranslucent onRequestClose={onClose}>
-      <View style={[es.root, { backgroundColor: colors.bg }]}>
+      <View style={[es.root, { backgroundColor: theme.surface.bg }]}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
           {/* Header */}
-          <View style={[es.header, { paddingTop: insets.top + 10 }]}>
+          <View style={[es.header, { paddingTop: insets.top + 10, borderBottomColor: theme.surface.border }]}>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name="close" size={22} color={colors.t2} />
+              <Ionicons name="close" size={22} color={theme.surface.t2} />
             </TouchableOpacity>
-            <Text style={es.headerTitle}>Edit Profile</Text>
+            <Text style={[es.headerTitle, { color: theme.surface.t1 }]}>Edit Profile</Text>
             <TouchableOpacity onPress={handleSave} disabled={saving} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               {saving ? (
-                <ActivityIndicator size="small" color={GOLD} />
+                <ActivityIndicator size="small" color={theme.accent} />
               ) : (
-                <Text style={es.saveBtn}>Save</Text>
+                <Text style={[es.saveBtn, { color: theme.accent }]}>Save</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -310,18 +314,18 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
             {/* Completion bar */}
             <View style={es.completionWrap}>
               <View style={es.completionHeader}>
-                <Text style={es.completionLabel}>PROFILE STRENGTH</Text>
-                <Text style={[es.completionPct, { color: completionPct >= 80 ? '#34C759' : completionPct >= 50 ? GOLD : '#FF9F0A' }]}>
+                <Text style={[es.completionLabel, { color: theme.surface.t3 }]}>PROFILE STRENGTH</Text>
+                <Text style={[es.completionPct, { color: completionPct >= 80 ? '#34C759' : completionPct >= 50 ? theme.accent : '#FF9F0A' }]}>
                   {completionPct}%
                 </Text>
               </View>
-              <View style={es.completionTrack}>
+              <View style={[es.completionTrack, { backgroundColor: theme.surface.border }]}>
                 <View style={[es.completionFill, {
                   width: `${completionPct}%` as any,
-                  backgroundColor: completionPct >= 80 ? '#34C759' : completionPct >= 50 ? GOLD : '#FF9F0A',
+                  backgroundColor: completionPct >= 80 ? '#34C759' : completionPct >= 50 ? theme.accent : '#FF9F0A',
                 }]} />
               </View>
-              <Text style={es.completionHint}>
+              <Text style={[es.completionHint, { color: theme.surface.t3 }]}>
                 {completionPct >= 80
                   ? 'Looking strong. Recruiters see a complete profile.'
                   : completionPct >= 50
@@ -398,23 +402,23 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
             {/* \u2500\u2500 Preferences \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
             <SectionHeader icon="settings-outline" label="PREFERENCES" />
 
-            <View style={es.toggleRow}>
+            <View style={[es.toggleRow, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
               <View style={{ flex: 1 }}>
-                <Text style={es.toggleLabel}>Show on leaderboard</Text>
-                <Text style={es.toggleHint}>Other students can see your rank and score</Text>
+                <Text style={[es.toggleLabel, { color: theme.surface.t1 }]}>Show on leaderboard</Text>
+                <Text style={[es.toggleHint, { color: theme.surface.t3 }]}>Other students can see your rank and score</Text>
               </View>
               <Switch
                 value={leaderboardOptIn}
                 onValueChange={setLeaderboardOptIn}
-                trackColor={{ false: colors.s3, true: 'rgba(201,168,76,0.35)' }}
-                thumbColor={leaderboardOptIn ? GOLD : colors.t3}
+                trackColor={{ false: theme.surface.border, true: theme.accentSoft }}
+                thumbColor={leaderboardOptIn ? theme.accent : theme.surface.t3}
               />
             </View>
 
             {/* Info */}
-            <View style={es.infoCard}>
-              <Ionicons name="information-circle-outline" size={14} color={colors.t3} />
-              <Text style={es.infoText}>
+            <View style={[es.infoCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Ionicons name="information-circle-outline" size={14} color={theme.surface.t3} />
+              <Text style={[es.infoText, { color: theme.surface.t2 }]}>
                 Your cohort is determined by your major and industry target. Changing them above will update your cohort automatically.
               </Text>
             </View>
