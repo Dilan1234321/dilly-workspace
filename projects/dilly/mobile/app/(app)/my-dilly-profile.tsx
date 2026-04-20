@@ -1097,19 +1097,19 @@ function SeekerProfileScreen() {
             the behavior, no need to nag. */}
         {!editMode && totalFacts < 80 && (
           <FadeInView delay={0}>
-            <View style={d.growthCard}>
+            <View style={[d.growthCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
               <View style={d.growthHeader}>
-                <Text style={d.growthLabel}>DILLY KNOWS</Text>
+                <Text style={[d.growthLabel, { color: theme.accent }]}>DILLY KNOWS</Text>
                 <Text style={d.growthCount}>
-                  <Text style={d.growthCountNum}>{totalFacts}</Text>
-                  <Text style={d.growthCountUnit}> {totalFacts === 1 ? 'thing' : 'things'}</Text>
+                  <Text style={[d.growthCountNum, { color: theme.surface.t1 }]}>{totalFacts}</Text>
+                  <Text style={[d.growthCountUnit, { color: theme.surface.t3 }]}> {totalFacts === 1 ? 'thing' : 'things'}</Text>
                 </Text>
               </View>
               {/* Progress bar. tops out at 80 */}
-              <View style={d.growthTrack}>
-                <View style={[d.growthFill, { width: `${Math.min(100, (totalFacts / 80) * 100)}%` }]} />
+              <View style={[d.growthTrack, { backgroundColor: theme.accent + '1a' }]}>
+                <View style={[d.growthFill, { width: `${Math.min(100, (totalFacts / 80) * 100)}%`, backgroundColor: theme.accent }]} />
               </View>
-              <Text style={d.growthSub}>
+              <Text style={[d.growthSub, { color: theme.surface.t2 }]}>
                 {totalFacts === 0
                   ? "Tell Dilly anything about your career. It all sharpens your fit narratives and resumes."
                   : totalFacts < 10
@@ -1119,7 +1119,7 @@ function SeekerProfileScreen() {
                       : `${totalFacts} is strong. A few more conversations and Dilly will know you better than most recruiters.`}
               </Text>
               <AnimatedPressable
-                style={d.growthCta}
+                style={[d.growthCta, { backgroundColor: theme.accent }]}
                 onPress={() => openDillyOverlay({
                   name: firstName,
                   isPaid: false,
@@ -1140,16 +1140,16 @@ function SeekerProfileScreen() {
         {!editMode && (
           <FadeInView delay={0}>
             <View style={d.citySection}>
-              <Text style={d.sectionLabel}>CITIES YOU'RE AVAILABLE IN</Text>
+              <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>CITIES YOU'RE AVAILABLE IN</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {(p.job_locations || []).map((city: string, i: number) => (
-                  <View key={i} style={d.cityChip}>
-                    <Ionicons name="location" size={12} color={colors.indigo} />
-                    <Text style={d.cityChipText}>{city}</Text>
+                  <View key={i} style={[d.cityChip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+                    <Ionicons name="location" size={12} color={theme.accent} />
+                    <Text style={[d.cityChipText, { color: theme.surface.t1 }]}>{city}</Text>
                   </View>
                 ))}
                 {(p.job_locations || []).length === 0 && (
-                  <Text style={{ fontSize: 12, color: colors.t3 }}>Tap Edit to add cities</Text>
+                  <Text style={{ fontSize: 12, color: theme.surface.t3 }}>Tap Edit to add cities</Text>
                 )}
               </View>
             </View>
@@ -1488,7 +1488,7 @@ function SeekerProfileScreen() {
             {/* Section header with a prominent always-visible Add
                 button. Users were missing the in-tile +s before. */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={d.sectionLabel}>WHAT WE KNOW ABOUT YOU</Text>
+              <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>WHAT WE KNOW ABOUT YOU</Text>
               {/* 'Add a fact' is a rounded rectangle (not a pill) and
                   follows the user's accent from Customize Dilly. Radius
                   pulls from theme.shape.sm so shape axis actually
@@ -1581,7 +1581,7 @@ function SeekerProfileScreen() {
         {/* ── 4. Skills Cloud ──────────────────────────────────── */}
         {allSkills.length > 0 && (
           <FadeInView delay={260}>
-            <Text style={d.sectionLabel}>SKILLS DILLY KNOWS</Text>
+            <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>SKILLS DILLY KNOWS</Text>
             <View style={d.skillCloud}>
               {allSkills.slice(0, 20).map((skill, i) => {
                 const conf = skill.confidence === 'high' ? 1 : skill.confidence === 'medium' ? 0.7 : 0.4;
@@ -1595,7 +1595,7 @@ function SeekerProfileScreen() {
 
         {/* ── 5. Help Dilly Help You (always visible) ─────────── */}
         <FadeInView delay={320}>
-          <Text style={d.sectionLabel}>HELP DILLY HELP YOU</Text>
+          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>HELP DILLY HELP YOU</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {[
               { icon: 'people', text: 'A leadership role you held', prompt: 'Help me describe a leadership role I held. Ask me about it.', color: colors.indigo },
@@ -1637,7 +1637,7 @@ function SeekerProfileScreen() {
 
         {/* ── 5b. Milestones ──────────────────────────────────── */}
         <FadeInView delay={350}>
-          <Text style={d.sectionLabel}>YOUR MILESTONES</Text>
+          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>YOUR MILESTONES</Text>
           <View style={{ gap: 6 }}>
             {totalFacts > 0 && (
               <View style={d.milestoneRow}>
@@ -1667,7 +1667,7 @@ function SeekerProfileScreen() {
         {/* ── 7. My Resumes ──────────────────────────────────── */}
         {resumes.length > 0 && (
           <FadeInView delay={400}>
-            <Text style={d.sectionLabel}>MY RESUMES</Text>
+            <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>MY RESUMES</Text>
             {resumes.slice(0, 5).map((r) => {
               const date = new Date(r.created_at);
               const dateStr = `${date.toLocaleString('default', { month: 'short' })} ${date.getDate()}`;

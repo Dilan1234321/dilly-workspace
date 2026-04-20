@@ -314,25 +314,25 @@ function FitNarrative({ listing, preloaded }: { listing: Listing; preloaded?: Fi
     return (
       <View style={[s.narrativeWrap, {
         borderWidth: 1,
-        borderColor: colors.indigo + '30',
-        backgroundColor: colors.indigo + '08',
+        borderColor: theme.accent + '30',
+        backgroundColor: theme.accentSoft,
         borderRadius: 12,
         padding: 14,
         gap: 10,
       }]}>
-        <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 1.4, color: colors.indigo }}>
+        <Text style={{ fontSize: 10, fontWeight: '800', letterSpacing: 1.4, color: theme.accent }}>
           WHAT DILLY SEES ON THIS JOB
         </Text>
-        <Text style={{ fontSize: 14, fontWeight: '800', color: colors.t1, letterSpacing: -0.2, lineHeight: 20 }}>
+        <Text style={{ fontSize: 14, fontWeight: '800', color: theme.surface.t1, letterSpacing: -0.2, lineHeight: 20 }}>
           What you have. What's missing. What to do.
         </Text>
-        <Text style={{ fontSize: 12, color: colors.t2, lineHeight: 18 }}>
+        <Text style={{ fontSize: 12, color: theme.surface.t2, lineHeight: 18 }}>
           Dilly reads every bullet in this job, checks it against everything in your profile, and tells you the honest read. No score. No fluff. Just the three things you need to know before you apply.
         </Text>
         <AnimatedPressable
           style={{
             flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-            gap: 6, backgroundColor: colors.indigo, borderRadius: 10, paddingVertical: 11,
+            gap: 6, backgroundColor: theme.accent, borderRadius: 10, paddingVertical: 11,
             marginTop: 4,
           }}
           scaleDown={0.97}
@@ -551,13 +551,14 @@ function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: L
 }
 
 function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
+  const theme = useResolvedTheme();
   return (
     <View style={bub.wrap}>
       <View style={bub.avatar}>
         <Ionicons name="sparkles" size={10} color="#fff" />
       </View>
-      <View style={bub.bubble}>
-        <Text style={bub.text}>{_oneLineRead(narrative, listing)}</Text>
+      <View style={[bub.bubble, { backgroundColor: VIOLET + '14', borderColor: VIOLET + '33' }]}>
+        <Text style={[bub.text, { color: theme.surface.t1 }]}>{_oneLineRead(narrative, listing)}</Text>
       </View>
     </View>
   );
