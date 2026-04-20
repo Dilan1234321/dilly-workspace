@@ -7,7 +7,6 @@ import { COHORTS_BY_NAME } from "@/lib/cohorts";
 import { getLang } from "@/lib/lang-server";
 import { t } from "@/lib/i18n";
 import { formatDuration, timeAgo, youtubeEmbedUrl, youtubeWatchUrl } from "@/lib/utils";
-import { bumpStreak, setLastWatched } from "@/lib/session-state";
 import { WatchTracker } from "@/components/watch-tracker";
 
 export default async function VideoPage({
@@ -27,16 +26,8 @@ export default async function VideoPage({
 
   const cohort = COHORTS_BY_NAME[video.cohort];
 
-  // This is the defining "you're learning" action — bump the streak and record
-  // the last-watched video so the homepage can greet the user next time.
-  await bumpStreak();
-  if (cohort) {
-    await setLastWatched({
-      id: video.id,
-      cohort: cohort.slug,
-      at: new Date().toISOString(),
-    });
-  }
+  // Streak + last-watched are written from the client-side <WatchTracker/>
+  // (server components can't mutate cookies).
 
   // "Where this fits" — pull the cohort's best and find this video's position.
   const cohortTopVideos = cohort
@@ -51,7 +42,7 @@ export default async function VideoPage({
 
   return (
     <div className="container-app pb-16 pt-8 sm:pt-12">
-      <WatchTracker videoId={video.id} />
+      <WatchTracker videoId={video.id} cohort={cohort?.slug ?? null} />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-12">
         {/* ═══ Player + meta ═══ */}
         <div className="space-y-6">

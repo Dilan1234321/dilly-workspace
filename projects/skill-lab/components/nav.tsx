@@ -43,8 +43,8 @@ export function Nav({
 
         <nav className="flex items-center gap-1.5 text-sm sm:gap-2">
           <CommandTrigger label="Search" />
-          <Link href="/today" className="hidden px-2 py-1 text-[color:var(--color-muted)] hover:text-[color:var(--color-accent)] md:inline">
-            Today
+          <Link href="/browse" className="hidden px-2 py-1 text-[color:var(--color-muted)] hover:text-[color:var(--color-accent)] md:inline">
+            Browse
           </Link>
           <Link href="/library" className="hidden px-2 py-1 text-[color:var(--color-muted)] hover:text-[color:var(--color-accent)] md:inline">
             {t(lang, "nav.library")}

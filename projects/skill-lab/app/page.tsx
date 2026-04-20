@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { CohortGrid } from "@/components/cohort-grid";
-import { IndustryPicker } from "@/components/industry-picker";
 import { TodayPanel } from "@/components/today-panel";
+import { EditorialPaths } from "@/components/editorial-paths";
 import { listTrending, listVideosByCohort } from "@/lib/api";
 import { getLang } from "@/lib/lang-server";
-import { t } from "@/lib/i18n";
 import {
   getStreak,
   getLastWatched,
@@ -12,6 +10,7 @@ import {
 } from "@/lib/session-state";
 
 const DEFAULT_COHORT = "software-engineering-cs";
+const FRESH_WINDOW_MS = 72 * 60 * 60 * 1000;
 
 export default async function HomePage() {
   const lang = await getLang();
@@ -21,28 +20,25 @@ export default async function HomePage() {
     isFirstVisit(),
   ]);
 
-  // Pick today's video: from the user's last cohort if they have one, else trending.
   const todaySources = lastWatched
     ? await listVideosByCohort(lastWatched.cohort, { limit: 8, sort: "best", lang }).catch(() => [])
     : await listTrending(8, lang).catch(() => []);
   const todayVideo =
     todaySources.find((v) => v.id !== lastWatched?.id) ?? todaySources[0] ?? null;
 
-  // Fallback if trending and last-cohort both returned nothing
-  const fallbackTrending = !todayVideo
+  const fallback = !todayVideo
     ? await listVideosByCohort(DEFAULT_COHORT, { limit: 1, sort: "best", lang }).catch(() => [])
     : [];
-  const pick = todayVideo ?? fallbackTrending[0] ?? null;
+  const pick = todayVideo ?? fallback[0] ?? null;
 
-  // Count fresh videos (< 72h) so the hero can surface "N new today"
   const freshCount = todaySources.filter((v) => {
-    const t = new Date(v.published_at).getTime();
-    return Number.isFinite(t) && Date.now() - t < 72 * 60 * 60 * 1000;
+    const ts = new Date(v.published_at).getTime();
+    return Number.isFinite(ts) && Date.now() - ts < FRESH_WINDOW_MS;
   }).length;
 
   return (
     <div>
-      {/* ═══ Today panel — the new front door ═══ */}
+      {/* ═══ The living front door — one pick, your state ═══ */}
       {pick ? (
         <TodayPanel
           video={pick}
@@ -54,56 +50,24 @@ export default async function HomePage() {
         <FirstRunHero firstVisit={firstVisit} />
       )}
 
-      {/* ═══ Industry picker ═══ */}
-      <section id="industries" className="container-app pt-16 sm:pt-20">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="max-w-3xl">
-            <div className="eyebrow">I work in…</div>
-            <h2 className="editorial mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-              Pick your role to see what AI is taking and what&apos;s yours to own.
-            </h2>
-          </div>
-        </div>
-        <div className="mt-6">
-          <IndustryPicker />
-        </div>
-      </section>
-
-      <div className="container-app">
-        <div className="rule" />
-      </div>
-
-      {/* ═══ Cohort index ═══ */}
-      <section id="cohorts" className="container-app pt-2">
-        <div className="flex items-end justify-between gap-4">
+      {/* ═══ Three editorial paths — the curator's pick ═══ */}
+      <section className="container-app pt-20 sm:pt-28">
+        <div className="flex items-end justify-between gap-4 border-b border-[color:var(--color-border)] pb-6">
           <div>
-            <div className="eyebrow">Or browse by field</div>
-            <h2 className="editorial mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {t(lang, "home.cohorts.heading")}
+            <div className="eyebrow">Start somewhere</div>
+            <h2 className="editorial mt-2 text-2xl tracking-tight sm:text-3xl">
+              Three places to begin.
             </h2>
           </div>
-          <div className="text-xs text-[color:var(--color-dim)]">
-            {t(lang, "home.cohorts.count")}
-          </div>
+          <Link
+            href="/browse"
+            className="text-xs font-semibold uppercase tracking-wider text-[color:var(--color-muted)] hover:text-[color:var(--color-accent)]"
+          >
+            All roles & fields →
+          </Link>
         </div>
-        <div className="mt-6">
-          <CohortGrid lang={lang} />
-        </div>
-      </section>
-
-      {/* ═══ A single-line calling card — no marketing wall ═══ */}
-      <section className="container-app pt-16">
-        <div className="container-narrow">
-          <p className="editorial text-lg italic leading-relaxed text-[color:var(--color-muted)] sm:text-xl">
-            Skill Lab is free, forever, for everyone. We keep the list short
-            so your time isn&apos;t.{" "}
-            <Link
-              href="/sign-up"
-              className="not-italic text-white underline decoration-[color:var(--color-accent)]/50 underline-offset-4 hover:text-[color:var(--color-accent-soft)]"
-            >
-              Make it yours →
-            </Link>
-          </p>
+        <div className="mt-8">
+          <EditorialPaths />
         </div>
       </section>
     </div>
@@ -115,13 +79,10 @@ function FirstRunHero({ firstVisit }: { firstVisit: boolean }) {
     <section className="container-app pt-16 sm:pt-24">
       <div className="max-w-3xl">
         <div className="eyebrow">{firstVisit ? "Start here" : "Welcome back"}</div>
-        <h1 className="editorial mt-3 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-          Learn the skills{" "}
-          <span className="italic text-[color:var(--color-accent-soft)]">
-            AI can&apos;t replace.
-          </span>
+        <h1 className="editorial mt-3 text-4xl leading-[1.05] tracking-tight sm:text-5xl">
+          Learn the skills <span className="italic">AI can&apos;t replace.</span>
         </h1>
-        <p className="mt-4 text-base text-[color:var(--color-muted)] sm:text-lg">
+        <p className="mt-4 text-[color:var(--color-muted)] sm:text-lg">
           Fetching your first pick…
         </p>
       </div>

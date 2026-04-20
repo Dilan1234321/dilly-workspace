@@ -35,8 +35,11 @@
   --color-red: #c24a4a;
   --color-red-bg: #f5dada;
 
-  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-editorial: "Fraunces", "Newsreader", Georgia, "Times New Roman", serif;
+  /* Satoshi — the rounded geometric sans hellodilly.com uses. Both headlines
+     and body now share this face so the brand feel is consistent everywhere;
+     "editorial" moments just shift to a heavier weight. */
+  --font-display: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+  --font-editorial: "Satoshi", ui-sans-serif, system-ui, sans-serif;
 
   --radius-sm: 10px;
   --radius: 14px;
@@ -52,11 +55,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* "Editorial" = heavier weight + tighter tracking. Same face as body. */
 .editorial {
   font-family: var(--font-editorial);
-  font-feature-settings: "ss01" on, "ss02" on;
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
+.editorial.italic { font-style: italic; font-weight: 500; }
 
 /* Containers scale with screen width */
 .container-app {

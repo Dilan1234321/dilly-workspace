@@ -4,14 +4,32 @@ import { useEffect } from "react";
 import { addTimeToday, markWatched } from "@/lib/progress-client";
 
 /**
- * Mounted on the video page. Increments the "time invested today" counter
- * in localStorage every 15 seconds while the tab is visible. Also marks the
- * video as watched after 30 seconds (a reasonable "engaged" threshold).
+ * Mounted on the video page. Three jobs, all client-side:
+ *   1. Fires a one-time POST /api/activity so the server bumps the streak
+ *      cookie + writes last-watched. Server components can't mutate cookies.
+ *   2. Increments localStorage "time invested today" every 15s while visible.
+ *   3. Marks the video as "watched" after 30s of engaged time.
  *
- * No network chatter, no analytics — pure client-side progress accumulation.
+ * No network chatter beyond the single initial beacon.
  */
-export function WatchTracker({ videoId }: { videoId: string }) {
+export function WatchTracker({
+  videoId,
+  cohort,
+}: {
+  videoId: string;
+  cohort: string | null;
+}) {
   useEffect(() => {
+    // Fire-and-forget. Errors are silent — losing a streak bump isn't critical.
+    if (cohort) {
+      fetch("/api/activity", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ videoId, cohort }),
+        keepalive: true,
+      }).catch(() => null);
+    }
+
     let elapsed = 0;
     let markedWatched = false;
     const interval = window.setInterval(() => {
@@ -24,7 +42,7 @@ export function WatchTracker({ videoId }: { videoId: string }) {
       }
     }, 15_000);
     return () => window.clearInterval(interval);
-  }, [videoId]);
+  }, [videoId, cohort]);
 
   return null;
 }

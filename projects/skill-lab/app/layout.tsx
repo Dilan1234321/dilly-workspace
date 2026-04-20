@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
 import { ShortcutsHelp } from "@/components/shortcuts-help";
@@ -7,19 +6,6 @@ import { getSession } from "@/lib/api";
 import { getLang } from "@/lib/lang-server";
 import { getStreak } from "@/lib/session-state";
 import { t } from "@/lib/i18n";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-serif",
-  display: "swap",
-  axes: ["opsz", "SOFT", "WONK"],
-});
 
 export const metadata: Metadata = {
   title: "Skill Lab by Dilly — a learning library, not a playlist",
@@ -43,7 +29,13 @@ export default async function RootLayout({
     getStreak(),
   ]);
   return (
-    <html lang={lang} className={`${inter.variable} ${fraunces.variable}`}>
+    <html lang={lang}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,900&display=swap"
+        />
+      </head>
       <body>
         <Nav session={session} lang={lang} streak={streak.streak} />
         <ShortcutsHelp />
