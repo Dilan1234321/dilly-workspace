@@ -1287,8 +1287,8 @@ function SeekerProfileScreen() {
                         setWebSections(updated);
                         dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ web_profile_settings: { sections: updated, hidden_fact_ids: hiddenFactIds } }) }).catch(() => {});
                       }}
-                      trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
-                      thumbColor={webSections[sec.key] !== false ? colors.indigo : '#f4f3f4'}
+                      trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
+                      thumbColor={webSections[sec.key] !== false ? theme.accent : '#f4f3f4'}
                     />
                   </View>
                 ))}
@@ -1347,8 +1347,8 @@ function SeekerProfileScreen() {
                                 toast.show({ message: `Could not update: ${status || ''} ${reason}`.trim() });
                               }
                             }}
-                            trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
-                            thumbColor={isPublic ? colors.indigo : '#f4f3f4'}
+                            trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
+                            thumbColor={isPublic ? theme.accent : '#f4f3f4'}
                           />
                         </View>
                       );
@@ -1387,8 +1387,8 @@ function SeekerProfileScreen() {
                       setProfile((prev: any) => ({ ...prev, booking_availability: updated }));
                       dilly.fetch('/booking/availability', { method: 'PATCH', body: JSON.stringify(updated) }).catch(() => {});
                     }}
-                    trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
-                    thumbColor={p.booking_availability?.enabled ? colors.indigo : '#f4f3f4'}
+                    trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
+                    thumbColor={p.booking_availability?.enabled ? theme.accent : '#f4f3f4'}
                   />
                 </View>
 
@@ -1404,8 +1404,8 @@ function SeekerProfileScreen() {
                       setProfile((prev: any) => ({ ...prev, show_qr_button: v }));
                       dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ show_qr_button: v }) }).catch(() => {});
                     }}
-                    trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
-                    thumbColor={p.show_qr_button !== false ? colors.indigo : '#f4f3f4'}
+                    trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
+                    thumbColor={p.show_qr_button !== false ? theme.accent : '#f4f3f4'}
                   />
                 </View>
 
@@ -1421,8 +1421,8 @@ function SeekerProfileScreen() {
                       setProfile((prev: any) => ({ ...prev, show_refer_button: v }));
                       dilly.fetch('/profile', { method: 'PATCH', body: JSON.stringify({ show_refer_button: v }) }).catch(() => {});
                     }}
-                    trackColor={{ false: colors.b2, true: colors.indigo + '40' }}
-                    thumbColor={p.show_refer_button !== false ? colors.indigo : '#f4f3f4'}
+                    trackColor={{ false: theme.surface.border, true: theme.accent + '40' }}
+                    thumbColor={p.show_refer_button !== false ? theme.accent : '#f4f3f4'}
                   />
                 </View>
               </View>

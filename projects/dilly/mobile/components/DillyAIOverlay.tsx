@@ -15,6 +15,7 @@ import { DillyVisual, VisualPayload } from './DillyVisuals';
 import { DillyFace } from './DillyFace';
 import { useSubscription } from '../hooks/useSubscription';
 import { useResolvedTheme } from '../hooks/useTheme';
+import { FirstVisitCoach } from './FirstVisitCoach';
 import {
   markExtractionPending, resolveExtraction, abortExtraction,
 } from '../hooks/useExtractionPending';
@@ -587,6 +588,18 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
+      {/* First-visit coach. Only fires on the user's very first open
+          of the Dilly AI overlay. Explains what Dilly actually is
+          before they see the input bar and freeze trying to come up
+          with something to type. The coach's own Modal sits above
+          this one because RN stacks Modals in mount order. */}
+      <FirstVisitCoach
+        id="dilly-ai-overlay-v1"
+        iconName="sparkles"
+        headline="This is Dilly. Talk like a friend who knows your career."
+        subline="Every conversation feeds your profile. The more you tell Dilly, the sharper your Chapters, fits, and resumes get."
+        disabled={!visible}
+      />
       <Animated.View style={[s.container, { opacity: contentOpacity, backgroundColor: theme.surface.bg, borderColor: theme.accent }]}>
 
         {/* Glow border */}
@@ -824,11 +837,29 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       {/* History overlay */}
       {showHistory && (
         <View style={[s.historyOverlay, { backgroundColor: theme.surface.bg }]}>
+          {/* First-visit coach inside the history panel. Explains the
+              5-cap and the Keep button before the user wonders where
+              their old chats went. Fires once, uniquely for this
+              panel. */}
+          <FirstVisitCoach
+            id="dilly-history-v1"
+            iconName="journal-outline"
+            headline="Dilly keeps your 5 most recent chats."
+            subline="Tap the pin on any chat to keep it forever. Anything unpinned rolls off as new chats come in."
+          />
           <View style={[s.historyHeader, { paddingTop: insets.top + 10, borderBottomColor: theme.surface.border }]}>
             <Text style={[s.historyTitle, { color: theme.surface.t1 }]}>Past Conversations</Text>
             <TouchableOpacity onPress={() => setShowHistory(false)} hitSlop={12}>
               <Ionicons name="close" size={20} color={theme.surface.t2} />
             </TouchableOpacity>
+          </View>
+          {/* Explainer strip. The 5-cap is real product policy — saves
+              disk and keeps the list scannable. The Keep button exists
+              so users don't lose the one chat that mattered. */}
+          <View style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: theme.accentSoft, borderBottomWidth: 1, borderBottomColor: theme.accentBorder }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: theme.accent, letterSpacing: 0.3 }}>
+              Dilly saves your 5 most recent chats. Tap the pin on one you want to keep.
+            </Text>
           </View>
           <ScrollView style={s.historyList}>
             {history.length === 0 ? (
@@ -880,12 +911,42 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                       setShowHistory(false);
                     }}
                   >
-                    <Text style={[s.historyItemTitle, { color: theme.surface.t1 }]} numberOfLines={1}>
-                      {title}
-                    </Text>
-                    <Text style={[s.historyItemDate, { color: theme.surface.t3 }]}>
-                      {whenLabel}{turns ? `  ·  ${turns} turn${turns === 1 ? '' : 's'}` : ''}
-                    </Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[s.historyItemTitle, { color: theme.surface.t1 }]} numberOfLines={1}>
+                        {title}
+                      </Text>
+                      <Text style={[s.historyItemDate, { color: theme.surface.t3 }]}>
+                        {whenLabel}{turns ? `  ·  ${turns} turn${turns === 1 ? '' : 's'}` : ''}{item.kept ? '  ·  Kept' : ''}
+                      </Text>
+                    </View>
+                    {/* Pin/Keep button. Toggles the kept flag on the
+                        thread. Kept threads never roll off the 5-cap.
+                        Optimistic update so the pin fills instantly. */}
+                    <TouchableOpacity
+                      hitSlop={10}
+                      style={{ marginLeft: 10, padding: 4 }}
+                      onPress={async (e: any) => {
+                        e?.stopPropagation?.();
+                        if (!item.conv_id) return;
+                        const newKept = !item.kept;
+                        // Optimistic: mutate the local history array so
+                        // the icon fills immediately. If the request
+                        // fails we'll get the right value on next fetch.
+                        setHistory(prev => prev.map((h: any) => h.conv_id === item.conv_id ? { ...h, kept: newKept } : h));
+                        try {
+                          await dilly.fetch(`/ai/chat-history/${item.conv_id}/keep`, {
+                            method: 'POST',
+                            body: JSON.stringify({ kept: newKept }),
+                          });
+                        } catch {}
+                      }}
+                    >
+                      <Ionicons
+                        name={item.kept ? 'bookmark' : 'bookmark-outline'}
+                        size={18}
+                        color={item.kept ? theme.accent : theme.surface.t3}
+                      />
+                    </TouchableOpacity>
                   </TouchableOpacity>
                 );
               })

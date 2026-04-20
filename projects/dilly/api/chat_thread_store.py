@@ -71,13 +71,26 @@ def _save(email: str, threads: list[dict[str, Any]]) -> None:
     path = _path(email)
     if not path:
         return
-    # Cap + sort by last_turn_at desc so we keep the most recent.
+    # Sort by last_turn_at desc so the most recent are first.
     try:
         threads.sort(key=lambda r: r.get("last_turn_at", ""), reverse=True)
     except Exception:
         pass
+    # Trim to the cap, but NEVER drop threads the user pinned with
+    # the Keep button. Product promise: Dilly shows your 5 most
+    # recent unless you pin them. We keep the existing _MAX_THREADS
+    # (100) as a hard upper bound for safety, but pinned rows are
+    # immune to the rolling trim inside that window.
     if len(threads) > _MAX_THREADS:
-        threads = threads[:_MAX_THREADS]
+        kept = [r for r in threads if r.get("kept") is True]
+        unkept = [r for r in threads if r.get("kept") is not True]
+        budget = max(0, _MAX_THREADS - len(kept))
+        threads = kept + unkept[:budget]
+        # Re-sort so the output is still time-ordered.
+        try:
+            threads.sort(key=lambda r: r.get("last_turn_at", ""), reverse=True)
+        except Exception:
+            pass
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         tmp = path + ".tmp"
@@ -159,13 +172,52 @@ def record_turn(
         pass
 
 
-def list_threads(email: str, limit: int = 30) -> list[dict[str, Any]]:
-    """Most recent chat threads, newest first."""
+def list_threads(email: str, limit: int = 5) -> list[dict[str, Any]]:
+    """Return the user's past chat threads for the history panel.
+
+    Product policy: Dilly shows the 5 most recent UNLESS the user
+    tapped the Keep button on a thread. Kept threads always appear
+    first, then the most recent unkept threads fill the remainder.
+    So if the cap is 5 and the user has 2 kept + 10 unkept, they
+    see 2 kept + 3 most-recent-unkept = 5 total.
+
+    `limit` is the total cap. Default is 5 to match the copy shown
+    to the user. A larger limit is allowed for admin/debug calls.
+    """
     if not email:
         return []
     threads = _load(email)
     threads.sort(key=lambda r: r.get("last_turn_at", ""), reverse=True)
-    return threads[: max(1, min(200, int(limit)))]
+    cap = max(1, min(200, int(limit)))
+    kept = [r for r in threads if r.get("kept") is True]
+    unkept = [r for r in threads if r.get("kept") is not True]
+    # Kept threads always show. Fill remainder from unkept in time
+    # order (already sorted). If kept alone exceeds cap, show all
+    # kept — we do not hide a pin from the user.
+    if len(kept) >= cap:
+        return kept
+    return kept + unkept[: cap - len(kept)]
+
+
+def set_kept(email: str, conv_id: str, kept: bool) -> bool:
+    """Flip the 'kept' flag on a thread. Kept threads are immune to
+    the rolling 5-cap and hard-cap trims. Returns True on success."""
+    if not email or not conv_id:
+        return False
+    try:
+        threads = _load(email)
+        found = False
+        for row in threads:
+            if row.get("conv_id") == conv_id:
+                row["kept"] = bool(kept)
+                found = True
+                break
+        if not found:
+            return False
+        _save(email, threads)
+        return True
+    except Exception:
+        return False
 
 
 def get_thread(email: str, conv_id: str) -> dict[str, Any] | None:

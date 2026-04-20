@@ -463,12 +463,15 @@ export default function ResumeGenerateScreen() {
       style={{ flex: 1, backgroundColor: colors.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* First-visit coach — Resume Forge. */}
+      {/* First-visit coach — Resume Forge. Version bumped to v2 to
+          re-show the coach once per user with the ATS explainer.
+          Most applicants have no idea what ATS means, and that's
+          the entire point of the Forge, so we spell it out. */}
       <FirstVisitCoach
-        id="forge-v1"
+        id="forge-v2"
         iconName="construct"
-        headline="One resume, rebuilt per job."
-        subline="Dilly reads the role, mines your profile for the matches, and writes the bullets from scratch."
+        headline="One resume, rebuilt per job. Tuned to beat ATS."
+        subline="ATS is the software recruiters use to auto-filter resumes before a human sees them. Dilly reads the job, mines your profile for matches, and writes bullets the ATS and the recruiter both pass."
       />
 
       <Header

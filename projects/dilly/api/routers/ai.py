@@ -19,7 +19,7 @@ _WORKSPACE_ROOT = os.path.normpath(os.path.join(_ROUTER_DIR, "..", "..", "..", "
 if _WORKSPACE_ROOT not in sys.path:
     sys.path.insert(0, _WORKSPACE_ROOT)
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 
@@ -1239,7 +1239,7 @@ def _opening_phrase_for_fact(fact: dict) -> str:
 
 
 @router.get("/ai/chat-history")
-async def get_ai_chat_history(request: Request, limit: int = 30):
+async def get_ai_chat_history(request: Request, limit: int = 5):
     """
     List past /ai/chat threads for the AI overlay "history" panel.
     Each thread: conv_id, first_user_message (as title), last
@@ -1270,6 +1270,23 @@ async def delete_ai_chat_thread(request: Request, conv_id: str):
     except Exception:
         ok = False
     return {"ok": ok}
+
+
+@router.post("/ai/chat-history/{conv_id}/keep")
+async def keep_ai_chat_thread(request: Request, conv_id: str, body: dict = Body(...)):
+    """Pin or unpin a past conversation. Kept threads are immune to
+    the rolling 5-cap in the history panel. Body: { kept: bool }."""
+    user = deps.require_auth(request)
+    email = (user.get("email") or "").strip().lower()
+    if not email:
+        raise errors.unauthorized()
+    kept = bool(body.get("kept", True))
+    try:
+        from projects.dilly.api.chat_thread_store import set_kept  # type: ignore
+        ok = set_kept(email, conv_id, kept)
+    except Exception:
+        ok = False
+    return {"ok": ok, "kept": kept}
 
 
 @router.get("/ai/chat-history/{conv_id}/messages")
