@@ -98,9 +98,9 @@ function AppLayoutInner() {
   ) => ({ focused }: { focused: boolean; color: string }) => (
     <View
       style={{
-        width: 44,
-        height: 34,
-        borderRadius: 17,
+        width: 52,
+        height: 40,
+        borderRadius: 20,
         backgroundColor: focused ? theme.accentSoft : 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
@@ -111,7 +111,7 @@ function AppLayoutInner() {
     >
       <Ionicons
         name={focused ? iconActive : iconInactive}
-        size={24}
+        size={28}
         color={focused ? theme.accent : theme.surface.t3}
       />
     </View>

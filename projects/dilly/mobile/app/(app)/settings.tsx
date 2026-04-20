@@ -22,6 +22,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { CancelGoodbyeModal } from '../../components/CancelGoodbyeModal';
 import { THEMES, useTheme, setTheme, useResolvedTheme } from '../../hooks/useTheme';
+import { useSubscription } from '../../hooks/useSubscription';
 
 const INDIGO = colors.indigo;
 const APP_VERSION = '1.0.0';
@@ -185,7 +186,20 @@ export default function SettingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [plan, setPlan] = useState('starter');
+  // Seed plan from the cached subscription context so we never flash
+  // "Dilly Starter" for users who are actually on Dilly or Pro. The
+  // subscription hook reads from AsyncStorage on mount, so its `plan`
+  // value is correct on the first render for returning users.
+  const sub = useSubscription();
+  const [plan, setPlan] = useState<string>(sub.plan);
+  // When the subscription hook refreshes (e.g. right after a cancel
+  // or an upgrade) make sure the Settings view reflects that even
+  // before the /profile fetch completes.
+  useEffect(() => { setPlan(sub.plan); }, [sub.plan]);
+  // Plan card should only render once we actually have a plan
+  // resolved. If the cached subscription hasn't loaded yet, we wait
+  // rather than flashing the free card at the user.
+  const planReady = !sub.loading;
   // In-app banner for confirmations and errors. Auto-dismisses after
   // 4 seconds. Used for cancel-subscription success, promo-code
   // errors, and anything else that shouldn't feel like an iOS system
@@ -695,10 +709,20 @@ export default function SettingsScreen() {
 
         {/* Plan — 3 visual states (starter / dilly / pro). Starter
             gets a dedicated upgrade hero. Paid tiers get a premium
-            status card celebrating what they already have. */}
+            status card celebrating what they already have.
+
+            Gate on `planReady` so returning paid users never see the
+            Starter upgrade hero flash before the real plan resolves.
+            While the subscription hook is still loading we render a
+            placeholder-height block instead of the wrong card. */}
         <FadeInView delay={40}>
           <SectionLabel text="PLAN" />
-          {plan === 'starter' ? (
+          {!planReady ? (
+            // Cached subscription hasn't loaded yet. Render a quiet
+            // skeleton sized like the paid card so the page doesn't
+            // jump when the right card appears.
+            <View style={{ height: 240, borderRadius: 18, backgroundColor: theme.surface.s1, borderWidth: 1, borderColor: theme.surface.border, marginBottom: 16 }} />
+          ) : plan === 'starter' ? (
             // ── Starter: loss-aversion upgrade frame. ────────────
             // The copy focuses on what the user CAN'T do yet, not on
             // feature names. Loss aversion > feature touting for
