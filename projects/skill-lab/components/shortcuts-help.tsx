@@ -65,7 +65,7 @@ export function ShortcutsHelp() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="eyebrow">Keyboard</div>
-        <h3 className="editorial mt-2 text-xl font-semibold tracking-tight text-white">
+        <h3 className="editorial mt-2 text-xl font-semibold tracking-tight text-[color:var(--color-text)]">
           Shortcuts
         </h3>
         <ul className="mt-4 space-y-2 text-sm">
@@ -76,7 +76,7 @@ export function ShortcutsHelp() {
                 {s.keys.map((k) => (
                   <kbd
                     key={k}
-                    className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-1.5 py-0.5 font-mono text-[0.7rem] text-white"
+                    className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-1.5 py-0.5 font-mono text-[0.7rem] text-[color:var(--color-text)]"
                   >
                     {k}
                   </kbd>

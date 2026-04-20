@@ -57,7 +57,7 @@ export default async function VideoPage({
         <div className="space-y-6">
           <Link
             href={cohort ? `/cohort/${cohort.slug}` : "/"}
-            className="text-xs text-[color:var(--color-muted)] hover:text-white"
+            className="text-xs text-[color:var(--color-muted)] hover:text-[color:var(--color-accent)]"
           >
             ← {cohort?.name ?? "Skill Lab"}
           </Link>
@@ -75,7 +75,7 @@ export default async function VideoPage({
           </div>
 
           <div>
-            <h1 className="editorial text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl">
+            <h1 className="editorial text-2xl font-semibold leading-tight tracking-tight text-[color:var(--color-text)] sm:text-3xl">
               {video.title}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[color:var(--color-muted)]">
@@ -87,7 +87,7 @@ export default async function VideoPage({
               {cohort && (
                 <>
                   <span>·</span>
-                  <Link href={`/cohort/${cohort.slug}`} className="chip hover:text-white">
+                  <Link href={`/cohort/${cohort.slug}`} className="chip hover:text-[color:var(--color-accent)]">
                     {cohort.name}
                   </Link>
                 </>
@@ -122,7 +122,7 @@ export default async function VideoPage({
 
             {video.description && (
               <details className="mt-6 text-sm text-[color:var(--color-muted)]">
-                <summary className="cursor-pointer select-none text-xs uppercase tracking-wider text-[color:var(--color-dim)] hover:text-white">
+                <summary className="cursor-pointer select-none text-xs uppercase tracking-wider text-[color:var(--color-dim)] hover:text-[color:var(--color-accent)]">
                   Full description
                 </summary>
                 <p className="mt-3 whitespace-pre-wrap leading-relaxed">
@@ -147,7 +147,7 @@ export default async function VideoPage({
           {cohort && positionIndex >= 0 && (
             <div className="card p-5">
               <div className="eyebrow">Where this fits</div>
-              <div className="editorial mt-3 text-lg font-semibold leading-snug text-white">
+              <div className="editorial mt-3 text-lg font-semibold leading-snug text-[color:var(--color-text)]">
                 Step {positionIndex + 1} in the {cohort.name.toLowerCase()} path
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[color:var(--color-border)]">
@@ -167,7 +167,7 @@ export default async function VideoPage({
                   className="mt-5 block rounded-lg border border-[color:var(--color-border)] p-3 transition hover:border-[color:var(--color-accent)]/40 hover:bg-[color:var(--color-surface)]"
                 >
                   <div className="text-xs text-[color:var(--color-dim)]">Up next</div>
-                  <div className="mt-1 line-clamp-2 text-sm font-semibold text-white">
+                  <div className="mt-1 line-clamp-2 text-sm font-semibold text-[color:var(--color-text)]">
                     {nextVideo.title}
                   </div>
                   <div className="mt-1 text-xs text-[color:var(--color-muted)]">

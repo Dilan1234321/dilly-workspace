@@ -31,7 +31,7 @@ export default async function LibraryPage() {
         </div>
         <div className="mt-6 text-sm text-[color:var(--color-muted)]">
           {t(lang, "library.already")}{" "}
-          <Link href="/sign-in?next=/library" className="underline decoration-[color:var(--color-accent)]/40 underline-offset-4 hover:text-white">
+          <Link href="/sign-in?next=/library" className="underline decoration-[color:var(--color-accent)]/40 underline-offset-4 hover:text-[color:var(--color-accent)]">
             {t(lang, "nav.sign_in")}
           </Link>
           .

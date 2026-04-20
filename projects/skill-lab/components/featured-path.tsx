@@ -56,7 +56,7 @@ export function FeaturedPath({ cohort, videos, lang }: Props) {
             >
               <span className="step-number mt-0.5">{i + 1}</span>
               <div className="min-w-0 flex-1">
-                <div className="text-[0.95rem] font-semibold leading-snug text-white">
+                <div className="text-[0.95rem] font-semibold leading-snug text-[color:var(--color-text)]">
                   {v.title}
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-muted)]">

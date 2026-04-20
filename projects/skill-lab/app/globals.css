@@ -1,29 +1,39 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Skill Lab design system — aligned with hellodilly.com
-   Dark navy base, glassmorphism layers, soft periwinkle accents, serif for
-   editorial copy (curator's notes, pathway titles), sans for UI chrome.
-   Opacity-based hierarchy instead of gray scale for depth.
+   Skill Lab design system — aligned with hellodilly.com (light theme).
+   Warm cream background, deep navy for type and buttons, soft lavender for
+   secondary chips, green/amber for semantic status. Editorial serif for
+   headlines, sans for UI chrome.
    ────────────────────────────────────────────────────────────────────────── */
 
 @theme {
-  /* Background — deep navy, not black, so the glass layers read warm */
-  --color-bg: #060e1c;
-  --color-bg-soft: #0a1529;
-  --color-surface: rgba(255, 255, 255, 0.035);
-  --color-surface-raised: rgba(255, 255, 255, 0.06);
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.14);
+  /* Warm cream base — not pure white, has a slight ochre cast */
+  --color-bg: #f4f1ea;
+  --color-bg-soft: #ece8df;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-border: rgba(26, 32, 80, 0.10);
+  --color-border-strong: rgba(26, 32, 80, 0.22);
 
-  --color-text: #f4f4f8;
-  --color-muted: rgba(244, 244, 248, 0.55);
-  --color-dim: rgba(244, 244, 248, 0.35);
+  /* Deep navy text, matching hellodilly.com's headline tone */
+  --color-text: #171c44;
+  --color-muted: rgba(23, 28, 68, 0.60);
+  --color-dim: rgba(23, 28, 68, 0.38);
 
-  --color-accent: #7b9fff;     /* periwinkle — primary */
-  --color-accent-soft: #a7bdff;
-  --color-mint: #5ecfb0;
-  --color-gold: #f5b942;
+  /* Primary navy accent (buttons, links) */
+  --color-accent: #1c2264;
+  --color-accent-soft: #3b4694;
+  --color-lavender: #e5e5f5;         /* soft tag background */
+  --color-lavender-border: #cfd0e8;
+
+  /* Semantic status colors — for the cohort/profile strength chips */
+  --color-green: #4c9a5a;
+  --color-green-bg: #e2f0e4;
+  --color-amber: #c88a2b;
+  --color-amber-bg: #f5ead2;
+  --color-red: #c24a4a;
+  --color-red-bg: #f5dada;
 
   --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-editorial: "Fraunces", "Newsreader", Georgia, "Times New Roman", serif;
@@ -40,17 +50,15 @@ html, body {
 body {
   font-family: var(--font-display);
   -webkit-font-smoothing: antialiased;
-  background-image:
-    radial-gradient(1200px 600px at 10% -10%, rgba(123, 159, 255, 0.10), transparent 60%),
-    radial-gradient(900px 500px at 110% 10%, rgba(94, 207, 176, 0.06), transparent 60%);
-  background-attachment: fixed;
 }
 
-/* Editorial serif for headings that want to feel curated (path titles, lead paragraphs) */
-.editorial { font-family: var(--font-editorial); font-feature-settings: "ss01" on, "ss02" on; letter-spacing: -0.01em; }
+.editorial {
+  font-family: var(--font-editorial);
+  font-feature-settings: "ss01" on, "ss02" on;
+  letter-spacing: -0.015em;
+}
 
-/* Containers scale with screen size instead of capping at a narrow width.
-   Most pages use container-app. Reading-width copy sits in container-narrow. */
+/* Containers scale with screen width */
 .container-app {
   max-width: 1720px;
   margin-inline: auto;
@@ -67,39 +75,49 @@ body {
 }
 @media (min-width: 768px) { .container-narrow { padding-inline: 2rem; } }
 
-/* Glass chrome — used by nav and elevated cards */
+/* Glass nav — cream with light blur so content reads through subtly */
 .glass {
-  background: rgba(6, 14, 28, 0.72);
-  backdrop-filter: saturate(160%) blur(12px);
-  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  background: rgba(244, 241, 234, 0.88);
+  backdrop-filter: saturate(150%) blur(10px);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Cards are pure white on cream, with a subtle border */
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
-.card:hover { border-color: var(--color-border-strong); background: var(--color-surface-raised); }
+.card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: 0 8px 24px -16px rgba(23, 28, 68, 0.15);
+}
 
 .card-featured {
-  border: 1px solid rgba(123, 159, 255, 0.35);
-  background:
-    linear-gradient(180deg, rgba(123, 159, 255, 0.08) 0%, rgba(123, 159, 255, 0) 60%),
-    var(--color-surface);
-  box-shadow: 0 20px 60px -30px rgba(123, 159, 255, 0.35);
+  position: relative;
+  border: 1px solid rgba(28, 34, 100, 0.22);
+  background: var(--color-surface);
+  box-shadow: 0 20px 60px -30px rgba(28, 34, 100, 0.18);
 }
 .card-featured::before {
   content: "";
-  position: absolute; inset: 0 0 auto 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(123, 159, 255, 0.8), transparent);
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(28, 34, 100, 0.5), transparent);
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
+/* Buttons — navy primary, subtle ghost */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  padding: 0.625rem 1.1rem;
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 999px; /* hellodilly uses pill buttons */
   font-weight: 600;
   font-size: 0.9rem;
   line-height: 1;
@@ -108,71 +126,101 @@ body {
 }
 .btn-primary {
   background: var(--color-accent);
-  color: #0b1020;
+  color: #ffffff;
 }
-.btn-primary:hover { transform: translateY(-1px); background: var(--color-accent-soft); }
+.btn-primary:hover { transform: translateY(-1px); background: #13173f; }
 
 .btn-ghost {
   background: transparent;
   color: var(--color-text);
   border-color: var(--color-border-strong);
 }
-.btn-ghost:hover { background: var(--color-surface); border-color: rgba(255,255,255,0.24); }
+.btn-ghost:hover {
+  background: #ffffff;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
 
+/* Chips — soft lavender, like the hellodilly feature tags */
 .chip {
-  display: inline-flex; align-items: center; gap: 0.4rem;
-  padding: 0.25rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--color-lavender);
+  border: 1px solid var(--color-lavender-border);
   font-size: 0.72rem;
-  color: var(--color-muted);
+  color: var(--color-accent);
   letter-spacing: 0.01em;
+  font-weight: 500;
 }
 .chip-accent {
-  color: var(--color-accent-soft);
-  background: rgba(123, 159, 255, 0.08);
-  border-color: rgba(123, 159, 255, 0.25);
+  background: var(--color-accent);
+  color: #ffffff;
+  border-color: var(--color-accent);
 }
 .chip-mint {
-  color: var(--color-mint);
-  background: rgba(94, 207, 176, 0.08);
-  border-color: rgba(94, 207, 176, 0.25);
+  color: var(--color-green);
+  background: var(--color-green-bg);
+  border-color: rgba(76, 154, 90, 0.3);
 }
 
 .eyebrow {
   font-size: 0.7rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-dim);
+  color: var(--color-accent);
   font-weight: 600;
+  opacity: 0.7;
 }
 
 .rule {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-border), transparent);
-  margin-block: 2rem;
+  background: var(--color-border);
+  margin-block: 2.5rem;
 }
 
-/* Numbered step indicator — for "Start here" sequences */
+/* Numbered step indicator — navy circle, cream background */
 .step-number {
-  width: 1.75rem; height: 1.75rem;
+  width: 1.9rem;
+  height: 1.9rem;
   border-radius: 999px;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: rgba(123, 159, 255, 0.15);
-  border: 1px solid rgba(123, 159, 255, 0.4);
-  color: var(--color-accent-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-lavender);
+  border: 1px solid var(--color-lavender-border);
+  color: var(--color-accent);
   font-family: var(--font-editorial);
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 0.95rem;
 }
 
-/* Scrollbar treatment — subtle on dark */
+.step-number-inline {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: var(--color-accent);
+  font-family: var(--font-editorial);
+  font-weight: 700;
+  font-size: 0.7rem;
+  margin-right: 0.2rem;
+}
+
+/* Scrollbar — warm, visible only on hover */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
 
-/* Disabled focus ring on mouse, keep for keyboard */
 :focus:not(:focus-visible) { outline: none; }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 6px; }
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}

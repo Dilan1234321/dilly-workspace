@@ -108,7 +108,7 @@ export function TodayPanel({
             >
               <div className="eyebrow">Pick up where you left off</div>
               <div className="mt-1.5 flex items-center justify-between gap-3 text-[color:var(--color-muted)]">
-                <span className="truncate text-white">
+                <span className="truncate text-[color:var(--color-text)]">
                   {friendlyCohort(lastWatched.cohort)}
                 </span>
                 <span className="shrink-0">→</span>
@@ -143,7 +143,7 @@ function Stat({
       <div
         className={
           "editorial mt-1 text-2xl font-semibold leading-tight " +
-          (hot ? "text-[color:var(--color-accent-soft)]" : "text-white")
+          (hot ? "text-[color:var(--color-accent-soft)]" : "text-[color:var(--color-text)]")
         }
       >
         {value}
@@ -154,7 +154,7 @@ function Stat({
 
 function PlayIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="#0b1020" aria-hidden>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff" aria-hidden>
       <path d="M8 5v14l11-7z" />
     </svg>
   );

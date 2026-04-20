@@ -48,7 +48,7 @@ export function VideoCard({ video, lang }: { video: Video; lang: LangCode }) {
         </div>
       </div>
       <div className="p-4">
-        <div className="line-clamp-2 text-[0.95rem] font-semibold leading-snug text-white">
+        <div className="line-clamp-2 text-[0.95rem] font-semibold leading-snug text-[color:var(--color-text)]">
           {video.title}
         </div>
         <div className="mt-2 flex items-center justify-between gap-2 text-xs text-[color:var(--color-muted)]">

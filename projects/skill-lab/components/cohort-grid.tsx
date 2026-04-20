@@ -14,13 +14,13 @@ export function CohortGrid({ lang }: { lang: LangCode }) {
         <Link
           key={c.slug}
           href={`/cohort/${c.slug}`}
-          className="group flex flex-col gap-1 bg-[color:var(--color-bg)] p-5 transition hover:bg-[color:var(--color-bg-soft)]"
+          className="group flex flex-col gap-1 bg-[color:var(--color-surface)] p-5 transition hover:bg-[color:var(--color-lavender)]"
         >
           <div className="flex items-start justify-between gap-3">
-            <span className="text-[0.95rem] font-semibold leading-snug text-white">
+            <span className="text-[0.95rem] font-semibold leading-snug text-[color:var(--color-text)]">
               {c.name}
             </span>
-            <span className="mt-0.5 shrink-0 text-sm text-[color:var(--color-dim)] transition group-hover:translate-x-0.5 group-hover:text-[color:var(--color-accent-soft)]">
+            <span className="mt-0.5 shrink-0 text-sm text-[color:var(--color-dim)] transition group-hover:translate-x-0.5 group-hover:text-[color:var(--color-accent)]">
               →
             </span>
           </div>

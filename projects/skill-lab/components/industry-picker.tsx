@@ -21,7 +21,7 @@ export function IndustryPicker() {
             </span>
           </div>
           <div>
-            <div className="text-[0.95rem] font-semibold leading-snug text-white">
+            <div className="text-[0.95rem] font-semibold leading-snug text-[color:var(--color-text)]">
               {i.name}
             </div>
             <div className="editorial mt-1 text-xs italic leading-snug text-[color:var(--color-muted)]">

@@ -18,19 +18,19 @@ export function Nav({
 }) {
   return (
     <header className="glass sticky top-0 z-50">
-      <div className="container-app flex h-16 items-center justify-between gap-3">
-        <Link href="/" className="group flex items-center gap-3">
-          <span className="relative block h-7 w-16 shrink-0">
+      <div className="container-app flex h-20 items-center justify-between gap-3 sm:h-24">
+        <Link href="/" className="group flex items-center gap-4">
+          <span className="relative block h-12 w-28 shrink-0 sm:h-14 sm:w-32">
             <Image
               src="/dilly-logo.png"
               alt="dilly"
               fill
               priority
-              className="object-contain invert brightness-[1.08]"
-              sizes="64px"
+              className="object-contain"
+              sizes="(min-width: 640px) 128px, 112px"
             />
           </span>
-          <span className="editorial hidden text-[0.95rem] text-[color:var(--color-text)]/80 group-hover:text-white sm:inline">
+          <span className="editorial hidden text-[1.05rem] text-[color:var(--color-text)]/75 group-hover:text-[color:var(--color-accent)] sm:inline">
             Skill Lab
           </span>
         </Link>
@@ -43,10 +43,10 @@ export function Nav({
 
         <nav className="flex items-center gap-1.5 text-sm sm:gap-2">
           <CommandTrigger label="Search" />
-          <Link href="/today" className="hidden px-2 py-1 text-[color:var(--color-muted)] hover:text-white md:inline">
+          <Link href="/today" className="hidden px-2 py-1 text-[color:var(--color-muted)] hover:text-[color:var(--color-accent)] md:inline">
             Today
           </Link>
-          <Link href="/library" className="hidden px-2 py-1 text-[color:var(--color-muted)] hover:text-white md:inline">
+          <Link href="/library" className="hidden px-2 py-1 text-[color:var(--color-muted)] hover:text-[color:var(--color-accent)] md:inline">
             {t(lang, "nav.library")}
           </Link>
           <span className="mx-1 hidden h-5 w-px bg-[color:var(--color-border)] md:inline-block" />

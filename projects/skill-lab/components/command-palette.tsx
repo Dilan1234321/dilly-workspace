@@ -79,7 +79,7 @@ export function CommandTrigger({ label = "Search" }: { label?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1.5 text-xs text-[color:var(--color-muted)] transition hover:border-[color:var(--color-border-strong)] hover:text-white"
+        className="flex items-center gap-2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1.5 text-xs text-[color:var(--color-muted)] transition hover:border-[color:var(--color-border-strong)] hover:text-[color:var(--color-text)]"
         aria-label="Open command palette"
       >
         <SearchIcon />
@@ -176,7 +176,7 @@ function CommandModal({ onClose }: { onClose: () => void }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Jump to a field, role, or page…"
-            className="flex-1 bg-transparent text-[0.95rem] text-white outline-none placeholder:text-[color:var(--color-dim)]"
+            className="flex-1 bg-transparent text-[0.95rem] text-[color:var(--color-text)] outline-none placeholder:text-[color:var(--color-dim)]"
           />
           <kbd className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[color:var(--color-dim)]">
             Esc
@@ -207,7 +207,7 @@ function CommandModal({ onClose }: { onClose: () => void }) {
               >
                 <Tag kind={it.kind} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-white">{it.label}</div>
+                  <div className="truncate text-sm font-medium text-[color:var(--color-text)]">{it.label}</div>
                   {it.sub && (
                     <div className="truncate text-xs text-[color:var(--color-muted)]">
                       {it.sub}
