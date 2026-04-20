@@ -31,7 +31,9 @@ import { useAccent, useResolvedTheme } from '../../hooks/useTheme';
 import {
   ExploringHome, DropoutHome, LaidOffHome, VisaHome,
   VeteranHome, ParentReturningHome, InternationalGradHome, RefugeeHome,
+  TieredSeekerHome,
 } from '../../components/SituationHomes';
+import { hasTieredSpec } from '../../lib/homeSpecs';
 import { useCachedFetch, getCached } from '../../lib/sessionCache';
 
 const W = Dimensions.get('window').width;
@@ -1861,6 +1863,7 @@ export default function HomeScreen() {
   const userPath = String(profileCached?.user_path || '').toLowerCase();
 
   if (appMode === 'holder') return <HolderHome />;
+  // Full Rung-3 bespoke Homes — their own file, own sections.
   if (userPath === 'senior_reset')        return <SeniorResetHome />;
   if (userPath === 'exploring')           return <ExploringHome />;
   if (userPath === 'dropout')             return <DropoutHome />;
@@ -1870,6 +1873,11 @@ export default function HomeScreen() {
   if (userPath === 'parent_returning')    return <ParentReturningHome />;
   if (userPath === 'international_grad')  return <InternationalGradHome />;
   if (userPath === 'refugee')             return <RefugeeHome />;
+  // Tier-2 spec-driven Home — one component, per-path data. Covers
+  // student / career_switch / first_gen_college / trades_to_white_collar
+  // / formerly_incarcerated / neurodivergent / disabled_professional
+  // / lgbtq / rural_remote_only / ex_founder.
+  if (hasTieredSpec(userPath))            return <TieredSeekerHome userPath={userPath} />;
   return <SeekerHome />;
 }
 

@@ -38,6 +38,7 @@ import { useAccent, useResolvedTheme } from '../hooks/useTheme';
 import { useSpacing } from './Themed';
 import { YourPlanCard } from './YourPlanCard';
 import { useYourPlan } from '../hooks/useYourPlan';
+import { specForPath, HomeSpec } from '../lib/homeSpecs';
 
 const INDIGO = colors.indigo;
 
@@ -1125,6 +1126,103 @@ export function RefugeeHome() {
             <Text style={s.growthBody}>
               Tell Dilly about one role you held in your home country. Title, company, years, what you actually did. That's where the translation starts.
             </Text>
+          </View>
+        </FadeInView>
+      ) : null}
+    </HomeShell>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* 9. TieredSeekerHome — spec-driven Home for paths that don't    */
+/*    need a full bespoke file. Reads from lib/homeSpecs and      */
+/*    renders through the same primitives as the Rung-3 Homes.   */
+/*    Covers 10 additional paths in one component.                */
+/* ─────────────────────────────────────────────────────────────── */
+
+export function TieredSeekerHome({ userPath }: { userPath: string }) {
+  const insets = useSafeAreaInsets();
+  const accent = useAccent();
+  const spec: HomeSpec = specForPath(userPath);
+  const { data, refreshing, refresh } = useHomeData(`home:tiered:${userPath}`);
+  const firstName = data?.firstName || 'there';
+  const factCount = data?.factCount ?? 0;
+  const marketCount = data?.marketCount ?? null;
+
+  // Each path's tone color. Falls back to the user's accent when
+  // the spec doesn't name one. Greeting eyebrow uses spec tone;
+  // CTAs / hero tints do the same so the whole screen reads in
+  // one coherent palette.
+  const tone = spec.tone || accent;
+
+  const plan = useYourPlan({
+    mode: 'seeker',
+    userPath,
+    firstName,
+    factCount,
+    appCount: 0,
+    interviewingCount: 0,
+    recentDeadline: null,
+  });
+
+  return (
+    <HomeShell insets={insets} refreshing={refreshing} onRefresh={refresh} accent={accent}>
+      <Greeting
+        eyebrow={spec.eyebrow}
+        firstName={firstName}
+        line={spec.greetingLine}
+        eyebrowColor={tone}
+      />
+
+      <FadeInView delay={10}>
+        <YourPlanCard plan={plan} firstName={firstName} />
+      </FadeInView>
+
+      <FadeInView delay={40}>
+        <HeroCard tintColor={tone}>
+          <HeroText
+            kicker={spec.hero.kicker}
+            head={spec.hero.head}
+            body={spec.hero.body}
+            kickerColor={tone}
+          />
+          <TalkCta
+            label={spec.hero.ctaLabel}
+            seed={spec.hero.seed}
+            accent={tone}
+          />
+        </HeroCard>
+      </FadeInView>
+
+      <FadeInView delay={100}>
+        <SectionLabel>START HERE TODAY</SectionLabel>
+        <View style={{ gap: 8 }}>
+          {spec.prompts.map((p, i) => (
+            <PromptRow
+              key={i}
+              text={p.text}
+              tint={tone}
+              onPress={() => openDillyOverlay({ isPaid: false, initialMessage: p.seed })}
+            />
+          ))}
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={160}>
+        <SectionLabel>THE MARKET</SectionLabel>
+        <MarketTile
+          count={marketCount}
+          label={spec.marketLabel}
+          accent={tone}
+          onPress={() => router.push('/(app)/jobs' as any)}
+        />
+      </FadeInView>
+
+      {factCount < 18 && spec.growthNudge ? (
+        <FadeInView delay={220}>
+          <View style={s.growthNudge}>
+            <Text style={s.growthLabel}>DILLY KNOWS {factCount}</Text>
+            <Text style={s.growthBody}>{spec.growthNudge}</Text>
           </View>
         </FadeInView>
       ) : null}
