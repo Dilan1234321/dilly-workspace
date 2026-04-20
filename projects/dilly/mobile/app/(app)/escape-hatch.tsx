@@ -85,25 +85,25 @@ export default function EscapeHatchScreen() {
   const doors = d?.doors || [];
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* Header bar */}
-      <View style={s.headerBar}>
+      <View style={[s.headerBar, { borderBottomColor: theme.surface.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={s.headerBtn}>
-          <Ionicons name="chevron-back" size={22} color={colors.t2} />
+          <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
         </Pressable>
-        <Text style={s.headerTitle}>ESCAPE HATCH</Text>
+        <Text style={[s.headerTitle, { color: theme.surface.t2 }]}>ESCAPE HATCH</Text>
         <View style={s.headerBtn} />
       </View>
 
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={INDIGO} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={theme.accent} />}
       >
         <FadeInView delay={0}>
-          <Text style={s.eyebrow}>A QUIET LOOK</Text>
-          <Text style={s.title}>What you'd walk into.</Text>
-          <Text style={s.sub}>
+          <Text style={[s.eyebrow, { color: theme.accent }]}>A QUIET LOOK</Text>
+          <Text style={[s.title, { color: theme.surface.t1 }]}>What you'd walk into.</Text>
+          <Text style={[s.sub, { color: theme.surface.t2 }]}>
             No applications, no alerts. Just a read on what's out there
             for someone like you. open it any time.
           </Text>
@@ -112,14 +112,14 @@ export default function EscapeHatchScreen() {
         {/* Anchor card: where you are now */}
         {d?.you ? (
           <FadeInView delay={40}>
-            <View style={s.anchorCard}>
-              <Text style={s.anchorEyebrow}>WHERE YOU ARE NOW</Text>
-              <Text style={s.anchorRole}>
+            <View style={[s.anchorCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[s.anchorEyebrow, { color: theme.surface.t3 }]}>WHERE YOU ARE NOW</Text>
+              <Text style={[s.anchorRole, { color: theme.surface.t1 }]}>
                 {d.you.role || 'Your current role'}
-                {d.you.company ? <Text style={s.anchorCompany}>{'  ·  '}{d.you.company}</Text> : null}
+                {d.you.company ? <Text style={[s.anchorCompany, { color: theme.surface.t2 }]}>{'  ·  '}{d.you.company}</Text> : null}
               </Text>
               {d.you.estimated_wage ? (
-                <Text style={s.anchorValue}>{fmtUsd(d.you.estimated_wage)}</Text>
+                <Text style={[s.anchorValue, { color: theme.accent }]}>{fmtUsd(d.you.estimated_wage)}</Text>
               ) : null}
             </View>
           </FadeInView>
@@ -127,9 +127,9 @@ export default function EscapeHatchScreen() {
 
         <FadeInView delay={80}>
           <View style={s.doorsHeaderRow}>
-            <Text style={s.sectionLabel}>YOUR DOORS</Text>
+            <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>YOUR DOORS</Text>
             {d?.total_market != null ? (
-              <Text style={s.marketCount}>
+              <Text style={[s.marketCount, { color: theme.surface.t3 }]}>
                 {d.total_market.toLocaleString()} live listings across the market
               </Text>
             ) : null}
@@ -138,33 +138,33 @@ export default function EscapeHatchScreen() {
 
         {doors.length === 0 ? (
           <FadeInView delay={120}>
-            <View style={s.emptyCard}>
-              <Ionicons name="compass-outline" size={24} color={colors.t3} />
-              <Text style={s.emptyText}>
+            <View style={[s.emptyCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Ionicons name="compass-outline" size={24} color={theme.surface.t3} />
+              <Text style={[s.emptyText, { color: theme.surface.t2 }]}>
                 Add your current role in My Career so Dilly can map your
                 nearest doors. Takes about a minute.
               </Text>
               <AnimatedPressable
-                style={s.emptyCta}
+                style={[s.emptyCta, { backgroundColor: theme.accentSoft, borderWidth: 1, borderColor: theme.accentBorder }]}
                 scaleDown={0.97}
                 onPress={() => router.push('/(app)/my-dilly-profile' as any)}
               >
-                <Text style={s.emptyCtaText}>Open My Career</Text>
-                <Ionicons name="arrow-forward" size={14} color={INDIGO} />
+                <Text style={[s.emptyCtaText, { color: theme.accent }]}>Open My Career</Text>
+                <Ionicons name="arrow-forward" size={14} color={theme.accent} />
               </AnimatedPressable>
             </View>
           </FadeInView>
         ) : (
           doors.map((door, i) => (
             <FadeInView key={`${door.label}-${i}`} delay={120 + i * 40}>
-              <View style={s.doorCard}>
+              <View style={[s.doorCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
                 <View style={s.doorHeaderRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.doorMove}>{door.move.toUpperCase()}</Text>
-                    <Text style={s.doorLabel}>{door.label}</Text>
+                    <Text style={[s.doorMove, { color: theme.accent }]}>{door.move.toUpperCase()}</Text>
+                    <Text style={[s.doorLabel, { color: theme.surface.t1 }]}>{door.label}</Text>
                   </View>
                   <View style={s.doorValueCol}>
-                    <Text style={s.doorValue}>{fmtUsd(door.estimated_wage)}</Text>
+                    <Text style={[s.doorValue, { color: theme.surface.t1 }]}>{fmtUsd(door.estimated_wage)}</Text>
                     <View
                       style={[
                         s.deltaPill,
@@ -185,7 +185,7 @@ export default function EscapeHatchScreen() {
 
                 {/* Sample listings */}
                 {door.sample_jobs.length > 0 ? (
-                  <View style={s.samplesWrap}>
+                  <View style={[s.samplesWrap, { borderTopColor: theme.surface.border }]}>
                     {door.sample_jobs.slice(0, 3).map((j, k) => (
                       <Pressable
                         key={j.id || k}
@@ -193,18 +193,18 @@ export default function EscapeHatchScreen() {
                         onPress={() => j.apply_url && Linking.openURL(j.apply_url).catch(() => {})}
                       >
                         <View style={{ flex: 1 }}>
-                          <Text style={s.sampleTitle} numberOfLines={1}>{j.title}</Text>
-                          <Text style={s.sampleMeta} numberOfLines={1}>
+                          <Text style={[s.sampleTitle, { color: theme.surface.t1 }]} numberOfLines={1}>{j.title}</Text>
+                          <Text style={[s.sampleMeta, { color: theme.surface.t3 }]} numberOfLines={1}>
                             {j.company}
                             {j.location ? `  ·  ${j.location}` : ''}
                           </Text>
                         </View>
-                        <Ionicons name="open-outline" size={14} color={colors.t3} />
+                        <Ionicons name="open-outline" size={14} color={theme.surface.t3} />
                       </Pressable>
                     ))}
                   </View>
                 ) : (
-                  <Text style={s.samplesEmpty}>No live listings matched this one in our feed.</Text>
+                  <Text style={[s.samplesEmpty, { color: theme.surface.t3 }]}>No live listings matched this one in our feed.</Text>
                 )}
               </View>
             </FadeInView>
@@ -212,7 +212,7 @@ export default function EscapeHatchScreen() {
         )}
 
         <FadeInView delay={400}>
-          <Text style={s.foot}>
+          <Text style={[s.foot, { color: theme.surface.t3 }]}>
             Comp figures: BLS OES (May 2024) adjusted for your YOE.
             Listings from our live feed. The Escape Hatch never notifies
             you, never saves you into a pipeline, and never tells anyone
