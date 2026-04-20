@@ -20,7 +20,7 @@ import { View, Text, ScrollView, StyleSheet, TextStyle, ViewStyle } from 'react-
 import { Ionicons } from '@expo/vector-icons';
 import { ResolvedTheme } from '../hooks/useTheme';
 
-export type MockScreenId = 'career' | 'chat' | 'profile' | 'room' | 'forge';
+export type MockScreenId = 'career';
 
 export interface MockScreenMeta {
   id: MockScreenId;
@@ -28,13 +28,10 @@ export interface MockScreenMeta {
 }
 
 export const MOCK_SCREENS: MockScreenMeta[] = [
-  // Profile and Room mocks removed per user request — they weren't
-  // useful previews of what the theme actually feels like. The
-  // remaining three (career, chat, forge) cover the high-traffic
-  // surfaces a theme change will actually affect.
-  { id: 'career',  label: 'Career Center' },
-  { id: 'chat',    label: 'Chat with Dilly' },
-  { id: 'forge',   label: 'Resume · The Forge' },
+  // Only Home (Career Center) remains. Per user: the other mocks
+  // were noise. One preview, the main surface, is enough to show
+  // what the user's theme choices will actually feel like.
+  { id: 'career', label: 'Home' },
 ];
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -174,216 +171,6 @@ function MockCareer({ theme }: { theme: ResolvedTheme }) {
   );
 }
 
-function MockChat({ theme }: { theme: ResolvedTheme }) {
-  const LINK = '#2B3A8E';
-  return (
-    <View style={{ gap: 10 * theme.density }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: theme.surface.border }}>
-        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.accentSoft, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.accent }} />
-        </View>
-        <Text style={{ fontSize: 13, fontWeight: '800', color: theme.surface.t1 }}>Dilly</Text>
-      </View>
-
-      {/* User bubble */}
-      <View style={{ alignItems: 'flex-end' }}>
-        <View style={{
-          backgroundColor: theme.accent,
-          borderRadius: theme.shape.md,
-          paddingVertical: 8, paddingHorizontal: 10,
-          maxWidth: '85%',
-        }}>
-          <Text style={{ fontSize: 12, color: '#fff' }}>I want to break into product management. Where do I start?</Text>
-        </View>
-      </View>
-
-      {/* Assistant bubble */}
-      <View style={{ alignItems: 'flex-start' }}>
-        <View style={{
-          backgroundColor: theme.surface.s1,
-          borderRadius: theme.shape.md,
-          borderWidth: 1, borderColor: theme.surface.border,
-          paddingVertical: 8, paddingHorizontal: 10,
-          maxWidth: '90%',
-        }}>
-          <Text style={{ fontSize: 12, color: theme.surface.t1, lineHeight: 17 }}>
-            Watch Lenny Rachitsky's "How to get your first PM role". It's the clearest map out there:{' '}
-            <Text style={{ color: theme.accent, textDecorationLine: 'underline', fontWeight: '700' }}>
-              https://youtu.be/lenny-pm-intro
-            </Text>
-            . What industry pulls you in?
-          </Text>
-        </View>
-      </View>
-
-      <View style={{
-        backgroundColor: theme.surface.s1,
-        borderRadius: theme.shape.sm,
-        borderWidth: 1, borderColor: theme.surface.border,
-        padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8,
-      }}>
-        <Text style={{ flex: 1, fontSize: 11, color: theme.surface.t3 }}>Type a message…</Text>
-        <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="arrow-up" size={14} color="#fff" />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function MockProfile({ theme }: { theme: ResolvedTheme }) {
-  const hero = useHeroTextStyle(theme);
-  return (
-    <View style={{ gap: 10 * theme.density }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{
-          width: 44, height: 44, borderRadius: theme.shape.pill === 999 ? 22 : 10,
-          backgroundColor: theme.accentSoft, borderWidth: 1, borderColor: theme.accentBorder,
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Ionicons name="person" size={22} color={theme.accent} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[hero, { fontSize: 16 }]}>Dilan Kochhar</Text>
-          <Text style={{ fontSize: 10, color: theme.surface.t3 }}>Data Science · University of Tampa</Text>
-        </View>
-        <View style={{
-          paddingHorizontal: 10, paddingVertical: 6, borderRadius: theme.shape.chip,
-          backgroundColor: theme.accent,
-        }}>
-          <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>EDIT</Text>
-        </View>
-      </View>
-
-      <Card theme={theme}>
-        <Text style={{ fontSize: 10, fontWeight: '800', color: theme.surface.t3, letterSpacing: 1, marginBottom: 8 }}>WHAT WE KNOW ABOUT YOU</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {['Leadership', 'Projects', 'Skills', 'Goals'].map((l, i) => (
-            <View key={i} style={{
-              flex: 1, minWidth: '45%',
-              backgroundColor: i < 2 ? theme.accentSoft : theme.surface.s2,
-              borderWidth: 1, borderColor: i < 2 ? theme.accentBorder : theme.surface.border,
-              borderRadius: theme.shape.sm,
-              padding: 8 * theme.density,
-              flexDirection: 'row', alignItems: 'center', gap: 6,
-            }}>
-              <Ionicons name={i === 0 ? 'trophy' : i === 1 ? 'rocket' : i === 2 ? 'construct' : 'compass'}
-                       size={12} color={i < 2 ? theme.accent : theme.surface.t3} />
-              <Text style={{ fontSize: 10, fontWeight: '700', color: theme.surface.t1, flex: 1 }}>{l}</Text>
-              {i < 2 && (
-                <View style={{ backgroundColor: theme.accent, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>{i === 0 ? '4' : '7'}</Text>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
-      </Card>
-
-      <CTA theme={theme} label="Share profile" icon="share-outline" />
-    </View>
-  );
-}
-
-function MockRoom({ theme }: { theme: ResolvedTheme }) {
-  // The Room is always dark in the real app. Preserve that — it's an
-  // intentional design choice, not a theme the user owns.
-  const nightBg = '#0B0F1E';
-  const nightCard = '#151A2E';
-  const nightText = '#E8EAF4';
-  const nightMuted = 'rgba(232,234,244,0.6)';
-  const nightBorder = 'rgba(255,255,255,0.08)';
-  return (
-    <View style={{ gap: 8, backgroundColor: nightBg, padding: 12, borderRadius: theme.shape.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF453A' }} />
-        <Text style={{ fontSize: 10, color: nightMuted }}>Interviewing at <Text style={{ color: nightText, fontWeight: '700' }}>Stripe</Text></Text>
-      </View>
-
-      <View style={{ backgroundColor: nightCard, borderRadius: theme.shape.md, borderWidth: 1, borderColor: nightBorder, padding: 14 }}>
-        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-          <View style={{ paddingHorizontal: 7, paddingVertical: 3, borderRadius: theme.shape.chip, backgroundColor: '#FF453A22', borderWidth: 1, borderColor: '#FF453A55' }}>
-            <Text style={{ fontSize: 8, fontWeight: '800', color: '#FF453A' }}>LIKELY</Text>
-          </View>
-          <Text style={{ fontSize: 9, color: nightMuted, fontWeight: '600' }}>BEHAVIORAL</Text>
-        </View>
-        <Text style={{ fontSize: 14, fontWeight: '700', color: nightText, lineHeight: 20 }}>
-          Tell me about a time you had to change a teammate's mind about a technical decision.
-        </Text>
-      </View>
-
-      <View style={{ backgroundColor: nightCard, borderRadius: theme.shape.md, borderWidth: 1, borderColor: nightBorder, padding: 10 }}>
-        <Text style={{ fontSize: 9, fontWeight: '800', color: nightMuted, letterSpacing: 1.2, marginBottom: 6 }}>LIVE METRICS</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#34C759' }}>~52s</Text>
-            <Text style={{ fontSize: 8, color: nightMuted, fontWeight: '700' }}>SWEET SPOT</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: nightText }}>118</Text>
-            <Text style={{ fontSize: 8, color: nightMuted, fontWeight: '700' }}>WORDS</Text>
-          </View>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#FF9F0A' }}>3 / 4</Text>
-            <Text style={{ fontSize: 8, color: nightMuted, fontWeight: '700' }}>STAR</Text>
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 5, marginTop: 10 }}>
-          {['S', 'T', 'A', 'R'].map((l, i) => {
-            const lit = i < 3;
-            return (
-              <View key={l} style={{
-                flex: 1, paddingVertical: 5, borderRadius: theme.shape.chip,
-                backgroundColor: lit ? theme.accentSoft : 'rgba(255,255,255,0.02)',
-                borderWidth: 1, borderColor: lit ? theme.accentBorder : nightBorder,
-                alignItems: 'center',
-              }}>
-                <Text style={{ fontSize: 10, fontWeight: '900', color: lit ? theme.accent : nightMuted }}>{l}</Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function MockForge({ theme }: { theme: ResolvedTheme }) {
-  const hero = useHeroTextStyle(theme);
-  return (
-    <View style={{ gap: 10 * theme.density }}>
-      <View style={{ alignItems: 'center', gap: 6 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.accentSoft, borderWidth: 1, borderColor: theme.accentBorder, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="ribbon" size={18} color={theme.accent} />
-        </View>
-        <Text style={{ fontSize: 9, fontWeight: '800', color: theme.accent, letterSpacing: 2 }}>FORGED</Text>
-        <Text style={[hero, { fontSize: 17, textAlign: 'center' }]}>
-          for Senior Engineer{'\n'}at <Text style={{ color: theme.accent }}>Stripe</Text>
-        </Text>
-      </View>
-
-      <Card theme={theme}>
-        <Text style={{ fontSize: 9, fontWeight: '800', color: theme.surface.t3, letterSpacing: 1.2, marginBottom: 8 }}>ATS READINESS</Text>
-        {[
-          { label: 'ATS parse', v: 92 },
-          { label: 'Keyword match', v: 78 },
-          { label: 'Profile depth', v: 84 },
-          { label: 'Role fit', v: 81 },
-        ].map(row => (
-          <View key={row.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 10, color: theme.surface.t2, fontWeight: '700', width: 80 }}>{row.label}</Text>
-            <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: theme.surface.s3, overflow: 'hidden' }}>
-              <View style={{ width: `${row.v}%`, height: '100%', backgroundColor: theme.accent }} />
-            </View>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: theme.accent, width: 24, textAlign: 'right' }}>{row.v}</Text>
-          </View>
-        ))}
-      </Card>
-
-      <CTA theme={theme} label="Export · PDF or DOCX" icon="download" />
-    </View>
-  );
-}
 
 /* ─────────────────────────────────────────────────────────────── */
 /* Exported frame                                                  */
@@ -394,32 +181,22 @@ function MockForge({ theme }: { theme: ResolvedTheme }) {
  * the theme surface so the "app" feel of the mock is preserved.
  */
 export function MockFrame({ theme, screen }: { theme: ResolvedTheme; screen: MockScreenId }) {
-  const inner = (() => {
-    switch (screen) {
-      case 'career':  return <MockCareer theme={theme} />;
-      case 'chat':    return <MockChat theme={theme} />;
-      case 'profile': return <MockProfile theme={theme} />;
-      case 'room':    return <MockRoom theme={theme} />;
-      case 'forge':   return <MockForge theme={theme} />;
-    }
-  })();
-
-  // The Room has its own dark shell regardless of surface choice;
-  // wrap it with minimal chrome so we don't double-frame.
-  const isRoom = screen === 'room';
+  // Only the home (career) mock is rendered now. Kept the screen
+  // prop in the signature so the picker UI up-stream still compiles.
+  void screen;
 
   return (
     <View style={[
       mockStyles.frame,
-      { backgroundColor: isRoom ? '#0B0F1E' : theme.surface.bg, borderRadius: theme.shape.lg },
+      { backgroundColor: theme.surface.bg, borderRadius: theme.shape.lg },
     ]}>
       {/* Notch + time */}
       <View style={mockStyles.notchRow}>
-        <Text style={{ fontSize: 9, fontWeight: '700', color: isRoom ? '#E8EAF4' : theme.surface.t1 }}>9:41</Text>
+        <Text style={{ fontSize: 9, fontWeight: '700', color: theme.surface.t1 }}>9:41</Text>
         <View style={mockStyles.notch} />
         <View style={{ flexDirection: 'row', gap: 3, alignItems: 'center' }}>
-          <Ionicons name="wifi" size={10} color={isRoom ? '#E8EAF4' : theme.surface.t2} />
-          <Ionicons name="battery-full" size={10} color={isRoom ? '#E8EAF4' : theme.surface.t2} />
+          <Ionicons name="wifi" size={10} color={theme.surface.t2} />
+          <Ionicons name="battery-full" size={10} color={theme.surface.t2} />
         </View>
       </View>
 
@@ -428,7 +205,7 @@ export function MockFrame({ theme, screen }: { theme: ResolvedTheme; screen: Moc
         contentContainerStyle={{ padding: 14, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {inner}
+        <MockCareer theme={theme} />
       </ScrollView>
     </View>
   );

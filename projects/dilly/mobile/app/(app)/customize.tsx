@@ -17,7 +17,7 @@
 
 import { useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, Modal, Pressable,
+  View, Text, ScrollView, StyleSheet,
   Platform, Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -55,9 +55,10 @@ export default function CustomizeStudio() {
 
   // PENDING theme — edits stay here until Save.
   const [pending, setPending] = useState<ThemeConfig>(committed);
-  const [screen, setScreen] = useState<MockScreenId>('career');
   const [axis, setAxis] = useState<AxisId>('accent');
-  const [screenPickerOpen, setScreenPickerOpen] = useState(false);
+  // Only one mock preview now ('career' = Home). Kept as a const so
+  // the MockFrame prop stays stable without a useless state pair.
+  const screen: MockScreenId = 'career';
 
   const theme: ResolvedTheme = resolveTheme(pending, systemIsDark);
   const dirty = JSON.stringify(pending) !== JSON.stringify(committed);
@@ -88,8 +89,6 @@ export default function CustomizeStudio() {
       accentStyle: rand(Object.values(ACCENT_STYLE_PRESETS)).id,
     }));
   }
-
-  const screenLabel = MOCK_SCREENS.find(s => s.id === screen)?.label || 'Preview';
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
@@ -122,20 +121,16 @@ export default function CustomizeStudio() {
         </AnimatedPressable>
       </View>
 
-      {/* Screen picker. Inline theme overrides so the row reads
-          correctly on Midnight/dark surfaces. */}
+      {/* Screen picker removed. Only Home preview remains, so a
+          picker would just add noise. "Surprise me" kept as the
+          single right-aligned action. */}
       <View style={s.screenPickerRow}>
-        <AnimatedPressable
-          style={[s.screenPickerBtn, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
-          onPress={() => setScreenPickerOpen(true)}
-          scaleDown={0.97}
-        >
-          <Ionicons name="phone-portrait" size={13} color={theme.surface.t1} />
-          <Text style={[s.screenPickerLabel, { color: theme.surface.t1 }]}>
-            Previewing: <Text style={{ fontWeight: '800' }}>{screenLabel}</Text>
+        <View style={[s.screenPickerBtn, { backgroundColor: 'transparent', borderColor: 'transparent' }]}>
+          <Ionicons name="phone-portrait" size={13} color={theme.surface.t3} />
+          <Text style={[s.screenPickerLabel, { color: theme.surface.t3 }]}>
+            Home preview
           </Text>
-          <Ionicons name="chevron-down" size={14} color={theme.surface.t3} />
-        </AnimatedPressable>
+        </View>
         <AnimatedPressable
           onPress={handleSurprise}
           scaleDown={0.95}
@@ -202,30 +197,6 @@ export default function CustomizeStudio() {
         </View>
       </View>
 
-      {/* Screen picker modal */}
-      <Modal visible={screenPickerOpen} transparent animationType="fade" onRequestClose={() => setScreenPickerOpen(false)}>
-        <Pressable style={s.sheetBackdrop} onPress={() => setScreenPickerOpen(false)}>
-          <View style={[s.sheetCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, borderWidth: 1 }]}>
-            <Text style={[s.sheetTitle, { color: theme.surface.t1 }]}>Preview screen</Text>
-            {MOCK_SCREENS.map(ms => {
-              const selected = ms.id === screen;
-              return (
-                <AnimatedPressable
-                  key={ms.id}
-                  style={[s.sheetRow, selected && { backgroundColor: theme.accentSoft }]}
-                  onPress={() => { setScreen(ms.id); setScreenPickerOpen(false); }}
-                  scaleDown={0.97}
-                >
-                  <Text style={[s.sheetRowText, { color: theme.surface.t1 }, selected && { color: theme.accent, fontWeight: '800' }]}>
-                    {ms.label}
-                  </Text>
-                  {selected && <Ionicons name="checkmark" size={16} color={theme.accent} />}
-                </AnimatedPressable>
-              );
-            })}
-          </View>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
