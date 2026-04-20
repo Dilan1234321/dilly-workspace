@@ -28,6 +28,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import { useCachedFetch } from '../../lib/sessionCache';
+import { useResolvedTheme } from '../../hooks/useTheme';
 
 const INDIGO = '#1B3FA0';
 
@@ -64,6 +65,9 @@ function tenureLabel(months: number): string {
 
 export default function RaiseBriefScreen() {
   const insets = useSafeAreaInsets();
+  // Root surface theme override so "congrats on the new job / raise"
+  // screens honor Customize Dilly.
+  const theme = useResolvedTheme();
   const { data, loading, refreshing, refresh } = useCachedFetch<Brief>(
     'holder:raise-brief',
     async () => {
@@ -102,7 +106,7 @@ export default function RaiseBriefScreen() {
 
   if (loading) {
     return (
-      <View style={[s.container, { paddingTop: insets.top }]}>
+      <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
         <View style={{ padding: spacing.lg, gap: 16 }}>
           <View style={[s.skelBlock, { height: 48, width: '60%' }]} />
           <View style={[s.skelBlock, { height: 200 }]} />
@@ -115,7 +119,7 @@ export default function RaiseBriefScreen() {
   const d = data as Brief | undefined;
   if (!d) {
     return (
-      <View style={[s.container, { paddingTop: insets.top, padding: spacing.lg }]}>
+      <View style={[s.container, { paddingTop: insets.top, padding: spacing.lg, backgroundColor: theme.surface.bg }]}>
         <Text style={s.title}>Brief unavailable.</Text>
         <Text style={s.body}>We need a current role on file to build a raise brief. Head to My Career to fill it in.</Text>
       </View>

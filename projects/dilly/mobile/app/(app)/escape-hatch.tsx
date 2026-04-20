@@ -20,6 +20,7 @@ import { colors, spacing } from '../../lib/tokens';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import { useCachedFetch } from '../../lib/sessionCache';
+import { useResolvedTheme } from '../../hooks/useTheme';
 
 const INDIGO = '#1B3FA0';
 
@@ -54,6 +55,10 @@ function fmtDelta(n: number): string {
 
 export default function EscapeHatchScreen() {
   const insets = useSafeAreaInsets();
+  // Theme the root surface so the "sorry you lost your job" flow
+  // respects Customize Dilly. Deep component-level audit deferred —
+  // root bg is the most visible regression.
+  const theme = useResolvedTheme();
   const { data, loading, refreshing, refresh } = useCachedFetch<Data>(
     'holder:escape-hatch',
     async () => {
@@ -65,7 +70,7 @@ export default function EscapeHatchScreen() {
 
   if (loading) {
     return (
-      <View style={[s.container, { paddingTop: insets.top }]}>
+      <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
         <View style={{ padding: spacing.lg, gap: 14 }}>
           <View style={[s.skelBlock, { height: 36, width: '40%' }]} />
           <View style={[s.skelBlock, { height: 180 }]} />

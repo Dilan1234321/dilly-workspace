@@ -186,6 +186,7 @@ function ActDivider({ number, title }: { number: string; title: string }) {
 // ── Loading State ────────────────────────────────────────────────────────────
 
 function ArenaLoadingState({ texts }: { texts: string[] }) {
+  const theme = useResolvedTheme();
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   const [textIdx, setTextIdx] = useState(0);
 
@@ -201,9 +202,9 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-      <DillyFace size={120} />
-      <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: TEXT, marginTop: 24, opacity: pulseAnim }}>
+    <View style={{ flex: 1, backgroundColor: theme.surface.bg, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
+      <DillyFace size={120} mood="thinking" />
+      <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: theme.surface.t1, marginTop: 24, opacity: pulseAnim }}>
         {texts[textIdx]}
       </Animated.Text>
     </View>
