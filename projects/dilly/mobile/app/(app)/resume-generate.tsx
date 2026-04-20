@@ -471,11 +471,15 @@ export default function ResumeGenerateScreen() {
           re-show the coach once per user with the ATS explainer.
           Most applicants have no idea what ATS means, and that's
           the entire point of the Forge, so we spell it out. */}
+      {/* Coach id bumped to v3 to re-show for users who already
+          saw v2 with the crowded long-subline version. New copy
+          is shorter with tight first line + one-sentence ATS
+          definition + one-sentence value prop. */}
       <FirstVisitCoach
-        id="forge-v2"
+        id="forge-v3"
         iconName="construct"
-        headline="One resume, rebuilt per job. Tuned to beat ATS."
-        subline="ATS is the software recruiters use to auto-filter resumes before a human sees them. Dilly reads the job, mines your profile for matches, and writes bullets the ATS and the recruiter both pass."
+        headline="One resume, rebuilt per job."
+        subline="ATS (Applicant Tracking System) is the software that reads resumes before any human does. Dilly writes bullets built to pass ATS and the recruiter."
       />
 
       <Header

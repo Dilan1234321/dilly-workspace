@@ -76,23 +76,28 @@ interface MemorySurface {
 
 // ── Category config ──────────────────────────────────────────────────────────
 
+// Category colors tuned to stay legible on BOTH dark and light
+// surfaces. Bright yellows (#FFD700) and light ambers (#FF9F0A)
+// vanish on white — swapped to darker amber / brown-gold tones
+// that hold contrast on both themes while still feeling warm.
+// Same swap applied to coral and any other light-on-light case.
 const STRENGTH_CATEGORIES: Record<string, { icon: string; label: string; color: string }> = {
-  achievement:          { icon: 'trophy',        label: 'Achievements',   color: '#FFD700' },
-  goal:                 { icon: 'flag',          label: 'Goals',          color: colors.green },
-  target_company:       { icon: 'business',      label: 'Target Cos',    color: COBALT },
-  skill_unlisted:       { icon: 'code-slash',    label: 'Hidden Skills',  color: CYAN },
-  project_detail:       { icon: 'construct',     label: 'Projects',       color: colors.green },
-  motivation:           { icon: 'heart',         label: 'Motivations',    color: '#FF6B8A' },
-  personality:          { icon: 'person',        label: 'Personality',    color: '#AF52DE' },
-  soft_skill:           { icon: 'people',        label: 'Soft Skills',    color: '#AF52DE' },
-  hobby:                { icon: 'football',      label: 'Interests',      color: '#FF9F0A' },
-  strength:             { icon: 'trending-up',   label: 'Strengths',      color: colors.green },
-  weakness:             { icon: 'alert-circle',  label: 'Weaknesses',     color: colors.coral },
-  challenge:            { icon: 'fitness',       label: 'Challenges',     color: colors.amber },
-  area_for_improvement: { icon: 'arrow-up',      label: 'To Improve',     color: colors.amber },
-  fear:                 { icon: 'thunderstorm',  label: 'Concerns',       color: '#8E8E93' },
-  company_culture_pref: { icon: 'storefront',    label: 'Culture Fit',    color: '#FFD700' },
-  life_context:         { icon: 'home',          label: 'Background',     color: '#FF9F0A' },
+  achievement:          { icon: 'trophy',        label: 'Achievements',   color: '#B7791F' },
+  goal:                 { icon: 'flag',          label: 'Goals',          color: '#15803D' },
+  target_company:       { icon: 'business',      label: 'Target Cos',     color: COBALT },
+  skill_unlisted:       { icon: 'code-slash',    label: 'Hidden Skills',  color: '#0E7490' },
+  project_detail:       { icon: 'construct',     label: 'Projects',       color: '#15803D' },
+  motivation:           { icon: 'heart',         label: 'Motivations',    color: '#BE185D' },
+  personality:          { icon: 'person',        label: 'Personality',    color: '#7C3AED' },
+  soft_skill:           { icon: 'people',        label: 'Soft Skills',    color: '#7C3AED' },
+  hobby:                { icon: 'football',      label: 'Interests',      color: '#C2410C' },
+  strength:             { icon: 'trending-up',   label: 'Strengths',      color: '#15803D' },
+  weakness:             { icon: 'alert-circle',  label: 'Weaknesses',     color: '#B91C1C' },
+  challenge:            { icon: 'fitness',       label: 'Challenges',     color: '#B45309' },
+  area_for_improvement: { icon: 'arrow-up',      label: 'To Improve',     color: '#B45309' },
+  fear:                 { icon: 'thunderstorm',  label: 'Concerns',       color: '#4B5563' },
+  company_culture_pref: { icon: 'storefront',    label: 'Culture Fit',    color: '#B7791F' },
+  life_context:         { icon: 'home',          label: 'Background',     color: '#C2410C' },
 };
 
 const CORE_CATEGORIES = [

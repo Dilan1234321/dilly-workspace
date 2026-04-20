@@ -661,12 +661,24 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={cs.modalOverlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={cs.modalKav}>
-          <View style={[cs.modalCard, { paddingBottom: insets.bottom + 20 }]}>
+          {/* Cap the card height so it never fills the full screen
+              (which pushed the X button up under the status bar with
+              the keyboard open). maxHeight: 82% leaves room for the
+              top notch area. */}
+          <View style={[cs.modalCard, { paddingBottom: insets.bottom + 20, maxHeight: '82%' }]}>
 
+            {/* Close button bumped bigger and wrapped in a padded
+                press target so it's always reachable, even at the
+                top of a tall modal. */}
             <View style={cs.modalHeader}>
               <Text style={cs.modalTitle}>New Event</Text>
-              <AnimatedPressable onPress={onClose} scaleDown={0.9} hitSlop={12}>
-                <Ionicons name="close" size={20} color={colors.t2} />
+              <AnimatedPressable
+                onPress={onClose}
+                scaleDown={0.9}
+                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="close" size={24} color={colors.t1} />
               </AnimatedPressable>
             </View>
 
@@ -1068,11 +1080,10 @@ export default function CalendarScreen() {
             <TouchableOpacity onPress={openSubscribeToDillyCalendar} hitSlop={8}>
               <Ionicons name="cloud-download-outline" size={18} color={GOLD} />
             </TouchableOpacity>
-            <AnimatedPressable onPress={() => setShowAdd(true)} scaleDown={0.9} hitSlop={12}>
-              <View style={cs.addBtn}>
-                <Ionicons name="add" size={18} color={GOLD} />
-              </View>
-            </AnimatedPressable>
+            {/* Top-right plus button removed. Users said it was
+                redundant with the bottom-right FAB and the swipe-
+                on-day "add event" affordance; just one + on this
+                page is cleaner. */}
           </View>
         </View>
       </FadeInView>
