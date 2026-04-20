@@ -73,7 +73,7 @@ function Headline({ text, goldPortion }: { text: string; goldPortion: string }) 
   );
 }
 
-function RippleRing({ delay }: { delay: number }) {
+function RippleRing({ delay, borderColor }: { delay: number; borderColor: string }) {
   const scale   = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(0.15)).current;
 
@@ -98,7 +98,7 @@ function RippleRing({ delay }: { delay: number }) {
   return (
     <Animated.View
       pointerEvents="none"
-      style={[ss.ripple, { opacity, transform: [{ scale }] }]}
+      style={[ss.ripple, { borderColor, opacity, transform: [{ scale }] }]}
     />
   );
 }
@@ -236,13 +236,15 @@ export default function SplashScreen({ onDismiss }: Props) {
       <View style={[ss.bg, { backgroundColor: theme.surface.bg }]} />
 
       <Animated.View style={[ss.orbWrap, { transform: [{ scale: orbScale }] }]}>
-        <RippleRing delay={0} />
-        <RippleRing delay={1000} />
+        <RippleRing delay={0} borderColor={theme.accent} />
+        <RippleRing delay={1000} borderColor={theme.accent} />
         {/* Orb outer is transparent so ripple rings show; inner is
             flush with the screen bg (not a white cutout) so on
             Midnight the DillyFace reads as floating on the dark
-            backdrop instead of sitting in a bright circle. */}
-        <View style={ss.orbOuter}>
+            backdrop instead of sitting in a bright circle.
+            Border pulls from theme.accent so the whole orb tracks
+            the user's Customize Dilly color. */}
+        <View style={[ss.orbOuter, { borderColor: theme.accentBorder }]}>
           <View style={[ss.orbInner, { backgroundColor: theme.surface.bg, borderColor: theme.accent }]}>
             <DillyFace size={156} />
           </View>
@@ -266,7 +268,7 @@ export default function SplashScreen({ onDismiss }: Props) {
       <View style={[ss.buttonsWrap, { paddingBottom: insets.bottom + 24 }]}>
         <Animated.View style={{ opacity: primaryOpacity, width: '100%' }}>
           <Pressable
-            style={({ pressed }) => [ss.primaryBtn, pressed && { transform: [{ scale: 0.97 }] }]}
+            style={({ pressed }) => [ss.primaryBtn, { backgroundColor: theme.accent }, pressed && { transform: [{ scale: 0.97 }] }]}
             onPress={() => {
               const prompt = splashData?.voice_prompt
                 || `The user just saw this on their splash screen: "${splashData?.headline ?? ''}" with context "${splashData?.sub ?? ''}". Help them take the next step.`;
@@ -283,10 +285,10 @@ export default function SplashScreen({ onDismiss }: Props) {
         </Animated.View>
         <Animated.View style={{ opacity: secondaryOpacity, width: '100%' }}>
           <Pressable
-            style={({ pressed }) => [ss.secondaryBtn, pressed && { opacity: 0.6 }]}
+            style={({ pressed }) => [ss.secondaryBtn, { borderColor: theme.accentBorder }, pressed && { opacity: 0.6 }]}
             onPress={() => dismiss()}
           >
-            <Text style={ss.secondaryBtnText}>Go to your career center</Text>
+            <Text style={[ss.secondaryBtnText, { color: theme.accent }]}>Go to your career center</Text>
           </Pressable>
         </Animated.View>
       </View>

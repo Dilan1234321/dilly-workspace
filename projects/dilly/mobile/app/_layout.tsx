@@ -24,6 +24,24 @@ import { useResolvedTheme } from '../hooks/useTheme';
 
 const GOLD = '#2B3A8E';
 
+/** Very brief splash rendered before fonts resolve (~200ms). Tints
+ *  the logo with the user's Customize Dilly accent — starts at the
+ *  default accent then flips to the stored accent once AsyncStorage
+ *  hydrates. Same surface bg so the pre-font flash matches whatever
+ *  theme the user chose. */
+function PreFontSplash() {
+  const theme = useResolvedTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Image
+        source={require('../assets/logo.png')}
+        style={{ width: 100, height: 34, tintColor: theme.accent }}
+        resizeMode="contain"
+      />
+    </View>
+  );
+}
+
 // Signed-in users see their chosen theme on the loading screen —
 // signed-out users still see the brand white/indigo since they have
 // no theme yet and we want the first impression to be consistent.
@@ -189,14 +207,12 @@ export default function RootLayout() {
   }, []);
 
   if (!fontsLoaded) {
-    // Can't read theme yet (not even in tree) — keep brand white so the
-    // font-loading flash is consistent across all users. This is at most
-    // ~200ms before fonts resolve.
-    return (
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-        <Image source={require('../assets/logo.png')} style={{ width: 100, height: 34 }} resizeMode="contain" />
-      </View>
-    );
+    // Pre-font flash. useResolvedTheme is hook-based (no provider
+    // required) so we can tint the logo with the user's Customize
+    // Dilly accent here too — starts at the default accent on very
+    // first paint, flips to the stored accent within a tick once
+    // AsyncStorage hydrates. Consistent with the rest of the app.
+    return <PreFontSplash />;
   }
 
   if (phase === 'loading') {

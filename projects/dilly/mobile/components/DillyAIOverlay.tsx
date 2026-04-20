@@ -823,15 +823,12 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                     in the bottom-right padding) gets clipped by the
                     parent. Left padding keeps the ring off the
                     screen edge. */}
-                <DillyFace size={68} mood="writing" accessory="pencil" />
-                {/* Wrapped the label in a fixed-height View matching
-                    the DillyFace ring (68) and centered vertically
-                    so the baseline sits at the middle of the ring
-                    — the text alone was riding the alignItems:'center'
-                    of the parent row but the DillyFace outer wrapper
-                    is taller (68 + pencil pad) so the label was
-                    nudged low. */}
-                <View style={{ height: 68, justifyContent: 'center' }}>
+                <DillyFace size={52} mood="writing" accessory="pencil" />
+                {/* Label height matches the smaller DillyFace ring
+                    (52) — user asked for a more compact typing
+                    indicator. Centered vertically so the baseline
+                    sits at the middle of the ring. */}
+                <View style={{ height: 52, justifyContent: 'center' }}>
                   <Text style={{ fontSize: 15, color: theme.surface.t3, fontStyle: 'italic' }}>
                     Dilly is writing…
                   </Text>

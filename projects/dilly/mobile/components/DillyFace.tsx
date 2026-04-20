@@ -40,6 +40,10 @@ interface DillyFaceProps {
   accessory?: DillyAccessory
   /** Override for accessory color (e.g. match the user's theme). */
   accessoryColor?: string
+  /** Show the accent perimeter ring + tinted fill behind the face.
+   *  Default true. Pass false for "clean" contexts (loading screens,
+   *  onboarding hero, AI arena) where the ring reads as chrome. */
+  ring?: boolean
 }
 
 const AnimatedPath = Animated.createAnimatedComponent(Path)
@@ -90,7 +94,7 @@ function shapeFor(mood: DillyMood): MoodShape {
 /* DillyFace                                                       */
 /* ─────────────────────────────────────────────────────────────── */
 
-export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor }: DillyFaceProps) {
+export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryColor, ring = true }: DillyFaceProps) {
   const TRAVEL = size * 0.15
   const faceRadius = (size * 0.44) / 2
   const s = faceRadius / 19
@@ -128,13 +132,17 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const mW = 8 * s
 
   function pickTarget() {
-    // Writing: lock gaze DOWN-RIGHT toward the pencil tip (which the
-    // Accessory renders at cx+14s, cy+14s). This makes it look like
-    // Dilly is watching her own pencil as she writes, which is what
-    // users expect from a "thinking / typing" animation. Override
-    // takes precedence over the generic lockGaze-to-center branch.
+    // Writing: gaze settles down-right toward the pencil but with
+    // slight jitter so Dilly looks alive — previously the target
+    // was a constant, so after converging the face sat perfectly
+    // still (loading screens felt frozen). Small ±TRAVEL*0.15
+    // wobble reads like natural micro-movements while writing.
     if (mood === 'writing') {
-      targetRef.current = { x: TRAVEL * 0.9, y: TRAVEL * 0.9 }
+      const baseX = TRAVEL * 0.9
+      const baseY = TRAVEL * 0.9
+      const jx = (Math.random() - 0.5) * TRAVEL * 0.3
+      const jy = (Math.random() - 0.5) * TRAVEL * 0.3
+      targetRef.current = { x: baseX + jx, y: baseY + jy }
       return
     }
     if (shape.lockGaze) {
@@ -181,10 +189,13 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     pickTarget()
     const moveInterval = setInterval(pickTarget, 2600)
     const smileInterval = setInterval(() => {
-      // Only roam the smile if we're idle; other moods keep the
-      // expression rock-steady.
+      // Idle roams freely. Writing gets a gentle breath so the
+      // chapter loading screen doesn't read as frozen — smile
+      // wobbles between 0.25 and 0.45 on a slow cycle.
       if (mood === 'idle') {
         smileTargetRef.current = 0.15 + Math.random() * 0.45
+      } else if (mood === 'writing') {
+        smileTargetRef.current = 0.25 + Math.random() * 0.20
       }
     }, 2200)
 
@@ -263,9 +274,9 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
           width: size,
           height: size,
           borderRadius: size / 2,
-          borderWidth: ringBorder,
-          borderColor: theme.accent,
-          backgroundColor: theme.accentSoft,
+          borderWidth: ring ? ringBorder : 0,
+          borderColor: ring ? theme.accent : 'transparent',
+          backgroundColor: ring ? theme.accentSoft : 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',

@@ -203,7 +203,7 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.bg, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-      <DillyFace size={120} mood="thinking" />
+      <DillyFace size={120} mood="thinking" ring={false} />
       <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: theme.surface.t1, marginTop: 24, opacity: pulseAnim }}>
         {texts[textIdx]}
       </Animated.Text>

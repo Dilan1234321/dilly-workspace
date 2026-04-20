@@ -60,11 +60,13 @@ const SLOT_LABELS: Record<string, string> = {
 };
 
 // Typing speed: slightly faster than human (human ≈ 40 c/s, this is
-// ~55 c/s). We drive the stream with requestAnimationFrame so updates
-// land on frame boundaries — setInterval drifted between frames and
-// made text appear in visible "jumps". With rAF, the character count
-// is computed from elapsed time, so the motion looks continuous.
+// ~55 c/s). We drive the stream with requestAnimationFrame but only
+// setState every ~50ms (UPDATE_MS). The rAF loop keeps timing tight,
+// the throttle keeps React re-renders cheap — build 330's
+// per-character setState was causing visible lag. 3 chars / 55ms =
+// ~55 c/s matches the AI overlay cadence.
 const TYPE_CHARS_PER_SEC = 55;
+const UPDATE_MS = 55;
 
 export default function ChapterSessionScreen() {
   const insets = useSafeAreaInsets();
@@ -173,18 +175,21 @@ export default function ChapterSessionScreen() {
       setTypedBody('');
     }
 
-    // rAF-driven stream. On each frame, compute how many chars should
-    // be visible based on wall-clock elapsed time. This keeps the
-    // perceived cadence stable even if a frame is skipped.
+    // rAF-driven stream with setState throttled to ~UPDATE_MS.
+    // Per-character setState caused visible lag in build 330 because
+    // React reconciliation fired 55x/sec. Now we only update when
+    // at least UPDATE_MS has passed since the last update — the text
+    // still arrives at ~55 c/s in chunks of a few chars per paint.
     const startMs = Date.now();
     let rafId = 0;
-    let lastCount = -1;
+    let lastUpdateMs = -1;
     const tick = () => {
       const elapsed = Date.now() - startMs;
       const target = Math.min(fullText.length, Math.floor((elapsed / 1000) * TYPE_CHARS_PER_SEC));
-      if (target !== lastCount) {
-        lastCount = target;
-        const done = target >= fullText.length;
+      const done = target >= fullText.length;
+      const shouldUpdate = done || elapsed - lastUpdateMs >= UPDATE_MS;
+      if (shouldUpdate) {
+        lastUpdateMs = elapsed;
         const chunk = done ? fullText : fullText.slice(0, target);
         if (isQuestionSlot) {
           setChatMessages(prev => {
@@ -312,13 +317,14 @@ export default function ChapterSessionScreen() {
       if (typeRef.current) { typeRef.current(); typeRef.current = null; }
       const startMs = Date.now();
       let rafId = 0;
-      let lastCount = -1;
+      let lastUpdateMs = -1;
       const tick = () => {
         const elapsed = Date.now() - startMs;
         const target = Math.min(reply.length, Math.floor((elapsed / 1000) * TYPE_CHARS_PER_SEC));
-        if (target !== lastCount) {
-          lastCount = target;
-          const done = target >= reply.length;
+        const done = target >= reply.length;
+        const shouldUpdate = done || elapsed - lastUpdateMs >= UPDATE_MS;
+        if (shouldUpdate) {
+          lastUpdateMs = elapsed;
           const chunk = done ? reply : reply.slice(0, target);
           setChatMessages(prev => {
             if (prev.length === 0) return prev;
