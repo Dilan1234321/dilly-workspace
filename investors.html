@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dilly — Investor Overview · Pre-seed 2026</title>
+<meta name="description" content="Dilly is the profile-first career platform for the age of AI. Investor overview — pre-seed $1.2M, launching April 2026 at the University of Tampa.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:        #0a0e1c;       /* deep navy-black base */
+    --ink-2:      #0d1226;       /* panel base */
+    --navy:       #002868;       /* brand navy */
+    --navy-mid:   #0a2a66;
+    --navy-deep:  #001336;
+    --gold:       #d4a94a;       /* primary accent — warmer, more editorial than #fdb913 */
+    --gold-hi:    #e8c06a;       /* highlight */
+    --gold-deep:  #8f6f1f;       /* etched gold for borders */
+    --gold-soft:  rgba(212, 169, 74, 0.14);
+    --cream:      #f5ecd7;
+    --text:       #f2eee4;
+    --text-muted: rgba(242, 238, 228, 0.68);
+    --text-dim:   rgba(242, 238, 228, 0.44);
+    --rule:       rgba(212, 169, 74, 0.22);
+    --border:     rgba(242, 238, 228, 0.08);
+    --surface:    rgba(255, 255, 255, 0.03);
+    --surface-2:  rgba(255, 255, 255, 0.05);
+    --shadow-lg:  0 30px 80px rgba(0, 0, 0, 0.55);
+    --shadow-md:  0 16px 40px rgba(0, 0, 0, 0.4);
+    --radius:     18px;
+    --radius-sm:  10px;
+    --max:        1160px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Montserrat", system-ui, -apple-system, sans-serif;
+    font-weight: 400;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; height: auto; display: block; }
+
+  .mono { font-family: "Geist Mono", "SF Mono", Menlo, monospace; font-feature-settings: "tnum" 1; letter-spacing: -0.01em; }
+  .serif { font-family: "Cinzel", "Playfair Display", Georgia, serif; font-weight: 600; letter-spacing: 0.04em; }
+  .gold { color: var(--gold); }
+
+  /* ─────────────── Background texture ─────────────── */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 10% 0%, rgba(0, 40, 104, 0.35), transparent 60%),
+      radial-gradient(ellipse 80% 60% at 95% 15%, rgba(212, 169, 74, 0.06), transparent 55%),
+      radial-gradient(ellipse 100% 60% at 50% 110%, rgba(0, 19, 54, 0.6), transparent 60%);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* ─────────────── Navigation ─────────────── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    background: rgba(10, 14, 28, 0.72);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: var(--max); margin: 0 auto;
+    padding: 1rem 1.75rem;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 2rem;
+  }
+  .nav-brand {
+    display: flex; align-items: baseline; gap: 0.6rem;
+    font-family: "Cinzel", serif; font-weight: 700;
+    font-size: 1.1rem; letter-spacing: 0.18em;
+  }
+  .nav-brand .brand-mark {
+    color: var(--gold);
+    font-size: 1.2rem;
+  }
+  .nav-brand .brand-tag {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.35em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding-left: 0.75rem;
+    border-left: 1px solid var(--rule);
+    margin-left: 0.35rem;
+  }
+  .nav-links {
+    display: flex; gap: 2rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .nav-links a { transition: color 0.2s; }
+  .nav-links a:hover { color: var(--gold); }
+  .nav-cta {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--gold);
+    padding: 0.72rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.25s ease;
+    border: 1px solid var(--gold);
+  }
+  .nav-cta:hover { background: var(--gold-hi); border-color: var(--gold-hi); transform: translateY(-1px); }
+  @media (max-width: 820px) {
+    .nav-links { display: none; }
+    .nav-brand .brand-tag { display: none; }
+  }
+
+  /* ─────────────── Section scaffolding ─────────────── */
+  .section { padding: 7rem 1.75rem; position: relative; }
+  .wrap { max-width: var(--max); margin: 0 auto; }
+  .eyebrow {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    display: inline-flex; align-items: center; gap: 0.9rem;
+  }
+  .eyebrow::before {
+    content: ""; width: 28px; height: 1px;
+    background: var(--gold); opacity: 0.7;
+  }
+  .h1, .h2, .h3 { font-family: "Cinzel", serif; font-weight: 600; line-height: 1.12; letter-spacing: 0.02em; color: var(--cream); }
+  .h1 { font-size: clamp(2.4rem, 5.4vw, 4.2rem); }
+  .h2 { font-size: clamp(1.8rem, 3.4vw, 2.8rem); margin-bottom: 1.5rem; }
+  .h3 { font-size: 1.15rem; letter-spacing: 0.08em; }
+  .lead { font-size: clamp(1.05rem, 1.5vw, 1.2rem); color: var(--text-muted); max-width: 62ch; line-height: 1.7; }
+  .rule-gold { width: 64px; height: 2px; background: var(--gold); margin: 1.5rem 0; }
+
+  /* ─────────────── Hero ─────────────── */
+  .hero {
+    min-height: 100vh;
+    padding: 8rem 1.75rem 5rem;
+    display: flex; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .hero-grid {
+    max-width: var(--max); width: 100%; margin: 0 auto;
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 5rem; align-items: center;
+  }
+  .hero-kicker {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.7rem; letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--gold);
+    padding-bottom: 1.3rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 1.8rem;
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+  }
+  .hero-kicker span::before { content: "—"; margin-right: 0.6rem; color: var(--text-dim); }
+  .hero-kicker span:first-child::before { display: none; }
+  .hero-title {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: clamp(2.6rem, 6vw, 5rem);
+    line-height: 1.05; letter-spacing: 0.015em;
+    color: var(--cream);
+    margin-bottom: 1.6rem;
+  }
+  .hero-title em {
+    font-style: italic;
+    font-family: "Playfair Display", "Cinzel", serif;
+    color: var(--gold);
+    font-weight: 500;
+  }
+  .hero-lead {
+    font-size: clamp(1.05rem, 1.35vw, 1.18rem);
+    color: var(--text-muted);
+    line-height: 1.75;
+    max-width: 42ch;
+    margin-bottom: 2.5rem;
+  }
+  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .btn {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.72rem; letter-spacing: 0.25em; text-transform: uppercase;
+    font-weight: 600;
+    padding: 1rem 1.6rem; border-radius: 6px;
+    transition: all 0.3s ease;
+    display: inline-flex; align-items: center; gap: 0.7rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-gold {
+    background: var(--gold); color: var(--ink);
+    box-shadow: 0 12px 32px rgba(212, 169, 74, 0.22);
+  }
+  .btn-gold:hover { background: var(--gold-hi); transform: translateY(-2px); box-shadow: 0 16px 40px rgba(212, 169, 74, 0.32); }
+  .btn-line {
+    background: transparent; color: var(--cream);
+    border: 1px solid var(--rule);
+  }
+  .btn-line:hover { border-color: var(--gold); color: var(--gold); }
+  .btn .arrow { transition: transform 0.25s; }
+  .btn:hover .arrow { transform: translateX(4px); }
+
+  /* Hero deal card — the gold-etched investor summary */
+  .deal-card {
+    background: linear-gradient(155deg, rgba(212, 169, 74, 0.05) 0%, rgba(0, 40, 104, 0.1) 100%);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 2.25rem 2rem;
+    position: relative;
+    box-shadow: var(--shadow-lg);
+  }
+  .deal-card::before {
+    content: ""; position: absolute; inset: 0;
+    border-radius: var(--radius);
+    padding: 1px;
+    background: linear-gradient(155deg, var(--gold) 0%, transparent 40%, transparent 60%, var(--gold-deep) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    pointer-events: none;
+  }
+  .deal-card-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 1.2rem;
+  }
+  .deal-card-title {
+    font-family: "Cinzel", serif;
+    font-size: 0.82rem; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--cream);
+  }
+  .deal-card-status {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.62rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--gold);
+    display: inline-flex; align-items: center; gap: 0.45rem;
+  }
+  .deal-card-status::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 0 3px rgba(212, 169, 74, 0.22);
+  }
+  .deal-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 0.85rem 0;
+    border-bottom: 1px dotted rgba(212, 169, 74, 0.15);
+  }
+  .deal-row:last-child { border-bottom: none; }
+  .deal-row-label {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .deal-row-value {
+    font-family: "Cinzel", serif;
+    font-size: 1.02rem; letter-spacing: 0.05em;
+    color: var(--cream); font-weight: 600;
+  }
+  .deal-row-value.gold { color: var(--gold); }
+
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 3rem; }
+    .hero { padding-top: 6rem; min-height: auto; }
+  }
+
+  /* ─────────────── Stat strip ─────────────── */
+  .strip {
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2.5rem 1.75rem;
+  }
+  .strip-grid {
+    max-width: var(--max); margin: 0 auto;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem;
+  }
+  .strip-item { text-align: center; border-right: 1px solid var(--border); padding: 0 1rem; }
+  .strip-item:last-child { border-right: none; }
+  .strip-num {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: clamp(1.9rem, 3.2vw, 2.6rem);
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .strip-label {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.62rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  @media (max-width: 720px) {
+    .strip-grid { grid-template-columns: repeat(2, 1fr); gap: 2rem 1rem; }
+    .strip-item:nth-child(2) { border-right: none; }
+  }
+
+  /* ─────────────── The shift (problem) ─────────────── */
+  .shift-grid {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 5rem; align-items: start;
+  }
+  .shift-lead h2 { margin-bottom: 1.3rem; }
+  .shift-points {
+    display: flex; flex-direction: column; gap: 1.8rem;
+  }
+  .shift-point {
+    display: grid; grid-template-columns: auto 1fr; gap: 1.5rem;
+    padding-bottom: 1.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .shift-point:last-child { border-bottom: none; padding-bottom: 0; }
+  .shift-point-num {
+    font-family: "Cinzel", serif;
+    font-size: 1.15rem; color: var(--gold);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    line-height: 1.4;
+  }
+  .shift-point-body h3 {
+    font-family: "Cinzel", serif;
+    font-size: 1rem; letter-spacing: 0.06em;
+    color: var(--cream);
+    margin-bottom: 0.6rem;
+  }
+  .shift-point-body p {
+    color: var(--text-muted); font-size: 0.95rem; line-height: 1.7;
+  }
+  @media (max-width: 900px) { .shift-grid { grid-template-columns: 1fr; gap: 3rem; } }
+
+  /* ─────────────── Positioning quote ─────────────── */
+  .pos {
+    padding: 8rem 1.75rem;
+    text-align: center;
+    position: relative;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 40, 104, 0.1) 50%, transparent 100%);
+  }
+  .pos-quote {
+    font-family: "Cinzel", serif; font-weight: 500;
+    font-style: italic;
+    font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+    line-height: 1.35;
+    max-width: 22ch;
+    margin: 0 auto 2rem;
+    color: var(--cream);
+  }
+  .pos-quote em { color: var(--gold); font-style: italic; }
+  .pos-attr {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.7rem; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .pos-ornament {
+    width: 1px; height: 48px;
+    background: linear-gradient(to bottom, transparent, var(--gold), transparent);
+    margin: 0 auto 2rem;
+  }
+
+  /* ─────────────── Product surfaces ─────────────── */
+  .surfaces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-top: 4rem; }
+  .surface {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--gold);
+    border-radius: 4px;
+    padding: 2.5rem 2rem;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .surface:hover { background: var(--surface-2); transform: translateY(-4px); box-shadow: var(--shadow-md); }
+  .surface-num {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.68rem; letter-spacing: 0.3em;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+  .surface-title {
+    font-family: "Cinzel", serif;
+    font-size: 1.3rem; letter-spacing: 0.04em;
+    color: var(--cream);
+    margin-bottom: 1rem;
+    line-height: 1.25;
+  }
+  .surface-desc {
+    font-size: 0.94rem; color: var(--text-muted); line-height: 1.7;
+    margin-bottom: 1.3rem;
+  }
+  .surface-tag {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.62rem; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--gold);
+    display: inline-block;
+    padding: 0.4rem 0.75rem;
+    background: var(--gold-soft);
+    border-radius: 4px;
+  }
+  @media (max-width: 900px) { .surfaces { grid-template-columns: 1fr; } }
+
+  /* ─────────────── How it works (flow) ─────────────── */
+  .flow {
+    background: linear-gradient(180deg, rgba(0, 19, 54, 0.45) 0%, transparent 100%);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .flow-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--rule); margin-top: 3.5rem; border: 1px solid var(--rule); }
+  .flow-step {
+    background: var(--ink);
+    padding: 2.2rem 1.8rem;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .flow-step-head {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .flow-step-n {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: 1.6rem;
+    color: var(--gold);
+  }
+  .flow-step-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold);
+    font-size: 0.9rem;
+  }
+  .flow-step-title {
+    font-family: "Cinzel", serif;
+    font-size: 1.05rem; letter-spacing: 0.04em;
+    color: var(--cream);
+  }
+  .flow-step-body {
+    font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;
+  }
+  @media (max-width: 900px) { .flow-grid { grid-template-columns: 1fr; } }
+
+  /* ─────────────── Retention primitives ─────────────── */
+  .loops-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  .loop {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1.6rem 1.75rem;
+    display: flex; gap: 1.4rem; align-items: flex-start;
+    transition: border-color 0.25s;
+  }
+  .loop:hover { border-color: var(--rule); }
+  .loop-tag {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--ink);
+    background: var(--gold);
+    padding: 0.35rem 0.6rem;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .loop-body h4 {
+    font-family: "Cinzel", serif; font-size: 0.98rem; letter-spacing: 0.04em;
+    color: var(--cream); margin-bottom: 0.4rem;
+  }
+  .loop-body p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; }
+  @media (max-width: 720px) { .loops-grid { grid-template-columns: 1fr; } }
+
+  /* ─────────────── Pricing ─────────────── */
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 3.5rem; }
+  .tier {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2.2rem 1.9rem;
+    display: flex; flex-direction: column; gap: 1rem;
+    position: relative;
+  }
+  .tier.featured {
+    border: 1px solid var(--gold);
+    background: linear-gradient(180deg, rgba(212, 169, 74, 0.06) 0%, var(--surface) 60%);
+    box-shadow: 0 20px 60px rgba(212, 169, 74, 0.12);
+  }
+  .tier-badge {
+    position: absolute; top: -10px; right: 1.5rem;
+    font-family: "Geist Mono", monospace;
+    font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase;
+    background: var(--gold); color: var(--ink);
+    padding: 0.4rem 0.7rem; border-radius: 3px;
+    font-weight: 700;
+  }
+  .tier-name {
+    font-family: "Cinzel", serif;
+    font-size: 1.15rem; letter-spacing: 0.06em;
+    color: var(--cream);
+  }
+  .tier-price {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: 2.2rem;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .tier-price small {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.7rem; color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 0.4rem;
+    letter-spacing: 0.08em;
+  }
+  .tier-model {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.64rem; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--gold);
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--rule);
+  }
+  .tier-list { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; padding-top: 0.5rem; }
+  .tier-list li {
+    font-size: 0.88rem; color: var(--text-muted);
+    padding-left: 1.2rem; position: relative;
+    line-height: 1.5;
+  }
+  .tier-list li::before {
+    content: "◆"; color: var(--gold);
+    font-size: 0.55rem;
+    position: absolute; left: 0; top: 0.55rem;
+  }
+  @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; } }
+
+  /* ─────────────── Market ─────────────── */
+  .market {
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 19, 54, 0.5) 100%);
+  }
+  .market-grid {
+    display: grid; grid-template-columns: 1fr 1.1fr; gap: 5rem; align-items: center;
+  }
+  .math-card {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.35);
+  }
+  .math-row {
+    display: grid; grid-template-columns: 1fr auto;
+    align-items: baseline;
+    padding: 1.3rem 1.7rem;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+  }
+  .math-row:last-child { border-bottom: none; background: rgba(212, 169, 74, 0.05); }
+  .math-label {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .math-val {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: 1.2rem;
+    color: var(--cream); letter-spacing: 0.04em;
+  }
+  .math-row:last-child .math-val { color: var(--gold); font-size: 1.5rem; }
+  .math-note {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.7rem; color: var(--text-dim);
+    margin-top: 1.25rem;
+    letter-spacing: 0.05em;
+  }
+  @media (max-width: 900px) { .market-grid { grid-template-columns: 1fr; gap: 3rem; } }
+
+  /* ─────────────── Traction ─────────────── */
+  .traction-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+    margin-top: 3.5rem;
+  }
+  .tract-item {
+    border: 1px solid var(--border);
+    padding: 1.8rem 1.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+  .tract-num {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: 2rem;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    margin-bottom: 0.6rem;
+  }
+  .tract-sub {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.66rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  @media (max-width: 900px) { .traction-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ─────────────── Moat ─────────────── */
+  .moat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-top: 3.5rem; }
+  .moat {
+    padding: 2rem 1.9rem;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    background: var(--surface);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+  .moat h4 {
+    font-family: "Cinzel", serif;
+    font-size: 1rem; letter-spacing: 0.04em;
+    color: var(--cream);
+    margin-bottom: 0.7rem;
+  }
+  .moat p { font-size: 0.92rem; color: var(--text-muted); line-height: 1.7; }
+  @media (max-width: 720px) { .moat-grid { grid-template-columns: 1fr; } }
+
+  /* ─────────────── Ask ─────────────── */
+  .ask {
+    padding: 8rem 1.75rem;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 0%, rgba(212, 169, 74, 0.1), transparent 60%),
+      var(--ink-2);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    text-align: center;
+  }
+  .ask .wrap { max-width: 880px; }
+  .ask h2 { font-size: clamp(2.2rem, 4.5vw, 3.4rem); margin-bottom: 1rem; }
+  .ask-lead { font-size: 1.1rem; color: var(--text-muted); max-width: 58ch; margin: 0 auto 3.5rem; }
+  .ask-box {
+    border: 1px solid var(--gold);
+    background: linear-gradient(180deg, rgba(212, 169, 74, 0.05) 0%, transparent 100%);
+    border-radius: var(--radius);
+    padding: 3rem 2.5rem;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(212, 169, 74, 0.1);
+  }
+  .ask-num {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: clamp(3rem, 7vw, 5rem);
+    color: var(--gold); letter-spacing: 0.02em; line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .ask-kind {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.76rem; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--cream); margin-bottom: 2.5rem;
+  }
+  .ask-terms {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1rem; padding-top: 2rem; border-top: 1px solid var(--rule);
+    margin-top: 2rem;
+  }
+  .ask-term-label {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.6rem; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 0.4rem;
+  }
+  .ask-term-val {
+    font-family: "Cinzel", serif; font-weight: 600;
+    color: var(--cream); font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+  @media (max-width: 720px) {
+    .ask-terms { grid-template-columns: 1fr; gap: 1.5rem; }
+    .ask-box { padding: 2.2rem 1.6rem; }
+  }
+
+  /* ─────────────── Contact / footer ─────────────── */
+  .contact-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+    align-items: center;
+    padding-top: 2.5rem;
+  }
+  .contact-item h4 {
+    font-family: "Geist Mono", monospace;
+    font-size: 0.66rem; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 0.7rem;
+  }
+  .contact-item a {
+    font-family: "Cinzel", serif; font-weight: 600;
+    font-size: 1.25rem;
+    color: var(--cream); letter-spacing: 0.03em;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    transition: color 0.2s;
+  }
+  .contact-item a:hover { color: var(--gold); }
+  footer {
+    padding: 3rem 1.75rem 4rem;
+    border-top: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.3);
+  }
+  .foot {
+    max-width: var(--max); margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: "Geist Mono", monospace;
+    font-size: 0.66rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--text-dim);
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .foot a:hover { color: var(--gold); }
+
+  /* Gold divider (ornamental) */
+  .divider {
+    display: flex; align-items: center; justify-content: center; gap: 1rem;
+    margin: 3rem auto 0;
+  }
+  .divider::before, .divider::after {
+    content: ""; flex: 1; max-width: 120px;
+    height: 1px; background: linear-gradient(to right, transparent, var(--gold), transparent);
+  }
+  .divider-mark {
+    font-family: "Cinzel", serif;
+    color: var(--gold); font-size: 1rem; letter-spacing: 0.3em;
+  }
+
+  /* Fade-in on scroll */
+  .fade-up { opacity: 0; transform: translateY(18px); transition: opacity 0.8s ease, transform 0.8s ease; }
+  .fade-up.in { opacity: 1; transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .fade-up { opacity: 1; transform: none; transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="Primary">
+  <div class="nav-inner">
+    <a href="#top" class="nav-brand">
+      <span class="brand-mark serif">Dilly</span>
+      <span class="brand-tag">Investor Overview</span>
+    </a>
+    <div class="nav-links">
+      <a href="#product">Product</a>
+      <a href="#market">Market</a>
+      <a href="#traction">Traction</a>
+      <a href="#ask">The Ask</a>
+    </div>
+    <a href="mailto:dilan@hellodilly.com" class="nav-cta">Request Deck</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section class="hero" id="top">
+  <div class="hero-grid">
+    <div class="fade-up">
+      <div class="hero-kicker">
+        <span>Pre-Seed</span>
+        <span>Confidential</span>
+        <span>April 2026</span>
+      </div>
+      <h1 class="hero-title">The career platform that <em>knows you</em>, not your resume.</h1>
+      <p class="hero-lead">
+        Dilly is building the profile-first career OS for the first generation of college students graduating into an AI job market. We replace the 6-second resume scan with a living profile, the score with a narrative, and the one-way application with a two-way read on fit.
+      </p>
+      <div class="hero-actions">
+        <a href="mailto:dilan@hellodilly.com" class="btn btn-gold">Request the Deck <span class="arrow">→</span></a>
+        <a href="https://hellodilly.com" target="_blank" rel="noopener" class="btn btn-line">See the Product</a>
+      </div>
+    </div>
+
+    <aside class="deal-card fade-up" aria-label="Round terms">
+      <div class="deal-card-head">
+        <span class="deal-card-title">Round Terms</span>
+        <span class="deal-card-status">Open</span>
+      </div>
+      <div class="deal-row">
+        <span class="deal-row-label">Stage</span>
+        <span class="deal-row-value">Pre-seed</span>
+      </div>
+      <div class="deal-row">
+        <span class="deal-row-label">Raising</span>
+        <span class="deal-row-value gold mono">$1.2M</span>
+      </div>
+      <div class="deal-row">
+        <span class="deal-row-label">Instrument</span>
+        <span class="deal-row-value">SAFE</span>
+      </div>
+      <div class="deal-row">
+        <span class="deal-row-label">Use of funds</span>
+        <span class="deal-row-value">GTM · team · infra</span>
+      </div>
+      <div class="deal-row">
+        <span class="deal-row-label">Launch</span>
+        <span class="deal-row-value">Apr 2026 · UT</span>
+      </div>
+      <div class="deal-row">
+        <span class="deal-row-label">18-mo target</span>
+        <span class="deal-row-value">10K users · 25 schools</span>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ STAT STRIP ═══════════════════════════ -->
+<section class="strip" aria-label="At a glance">
+  <div class="strip-grid">
+    <div class="strip-item">
+      <div class="strip-num mono">20M</div>
+      <div class="strip-label">US Undergrads</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-num mono">~9,800</div>
+      <div class="strip-label">Live Job Listings</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-num mono">22</div>
+      <div class="strip-label">Career Cohorts</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-num mono">85%+</div>
+      <div class="strip-label">Projected Gross Margin</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ THE SHIFT (problem) ═══════════════════════════ -->
+<section class="section" id="shift">
+  <div class="wrap shift-grid">
+    <div class="shift-lead fade-up">
+      <div class="eyebrow">The Shift</div>
+      <h2 class="h2">The career stack wasn't built for this generation.</h2>
+      <p class="lead">
+        Every surface a student touches — the resume, the ATS, the career center, the application — was designed for a labor market that no longer exists. AI broke the old signals. Gen-Z never trusted them in the first place.
+      </p>
+      <div class="rule-gold"></div>
+    </div>
+
+    <div class="shift-points fade-up">
+      <div class="shift-point">
+        <span class="shift-point-num">01</span>
+        <div class="shift-point-body">
+          <h3>The career center is unstaffed.</h3>
+          <p>One advisor for every 2,263 students. Appointments booked weeks out. Students graduate without meeting one.</p>
+        </div>
+      </div>
+      <div class="shift-point">
+        <span class="shift-point-num">02</span>
+        <div class="shift-point-body">
+          <h3>The resume is six seconds and a filter.</h3>
+          <p>75% of applications are rejected by an ATS before a human sees them. The survivors get a six-second skim. Nobody learns anything.</p>
+        </div>
+      </div>
+      <div class="shift-point">
+        <span class="shift-point-num">03</span>
+        <div class="shift-point-body">
+          <h3>AI made the old scoring obsolete.</h3>
+          <p>Every resume now reads like it was written by a consultant. GPT polish is table stakes. The signal has moved — from what's on the page to what the student actually knows, has built, and wants.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ POSITIONING QUOTE ═══════════════════════════ -->
+<section class="pos">
+  <div class="wrap fade-up">
+    <div class="pos-ornament"></div>
+    <p class="pos-quote">Dilly is <em>not</em> a resume editor. It is the first career platform built around a student — not a document.</p>
+    <div class="pos-attr">Core Thesis</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PRODUCT ═══════════════════════════ -->
+<section class="section" id="product">
+  <div class="wrap">
+    <div class="fade-up" style="max-width: 48rem;">
+      <div class="eyebrow">The Product</div>
+      <h2 class="h2">Three surfaces, one profile, zero scores.</h2>
+      <p class="lead">Everything Dilly does is grounded in a living profile the student builds through conversation. No Smart/Grit/Build. No ranking. No leaderboards. Just fit, narrative, and momentum.</p>
+    </div>
+
+    <div class="surfaces">
+      <article class="surface fade-up">
+        <div class="surface-num">01 — Foundation</div>
+        <h3 class="surface-title">The Dilly Profile</h3>
+        <p class="surface-desc">
+          A structured, growing record of who the student is: experiences, skills, goals, fears, strengths, gaps. Built from conversation, seeded from a resume, edited by the user. The profile is the product.
+        </p>
+        <span class="surface-tag">16 fact categories</span>
+      </article>
+
+      <article class="surface fade-up">
+        <div class="surface-num">02 — Signal</div>
+        <h3 class="surface-title">Fit Narratives</h3>
+        <p class="surface-desc">
+          For every job, Dilly writes the student a personal read: what they have that matches, what's missing, what to do about it. No percentages. No grades. Cached per user-job pair. ~$0.001 each.
+        </p>
+        <span class="surface-tag">Claude Haiku · ~$0.001/pair</span>
+      </article>
+
+      <article class="surface fade-up">
+        <div class="surface-num">03 — Command</div>
+        <h3 class="surface-title">What We Think</h3>
+        <p class="surface-desc">
+          A personal letter from Dilly that reads the full profile, connects dots across experiences, identifies patterns, and names the next moves. The thing a career advisor would write — if they had read everything you wrote.
+        </p>
+        <span class="surface-tag">Claude Sonnet</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ HOW IT WORKS ═══════════════════════════ -->
+<section class="section flow">
+  <div class="wrap">
+    <div class="fade-up" style="max-width: 48rem;">
+      <div class="eyebrow">How It Works</div>
+      <h2 class="h2">The profile grows every time the student shows up.</h2>
+      <p class="lead">Three input paths, one extraction pipeline, one evergreen profile. Dilly never asks the student to "update" anything — it learns.</p>
+    </div>
+
+    <div class="flow-grid">
+      <div class="flow-step fade-up">
+        <div class="flow-step-head">
+          <span class="flow-step-n">01</span>
+          <span class="flow-step-icon">▸</span>
+        </div>
+        <h3 class="flow-step-title">Resume seed</h3>
+        <p class="flow-step-body">Student uploads a resume at onboarding. Dilly parses, extracts, and converts it into structured profile facts. The resume is the ignition, not the engine.</p>
+      </div>
+      <div class="flow-step fade-up">
+        <div class="flow-step-head">
+          <span class="flow-step-n">02</span>
+          <span class="flow-step-icon">▸</span>
+        </div>
+        <h3 class="flow-step-title">Conversation</h3>
+        <p class="flow-step-body">Every chat runs a background extraction that pulls new facts into the profile — achievements, fears, preferences, patterns. The student never has to "save" anything.</p>
+      </div>
+      <div class="flow-step fade-up">
+        <div class="flow-step-head">
+          <span class="flow-step-n">03</span>
+          <span class="flow-step-icon">▸</span>
+        </div>
+        <h3 class="flow-step-title">Direct edit</h3>
+        <p class="flow-step-body">Users can add, edit, or remove facts from the My Dilly page. The profile is theirs. We never sell it, rank it, or show it to a third party without consent.</p>
+      </div>
+    </div>
+
+    <div style="margin-top: 4rem;" class="fade-up">
+      <h3 class="h3 gold" style="margin-bottom: 1.5rem;">↓ Then the profile powers everything.</h3>
+      <div class="loops-grid">
+        <div class="loop">
+          <span class="loop-tag">Output</span>
+          <div class="loop-body">
+            <h4>Tailored resumes, per ATS.</h4>
+            <p>Dilly generates a resume formatted for the exact ATS the target job uses (Greenhouse, Lever, Workday, Ashby, SmartRecruiters, USAJobs). No more guessing.</p>
+          </div>
+        </div>
+        <div class="loop">
+          <span class="loop-tag">Output</span>
+          <div class="loop-body">
+            <h4>Fit narratives on every job.</h4>
+            <p>Green / amber / red dots on job cards. Tap for the full read. ~9,800 real listings, .edu-gated, refreshed continuously.</p>
+          </div>
+        </div>
+        <div class="loop">
+          <span class="loop-tag">Output</span>
+          <div class="loop-body">
+            <h4>Interview practice, personal.</h4>
+            <p>Questions drawn from the student's actual experiences and target cohort. Feedback loops back into the profile.</p>
+          </div>
+        </div>
+        <div class="loop">
+          <span class="loop-tag">Output</span>
+          <div class="loop-body">
+            <h4>Dilly Card + shareable profile.</h4>
+            <p>A clean public surface recruiters can read in 30 seconds. 8 templates. Profile facts woven into a human narrative, not a CV.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ RETENTION LOOPS ═══════════════════════════ -->
+<section class="section" id="retention">
+  <div class="wrap">
+    <div class="fade-up" style="max-width: 48rem;">
+      <div class="eyebrow">Retention Architecture</div>
+      <h2 class="h2">The moat isn't the features. It's the return.</h2>
+      <p class="lead">Career tools are graveyards — students sign up once and forget. We ship retention primitives as first-class product, engineered for daily and weekly return on a surface that otherwise sees a student twice a year.</p>
+    </div>
+
+    <div class="loops-grid">
+      <div class="loop fade-up">
+        <span class="loop-tag">Daily</span>
+        <div class="loop-body">
+          <h4>Daily Pulse</h4>
+          <p>A one-tap daily check-in. Streaks, micro-actions, low cognitive cost. Builds the habit that makes everything else work.</p>
+        </div>
+      </div>
+      <div class="loop fade-up">
+        <span class="loop-tag">Weekly</span>
+        <div class="loop-body">
+          <h4>Field Pulse</h4>
+          <p>Weekly return anchor. The AI Arena reads the student's path and frames data through 18 advisor lenses — same job market, 18 different readings.</p>
+        </div>
+      </div>
+      <div class="loop fade-up">
+        <span class="loop-tag">Callback</span>
+        <div class="loop-body">
+          <h4>Dilly Remembered You</h4>
+          <p>Callback-to-past-context retention. "Last month you said X — here's what changed." The product has a memory; the student feels known.</p>
+        </div>
+      </div>
+      <div class="loop fade-up">
+        <span class="loop-tag">Celebrate</span>
+        <div class="loop-body">
+          <h4>Wins Timeline</h4>
+          <p>A running log of what the student did, not what they failed at. Applications, callbacks, offers, first days. Worth opening the app to add to.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ PRICING ═══════════════════════════ -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="fade-up" style="max-width: 48rem;">
+      <div class="eyebrow">Business Model</div>
+      <h2 class="h2">Direct-to-student SaaS. No ads, no data sale, no recruiters paying for access.</h2>
+      <p class="lead">We verify .edu, we price for students, and we never become a two-sided marketplace where the student is the inventory. That's the deal, forever.</p>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="tier fade-up">
+        <span class="tier-name">Starter</span>
+        <div class="tier-price">Free</div>
+        <span class="tier-model">.edu required · Claude Haiku</span>
+        <ul class="tier-list">
+          <li>Browse all ~9,800 jobs</li>
+          <li>20 profile facts</li>
+          <li>10 fit narratives / month</li>
+          <li>1 resume template</li>
+        </ul>
+      </div>
+
+      <div class="tier featured fade-up">
+        <span class="tier-badge">Most Students</span>
+        <span class="tier-name">Dilly</span>
+        <div class="tier-price">$9.99<small>/mo · student</small></div>
+        <span class="tier-model">$14.99 web · Claude Sonnet</span>
+        <ul class="tier-list">
+          <li>Unlimited profile facts</li>
+          <li>250 fit narratives / month</li>
+          <li>20 tailored resumes / month</li>
+          <li>2 interview practice sessions</li>
+          <li>Dilly Card (8 templates)</li>
+        </ul>
+      </div>
+
+      <div class="tier fade-up">
+        <span class="tier-name">Dilly Pro</span>
+        <div class="tier-price">$14.99<small>/mo · student</small></div>
+        <span class="tier-model">$19.99 web · Claude Opus</span>
+        <ul class="tier-list">
+          <li>Unlimited narratives</li>
+          <li>Unlimited resumes</li>
+          <li>Unlimited interview sessions</li>
+          <li>Top-tier model on every surface</li>
+          <li>Priority support</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ MARKET ═══════════════════════════ -->
+<section class="section market" id="market">
+  <div class="wrap market-grid">
+    <div class="fade-up">
+      <div class="eyebrow">The Math</div>
+      <h2 class="h2">20 million undergrads. Two pathways. One platform.</h2>
+      <p class="lead">We don't need to win a majority. We need to become the default for students who take their career seriously — and then extend to high school and early career.</p>
+      <p class="math-note">$60–$120 ARPU · 85%+ GM · direct subscription · .edu verified</p>
+    </div>
+
+    <div class="math-card fade-up">
+      <div class="math-row">
+        <span class="math-label">US undergraduates</span>
+        <span class="math-val mono">20,000,000</span>
+      </div>
+      <div class="math-row">
+        <span class="math-label">Serious job-seekers (~35%)</span>
+        <span class="math-val mono">7,000,000</span>
+      </div>
+      <div class="math-row">
+        <span class="math-label">5% reachable in Y3–Y5</span>
+        <span class="math-val mono">350,000</span>
+      </div>
+      <div class="math-row">
+        <span class="math-label">Avg ARPU</span>
+        <span class="math-val mono">~$85</span>
+      </div>
+      <div class="math-row">
+        <span class="math-label">Path to</span>
+        <span class="math-val mono">$30M ARR</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ TRACTION ═══════════════════════════ -->
+<section class="section" id="traction">
+  <div class="wrap">
+    <div class="fade-up" style="max-width: 48rem;">
+      <div class="eyebrow">Where We Are</div>
+      <h2 class="h2">The product is shipped. The pipe is live. The launch is scheduled.</h2>
+      <p class="lead">This isn't a pitch for a thing we hope to build. Dilly runs today — mobile on TestFlight, desktop in active internal dogfooding, FastAPI backend, real job ingestion across six ATS vendors.</p>
+    </div>
+
+    <div class="traction-grid">
+      <div class="tract-item fade-up">
+        <div class="tract-num mono">~9,800</div>
+        <div class="tract-sub">Real jobs live in the feed, tagged by ATS and cohort</div>
+      </div>
+      <div class="tract-item fade-up">
+        <div class="tract-num mono">6</div>
+        <div class="tract-sub">ATS vendors mapped: Greenhouse · Lever · Ashby · SmartRecruiters · USAJobs · NSF REU</div>
+      </div>
+      <div class="tract-item fade-up">
+        <div class="tract-num mono">3</div>
+        <div class="tract-sub">Surfaces shipped: iOS (TestFlight), Desktop (Next.js), Web profile</div>
+      </div>
+      <div class="tract-item fade-up">
+        <div class="tract-num mono">18</div>
+        <div class="tract-sub">Path-aware narrator lenses live in AI Arena</div>
+      </div>
+    </div>
+
+    <div class="divider"><span class="divider-mark">✦</span></div>
+
+    <div class="moat-grid">
+      <div class="moat fade-up">
+        <h4>The profile is the moat.</h4>
+        <p>Every conversation, every edit, every uploaded resume deepens a structured record that is unique to the student and non-portable to a competitor. Switching cost compounds with time-in-product.</p>
+      </div>
+      <div class="moat fade-up">
+        <h4>The ATS knowledge is the moat.</h4>
+        <p>Per-ATS formatting rules are not public API surface — they're learned from thousands of live postings. The more jobs we ingest, the sharper the resume output, the harder we are to catch.</p>
+      </div>
+      <div class="moat fade-up">
+        <h4>.edu gating is the moat.</h4>
+        <p>No bot spam, no adult users pretending to be students, no employers sneaking in to scrape. The gate is the product's integrity and the foundation of every future recruiter relationship.</p>
+      </div>
+      <div class="moat fade-up">
+        <h4>The positioning is the moat.</h4>
+        <p>Every competitor is racing to be a better resume tool. We built the one category where the resume is a side effect. Reframing against a market is the hardest moat to cross.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ THE ASK ═══════════════════════════ -->
+<section class="ask" id="ask">
+  <div class="wrap fade-up">
+    <div class="eyebrow" style="justify-content: center; display: flex;">The Round</div>
+    <h2 class="h2">What we're raising and what it unlocks.</h2>
+    <p class="ask-lead">Eighteen months of runway to turn a built product into a launched one — University of Tampa in April, then the SEC pipeline, then the first hundred schools.</p>
+
+    <div class="ask-box">
+      <div class="ask-num mono">$1.2M</div>
+      <div class="ask-kind">Pre-seed · SAFE</div>
+
+      <div class="ask-terms">
+        <div>
+          <div class="ask-term-label">Go-to-market</div>
+          <div class="ask-term-val">UT → SEC → 25 schools</div>
+        </div>
+        <div>
+          <div class="ask-term-label">18-month target</div>
+          <div class="ask-term-val">10K verified users</div>
+        </div>
+        <div>
+          <div class="ask-term-label">Next milestone</div>
+          <div class="ask-term-val">Seed at Y1 revenue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ CONTACT ═══════════════════════════ -->
+<section class="section" id="contact" style="padding-top: 5rem;">
+  <div class="wrap">
+    <div class="fade-up" style="text-align: center; max-width: 42rem; margin: 0 auto;">
+      <div class="eyebrow" style="justify-content: center; display: inline-flex;">Contact</div>
+      <h2 class="h2">Let's talk.</h2>
+      <p class="lead" style="margin: 0 auto;">Built by one founder. Looking for a small group of believers to make the next eighteen months possible.</p>
+    </div>
+
+    <div class="contact-grid fade-up">
+      <div class="contact-item" style="text-align: right;">
+        <h4>Founder</h4>
+        <a href="mailto:dilan@hellodilly.com">dilan@hellodilly.com →</a>
+      </div>
+      <div class="contact-item">
+        <h4>Product</h4>
+        <a href="https://hellodilly.com" target="_blank" rel="noopener">hellodilly.com →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    <div>© 2026 Dilly · Confidential · Not for distribution</div>
+    <div><a href="mailto:dilan@hellodilly.com">dilan@hellodilly.com</a></div>
+  </div>
+</footer>
+
+<script>
+  // Fade-in on scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.fade-up').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
