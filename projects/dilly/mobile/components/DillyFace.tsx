@@ -128,6 +128,15 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   const mW = 8 * s
 
   function pickTarget() {
+    // Writing: lock gaze DOWN-RIGHT toward the pencil tip (which the
+    // Accessory renders at cx+14s, cy+14s). This makes it look like
+    // Dilly is watching her own pencil as she writes, which is what
+    // users expect from a "thinking / typing" animation. Override
+    // takes precedence over the generic lockGaze-to-center branch.
+    if (mood === 'writing') {
+      targetRef.current = { x: TRAVEL * 0.9, y: TRAVEL * 0.9 }
+      return
+    }
     if (shape.lockGaze) {
       targetRef.current = { x: 0, y: 0 }
       return
@@ -218,11 +227,25 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     outputRange: ['-10deg', '10deg'],
   })
 
+  // Accent-colored perimeter ring behind Dilly. Rendered on the
+  // Animated.View (not inside the SVG) so the ring stays stationary
+  // even while the face drifts/tilts inside it. Reads the theme
+  // accent so it follows Customize. Stroke width scales with size
+  // so a 32pt mini Dilly gets a subtle 1.5px ring and a 120pt hero
+  // gets a proportional 3px ring.
+  const ringBorder = Math.max(1.5, Math.round(size * 0.025))
+
   return (
     <Animated.View
       style={{
         width: size,
         height: size,
+        borderRadius: size / 2,
+        borderWidth: ringBorder,
+        borderColor: theme.accent,
+        backgroundColor: theme.accentSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
         transform: [
           { translateX: posX },
           { translateY: posY },
