@@ -79,6 +79,7 @@ function daysAgo(dateStr: string | null | undefined): string {
 // ── Pipeline summary ──────────────────────────────────────────────────────────
 
 function PipelineSummary({ apps }: { apps: Application[] }) {
+  const theme = useResolvedTheme();
   const counts = useMemo(() => {
     const c: Record<AppStatus, number> = { saved: 0, applied: 0, interviewing: 0, offer: 0, rejected: 0 };
     for (const a of apps) c[a.status] = (c[a.status] || 0) + 1;
@@ -86,25 +87,25 @@ function PipelineSummary({ apps }: { apps: Application[] }) {
   }, [apps]);
 
   return (
-    <View style={ts.pipelineWrap}>
+    <View style={[ts.pipelineWrap, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
       <View style={ts.pipelineHeader}>
-        <Ionicons name="git-branch-outline" size={14} color={GOLD} />
-        <Text style={ts.pipelineTitle}>YOUR PIPELINE</Text>
-        <Text style={ts.pipelineTotal}>{apps.length} total</Text>
+        <Ionicons name="git-branch-outline" size={14} color={theme.accent} />
+        <Text style={[ts.pipelineTitle, { color: theme.accent }]}>YOUR PIPELINE</Text>
+        <Text style={[ts.pipelineTotal, { color: theme.surface.t3 }]}>{apps.length} total</Text>
       </View>
       <View style={ts.pipelineRow}>
         {STATUSES.map(s => (
           <View key={s.key} style={ts.pipelineCol}>
-            <Text style={[ts.pipelineNum, { color: counts[s.key] > 0 ? s.color : colors.t3 }]}>
+            <Text style={[ts.pipelineNum, { color: counts[s.key] > 0 ? s.color : theme.surface.t3 }]}>
               {counts[s.key]}
             </Text>
-            <Text style={ts.pipelineLabel}>{s.label}</Text>
-            <View style={[ts.pipelineDot, { backgroundColor: counts[s.key] > 0 ? s.color : colors.s3 }]} />
+            <Text style={[ts.pipelineLabel, { color: theme.surface.t3 }]}>{s.label}</Text>
+            <View style={[ts.pipelineDot, { backgroundColor: counts[s.key] > 0 ? s.color : theme.surface.border }]} />
           </View>
         ))}
       </View>
       {/* Progress bar */}
-      <View style={ts.pipelineBar}>
+      <View style={[ts.pipelineBar, { backgroundColor: theme.surface.s2 }]}>
         {STATUSES.filter(s => counts[s.key] > 0).map(s => (
           <View
             key={s.key}
@@ -331,6 +332,15 @@ function AddAppModal({ visible, onClose, onAdd }: {
   onAdd: (company: string, role: string, notes: string, deadline?: string, jobUrl?: string) => void;
 }) {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
+  const onAccent = (() => {
+    const hex = (theme.accent || '').replace('#', '');
+    if (hex.length !== 6) return '#fff';
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#0B1426' : '#FFFFFF';
+  })();
   const [company, setCompany]   = useState('');
   const [role, setRole]         = useState('');
   const [notes, setNotes]       = useState('');
@@ -349,27 +359,29 @@ function AddAppModal({ visible, onClose, onAdd }: {
     onClose();
   }
 
+  const inputStyle = [ts.modalInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }];
+
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={ts.modalOverlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
-          <View style={[ts.modalCard, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={[ts.modalCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, paddingBottom: insets.bottom + 20 }]}>
             <View style={ts.modalHeader}>
-              <Text style={ts.modalTitle}>Track Application</Text>
+              <Text style={[ts.modalTitle, { color: theme.surface.t1 }]}>Track Application</Text>
               <AnimatedPressable onPress={onClose} scaleDown={0.9} hitSlop={12}>
-                <Ionicons name="close" size={20} color={colors.t2} />
+                <Ionicons name="close" size={20} color={theme.surface.t2} />
               </AnimatedPressable>
             </View>
 
-            <TextInput style={ts.modalInput} value={company} onChangeText={setCompany} placeholder="Company name" placeholderTextColor={colors.t3} autoFocus />
-            <TextInput style={ts.modalInput} value={role} onChangeText={setRole} placeholder="Role (e.g. Data Science Intern)" placeholderTextColor={colors.t3} />
-            <TextInput style={ts.modalInput} value={deadline} onChangeText={setDeadline} placeholder="Deadline (YYYY-MM-DD, optional)" placeholderTextColor={colors.t3} keyboardType="numbers-and-punctuation" />
-            <TextInput style={ts.modalInput} value={jobUrl} onChangeText={setJobUrl} placeholder="Job URL (optional)" placeholderTextColor={colors.t3} autoCapitalize="none" keyboardType="url" />
-            <TextInput style={[ts.modalInput, { minHeight: 56 }]} value={notes} onChangeText={setNotes} placeholder="Notes (optional)" placeholderTextColor={colors.t3} multiline />
+            <TextInput style={inputStyle} value={company} onChangeText={setCompany} placeholder="Company name" placeholderTextColor={theme.surface.t3} autoFocus />
+            <TextInput style={inputStyle} value={role} onChangeText={setRole} placeholder="Role (e.g. Data Science Intern)" placeholderTextColor={theme.surface.t3} />
+            <TextInput style={inputStyle} value={deadline} onChangeText={setDeadline} placeholder="Deadline (YYYY-MM-DD, optional)" placeholderTextColor={theme.surface.t3} keyboardType="numbers-and-punctuation" />
+            <TextInput style={inputStyle} value={jobUrl} onChangeText={setJobUrl} placeholder="Job URL (optional)" placeholderTextColor={theme.surface.t3} autoCapitalize="none" keyboardType="url" />
+            <TextInput style={[...inputStyle, { minHeight: 56 }]} value={notes} onChangeText={setNotes} placeholder="Notes (optional)" placeholderTextColor={theme.surface.t3} multiline />
 
-            <AnimatedPressable style={ts.modalBtn} onPress={handleAdd} scaleDown={0.97}>
-              <Ionicons name="add-circle" size={16} color="#FFFFFF" />
-              <Text style={ts.modalBtnText}>Add to Pipeline</Text>
+            <AnimatedPressable style={[ts.modalBtn, { backgroundColor: theme.accent }]} onPress={handleAdd} scaleDown={0.97}>
+              <Ionicons name="add-circle" size={16} color={onAccent} />
+              <Text style={[ts.modalBtnText, { color: onAccent }]}>Add to Pipeline</Text>
             </AnimatedPressable>
           </View>
         </KeyboardAvoidingView>
@@ -513,7 +525,7 @@ export default function InternshipTrackerScreen() {
     return (
       <View style={[ts.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', paddingBottom: 80, backgroundColor: theme.surface.bg }]}>
         <DillyFace size={100} />
-        <Text style={{ color: colors.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your pipeline...</Text>
+        <Text style={{ color: theme.surface.t2, fontSize: 15, fontWeight: '600', marginTop: 20 }}>Loading your pipeline...</Text>
       </View>
     );
   }
@@ -523,14 +535,14 @@ export default function InternshipTrackerScreen() {
 
       {/* Nav bar */}
       <FadeInView delay={0}>
-        <View style={ts.navBar}>
+        <View style={[ts.navBar, { borderBottomColor: theme.surface.border }]}>
           <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={colors.t1} />
+            <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
-          <Text style={ts.navTitle}>Tracker</Text>
+          <Text style={[ts.navTitle, { color: theme.surface.t1 }]}>Tracker</Text>
           <AnimatedPressable onPress={() => setShowAdd(true)} scaleDown={0.9} hitSlop={12}>
-            <View style={ts.addBtn}>
-              <Ionicons name="add" size={18} color={GOLD} />
+            <View style={[ts.addBtn, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+              <Ionicons name="add" size={18} color={theme.accent} />
             </View>
           </AnimatedPressable>
         </View>
@@ -547,23 +559,39 @@ export default function InternshipTrackerScreen() {
         <FadeInView delay={120}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ts.filterRow}>
             <AnimatedPressable
-              style={[ts.statusPill, filterStatus === 'all' && { backgroundColor: GOLD + '20', borderColor: GOLD + '40' }]}
+              style={[
+                ts.statusPill,
+                { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+                filterStatus === 'all' && { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder },
+              ]}
               onPress={() => setFilterStatus('all')}
               scaleDown={0.95}
             >
-              <Text style={[ts.statusPillText, filterStatus === 'all' && { color: GOLD }]}>All ({apps.length})</Text>
+              <Text style={[
+                ts.statusPillText,
+                { color: theme.surface.t2 },
+                filterStatus === 'all' && { color: theme.accent },
+              ]}>All ({apps.length})</Text>
             </AnimatedPressable>
             {STATUSES.map(s => {
               const count = apps.filter(a => a.status === s.key).length;
               return (
                 <AnimatedPressable
                   key={s.key}
-                  style={[ts.statusPill, filterStatus === s.key && { backgroundColor: s.color + '20', borderColor: s.color + '40' }]}
+                  style={[
+                    ts.statusPill,
+                    { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
+                    filterStatus === s.key && { backgroundColor: s.color + '20', borderColor: s.color + '40' },
+                  ]}
                   onPress={() => setFilterStatus(s.key)}
                   scaleDown={0.95}
                 >
-                  <Ionicons name={s.icon as any} size={10} color={filterStatus === s.key ? s.color : colors.t3} />
-                  <Text style={[ts.statusPillText, filterStatus === s.key && { color: s.color }]}>{s.label} ({count})</Text>
+                  <Ionicons name={s.icon as any} size={10} color={filterStatus === s.key ? s.color : theme.surface.t3} />
+                  <Text style={[
+                    ts.statusPillText,
+                    { color: theme.surface.t2 },
+                    filterStatus === s.key && { color: s.color },
+                  ]}>{s.label} ({count})</Text>
                 </AnimatedPressable>
               );
             })}
@@ -573,23 +601,23 @@ export default function InternshipTrackerScreen() {
         {/* Application cards */}
         {sorted.length === 0 ? (
           <FadeInView delay={180}>
-            <View style={ts.emptyWrap}>
-              <Ionicons name="briefcase-outline" size={40} color={colors.t3 + '30'} />
-              <Text style={ts.emptyTitle}>No applications yet</Text>
-              <Text style={ts.emptyText}>
+            <View style={[ts.emptyWrap, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Ionicons name="briefcase-outline" size={40} color={theme.surface.t3 + '60'} />
+              <Text style={[ts.emptyTitle, { color: theme.surface.t1 }]}>No applications yet</Text>
+              <Text style={[ts.emptyText, { color: theme.surface.t2 }]}>
                 Find a job on the Internships page and tap "Apply + Track"  -  or add one manually below.
               </Text>
-              <AnimatedPressable style={ts.emptyBtn} onPress={() => setShowAdd(true)} scaleDown={0.97}>
+              <AnimatedPressable style={[ts.emptyBtn, { backgroundColor: theme.accent }]} onPress={() => setShowAdd(true)} scaleDown={0.97}>
                 <Ionicons name="add-circle" size={16} color="#FFFFFF" />
                 <Text style={ts.emptyBtnText}>Add manually</Text>
               </AnimatedPressable>
               <AnimatedPressable
-                style={[ts.emptyBtn, { backgroundColor: colors.s2, borderWidth: 1, borderColor: GOLD + '40', marginTop: 8 }]}
+                style={[ts.emptyBtn, { backgroundColor: theme.accentSoft, borderWidth: 1, borderColor: theme.accentBorder, marginTop: 8 }]}
                 onPress={() => router.push('/(app)/jobs')}
                 scaleDown={0.97}
               >
-                <Ionicons name="search" size={14} color={GOLD} />
-                <Text style={[ts.emptyBtnText, { color: GOLD }]}>Browse jobs</Text>
+                <Ionicons name="search" size={14} color={theme.accent} />
+                <Text style={[ts.emptyBtnText, { color: theme.accent }]}>Browse jobs</Text>
               </AnimatedPressable>
             </View>
           </FadeInView>
