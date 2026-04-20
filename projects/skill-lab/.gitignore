@@ -1,0 +1,6 @@
+.vercel
+
+# Build artifacts
+.next
+node_modules
+next-env.d.ts

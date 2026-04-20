@@ -2,11 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE, sendVerificationCode, verifyCode } from "@/lib/api";
-
-// Dilly auth = email + 6-digit code. Same flow whether you're new or returning;
-// the backend creates the profile on first verification. We keep /sign-in and
-// /sign-up as two routes (for friendlier marketing links) but they render the
-// same two-step form with different copy.
+import { getLang } from "@/lib/lang-server";
+import { t } from "@/lib/i18n";
 
 async function handleSendCode(formData: FormData) {
   "use server";
@@ -54,6 +51,7 @@ export default async function SignInPage({
   searchParams: Promise<{ next?: string; error?: string; step?: string; email?: string; t?: string }>;
 }) {
   const sp = await searchParams;
+  const lang = await getLang();
   const next = sp.next ?? "/";
   const step = sp.step === "code" ? "code" : "email";
   const emailPrefill = sp.email ?? "";
@@ -62,44 +60,38 @@ export default async function SignInPage({
   return (
     <div className="mx-auto max-w-md pt-10">
       <h1 className="text-2xl font-semibold">
-        {step === "email" ? "Sign in or create an account" : "Check your email"}
+        {step === "email" ? t(lang, "auth.signin.title") : t(lang, "auth.code.title")}
       </h1>
       <p className="mt-2 text-sm text-[color:var(--color-muted)]">
         {step === "email"
-          ? "One login works across Skill Lab and the full Dilly app. No password — we email you a code."
-          : `We sent a 6-digit code to ${emailPrefill}. It expires in a few minutes.`}
+          ? t(lang, "auth.signin.subtitle")
+          : t(lang, "auth.code.subtitle", { email: emailPrefill })}
       </p>
 
-      {sp.error === "send" && (
-        <ErrorNote>We couldn&apos;t send the email. Try again in a minute.</ErrorNote>
-      )}
-      {sp.error === "invalid" && (
-        <ErrorNote>That code didn&apos;t work. Double-check or request a new one.</ErrorNote>
-      )}
-      {sp.error === "missing" && (
-        <ErrorNote>Fill in all the fields.</ErrorNote>
-      )}
+      {sp.error === "send" && <ErrorNote>{t(lang, "auth.err.send")}</ErrorNote>}
+      {sp.error === "invalid" && <ErrorNote>{t(lang, "auth.err.invalid")}</ErrorNote>}
+      {sp.error === "missing" && <ErrorNote>{t(lang, "auth.err.missing")}</ErrorNote>}
 
       {step === "email" ? (
         <form action={handleSendCode} className="mt-6 space-y-4">
           <input type="hidden" name="next" value={next} />
-          <Field name="email" type="email" label="Email" autoComplete="email" required defaultValue={emailPrefill} />
+          <Field name="email" type="email" label={t(lang, "auth.field.email")} autoComplete="email" required defaultValue={emailPrefill} />
           <fieldset className="rounded-lg border border-[color:var(--color-border)] p-3">
             <legend className="px-1 text-xs uppercase tracking-wide text-[color:var(--color-muted)]">
-              I&apos;m a…
+              {t(lang, "auth.user_type.heading")}
             </legend>
             <div className="flex gap-4 text-sm">
               <label className="flex items-center gap-2">
                 <input type="radio" name="user_type" value="student" defaultChecked={isStudent} />
-                College student (.edu email)
+                {t(lang, "auth.user_type.student")}
               </label>
               <label className="flex items-center gap-2">
                 <input type="radio" name="user_type" value="general" defaultChecked={!isStudent} />
-                Anyone else
+                {t(lang, "auth.user_type.general")}
               </label>
             </div>
           </fieldset>
-          <button type="submit" className="btn btn-primary w-full">Email me a code</button>
+          <button type="submit" className="btn btn-primary w-full">{t(lang, "auth.btn.send_code")}</button>
         </form>
       ) : (
         <form action={handleVerifyCode} className="mt-6 space-y-4">
@@ -108,20 +100,17 @@ export default async function SignInPage({
           <Field
             name="code"
             type="text"
-            label="6-digit code"
+            label={t(lang, "auth.field.code")}
             autoComplete="one-time-code"
             inputMode="numeric"
             pattern="[0-9]*"
             required
           />
-          <button type="submit" className="btn btn-primary w-full">Continue</button>
+          <button type="submit" className="btn btn-primary w-full">{t(lang, "auth.btn.continue")}</button>
           <div className="text-center text-xs text-[color:var(--color-muted)]">
-            Didn&apos;t get it?{" "}
-            <Link
-              href={`/sign-in?next=${encodeURIComponent(next)}`}
-              className="underline hover:text-white"
-            >
-              Start over
+            {t(lang, "auth.didnt_get")}{" "}
+            <Link href={`/sign-in?next=${encodeURIComponent(next)}`} className="underline hover:text-white">
+              {t(lang, "auth.start_over")}
             </Link>
             .
           </div>

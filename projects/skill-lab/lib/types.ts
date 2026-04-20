@@ -13,6 +13,7 @@ export type Video = {
   quality_score: number;     // 0–100
   thumbnail_url: string;
   description: string | null;
+  language: string;          // ISO 639-1, e.g. 'en'
 };
 
 export type SavedVideo = Video & {

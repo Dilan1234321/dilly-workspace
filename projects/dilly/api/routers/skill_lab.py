@@ -47,10 +47,27 @@ _SLUG_TO_COHORT: dict[str, str] = {
 }
 
 
+SELECT_COLS = (
+    "id, title, description, channel_id, channel_title, cohort, "
+    "duration_sec, view_count, published_at, thumbnail_url, quality_score, language"
+)
+
+SUPPORTED_LANGS: set[str] = {"en", "es", "pt", "hi", "fr", "zh"}
+
+
+def _clean_lang(lang: str | None) -> str | None:
+    """Accept any supported language; return None if unsupported so we don't filter."""
+    if not lang:
+        return None
+    code = lang.strip().lower().split("-")[0]
+    return code if code in SUPPORTED_LANGS else None
+
+
 def _serialize(row: tuple) -> dict:
     (
         vid, title, description, channel_id, channel_title, cohort,
         duration_sec, view_count, published_at, thumbnail_url, quality_score,
+        language,
     ) = row
     return {
         "id": vid,
@@ -64,6 +81,7 @@ def _serialize(row: tuple) -> dict:
         "published_at": published_at.isoformat() if published_at else None,
         "thumbnail_url": thumbnail_url or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
         "quality_score": float(quality_score or 0),
+        "language": language or "en",
     }
 
 
@@ -82,6 +100,7 @@ def list_videos(
     sort: Literal["best", "newest"] = Query("best"),
     limit: int = Query(48, ge=1, le=100),
     max_duration_min: int | None = Query(None, ge=1, le=600),
+    lang: str | None = Query(None, description="ISO language code (e.g. en, es)"),
 ):
     cohort_name = _SLUG_TO_COHORT.get(cohort)
     if not cohort_name:
@@ -93,14 +112,17 @@ def list_videos(
     if max_duration_min is not None:
         clauses.append("duration_sec <= %s")
         params.append(max_duration_min * 60)
+    lang_code = _clean_lang(lang)
+    if lang_code:
+        clauses.append("language = %s")
+        params.append(lang_code)
     where = " AND ".join(clauses)
 
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 f"""
-                SELECT id, title, description, channel_id, channel_title, cohort,
-                       duration_sec, view_count, published_at, thumbnail_url, quality_score
+                SELECT {SELECT_COLS}
                   FROM skill_lab_videos
                  WHERE {where}
                  ORDER BY {order}
@@ -109,6 +131,30 @@ def list_videos(
                 (*params, limit),
             )
             rows = cur.fetchall()
+
+    # If a language was requested but nothing matched, fall back to English so
+    # the page renders useful content instead of a wall of empty states while
+    # we grow the library for that language.
+    if lang_code and not rows and lang_code != "en":
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                fallback_params = [cohort_name]
+                fallback_clauses = ["cohort = %s", "language = %s"]
+                fallback_params.append("en")
+                if max_duration_min is not None:
+                    fallback_clauses.append("duration_sec <= %s")
+                    fallback_params.append(max_duration_min * 60)
+                cur.execute(
+                    f"""
+                    SELECT {SELECT_COLS}
+                      FROM skill_lab_videos
+                     WHERE {" AND ".join(fallback_clauses)}
+                     ORDER BY {order}
+                     LIMIT %s
+                    """,
+                    (*fallback_params, limit),
+                )
+                rows = cur.fetchall()
 
     return {"videos": [_serialize(r) for r in rows]}
 
@@ -120,12 +166,7 @@ def get_video(video_id: str):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT id, title, description, channel_id, channel_title, cohort,
-                       duration_sec, view_count, published_at, thumbnail_url, quality_score
-                  FROM skill_lab_videos
-                 WHERE id = %s
-                """,
+                f"SELECT {SELECT_COLS} FROM skill_lab_videos WHERE id = %s",
                 (video_id,),
             )
             row = cur.fetchone()
@@ -135,22 +176,45 @@ def get_video(video_id: str):
 
 
 @router.get("/trending")
-def trending(limit: int = Query(12, ge=1, le=48)):
+def trending(
+    limit: int = Query(12, ge=1, le=48),
+    lang: str | None = Query(None, description="ISO language code"),
+):
     """Top videos across all cohorts, weighted toward recency + signal."""
+    lang_code = _clean_lang(lang)
+    params: list = []
+    clauses = ["published_at > NOW() - INTERVAL '180 days'"]
+    if lang_code:
+        clauses.append("language = %s")
+        params.append(lang_code)
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT id, title, description, channel_id, channel_title, cohort,
-                       duration_sec, view_count, published_at, thumbnail_url, quality_score
+                f"""
+                SELECT {SELECT_COLS}
                   FROM skill_lab_videos
-                 WHERE published_at > NOW() - INTERVAL '180 days'
+                 WHERE {" AND ".join(clauses)}
                  ORDER BY quality_score DESC, view_count DESC
                  LIMIT %s
                 """,
-                (limit,),
+                (*params, limit),
             )
             rows = cur.fetchall()
+    # Fallback to English if the selected language has no trending content yet.
+    if lang_code and not rows and lang_code != "en":
+        with get_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    SELECT {SELECT_COLS}
+                      FROM skill_lab_videos
+                     WHERE published_at > NOW() - INTERVAL '180 days' AND language = 'en'
+                     ORDER BY quality_score DESC, view_count DESC
+                     LIMIT %s
+                    """,
+                    (limit,),
+                )
+                rows = cur.fetchall()
     return {"videos": [_serialize(r) for r in rows]}
 
 
@@ -162,9 +226,8 @@ def list_library(user: dict = Depends(require_auth)):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                SELECT v.id, v.title, v.description, v.channel_id, v.channel_title, v.cohort,
-                       v.duration_sec, v.view_count, v.published_at, v.thumbnail_url, v.quality_score,
+                f"""
+                SELECT {", ".join("v." + c for c in SELECT_COLS.split(", "))},
                        s.saved_at, s.progress_sec
                   FROM skill_lab_saved_videos s
                   JOIN skill_lab_videos v ON v.id = s.video_id
@@ -176,11 +239,11 @@ def list_library(user: dict = Depends(require_auth)):
             rows = cur.fetchall()
     videos = []
     for r in rows:
-        base = _serialize(r[:11])
+        base = _serialize(r[:12])
         videos.append({
             **base,
-            "saved_at": r[11].isoformat() if r[11] else None,
-            "progress_sec": int(r[12] or 0),
+            "saved_at": r[12].isoformat() if r[12] else None,
+            "progress_sec": int(r[13] or 0),
         })
     return {"videos": videos}
 
