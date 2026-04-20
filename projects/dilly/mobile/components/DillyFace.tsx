@@ -227,110 +227,90 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
     outputRange: ['-10deg', '10deg'],
   })
 
-  // Accent-colored perimeter ring behind Dilly. The ring + fill must
-  // stay STATIC — only the face (eyes/smile/tilt) inside should move.
-  // So the ring goes on an outer View with no transforms, and the
-  // face SVG sits inside an Animated.View that carries the drift
-  // and tilt. Reading from theme so the ring follows Customize.
+  // Accent-colored perimeter ring behind Dilly. The ring + fill stay
+  // STATIC. Only the face (eyes/smile/tilt) animates inside.
   // Stroke width scales with size: 1.5px min, ~3px on hero.
   const ringBorder = Math.max(1.5, Math.round(size * 0.025))
 
-  // When Dilly is "writing" with a pencil, we render the pencil OUTSIDE
-  // the perimeter ring — bigger, static, poking in from the bottom-right.
-  // The face's gaze-lock-to-corner makes it read like Dilly is watching
-  // her own pencil. Other accessories (magnifier, paintbrush) continue
-  // to render inside the SVG near her mouth.
-  const externalPencil = mood === 'writing' && accessory === 'pencil'
-  const pencilSize = Math.round(size * 0.65)
-  const pencilColor = accessoryColor || faceInk
-  // Outer wrapper is bigger than the ring so the pencil has room to
-  // extend past the ring edge without being clipped. Extra padding
-  // goes bottom-right only, where the pencil sits.
-  const outerW = size + (externalPencil ? pencilSize * 0.55 : 0)
-  const outerH = size + (externalPencil ? pencilSize * 0.55 : 0)
+  // When Dilly is "writing" with a pencil, the pencil itself stays
+  // pinned in one spot — same original SVG design, same scribble
+  // animation, just rendered in a STATIC layer overlayed on top of
+  // the animated face layer. That way Dilly's gaze drifts to the
+  // corner and finds the pencil already there, instead of the
+  // pencil moving with her face.
+  const pinnedPencil = mood === 'writing' && accessory === 'pencil'
 
   return (
-    <View style={{ width: outerW, height: outerH }}>
-      <View
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: ringBorder,
+        borderColor: theme.accent,
+        backgroundColor: theme.accentSoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      <Animated.View
         style={{
           width: size,
           height: size,
-          borderRadius: size / 2,
-          borderWidth: ringBorder,
-          borderColor: theme.accent,
-          backgroundColor: theme.accentSoft,
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
+          transform: [
+            { translateX: posX },
+            { translateY: posY },
+            { rotate: tiltRotate },
+          ],
         }}
       >
-        <Animated.View
-          style={{
-            width: size,
-            height: size,
-            transform: [
-              { translateX: posX },
-              { translateY: posY },
-              { rotate: tiltRotate },
-            ],
-          }}
-        >
-          <Svg width={size} height={size}>
-            <EyesAndSmile
+        <Svg width={size} height={size}>
+          <EyesAndSmile
+            cx={cx}
+            cy={cy}
+            s={s}
+            eyeScaleAnim={eyeScaleAnim}
+            eyeLiftAnim={eyeLiftAnim}
+            browLiftAnim={browLiftAnim}
+            smilePath={smilePath}
+            archEyes={shape.archEyes}
+            ink={faceInk}
+          />
+          {/* Non-pencil accessories (magnifier, paintbrush) still
+              render inside the animated layer so they track with
+              the face as before. The pencil pulls out to its own
+              static layer below. */}
+          {accessory !== 'none' && !pinnedPencil && (
+            <Accessory
+              kind={accessory}
               cx={cx}
               cy={cy}
               s={s}
-              eyeScaleAnim={eyeScaleAnim}
-              eyeLiftAnim={eyeLiftAnim}
-              browLiftAnim={browLiftAnim}
-              smilePath={smilePath}
-              archEyes={shape.archEyes}
-              ink={faceInk}
+              color={accessoryColor || faceInk}
+              scribbleAnim={mood === 'writing' ? scribbleAnim : null}
             />
-            {accessory !== 'none' && !externalPencil && (
-              <Accessory
-                kind={accessory}
-                cx={cx}
-                cy={cy}
-                s={s}
-                color={accessoryColor || faceInk}
-                scribbleAnim={mood === 'writing' ? scribbleAnim : null}
-              />
-            )}
-          </Svg>
-        </Animated.View>
-      </View>
+          )}
+        </Svg>
+      </Animated.View>
 
-      {/* External pencil. Rendered OUTSIDE the ring so it sits
-          against the bottom-right of the perimeter and reads like
-          something Dilly is holding just outside her face. Static:
-          no scribble animation, no movement. Only Dilly's gaze
-          drifts toward it. */}
-      {externalPencil && (
+      {/* Pinned pencil layer. Same original PencilAccessory (with its
+          scribble wiggle) but mounted OUTSIDE the Animated.View so
+          its position is locked to the ring, not the face. */}
+      {pinnedPencil && (
         <View
           pointerEvents="none"
-          style={{
-            position: 'absolute',
-            right: 0,
-            bottom: 0,
-            width: pencilSize,
-            height: pencilSize,
-          }}
+          style={{ position: 'absolute', width: size, height: size }}
         >
-          <Svg width={pencilSize} height={pencilSize} viewBox="0 0 100 100">
-            {/* Pencil body — angled down-right toward the ring edge.
-                Tip at the top-left (touching the ring), eraser at
-                the bottom-right (far corner). */}
-            <Line x1={18} y1={18} x2={78} y2={78} stroke={pencilColor} strokeWidth={11} strokeLinecap="round" />
-            {/* Wood collar at the tip end: darker band across the
-                pencil near the tip to give it dimension. */}
-            <Line x1={26} y1={26} x2={34} y2={34} stroke={pencilColor} strokeWidth={14} strokeLinecap="butt" opacity={0.35} />
-            {/* Tip point — small filled circle where the pencil writes. */}
-            <Circle cx={14} cy={14} r={5} fill={pencilColor} />
-            {/* Metal ferrule band where the eraser meets the body. */}
-            <Line x1={68} y1={68} x2={78} y2={78} stroke="#C9A84C" strokeWidth={12} strokeLinecap="butt" />
-            {/* Eraser */}
-            <Circle cx={84} cy={84} r={8} fill="#FF9F0A" />
+          <Svg width={size} height={size}>
+            <Accessory
+              kind="pencil"
+              cx={cx}
+              cy={cy}
+              s={s}
+              color={accessoryColor || faceInk}
+              scribbleAnim={scribbleAnim}
+            />
           </Svg>
         </View>
       )}

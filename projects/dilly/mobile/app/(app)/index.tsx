@@ -1450,17 +1450,51 @@ function SeekerHome() {
                   textAlign: 'center',
                 }}
               >
-                {showJourney ? (
-                  <>
-                    Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName || 'there'}</Text>, let me get to know you so I can help you land your next opportunity.
-                  </>
-                ) : dillyTake ? (
-                  <>
-                    Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName || 'there'}</Text>, {dillyTake.charAt(0).toLowerCase()}{dillyTake.slice(1)}
-                  </>
-                ) : (
-                  situationCopy.greetingResolved
-                )}
+                {(() => {
+                  // Copy logic lives inline because the combinations
+                  // are narrow: (have a firstName? have a dillyTake?).
+                  // Product rule: NEVER fall back to "Hey there," — it
+                  // reads cold. If we don't know the name, we just
+                  // skip the greeting and lead with the thought.
+                  //
+                  // "Take a look" was the old generic filler that the
+                  // LLM sometimes returned for dilly_take. We filter
+                  // those weak takes and replace them with a warmer
+                  // first-Chapter-style opener so the quote under
+                  // DillyFace never reads like "there, take a look".
+                  const rawTake = (dillyTake || '').trim()
+                  const weakTake = !rawTake
+                    || rawTake.length < 18
+                    || /^take a look/i.test(rawTake)
+                    || /^check (it|this) out/i.test(rawTake)
+
+                  if (showJourney) {
+                    return firstName ? (
+                      <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>. Let me get to know you so I can help you land your next opportunity.</>
+                    ) : (
+                      <>Let me get to know you so I can help you land your next opportunity.</>
+                    )
+                  }
+
+                  if (weakTake) {
+                    // No real audit take yet. Lead with a warm,
+                    // specific statement that doesn't pretend we know
+                    // more than we do. Reads as a mentor noticing you
+                    // rather than a placeholder.
+                    return firstName ? (
+                      <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>. I've been reading through your profile. Let's pick up where you left off.</>
+                    ) : (
+                      <>I've been reading through your profile. Let's pick up where you left off.</>
+                    )
+                  }
+
+                  const takeBody = `${rawTake.charAt(0).toLowerCase()}${rawTake.slice(1)}`
+                  return firstName ? (
+                    <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>, {takeBody}</>
+                  ) : (
+                    <>{rawTake}</>
+                  )
+                })()}
               </Text>
               {/* Tiny byline underneath. Names who said it — it's a
                   quote from Dilly, so the attribution earns the
