@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { colors } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
 import { useSubscription } from '../hooks/useSubscription';
 
@@ -34,6 +35,7 @@ type Plan = 'monthly' | 'annual';
 
 export default function PaywallModal() {
   const insets = useSafeAreaInsets();
+  const theme = useResolvedTheme();
   const { paywallVisible, paywallFeature, dismissPaywall } = useSubscription();
   const [plan, setPlan] = useState<Plan>('annual');
 
@@ -60,11 +62,11 @@ export default function PaywallModal() {
       onRequestClose={dismissPaywall}
     >
       <View style={s.overlay}>
-        <View style={[s.sheet, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={[s.sheet, { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 8 }]}>
 
           {/* Close button */}
-          <AnimatedPressable style={s.closeBtn} onPress={dismissPaywall} scaleDown={0.88} hitSlop={12}>
-            <Ionicons name="close" size={18} color={colors.t2} />
+          <AnimatedPressable style={[s.closeBtn, { backgroundColor: theme.surface.s2 }]} onPress={dismissPaywall} scaleDown={0.88} hitSlop={12}>
+            <Ionicons name="close" size={18} color={theme.surface.t2} />
           </AnimatedPressable>
 
           <ScrollView
@@ -78,7 +80,7 @@ export default function PaywallModal() {
               <View style={s.badge}><Text style={s.badgeText}>PRO</Text></View>
             </View>
 
-            <Text style={s.headline}>Land the internship{'\n'}you actually want.</Text>
+            <Text style={[s.headline, { color: theme.surface.t1 }]}>Land the internship{'\n'}you actually want.</Text>
 
             {prompt && (
               <View style={s.promptRow}>
@@ -88,47 +90,47 @@ export default function PaywallModal() {
             )}
 
             {/* Plan toggle */}
-            <View style={s.toggle}>
+            <View style={[s.toggle, { backgroundColor: theme.surface.s2 }]}>
               <AnimatedPressable
-                style={[s.toggleTab, plan === 'monthly' && s.toggleTabActive]}
+                style={[s.toggleTab, plan === 'monthly' && { ...s.toggleTabActive, backgroundColor: theme.surface.bg }]}
                 onPress={() => setPlan('monthly')}
                 scaleDown={0.96}
               >
-                <Text style={[s.toggleTabText, plan === 'monthly' && s.toggleTabTextActive]}>Monthly</Text>
+                <Text style={[s.toggleTabText, { color: theme.surface.t3 }, plan === 'monthly' && { color: theme.surface.t1 }]}>Monthly</Text>
               </AnimatedPressable>
               <AnimatedPressable
-                style={[s.toggleTab, plan === 'annual' && s.toggleTabActive]}
+                style={[s.toggleTab, plan === 'annual' && { ...s.toggleTabActive, backgroundColor: theme.surface.bg }]}
                 onPress={() => setPlan('annual')}
                 scaleDown={0.96}
               >
-                <Text style={[s.toggleTabText, plan === 'annual' && s.toggleTabTextActive]}>Annual</Text>
+                <Text style={[s.toggleTabText, { color: theme.surface.t3 }, plan === 'annual' && { color: theme.surface.t1 }]}>Annual</Text>
                 <View style={s.saveBadge}><Text style={s.saveBadgeText}>Save 34%</Text></View>
               </AnimatedPressable>
             </View>
 
             {/* Price display */}
             <View style={s.priceRow}>
-              <Text style={s.priceAmount}>
+              <Text style={[s.priceAmount, { color: theme.surface.t1 }]}>
                 {plan === 'monthly' ? '$9.99' : '$6.58'}
               </Text>
               <View style={s.priceRight}>
-                <Text style={s.pricePerMonth}>/month</Text>
+                <Text style={[s.pricePerMonth, { color: theme.surface.t3 }]}>/month</Text>
                 {plan === 'annual' && (
-                  <Text style={s.priceBilled}>Billed $79/year</Text>
+                  <Text style={[s.priceBilled, { color: theme.surface.t3 }]}>Billed $79/year</Text>
                 )}
               </View>
             </View>
 
             {/* Features card */}
-            <View style={s.featuresCard}>
+            <View style={[s.featuresCard, { borderColor: theme.surface.border }]}>
               {FEATURES.map((f, i) => (
-                <View key={i} style={[s.featureRow, i < FEATURES.length - 1 && s.featureRowBorder]}>
+                <View key={i} style={[s.featureRow, { backgroundColor: theme.surface.s1 }, i < FEATURES.length - 1 && { ...s.featureRowBorder, borderBottomColor: theme.surface.border }]}>
                   <View style={s.featureIcon}>
                     <Ionicons name={f.icon as any} size={15} color={BLUE} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.featureLabel}>{f.label}</Text>
-                    <Text style={s.featureSub}>{f.sub}</Text>
+                    <Text style={[s.featureLabel, { color: theme.surface.t1 }]}>{f.label}</Text>
+                    <Text style={[s.featureSub, { color: theme.surface.t3 }]}>{f.sub}</Text>
                   </View>
                   <Ionicons name="checkmark-circle" size={16} color={GREEN} />
                 </View>
@@ -142,10 +144,10 @@ export default function PaywallModal() {
 
             {/* Dismiss */}
             <AnimatedPressable onPress={dismissPaywall} scaleDown={0.95} style={s.notNow}>
-              <Text style={s.notNowText}>Not now</Text>
+              <Text style={[s.notNowText, { color: theme.surface.t3 }]}>Not now</Text>
             </AnimatedPressable>
 
-            <Text style={s.legal}>
+            <Text style={[s.legal, { color: theme.surface.t3 }]}>
               Tap "Get Dilly Pro" to view pricing and subscribe on our website.
               {'\n'}Cancel anytime. No hidden fees.
             </Text>

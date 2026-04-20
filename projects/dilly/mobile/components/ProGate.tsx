@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../lib/tokens';
+import { useResolvedTheme } from '../hooks/useTheme';
 import AnimatedPressable from './AnimatedPressable';
 import { useSubscription } from '../hooks/useSubscription';
 
@@ -15,7 +16,7 @@ interface Props {
 /**
  * Wraps a premium feature. On free tier, shows a lock overlay instead of children.
  * Tapping the lock triggers the paywall modal.
- * 
+ *
  * Usage:
  *   <ProGate feature="resume_editor">
  *     <ResumeEditor />
@@ -23,6 +24,7 @@ interface Props {
  */
 export default function ProGate({ feature, children, fallback }: Props) {
   const { isPaid, showPaywall } = useSubscription();
+  const theme = useResolvedTheme();
 
   if (isPaid) return <>{children}</>;
 
@@ -31,12 +33,12 @@ export default function ProGate({ feature, children, fallback }: Props) {
   return (
     <View style={s.container}>
       <View style={s.lockCard}>
-        <View style={s.lockIcon}>
-          <Ionicons name="lock-closed" size={24} color={GOLD} />
+        <View style={[s.lockIcon, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <Ionicons name="lock-closed" size={24} color={theme.accent} />
         </View>
-        <Text style={s.lockTitle}>Dilly Pro Feature</Text>
-        <Text style={s.lockSub}>Upgrade to access this and all Pro features.</Text>
-        <AnimatedPressable style={s.unlockBtn} onPress={() => showPaywall(feature)} scaleDown={0.97}>
+        <Text style={[s.lockTitle, { color: theme.surface.t1 }]}>Dilly Pro Feature</Text>
+        <Text style={[s.lockSub, { color: theme.surface.t3 }]}>Upgrade to access this and all Pro features.</Text>
+        <AnimatedPressable style={[s.unlockBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }]} onPress={() => showPaywall(feature)} scaleDown={0.97}>
           <Ionicons name="flash" size={14} color="#FFFFFF" />
           <Text style={s.unlockBtnText}>Unlock with Pro</Text>
         </AnimatedPressable>
@@ -48,19 +50,24 @@ export default function ProGate({ feature, children, fallback }: Props) {
 /**
  * Inline lock badge  -  use on buttons/cards that are partially visible but not actionable.
  * Shows a small lock icon and triggers paywall on tap.
- * 
+ *
  * Usage:
  *   <ProBadge feature="ats" />   -  renders a small "PRO" badge
  */
 export function ProBadge({ feature }: { feature: string }) {
   const { isPaid, showPaywall } = useSubscription();
+  const theme = useResolvedTheme();
 
   if (isPaid) return null;
 
   return (
-    <AnimatedPressable style={s.badge} onPress={() => showPaywall(feature)} scaleDown={0.95}>
-      <Ionicons name="lock-closed" size={8} color={GOLD} />
-      <Text style={s.badgeText}>PRO</Text>
+    <AnimatedPressable
+      style={[s.badge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+      onPress={() => showPaywall(feature)}
+      scaleDown={0.95}
+    >
+      <Ionicons name="lock-closed" size={8} color={theme.accent} />
+      <Text style={[s.badgeText, { color: theme.accent }]}>PRO</Text>
     </AnimatedPressable>
   );
 }
