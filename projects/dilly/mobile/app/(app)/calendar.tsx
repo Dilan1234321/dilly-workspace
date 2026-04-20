@@ -176,6 +176,7 @@ function InterviewCountdownHero({
   onViewPrepDeck: () => void;
   loadingPrepDeck: boolean;
 }) {
+  const theme = useResolvedTheme();
   const days = daysUntil(interview.date);
   const prepBlocks = events.filter(
     e => e.type === 'prep' && e.company === interview.company && !e.completedAt
@@ -187,7 +188,7 @@ function InterviewCountdownHero({
   const prepPct = prepTotal > 0 ? Math.round((prepDone / prepTotal) * 100) : 0;
 
   return (
-    <View style={cs.countdownCard}>
+    <View style={[cs.countdownCard, { backgroundColor: theme.surface.s1, borderColor: CORAL + '40' }]}>
       <View style={cs.countdownHeader}>
         <Ionicons name="people" size={14} color={CORAL} />
         <Text style={cs.countdownLabel}>INTERVIEW COUNTDOWN</Text>
@@ -197,25 +198,25 @@ function InterviewCountdownHero({
           <Text style={cs.countdownDays}>
             {days === 0 ? 'TODAY' : days === 1 ? '1' : String(days)}
           </Text>
-          {days > 0 && <Text style={cs.countdownDaysLabel}>day{days !== 1 ? 's' : ''}</Text>}
+          {days > 0 && <Text style={[cs.countdownDaysLabel, { color: theme.surface.t3 }]}>day{days !== 1 ? 's' : ''}</Text>}
         </View>
         <View style={cs.countdownRight}>
-          <Text style={cs.countdownCompany} numberOfLines={1}>
+          <Text style={[cs.countdownCompany, { color: theme.surface.t1 }]} numberOfLines={1}>
             {interview.company || interview.title}
           </Text>
           {interview.role ? (
-            <Text style={cs.countdownRole} numberOfLines={1}>{interview.role}</Text>
+            <Text style={[cs.countdownRole, { color: theme.surface.t2 }]} numberOfLines={1}>{interview.role}</Text>
           ) : null}
-          <Text style={cs.countdownDate}>{formatDateFull(interview.date)}</Text>
+          <Text style={[cs.countdownDate, { color: theme.surface.t3 }]}>{formatDateFull(interview.date)}</Text>
         </View>
       </View>
       {/* Prep progress */}
       {prepTotal > 0 && (
         <View style={cs.countdownPrepRow}>
-          <View style={cs.countdownPrepTrack}>
+          <View style={[cs.countdownPrepTrack, { backgroundColor: theme.surface.s2 }]}>
             <View style={[cs.countdownPrepFill, { width: `${prepPct}%` }]} />
           </View>
-          <Text style={cs.countdownPrepText}>
+          <Text style={[cs.countdownPrepText, { color: theme.surface.t3 }]}>
             {prepDone}/{prepTotal} prep blocks done
           </Text>
         </View>
@@ -233,7 +234,7 @@ function InterviewCountdownHero({
           </Text>
         </AnimatedPressable>
         <TouchableOpacity
-          style={cs.countdownCalBtn}
+          style={[cs.countdownCalBtn, { borderColor: CORAL + '40' }]}
           onPress={() => {
             router.push({
               pathname: '/(app)/resume-generate',
@@ -254,6 +255,7 @@ function InterviewCountdownHero({
 // ── This Week Summary ─────────────────────────────────────────────────────────
 
 function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
+  const theme = useResolvedTheme();
   const now = new Date();
   const endOfWeek = new Date(now);
   endOfWeek.setDate(now.getDate() + (7 - now.getDay()));
@@ -271,48 +273,48 @@ function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
 
   if (thisWeek.length === 0) {
     return (
-      <View style={cs.weekCard}>
+      <View style={[cs.weekCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
         <View style={cs.weekHeader}>
           <Ionicons name="calendar" size={14} color={GREEN} />
-          <Text style={cs.weekTitle}>THIS WEEK</Text>
+          <Text style={[cs.weekTitle, { color: theme.surface.t2 }]}>THIS WEEK</Text>
         </View>
-        <Text style={cs.weekEmpty}>Nothing scheduled. Add deadlines to stay on track.</Text>
+        <Text style={[cs.weekEmpty, { color: theme.surface.t3 }]}>Nothing scheduled. Add deadlines to stay on track.</Text>
       </View>
     );
   }
 
   return (
-    <View style={cs.weekCard}>
+    <View style={[cs.weekCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
       <View style={cs.weekHeader}>
-        <Ionicons name="calendar" size={14} color={GOLD} />
-        <Text style={cs.weekTitle}>THIS WEEK</Text>
-        <View style={cs.weekBadge}>
-          <Text style={cs.weekBadgeText}>{thisWeek.length}</Text>
+        <Ionicons name="calendar" size={14} color={theme.accent} />
+        <Text style={[cs.weekTitle, { color: theme.surface.t2 }]}>THIS WEEK</Text>
+        <View style={[cs.weekBadge, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+          <Text style={[cs.weekBadgeText, { color: theme.accent }]}>{thisWeek.length}</Text>
         </View>
       </View>
       <View style={cs.weekStats}>
         {deadlines > 0 && (
           <View style={cs.weekStat}>
-            <View style={[cs.weekStatDot, { backgroundColor: GOLD }]} />
-            <Text style={cs.weekStatText}>{deadlines} deadline{deadlines > 1 ? 's' : ''}</Text>
+            <View style={[cs.weekStatDot, { backgroundColor: theme.accent }]} />
+            <Text style={[cs.weekStatText, { color: theme.surface.t2 }]}>{deadlines} deadline{deadlines > 1 ? 's' : ''}</Text>
           </View>
         )}
         {interviews > 0 && (
           <View style={cs.weekStat}>
             <View style={[cs.weekStatDot, { backgroundColor: CORAL }]} />
-            <Text style={cs.weekStatText}>{interviews} interview{interviews > 1 ? 's' : ''}</Text>
+            <Text style={[cs.weekStatText, { color: theme.surface.t2 }]}>{interviews} interview{interviews > 1 ? 's' : ''}</Text>
           </View>
         )}
         {prepBlocks > 0 && (
           <View style={cs.weekStat}>
             <View style={[cs.weekStatDot, { backgroundColor: PURPLE }]} />
-            <Text style={cs.weekStatText}>{prepBlocks} prep block{prepBlocks > 1 ? 's' : ''}</Text>
+            <Text style={[cs.weekStatText, { color: theme.surface.t2 }]}>{prepBlocks} prep block{prepBlocks > 1 ? 's' : ''}</Text>
           </View>
         )}
         {other > 0 && (
           <View style={cs.weekStat}>
             <View style={[cs.weekStatDot, { backgroundColor: BLUE }]} />
-            <Text style={cs.weekStatText}>{other} event{other > 1 ? 's' : ''}</Text>
+            <Text style={[cs.weekStatText, { color: theme.surface.t2 }]}>{other} event{other > 1 ? 's' : ''}</Text>
           </View>
         )}
       </View>
@@ -322,9 +324,9 @@ function ThisWeekCard({ events }: { events: CalendarEvent[] }) {
         const days = daysUntil(next.date);
         const cfg = EVENT_CONFIG[next.type] || EVENT_CONFIG.custom;
         return (
-          <View style={cs.weekNext}>
+          <View style={[cs.weekNext, { borderTopColor: theme.surface.border }]}>
             <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
-            <Text style={cs.weekNextText} numberOfLines={1}>
+            <Text style={[cs.weekNextText, { color: theme.surface.t1 }]} numberOfLines={1}>
               <Text style={{ color: cfg.color, fontWeight: '700' }}>
                 {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `In ${days} days`}
               </Text>
@@ -343,6 +345,7 @@ function MonthGrid({ year, month, events, selectedDay, onSelectDay }: {
   year: number; month: number; events: CalendarEvent[];
   selectedDay: string | null; onSelectDay: (key: string | null) => void;
 }) {
+  const theme = useResolvedTheme();
   const weeks = useMemo(() => getMonthGrid(year, month), [year, month]);
   const today = toDateKey(new Date());
 
@@ -360,12 +363,12 @@ function MonthGrid({ year, month, events, selectedDay, onSelectDay }: {
   }, [events, year, month]);
 
   return (
-    <View style={cs.gridWrap}>
+    <View style={[cs.gridWrap, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
       {/* Day headers */}
       <View style={cs.gridRow}>
         {DAYS.map((d, i) => (
           <View key={i} style={cs.gridCell}>
-            <Text style={cs.gridDayHeader}>{d}</Text>
+            <Text style={[cs.gridDayHeader, { color: theme.surface.t3 }]}>{d}</Text>
           </View>
         ))}
       </View>
@@ -384,16 +387,17 @@ function MonthGrid({ year, month, events, selectedDay, onSelectDay }: {
                 key={di}
                 style={[
                   cs.gridCell,
-                  isToday && cs.gridCellToday,
-                  isSelected && cs.gridCellSelected,
+                  isToday && [cs.gridCellToday, { backgroundColor: theme.accentSoft }],
+                  isSelected && [cs.gridCellSelected, { backgroundColor: theme.accent, borderColor: theme.accent }],
                 ]}
                 onPress={() => onSelectDay(isSelected ? null : key)}
                 scaleDown={0.9}
               >
                 <Text style={[
                   cs.gridDayNum,
-                  isToday && cs.gridDayNumToday,
-                  isSelected && cs.gridDayNumSelected,
+                  { color: theme.surface.t1 },
+                  isToday && [cs.gridDayNumToday, { color: theme.accent }],
+                  isSelected && [cs.gridDayNumSelected, { color: '#FFFFFF' }],
                 ]}>
                   {day}
                 </Text>
@@ -522,27 +526,28 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
   loadingPrepSchedule: boolean;
   loadingPrepDeck: boolean;
 }) {
+  const theme = useResolvedTheme();
   const cfg = EVENT_CONFIG[event.type] || EVENT_CONFIG.custom;
   const days = daysUntil(event.date);
   const isUrgent = days <= 2 && days >= 0;
   const isPast = days < 0;
 
   return (
-    <View style={[cs.eventCard, isUrgent && { borderColor: cfg.color + '40' }]}>
+    <View style={[cs.eventCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }, isUrgent && { borderColor: cfg.color + '40' }]}>
       <View style={[cs.eventIcon, { backgroundColor: cfg.color + '15' }]}>
         <Ionicons name={cfg.icon as any} size={16} color={cfg.color} />
       </View>
       <View style={{ flex: 1 }}>
         <View style={cs.eventTitleRow}>
-          <Text style={[cs.eventTitle, event.completedAt && cs.eventTitleDone]} numberOfLines={1}>
+          <Text style={[cs.eventTitle, { color: theme.surface.t1 }, event.completedAt && [cs.eventTitleDone, { color: theme.surface.t3 }]]} numberOfLines={1}>
             {event.title}
           </Text>
           <Text style={[cs.eventType, { color: cfg.color }]}>{cfg.label}</Text>
         </View>
         <View style={cs.eventMeta}>
-          <Text style={cs.eventDate}>{formatDateShort(event.date)}</Text>
+          <Text style={[cs.eventDate, { color: theme.surface.t2 }]}>{formatDateShort(event.date)}</Text>
           {!isPast && !event.completedAt && (
-            <Text style={[cs.eventCountdown, { color: isUrgent ? CORAL : colors.t3 }]}>
+            <Text style={[cs.eventCountdown, { color: isUrgent ? CORAL : theme.surface.t3 }]}>
               {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
             </Text>
           )}
@@ -550,7 +555,7 @@ function EventCard({ event, onComplete, onDelete, onUpdateReminders, onGenerateP
             <Text style={[cs.eventCountdown, { color: CORAL }]}>Overdue</Text>
           )}
         </View>
-        {event.notes ? <Text style={cs.eventNotes} numberOfLines={2}>{event.notes}</Text> : null}
+        {event.notes ? <Text style={[cs.eventNotes, { color: theme.surface.t2 }]} numberOfLines={2}>{event.notes}</Text> : null}
 
         {/* Reminder toggles for deadlines/interviews/applications */}
         {(event.type === 'deadline' || event.type === 'interview' || event.type === 'application') && (
