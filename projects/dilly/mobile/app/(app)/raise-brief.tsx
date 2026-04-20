@@ -120,8 +120,8 @@ export default function RaiseBriefScreen() {
   if (!d) {
     return (
       <View style={[s.container, { paddingTop: insets.top, padding: spacing.lg, backgroundColor: theme.surface.bg }]}>
-        <Text style={s.title}>Brief unavailable.</Text>
-        <Text style={s.body}>We need a current role on file to build a raise brief. Head to My Career to fill it in.</Text>
+        <Text style={[s.title, { color: theme.surface.t1 }]}>Brief unavailable.</Text>
+        <Text style={[s.body, { color: theme.surface.t2 }]}>We need a current role on file to build a raise brief. Head to My Career to fill it in.</Text>
       </View>
     );
   }
@@ -129,36 +129,36 @@ export default function RaiseBriefScreen() {
   const hasCompanyPremium = d.market.company_premium && d.market.company_premium !== 1;
 
   return (
-    <View style={[s.container, { paddingTop: insets.top }]}>
+    <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* Header bar */}
-      <View style={s.headerBar}>
+      <View style={[s.headerBar, { borderBottomColor: theme.surface.border }]}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={s.headerBtn}>
-          <Ionicons name="chevron-back" size={22} color={colors.t2} />
+          <Ionicons name="chevron-back" size={22} color={theme.surface.t2} />
         </Pressable>
-        <Text style={s.headerTitle}>RAISE BRIEF</Text>
+        <Text style={[s.headerTitle, { color: theme.surface.t2 }]}>RAISE BRIEF</Text>
         <Pressable onPress={onShare} hitSlop={12} style={s.headerBtn}>
-          <Ionicons name="share-outline" size={20} color={colors.t2} />
+          <Ionicons name="share-outline" size={20} color={theme.surface.t2} />
         </Pressable>
       </View>
 
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={INDIGO} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={theme.accent} />}
       >
         {/* Eyebrow */}
         <FadeInView delay={0}>
-          <Text style={s.eyebrow}>FOR YOUR NEXT COMP CONVERSATION</Text>
-          <Text style={s.title}>{d.you.role || 'Your role'}</Text>
+          <Text style={[s.eyebrow, { color: theme.accent }]}>FOR YOUR NEXT COMP CONVERSATION</Text>
+          <Text style={[s.title, { color: theme.surface.t1 }]}>{d.you.role || 'Your role'}</Text>
           {d.you.company ? (
-            <Text style={s.sub}>
+            <Text style={[s.sub, { color: theme.surface.t2 }]}>
               {d.you.company}
               {d.you.tenure_months ? ` · ${tenureLabel(d.you.tenure_months)}` : ''}
             </Text>
           ) : null}
         </FadeInView>
 
-        {/* THE ASK. the money shot */}
+        {/* THE ASK. the money shot - intentionally dark for premium pitch-deck feel */}
         <FadeInView delay={40}>
           <View style={s.askCard}>
             <Text style={s.askEyebrow}>THE ASK</Text>
@@ -185,13 +185,13 @@ export default function RaiseBriefScreen() {
         {/* MARKET POSITION */}
         {d.market.your_estimated_wage != null ? (
           <FadeInView delay={80}>
-            <Text style={s.sectionLabel}>MARKET POSITION</Text>
-            <View style={s.marketCard}>
-              <Text style={s.marketHeadline}>
+            <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>MARKET POSITION</Text>
+            <View style={[s.marketCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Text style={[s.marketHeadline, { color: theme.surface.t1 }]}>
                 {d.you.market_title ? `${d.you.market_title}s` : 'Your role'} earn {fmtUsd(d.market.p25)}–{fmtUsd(d.market.p75)}
               </Text>
-              <Text style={s.marketSub}>
-                Your estimate: <Text style={s.marketStrong}>{fmtUsd(d.market.your_estimated_wage)}</Text>
+              <Text style={[s.marketSub, { color: theme.surface.t2 }]}>
+                Your estimate: <Text style={[s.marketStrong, { color: theme.accent }]}>{fmtUsd(d.market.your_estimated_wage)}</Text>
                 {' · '}
                 P{d.market.your_percentile ?? '?'}
               </Text>
@@ -202,7 +202,7 @@ export default function RaiseBriefScreen() {
                     size={12}
                     color={d.market.company_premium > 1 ? '#4ADE80' : '#F87171'}
                   />
-                  <Text style={s.pillText}>
+                  <Text style={[s.pillText, { color: theme.surface.t2 }]}>
                     Adjusted for {String(d.market.company_match || '').replace(/\b\w/g, c => c.toUpperCase())}{' '}
                     {d.market.company_premium > 1 ? '+' : ''}
                     {Math.round((d.market.company_premium - 1) * 100)}%
@@ -215,25 +215,25 @@ export default function RaiseBriefScreen() {
 
         {/* WINS */}
         <FadeInView delay={120}>
-          <Text style={s.sectionLabel}>WINS TO BRING UP</Text>
+          <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>WINS TO BRING UP</Text>
           {d.wins.length > 0 ? (
             d.wins.map((w, i) => (
               <View key={i} style={s.winRow}>
-                <View style={s.winDot} />
-                <Text style={s.winText}>{w}</Text>
+                <View style={[s.winDot, { backgroundColor: theme.accent }]} />
+                <Text style={[s.winText, { color: theme.surface.t1 }]}>{w}</Text>
               </View>
             ))
           ) : (
             <AnimatedPressable
-              style={s.emptyCard}
+              style={[s.emptyCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
               scaleDown={0.98}
               onPress={() => openDillyOverlay({
                 isPaid: true,
                 initialMessage: `I'm prepping for a raise conversation. Help me name 3 concrete wins from my current role. specific outcomes, not vague descriptions. I'm a ${d.you.role || 'professional'}${d.you.company ? ` at ${d.you.company}` : ''}.`,
               })}
             >
-              <Ionicons name="sparkles" size={16} color={INDIGO} />
-              <Text style={s.emptyText}>Dilly doesn't know your recent wins yet. Tap to talk them through together.</Text>
+              <Ionicons name="sparkles" size={16} color={theme.accent} />
+              <Text style={[s.emptyText, { color: theme.surface.t2 }]}>Dilly doesn't know your recent wins yet. Tap to talk them through together.</Text>
             </AnimatedPressable>
           )}
         </FadeInView>
@@ -241,11 +241,11 @@ export default function RaiseBriefScreen() {
         {/* WHY NOW */}
         {d.why_now.length > 0 ? (
           <FadeInView delay={160}>
-            <Text style={s.sectionLabel}>WHY NOW</Text>
+            <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>WHY NOW</Text>
             {d.why_now.map((r, i) => (
               <View key={i} style={s.reasonRow}>
-                <Text style={s.reasonNum}>{i + 1}</Text>
-                <Text style={s.reasonText}>{r}</Text>
+                <Text style={[s.reasonNum, { color: theme.accent }]}>{i + 1}</Text>
+                <Text style={[s.reasonText, { color: theme.surface.t1 }]}>{r}</Text>
               </View>
             ))}
           </FadeInView>
@@ -253,31 +253,31 @@ export default function RaiseBriefScreen() {
 
         {/* OPENER */}
         <FadeInView delay={200}>
-          <Text style={s.sectionLabel}>YOUR OPENER</Text>
-          <View style={s.openerCard}>
-            <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.t3} />
-            <Text style={s.openerText}>{d.opener}</Text>
+          <Text style={[s.sectionLabel, { color: theme.surface.t3 }]}>YOUR OPENER</Text>
+          <View style={[s.openerCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.surface.t3} />
+            <Text style={[s.openerText, { color: theme.surface.t1 }]}>{d.opener}</Text>
           </View>
         </FadeInView>
 
         {/* Talk it through */}
         <FadeInView delay={240}>
           <AnimatedPressable
-            style={s.coachCta}
+            style={[s.coachCta, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
             scaleDown={0.97}
             onPress={() => openDillyOverlay({
               isPaid: true,
               initialMessage: `I'm about to go into a raise conversation. I'm a ${d.you.role || 'professional'}${d.you.company ? ` at ${d.you.company}` : ''}${d.you.tenure_months ? `, ${Math.round(d.you.tenure_months)} months in` : ''}. My target number is ${fmtUsd(d.the_ask.target)}. Role-play this with me. you be the manager. Push back hard.`,
             })}
           >
-            <View style={s.coachIcon}>
-              <Ionicons name="mic-outline" size={18} color={INDIGO} />
+            <View style={[s.coachIcon, { backgroundColor: theme.accentSoft }]}>
+              <Ionicons name="mic-outline" size={18} color={theme.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.coachTitle}>Role-play it with Dilly</Text>
-              <Text style={s.coachSub}>Dilly plays the manager. Push you. Find your weak spots before they do.</Text>
+              <Text style={[s.coachTitle, { color: theme.surface.t1 }]}>Role-play it with Dilly</Text>
+              <Text style={[s.coachSub, { color: theme.surface.t2 }]}>Dilly plays the manager. Push you. Find your weak spots before they do.</Text>
             </View>
-            <Ionicons name="arrow-forward" size={16} color={INDIGO} />
+            <Ionicons name="arrow-forward" size={16} color={theme.accent} />
           </AnimatedPressable>
         </FadeInView>
       </ScrollView>
