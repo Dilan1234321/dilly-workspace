@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/nav";
+import { ShortcutsHelp } from "@/components/shortcuts-help";
 import { getSession } from "@/lib/api";
 import { getLang } from "@/lib/lang-server";
+import { getStreak } from "@/lib/session-state";
 import { t } from "@/lib/i18n";
 
 const inter = Inter({
@@ -35,12 +37,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const lang = await getLang();
-  const session = await getSession().catch(() => null);
+  const [lang, session, streak] = await Promise.all([
+    getLang(),
+    getSession().catch(() => null),
+    getStreak(),
+  ]);
   return (
     <html lang={lang} className={`${inter.variable} ${fraunces.variable}`}>
       <body>
-        <Nav session={session} lang={lang} />
+        <Nav session={session} lang={lang} streak={streak.streak} />
+        <ShortcutsHelp />
         <main>{children}</main>
         <footer className="container-app mt-24 border-t border-[color:var(--color-border)] py-10 text-sm text-[color:var(--color-muted)]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
