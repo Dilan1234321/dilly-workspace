@@ -18,6 +18,7 @@ import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
 import DailyPulseCard from '../../components/DailyPulseCard';
 import RememberedCard from '../../components/RememberedCard';
+import WinsCard from '../../components/WinsCard';
 import { scheduleChapterNotifications } from '../../hooks/useChapterNotifications';
 import { useExtractionState } from '../../hooks/useExtractionPending';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
@@ -1341,6 +1342,14 @@ function SeekerHome() {
             meaningful signal yet. */}
         <FadeInView delay={22}>
           <RememberedCard />
+        </FadeInView>
+
+        {/* Wins timeline — positive-reinforcement loop. Users open
+            the app to log good news, which builds an association
+            that THIS is where progress lives. Recent wins visible
+            on every return visit; "Log a win" triggers celebration. */}
+        <FadeInView delay={26}>
+          <WinsCard />
         </FadeInView>
 
         {/* ── Situation hero card ─────────────────────────────

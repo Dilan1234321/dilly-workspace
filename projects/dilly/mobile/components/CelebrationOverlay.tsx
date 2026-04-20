@@ -16,6 +16,9 @@ export type MilestoneType =
   | 'top-10'
   | 'score-jump'
   | 'applied-job'
+  | 'win-interview'
+  | 'win-offer'
+  | 'win-milestone'
   | 'unlocked-dilly'
   | 'unlocked-pro';
 
@@ -77,6 +80,31 @@ const MILESTONE_CONFIGS: Record<MilestoneType, MilestoneConfig> = {
     sub: "You applied. Most students never do. That's the whole game.",
     accentColor: colors.green,
     ctaLabel: 'Find more jobs',
+  },
+  // Wins celebrations. Triggered when the user logs a manual win from
+  // the Wins card on Home. Tone: quiet earned pride, not confetti. The
+  // point is to make the app feel like where good news happens — an
+  // emotional reason to open it next time.
+  'win-interview': {
+    eyebrow: 'INTERVIEW LOCKED',
+    headline: "You're in\nthe room.",
+    sub: "Getting to the interview is the hard part. Now it's just a conversation between two people.",
+    accentColor: colors.green,
+    ctaLabel: 'Prep with Dilly',
+  },
+  'win-offer': {
+    eyebrow: 'OFFER',
+    headline: "You got\nthe offer.",
+    sub: "This is the moment. Whatever you decide next, you earned the right to choose.",
+    accentColor: colors.gold,
+    ctaLabel: 'Talk it through',
+  },
+  'win-milestone': {
+    eyebrow: 'NOTED',
+    headline: "Saved to\nyour timeline.",
+    sub: "These stack. One at a time is how it compounds.",
+    accentColor: colors.green,
+    ctaLabel: 'Keep going',
   },
   // Subscription unlocks. These are the moments the user becomes a paying
   // customer (or jumps tiers). Tone here is earned-pride, not celebration
