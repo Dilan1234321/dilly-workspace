@@ -18,6 +18,8 @@ import Svg, { Circle } from 'react-native-svg';
 import { dilly } from '../../lib/dilly';
 import { colors, spacing, radius } from '../../lib/tokens';
 import { mediumHaptic } from '../../lib/haptics';
+import { framingForPath } from '../../lib/arenaFraming';
+import { getCached } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import FadeInView from '../../components/FadeInView';
 import DillyFooter from '../../components/DillyFooter';
@@ -474,6 +476,49 @@ export default function AIArenaScreen() {
             </Text>
           </View>
         </FadeInView>
+
+        {/* Per-user_path narrator block. Same Arena data below either
+            way — threat %, signals, tools — but the MEANING of that
+            data isn't the same for a dropout as it is for a veteran
+            as it is for a senior_reset. This card sets the frame
+            before the numbers arrive. Zero LLM cost. Hides itself if
+            the cached profile hasn't loaded yet. */}
+        {(() => {
+          const cachedProfile = getCached<any>('profile:full');
+          const userPath = cachedProfile?.user_path;
+          if (!userPath) return null;
+          const framing = framingForPath(userPath);
+          return (
+            <FadeInView delay={5}>
+              <View style={{
+                marginBottom: 14,
+                padding: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                backgroundColor: theme.accentSoft,
+                borderColor: theme.accentBorder,
+              }}>
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '900',
+                  letterSpacing: 1.4,
+                  color: theme.accent,
+                  marginBottom: 5,
+                }}>
+                  {framing.eyebrow}
+                </Text>
+                <Text style={{
+                  fontSize: 13,
+                  lineHeight: 19,
+                  fontWeight: '600',
+                  color: theme.surface.t1,
+                }}>
+                  {framing.line}
+                </Text>
+              </View>
+            </FadeInView>
+          );
+        })()}
 
         {/* ════════════════════════════════════════════════════════
             THREAT REPORT. the painkiller card for EVERYONE.
