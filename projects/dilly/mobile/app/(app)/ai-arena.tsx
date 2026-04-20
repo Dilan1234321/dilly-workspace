@@ -5,7 +5,7 @@
  * Dark navy background, off-white accents, green for good, amber for warning.
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
   Animated, Easing, Alert, LayoutAnimation, Dimensions,
@@ -240,6 +240,13 @@ export default function AIArenaScreen() {
   // week's biggest move in the user's field. Zero-LLM.
   const [weeklySignal, setWeeklySignal] = useState<any>(null);
 
+  // Rebuilt page state. The old three-Act structure + ShieldRing
+  // ring + tools-drawer felt like a feature menu. New design leads
+  // with ONE next move (cycleable) and hides all tools besides
+  // Threat Scanner behind a "More tools" drawer.
+  const [moveIndex, setMoveIndex] = useState(0);
+  const [showMoreTools, setShowMoreTools] = useState(false);
+
   const fetchShield = useCallback(async () => {
     try {
       const ctrl = new AbortController();
@@ -350,14 +357,60 @@ export default function AIArenaScreen() {
     } catch {} finally { setSimLoading(false); }
   }, []);
 
-  const shieldScore = shield?.shield_score ?? 0;
-  const shieldLabel = shield?.shield_label ?? '';
   const disruptionPct = shield?.disruption_pct ?? 0;
   const cohort = shield?.cohort ?? 'your field';
   const vulnerableSignals = shield?.vulnerable_signals ?? [];
-  const resistantSignals = shield?.resistant_signals ?? [];
   const recommendation = shield?.recommendation ?? '';
-  const aiResistantSkills = shield?.ai_resistant_skills ?? [];
+
+  /* Next-move deck.
+     One high-signal "do this next" action, derived from whatever Dilly
+     already knows about the user. Order matters: what_to_learn is the
+     sharpest (already scoped to the role and ranked), then the old
+     recommendation field as fallback, then a moat-building move built
+     from the top vulnerable task. Users cycle through with "Show me
+     another move" rather than seeing all of them stacked. */
+  const moves = useMemo(() => {
+    const out: { verb: string; why: string; msg: string }[] = [];
+    const roleName = threatReport?.display || cohort;
+
+    (threatReport?.what_to_learn || []).slice(0, 3).forEach((t: string) => {
+      out.push({
+        verb: t,
+        why: `${roleName} is seeing ${threatReport?.threat_pct ?? disruptionPct}% AI shift. This is the top play Dilly has for your field right now.`,
+        msg: `The top play for my field right now is "${t}". Help me actually start doing this this week. Begin by asking what I've already tried.`,
+      });
+    });
+
+    if (recommendation) {
+      out.push({
+        verb: recommendation,
+        why: `Based on everything Dilly knows about you in ${cohort}.`,
+        msg: `Dilly suggested: "${recommendation}". Walk me through the very first step. Ask me one question at a time.`,
+      });
+    }
+
+    const firstVuln = threatReport?.vulnerable_tasks?.[0] || (typeof vulnerableSignals?.[0] === 'string' ? vulnerableSignals[0] : vulnerableSignals?.[0]?.signal);
+    if (firstVuln) {
+      out.push({
+        verb: "Rewrite your profile around work AI can't do",
+        why: `"${firstVuln}" is what AI is eating in your field. Lead with the part it can't touch.`,
+        msg: `In my field AI is eating "${firstVuln}". Help me rewrite my Dilly Profile so the first thing a recruiter sees is the part AI can't do.`,
+      });
+    }
+
+    if (out.length === 0) {
+      out.push({
+        verb: 'Tell Dilly what you actually do',
+        why: 'Without a clear role, there is no threat report and no plan. 30 seconds, one sentence.',
+        msg: "Help me nail down my current role in one sentence so you can give me a real AI-readiness plan.",
+      });
+    }
+
+    return out;
+  }, [threatReport, recommendation, cohort, disruptionPct, vulnerableSignals]);
+
+  const currentMove = moves[moveIndex % moves.length];
+  const cycleMove = () => setMoveIndex((i) => (i + 1) % moves.length);
 
   if (loading) {
     const ARENA_LOADING = [
@@ -592,345 +645,193 @@ export default function AIArenaScreen() {
         )}
 
         {/* ════════════════════════════════════════════════════════
-            ACT 1: THE THREAT
+            YOUR NEXT MOVE. replaces the old three-Act structure
+            (THREAT / EDGE / PLAYBOOK) and the Shield Score ring.
+            Single focused card, one sentence, one button. Users
+            cycle through alternatives with "Show me another move"
+            instead of seeing 6 stacked cards.
             ════════════════════════════════════════════════════════ */}
 
         <FadeInView delay={40}>
-          <ActDivider number="I" title="THE THREAT" />
-        </FadeInView>
-
-        {/* Shield Score Ring. seekers/students only. Holders
-            explicitly don't want a score calculated. For them, the
-            Field Report threat_pct above carries the quantitative
-            load and the vulnerable/moat cards below carry the
-            qualitative weight. */}
-        {!isHolder && (
-          <FadeInView delay={60}>
-            <View style={a.ringSection}>
-              <ShieldRing score={shieldScore} size={120} />
-              <Text style={a.ringScore}>{Math.round(shieldScore)}</Text>
-              <Text style={a.ringLabel}>{shieldLabel || 'AI SHIELD SCORE'}</Text>
+          <View style={nm.card}>
+            <View style={nm.eyebrowRow}>
+              <View style={nm.eyebrowDot} />
+              <Text style={nm.eyebrow}>YOUR NEXT MOVE</Text>
+              {moves.length > 1 ? (
+                <Text style={nm.indexText}>{(moveIndex % moves.length) + 1} / {moves.length}</Text>
+              ) : null}
             </View>
-          </FadeInView>
-        )}
 
-        {/* Disruption stat. seeker framing ("entry-level roles")
-            doesn't apply to holders. Skip for them. */}
-        {!isHolder && (
-          <FadeInView delay={100}>
-            <Text style={a.disruptionStatement}>
-              In {cohort}, AI is disrupting {disruptionPct}% of entry-level roles.
-            </Text>
-          </FadeInView>
-        )}
+            <Text style={nm.verb}>{currentMove.verb}</Text>
+            <Text style={nm.why}>{currentMove.why}</Text>
 
-        {/* Vulnerable signals */}
-        <FadeInView delay={140}>
-          <Text style={a.actSectionHeader}>
-            {isHolder ? 'WHAT AI IS EATING IN YOUR FIELD' : 'YOUR VULNERABLE SPOTS'}
-          </Text>
+            <AnimatedPressable
+              style={nm.primaryBtn}
+              onPress={() => openDillyOverlay({
+                isPaid: false,
+                initialMessage: currentMove.msg,
+              })}
+              scaleDown={0.97}
+            >
+              <Ionicons name="chatbubbles" size={15} color="#0B1426" />
+              <Text style={nm.primaryBtnText}>Do this with Dilly</Text>
+            </AnimatedPressable>
+
+            {moves.length > 1 ? (
+              <AnimatedPressable
+                style={nm.ghostBtn}
+                onPress={cycleMove}
+                scaleDown={0.97}
+                hitSlop={8}
+              >
+                <Ionicons name="refresh" size={13} color={SUB} />
+                <Text style={nm.ghostBtnText}>Show me another move</Text>
+              </AnimatedPressable>
+            ) : null}
+          </View>
         </FadeInView>
-
-        {vulnerableSignals.length > 0 ? (
-          vulnerableSignals.map((sig: any, i: number) => {
-            const text = typeof sig === 'string' ? sig : sig.signal || sig.text || '';
-            return (
-              <FadeInView key={`v-${i}`} delay={160 + i * 30}>
-                {isHolder ? (
-                  <HolderImpactCard
-                    icon="flame"
-                    accent="#EA580C"
-                    tint="#3A1B10"
-                    label="AT RISK"
-                    text={text}
-                  />
-                ) : (
-                  <SignalCard signal={text} accentColor={AMBER} />
-                )}
-              </FadeInView>
-            );
-          })
-        ) : (
-          <FadeInView delay={160}>
-            <View style={a.emptyCard}>
-              <Ionicons name="help-circle-outline" size={20} color={DIM} />
-              <Text style={a.emptyText}>
-                Dilly needs to learn more about you to assess your vulnerabilities.
-              </Text>
-            </View>
-          </FadeInView>
-        )}
-
 
         {/* ════════════════════════════════════════════════════════
-            ACT 2: YOUR EDGE
+            PROVE IT. Seeker/student only. Threat Scanner is the
+            single tool surfaced by default; every other tool lives
+            behind "More AI tools" below.
+
+            Holders end here. Their field report above already covers
+            what's shifting / moat / plays; no resume scanning needed.
             ════════════════════════════════════════════════════════ */}
 
-        <FadeInView delay={200}>
-          <ActDivider number="II" title="YOUR EDGE" />
-        </FadeInView>
-
-        <FadeInView delay={220}>
-          <Text style={a.actSectionHeader}>
-            {isHolder ? "YOUR MOAT. WHAT AI CAN'T TOUCH" : "WHAT AI CAN'T TOUCH"}
-          </Text>
-        </FadeInView>
-
-        {resistantSignals.length > 0 ? (
-          resistantSignals.map((sig: any, i: number) => {
-            const text = typeof sig === 'string' ? sig : sig.signal || sig.text || '';
-            return (
-              <FadeInView key={`r-${i}`} delay={240 + i * 30}>
-                {isHolder ? (
-                  <HolderImpactCard
-                    icon="shield-checkmark"
-                    accent="#16A34A"
-                    tint="#0F2B22"
-                    label="YOUR MOAT"
-                    text={text}
-                  />
-                ) : (
-                  <SignalCard signal={text} accentColor={GREEN} />
-                )}
-              </FadeInView>
-            );
-          })
-        ) : (
-          <FadeInView delay={240}>
-            <View style={a.emptyCard}>
-              <Ionicons name="bulb-outline" size={20} color={DIM} />
-              <Text style={a.emptyText}>
-                Tell Dilly about your leadership, creative work, and human skills.
+        {!isHolder && shield && shield.tools_unlocked === false ? (
+          /* Free tier gate. Tight "locked" card, no separate tools header. */
+          <FadeInView delay={80}>
+            <View style={nm.lockedCard}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="lock-closed" size={14} color={ACCENT} />
+                <Text style={nm.lockedTitle}>AI TOOLS LOCKED</Text>
+              </View>
+              <Text style={nm.lockedBody}>
+                Threat Scanner, Replace Me, Career Sim, and the rest are part of Dilly. Your next move above is always free.
               </Text>
               <AnimatedPressable
-                style={a.emptyBtn}
-                onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'I want to add human-only skills to my profile. Help me identify my leadership, creative work, and interpersonal strengths.' })}
+                style={nm.lockedBtn}
+                onPress={() => router.push('/(app)/settings')}
                 scaleDown={0.97}
               >
-                <Ionicons name="chatbubble" size={14} color={ACCENT} />
-                <Text style={a.emptyBtnText}>Talk to Dilly</Text>
+                <Ionicons name="sparkles" size={13} color="#0B1426" />
+                <Text style={nm.lockedBtnText}>Unlock with Dilly</Text>
               </AnimatedPressable>
             </View>
           </FadeInView>
-        )}
+        ) : null}
 
-        {resistantSignals.length > 0 && resistantSignals.length < 3 && (
-          <FadeInView delay={300}>
-            <AnimatedPressable
-              style={a.addMoreBtn}
-              onPress={() => openDillyOverlay({ isPaid: true, initialMessage: 'I want to strengthen my AI-proof profile. Help me identify and add more human-only skills like leadership, creative work, and interpersonal strengths.' })}
-              scaleDown={0.97}
-            >
-              <Ionicons name="add-circle-outline" size={16} color={ACCENT} />
-              <Text style={a.addMoreText}>Tell Dilly about more human skills</Text>
-            </AnimatedPressable>
-          </FadeInView>
-        )}
-
-
-        {/* ════════════════════════════════════════════════════════
-            ACT 3: YOUR PLAYBOOK. seeker/student only. Holders get
-            the Field Report's WHAT'S SHIFTING / YOUR MOAT /
-            THIS QUARTER'S PLAYS sections up top, which cover the
-            same ground without the score framing.
-            ════════════════════════════════════════════════════════ */}
-
-        {!isHolder && (
+        {!isHolder && shield && shield.tools_unlocked === true ? (
           <>
-            <FadeInView delay={320}>
-              <ActDivider number="III" title="YOUR PLAYBOOK" />
+            <FadeInView delay={80}>
+              <View style={nm.proveRow}>
+                <Text style={nm.sectionEyebrow}>PROVE IT</Text>
+                {shield.next_refresh ? (
+                  <Text style={nm.refreshText}>{shield.next_refresh}</Text>
+                ) : null}
+              </View>
             </FadeInView>
 
-            <FadeInView delay={340}>
-              <Text style={a.actSectionHeader}>HERE'S YOUR PLAN</Text>
+            {/* Threat Scanner. kept surfaced because it's the tool that
+                makes the "next move" concrete by naming bullets that
+                are at risk right now. */}
+            <FadeInView delay={100}>
+              <ToolRow
+                icon="scan"
+                title="Threat Scanner"
+                sub="See which bullets AI can replace"
+                color={ACCENT}
+                onPress={() => toggleFeature('scan')}
+                active={activeFeature === 'scan'}
+              />
             </FadeInView>
 
-            {/* Recommendation card */}
-            {recommendation ? (
-              <FadeInView delay={360}>
-                <View style={a.recommendationCard}>
-                  <Ionicons name="bulb" size={18} color={ACCENT} />
-                  <Text style={a.recommendationText}>{recommendation}</Text>
-                </View>
-              </FadeInView>
-            ) : null}
-
-            {/* AI-resistant skills to develop */}
-            {aiResistantSkills.length > 0 && (
-              <FadeInView delay={380}>
-                <View style={a.skillPillWrap}>
-                  {aiResistantSkills.map((skill: string, i: number) => (
-                    <View key={`sk-${i}`} style={a.skillPill}>
-                      <Text style={a.skillPillText}>{skill}</Text>
-                    </View>
-                  ))}
+            {activeFeature === 'scan' && (
+              <FadeInView delay={0}>
+                <View style={a.expandedCard}>
+                  <Text style={a.expandedTitle}>Threat Scanner</Text>
+                  <Text style={a.expandedSub}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
+                  {!scanResults && !scanLoading && (
+                    <AnimatedPressable style={a.actionBtn} onPress={runScan} scaleDown={0.97}>
+                      <Ionicons name="flash" size={16} color="#fff" />
+                      <Text style={a.actionBtnText}>Scan My Profile</Text>
+                    </AnimatedPressable>
+                  )}
+                  {scanLoading && <ActivityIndicator size="small" color={ACCENT} style={{ paddingVertical: 20 }} />}
+                  {scanResults && (
+                    <>
+                      <View style={a.scanSummary}>
+                        <View style={[a.scanStat, { backgroundColor: GREEN + '15' }]}>
+                          <Text style={[a.scanStatNum, { color: GREEN }]}>{scanResults.summary?.safe ?? 0}</Text>
+                          <Text style={a.scanStatLabel}>Safe</Text>
+                        </View>
+                        <View style={[a.scanStat, { backgroundColor: AMBER + '15' }]}>
+                          <Text style={[a.scanStatNum, { color: AMBER }]}>{scanResults.summary?.at_risk ?? 0}</Text>
+                          <Text style={a.scanStatLabel}>At Risk</Text>
+                        </View>
+                        <View style={[a.scanStat, { backgroundColor: ACCENT + '15' }]}>
+                          <Text style={[a.scanStatNum, { color: ACCENT }]}>{scanResults.summary?.neutral ?? 0}</Text>
+                          <Text style={a.scanStatLabel}>Neutral</Text>
+                        </View>
+                      </View>
+                      {(scanResults.bullets || []).slice(0, 10).map((b: any, i: number) => {
+                        const c = b.status === 'safe' ? GREEN : b.status === 'at_risk' ? AMBER : ACCENT;
+                        return (
+                          <View key={i} style={[a.bulletRow, { borderLeftColor: c }]}>
+                            <Ionicons name={b.status === 'safe' ? 'shield-checkmark' : b.status === 'at_risk' ? 'warning' : 'help-circle'} size={14} color={c} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={a.bulletText} numberOfLines={2}>{b.text}</Text>
+                              <Text style={a.bulletReason}>{b.reason}</Text>
+                            </View>
+                            {b.status === 'at_risk' && (
+                              <AnimatedPressable
+                                style={a.fixBtn}
+                                onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `This bullet is AI-vulnerable: "${b.text}". Rewrite it to emphasize human skills.` })}
+                                scaleDown={0.95}
+                              >
+                                <Text style={a.fixBtnText}>Fix</Text>
+                              </AnimatedPressable>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </>
+                  )}
                 </View>
               </FadeInView>
             )}
 
-            {/* Improve My Score CTA */}
-            <FadeInView delay={400}>
+            {/* Collapsed drawer. Everything that used to live in the
+                "AI TOOLS" section sits here now, one tap away. */}
+            <FadeInView delay={120}>
               <AnimatedPressable
-                style={a.improveBtn}
-                onPress={() => {
-                  const vulnList = vulnerableSignals.map((s: any) => typeof s === 'string' ? s : s.signal || s.text || '').join(', ');
-                  openDillyOverlay({
-                    isPaid: true,
-                    initialMessage: `My AI readiness is ${Math.round(shieldScore)} (${shieldLabel}). Vulnerable: ${vulnList || 'unknown'}. What specific things should I add to my Dilly Profile to become more AI-proof in ${cohort}?`,
-                  });
-                }}
-                scaleDown={0.97}
+                style={nm.drawerHeader}
+                onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setShowMoreTools(v => !v); }}
+                scaleDown={0.98}
               >
-                <Ionicons name="trending-up" size={18} color={BG} />
-                <Text style={a.improveBtnText}>Improve My Score</Text>
+                <Text style={nm.drawerText}>More AI tools</Text>
+                <Ionicons name={showMoreTools ? 'chevron-up' : 'chevron-down'} size={16} color={SUB} />
               </AnimatedPressable>
             </FadeInView>
           </>
-        )}
-
-
-        {/* ════════════════════════════════════════════════════════
-            TOOLS SECTION. seeker/student only. Every tool below
-            (Threat Scanner / Replace Me / Career Sim / Firewall /
-            Vault / Index) is resume- and skill-scan-flavored. For
-            holders we end the page at the moat card above.
-            ════════════════════════════════════════════════════════ */}
-
-        {!isHolder && (
-        <FadeInView delay={440}>
-          <Text style={a.toolsSectionHeader}>AI TOOLS</Text>
-        </FadeInView>
-        )}
-
-        {shield && shield.tools_unlocked === false ? (
-          /* Free tier. show locked-tools message + "come back" copy */
-          <FadeInView delay={460}>
-            <View style={{
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: '#33415588',
-              backgroundColor: '#11182780',
-              padding: 18,
-              gap: 10,
-              marginBottom: 12,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="lock-closed" size={16} color={ACCENT} />
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#F8FAFC', letterSpacing: 0.5 }}>
-                  AI TOOLS LOCKED
-                </Text>
-              </View>
-              <Text style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 19 }}>
-                Threat Scanner, Replace Me, and Career Sim are part of Dilly. Your shield score is free. {shield.next_refresh ? `come back ${shield.next_refresh.toLowerCase()} for an updated score.` : 'check back next month for an updated score.'}
-              </Text>
-              <AnimatedPressable
-                style={{
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  gap: 6, paddingVertical: 11, borderRadius: 10, backgroundColor: ACCENT,
-                  marginTop: 4,
-                }}
-                onPress={() => router.push('/(app)/settings')}
-                scaleDown={0.97}
-              >
-                <Ionicons name="sparkles" size={14} color="#0B1426" />
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#0B1426' }}>Unlock with Dilly</Text>
-              </AnimatedPressable>
-            </View>
-          </FadeInView>
         ) : null}
 
-        {/* Dilly tier. gentle "refreshes Monday" copy above the tools */}
-        {shield && shield.tools_unlocked === true && shield.next_refresh ? (
-          <FadeInView delay={460}>
-            <Text style={{
-              fontSize: 11, color: '#94A3B8', textAlign: 'center', marginBottom: 12, letterSpacing: 0.3,
-            }}>
-              {shield.next_refresh}
-            </Text>
-          </FadeInView>
-        ) : null}
-
-        {/* 1. Threat Scanner */}
-        <FadeInView delay={460}>
-          <ToolRow
-            icon="scan"
-            title={isHolder ? "Skill Scanner" : "Threat Scanner"}
-            sub={
-              shield?.tools_unlocked === false
-                ? 'Locked. Upgrade to scan'
-                : isHolder
-                  ? 'Map which skills AI is eating vs. which it amplifies'
-                  : 'See which bullets AI can replace'
-            }
-            color={ACCENT}
-            onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('scan'); }}
-            active={activeFeature === 'scan'}
-          />
-        </FadeInView>
-
-        {activeFeature === 'scan' && (
-          <FadeInView delay={0}>
-            <View style={a.expandedCard}>
-              <Text style={a.expandedTitle}>Threat Scanner</Text>
-              <Text style={a.expandedSub}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
-              {!scanResults && !scanLoading && (
-                <AnimatedPressable style={a.actionBtn} onPress={runScan} scaleDown={0.97}>
-                  <Ionicons name="flash" size={16} color="#fff" />
-                  <Text style={a.actionBtnText}>Scan My Profile</Text>
-                </AnimatedPressable>
-              )}
-              {scanLoading && <ActivityIndicator size="small" color={ACCENT} style={{ paddingVertical: 20 }} />}
-              {scanResults && (
-                <>
-                  <View style={a.scanSummary}>
-                    <View style={[a.scanStat, { backgroundColor: GREEN + '15' }]}>
-                      <Text style={[a.scanStatNum, { color: GREEN }]}>{scanResults.summary?.safe ?? 0}</Text>
-                      <Text style={a.scanStatLabel}>Safe</Text>
-                    </View>
-                    <View style={[a.scanStat, { backgroundColor: AMBER + '15' }]}>
-                      <Text style={[a.scanStatNum, { color: AMBER }]}>{scanResults.summary?.at_risk ?? 0}</Text>
-                      <Text style={a.scanStatLabel}>At Risk</Text>
-                    </View>
-                    <View style={[a.scanStat, { backgroundColor: ACCENT + '15' }]}>
-                      <Text style={[a.scanStatNum, { color: ACCENT }]}>{scanResults.summary?.neutral ?? 0}</Text>
-                      <Text style={a.scanStatLabel}>Neutral</Text>
-                    </View>
-                  </View>
-                  {(scanResults.bullets || []).slice(0, 10).map((b: any, i: number) => {
-                    const c = b.status === 'safe' ? GREEN : b.status === 'at_risk' ? AMBER : ACCENT;
-                    return (
-                      <View key={i} style={[a.bulletRow, { borderLeftColor: c }]}>
-                        <Ionicons name={b.status === 'safe' ? 'shield-checkmark' : b.status === 'at_risk' ? 'warning' : 'help-circle'} size={14} color={c} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={a.bulletText} numberOfLines={2}>{b.text}</Text>
-                          <Text style={a.bulletReason}>{b.reason}</Text>
-                        </View>
-                        {b.status === 'at_risk' && (
-                          <AnimatedPressable
-                            style={a.fixBtn}
-                            onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `This bullet is AI-vulnerable: "${b.text}". Rewrite it to emphasize human skills.` })}
-                            scaleDown={0.95}
-                          >
-                            <Text style={a.fixBtnText}>Fix</Text>
-                          </AnimatedPressable>
-                        )}
-                      </View>
-                    );
-                  })}
-                </>
-              )}
-            </View>
-          </FadeInView>
-        )}
+        {/* More-tools drawer. Everything below is conditionally
+            rendered based on showMoreTools state from the drawer
+            header above. Paid-only; free users see the locked card
+            at the top of the PROVE IT section instead. */}
+        {!isHolder && shield?.tools_unlocked === true && showMoreTools && (<>
 
         {/* 2. Replace Me */}
-        <FadeInView delay={480}>
+        <FadeInView delay={0}>
           <ToolRow
             icon="swap-horizontal"
             title="Replace Me"
-            sub={shield?.tools_unlocked === false ? "Locked. Upgrade to test" : "Can AI do what you do?"}
+            sub="Can AI do what you do?"
             color={AMBER}
-            onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('replace'); }}
+            onPress={() => toggleFeature('replace')}
             active={activeFeature === 'replace'}
           />
         </FadeInView>
@@ -1127,7 +1028,8 @@ export default function AIArenaScreen() {
             </View>
           </FadeInView>
         )}
-        {/* /isHolder gate on everything below the moat section */}
+        </>)}
+        {/* /isHolder + tools_unlocked + showMoreTools gate on the drawer */}
 
         {/* ── Footer ──────────────────────────────────────────── */}
         <DillyFooter />
@@ -1530,6 +1432,161 @@ const a = StyleSheet.create({
   compCol: { flex: 1, borderRadius: 10, padding: 10, borderWidth: 1 },
   compLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
   compItem: { fontSize: 11, color: SUB, lineHeight: 16 },
+});
+
+// ── Next Move + drawer styles ────────────────────────────────────────
+// Lives below the Threat Report + Weekly Signal. Replaces the old Acts +
+// Shield ring. Dense dark card that feels premium next to the threat
+// card above it — bright CTA, restrained eyebrow, quiet cycle link.
+const nm = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    backgroundColor: '#0F1524',
+    borderWidth: 1,
+    borderColor: ACCENT + '22',
+    padding: 18,
+    gap: 10,
+    marginTop: 4,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eyebrowDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: ACCENT,
+    shadowColor: ACCENT, shadowOpacity: 0.8, shadowRadius: 4, shadowOffset: { width: 0, height: 0 },
+  },
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 2,
+    color: ACCENT,
+    flex: 1,
+  },
+  indexText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: DIM,
+    letterSpacing: 1,
+  },
+  verb: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: TEXT,
+    letterSpacing: -0.3,
+    lineHeight: 25,
+  },
+  why: {
+    fontSize: 13,
+    color: SUB,
+    lineHeight: 19,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 13,
+    borderRadius: 11,
+    backgroundColor: ACCENT,
+    marginTop: 4,
+  },
+  primaryBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0B1426',
+    letterSpacing: -0.1,
+  },
+  ghostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 8,
+  },
+  ghostBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: SUB,
+  },
+
+  // Locked card for free tier. Sits just below the next-move card.
+  lockedCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: CARD,
+    padding: 16,
+    gap: 10,
+    marginTop: 4,
+  },
+  lockedTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: TEXT,
+    letterSpacing: 1.5,
+  },
+  lockedBody: {
+    fontSize: 12,
+    color: SUB,
+    lineHeight: 18,
+  },
+  lockedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: ACCENT,
+    marginTop: 2,
+  },
+  lockedBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0B1426',
+  },
+
+  // PROVE IT section eyebrow row
+  proveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 2,
+  },
+  sectionEyebrow: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: DIM,
+    letterSpacing: 2,
+  },
+  refreshText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: DIM,
+    letterSpacing: 0.5,
+  },
+
+  // More-tools drawer header
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+  },
+  drawerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: SUB,
+    letterSpacing: 0.2,
+  },
 });
 
 // ── AI Threat Report styles ───────────────────────────────────────────
