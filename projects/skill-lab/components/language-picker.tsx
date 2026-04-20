@@ -28,17 +28,21 @@ export function LanguagePicker({ current, label }: Props) {
   }
 
   return (
-    <label className="flex items-center gap-1.5 text-xs text-[color:var(--color-muted)]">
+    <label className="hidden items-center gap-1.5 sm:flex">
       <span className="sr-only">{label}</span>
       <select
         aria-label={label}
         value={current}
         onChange={onChange}
         disabled={pending}
-        className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2 py-1 text-xs text-white outline-none focus:border-[color:var(--color-accent)]"
+        className="cursor-pointer rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--color-text)] outline-none transition hover:border-[color:var(--color-accent)] focus:border-[color:var(--color-accent)]"
       >
         {SUPPORTED_LANGS.map((l) => (
-          <option key={l.code} value={l.code}>
+          <option
+            key={l.code}
+            value={l.code}
+            className="bg-white text-[color:var(--color-text)]"
+          >
             {l.flag} {l.label}
           </option>
         ))}

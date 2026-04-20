@@ -6,8 +6,8 @@ import { getSession, getVideo, listSavedVideos, listVideosByCohort } from "@/lib
 import { COHORTS_BY_NAME } from "@/lib/cohorts";
 import { getLang } from "@/lib/lang-server";
 import { t } from "@/lib/i18n";
-import { formatDuration, timeAgo, youtubeEmbedUrl, youtubeWatchUrl } from "@/lib/utils";
-import { WatchTracker } from "@/components/watch-tracker";
+import { formatDuration, timeAgo, youtubeWatchUrl } from "@/lib/utils";
+import { VideoPlayer } from "@/components/video-player";
 
 export default async function VideoPage({
   params,
@@ -42,7 +42,6 @@ export default async function VideoPage({
 
   return (
     <div className="container-app pb-16 pt-8 sm:pt-12">
-      <WatchTracker videoId={video.id} cohort={cohort?.slug ?? null} />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px] xl:gap-12">
         {/* ═══ Player + meta ═══ */}
         <div className="space-y-6">
@@ -54,15 +53,11 @@ export default async function VideoPage({
           </Link>
 
           <div className="card overflow-hidden">
-            <div className="relative aspect-video bg-black">
-              <iframe
-                src={youtubeEmbedUrl(video.id)}
-                title={video.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full"
-              />
-            </div>
+            <VideoPlayer
+              videoId={video.id}
+              cohortSlug={cohort?.slug ?? null}
+              title={video.title}
+            />
           </div>
 
           <div>
@@ -70,7 +65,7 @@ export default async function VideoPage({
               {video.title}
             </h1>
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[color:var(--color-muted)]">
-              <span className="font-medium text-white/90">{video.channel_title}</span>
+              <span className="font-medium text-[color:var(--color-text)]">{video.channel_title}</span>
               <span>·</span>
               <span>{formatDuration(video.duration_sec)}</span>
               <span>·</span>
@@ -179,7 +174,7 @@ export default async function VideoPage({
                       href={`/video/${v.id}`}
                       className="block rounded-lg border border-transparent p-2 transition hover:border-[color:var(--color-border)] hover:bg-[color:var(--color-surface)]"
                     >
-                      <div className="line-clamp-2 text-sm font-medium text-white/90">
+                      <div className="line-clamp-2 text-sm font-medium text-[color:var(--color-text)]">
                         {v.title}
                       </div>
                       <div className="mt-1 text-xs text-[color:var(--color-muted)]">

@@ -79,12 +79,12 @@ export function CommandTrigger({ label = "Search" }: { label?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-2.5 py-1.5 text-xs text-[color:var(--color-muted)] transition hover:border-[color:var(--color-border-strong)] hover:text-[color:var(--color-text)]"
+        className="flex w-full max-w-2xl items-center gap-3 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-3 text-sm text-[color:var(--color-muted)] transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-text)] sm:gap-4 sm:py-3.5"
         aria-label="Open command palette"
       >
         <SearchIcon />
-        <span className="hidden sm:inline">{label}</span>
-        <kbd className="hidden items-center gap-0.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[color:var(--color-dim)] sm:inline-flex">
+        <span className="flex-1 truncate text-left">{label}</span>
+        <kbd className="hidden items-center gap-0.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg-soft)] px-2 py-0.5 font-mono text-[0.7rem] text-[color:var(--color-dim)] sm:inline-flex">
           ⌘K
         </kbd>
       </button>

@@ -6,6 +6,7 @@
 
 const KEY_WATCHED = "skilllab.watched.v1";        // Record<videoId, { at: iso, sec: number }>
 const KEY_TIME_TODAY = "skilllab.time_today.v1";  // { date: "YYYY-MM-DD", sec: number }
+const KEY_RESUME = "skilllab.resume.v1";          // Record<videoId, { at: iso, sec: number }>
 
 type WatchedMap = Record<string, { at: string; sec: number }>;
 type TimeToday = { date: string; sec: number };
@@ -63,6 +64,35 @@ export function addTimeToday(seconds: number): TimeToday {
   };
   localStorage.setItem(KEY_TIME_TODAY, JSON.stringify(next));
   return next;
+}
+
+// ── Resume-from-position ───────────────────────────────────────────────────
+
+type ResumeMap = Record<string, { at: string; sec: number }>;
+
+function loadResumeMap(): ResumeMap {
+  if (typeof window === "undefined") return {};
+  return safeParse<ResumeMap>(localStorage.getItem(KEY_RESUME), {});
+}
+
+export function getResumePosition(videoId: string): number {
+  if (typeof window === "undefined") return 0;
+  const entry = loadResumeMap()[videoId];
+  return entry?.sec ?? 0;
+}
+
+export function setResumePosition(videoId: string, seconds: number): void {
+  if (typeof window === "undefined") return;
+  const map = loadResumeMap();
+  map[videoId] = { at: new Date().toISOString(), sec: Math.max(0, Math.round(seconds)) };
+  localStorage.setItem(KEY_RESUME, JSON.stringify(map));
+}
+
+export function clearResumePosition(videoId: string): void {
+  if (typeof window === "undefined") return;
+  const map = loadResumeMap();
+  delete map[videoId];
+  localStorage.setItem(KEY_RESUME, JSON.stringify(map));
 }
 
 export function formatMinutes(sec: number): string {

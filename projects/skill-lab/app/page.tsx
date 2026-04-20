@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { TodayPanel } from "@/components/today-panel";
 import { EditorialPaths } from "@/components/editorial-paths";
-import { listTrending, listVideosByCohort } from "@/lib/api";
+import { getSession, listTrending, listVideosByCohort } from "@/lib/api";
 import { getLang } from "@/lib/lang-server";
 import {
   getStreak,
@@ -14,10 +14,11 @@ const FRESH_WINDOW_MS = 72 * 60 * 60 * 1000;
 
 export default async function HomePage() {
   const lang = await getLang();
-  const [streak, lastWatched, firstVisit] = await Promise.all([
+  const [streak, lastWatched, firstVisit, session] = await Promise.all([
     getStreak(),
     getLastWatched(),
     isFirstVisit(),
+    getSession().catch(() => null),
   ]);
 
   const todaySources = lastWatched
@@ -45,6 +46,7 @@ export default async function HomePage() {
           streak={streak}
           lastWatched={lastWatched}
           fresh={freshCount}
+          session={session}
         />
       ) : (
         <FirstRunHero firstVisit={firstVisit} />

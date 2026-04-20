@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Video } from "@/lib/types";
 import type { StreakState, LastWatched } from "@/lib/session-state";
+import type { SessionUser } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 
 /**
@@ -13,11 +14,13 @@ export function TodayPanel({
   streak,
   lastWatched,
   fresh,
+  session,
 }: {
   video: Video | null;
   streak: StreakState;
   lastWatched: LastWatched | null;
   fresh: number;          // count of videos added in last 72h
+  session: SessionUser | null;
 }) {
   if (!video) return null;
 
@@ -115,9 +118,43 @@ export function TodayPanel({
               </div>
             </Link>
           )}
+
+          {!session && streak.streak >= 2 && <ProgressLockNudge streak={streak.streak} />}
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Shown only to logged-out users who have enough of a streak or history that
+ * losing it would genuinely sting. Non-coercive: a Link, not a modal; copy
+ * centers on "save" not "sign up".
+ */
+function ProgressLockNudge({ streak }: { streak: number }) {
+  return (
+    <Link
+      href="/sign-up?next=/&reason=progress"
+      className="group block rounded-xl border border-[color:var(--color-accent)]/30 bg-[color:var(--color-lavender)] p-4 transition hover:border-[color:var(--color-accent)]"
+    >
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 text-xl" aria-hidden>
+          🔒
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-[color:var(--color-accent)]">
+            Don&apos;t lose your {streak}-day streak
+          </div>
+          <div className="mt-1 text-xs leading-relaxed text-[color:var(--color-muted)]">
+            Save progress to your free Dilly account — takes 20 seconds, keeps
+            your streak on every device.
+          </div>
+        </div>
+        <span className="shrink-0 text-[color:var(--color-accent)] transition group-hover:translate-x-0.5">
+          →
+        </span>
+      </div>
+    </Link>
   );
 }
 
