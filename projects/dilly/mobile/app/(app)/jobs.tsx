@@ -531,66 +531,16 @@ function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; 
 // useful has come back yet (narrative still loading), show a stable
 // placeholder that doesn't promise anything Dilly hasn't earned.
 
-// Compose an "earned" one-line sentence from the signals we already have
-// (no network, no narrative). Prevents chrome placeholders like
-// "Tap to see why X could work for you." Cheap, deterministic, and
-// doesn't require the fit-narrative endpoint to fire.
-function _earnedSentenceFromSignals(
-  listing: Listing,
-  userCities: string[],
-  userPath: string,
-): string {
-  const company = listing.company || 'this company';
-  const title = listing.title || 'this role';
-  const tags: string[] = Array.isArray((listing as any).tags) ? (listing as any).tags : [];
-
-  const jobCity = String(listing.location_city || '').trim();
-  const jobState = String(listing.location_state || '').trim();
-  if (jobCity && userCities.length > 0) {
-    const overlap = userCities.find(
-      c => c.toLowerCase() === jobCity.toLowerCase() ||
-           c.toLowerCase() === `${jobCity.toLowerCase()}, ${jobState.toLowerCase()}`
-    );
-    if (overlap) return `${company} hiring in ${overlap} — one of your cities.`;
-  }
-
-  if (listing.remote || (listing.work_mode && String(listing.work_mode).toLowerCase() === 'remote')) {
-    if (userPath === 'rural_remote_only') {
-      return `${company} is hiring this one remote. Matches your preference.`;
-    }
-    return `${company} has this one open to remote work.`;
-  }
-
-  const posted = (() => {
-    if (!listing.posted_date) return null;
-    try {
-      const diff = Date.now() - new Date(listing.posted_date).getTime();
-      return Math.floor(diff / 86400000);
-    } catch { return null; }
-  })();
-  if (posted !== null && posted <= 2) {
-    return `Just posted at ${company}. Tap to see if ${title} matches your profile.`;
-  }
-
-  if (tags.length > 0) return `${tags[0]} role at ${company}. Tap for Dilly's read.`;
-  return `Open at ${company}. Tap for Dilly's read.`;
-}
-
-function _oneLineRead(
-  narrative: FitNarrativeData | null | undefined,
-  listing: Listing,
-  userCities: string[] = [],
-  userPath: string = '',
-): string {
+function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: Listing): string {
   if (!narrative) {
-    // Composed sentence from whatever signals we do have, instead
-    // of a chrome "tap to see" placeholder.
-    return _earnedSentenceFromSignals(listing, userCities, userPath);
+    return `Tap to see why ${listing.company || 'this role'} could work for you.`;
   }
   // Prefer what_you_have. the sharpest "you have X" sentence is the
   // most powerful for the user to see first. Fall back to what_to_do.
   const pickSentence = (text: string | undefined): string => {
     if (!text) return '';
+    // Split on sentence boundaries, pick first non-empty sentence with
+    // real content (≥ 25 chars, contains a verb-ish word).
     const parts = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
     for (const p of parts) {
       if (p.length >= 25) return p.endsWith('.') ? p : p + '.';
@@ -602,14 +552,7 @@ function _oneLineRead(
   return `Worth a look at ${listing.company || 'this role'}.`;
 }
 
-function DillyVoiceBubble({
-  narrative, listing, userCities, userPath,
-}: {
-  narrative: FitNarrativeData | null | undefined;
-  listing: Listing;
-  userCities?: string[];
-  userPath?: string;
-}) {
+function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
   const theme = useResolvedTheme();
   return (
     <View style={bub.wrap}>
@@ -617,9 +560,7 @@ function DillyVoiceBubble({
         <Ionicons name="sparkles" size={10} color="#fff" />
       </View>
       <View style={[bub.bubble, { backgroundColor: VIOLET + '14', borderColor: VIOLET + '33' }]}>
-        <Text style={[bub.text, { color: theme.surface.t1 }]}>
-          {_oneLineRead(narrative, listing, userCities || [], userPath || '')}
-        </Text>
+        <Text style={[bub.text, { color: theme.surface.t1 }]}>{_oneLineRead(narrative, listing)}</Text>
       </View>
     </View>
   );
@@ -872,12 +813,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
         {!isHolder && (
           <>
             <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
-            <DillyVoiceBubble
-              narrative={narrativeCache}
-              listing={listing}
-              userCities={userCities}
-              userPath={userPath}
-            />
+            <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
           </>
         )}
 
@@ -1732,41 +1668,6 @@ export default function JobsScreen() {
     setExpandedId(id);
   }, []);
 
-  // Confidence bands — split the sorted feed into three visual zones
-  // so the user feels Dilly sorting the world for them. Backend feed
-  // is already ranked (sort=rank), we just cut it. Memoed so a
-  // re-render doesn't rebuild the slices on every interaction.
-  // Intentionally NOT inside an IIFE in JSX — last time a band IIFE
-  // crashed the tab. Plain object array, rendered with .map.
-  const bands = useMemo(() => {
-    const n = restMatches.length;
-    if (n === 0) {
-      return [] as Array<{ label: string; sub: string; items: Listing[]; opacity: number }>;
-    }
-    const strongEnd = Math.max(1, Math.floor(n / 3));
-    const stretchEnd = Math.max(strongEnd + 1, Math.floor((n * 2) / 3));
-    return [
-      {
-        label: 'STRONG MATCHES',
-        sub: 'Dilly sees you here.',
-        items: restMatches.slice(0, strongEnd),
-        opacity: 1,
-      },
-      {
-        label: 'STRETCH ROLES',
-        sub: 'Reach — but the path is visible.',
-        items: restMatches.slice(strongEnd, stretchEnd),
-        opacity: 0.92,
-      },
-      {
-        label: 'WORTH KNOWING',
-        sub: 'Background awareness. Not today, maybe next week.',
-        items: restMatches.slice(stretchEnd),
-        opacity: 0.82,
-      },
-    ];
-  }, [restMatches]);
-
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* First-visit coach — paid users only. Their version of this
@@ -2125,95 +2026,42 @@ export default function JobsScreen() {
           </View>
         )}
 
-        {/* Holder view stays a single rail — they're benchmarking
-            the market, not applying. */}
-        {isHolder && restMatches.length > 0 && (
-          <>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-              <Text style={{ fontSize: 10, fontWeight: '800', color: theme.surface.t3, letterSpacing: 1.2 }}>
-                ALSO HIRING IN YOUR FIELD
-              </Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-            </View>
-            {restMatches.map((listing, i) => (
-              <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
-                <JobCard
-                  listing={listing}
-                  index={i}
-                  userCities={userCities}
-                  userPath={userPath}
-                  isHolder={isHolder}
-                  expanded={expandedId === listing.id}
-                  narrativeCache={narrativeCache[listing.id] || null}
-                  onNarrativeLoaded={handleNarrativeLoaded}
-                  tailoredResumeId={
-                    tailoredResumes.find(r =>
-                      r.company?.toLowerCase() === listing.company?.toLowerCase()
-                      && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
-                    )?.id || null
-                  }
-                  onToggle={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    setExpandedId(expandedId === listing.id ? null : listing.id);
-                  }}
-                  onBookmark={(l) => setShowCollectionPicker(l)}
-                  isSaved={savedJobIds.has(listing.id)}
-                />
-              </FadeInView>
-            ))}
-          </>
+        {/* "Up next for you" rail separator. signals the hierarchy */}
+        {restMatches.length > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>
+              {isHolder ? 'ALSO HIRING IN YOUR FIELD' : 'UP NEXT FOR YOU'}
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+          </View>
         )}
 
-        {/* Seeker / student view — confidence bands so the user feels
-            Dilly sorting the world for them. The feed is already ranked
-            by the backend; we cut it into three named zones with
-            decreasing visual weight. Each band renders its own header
-            + list inline (no IIFE wrapper — last time that crashed
-            the tab). Bands with 0 items are skipped. */}
-        {!isHolder && restMatches.length > 0 && bands.map(band => (
-          band.items.length === 0 ? null : (
-            <View key={band.label} style={{ marginTop: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-                <Text style={{ fontSize: 10, fontWeight: '800', color: theme.accent, letterSpacing: 1.2 }}>
-                  {band.label}
-                </Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-              </View>
-              <Text style={{ fontSize: 11, color: theme.surface.t3, textAlign: 'center', marginBottom: 10, fontStyle: 'italic' }}>
-                {band.sub}
-              </Text>
-              <View style={{ opacity: band.opacity }}>
-                {band.items.map((listing, i) => (
-                  <FadeInView key={listing.id || `${band.label}-${i}`} delay={Math.min(i * 40, 200)}>
-                    <JobCard
-                      listing={listing}
-                      index={i}
-                      userCities={userCities}
-                      userPath={userPath}
-                      isHolder={isHolder}
-                      expanded={expandedId === listing.id}
-                      narrativeCache={narrativeCache[listing.id] || null}
-                      onNarrativeLoaded={handleNarrativeLoaded}
-                      tailoredResumeId={
-                        tailoredResumes.find(r =>
-                          r.company?.toLowerCase() === listing.company?.toLowerCase()
-                          && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
-                        )?.id || null
-                      }
-                      onToggle={() => {
-                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                        setExpandedId(expandedId === listing.id ? null : listing.id);
-                      }}
-                      onBookmark={(l) => setShowCollectionPicker(l)}
-                      isSaved={savedJobIds.has(listing.id)}
-                    />
-                  </FadeInView>
-                ))}
-              </View>
-            </View>
-          )
+        {restMatches.map((listing, i) => (
+          <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
+            <JobCard
+              listing={listing}
+              index={i}
+              userCities={userCities}
+              userPath={userPath}
+              isHolder={isHolder}
+              expanded={expandedId === listing.id}
+              narrativeCache={narrativeCache[listing.id] || null}
+              onNarrativeLoaded={handleNarrativeLoaded}
+              tailoredResumeId={
+                tailoredResumes.find(r =>
+                  r.company?.toLowerCase() === listing.company?.toLowerCase()
+                  && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
+                )?.id || null
+              }
+              onToggle={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setExpandedId(expandedId === listing.id ? null : listing.id);
+              }}
+              onBookmark={(l) => setShowCollectionPicker(l)}
+              isSaved={savedJobIds.has(listing.id)}
+            />
+          </FadeInView>
         ))}
         <DillyFooter />
       </ScrollView>
