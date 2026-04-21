@@ -61,14 +61,33 @@ const SLOT_LABELS: Record<string, string> = {
   close: '',
 };
 
-// Typing speed: slightly faster than human (human ≈ 40 c/s, this is
-// ~55 c/s). We drive the stream with requestAnimationFrame but only
-// setState every ~50ms (UPDATE_MS). The rAF loop keeps timing tight,
-// the throttle keeps React re-renders cheap — build 330's
-// per-character setState was causing visible lag. 3 chars / 55ms =
-// ~55 c/s matches the AI overlay cadence.
-const TYPE_CHARS_PER_SEC = 55;
-const UPDATE_MS = 55;
+// Typing cadence. Chapters should feel like Dilly sat down with the
+// user — a booked coaching session, not a chat overlay. That means
+// smooth 60fps character motion (no visible chunks) plus natural
+// pauses at sentence boundaries so the text has the rhythm of
+// someone thinking before they write the next clause.
+//
+// Prior build used a 55ms/18fps throttle which made the stream look
+// jittery. We now update every rAF tick. Per-frame setState is fine
+// at this scale — text slice updates don't trigger heavy reconciliation,
+// and the perceived smoothness comes from continuous motion rather
+// than "3 chars at a time, 18 times a second".
+//
+// Base rate 72 c/s (human is ~40; typing 'at her' is ~60; this sits
+// between "she's typing live" and "she's reading aloud"). Pauses at
+// punctuation match natural breathing when someone reads a thought
+// out loud.
+const TYPE_CHARS_PER_SEC = 72;
+const PUNCT_PAUSE_MS: Record<string, number> = {
+  '.': 200,
+  '!': 220,
+  '?': 220,
+  ',': 90,
+  ';': 130,
+  ':': 130,
+  '—': 160,
+  '\n': 240,
+};
 
 export default function ChapterSessionScreen() {
   const insets = useSafeAreaInsets();
@@ -210,37 +229,69 @@ export default function ChapterSessionScreen() {
       setTypedBody('');
     }
 
-    // rAF-driven stream with setState throttled to ~UPDATE_MS.
-    // Per-character setState caused visible lag in build 330 because
-    // React reconciliation fired 55x/sec. Now we only update when
-    // at least UPDATE_MS has passed since the last update — the text
-    // still arrives at ~55 c/s in chunks of a few chars per paint.
+    // Per-frame stream. At 60fps with a 72 c/s base rate we reveal
+    // roughly one character every ~14ms, which the eye reads as
+    // continuous motion instead of the old 55ms chunked repaint.
+    //
+    // Natural pauses at sentence breaks make Dilly feel like she's
+    // thinking between clauses, same as someone sitting across the
+    // table pacing their thoughts. We track total pause time and
+    // subtract it from elapsed when computing the character target —
+    // that way the animation doesn't rubber-band after a pause.
     const startMs = Date.now();
     let rafId = 0;
-    let lastUpdateMs = -1;
+    let cursor = 0;
+    let pausedUntilMs = 0;
+    let totalPauseMs = 0;
+    const applyChunk = (chunk: string) => {
+      if (isQuestionSlot) {
+        setChatMessages(prev => {
+          if (prev.length === 0) return prev;
+          const updated = [...prev];
+          updated[0] = { ...updated[0], content: chunk };
+          return updated;
+        });
+      } else {
+        setTypedBody(chunk);
+      }
+    };
     const tick = () => {
-      const elapsed = Date.now() - startMs;
-      const target = Math.min(fullText.length, Math.floor((elapsed / 1000) * TYPE_CHARS_PER_SEC));
-      const done = target >= fullText.length;
-      const shouldUpdate = done || elapsed - lastUpdateMs >= UPDATE_MS;
-      if (shouldUpdate) {
-        lastUpdateMs = elapsed;
-        const chunk = done ? fullText : fullText.slice(0, target);
-        if (isQuestionSlot) {
-          setChatMessages(prev => {
-            if (prev.length === 0) return prev;
-            const updated = [...prev];
-            updated[0] = { ...updated[0], content: chunk };
-            return updated;
-          });
-        } else {
-          setTypedBody(chunk);
+      const now = Date.now();
+      if (now < pausedUntilMs) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+      const activeMs = now - startMs - totalPauseMs;
+      const desiredCursor = Math.min(
+        fullText.length,
+        Math.floor((activeMs * TYPE_CHARS_PER_SEC) / 1000),
+      );
+      if (desiredCursor > cursor) {
+        // Reveal char-by-char so pauses land on the exact punctuation
+        // boundary even when one rAF frame would cover several chars.
+        let next = cursor;
+        while (next < desiredCursor) {
+          next++;
+          const justTyped = fullText[next - 1];
+          const pauseMs = PUNCT_PAUSE_MS[justTyped];
+          // Only pause when the punctuation is followed by whitespace
+          // (or EOL). Prevents pausing inside decimals, URLs, etc.
+          const nextChar = fullText[next];
+          const isBoundary = !nextChar || nextChar === ' ' || nextChar === '\n';
+          if (pauseMs && isBoundary && next < fullText.length) {
+            cursor = next;
+            pausedUntilMs = now + pauseMs;
+            totalPauseMs += pauseMs;
+            break;
+          }
         }
-        if (done) {
-          typedScreens.current.add(index);
-          setIsTyping(false);
-          return;
-        }
+        if (next >= desiredCursor) cursor = desiredCursor;
+        applyChunk(fullText.slice(0, cursor));
+      }
+      if (cursor >= fullText.length) {
+        typedScreens.current.add(index);
+        setIsTyping(false);
+        return;
       }
       rafId = requestAnimationFrame(tick);
     };
