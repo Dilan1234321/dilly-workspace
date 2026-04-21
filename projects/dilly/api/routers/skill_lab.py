@@ -227,12 +227,16 @@ def public_skills_profile(
     tagline = profile.get("profile_tagline")
 
     # ── Career cross-link data ────────────────────────────────────────────
-    # Determine which canonical Dilly profile URL this user has. Students
-    # live at hellodilly.com/s/{slug}, everyone else at /p/{slug}. This
-    # matches projects/dilly/website/src/app/[sp]/[slug]/page.tsx.
-    user_type = (profile.get("user_type") or "").strip().lower()
+    # Canonical rule, mirrored exactly from Dilly's /profile/generate-slug
+    # endpoint (projects/dilly/api/routers/profile.py ~line 1599):
+    #     user_type = profile.user_type or "student"
+    #     is_student = user_type not in ("general", "professional")
+    # So a missing user_type defaults to student, and anything labeled
+    # 'general' or 'professional' is the /p/{slug} general track.
+    user_type = (profile.get("user_type") or "student").strip().lower()
+    is_student = user_type not in ("general", "professional")
     dilly_profile_url = (
-        f"https://hellodilly.com/{'s' if user_type == 'student' else 'p'}/{slug}"
+        f"https://hellodilly.com/{'s' if is_student else 'p'}/{slug}"
     )
 
     # Privacy flags — both default ON so the ecosystem feels connected
