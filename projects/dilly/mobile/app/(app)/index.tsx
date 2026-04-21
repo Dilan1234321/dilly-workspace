@@ -1366,6 +1366,54 @@ function SeekerHome() {
           <WinsCard />
         </FadeInView>
 
+        {/* Dilly Skills — entry point to the curated learning library
+            at skills.hellodilly.com, surfaced inside the app so
+            Chapter and Jobs prescriptions can route to it. Keeps
+            Dilly and Skills feeling like one product. */}
+        <FadeInView delay={30}>
+          <AnimatedPressable
+            onPress={() => router.push('/skills')}
+            scaleDown={0.97}
+            style={{
+              marginHorizontal: 16,
+              marginTop: 14,
+              padding: 16,
+              borderRadius: 14,
+              borderWidth: 1,
+              backgroundColor: theme.surface.s1,
+              borderColor: theme.accentBorder,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: theme.accentSoft,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="sparkles" size={22} color={theme.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }}>
+                DILLY SKILLS
+              </Text>
+              <Text style={{ color: theme.surface.t1, fontSize: 14, fontWeight: '800', marginTop: 2 }}>
+                Learn something today
+              </Text>
+              <Text style={{ color: theme.surface.t3, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
+                Curated 15-min videos · free · no signup
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward" size={18} color={theme.surface.t3} />
+          </AnimatedPressable>
+        </FadeInView>
+
         {/* ── Situation hero card ─────────────────────────────
             Per-path, cohort-specific action block rendered above
             every other home block. One concrete thing the user can

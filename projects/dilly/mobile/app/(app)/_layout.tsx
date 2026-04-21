@@ -14,6 +14,7 @@ import DillyPaywallFullScreen from '../../components/DillyPaywallFullScreen';
 import { usePaywallState } from '../../hooks/usePaywall';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import useCelebration from '../../hooks/useCelebration';
+import ProfileGrowthToast from '../../components/ProfileGrowthToast';
 
 function DillyAIOverlayWrapper() {
   const { visible, studentContext, close } = useDillyOverlayState();
@@ -315,6 +316,15 @@ function AppLayoutInner() {
         name="collection"
         options={{ href: null, animation: 'fade' }}
       />
+      {/* Dilly Skills — the in-app surface for the curated learning
+          library at skills.hellodilly.com. Reached from Home entry
+          points, Chapter journey "learn this" buttons, and Jobs
+          "brush up" pills. Deliberately not a tab because Skills is
+          prescribed contextually, not browsed randomly. */}
+      <Tabs.Screen
+        name="skills"
+        options={{ href: null, animation: 'fade' }}
+      />
       <Tabs.Screen
         name="raise-brief"
         options={{ href: null, animation: 'fade' }}
@@ -346,6 +356,12 @@ export default function AppLayout() {
           <DillyGateWrapper />
           <DillyPaywallWrapper />
           <CelebrationWrapper />
+          {/* Global surfacing of Dilly's auto-writes to the user's
+              profile. Listens to the extraction signal and shows a
+              soft top-of-screen pill whenever new facts arrive.
+              Mounted at the app shell so it reads anywhere the user
+              happens to be when extraction resolves. */}
+          <ProfileGrowthToast />
         </>
       </ErrorBoundary>
     </SubscriptionProvider>

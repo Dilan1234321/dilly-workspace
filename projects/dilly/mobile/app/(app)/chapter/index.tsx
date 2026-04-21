@@ -360,9 +360,24 @@ export default function ChapterSessionScreen() {
       if (hit) {
         setTimeout(() => triggerCelebration(hit as any), 420);
       }
-      router.back();
+      // New session model: when a Chapter session completes, route to
+      // the journey map instead of popping back to Home. The user lands
+      // on a visual board of everything they just talked about, with
+      // tap-through nodes that open Dilly chat seeded with the topic.
+      // Replace (not push) so back nav does not bounce them into a
+      // finished session.
+      router.replace('/chapter/journey');
     }
   }
+
+  // End-session escape hatch. The user decides when a session is done —
+  // not a clock. Tapping this jumps straight to the journey map for
+  // the current chapter (skipping remaining slots). Only surfaces after
+  // the first screen so the intro breath is not interrupted.
+  const endSession = useCallback(() => {
+    if (typeRef.current) { typeRef.current(); typeRef.current = null; }
+    router.replace('/chapter/journey');
+  }, []);
 
   function goBack() {
     if (isFirst) return;
@@ -610,9 +625,19 @@ export default function ChapterSessionScreen() {
             </Text>
           ) : null}
         </View>
-        <AnimatedPressable onPress={sharePdf} hitSlop={12} scaleDown={0.9}>
-          <Ionicons name="share-outline" size={20} color={theme.surface.t3} />
-        </AnimatedPressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          {/* End session: user decides when the session is done, not a
+              clock. Surfaces after the intro breath so it does not
+              compete for attention on the first screen. */}
+          {!isFirst ? (
+            <AnimatedPressable onPress={endSession} hitSlop={12} scaleDown={0.9}>
+              <Text style={[s.endSessionTxt, { color: theme.accent }]}>End</Text>
+            </AnimatedPressable>
+          ) : null}
+          <AnimatedPressable onPress={sharePdf} hitSlop={12} scaleDown={0.9}>
+            <Ionicons name="share-outline" size={20} color={theme.surface.t3} />
+          </AnimatedPressable>
+        </View>
       </View>
 
       {/* Progress dot row */}
@@ -795,6 +820,7 @@ const s = StyleSheet.create({
   },
   chapterTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' },
   chapterStreak: { fontSize: 9, fontWeight: '600', letterSpacing: 0.8, marginTop: 2 },
+  endSessionTxt: { fontSize: 13, fontWeight: '800', letterSpacing: 0.4 },
   dotRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, marginBottom: 20, alignSelf: 'center' },
   dot: { width: 6, height: 6, borderRadius: 3 },
 
