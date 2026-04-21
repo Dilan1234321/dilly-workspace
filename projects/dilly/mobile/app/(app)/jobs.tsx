@@ -531,9 +531,71 @@ function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; 
 // useful has come back yet (narrative still loading), show a stable
 // placeholder that doesn't promise anything Dilly hasn't earned.
 
-function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: Listing): string {
+// Compose an earned one-line sentence from signals we already have
+// (city, remote, freshness, tag). Replaces the pre-narrative chrome
+// placeholder so every card feels picked-for-you even before the
+// fit-narrative endpoint fires. Cheap — pure function, no network.
+// Every branch is defensive; an outer try/catch falls back to the
+// original placeholder if anything unexpected throws.
+function _earnedSentenceFromSignals(
+  listing: Listing,
+  userCities: string[],
+  userPath: string,
+): string {
+  try {
+    const company = listing?.company || 'this company';
+    const title = listing?.title || 'this role';
+    const tagsRaw = (listing as any)?.tags;
+    const tags: string[] = Array.isArray(tagsRaw) ? tagsRaw.filter(t => typeof t === 'string') : [];
+
+    const jobCity = String(listing?.location_city || '').trim();
+    const jobState = String(listing?.location_state || '').trim();
+    if (jobCity && Array.isArray(userCities) && userCities.length > 0) {
+      const jc = jobCity.toLowerCase();
+      const js = jobState.toLowerCase();
+      const overlap = userCities.find(c => {
+        const cs = String(c || '').toLowerCase();
+        return cs === jc || cs === `${jc}, ${js}`;
+      });
+      if (overlap) return `${company} hiring in ${overlap} — one of your cities.`;
+    }
+
+    const isRemote = !!listing?.remote || (
+      typeof listing?.work_mode === 'string' && listing.work_mode.toLowerCase() === 'remote'
+    );
+    if (isRemote) {
+      if (userPath === 'rural_remote_only') {
+        return `${company} is hiring this one remote. Matches your preference.`;
+      }
+      return `${company} has this one open to remote work.`;
+    }
+
+    let postedDays: number | null = null;
+    if (listing?.posted_date) {
+      try {
+        const diff = Date.now() - new Date(listing.posted_date).getTime();
+        if (!Number.isNaN(diff)) postedDays = Math.floor(diff / 86400000);
+      } catch {}
+    }
+    if (postedDays !== null && postedDays <= 2) {
+      return `Just posted at ${company}. Tap to see if ${title} matches your profile.`;
+    }
+
+    if (tags.length > 0) return `${tags[0]} role at ${company}. Tap for Dilly's read.`;
+    return `Open at ${company}. Tap for Dilly's read.`;
+  } catch {
+    return `Tap to see why ${listing?.company || 'this role'} could work for you.`;
+  }
+}
+
+function _oneLineRead(
+  narrative: FitNarrativeData | null | undefined,
+  listing: Listing,
+  userCities: string[] = [],
+  userPath: string = '',
+): string {
   if (!narrative) {
-    return `Tap to see why ${listing.company || 'this role'} could work for you.`;
+    return _earnedSentenceFromSignals(listing, userCities, userPath);
   }
   // Prefer what_you_have. the sharpest "you have X" sentence is the
   // most powerful for the user to see first. Fall back to what_to_do.
@@ -552,7 +614,14 @@ function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: L
   return `Worth a look at ${listing.company || 'this role'}.`;
 }
 
-function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
+function DillyVoiceBubble({
+  narrative, listing, userCities, userPath,
+}: {
+  narrative: FitNarrativeData | null | undefined;
+  listing: Listing;
+  userCities?: string[];
+  userPath?: string;
+}) {
   const theme = useResolvedTheme();
   return (
     <View style={bub.wrap}>
@@ -560,7 +629,9 @@ function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData 
         <Ionicons name="sparkles" size={10} color="#fff" />
       </View>
       <View style={[bub.bubble, { backgroundColor: VIOLET + '14', borderColor: VIOLET + '33' }]}>
-        <Text style={[bub.text, { color: theme.surface.t1 }]}>{_oneLineRead(narrative, listing)}</Text>
+        <Text style={[bub.text, { color: theme.surface.t1 }]}>
+          {_oneLineRead(narrative, listing, userCities || [], userPath || '')}
+        </Text>
       </View>
     </View>
   );
@@ -813,7 +884,12 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
         {!isHolder && (
           <>
             <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
-            <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
+            <DillyVoiceBubble
+              narrative={narrativeCache}
+              listing={listing}
+              userCities={userCities}
+              userPath={userPath}
+            />
           </>
         )}
 
