@@ -32,6 +32,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import { DillyFace } from '../../../components/DillyFace';
@@ -79,6 +80,31 @@ const SLOT_LABELS: Record<string, string> = {
 // someone thinking before they write the next clause — longer pauses
 // at sentence breaks, shorter at commas.
 const TYPE_CHARS_PER_SEC = 38;
+// AsyncStorage key holding the list of chapter ids the user has
+// already walked through. Used by the index route to decide whether
+// to play the typed session (new / unread) or redirect to the recap
+// surface (already-completed). Written at end of advance() and when
+// the user taps "End" from the top bar.
+const CHAPTER_COMPLETED_KEY = 'chapter_completed_ids_v1';
+
+async function markChapterCompleted(chapterId: string | undefined) {
+  if (!chapterId) return;
+  try {
+    const raw = await AsyncStorage.getItem(CHAPTER_COMPLETED_KEY);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(chapterId)) {
+      list.push(chapterId);
+      // Keep the list bounded — only the last 50 ids matter for
+      // routing decisions; anything older is by definition stale.
+      const trimmed = list.slice(-50);
+      await AsyncStorage.setItem(CHAPTER_COMPLETED_KEY, JSON.stringify(trimmed));
+    }
+  } catch {
+    // ignore — worst case is we re-play the session once, which is
+    // recoverable (the user can just skip).
+  }
+}
+
 const PUNCT_PAUSE_MS: Record<string, number> = {
   '.': 260,
   '!': 300,
@@ -155,12 +181,26 @@ export default function ChapterSessionScreen() {
     };
   }, [chapter?.id]);
 
-  // Chapter load. Generate if eligible, else render latest.
+  // Chapter load with the new session-aware routing.
+  //
+  // Rule (per product direction):
+  //   - If a brand-new session is ready (server says generation_eligible,
+  //     OR the latest chapter has not yet been marked "completed" by
+  //     this user locally) → render the typed session flow as before.
+  //   - If the last chapter has already been completed and no new
+  //     session is ready → redirect to /chapter/recap, which shows the
+  //     read-only cards + notes-for-next-chapter pad.
+  //
+  // "Completed" is tracked in AsyncStorage under CHAPTER_COMPLETED_KEY
+  // (a set of chapter ids the user has already walked through). The
+  // write happens in advance()'s end-of-chapter branch below.
   useEffect(() => {
     (async () => {
       try {
         const cur = await dilly.get('/chapters/current');
+
         if (cur?.generation_eligible) {
+          // A new scheduled cycle has opened — generate and play.
           const res = await dilly.fetch('/chapters/generate', { method: 'POST', body: JSON.stringify({}) });
           if (res.ok) {
             const body = await res.json();
@@ -174,7 +214,23 @@ export default function ChapterSessionScreen() {
           } else {
             setError('Could not open this Chapter right now. Try again soon.');
           }
-        } else if (cur?.latest) {
+          return;
+        }
+
+        if (cur?.latest) {
+          // Has the user already finished this chapter once? If so,
+          // route them to the recap + notes surface instead of
+          // re-opening the typed session.
+          const completedRaw = await AsyncStorage.getItem(CHAPTER_COMPLETED_KEY).catch(() => null);
+          const completed: string[] = (() => {
+            try { return completedRaw ? JSON.parse(completedRaw) : []; }
+            catch { return []; }
+          })();
+          if (cur.latest.id && completed.includes(cur.latest.id)) {
+            router.replace('/chapter/recap');
+            return;
+          }
+          // Not yet completed — play the session.
           setChapter({ ...cur.latest, count: cur?.count || 1 });
           cancelMissReminder().catch(() => {});
         } else {
@@ -360,12 +416,13 @@ export default function ChapterSessionScreen() {
       if (hit) {
         setTimeout(() => triggerCelebration(hit as any), 420);
       }
-      // New session model: when a Chapter session completes, route to
-      // the journey map instead of popping back to Home. The user lands
-      // on a visual board of everything they just talked about, with
-      // tap-through nodes that open Dilly chat seeded with the topic.
-      // Replace (not push) so back nav does not bounce them into a
-      // finished session.
+      // New session model: when a Chapter session completes, mark
+      // this chapter id as completed so the next tap on the Chapter
+      // tab routes to the recap surface instead of replaying the
+      // typed session. Then route to the journey map for a visual
+      // wrap-up. Replace (not push) so back nav does not bounce the
+      // user into a finished session.
+      markChapterCompleted(chapter?.id).catch(() => {});
       router.replace('/chapter/journey');
     }
   }
@@ -373,11 +430,14 @@ export default function ChapterSessionScreen() {
   // End-session escape hatch. The user decides when a session is done —
   // not a clock. Tapping this jumps straight to the journey map for
   // the current chapter (skipping remaining slots). Only surfaces after
-  // the first screen so the intro breath is not interrupted.
+  // the first screen so the intro breath is not interrupted. Marks the
+  // chapter completed on the way out, so the next tab tap lands on
+  // the recap surface.
   const endSession = useCallback(() => {
     if (typeRef.current) { typeRef.current(); typeRef.current = null; }
+    markChapterCompleted(chapter?.id).catch(() => {});
     router.replace('/chapter/journey');
-  }, []);
+  }, [chapter?.id]);
 
   function goBack() {
     if (isFirst) return;
