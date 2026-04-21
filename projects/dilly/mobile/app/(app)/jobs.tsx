@@ -1081,6 +1081,181 @@ const mr = StyleSheet.create({
 });
 
 
+// ── Dilly Noticed — intelligence strip ────────────────────────────────────
+//
+// Thin rotating panel at the top of Jobs making the user feel like Dilly
+// has been reading the feed overnight. Zero-cost — observations come from
+// data we already have (listings + profile.target_companies + tracker apps).
+
+type NoticedObservation = {
+  kind: 'target_hit' | 'target_sum' | 'similar_saved' | 'fresh_cohort';
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  jumpToId?: string;
+};
+
+function _daysSince(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    if (Number.isNaN(diff)) return null;
+    return Math.floor(diff / 86400000);
+  } catch { return null; }
+}
+
+function buildNoticedObservations(
+  listings: Listing[],
+  targetCompanies: string[],
+  trackedRoles: Array<{ company: string; role: string }>,
+  savedJobIds: Set<string>,
+): NoticedObservation[] {
+  const out: NoticedObservation[] = [];
+  if (!Array.isArray(listings) || listings.length === 0) return out;
+
+  const isFresh = (l: Listing): boolean => {
+    const d = _daysSince(l.posted_date);
+    return d !== null && d <= 3;
+  };
+
+  if (targetCompanies.length > 0) {
+    const targetSet = new Set(targetCompanies);
+    const hits = listings.filter(l => {
+      const co = String(l.company || '').toLowerCase().trim();
+      return co && targetSet.has(co) && isFresh(l);
+    });
+    if (hits.length === 1) {
+      out.push({
+        kind: 'target_hit',
+        icon: 'star',
+        text: `${hits[0].company} just posted ${hits[0].title}. You said you'd love to work here.`,
+        jumpToId: hits[0].id,
+      });
+    } else if (hits.length > 1) {
+      out.push({
+        kind: 'target_sum',
+        icon: 'star',
+        text: `${hits.length} new roles at companies you said you'd love.`,
+        jumpToId: hits[0].id,
+      });
+    }
+  }
+
+  for (const prior of trackedRoles.slice(0, 4)) {
+    const priorTokens = new Set(
+      prior.role.toLowerCase().split(/\s+/).filter(t => t.length >= 4),
+    );
+    if (priorTokens.size < 1) continue;
+    const similar = listings.filter(l => {
+      if (savedJobIds.has(l.id)) return false;
+      if (!isFresh(l)) return false;
+      const tokens = l.title.toLowerCase().split(/\s+/);
+      let hits = 0;
+      for (const t of tokens) if (priorTokens.has(t)) hits++;
+      return hits >= 2;
+    });
+    if (similar.length >= 2) {
+      out.push({
+        kind: 'similar_saved',
+        icon: 'git-branch',
+        text: `Last week you tracked ${prior.role} at ${prior.company}. ${similar.length} similar roles just opened.`,
+        jumpToId: similar[0].id,
+      });
+      break;
+    }
+  }
+
+  const fresh48 = listings.filter(l => {
+    const d = _daysSince(l.posted_date);
+    return d !== null && d <= 2;
+  });
+  if (fresh48.length >= 5) {
+    out.push({
+      kind: 'fresh_cohort',
+      icon: 'flame',
+      text: `${fresh48.length} roles in your feed posted in the last 48 hours. Dilly surfaced the strongest first.`,
+      jumpToId: fresh48[0].id,
+    });
+  }
+
+  return out.slice(0, 3);
+}
+
+function DillyNoticed({
+  observations,
+  onJumpTo,
+}: {
+  observations: NoticedObservation[];
+  onJumpTo?: (id: string) => void;
+}) {
+  const theme = useResolvedTheme();
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    if (observations.length <= 1) return;
+    const h = setInterval(() => {
+      setIdx(i => (i + 1) % observations.length);
+    }, 6000);
+    return () => clearInterval(h);
+  }, [observations.length]);
+
+  if (observations.length === 0) return null;
+  const ob = observations[Math.min(idx, observations.length - 1)];
+  if (!ob) return null;
+
+  return (
+    <AnimatedPressable
+      onPress={() => { if (ob.jumpToId && onJumpTo) onJumpTo(ob.jumpToId); }}
+      scaleDown={0.99}
+      style={{
+        marginHorizontal: spacing.lg,
+        marginTop: 8,
+        marginBottom: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        backgroundColor: theme.accentSoft,
+        borderWidth: 1,
+        borderColor: theme.accentBorder,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <View style={{
+        width: 28, height: 28, borderRadius: 14,
+        backgroundColor: theme.accent,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name={ob.icon} size={14} color="#fff" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{
+          fontSize: 10, fontWeight: '800', letterSpacing: 1.1,
+          color: theme.accent, marginBottom: 2,
+        }}>
+          DILLY NOTICED
+        </Text>
+        <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 18, fontWeight: '500' }}>
+          {ob.text}
+        </Text>
+      </View>
+      {observations.length > 1 && (
+        <View style={{ flexDirection: 'row', gap: 3 }}>
+          {observations.map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: 5, height: 5, borderRadius: 2.5,
+                backgroundColor: i === idx ? theme.accent : theme.accentBorder,
+              }}
+            />
+          ))}
+        </View>
+      )}
+    </AnimatedPressable>
+  );
+}
+
 // -- Main Screen ------------------------------------------------------------
 
 export default function JobsScreen() {
@@ -1128,6 +1303,12 @@ export default function JobsScreen() {
   // User's chosen onboarding path. drives which extra filters show
   // (e.g. 'No degree required' appears only for dropouts).
   const [userPath, setUserPath] = useState<string>('');
+  // Companies the user told Dilly they'd love to work at — used by
+  // the "Dilly noticed..." strip above the feed.
+  const [userTargetCompanies, setUserTargetCompanies] = useState<string[]>([]);
+  // Applications the user is tracking — used to surface similar fresh
+  // listings ("you tracked X; 3 similar roles just opened").
+  const [trackedRoles, setTrackedRoles] = useState<Array<{ company: string; role: string }>>([]);
   // Student flag — drives the jobs-page filter constraint. Students
   // see ONLY internships + entry-level roles (product rule:
   // don't show them jobs they can't realistically land yet). Derived
@@ -1182,7 +1363,7 @@ export default function JobsScreen() {
       const h1bParam = h1bFilter ? '&h1b_sponsor=true' : '';
       const fcParam = fairChanceFilter ? '&fair_chance=true' : '';
       const remoteParam = remoteOnlyFilter ? '&remote_only=true' : '';
-      const [profileRes, feedRes, resumesRes, collectionsRes, usageRes] = await Promise.all([
+      const [profileRes, feedRes, resumesRes, collectionsRes, usageRes, appsRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
         // When multiple types are selected, fetch all and filter client-side.
         // When only one non-'all' type is selected, pass it to the server for efficiency.
@@ -1193,6 +1374,9 @@ export default function JobsScreen() {
         dilly.get('/generated-resumes').catch(() => null),
         dilly.get('/collections').catch(() => null),
         dilly.get('/jobs/fit-narrative/usage').catch(() => null),
+        // Pulled for the "Dilly noticed..." strip — tracked-role similarity.
+        // Failure is silent; strip just loses one of its observation sources.
+        dilly.get('/applications').catch(() => null),
       ]);
       setTailoredResumes(Array.isArray(resumesRes) ? resumesRes : resumesRes?.resumes || []);
       setCollections(collectionsRes?.collections || []);
@@ -1218,6 +1402,31 @@ export default function JobsScreen() {
       // path-specific filters (like "No degree required" for dropouts).
       const pathRaw = ((profileRes as any)?.user_path || '').toString().toLowerCase();
       setUserPath(pathRaw);
+
+      // Target companies + tracked roles for the "Dilly noticed..." strip.
+      // target_companies may be an array OR a comma-separated string on
+      // the profile; normalize + lowercase. appsRes.applications is
+      // {company, role, status} per entry.
+      const rawTargets = (profileRes as any)?.target_companies;
+      const targets: string[] = Array.isArray(rawTargets)
+        ? rawTargets.map((s: any) => String(s || '').trim().toLowerCase()).filter(Boolean)
+        : typeof rawTargets === 'string'
+          ? rawTargets.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+          : [];
+      setUserTargetCompanies(targets);
+
+      const rawApps = (appsRes as any)?.applications;
+      if (Array.isArray(rawApps)) {
+        setTrackedRoles(
+          rawApps
+            .map((a: any) => ({
+              company: String(a?.company || '').trim(),
+              role: String(a?.role || '').trim(),
+            }))
+            .filter((a: { company: string; role: string }) => !!a.company && !!a.role)
+            .slice(0, 12),
+        );
+      }
       // Student lock: if profile says student, force the filters
       // to internship+entry-level only. The user can still pick
       // between them but can't see full-time or part-time roles —
@@ -1441,6 +1650,23 @@ export default function JobsScreen() {
   // Top match and the rest. hero card + stacked cards pattern.
   const topMatch = filtered[0];
   const restMatches = filtered.slice(1);
+
+  // "Dilly noticed..." observations — cheap pure-function compute over
+  // already-loaded data. Wrapped in try so a bad entry never bubbles
+  // up to the screen-level render (the ErrorBoundary on the render
+  // site is a belt; this try is suspenders).
+  const noticedObservations = useMemo(() => {
+    try {
+      return buildNoticedObservations(filtered, userTargetCompanies, trackedRoles, savedJobIds);
+    } catch {
+      return [] as NoticedObservation[];
+    }
+  }, [filtered, userTargetCompanies, trackedRoles, savedJobIds]);
+
+  const handleNoticedJump = useCallback((id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedId(id);
+  }, []);
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
@@ -1740,6 +1966,20 @@ export default function JobsScreen() {
             silent when the endpoint is still warming up (empty state
             returns null above). */}
         {isHolder && marketRadar && <MarketRadarCard radar={marketRadar} />}
+
+        {/* "Dilly noticed..." intelligence strip. Wrapped in an
+            ErrorBoundary so any unexpected observation payload is
+            contained to the strip — the rest of Jobs keeps rendering.
+            Hidden for holders (Market Radar is their equivalent
+            "Dilly has been watching" surface). */}
+        {!isHolder && noticedObservations.length > 0 && (
+          <ErrorBoundary surface="this strip" resetKey={noticedObservations.length}>
+            <DillyNoticed
+              observations={noticedObservations}
+              onJumpTo={handleNoticedJump}
+            />
+          </ErrorBoundary>
+        )}
 
         {/* Hero spotlight. the #1 match gets cinematic treatment. This
             is the first thing the user sees after the header: a poster,
