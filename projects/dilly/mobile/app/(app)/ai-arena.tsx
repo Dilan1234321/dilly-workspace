@@ -206,7 +206,11 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.bg, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-      <DillyFace size={120} mood="thinking" ring={false} />
+      {/* Matches every other loading screen (Home, Profile, Tracker,
+          Calendar, Jobs). Previously this was the only one passing
+          ring={false}, which made DillyFace render without its accent
+          perimeter and read as "butchered" next to the rest. */}
+      <DillyFace size={120} mood="thinking" />
       <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: theme.surface.t1, marginTop: 24, opacity: pulseAnim }}>
         {texts[textIdx]}
       </Animated.Text>
