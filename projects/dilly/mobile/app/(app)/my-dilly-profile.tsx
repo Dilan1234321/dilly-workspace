@@ -854,25 +854,39 @@ function SeekerProfileScreen() {
                     undefined on first render. Coalescing across
                     identity + p fixes that. */}
                 {(() => {
-                  // Coalesce across the dashboard identity (fast) and the
-                  // full profile (authoritative). data.identity is the
-                  // dashboard payload loaded from /memory/surface; p
-                  // comes from /profile. Either may hydrate first.
-                  const photoUrl = (data?.identity as any)?.photo_url || p.photo_url || '';
-                  if (!photoUrl) {
+                  // Photo detection mirrors the main-screen resolution
+                  // (see HolderCareer photoFull). Three possible sources
+                  // in priority order:
+                  //   1. /profile/public/{slug}/photo — the public CDN
+                  //      URL. Present the moment the user has any slug,
+                  //      even if p.photo_url hasn't hydrated.
+                  //   2. p.profile_photo_url — the canonical field some
+                  //      backends return under this alias.
+                  //   3. p.photo_url — full profile response.
+                  // A user can have a photo via any of these — don't
+                  // prompt "Add a photo" if ANY is set.
+                  const slug = p.profile_slug;
+                  const bust = Math.floor(Date.now() / 60000);
+                  const hasPhoto = !!(slug || p.photo_url || p.profile_photo_url);
+                  if (!hasPhoto) {
                     return (
                       <View style={d.editPhotoPlaceholder}>
                         <Ionicons name="camera" size={28} color={colors.t3} />
                       </View>
                     );
                   }
-                  const uri = String(photoUrl).startsWith('http')
-                    ? `${photoUrl}?_t=${Date.now()}`
-                    : `${API_BASE}${photoUrl}?_t=${Date.now()}`;
+                  const uri = slug
+                    ? `${API_BASE}/profile/public/${slug}/photo?_t=${bust}`
+                    : (() => {
+                        const raw = p.photo_url || p.profile_photo_url;
+                        return String(raw).startsWith('http')
+                          ? `${raw}?_t=${bust}`
+                          : `${API_BASE}${raw}?_t=${bust}`;
+                      })();
                   return <Image source={{ uri }} style={d.editPhotoImg} />;
                 })()}
                 <Text style={d.editPhotoLabel}>
-                  {((data?.identity as any)?.photo_url || p.photo_url) ? 'Change photo' : 'Add a photo'}
+                  {(p.profile_slug || p.photo_url || p.profile_photo_url) ? 'Change photo' : 'Add a photo'}
                 </Text>
               </AnimatedPressable>
 
