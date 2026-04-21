@@ -653,16 +653,19 @@ export default function ChapterSessionScreen() {
         {/* Normal screens show the streaming typed body centered. */}
         {!isQuestion && (
           <Animated.View style={{ opacity: fade }}>
+            {/* Chapter body font is locked to the system/page-title
+                font (same as the label "What I'd push on" above).
+                Intentionally does NOT pick up theme.type.display /
+                heroWeight / heroTracking — Customize Dilly must not
+                alter Chapter typography. Chapter is Chapter. */}
             <Text
               style={[
                 s.body,
                 {
                   color: theme.surface.t1,
-                  fontFamily: theme.type.display,
-                  fontWeight: isFirst ? '700' : theme.type.heroWeight,
+                  fontWeight: isFirst ? '800' : '700',
                   fontSize: isFirst ? 28 : 22,
                   lineHeight: isFirst ? 36 : 30,
-                  letterSpacing: theme.type.heroTracking,
                 },
               ]}
             >
