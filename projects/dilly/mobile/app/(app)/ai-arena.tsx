@@ -191,6 +191,11 @@ function ActDivider({ number, title }: { number: string; title: string }) {
 function ArenaLoadingState({ texts }: { texts: string[] }) {
   const theme = useResolvedTheme();
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  // Scale loop on the face so Dilly reads as "thinking" instead of
+  // frozen. Prior build used `mood="thinking"` but DillyFace itself
+  // only animates on `mood="writing"`, so without an outer scale
+  // animation the face was static while the text pulsed — felt off.
+  const faceScale = useRef(new Animated.Value(1)).current;
   const [textIdx, setTextIdx] = useState(0);
 
   useEffect(() => {
@@ -200,17 +205,27 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
         Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
+    // Subtle breathe: 1.0 → 1.04 → 1.0. Matches the breathing rhythm
+    // DillyAIOverlay uses during thinking state so the feeling is
+    // consistent across the app.
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(faceScale, { toValue: 1.04, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(faceScale, { toValue: 1.0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    ).start();
     const interval = setInterval(() => setTextIdx(i => (i + 1) % texts.length), 2500);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.bg, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-      {/* Matches every other loading screen (Home, Profile, Tracker,
-          Calendar, Jobs). Previously this was the only one passing
-          ring={false}, which made DillyFace render without its accent
-          perimeter and read as "butchered" next to the rest. */}
-      <DillyFace size={120} mood="thinking" />
+      {/* Wrapped in Animated.View so the face breathes while loading.
+          Matches DillyAIOverlay thinking rhythm — Dilly feels alive
+          even when she's working in the background. */}
+      <Animated.View style={{ transform: [{ scale: faceScale }] }}>
+        <DillyFace size={120} mood="thinking" />
+      </Animated.View>
       <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: theme.surface.t1, marginTop: 24, opacity: pulseAnim }}>
         {texts[textIdx]}
       </Animated.Text>

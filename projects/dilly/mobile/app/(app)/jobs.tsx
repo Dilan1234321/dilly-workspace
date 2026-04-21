@@ -892,12 +892,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
         {!isHolder && (
           <>
             <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
-            <DillyVoiceBubble
-              narrative={narrativeCache}
-              listing={listing}
-              userCities={userCities}
-              userPath={userPath}
-            />
+            <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
           </>
         )}
 
@@ -1480,7 +1475,7 @@ export default function JobsScreen() {
       const h1bParam = h1bFilter ? '&h1b_sponsor=true' : '';
       const fcParam = fairChanceFilter ? '&fair_chance=true' : '';
       const remoteParam = remoteOnlyFilter ? '&remote_only=true' : '';
-      const [profileRes, feedRes, resumesRes, collectionsRes, usageRes, appsRes] = await Promise.all([
+      const [profileRes, feedRes, resumesRes, collectionsRes, usageRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
         // When multiple types are selected, fetch all and filter client-side.
         // When only one non-'all' type is selected, pass it to the server for efficiency.
@@ -1491,12 +1486,11 @@ export default function JobsScreen() {
         dilly.get('/generated-resumes').catch(() => null),
         dilly.get('/collections').catch(() => null),
         dilly.get('/jobs/fit-narrative/usage').catch(() => null),
-        // Pulled for the "Dilly noticed..." strip. The endpoint returns
-        // saved + applied jobs; we only need company+role to light up
-        // "similar roles just posted" observations. Failure is silent —
-        // the strip just loses one of its observation sources.
-        dilly.get('/applications').catch(() => null),
       ]);
+      // /applications fetch removed while debugging Jobs-tab crash
+      // (build 338.1). Re-add inside Promise.all when DillyNoticed
+      // strip goes back in.
+      const appsRes: any = null;
       setTailoredResumes(Array.isArray(resumesRes) ? resumesRes : resumesRes?.resumes || []);
       setCollections(collectionsRes?.collections || []);
       if (usageRes && typeof usageRes === 'object') {
@@ -2085,17 +2079,17 @@ export default function JobsScreen() {
             returns null above). */}
         {isHolder && marketRadar && <MarketRadarCard radar={marketRadar} />}
 
-        {/* "Dilly noticed..." intelligence strip. Only renders when we
-            have at least one observation. Zero-cost (pure function over
-            already-loaded data). Hidden for holders — their top-of-page
-            is the Market Radar, a different "Dilly has been watching"
-            affordance specific to comp benchmarking. */}
+        {/* "Dilly noticed..." strip disabled in 338.1 — still debugging
+            a Jobs-tab crash that bounces users back to Home. Will
+            re-enable once root cause is found and fixed.
         {!isHolder && noticedObservations.length > 0 && (
-          <DillyNoticed
-            observations={noticedObservations}
-            onJumpTo={handleNoticedJump}
-          />
-        )}
+          <ErrorBoundary surface="this strip" resetKey={noticedObservations.length}>
+            <DillyNoticed
+              observations={noticedObservations}
+              onJumpTo={handleNoticedJump}
+            />
+          </ErrorBoundary>
+        )} */}
 
         {/* Hero spotlight. the #1 match gets cinematic treatment. This
             is the first thing the user sees after the header: a poster,
