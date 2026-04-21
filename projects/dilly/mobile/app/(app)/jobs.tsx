@@ -531,16 +531,76 @@ function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; 
 // useful has come back yet (narrative still loading), show a stable
 // placeholder that doesn't promise anything Dilly hasn't earned.
 
-function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: Listing): string {
+// Compose an earned one-line sentence from already-loaded signals
+// (city overlap, remote, posting freshness, first tag). Replaces the
+// pre-narrative chrome placeholder so every card feels picked-for-you
+// BEFORE the fit-narrative endpoint fires. Pure function, no network.
+// Outer try/catch — any unexpected listing shape falls back to the
+// original chrome string. Never throws.
+function _earnedSentenceFromSignals(
+  listing: Listing,
+  userCities: string[],
+  userPath: string,
+): string {
+  try {
+    const company = listing?.company || 'this company';
+    const title = listing?.title || 'this role';
+    const tagsRaw = (listing as any)?.tags;
+    const tags: string[] = Array.isArray(tagsRaw) ? tagsRaw.filter((t: any) => typeof t === 'string') : [];
+
+    const jobCity = String(listing?.location_city || '').trim();
+    const jobState = String(listing?.location_state || '').trim();
+    if (jobCity && Array.isArray(userCities) && userCities.length > 0) {
+      const jc = jobCity.toLowerCase();
+      const js = jobState.toLowerCase();
+      const overlap = userCities.find(c => {
+        const cs = String(c || '').toLowerCase();
+        return cs === jc || cs === `${jc}, ${js}`;
+      });
+      if (overlap) return `${company} hiring in ${overlap} — one of your cities.`;
+    }
+
+    const isRemote = !!listing?.remote || (
+      typeof listing?.work_mode === 'string' && listing.work_mode.toLowerCase() === 'remote'
+    );
+    if (isRemote) {
+      if (userPath === 'rural_remote_only') {
+        return `${company} is hiring this one remote. Matches your preference.`;
+      }
+      return `${company} has this one open to remote work.`;
+    }
+
+    let postedDays: number | null = null;
+    if (listing?.posted_date) {
+      try {
+        const diff = Date.now() - new Date(listing.posted_date).getTime();
+        if (!Number.isNaN(diff)) postedDays = Math.floor(diff / 86400000);
+      } catch {}
+    }
+    if (postedDays !== null && postedDays <= 2) {
+      return `Just posted at ${company}. Tap to see if ${title} matches your profile.`;
+    }
+
+    if (tags.length > 0) return `${tags[0]} role at ${company}. Tap for Dilly's read.`;
+    return `Open at ${company}. Tap for Dilly's read.`;
+  } catch {
+    return `Tap to see why ${listing?.company || 'this role'} could work for you.`;
+  }
+}
+
+function _oneLineRead(
+  narrative: FitNarrativeData | null | undefined,
+  listing: Listing,
+  userCities: string[] = [],
+  userPath: string = '',
+): string {
   if (!narrative) {
-    return `Tap to see why ${listing.company || 'this role'} could work for you.`;
+    return _earnedSentenceFromSignals(listing, userCities, userPath);
   }
   // Prefer what_you_have. the sharpest "you have X" sentence is the
   // most powerful for the user to see first. Fall back to what_to_do.
   const pickSentence = (text: string | undefined): string => {
     if (!text) return '';
-    // Split on sentence boundaries, pick first non-empty sentence with
-    // real content (≥ 25 chars, contains a verb-ish word).
     const parts = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
     for (const p of parts) {
       if (p.length >= 25) return p.endsWith('.') ? p : p + '.';
@@ -552,15 +612,31 @@ function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: L
   return `Worth a look at ${listing.company || 'this role'}.`;
 }
 
-function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
+function DillyVoiceBubble({
+  narrative, listing, userCities, userPath,
+}: {
+  narrative: FitNarrativeData | null | undefined;
+  listing: Listing;
+  userCities?: string[];
+  userPath?: string;
+}) {
   const theme = useResolvedTheme();
+  // Wrap the sentence compute in a try/catch + silent fallback so a
+  // single-listing crash can never take down the whole card (and
+  // therefore the whole Jobs page).
+  let line = '';
+  try {
+    line = _oneLineRead(narrative, listing, userCities || [], userPath || '');
+  } catch {
+    line = `Tap to see why ${listing?.company || 'this role'} could work for you.`;
+  }
   return (
     <View style={bub.wrap}>
       <View style={bub.avatar}>
         <Ionicons name="sparkles" size={10} color="#fff" />
       </View>
       <View style={[bub.bubble, { backgroundColor: VIOLET + '14', borderColor: VIOLET + '33' }]}>
-        <Text style={[bub.text, { color: theme.surface.t1 }]}>{_oneLineRead(narrative, listing)}</Text>
+        <Text style={[bub.text, { color: theme.surface.t1 }]}>{line}</Text>
       </View>
     </View>
   );
@@ -813,7 +889,12 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
         {!isHolder && (
           <>
             <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
-            <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
+            <DillyVoiceBubble
+              narrative={narrativeCache}
+              listing={listing}
+              userCities={userCities}
+              userPath={userPath}
+            />
           </>
         )}
 
@@ -1668,6 +1749,49 @@ export default function JobsScreen() {
     setExpandedId(id);
   }, []);
 
+  // Confidence-band rows. Flat list of typed rows so render is a single
+  // .map (no nested iteration). If the compute throws for any reason we
+  // silently fall back to the flat restMatches list — the page stays up.
+  type FeedRow =
+    | { kind: 'header'; id: string; label: string }
+    | { kind: 'card'; id: string; listing: Listing; opacity: number };
+
+  const restFeedRows: FeedRow[] = useMemo(() => {
+    try {
+      const rows: FeedRow[] = [];
+      const n = restMatches.length;
+      if (n === 0) return rows;
+
+      if (isHolder) {
+        rows.push({ kind: 'header', id: 'h-holder', label: 'ALSO HIRING IN YOUR FIELD' });
+        for (const l of restMatches) {
+          rows.push({ kind: 'card', id: `card-${l.id}`, listing: l, opacity: 1 });
+        }
+        return rows;
+      }
+
+      const strongEnd = Math.max(1, Math.floor(n / 3));
+      const stretchEnd = Math.max(strongEnd + 1, Math.floor((n * 2) / 3));
+      const bands: Array<{ label: string; items: Listing[]; opacity: number }> = [
+        { label: 'STRONG MATCHES', items: restMatches.slice(0, strongEnd),         opacity: 1 },
+        { label: 'STRETCH ROLES',  items: restMatches.slice(strongEnd, stretchEnd), opacity: 0.92 },
+        { label: 'WORTH KNOWING',  items: restMatches.slice(stretchEnd),            opacity: 0.82 },
+      ];
+      for (const band of bands) {
+        if (band.items.length === 0) continue;
+        rows.push({ kind: 'header', id: `h-${band.label}`, label: band.label });
+        for (const l of band.items) {
+          rows.push({ kind: 'card', id: `card-${l.id}`, listing: l, opacity: band.opacity });
+        }
+      }
+      return rows;
+    } catch {
+      // Fall back to a single flat list if anything goes wrong — the
+      // tab must keep working.
+      return restMatches.map(l => ({ kind: 'card' as const, id: `card-${l.id}`, listing: l, opacity: 1 }));
+    }
+  }, [restMatches, isHolder]);
+
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* First-visit coach — paid users only. Their version of this
@@ -1981,88 +2105,99 @@ export default function JobsScreen() {
           </ErrorBoundary>
         )}
 
-        {/* Hero spotlight. the #1 match gets cinematic treatment. This
-            is the first thing the user sees after the header: a poster,
-            not a list item. */}
+        {/* Hero spotlight. Wrapped in silent boundary so a bad listing
+            shape can't nuke the whole tab — the user would just see
+            the feed beneath it instead of bouncing out. */}
         {topMatch && (
-          <View style={{ marginBottom: 14 }}>
-            <HeroJobCard
-              listing={topMatch}
-              narrative={narrativeCache[topMatch.id] || null}
-              isSaved={savedJobIds.has(topMatch.id)}
-              isHolder={isHolder}
-              onBookmark={() => setShowCollectionPicker(topMatch)}
-              onApply={async () => {
-                try { await dilly.post('/v2/internships/save', { internship_id: topMatch.id }); } catch {}
-                const url = topMatch.apply_url || topMatch.url || '';
-                if (url) Linking.openURL(url).catch(() => {});
-              }}
-              onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setExpandedId(expandedId === topMatch.id ? null : topMatch.id);
-              }}
-            />
-            {/* Expanded hero view. full fit narrative inline. Holders
-                don't see this (benchmarking, not matching); the tap
-                still expands the card, it just won't render the
-                fit-breakdown component. */}
-            {expandedId === topMatch.id && !isHolder && (
-              <View style={[s.jobCard, { marginTop: 8 }]}>
-                <View style={s.jobContent}>
-                  <View style={s.expandedSection}>
-                    {/* Local boundary so a bad narrative payload can't
-                        blank the whole jobs tab. Without this, one
-                        malformed fit-narrative response would crash
-                        JobsScreen at render and leave the user on a
-                        blank page — which matched the intermittent
-                        'jobs page goes blank' reports. */}
-                    <ErrorBoundary surface="this read" resetKey={topMatch.id}>
-                      <FitNarrative listing={topMatch} preloaded={narrativeCache[topMatch.id] || null} />
-                    </ErrorBoundary>
+          <ErrorBoundary surface="the top match" resetKey={topMatch.id} silent>
+            <View style={{ marginBottom: 14 }}>
+              <HeroJobCard
+                listing={topMatch}
+                narrative={narrativeCache[topMatch.id] || null}
+                isSaved={savedJobIds.has(topMatch.id)}
+                isHolder={isHolder}
+                onBookmark={() => setShowCollectionPicker(topMatch)}
+                onApply={async () => {
+                  try { await dilly.post('/v2/internships/save', { internship_id: topMatch.id }); } catch {}
+                  const url = topMatch.apply_url || topMatch.url || '';
+                  if (url) Linking.openURL(url).catch(() => {});
+                }}
+                onPress={() => {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setExpandedId(expandedId === topMatch.id ? null : topMatch.id);
+                }}
+              />
+              {/* Expanded hero view. full fit narrative inline. */}
+              {expandedId === topMatch.id && !isHolder && (
+                <View style={[s.jobCard, { marginTop: 8 }]}>
+                  <View style={s.jobContent}>
+                    <View style={s.expandedSection}>
+                      <ErrorBoundary surface="this read" resetKey={topMatch.id} silent>
+                        <FitNarrative listing={topMatch} preloaded={narrativeCache[topMatch.id] || null} />
+                      </ErrorBoundary>
+                    </View>
                   </View>
                 </View>
+              )}
+            </View>
+          </ErrorBoundary>
+        )}
+
+        {/* Confidence-band flat list. Wrapped in a silent ErrorBoundary
+            so any render crash collapses THIS section only — the header,
+            top hero card, and DillyNoticed strip stay up. If the new
+            bands render breaks, the user sees a blank feed beneath the
+            hero instead of being kicked out of the tab. */}
+        <ErrorBoundary surface="the rest of the feed" resetKey={restFeedRows.length} silent>
+          {restFeedRows.map(row => {
+            if (row.kind === 'header') {
+              return (
+                <View
+                  key={row.id}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 12 }}
+                >
+                  <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+                  <Text style={{
+                    fontSize: 10,
+                    fontWeight: '800',
+                    color: isHolder ? theme.surface.t3 : theme.accent,
+                    letterSpacing: 1.2,
+                  }}>
+                    {row.label}
+                  </Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+                </View>
+              );
+            }
+            const listing = row.listing;
+            return (
+              <View key={row.id} style={row.opacity < 1 ? { opacity: row.opacity } : undefined}>
+                <JobCard
+                  listing={listing}
+                  index={0}
+                  userCities={userCities}
+                  userPath={userPath}
+                  isHolder={isHolder}
+                  expanded={expandedId === listing.id}
+                  narrativeCache={narrativeCache[listing.id] || null}
+                  onNarrativeLoaded={handleNarrativeLoaded}
+                  tailoredResumeId={
+                    tailoredResumes.find(r =>
+                      r.company?.toLowerCase() === listing.company?.toLowerCase()
+                      && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
+                    )?.id || null
+                  }
+                  onToggle={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setExpandedId(expandedId === listing.id ? null : listing.id);
+                  }}
+                  onBookmark={(l) => setShowCollectionPicker(l)}
+                  isSaved={savedJobIds.has(listing.id)}
+                />
               </View>
-            )}
-          </View>
-        )}
-
-        {/* "Up next for you" rail separator. signals the hierarchy */}
-        {restMatches.length > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>
-              {isHolder ? 'ALSO HIRING IN YOUR FIELD' : 'UP NEXT FOR YOU'}
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-          </View>
-        )}
-
-        {restMatches.map((listing, i) => (
-          <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
-            <JobCard
-              listing={listing}
-              index={i}
-              userCities={userCities}
-              userPath={userPath}
-              isHolder={isHolder}
-              expanded={expandedId === listing.id}
-              narrativeCache={narrativeCache[listing.id] || null}
-              onNarrativeLoaded={handleNarrativeLoaded}
-              tailoredResumeId={
-                tailoredResumes.find(r =>
-                  r.company?.toLowerCase() === listing.company?.toLowerCase()
-                  && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
-                )?.id || null
-              }
-              onToggle={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setExpandedId(expandedId === listing.id ? null : listing.id);
-              }}
-              onBookmark={(l) => setShowCollectionPicker(l)}
-              isSaved={savedJobIds.has(listing.id)}
-            />
-          </FadeInView>
-        ))}
+            );
+          })}
+        </ErrorBoundary>
         <DillyFooter />
       </ScrollView>
 

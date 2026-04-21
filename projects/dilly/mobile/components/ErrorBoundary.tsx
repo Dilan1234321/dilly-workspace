@@ -20,6 +20,11 @@ interface ErrorBoundaryProps {
    * Pass the current route name to clear when the user navigates away
    * from a crashed screen. */
   resetKey?: string | number;
+  /** When true, a caught error renders nothing at all — no sad face,
+   * no error text. Use for optional surface pieces (intel strips,
+   * band dividers) where failure should degrade silently without
+   * blocking the rest of the page. */
+  silent?: boolean;
 }
 
 interface ErrorBoundaryState {
@@ -84,6 +89,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   render() {
     if (!this.state.hasError) return this.props.children;
+
+    // Silent mode: render nothing at all. Used for optional surface
+    // pieces where a crash should not block the rest of the page.
+    if (this.props.silent) return null;
 
     return (
       <ErrorView
