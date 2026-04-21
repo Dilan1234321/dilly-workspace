@@ -49,7 +49,8 @@ _SLUG_TO_COHORT: dict[str, str] = {
 
 SELECT_COLS = (
     "id, title, description, channel_id, channel_title, cohort, "
-    "duration_sec, view_count, published_at, thumbnail_url, quality_score, language"
+    "duration_sec, view_count, published_at, thumbnail_url, quality_score, language, "
+    "summary, summary_source"
 )
 
 SUPPORTED_LANGS: set[str] = {"en", "es", "pt", "hi", "fr", "zh"}
@@ -67,7 +68,7 @@ def _serialize(row: tuple) -> dict:
     (
         vid, title, description, channel_id, channel_title, cohort,
         duration_sec, view_count, published_at, thumbnail_url, quality_score,
-        language,
+        language, summary, summary_source,
     ) = row
     return {
         "id": vid,
@@ -82,6 +83,8 @@ def _serialize(row: tuple) -> dict:
         "thumbnail_url": thumbnail_url or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
         "quality_score": float(quality_score or 0),
         "language": language or "en",
+        "summary": summary,
+        "summary_source": summary_source,
     }
 
 
@@ -219,7 +222,7 @@ def ask(
     # Rank cohorts by score, keep top 3
     top_cohorts = sorted(cohort_scores.items(), key=lambda x: -x[1])[:3]
 
-    videos = [_serialize(r[:12]) for r in video_rows]
+    videos = [_serialize(r[:14]) for r in video_rows]
     return {
         "videos": videos,
         "cohorts": [
@@ -292,11 +295,11 @@ def list_library(user: dict = Depends(require_auth)):
             rows = cur.fetchall()
     videos = []
     for r in rows:
-        base = _serialize(r[:12])
+        base = _serialize(r[:14])
         videos.append({
             **base,
-            "saved_at": r[12].isoformat() if r[12] else None,
-            "progress_sec": int(r[13] or 0),
+            "saved_at": r[14].isoformat() if r[14] else None,
+            "progress_sec": int(r[15] or 0),
         })
     return {"videos": videos}
 
