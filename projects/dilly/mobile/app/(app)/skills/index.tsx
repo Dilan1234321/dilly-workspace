@@ -1,174 +1,133 @@
 /**
- * Dilly Skills — in-app companion to skills.hellodilly.com.
+ * Dilly Skills — in-app home (build 353).
  *
- * Dilly and Dilly Skills are two sides of the same coin: Dilly tells
- * the user what to work on; Skills is the curated library where they
- * go learn it. This screen is the mobile surface that keeps users
- * inside the brand when Chapter prescribes "learn financial modeling"
- * or Jobs suggests "brush up on SQL window functions."
+ * Skills is a full in-app surface that mirrors everything
+ * skills.hellodilly.com does: browse cohorts, ask a question, watch
+ * videos, save to a library. The web version exists for desktop; on
+ * mobile, Skills IS the app (two sides of the same coin).
  *
- * Content mirrors the web at https://skills.hellodilly.com — same
- * fields, same roles, same tone. Tapping a field / role / ask opens
- * the corresponding web page in the user's browser for now. When a
- * native library API ships we swap to in-app video playback without
- * changing this shell.
+ * Header intent:
+ *   Big Dilly logo (DillyFace, theme-accent) + "Skills" wordmark at
+ *   the same size — reads as a co-branded product line. No back
+ *   button; Skills is a destination, not a modal.
  *
- * Intentionally zero network-dependent; renders instantly. The content
- * is static because Skills is a curated library, not an algorithmic
- * feed.
+ * Tabs:
+ *   - Ask: /skills/ask — natural language search
+ *   - Library: /skills/library — saved videos
+ *   - Trending: /skills/trending — hot picks across all cohorts
+ *   Browse 22 cohort cards (real backend slugs). Tap → cohort page.
+ *
+ * Data: none on this screen. Cohort list is static. Heavy data lives
+ * on the cohort detail page.
  */
 
 import { useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useResolvedTheme } from '../../../hooks/useTheme';
+import { DillyFace } from '../../../components/DillyFace';
 
-const SKILLS_HOST = 'https://skills.hellodilly.com';
+/** 22 backend cohort slugs — must stay in sync with
+ *  projects/dilly/api/routers/skill_lab.py `_SLUG_TO_COHORT`.
+ *  Hints are the brand-voice taglines, not marketing. */
+interface Cohort { slug: string; label: string; hint: string; icon: any; }
 
-interface Card {
-  id: string;      // URL slug
-  label: string;
-  hint: string;
-  icon: any;
-}
-
-// Roles — 11 live on the Skills site as of this build. Each points
-// to /industry/<slug>. Taglines echo the brand voice on the web
-// (short imperative, not marketing fluff).
-const ROLES: Card[] = [
-  { id: 'software-engineer', label: 'Software Engineer',  hint: 'Ship 10x more with AI as your pair.',                        icon: 'code-slash' },
-  { id: 'data-scientist',    label: 'Data Scientist',     hint: 'SQL, models, and the craft of asking the right question.', icon: 'stats-chart' },
-  { id: 'product-manager',   label: 'Product Manager',    hint: 'Ruthless prioritization, clear writing, user truth.',      icon: 'compass' },
-  { id: 'designer',          label: 'Designer',           hint: 'Systems, type, motion, and why good taste is a skill.',    icon: 'color-palette' },
-  { id: 'marketer',          label: 'Marketer',           hint: 'Positioning, distribution, and what actually compounds.',  icon: 'megaphone' },
-  { id: 'consultant',        label: 'Consultant',         hint: 'Frameworks that survive contact with real clients.',       icon: 'briefcase' },
-  { id: 'investment-banker', label: 'Investment Banker',  hint: 'Modeling, decks, and the bar for junior work.',            icon: 'cash' },
-  { id: 'quant',             label: 'Quant',              hint: 'Pricing, risk, and the math that moves money.',            icon: 'infinite' },
-  { id: 'cybersecurity',     label: 'Cybersecurity',      hint: 'Offensive thinking, defense, and the right mindset.',      icon: 'shield-checkmark' },
-  { id: 'mechanical-eng',    label: 'Mechanical Eng',     hint: 'CAD, FEA, manufacturing, and the realities of hardware.',  icon: 'cog' },
-  { id: 'biomed-eng',        label: 'Biomed Eng',         hint: 'Where engineering meets the body and the regulation.',     icon: 'pulse' },
+const COHORTS: Cohort[] = [
+  { slug: 'software-engineering-cs',          label: 'Software Engineering & CS',     hint: 'Languages, systems, algorithms, shipping.',         icon: 'code-slash' },
+  { slug: 'data-science-analytics',           label: 'Data Science & Analytics',      hint: 'Stats, ML, SQL, and asking the right question.',    icon: 'stats-chart' },
+  { slug: 'cybersecurity-it',                 label: 'Cybersecurity & IT',            hint: 'Threats, hardening, networking, response.',         icon: 'shield-checkmark' },
+  { slug: 'electrical-computer-engineering',  label: 'Electrical & Computer Eng',     hint: 'Circuits, signals, embedded, the metal layer.',     icon: 'hardware-chip' },
+  { slug: 'mechanical-aerospace-engineering', label: 'Mechanical & Aerospace Eng',    hint: 'Solids, fluids, thermo, the discipline of flight.', icon: 'airplane' },
+  { slug: 'civil-environmental-engineering',  label: 'Civil & Environmental Eng',     hint: 'Structures, water, transport, the built world.',    icon: 'business' },
+  { slug: 'chemical-biomedical-engineering',  label: 'Chemical & Biomedical Eng',     hint: 'Reactions, unit ops, devices, life sciences.',      icon: 'flask' },
+  { slug: 'finance-accounting',               label: 'Finance & Accounting',          hint: 'Modeling, valuation, audit, financial reasoning.',  icon: 'cash' },
+  { slug: 'consulting-strategy',              label: 'Consulting & Strategy',         hint: 'Structure, synthesis, winning the whiteboard.',     icon: 'analytics' },
+  { slug: 'marketing-advertising',            label: 'Marketing & Advertising',       hint: 'Brand, performance, content, demand.',              icon: 'megaphone' },
+  { slug: 'management-operations',            label: 'Management & Operations',       hint: 'Teams, process, execution, the operating cadence.', icon: 'people' },
+  { slug: 'entrepreneurship-innovation',      label: 'Entrepreneurship & Innovation', hint: 'Building from zero — product, capital, velocity.',  icon: 'rocket' },
+  { slug: 'economics-public-policy',          label: 'Economics & Public Policy',     hint: 'Markets, incentives, institutions, evidence.',      icon: 'trending-up' },
+  { slug: 'healthcare-clinical',              label: 'Healthcare & Clinical',         hint: 'Anatomy, clinical reasoning, the MCAT bar.',        icon: 'medkit' },
+  { slug: 'biotech-pharmaceutical',           label: 'Biotech & Pharmaceutical',      hint: 'Molecules, pathways, trials, regulation.',          icon: 'fitness' },
+  { slug: 'life-sciences-research',           label: 'Life Sciences & Research',      hint: 'From bench to insight — biology and the paper.',    icon: 'leaf' },
+  { slug: 'physical-sciences-math',           label: 'Physical Sciences & Math',      hint: 'Physics, chemistry, the math that underwrites it.', icon: 'infinite' },
+  { slug: 'law-government',                   label: 'Law & Government',              hint: 'Cases, briefs, process, institutional craft.',      icon: 'hammer' },
+  { slug: 'media-communications',             label: 'Media & Communications',        hint: 'Narrative, reporting, the honest sentence.',        icon: 'newspaper' },
+  { slug: 'design-creative-arts',             label: 'Design & Creative Arts',        hint: 'Systems, type, motion, taste as output.',           icon: 'color-palette' },
+  { slug: 'education-human-development',      label: 'Education & Human Development', hint: 'Pedagogy, lesson design, the classroom craft.',     icon: 'school' },
+  { slug: 'social-sciences-nonprofit',        label: 'Social Sciences & Nonprofit',   hint: 'People, institutions, mission-driven work.',        icon: 'heart-circle' },
 ];
 
-// Fields — 10 populated + 12 listed = 22 total. We show all 22 so the
-// browse feels deep, grayed state for unpopulated ones.
-interface FieldCard extends Card { populated: boolean; }
-const FIELDS: FieldCard[] = [
-  { id: 'software-engineering-cs', label: 'Software Engineering & CS',         hint: 'Languages, frameworks, algorithms, shipping.',          icon: 'code-working',   populated: true },
-  { id: 'marketing-advertising',   label: 'Marketing & Advertising',           hint: 'Brand, performance, content, and the craft of demand.', icon: 'megaphone',      populated: true },
-  { id: 'data-science-analytics',  label: 'Data Science & Analytics',          hint: 'Stats, ML, SQL, and the art of making numbers speak.',  icon: 'stats-chart',    populated: true },
-  { id: 'cybersecurity-it',        label: 'Cybersecurity & IT',                hint: 'Threats, hardening, networking, incident response.',    icon: 'shield',         populated: true },
-  { id: 'finance-accounting',      label: 'Finance & Accounting',              hint: 'Modeling, valuation, audit, and financial reasoning.',  icon: 'cash',           populated: true },
-  { id: 'consulting-strategy',     label: 'Consulting & Strategy',             hint: 'Structure, synthesis, and winning the whiteboard.',     icon: 'analytics',      populated: true },
-  { id: 'electrical-computer-eng', label: 'Electrical & Computer Engineering', hint: 'Circuits, signals, embedded, and the metal layer.',     icon: 'hardware-chip',  populated: true },
-  { id: 'mechanical-aerospace',    label: 'Mechanical & Aerospace Engineering',hint: 'Solids, fluids, thermo, and the disciplines of flight.', icon: 'airplane',      populated: true },
-  { id: 'civil-environmental',     label: 'Civil & Environmental Engineering', hint: 'Structures, water, transport, and the built world.',    icon: 'business',       populated: true },
-  { id: 'chemical-biomedical',     label: 'Chemical & Biomedical Engineering', hint: 'Reactions, unit ops, devices, and the life sciences.',  icon: 'flask',          populated: true },
-  { id: 'product-design',          label: 'Product & Design',                  hint: 'Figma, systems, research, and taste as output.',         icon: 'color-palette',  populated: false },
-  { id: 'media-journalism',        label: 'Media & Journalism',                hint: 'Narrative, reporting, and the honest sentence.',        icon: 'newspaper',      populated: false },
-  { id: 'law',                     label: 'Law',                               hint: 'Reading cases, writing briefs, thinking like counsel.', icon: 'hammer',         populated: false },
-  { id: 'medicine-nursing',        label: 'Medicine & Nursing',                hint: 'Anatomy, clinical reasoning, the MCAT bar.',            icon: 'medkit',         populated: false },
-  { id: 'education',               label: 'Education',                         hint: 'Pedagogy, lesson design, and the classroom craft.',     icon: 'school',         populated: false },
-  { id: 'psychology-behavior',     label: 'Psychology & Behavior',             hint: 'Cognition, therapy, and the sciences of people.',       icon: 'heart-circle',   populated: false },
-  { id: 'government-policy',       label: 'Government & Policy',               hint: 'Political economy, process, and institutional craft.',  icon: 'flag',           populated: false },
-  { id: 'architecture',            label: 'Architecture',            hint: 'Form, structure, codes, and the discipline of space.', icon: 'layers',         populated: false },
-  { id: 'sustainability',          label: 'Sustainability',          hint: 'Energy, materials, and what it takes to decarbonize.', icon: 'leaf',           populated: false },
-  { id: 'hardware-robotics',       label: 'Hardware & Robotics',     hint: 'Controls, sensing, actuation, and physical systems.',  icon: 'construct',      populated: false },
-  { id: 'agriculture-food',        label: 'Agriculture & Food Systems', hint: 'From farm to fork, science through supply chain.',  icon: 'nutrition',      populated: false },
-  { id: 'art-film-music',          label: 'Art, Film & Music',       hint: 'Craft, taste, production, and the discipline of beauty.', icon: 'musical-notes', populated: false },
-];
-
-export default function SkillsScreen() {
+export default function SkillsHomeScreen() {
   const theme = useResolvedTheme();
   const insets = useSafeAreaInsets();
 
-  const openRole  = useCallback((r: Card)      => { Linking.openURL(`${SKILLS_HOST}/industry/${r.id}`).catch(() => {}); }, []);
-  const openField = useCallback((f: FieldCard) => { Linking.openURL(`${SKILLS_HOST}/cohort/${f.id}`).catch(() => {}); }, []);
-  const openAsk   = useCallback(()             => { Linking.openURL(`${SKILLS_HOST}/ask`).catch(() => {}); }, []);
-  const openLib   = useCallback(()             => { Linking.openURL(`${SKILLS_HOST}/library`).catch(() => {}); }, []);
+  const goCohort = useCallback((slug: string) => {
+    router.push(`/skills/cohort/${slug}`);
+  }, []);
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 40 }}
+      contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 120 }}
     >
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={theme.surface.t2} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={[styles.eyebrow, { color: theme.accent }]}>DILLY SKILLS</Text>
-          <Text style={[styles.pageTitle, { color: theme.surface.t1 }]}>Learn something today</Text>
-        </View>
-        <View style={{ width: 24 }} />
+      {/* Big co-branded header: DillyFace + "Skills" at the same size.
+          No back button — Skills is a destination. */}
+      <View style={styles.header}>
+        <DillyFace size={44} mood="happy" accessory="none" />
+        <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>Skills</Text>
       </View>
 
       <Text style={[styles.intro, { color: theme.surface.t2 }]}>
-        Human-curated 15-min videos. No clickbait, no 30-minute ramble. Pick a role
-        or field, or just ask for what you need.
+        Human-curated 15-min videos. No clickbait. Pick a cohort, ask for what
+        you need, or open your library.
       </Text>
 
-      {/* Ask + Library */}
-      <View style={styles.asksRow}>
+      {/* Ask / Library / Trending row — the three ways in. */}
+      <View style={styles.pillsRow}>
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={openAsk}
-          style={[styles.askBtn, { backgroundColor: theme.accent }]}
+          onPress={() => router.push('/skills/ask')}
+          style={[styles.askPill, { backgroundColor: theme.accent }]}
         >
           <Ionicons name="sparkles" size={15} color="#FFF" />
-          <Text style={styles.askBtnText}>Ask for what you need</Text>
+          <Text style={styles.askPillText}>Ask for what you need</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={[styles.pillsRow, { marginTop: 10 }]}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push('/skills/library')}
+          style={[styles.subPill, { borderColor: theme.accentBorder }]}
+        >
+          <Ionicons name="bookmark" size={15} color={theme.accent} />
+          <Text style={[styles.subPillText, { color: theme.surface.t1 }]}>Your library</Text>
         </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={openLib}
-          style={[styles.libBtn, { borderColor: theme.accentBorder }]}
+          onPress={() => router.push('/skills/trending')}
+          style={[styles.subPill, { borderColor: theme.accentBorder }]}
         >
-          <Ionicons name="bookmark" size={15} color={theme.accent} />
-          <Text style={[styles.libBtnText, { color: theme.surface.t1 }]}>Library</Text>
+          <Ionicons name="flame" size={15} color={theme.accent} />
+          <Text style={[styles.subPillText, { color: theme.surface.t1 }]}>Trending</Text>
         </TouchableOpacity>
       </View>
 
-      {/* By Role */}
-      <Text style={[styles.sectionTitle, { color: theme.surface.t3 }]}>BY ROLE</Text>
+      <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 28 }]}>BY COHORT</Text>
       <View style={styles.grid}>
-        {ROLES.map(r => (
+        {COHORTS.map(c => (
           <TouchableOpacity
-            key={r.id}
+            key={c.slug}
             activeOpacity={0.85}
-            onPress={() => openRole(r)}
+            onPress={() => goCohort(c.slug)}
             style={[styles.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
           >
-            <Ionicons name={r.icon} size={22} color={theme.accent} />
-            <Text style={[styles.cardTitle, { color: theme.surface.t1 }]} numberOfLines={1}>{r.label}</Text>
-            <Text style={[styles.cardHint, { color: theme.surface.t3 }]} numberOfLines={2}>{r.hint}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* By Field */}
-      <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 24 }]}>BY FIELD</Text>
-      <View style={styles.grid}>
-        {FIELDS.map(f => (
-          <TouchableOpacity
-            key={f.id}
-            activeOpacity={f.populated ? 0.85 : 0.6}
-            onPress={() => openField(f)}
-            style={[
-              styles.card,
-              { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
-              !f.populated && { opacity: 0.55 },
-            ]}
-          >
-            <Ionicons name={f.icon} size={22} color={f.populated ? theme.accent : theme.surface.t3} />
-            <Text style={[styles.cardTitle, { color: theme.surface.t1 }]} numberOfLines={1}>{f.label}</Text>
-            <Text style={[styles.cardHint, { color: theme.surface.t3 }]} numberOfLines={2}>{f.hint}</Text>
-            {!f.populated ? (
-              <Text style={[styles.soonTag, { color: theme.surface.t3 }]}>Coming soon</Text>
-            ) : null}
+            <Ionicons name={c.icon} size={22} color={theme.accent} />
+            <Text style={[styles.cardTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{c.label}</Text>
+            <Text style={[styles.cardHint, { color: theme.surface.t3 }]} numberOfLines={2}>{c.hint}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -181,42 +140,53 @@ export default function SkillsScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
-  pageTitle: { fontSize: 17, fontWeight: '800', marginTop: 3 },
-  intro: { fontSize: 13, paddingHorizontal: 24, textAlign: 'center', lineHeight: 19, marginBottom: 18 },
+  wordmark: {
+    fontSize: 44,
+    fontWeight: '800',
+    letterSpacing: -1.1,
+    lineHeight: 48,
+  },
+  intro: {
+    fontSize: 13,
+    paddingHorizontal: 20,
+    lineHeight: 19,
+    marginTop: 6,
+    marginBottom: 20,
+  },
 
-  asksRow: {
+  pillsRow: {
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 20,
-    marginBottom: 24,
   },
-  askBtn: {
+  askPill: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  askPillText: { color: '#FFF', fontWeight: '800', fontSize: 14 },
+  subPill: {
     flex: 1,
     flexDirection: 'row',
     gap: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 13,
-    borderRadius: 12,
-  },
-  askBtnText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
-  libBtn: {
-    flexDirection: 'row',
-    gap: 5,
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
   },
-  libBtnText: { fontWeight: '800', fontSize: 13 },
+  subPillText: { fontWeight: '800', fontSize: 13 },
 
   sectionTitle: {
     fontSize: 10,
@@ -237,11 +207,10 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     borderWidth: 1,
     padding: 14,
-    minHeight: 112,
+    minHeight: 114,
   },
-  cardTitle: { fontSize: 13, fontWeight: '800', marginTop: 8 },
+  cardTitle: { fontSize: 13, fontWeight: '800', marginTop: 8, lineHeight: 17 },
   cardHint:  { fontSize: 11, fontWeight: '600', marginTop: 4, lineHeight: 15 },
-  soonTag:   { fontSize: 9,  fontWeight: '800', letterSpacing: 1, marginTop: 6 },
 
   footer: {
     fontSize: 11,

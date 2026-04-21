@@ -187,6 +187,10 @@ function AppLayoutInner() {
         isHolder ? 'trending-up' : 'briefcase',
         isHolder ? 'trending-up-outline' : 'briefcase-outline',
       ),
+      // Dilly Skills tab — curated learning library. Play-circle reads
+      // as "video content" without being literal about YouTube. Same
+      // icon for both modes; Skills is cross-audience.
+      skills: make('play-circle', 'play-circle-outline'),
     };
   }, [isHolder, navActiveIcon, navInactiveIcon]);
 
@@ -194,6 +198,11 @@ function AppLayoutInner() {
   // any /chapter route so users don't see app chrome while they're
   // reading through the session.
   const onChapter = !!pathname && pathname.includes('/chapter');
+  // Skills sub-pages (a specific cohort, video, ask, library, trending)
+  // also hide the tab bar so the detail surfaces feel full-screen — the
+  // Skills root keeps the tab bar so the navigation is obvious.
+  const onSkillsDetail = !!pathname && /\/skills\/(cohort|video|ask|library|trending)/.test(pathname);
+  const hideTabBar = onChapter || onSkillsDetail;
 
   return (
     <Tabs
@@ -202,7 +211,7 @@ function AppLayoutInner() {
       initialRouteName={isHolder ? 'ai-arena' : 'index'}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: onChapter
+        tabBarStyle: hideTabBar
           ? { display: 'none' }
           : {
               backgroundColor: navBarBg,
@@ -245,7 +254,20 @@ function AppLayoutInner() {
         }}
       />
 
-      {/* Tab 3: Profile. Person for seekers/students (identity
+      {/* Tab 3: Dilly Skills — the curated learning library,
+          promoted from hidden to a top-level tab. Dilly and Skills
+          are two sides of the same coin; Skills deserves a permanent
+          seat in the navbar so Chapter / Jobs prescriptions read
+          as first-class pointers. */}
+      <Tabs.Screen
+        name="skills"
+        options={{
+          title: 'Skills',
+          tabBarIcon: tabIcons.skills,
+        }}
+      />
+
+      {/* Tab 4: Profile. Person for seekers/students (identity
           focus), analytics chart for holders (trajectory focus). */}
       <Tabs.Screen
         name="my-dilly-profile"
@@ -255,7 +277,7 @@ function AppLayoutInner() {
         }}
       />
 
-      {/* Tab 4: Jobs / Market. Briefcase for apply-mode seekers;
+      {/* Tab 5: Jobs / Market. Briefcase for apply-mode seekers;
           trending-up for holders benchmarking their field. */}
       <Tabs.Screen
         name="jobs"
@@ -316,15 +338,8 @@ function AppLayoutInner() {
         name="collection"
         options={{ href: null, animation: 'fade' }}
       />
-      {/* Dilly Skills — the in-app surface for the curated learning
-          library at skills.hellodilly.com. Reached from Home entry
-          points, Chapter journey "learn this" buttons, and Jobs
-          "brush up" pills. Deliberately not a tab because Skills is
-          prescribed contextually, not browsed randomly. */}
-      <Tabs.Screen
-        name="skills"
-        options={{ href: null, animation: 'fade' }}
-      />
+      {/* Skills is registered above as a top-level tab. Kept the
+          comment here as a breadcrumb for readers who grep. */}
       <Tabs.Screen
         name="raise-brief"
         options={{ href: null, animation: 'fade' }}
