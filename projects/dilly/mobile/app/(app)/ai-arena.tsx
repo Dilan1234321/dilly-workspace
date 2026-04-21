@@ -189,13 +189,12 @@ function ActDivider({ number, title }: { number: string; title: string }) {
 // ── Loading State ────────────────────────────────────────────────────────────
 
 function ArenaLoadingState({ texts }: { texts: string[] }) {
-  const theme = useResolvedTheme();
+  // Copy-paste of MyDillyLoadingState from my-dilly-profile.tsx so
+  // this screen looks identical to every other loading screen in
+  // the app. Static DillyFace, pulsing text — that's the pattern.
+  // Prior builds tried to add face scale animation, halo rings,
+  // etc; user asked explicitly to match the others.
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
-  // Scale loop on the face so Dilly reads as "thinking" instead of
-  // frozen. Prior build used `mood="thinking"` but DillyFace itself
-  // only animates on `mood="writing"`, so without an outer scale
-  // animation the face was static while the text pulsed — felt off.
-  const faceScale = useRef(new Animated.Value(1)).current;
   const [textIdx, setTextIdx] = useState(0);
 
   useEffect(() => {
@@ -205,47 +204,24 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
         Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
-    // Breathe: 1.0 → 1.08 → 1.0. Was 1.04 but too subtle — user
-    // reported "face doesn't move." 1.08 is perceptibly bigger
-    // without feeling cartoonish; paired with the pulsing halo ring
-    // the whole screen reads as alive.
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(faceScale, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(faceScale, { toValue: 1.0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-    ).start();
     const interval = setInterval(() => setTextIdx(i => (i + 1) % texts.length), 2500);
     return () => clearInterval(interval);
-  }, []);
+  }, [pulseAnim]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surface.bg, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-      {/* Three visible motion layers so the screen feels alive even
-          when the user's accent is a pale color (where the ring would
-          otherwise be invisible against the white bg):
-            1. Outer halo ring — pulsing opacity, independent of accent
-            2. DillyFace itself — breathing scale (1.0 → 1.06)
-            3. Pulsing status text beneath
-          The halo ring is drawn with theme.surface.t3 (always visible
-          gray) so it reads on every palette. */}
-      <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
-        <Animated.View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            width: 150, height: 150, borderRadius: 75,
-            borderWidth: 2,
-            borderColor: theme.surface.t3,
-            opacity: pulseAnim,
-            transform: [{ scale: pulseAnim.interpolate({ inputRange: [0.4, 1], outputRange: [0.9, 1.1] }) }],
-          }}
-        />
-        <Animated.View style={{ transform: [{ scale: faceScale }] }}>
-          <DillyFace size={120} mood="thinking" />
-        </Animated.View>
-      </View>
-      <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: theme.surface.t1, marginTop: 24, opacity: pulseAnim }}>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
+      <DillyFace size={120} />
+      <Animated.Text
+        style={{
+          fontSize: 16,
+          fontWeight: '600',
+          color: colors.t2,
+          marginTop: 24,
+          opacity: pulseAnim,
+          textAlign: 'center',
+          paddingHorizontal: 24,
+        }}
+      >
         {texts[textIdx]}
       </Animated.Text>
     </View>
