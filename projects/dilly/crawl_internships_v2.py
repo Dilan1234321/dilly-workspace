@@ -109,17 +109,20 @@ GREENHOUSE_COMPANIES = {
     'segmentio':('Segment','Tech'),'heap':('Heap','Tech'),
     'fullstory':('FullStory','Tech'),'pendo':('Pendo','Tech'),
     'appcues':('Appcues','Tech'),'braze':('Braze','Tech'),
-    'mixpanelinc':('Mixpanel','Tech'),
+    # mixpanelinc 404s; canonical slug is 'mixpanel' (already in this map above).
+    # 'mixpanelinc':('Mixpanel','Tech'),
     'sendbird':('Sendbird','Tech'),'stream':('Stream','Tech'),
     'pusher':('Pusher','Tech'),'ably':('Ably','Tech'),
     'twilioflex':('Twilio Flex','Tech'),
-    'auth0':('Auth0','Tech'),'oktainc':('Okta','Tech'),
+    # auth0 and oktainc both 404. okta already in this map above as 'okta'.
+    # 'auth0':('Auth0','Tech'),'oktainc':('Okta','Tech'),
     'lastpass':('LastPass','Tech'),'onepassword':('1Password','Tech'),
     'bitwarden':('Bitwarden','Tech'),'dashlane':('Dashlane','Tech'),
     'rapid7':('Rapid7','Tech'),'crowdstrike':('CrowdStrike','Tech'),
     'sentinelone':('SentinelOne','Tech'),'paloaltonetworks':('Palo Alto Networks','Tech'),
     'fortinet':('Fortinet','Tech'),'zscaler':('Zscaler','Tech'),
-    'cloudflareinc':('Cloudflare','Tech'),
+    # cloudflareinc 404s; canonical slug 'cloudflare' is already in this map above.
+    # 'cloudflareinc':('Cloudflare','Tech'),
     'vmware':('VMware','Tech'),'citrix':('Citrix','Tech'),
     'servicenow':('ServiceNow','Tech'),'workday':('Workday','Tech'),
     'splunk':('Splunk','Tech'),'tableau':('Tableau','Tech'),

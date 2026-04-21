@@ -117,7 +117,86 @@ COHORT_KEYWORDS: dict[str, list[str]] = {
         "circuit design", "pcb", "semiconductor", "vlsi", "signal processing",
         "firmware", "robotics",
     ],
+    # Canonical-only buckets (no prior legacy equivalent). Added 2026-04-21
+    # so business_accounting / health_nursing_allied / sport_management
+    # students stop falling through to "Management & Operations".
+    "Accounting & Audit": [
+        "accountant", "accounting", "auditor", "audit ", "cpa", "tax ",
+        "tax associate", "staff accountant", "internal audit", "external audit",
+        "controller", "bookkeep", "reconciliation", "financial reporting",
+        "gaap", "ifrs", "big 4", "big four",
+    ],
+    "Nursing & Allied Health": [
+        "registered nurse", "rn ", "lpn", "nursing", "nurse practitioner",
+        "cna", "pharmacy technician", "respiratory therap", "occupational therap",
+        "physical therap", "medical assistant", "radiologic technolog",
+        "phlebotomy", "sonograph", "dental hygien", "ekg tech",
+        "surgical tech", "medical coder",
+    ],
+    "Sport & Recreation": [
+        "athletic", "sports management", "sport marketing", "recreation",
+        "sports operations", "game day", "athletic department", "fitness",
+        "team operations", "ncaa", "sports analytics", "sports media",
+        "event operations", "front office",
+    ],
 }
+
+# ── Canonical cohort mapping ─────────────────────────────────────────────────
+# The DB historically stores the "legacy" labels above in
+# internships.cohort_requirements. The rubric system and the mobile UI
+# both speak in canonical cohort IDs defined in
+# knowledge/cohort_rubrics.json (tech_cybersecurity,
+# business_accounting, etc).
+#
+# Rather than rewrite the legacy names in every downstream surface,
+# every analyzed job now carries BOTH:
+#   - cohort_requirements: [{cohort: <legacy_label>, smart/grit/build}]
+#   - canonical_cohorts:   [<canonical_id>, ...]
+#
+# Old callers keep reading cohort_requirements; new callers index on
+# canonical_cohorts. The crawler's DB write path unions them into
+# existing jsonb fields so no schema change is required.
+#
+# Multiple legacy labels can map to the same canonical cohort (e.g.
+# "Cybersecurity & IT" → tech_cybersecurity). Some legacy labels span
+# more than one canonical cohort (e.g. "Finance & Accounting" → both
+# business_finance AND business_accounting, because the keyword list
+# covers both). Downstream code is happy with 1..N canonicals per job.
+LEGACY_TO_CANONICAL: dict[str, list[str]] = {
+    "Software Engineering & CS":        ["tech_software_engineering"],
+    "Data Science & Analytics":         ["tech_data_science"],
+    "Cybersecurity & IT":               ["tech_cybersecurity"],
+    "Finance & Accounting":             ["business_finance", "business_accounting"],
+    "Accounting & Audit":               ["business_accounting"],
+    "Consulting & Strategy":            ["business_consulting"],
+    "Marketing & Advertising":          ["business_marketing"],
+    "Healthcare & Clinical":            ["pre_health", "health_nursing_allied"],
+    "Nursing & Allied Health":          ["health_nursing_allied"],
+    "Life Sciences & Research":         ["science_research"],
+    "Design & Creative Arts":           ["arts_design"],
+    "Media & Communications":           ["humanities_communications"],
+    "Management & Operations":          [],  # generic bucket, no cohort
+    "Economics & Public Policy":        ["social_sciences"],
+    "Human Resources & People":         ["social_sciences"],
+    "Legal & Compliance":               ["pre_law"],
+    "Education & Teaching":             ["social_sciences"],
+    "Entrepreneurship & Innovation":    [],  # spans many cohorts, skip
+    "Mechanical & Aerospace Engineering": ["tech_software_engineering"],  # nearest fit
+    "Electrical & Computer Engineering": ["tech_software_engineering"],
+    "Sport & Recreation":               ["sport_management"],
+}
+
+
+def _canonical_cohorts_for(legacy_labels: list[str]) -> list[str]:
+    """Translate the list of legacy cohort labels into canonical IDs.
+    De-duplicates and preserves relative order of first appearance."""
+    out: list[str] = []
+    for label in legacy_labels:
+        for cid in LEGACY_TO_CANONICAL.get(label, []):
+            if cid not in out:
+                out.append(cid)
+    return out
+
 
 # ── Seniority detection ──────────────────────────────────────────────────────
 
@@ -252,9 +331,18 @@ def analyze_job(
             reqs["grit"] = min(reqs["grit"] + 5, 100)
         cohort_requirements.append({"cohort": cohort, **reqs})
 
+    canonical_cohorts = _canonical_cohorts_for(matched_cohorts)
+
     return {
         "cohort_requirements": cohort_requirements,
         "job_type": job_type,
         "seniority": seniority,
         "primary_cohort": matched_cohorts[0],
+        # Canonical cohort IDs matching knowledge/cohort_rubrics.json.
+        # Empty list is possible when every matched legacy label has no
+        # canonical mapping (e.g. "Management & Operations" only).
+        "canonical_cohorts": canonical_cohorts,
+        # Primary canonical = the first matched legacy label's first
+        # canonical, or None when none exists.
+        "primary_canonical_cohort": canonical_cohorts[0] if canonical_cohorts else None,
     }

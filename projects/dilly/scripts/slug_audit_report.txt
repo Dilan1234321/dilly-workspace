@@ -1,0 +1,106 @@
+=== SLUG AUDIT ===
+
+Total slugs probed: 602
+  alive (≥1 job):  144
+  empty (200, 0 jobs): 144
+  dead (non-200): 281
+  network_error:  33
+
+By ATS — alive:
+  ashby: 32
+  greenhouse: 108
+  lever: 2
+  smartrecruiters: 2
+
+By ATS — dead:
+  ashby: 45
+  greenhouse: 171
+  lever: 64
+  smartrecruiters: 1
+
+=== RECOVERY SUGGESTIONS (Greenhouse) ===
+  'mixpanelinc' → try 'mixpanel' (46 jobs)
+  'oktainc' → try 'okta' (367 jobs)
+  'cloudflareinc' → try 'cloudflare' (478 jobs)
+
+=== FIRST 80 DEAD SLUGS ===
+  [ashby] '11x'  (11x)  → HTTP 404
+  [ashby] 'adept'  (Adept)  → HTTP 404
+  [ashby] 'airbase'  (Airbase)  → HTTP 404
+  [ashby] 'algolia'  (Algolia)  → HTTP 404
+  [ashby] 'amplitude-inc'  (Amplitude)  → HTTP 404
+  [ashby] 'anthropic'  (Anthropic)  → HTTP 404
+  [ashby] 'arize'  (Arize AI)  → HTTP 404
+  [ashby] 'beautifulai'  (Beautiful.ai)  → HTTP 404
+  [ashby] 'brexhq'  (Brex)  → HTTP 404
+  [ashby] 'cal'  (Cal.com)  → HTTP 404
+  [ashby] 'census'  (Census)  → HTTP 404
+  [ashby] 'cerebras'  (Cerebras)  → HTTP 404
+  [ashby] 'characterai'  (Character.AI)  → HTTP 404
+  [ashby] 'clickupapp'  (ClickUp)  → HTTP 404
+  [ashby] 'comet'  (Comet)  → HTTP 404
+  [ashby] 'default'  (Default)  → HTTP 404
+  [ashby] 'dub'  (Dub)  → HTTP 404
+  [ashby] 'eleven'  (ElevenLabs)  → HTTP 404
+  [ashby] 'eppo'  (Eppo)  → HTTP 404
+  [ashby] 'groq'  (Groq)  → HTTP 404
+  [ashby] 'height'  (Height)  → HTTP 404
+  [ashby] 'hotjar'  (Hotjar)  → HTTP 404
+  [ashby] 'huggingface'  (Hugging Face)  → HTTP 404
+  [ashby] 'increase'  (Increase)  → HTTP 404
+  [ashby] 'ironclad'  (Ironclad)  → HTTP 404
+  [ashby] 'labelbox'  (Labelbox)  → HTTP 404
+  [ashby] 'maze'  (Maze)  → HTTP 404
+  [ashby] 'mercoa'  (Mercoa)  → HTTP 404
+  [ashby] 'modern-treasury'  (Modern Treasury)  → HTTP 404
+  [ashby] 'ontop'  (Ontop)  → HTTP 404
+  [ashby] 'pitch'  (Pitch)  → HTTP 404
+  [ashby] 'prefect-io'  (Prefect)  → HTTP 404
+  [ashby] 'puzzle'  (Puzzle)  → HTTP 404
+  [ashby] 'replicate'  (Replicate)  → HTTP 404
+  [ashby] 'rho-business'  (Rho)  → HTTP 404
+  [ashby] 'rudderstack'  (RudderStack)  → HTTP 404
+  [ashby] 'scale'  (Scale AI)  → HTTP 404
+  [ashby] 'shortcut'  (Shortcut)  → HTTP 404
+  [ashby] 'snorkel'  (Snorkel AI)  → HTTP 404
+  [ashby] 'tinybird'  (Tinybird)  → HTTP 404
+  [ashby] 'together'  (Together AI)  → HTTP 404
+  [ashby] 'tome'  (Tome)  → HTTP 404
+  [ashby] 'tropic'  (Tropic)  → HTTP 404
+  [ashby] 'userpilot'  (Userpilot)  → HTTP 404
+  [ashby] 'weights-biases'  (Weights & Biases)  → HTTP 404
+  [greenhouse] 'ably'  (Ably)  → HTTP 404
+  [greenhouse] 'acorns'  (Acorns)  → HTTP 404
+  [greenhouse] 'activision'  (Activision Blizzard)  → HTTP 404
+  [greenhouse] 'afterpay'  (Afterpay)  → HTTP 404
+  [greenhouse] 'airbyte'  (Airbyte)  → HTTP 404
+  [greenhouse] 'airflow'  (Astronomer)  → HTTP 404
+  [greenhouse] 'altair'  (Altair)  → HTTP 404
+  [greenhouse] 'alteryx'  (Alteryx)  → HTTP 404
+  [greenhouse] 'amgen'  (Amgen)  → HTTP 404
+  [greenhouse] 'anduril'  (Anduril Industries)  → HTTP 404
+  [greenhouse] 'ansys'  (ANSYS)  → HTTP 404
+  [greenhouse] 'appcues'  (Appcues)  → HTTP 404
+  [greenhouse] 'aurora'  (Aurora)  → HTTP 404
+  [greenhouse] 'auth0'  (Auth0)  → HTTP 404
+  [greenhouse] 'autodesk'  (Autodesk)  → HTTP 404
+  [greenhouse] 'bain'  (Bain)  → HTTP 404
+  [greenhouse] 'bcg'  (BCG)  → HTTP 404
+  [greenhouse] 'beamtx'  (Beam Therapeutics)  → HTTP 404
+  [greenhouse] 'beyondmeat'  (Beyond Meat)  → HTTP 404
+  [greenhouse] 'bigcommerce'  (BigCommerce)  → HTTP 404
+  [greenhouse] 'biogen'  (Biogen)  → HTTP 404
+  [greenhouse] 'bloomberg'  (Bloomberg)  → HTTP 404
+  [greenhouse] 'c3ai'  (C3.ai)  → HTTP 404
+  [greenhouse] 'cadence'  (Cadence)  → HTTP 404
+  [greenhouse] 'canva'  (Canva)  → HTTP 404
+  [greenhouse] 'checkout'  (Checkout.com)  → HTTP 404
+  [greenhouse] 'chegg'  (Chegg)  → HTTP 404
+  [greenhouse] 'chewy'  (Chewy)  → HTTP 404
+  [greenhouse] 'citrix'  (Citrix)  → HTTP 404
+  [greenhouse] 'cityblock'  (Cityblock Health)  → HTTP 404
+  [greenhouse] 'clari'  (Clari)  → HTTP 404
+  [greenhouse] 'clickup'  (ClickUp)  → HTTP 404
+  [greenhouse] 'cloudflareinc'  (Cloudflare)  → HTTP 404
+  [greenhouse] 'cockroachdb'  (Cockroach Labs)  → HTTP 404
+  [greenhouse] 'color'  (Color Health)  → HTTP 404
