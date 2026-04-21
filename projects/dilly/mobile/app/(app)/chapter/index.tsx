@@ -418,36 +418,64 @@ export default function ChapterSessionScreen() {
         setChatBlocked('Dilly stepped away. Tap Continue when you are ready.');
         return;
       }
-      // Type reply in same cadence as the rest of the Chapter. rAF
-      // driver matches the main-body stream for a consistent feel.
+      // Type reply in same cadence as the main Chapter body — per-frame
+      // rAF with punctuation pauses. The prior build referenced an
+      // undefined UPDATE_MS constant here which crashed every time a
+      // user sent a chat message. This mirrors the same tick loop used
+      // to stream the main screen body.
       const assistantMsg: ChatMsg = { id: ++chatMsgId.current, role: 'assistant', content: '' };
       setChatMessages(prev => [...prev, assistantMsg]);
       setIsTyping(true);
       if (typeRef.current) { typeRef.current(); typeRef.current = null; }
+
       const startMs = Date.now();
       let rafId = 0;
-      let lastUpdateMs = -1;
-      const tick = () => {
-        const elapsed = Date.now() - startMs;
-        const target = Math.min(reply.length, Math.floor((elapsed / 1000) * TYPE_CHARS_PER_SEC));
-        const done = target >= reply.length;
-        const shouldUpdate = done || elapsed - lastUpdateMs >= UPDATE_MS;
-        if (shouldUpdate) {
-          lastUpdateMs = elapsed;
-          const chunk = done ? reply : reply.slice(0, target);
-          setChatMessages(prev => {
-            if (prev.length === 0) return prev;
-            const updated = [...prev];
-            const last = updated[updated.length - 1];
-            if (last?.role === 'assistant') {
-              updated[updated.length - 1] = { ...last, content: chunk };
-            }
-            return updated;
-          });
-          if (done) {
-            setIsTyping(false);
-            return;
+      let cursor = 0;
+      let pausedUntilMs = 0;
+      let totalPauseMs = 0;
+      const applyChunk = (chunk: string) => {
+        setChatMessages(prev => {
+          if (prev.length === 0) return prev;
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          if (last?.role === 'assistant') {
+            updated[updated.length - 1] = { ...last, content: chunk };
           }
+          return updated;
+        });
+      };
+      const tick = () => {
+        const now = Date.now();
+        if (now < pausedUntilMs) {
+          rafId = requestAnimationFrame(tick);
+          return;
+        }
+        const activeMs = now - startMs - totalPauseMs;
+        const desiredCursor = Math.min(
+          reply.length,
+          Math.floor((activeMs * TYPE_CHARS_PER_SEC) / 1000),
+        );
+        if (desiredCursor > cursor) {
+          let next = cursor;
+          while (next < desiredCursor) {
+            next++;
+            const justTyped = reply[next - 1];
+            const pauseMs = PUNCT_PAUSE_MS[justTyped];
+            const nextChar = reply[next];
+            const isBoundary = !nextChar || nextChar === ' ' || nextChar === '\n';
+            if (pauseMs && isBoundary && next < reply.length) {
+              cursor = next;
+              pausedUntilMs = now + pauseMs;
+              totalPauseMs += pauseMs;
+              break;
+            }
+          }
+          if (next >= desiredCursor) cursor = desiredCursor;
+          applyChunk(reply.slice(0, cursor));
+        }
+        if (cursor >= reply.length) {
+          setIsTyping(false);
+          return;
         }
         rafId = requestAnimationFrame(tick);
       };
