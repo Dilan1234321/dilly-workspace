@@ -61,67 +61,27 @@ function publishedAgo(iso?: string | null): string {
   return `${Math.floor(diff / 365)}y ago`;
 }
 
-/** HTML shell hosting YouTube's iframe API (not the plain /embed URL).
- *  The API exposes error codes (2/5/100/101/150) so we can detect
- *  when a video refuses to embed and post a message back to RN to
- *  show a graceful fallback instead of YouTube's "Video playback
- *  configuration error" overlay.
+/** Build the YouTube embed URL. We point the WebView directly at
+ *  this URL (instead of wrapping the iframe API inside a local HTML
+ *  string) for one crucial reason: a `source={{ html }}` WebView has
+ *  NO real origin, and YouTube's iframe API refuses to play video in
+ *  a nullorigin context — it emits error code 5 for every request,
+ *  which is exactly the "this video can't play inline" error the user
+ *  was seeing on every video.
  *
- *  Autoplay is deliberately OFF. iOS WebView autoplay requires the
- *  original user gesture to propagate into the nested <iframe>, which
- *  does not always happen — so autoplay triggered the "playback
- *  configuration error" the user saw. Letting the iframe render its
- *  own play button is the robust path; the user already tapped the
- *  big Dilly play button so one more tap is acceptable and reliable. */
-function buildPlayerHtml(videoId: string): string {
-  return `<!doctype html>
-<html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-    <style>
-      html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
-      #player { position: fixed; inset: 0; width: 100%; height: 100%; }
-    </style>
-  </head>
-  <body>
-    <div id="player"></div>
-    <script>
-      // Load the official YouTube iframe API, then instantiate a
-      // player bound to the #player div. We use the API (not a
-      // plain embed URL) so we can listen for onError and tell the
-      // React Native host when a video refuses to embed.
-      var tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(tag);
-
-      function post(type, detail) {
-        if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: type, detail: detail }));
-        }
-      }
-
-      window.onYouTubeIframeAPIReady = function () {
-        try {
-          new YT.Player('player', {
-            videoId: '${videoId}',
-            playerVars: {
-              playsinline: 1,
-              rel: 0,
-              modestbranding: 1,
-              fs: 1,
-            },
-            events: {
-              onReady: function () { post('ready'); },
-              onError: function (e) { post('error', e && e.data); },
-            },
-          });
-        } catch (err) {
-          post('error', 'init');
-        }
-      };
-    </script>
-  </body>
-</html>`;
+ *  Loading the embed URL directly gives the WebView a real origin
+ *  (www.youtube.com), so playback works. If a specific video cannot
+ *  be embedded, YouTube's own player surfaces an inline "video
+ *  unavailable" state — clearer than any custom fallback we can
+ *  fabricate, and the right source of truth.
+ *
+ *  - playsinline=1: honors our allowsInlineMediaPlayback WebView flag
+ *  - rel=0: no related videos at end (keeps user in Dilly's own
+ *    suggestion flow)
+ *  - modestbranding=1: minimizes the YouTube chrome
+ */
+function embedUrl(videoId: string): string {
+  return `https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1`;
 }
 
 export default function VideoScreen() {
@@ -135,11 +95,6 @@ export default function VideoScreen() {
   const [saved, setSaved] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
-  // Player error surfaces only when YouTube refuses to embed this
-  // specific video (error codes 101/150 from the iframe API). We show
-  // a soft fallback with a one-tap "open in YouTube" rather than a
-  // hard failure.
-  const [playerError, setPlayerError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -241,32 +196,16 @@ export default function VideoScreen() {
           render, and it matches Google's own pattern of a
           poster-to-player flip. */}
       <View style={styles.playerWrap}>
-        {playerError ? (
-          // Fallback surface when YouTube refuses to embed (errors
-          // 101 / 150 from the iframe API). Thumbnail stays so the
-          // page still reads well; one-tap escape to the YouTube
-          // app is below. Preserves the Dilly chrome — user stays
-          // in the app unless they explicitly opt out.
-          <View style={{ flex: 1 }}>
-            <Image source={{ uri: video.thumbnail_url }} style={styles.player} resizeMode="cover" />
-            <View style={[styles.playOverlay, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
-              <Text style={styles.errOverlayTitle}>This video can't play inline</Text>
-              <Text style={styles.errOverlayBody}>
-                The channel disabled embedded playback. You can still watch it in YouTube.
-              </Text>
-              <TouchableOpacity
-                activeOpacity={0.88}
-                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${video.id}`).catch(() => {})}
-                style={[styles.errOverlayBtn, { backgroundColor: theme.accent }]}
-              >
-                <Ionicons name="open-outline" size={14} color="#FFF" />
-                <Text style={styles.errOverlayBtnText}>Open in YouTube</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : playing ? (
+        {playing ? (
+          // Load the YouTube embed URL directly — not wrapped in a
+          // local HTML shell. Inline HTML has a null origin which
+          // trips YouTube's iframe API into emitting error code 5
+          // for every video. Pointing the WebView at www.youtube.com
+          // gives it a real origin and playback works. If a specific
+          // video has embedding disabled, YouTube's own player shows
+          // a clear "video unavailable" state inline.
           <WebView
-            source={{ html: buildPlayerHtml(video.id) }}
+            source={{ uri: embedUrl(video.id) }}
             style={styles.player}
             allowsInlineMediaPlayback
             mediaPlaybackRequiresUserAction={false}
@@ -274,20 +213,6 @@ export default function VideoScreen() {
             domStorageEnabled
             allowsFullscreenVideo
             startInLoadingState
-            originWhitelist={['*']}
-            onMessage={(ev) => {
-              try {
-                const msg = JSON.parse(ev.nativeEvent.data);
-                if (msg?.type === 'error') {
-                  // YT iframe error codes: 2 (invalid parameter),
-                  // 5 (HTML5 player error), 100 (video removed /
-                  // private), 101/150 (embedding disabled by owner).
-                  setPlayerError(String(msg.detail || 'unknown'));
-                }
-              } catch {
-                // ignore non-JSON messages from the player page
-              }
-            }}
             renderLoading={() => (
               <View style={[styles.playerLoading, { backgroundColor: '#000' }]}>
                 <ActivityIndicator color="#FFF" />

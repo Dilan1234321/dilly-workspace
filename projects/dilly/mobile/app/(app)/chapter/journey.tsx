@@ -98,12 +98,20 @@ export default function ChapterJourneyScreen() {
     let cancelled = false;
     (async () => {
       try {
+        // /chapters/current wraps the chapter in `latest`. Earlier
+        // version read res.screens directly and always missed, which
+        // made Journey show "no journey yet" every time a user
+        // finished a session. Also accept the unwrapped shape as a
+        // safety net in case a future backend version flattens it.
         const res = await dilly.get('/chapters/current').catch(() => null);
         if (cancelled) return;
-        if (res && typeof res === 'object' && Array.isArray((res as any).screens)) {
-          setChapter(res as Chapter);
-          // Hydrate visited set scoped to this chapter.
-          const key = VISITED_KEY_PREFIX + ((res as Chapter).generated_at || 'latest');
+        const candidate: Chapter | null =
+          res && Array.isArray((res as any).latest?.screens)  ? (res as any).latest :
+          res && Array.isArray((res as any).screens)           ? (res as any) :
+          null;
+        if (candidate) {
+          setChapter(candidate);
+          const key = VISITED_KEY_PREFIX + (candidate.generated_at || candidate.id || 'latest');
           const raw = await AsyncStorage.getItem(key).catch(() => null);
           if (raw && !cancelled) {
             try { setVisited(new Set(JSON.parse(raw) as string[])); }
