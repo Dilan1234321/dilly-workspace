@@ -482,8 +482,21 @@ function Accessory({ kind, cx, cy, s, color, scribbleAnim }: AccessoryProps) {
 }
 
 /** Pencil in the hand zone (bottom-right of face). Writing mood makes
- *  the tip scribble with a short animated under-line. */
-function PencilAccessory({ cx, cy, s, color, scribbleAnim }: Omit<AccessoryProps, 'kind'>) {
+ *  the tip scribble with a short animated under-line.
+ *
+ *  Colors are fixed (not themed) — readable against any accent:
+ *    - Body: yellow (classic no.2)
+ *    - Top / eraser: pink
+ *    - Tip (bottom): black graphite
+ *    - Scribble line: black
+ *  Previously the pencil pulled from `color` (accent) which made it
+ *  disappear on pale themes and didn't read as a pencil. */
+function PencilAccessory({ cx, cy, s, scribbleAnim }: Omit<AccessoryProps, 'kind' | 'color'> & { color?: string }) {
+  const PENCIL_BODY = '#FFD83D'   // yellow no.2 body
+  const PENCIL_ERASER = '#FF7AA2' // classic pink eraser top
+  const PENCIL_TIP = '#111111'    // black graphite
+  const SCRIBBLE = '#111111'      // black scribble line
+
   // Tip at bottom-right, body angled up-right.
   const tipX = cx + 14 * s
   const tipY = cy + 14 * s
@@ -499,22 +512,22 @@ function PencilAccessory({ cx, cy, s, color, scribbleAnim }: Omit<AccessoryProps
 
   return (
     <>
-      {/* Body */}
-      <Line x1={tipX} y1={tipY} x2={butX} y2={butY} stroke={color} strokeWidth={strokeW} strokeLinecap="round" />
-      {/* Tip highlight */}
-      <Circle cx={tipX} cy={tipY} r={0.9 * s} fill={color} />
-      {/* Eraser */}
-      <Circle cx={butX} cy={butY} r={1.2 * s} fill="#FF9F0A" />
+      {/* Yellow body */}
+      <Line x1={tipX} y1={tipY} x2={butX} y2={butY} stroke={PENCIL_BODY} strokeWidth={strokeW} strokeLinecap="round" />
+      {/* Black tip */}
+      <Circle cx={tipX} cy={tipY} r={0.9 * s} fill={PENCIL_TIP} />
+      {/* Pink eraser */}
+      <Circle cx={butX} cy={butY} r={1.2 * s} fill={PENCIL_ERASER} />
       {/* Scribble line — only when writing */}
       {dashOffset && (
         <AnimatedPath
           d={`M ${tipX - 5 * s} ${tipY + 3 * s} l ${10 * s} 0`}
-          stroke={color}
+          stroke={SCRIBBLE}
           strokeWidth={1.4 * s}
           strokeLinecap="round"
           strokeDasharray={`${4 * s},${3 * s}`}
           strokeDashoffset={dashOffset as unknown as number}
-          opacity={0.75}
+          opacity={0.9}
         />
       )}
     </>

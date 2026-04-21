@@ -1339,7 +1339,68 @@ function DillyNoticed({
 
 // -- Main Screen ------------------------------------------------------------
 
+// ── Debug error boundary ──────────────────────────────────────────
+// Temporarily added to diagnose the "pressing Jobs bounces me to Home"
+// bug. When Jobs crashes, the app-level ErrorBoundary at _layout.tsx
+// catches it and shows a sad face — but auto-resets when pathname
+// changes, which makes it FEEL like the app returns to Home.
+//
+// This local boundary catches FIRST, renders the error message + stack
+// inline, and has no resetKey so the user sees it until they navigate
+// away. Once we identify the crash, revert this wrapper.
+class JobsDebugBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null; info: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null, info: '' };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error, info: '' };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[JobsDebugBoundary]', error, info.componentStack);
+    this.setState({ error, info: String(info.componentStack || '').slice(0, 2000) });
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const msg = this.state.error.message || String(this.state.error);
+    const stack = String(this.state.error.stack || '').slice(0, 2000);
+    return (
+      <ScrollView style={{ flex: 1, backgroundColor: '#FFF5F5', padding: 20, paddingTop: 60 }}>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#B91C1C', marginBottom: 8 }}>
+          Jobs crashed — screenshot this
+        </Text>
+        <Text style={{ fontSize: 10, color: '#6B7280', marginBottom: 16 }}>
+          Debug boundary (build 349). Send this screen to Dilan so he can fix the root cause.
+        </Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#111', marginTop: 12 }}>MESSAGE</Text>
+        <Text selectable style={{ fontSize: 12, color: '#111', marginTop: 4 }}>
+          {msg}
+        </Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#111', marginTop: 16 }}>STACK</Text>
+        <Text selectable style={{ fontSize: 10, color: '#333', marginTop: 4, fontFamily: 'Menlo' }}>
+          {stack}
+        </Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#111', marginTop: 16 }}>COMPONENT STACK</Text>
+        <Text selectable style={{ fontSize: 10, color: '#333', marginTop: 4, fontFamily: 'Menlo', marginBottom: 40 }}>
+          {this.state.info}
+        </Text>
+      </ScrollView>
+    );
+  }
+}
+
 export default function JobsScreen() {
+  return (
+    <JobsDebugBoundary>
+      <JobsScreenInner />
+    </JobsDebugBoundary>
+  );
+}
+
+function JobsScreenInner() {
   const insets = useSafeAreaInsets();
   // User-chosen theme — container bg, header typography, refresh
   // tint all read from here so Customize paints this tab too.
