@@ -28,11 +28,14 @@ import psycopg2.extras
 import requests
 
 YT_API = "https://www.googleapis.com/youtube/v3"
-TOP_N_PER_COHORT_LANG = 50           # keep top N per (cohort, language) combo
-MAX_RESULTS_PER_QUERY = 25
-MIN_DURATION_SEC = 180
+TOP_N_PER_COHORT_LANG = 40           # tighter — we'd rather have 40 great than 60 mediocre
+MAX_RESULTS_PER_QUERY = 20
+MIN_DURATION_SEC = 240               # 4 min — cuts more low-effort shorts
 MAX_DURATION_SEC = 4 * 3600
-MIN_RELEVANCE = 0.15                 # drop videos below this cohort-keyword match score
+MIN_RELEVANCE = 0.22                 # raised so off-topic videos are rejected
+MIN_SUBSCRIBERS = 5_000              # channel authority floor
+MIN_VIEWS = 2_000                    # the absolute floor; top picks have millions
+MIN_QUALITY_SCORE = 40               # final filter on computed score
 
 # Languages we can ingest for. Keep this list in sync with lib/i18n.ts.
 # YouTube quota is 10k units/day. search.list costs 100 units per call, so
@@ -77,8 +80,16 @@ class VideoRow:
 
 # ── YouTube API helpers ────────────────────────────────────────────────────────
 
+class QuotaExhausted(Exception):
+    """Raised when YouTube returns a quota-exceeded 403. The caller should
+    gracefully stop and resume on the next quota reset (midnight Pacific)."""
+    pass
+
+
 def yt_get(path: str, params: dict, key: str) -> dict:
     r = requests.get(f"{YT_API}/{path}", params={**params, "key": key}, timeout=15)
+    if r.status_code == 403 and "quota" in r.text.lower():
+        raise QuotaExhausted(f"YouTube quota exhausted at /{path}")
     if r.status_code != 200:
         raise RuntimeError(f"YouTube {path} {r.status_code}: {r.text[:200]}")
     return r.json()
@@ -234,6 +245,13 @@ def to_row(
     if relevance < MIN_RELEVANCE:
         return None
 
+    # Channel authority + floor views. Drops low-effort or unwatched content.
+    view_count_raw = int(stats.get("viewCount", 0) or 0)
+    if view_count_raw < MIN_VIEWS:
+        return None
+    if subs < MIN_SUBSCRIBERS:
+        return None
+
     published_at = datetime.fromisoformat(
         snippet.get("publishedAt", "1970-01-01T00:00:00Z").replace("Z", "+00:00")
     )
@@ -256,6 +274,8 @@ def to_row(
         view_count, like_count, comment_count, subs,
         duration_sec, published_at, query_weight, relevance,
     )
+    if quality < MIN_QUALITY_SCORE:
+        return None
 
     return VideoRow(
         id=vid,
@@ -383,6 +403,11 @@ def main() -> int:
     languages = resolve_languages()
     print(f"Ingesting languages: {[l for l, _ in languages]}")
 
+    # When SKIP_IF_COVERED is set, skip cohorts that already have >= N videos.
+    # Lets us resume after a quota-exhausted run without re-burning quota on
+    # the cohorts we already finished.
+    skip_threshold = int(os.environ.get("SKIP_IF_COVERED", "0"))
+
     conn = psycopg2.connect(db_url)
     try:
         queries_by_cohort = load_queries(conn)
@@ -390,31 +415,53 @@ def main() -> int:
         deny = load_denylist(conn)
         global_deny = deny["__global__"]
 
+        coverage: dict[str, int] = {}
+        if skip_threshold > 0:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT cohort, COUNT(*) FROM skill_lab_videos GROUP BY cohort"
+                )
+                coverage = {c: int(n) for (c, n) in cur.fetchall()}
+
         if not queries_by_cohort:
             print("No cohort queries seeded.", file=sys.stderr)
             return 1
 
         for cohort, queries in queries_by_cohort.items():
+            if skip_threshold > 0 and coverage.get(cohort, 0) >= skip_threshold:
+                print(f"[{cohort}] already has {coverage[cohort]} videos — skipping")
+                continue
+
             keywords = keywords_by_cohort.get(cohort, [])
             denylist = deny.get(cohort, global_deny)
             print(f"[{cohort}] {len(queries)} queries, {len(keywords)} keywords")
 
             for lang_code, relevance_lang in languages:
                 all_items: list[tuple[dict, float]] = []
-                for q, weight in queries:
-                    try:
-                        ids = search_video_ids(q, relevance_lang, key)
-                        for item in fetch_video_details(ids, key):
-                            all_items.append((item, weight))
-                    except Exception as e:
-                        print(f"  ! {lang_code} '{q}' failed: {e}", file=sys.stderr)
-                    time.sleep(0.2)
+                try:
+                    for q, weight in queries:
+                        try:
+                            ids = search_video_ids(q, relevance_lang, key)
+                            for item in fetch_video_details(ids, key):
+                                all_items.append((item, weight))
+                        except QuotaExhausted:
+                            raise
+                        except Exception as e:
+                            print(f"  ! {lang_code} '{q}' failed: {e}", file=sys.stderr)
+                        time.sleep(0.2)
+                except QuotaExhausted as e:
+                    print(f"⚠  {e} — stopping. Re-run tomorrow with SKIP_IF_COVERED=30 to resume.", file=sys.stderr)
+                    return 0
 
                 if not all_items:
                     continue
 
                 channel_ids = {i.get("snippet", {}).get("channelId", "") for i, _ in all_items}
-                subs_by_channel = fetch_channel_subs(channel_ids, key)
+                try:
+                    subs_by_channel = fetch_channel_subs(channel_ids, key)
+                except QuotaExhausted as e:
+                    print(f"⚠  {e} — stopping. Re-run tomorrow with SKIP_IF_COVERED=30 to resume.", file=sys.stderr)
+                    return 0
 
                 rows: list[VideoRow] = []
                 for item, weight in all_items:

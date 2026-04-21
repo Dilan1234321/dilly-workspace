@@ -175,6 +175,59 @@ def get_video(video_id: str):
     return {"video": _serialize(row)}
 
 
+@router.get("/ask")
+def ask(
+    q: str = Query(..., min_length=2, max_length=500),
+    limit: int = Query(12, ge=1, le=30),
+):
+    """
+    Free-text situation search. Zero LLM: Postgres full-text matches the
+    phrase against (title + channel + cohort + description), ranks with
+    ts_rank_cd, blends with quality_score. Also detects cohort intent by
+    scoring against skill_lab_cohort_keywords so a phrase like
+    "I want to be a data scientist" also surfaces the cohort itself.
+    """
+    phrase = q.strip()
+    # websearch_to_tsquery handles natural-language input — quotes, negatives,
+    # OR — without raising on weird punctuation
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            # Video matches
+            cur.execute(
+                f"""
+                SELECT {SELECT_COLS},
+                       ts_rank_cd(search_doc, websearch_to_tsquery('english', %s)) AS trank
+                  FROM skill_lab_videos
+                 WHERE search_doc @@ websearch_to_tsquery('english', %s)
+                 ORDER BY (trank * 0.6 + (quality_score / 100.0) * 0.4) DESC
+                 LIMIT %s
+                """,
+                (phrase, phrase, limit),
+            )
+            video_rows = cur.fetchall()
+
+            # Cohort intent: which cohorts' keywords match the user's phrase?
+            phrase_lower = phrase.lower()
+            cur.execute(
+                "SELECT cohort, keyword, weight FROM skill_lab_cohort_keywords"
+            )
+            cohort_scores: dict[str, float] = {}
+            for cohort, kw, w in cur.fetchall():
+                if kw.lower() in phrase_lower:
+                    cohort_scores[cohort] = cohort_scores.get(cohort, 0.0) + float(w)
+
+    # Rank cohorts by score, keep top 3
+    top_cohorts = sorted(cohort_scores.items(), key=lambda x: -x[1])[:3]
+
+    videos = [_serialize(r[:12]) for r in video_rows]
+    return {
+        "videos": videos,
+        "cohorts": [
+            {"cohort": c, "score": round(s, 2)} for (c, s) in top_cohorts
+        ],
+    }
+
+
 @router.get("/trending")
 def trending(
     limit: int = Query(12, ge=1, le=48),
