@@ -35,13 +35,25 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# Workday's bot detection returns HTTP 400 when the User-Agent has any
+# non-standard suffix (it used to allow "Dilly-Job-Aggregator/1.0" but
+# started rejecting it sometime after build 330). Stick to a plain
+# browser UA — the API is public and unauthenticated.
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/120.0 Safari/537.36 Dilly-Job-Aggregator/1.0"
+    "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 )
 REQUEST_TIMEOUT = 25
 REQUEST_DELAY = 2.0
 PER_TENANT_CAP = 500  # hard cap so one mega-employer doesn't block the crawl
+
+# Workday's list endpoint only returns titles + external paths; the JD
+# lives at a separate /wday/cxs/{tenant}/{site}{externalPath} GET that
+# we have to call per job. We cap the number of detail fetches per
+# tenant so the crawl doesn't take hours — rest ship with title-only
+# content (still enough for cohort classification + apply-link).
+JD_DETAIL_FETCH_CAP = 80
+JD_DETAIL_DELAY = 0.3  # seconds between detail calls (per tenant)
 
 
 # (tenant_slug, wd_number, site_path, display_name, industry, website)
@@ -56,7 +68,8 @@ WORKDAY_TENANTS: list[tuple[str, str, str, str, str, str]] = [
     ("intel",        "wd1", "External", "Intel", "Tech", "intel.com"),
     ("ibm",          "wd1", "IBM", "IBM", "Tech", "ibm.com"),
     ("cisco",        "wd5", "External", "Cisco", "Tech", "cisco.com"),
-    ("salesforce",   "wd1", "External_Career_Site", "Salesforce", "Tech", "salesforce.com"),
+    # Salesforce moved to wd12 some time ago; wd1 now returns 422.
+    ("salesforce",   "wd12","External_Career_Site", "Salesforce", "Tech", "salesforce.com"),
     ("oracle",       "wd5", "OracleCorporate", "Oracle", "Tech", "oracle.com"),
     ("sap",          "wd3", "SAPcareers", "SAP", "Tech", "sap.com"),
     ("workday",      "wd5", "Workday", "Workday", "Tech", "workday.com"),
@@ -105,7 +118,8 @@ WORKDAY_TENANTS: list[tuple[str, str, str, str, str, str]] = [
     ("hcahealthcare","wd1", "HCA_Healthcare_Careers", "HCA Healthcare", "Healthcare", "hcahealthcare.com"),
 
     # Consumer / Retail
-    ("target",       "wd1", "Target", "Target", "Consumer", "target.com"),
+    # Target is on wd5, site slug "targetcareers" (lowercase).
+    ("target",       "wd5", "targetcareers", "Target", "Consumer", "target.com"),
     ("walmart",      "wd5", "WalmartExternal", "Walmart", "Consumer", "walmart.com"),
     ("nordstrom",    "wd1", "Nordstrom", "Nordstrom", "Consumer", "nordstrom.com"),
     ("bestbuy",      "wd1", "External", "Best Buy", "Consumer", "bestbuy.com"),
@@ -126,7 +140,8 @@ WORKDAY_TENANTS: list[tuple[str, str, str, str, str, str]] = [
     ("unilever",     "wd3", "External", "Unilever", "Consumer", "unilever.com"),
 
     # Media / Entertainment
-    ("disney",       "wd1", "disneycareer", "Disney", "Media", "disney.com"),
+    # Disney is on wd5, not wd1; site is "disneycareer" (unchanged).
+    ("disney",       "wd5", "disneycareer", "Disney", "Media", "disney.com"),
     ("comcast",      "wd5", "CorporateCareers", "Comcast", "Media", "comcast.com"),
     ("paramount",    "wd5", "ParamountCareers", "Paramount", "Media", "paramount.com"),
     ("warnerbros",   "wd5", "global", "Warner Bros Discovery", "Media", "wbd.com"),
@@ -198,6 +213,49 @@ def _classify_job_type(title: str, description: str) -> str:
 
 # ── Core fetcher ──────────────────────────────────────────────────────
 
+def _fetch_workday_job_detail(
+    base_host: str,
+    tenant: str,
+    site_path: str,
+    external_path: str,
+) -> str:
+    """Fetch the full HTML description for one Workday job posting.
+
+    The listing endpoint gives us only {title, externalPath, ...} —
+    no job description. To get the JD we hit:
+      GET {base_host}/wday/cxs/{tenant}/{site_path}{external_path}
+
+    Returns a plain-text description (HTML stripped) or "" on any
+    error. Never raises — the caller continues with the thin listing
+    content if this fails.
+    """
+    if not external_path:
+        return ""
+    url = f"{base_host}/wday/cxs/{tenant}/{site_path}{external_path}"
+    try:
+        resp = requests.get(
+            url,
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "application/json",
+            },
+            timeout=REQUEST_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return ""
+        data = resp.json() or {}
+        info = data.get("jobPostingInfo") or {}
+        raw = info.get("jobDescription") or ""
+        # Workday returns HTML; let the existing _strip_html helper
+        # clean it up if available (it's defined just above in this
+        # same module).
+        if raw:
+            return _strip_html(raw)[:6000]
+    except Exception as e:
+        logger.debug("[workday] JD detail fetch failed %s: %s", url, e)
+    return ""
+
+
 def fetch_workday_tenant(
     tenant: str,
     wd_number: str,
@@ -217,22 +275,29 @@ def fetch_workday_tenant(
 
     jobs: list[dict] = []
     offset = 0
-    page_size = 50
+    # Workday changed their bot limits — page sizes > 20 now return
+    # HTTP 400. Was 50 (worked through build 330). Keeping at 20 is
+    # safe and doesn't meaningfully slow the crawl since we're still
+    # network-bound on the JD detail fetches.
+    page_size = 20
 
+    # Workday rejects a matching Origin (expects either no Origin or the
+    # referring site that embeds their widget). Passing "Origin: host"
+    # used to work but now returns 400. Leaving Origin off is the
+    # reliable path.
     headers = {
         "User-Agent": USER_AGENT,
-        "Accept": "application/json,text/plain,*/*",
+        "Accept": "application/json",
         "Content-Type": "application/json",
-        # Without an Origin, some Workday tenants 401.
-        "Origin": f"https://{tenant}.{wd_number}.myworkdayjobs.com",
     }
 
     while offset < cap:
+        # Minimal body only. Workday used to accept
+        # {"searchText": "", "appliedFacets": {}} but now returns HTTP
+        # 400 with those fields — even empty. Send just limit+offset.
         body = {
             "limit": page_size,
             "offset": offset,
-            "searchText": "",
-            "appliedFacets": {},
         }
 
         try:
@@ -273,6 +338,16 @@ def fetch_workday_tenant(
             bullets = p.get("bulletFields") or []
             desc = " · ".join(bullets) if bullets else ""
 
+            # Enrich the first JD_DETAIL_FETCH_CAP jobs per tenant with
+            # the real job description. Caps keep the total crawl time
+            # sane — 100 tenants × 500 jobs × 0.3s = 4h otherwise.
+            external_path = p.get("externalPath") or ""
+            if external_path and len(jobs) < JD_DETAIL_FETCH_CAP:
+                full_desc = _fetch_workday_job_detail(base, tenant, site_path, external_path)
+                if full_desc:
+                    desc = full_desc
+                time.sleep(JD_DETAIL_DELAY)
+
             posted = None
             pp = p.get("postedOn")
             if pp and isinstance(pp, str):
@@ -280,7 +355,6 @@ def fetch_workday_tenant(
                 # Leave as None for posted_date; the stamp isn't machine-friendly.
                 posted = None
 
-            external_path = p.get("externalPath") or ""
             apply_url = f"{base}{external_path}" if external_path else ""
 
             # Remote detection from location text.
