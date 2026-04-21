@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Dimensions,
+  Image, ActivityIndicator, Dimensions, Linking,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +27,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { dilly } from '../../../../lib/dilly';
 import { useResolvedTheme } from '../../../../hooks/useTheme';
 import DillyLoadingState from '../../../../components/DillyLoadingState';
+import { FirstVisitCoach } from '../../../../components/FirstVisitCoach';
 
 interface Video {
   id: string;
@@ -60,13 +61,18 @@ function publishedAgo(iso?: string | null): string {
   return `${Math.floor(diff / 365)}y ago`;
 }
 
-/** Minimal HTML page hosting YouTube's iframe player. Takes the
- *  video id as a query param. The body black bg and zero margins
- *  mean there are no white edges around the player at any aspect
- *  ratio. Autoplay is true because the user already chose to watch
- *  by tapping the thumbnail; fullscreen is enabled; related videos
- *  after the video play are suppressed (rel=0) to keep the user in
- *  Dilly's suggestion flow. */
+/** HTML shell hosting YouTube's iframe API (not the plain /embed URL).
+ *  The API exposes error codes (2/5/100/101/150) so we can detect
+ *  when a video refuses to embed and post a message back to RN to
+ *  show a graceful fallback instead of YouTube's "Video playback
+ *  configuration error" overlay.
+ *
+ *  Autoplay is deliberately OFF. iOS WebView autoplay requires the
+ *  original user gesture to propagate into the nested <iframe>, which
+ *  does not always happen — so autoplay triggered the "playback
+ *  configuration error" the user saw. Letting the iframe render its
+ *  own play button is the robust path; the user already tapped the
+ *  big Dilly play button so one more tap is acceptable and reliable. */
 function buildPlayerHtml(videoId: string): string {
   return `<!doctype html>
 <html>
@@ -74,18 +80,46 @@ function buildPlayerHtml(videoId: string): string {
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <style>
       html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
-      .wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
-      iframe { border: 0; width: 100%; height: 100%; }
+      #player { position: fixed; inset: 0; width: 100%; height: 100%; }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <iframe
-        src="https://www.youtube.com/embed/${videoId}?autoplay=1&playsinline=1&rel=0&modestbranding=1"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-        allowfullscreen>
-      </iframe>
-    </div>
+    <div id="player"></div>
+    <script>
+      // Load the official YouTube iframe API, then instantiate a
+      // player bound to the #player div. We use the API (not a
+      // plain embed URL) so we can listen for onError and tell the
+      // React Native host when a video refuses to embed.
+      var tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+
+      function post(type, detail) {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: type, detail: detail }));
+        }
+      }
+
+      window.onYouTubeIframeAPIReady = function () {
+        try {
+          new YT.Player('player', {
+            videoId: '${videoId}',
+            playerVars: {
+              playsinline: 1,
+              rel: 0,
+              modestbranding: 1,
+              fs: 1,
+            },
+            events: {
+              onReady: function () { post('ready'); },
+              onError: function (e) { post('error', e && e.data); },
+            },
+          });
+        } catch (err) {
+          post('error', 'init');
+        }
+      };
+    </script>
   </body>
 </html>`;
 }
@@ -101,6 +135,11 @@ export default function VideoScreen() {
   const [saved, setSaved] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
+  // Player error surfaces only when YouTube refuses to embed this
+  // specific video (error codes 101/150 from the iframe API). We show
+  // a soft fallback with a one-tap "open in YouTube" rather than a
+  // hard failure.
+  const [playerError, setPlayerError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -202,7 +241,30 @@ export default function VideoScreen() {
           render, and it matches Google's own pattern of a
           poster-to-player flip. */}
       <View style={styles.playerWrap}>
-        {playing ? (
+        {playerError ? (
+          // Fallback surface when YouTube refuses to embed (errors
+          // 101 / 150 from the iframe API). Thumbnail stays so the
+          // page still reads well; one-tap escape to the YouTube
+          // app is below. Preserves the Dilly chrome — user stays
+          // in the app unless they explicitly opt out.
+          <View style={{ flex: 1 }}>
+            <Image source={{ uri: video.thumbnail_url }} style={styles.player} resizeMode="cover" />
+            <View style={[styles.playOverlay, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
+              <Text style={styles.errOverlayTitle}>This video can't play inline</Text>
+              <Text style={styles.errOverlayBody}>
+                The channel disabled embedded playback. You can still watch it in YouTube.
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${video.id}`).catch(() => {})}
+                style={[styles.errOverlayBtn, { backgroundColor: theme.accent }]}
+              >
+                <Ionicons name="open-outline" size={14} color="#FFF" />
+                <Text style={styles.errOverlayBtnText}>Open in YouTube</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : playing ? (
           <WebView
             source={{ html: buildPlayerHtml(video.id) }}
             style={styles.player}
@@ -213,6 +275,19 @@ export default function VideoScreen() {
             allowsFullscreenVideo
             startInLoadingState
             originWhitelist={['*']}
+            onMessage={(ev) => {
+              try {
+                const msg = JSON.parse(ev.nativeEvent.data);
+                if (msg?.type === 'error') {
+                  // YT iframe error codes: 2 (invalid parameter),
+                  // 5 (HTML5 player error), 100 (video removed /
+                  // private), 101/150 (embedding disabled by owner).
+                  setPlayerError(String(msg.detail || 'unknown'));
+                }
+              } catch {
+                // ignore non-JSON messages from the player page
+              }
+            }}
             renderLoading={() => (
               <View style={[styles.playerLoading, { backgroundColor: '#000' }]}>
                 <ActivityIndicator color="#FFF" />
@@ -302,6 +377,13 @@ export default function VideoScreen() {
           </>
         ) : null}
       </View>
+
+      <FirstVisitCoach
+        id="skills_video_v1"
+        iconName="play-circle"
+        headline="Play lives inside Dilly"
+        subline="Tap the thumbnail to start. Bookmark to save for later, and the library keeps everything you watch."
+      />
     </ScrollView>
   );
 }
@@ -359,6 +441,20 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   durTagText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+
+  errOverlayTitle: {
+    color: '#FFF', fontSize: 15, fontWeight: '800',
+    textAlign: 'center', paddingHorizontal: 24,
+  },
+  errOverlayBody: {
+    color: 'rgba(255,255,255,0.8)', fontSize: 12, lineHeight: 17,
+    textAlign: 'center', paddingHorizontal: 30, marginTop: 6, marginBottom: 14,
+  },
+  errOverlayBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
+  },
+  errOverlayBtnText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
 
   title:    { fontSize: 19, fontWeight: '800', letterSpacing: -0.2, lineHeight: 25 },
   metaLine: { fontSize: 12, fontWeight: '600', marginTop: 4 },

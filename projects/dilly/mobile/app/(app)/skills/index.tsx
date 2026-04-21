@@ -30,6 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import { DillyFace } from '../../../components/DillyFace';
+import { FirstVisitCoach } from '../../../components/FirstVisitCoach';
 
 /** 22 backend cohort slugs — must stay in sync with
  *  projects/dilly/api/routers/skill_lab.py `_SLUG_TO_COHORT`.
@@ -135,6 +136,15 @@ export default function SkillsHomeScreen() {
       <Text style={[styles.footer, { color: theme.surface.t3 }]}>
         Save what helps, revisit when you want, build a receipt of what you've learned.
       </Text>
+
+      {/* First-visit intro. Fires once per install; dismiss persists
+          in AsyncStorage so it never annoys a returning user. */}
+      <FirstVisitCoach
+        id="skills_home_v1"
+        iconName="sparkles"
+        headline="Dilly Skills is your library"
+        subline="Curated 15-min videos. Pick a cohort, ask for what you need, or open your library."
+      />
     </ScrollView>
   );
 }

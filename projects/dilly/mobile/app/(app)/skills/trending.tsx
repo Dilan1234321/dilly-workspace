@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import DillyLoadingState from '../../../components/DillyLoadingState';
+import { FirstVisitCoach } from '../../../components/FirstVisitCoach';
 
 interface Video {
   id: string;
@@ -97,6 +98,13 @@ export default function TrendingScreen() {
           </TouchableOpacity>
         ))
       )}
+
+      <FirstVisitCoach
+        id="skills_trending_v1"
+        iconName="flame"
+        headline="What's moving across the library"
+        subline="A cross-cohort view of the highest-signal videos right now. Useful when you don't know what to learn next."
+      />
     </ScrollView>
   );
 }

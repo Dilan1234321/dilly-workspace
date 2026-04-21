@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import DillyLoadingState from '../../../components/DillyLoadingState';
+import { FirstVisitCoach } from '../../../components/FirstVisitCoach';
 
 interface SavedVideo {
   id: string;
@@ -112,6 +113,13 @@ export default function LibraryScreen() {
           </TouchableOpacity>
         ))
       )}
+
+      <FirstVisitCoach
+        id="skills_library_v1"
+        iconName="bookmark"
+        headline="Everything you save lives here"
+        subline="Tap the bookmark on any video to keep it. Sorted by most recent save — your receipt of what you're learning."
+      />
     </ScrollView>
   );
 }

@@ -33,6 +33,7 @@ import { router } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import DillyLoadingState from '../../../components/DillyLoadingState';
+import { FirstVisitCoach } from '../../../components/FirstVisitCoach';
 
 interface Video {
   id: string;
@@ -331,6 +332,13 @@ export default function AskScreen() {
           />
         </View>
       ) : null}
+
+      <FirstVisitCoach
+        id="skills_ask_v1"
+        iconName="search"
+        headline="Ask for anything you want to learn"
+        subline="Write a full sentence. Dilly matches it to the curated library and sends you the best videos."
+      />
 
       {submitted && !loading ? (
         <>

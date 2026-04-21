@@ -304,8 +304,39 @@ export default function JobsScreen() {
   }, []);
 
   const askDilly = useCallback((job: Listing) => {
+    // Seed Dilly with the full job context so it can answer ANY
+    // question the user asks from this point — qualifications,
+    // deadlines, salary, how to frame a cold email, pivot stories,
+    // whatever. We pass company, title, location, work mode, and the
+    // full description (truncated at 4,000 chars so very long JDs
+    // don't explode the prompt). The user's question comes on the
+    // next turn; Dilly's first job is to read + acknowledge.
+    const loc = [job.location_city, job.location_state].filter(Boolean).join(', ')
+      || (job.remote ? 'Remote' : '');
+    const workMode = job.work_mode || (job.remote ? 'Remote' : '');
+    const fullJd = (job.description || job.description_preview || '').trim().slice(0, 4000);
+
+    const context = [
+      `COMPANY: ${job.company}`,
+      `ROLE: ${job.title}`,
+      loc ? `LOCATION: ${loc}` : '',
+      workMode ? `WORK MODE: ${workMode}` : '',
+      job.posted_date ? `POSTED: ${job.posted_date}` : '',
+      job.apply_url || job.url ? `LINK: ${job.apply_url || job.url}` : '',
+      fullJd ? `\nJOB DESCRIPTION:\n${fullJd}` : '',
+    ].filter(Boolean).join('\n');
+
+    const seed =
+      `I'm looking at this role and I want your read on it. Here is the ` +
+      `full posting — please use it to answer whatever I ask next:\n\n` +
+      context +
+      `\n\nTo start: how well do I fit this role, and what would you push ` +
+      `me on to be competitive? I may follow up with specific questions.`;
+
     openDillyOverlay({
-      initialMessage: `I'm looking at the ${job.title} role at ${job.company}. Can you help me understand how well I fit and what I should work on to be competitive for this role?`,
+      initialMessage: seed,
+      applicationTarget: `${job.title} @ ${job.company}`,
+      referenceCompany: job.company,
     });
   }, []);
 
@@ -598,6 +629,11 @@ function ExpandedDetails({ job, theme, narrative, onApply, onAsk, onTailor }: Ca
   const loading = narrative && (narrative as any).__loading;
   const errored = narrative && (narrative as any).__error;
   const data: FitNarrative | null = (narrative && !loading && !errored) ? (narrative as FitNarrative) : null;
+  // Default to the action only ("What to do"). The full read (What
+  // you have + What's missing) is one tap away but hidden by default
+  // so users aren't staring at a wall of text. Most of the value is
+  // the action — strengths and gaps are the "why" behind it.
+  const [showFullRead, setShowFullRead] = useState(false);
 
   return (
     <View style={{ marginTop: 14, gap: 10 }}>
@@ -625,14 +661,41 @@ function ExpandedDetails({ job, theme, narrative, onApply, onAsk, onTailor }: Ca
 
       {data ? (
         <View style={{ gap: 10 }}>
-          {data.what_you_have ? (
-            <NarrativeRow label="What you have" body={data.what_you_have} color="#34C759" theme={theme} />
-          ) : null}
-          {data.whats_missing ? (
-            <NarrativeRow label="What's missing" body={data.whats_missing} color="#FF9F0A" theme={theme} />
-          ) : null}
+          {/* Action first (default visible). This is the payoff — what
+              should the user actually do with this role. */}
           {data.what_to_do ? (
             <NarrativeRow label="What to do" body={data.what_to_do} color={theme.accent} theme={theme} />
+          ) : null}
+
+          {/* Reveal the strengths + gaps on demand. One tap expands. */}
+          {(data.what_you_have || data.whats_missing) ? (
+            showFullRead ? (
+              <View style={{ gap: 10 }}>
+                {data.what_you_have ? (
+                  <NarrativeRow label="What you have" body={data.what_you_have} color="#34C759" theme={theme} />
+                ) : null}
+                {data.whats_missing ? (
+                  <NarrativeRow label="What's missing" body={data.whats_missing} color="#FF9F0A" theme={theme} />
+                ) : null}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  hitSlop={8}
+                  onPress={(e) => { e.stopPropagation?.(); setShowFullRead(false); }}
+                >
+                  <Text style={[styles.fullReadToggle, { color: theme.surface.t3 }]}>Show less</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                hitSlop={8}
+                onPress={(e) => { e.stopPropagation?.(); setShowFullRead(true); }}
+              >
+                <Text style={[styles.fullReadToggle, { color: theme.accent }]}>
+                  See the full read (strengths + gaps)
+                </Text>
+              </TouchableOpacity>
+            )
           ) : null}
         </View>
       ) : null}
@@ -757,6 +820,7 @@ const styles = StyleSheet.create({
   narrativeBody:    { fontSize: 13, lineHeight: 19, flex: 1 },
   bulletRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 3 },
   bulletDot:        { fontSize: 14, lineHeight: 19, fontWeight: '900' },
+  fullReadToggle:   { fontSize: 12, fontWeight: '800', marginTop: 4 },
 
   actionPrimary: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

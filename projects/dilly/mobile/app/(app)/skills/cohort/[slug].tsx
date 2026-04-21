@@ -1,22 +1,27 @@
 /**
- * Skills cohort detail (build 353).
+ * Skills cohort page — redesigned (build 355).
  *
- * Mirrors the web cohort page:
- *   - "Start here" — first 5 high-quality videos as a guided path
- *   - "The rest of the library" — sort (Best/Newest) + length filter
- *     (≤15m / ≤45m / Any)
+ * The first pass looked like a list with a filter bar on top. Too
+ * clinical. This redesign is magazine-like:
  *
- * Fetches from the existing FastAPI endpoint
- *   GET /skill-lab/videos?cohort=<slug>&sort=&limit=&max_duration_min=
+ *   - Hero: big cohort title, short tagline from a static map, video
+ *     + channel count, a warm accent-tinted background so each cohort
+ *     feels like a distinct destination.
+ *   - "Start here" is now a horizontal carousel of full-bleed cards
+ *     with step numbers. Feels like a curated playlist.
+ *   - Filters move into a sticky-looking chip row under "The library",
+ *     horizontally scrollable so they don't wrap.
+ *   - Video cards use a bigger title (15pt, weight 800), cleaner
+ *     spacing, duration chip on the thumbnail, and a slim "high signal"
+ *     badge that doesn't dominate.
  *
- * Each video renders as a card with thumbnail, title, channel, and
- * duration. Tap → /skills/video/[id] which handles playback.
+ * Data source is unchanged: GET /skill-lab/videos?cohort=&sort=&max_duration_min=.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Image, RefreshControl,
+  Image, RefreshControl, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,32 +29,39 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { dilly } from '../../../../lib/dilly';
 import { useResolvedTheme } from '../../../../hooks/useTheme';
 import DillyLoadingState from '../../../../components/DillyLoadingState';
+import { FirstVisitCoach } from '../../../../components/FirstVisitCoach';
 
-// Slug → display name. Must stay in sync with the Skills home page
-// and the backend _SLUG_TO_COHORT.
-const SLUG_TO_TITLE: Record<string, string> = {
-  'software-engineering-cs':          'Software Engineering & CS',
-  'data-science-analytics':           'Data Science & Analytics',
-  'cybersecurity-it':                 'Cybersecurity & IT',
-  'electrical-computer-engineering':  'Electrical & Computer Engineering',
-  'mechanical-aerospace-engineering': 'Mechanical & Aerospace Engineering',
-  'civil-environmental-engineering':  'Civil & Environmental Engineering',
-  'chemical-biomedical-engineering':  'Chemical & Biomedical Engineering',
-  'finance-accounting':               'Finance & Accounting',
-  'consulting-strategy':              'Consulting & Strategy',
-  'marketing-advertising':            'Marketing & Advertising',
-  'management-operations':            'Management & Operations',
-  'entrepreneurship-innovation':      'Entrepreneurship & Innovation',
-  'economics-public-policy':          'Economics & Public Policy',
-  'healthcare-clinical':              'Healthcare & Clinical',
-  'biotech-pharmaceutical':           'Biotech & Pharmaceutical',
-  'life-sciences-research':           'Life Sciences & Research',
-  'physical-sciences-math':           'Physical Sciences & Math',
-  'law-government':                   'Law & Government',
-  'media-communications':             'Media & Communications',
-  'design-creative-arts':             'Design & Creative Arts',
-  'education-human-development':      'Education & Human Development',
-  'social-sciences-nonprofit':        'Social Sciences & Nonprofit',
+interface CohortMeta {
+  title: string;
+  tagline: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+/** Slug → display name + short editorial tagline. Taglines are
+ *  single-sentence, imperative when possible, brand voice. */
+const COHORTS: Record<string, CohortMeta> = {
+  'software-engineering-cs':          { title: 'Software Engineering & CS',        tagline: 'Build systems that scale.',                         icon: 'code-slash' },
+  'data-science-analytics':           { title: 'Data Science & Analytics',         tagline: 'Make numbers speak.',                              icon: 'stats-chart' },
+  'cybersecurity-it':                 { title: 'Cybersecurity & IT',               tagline: 'Defend what matters; break what should break.',   icon: 'shield-checkmark' },
+  'electrical-computer-engineering':  { title: 'Electrical & Computer Engineering',tagline: 'Signal, circuit, silicon — the metal layer.',      icon: 'hardware-chip' },
+  'mechanical-aerospace-engineering': { title: 'Mechanical & Aerospace Engineering',tagline: 'Solids, fluids, the discipline of flight.',       icon: 'airplane' },
+  'civil-environmental-engineering':  { title: 'Civil & Environmental Engineering',tagline: 'The built world.',                                 icon: 'business' },
+  'chemical-biomedical-engineering':  { title: 'Chemical & Biomedical Engineering',tagline: 'Reactions, devices, the life sciences.',           icon: 'flask' },
+  'finance-accounting':               { title: 'Finance & Accounting',             tagline: 'Modeling, valuation, financial reasoning.',        icon: 'cash' },
+  'consulting-strategy':              { title: 'Consulting & Strategy',            tagline: 'Structure, synthesis, the whiteboard.',            icon: 'analytics' },
+  'marketing-advertising':            { title: 'Marketing & Advertising',          tagline: 'Positioning, distribution, demand.',               icon: 'megaphone' },
+  'management-operations':            { title: 'Management & Operations',          tagline: 'Teams, process, the operating cadence.',           icon: 'people' },
+  'entrepreneurship-innovation':      { title: 'Entrepreneurship & Innovation',    tagline: 'Building from zero.',                              icon: 'rocket' },
+  'economics-public-policy':          { title: 'Economics & Public Policy',        tagline: 'Markets, incentives, evidence.',                   icon: 'trending-up' },
+  'healthcare-clinical':              { title: 'Healthcare & Clinical',            tagline: 'Anatomy, clinical reasoning, the MCAT bar.',       icon: 'medkit' },
+  'biotech-pharmaceutical':           { title: 'Biotech & Pharmaceutical',         tagline: 'Molecules, trials, regulation.',                   icon: 'fitness' },
+  'life-sciences-research':           { title: 'Life Sciences & Research',         tagline: 'From bench to insight.',                           icon: 'leaf' },
+  'physical-sciences-math':           { title: 'Physical Sciences & Math',         tagline: 'The math that underwrites everything.',            icon: 'infinite' },
+  'law-government':                   { title: 'Law & Government',                 tagline: 'Cases, briefs, institutional craft.',              icon: 'hammer' },
+  'media-communications':             { title: 'Media & Communications',           tagline: 'The honest sentence.',                             icon: 'newspaper' },
+  'design-creative-arts':             { title: 'Design & Creative Arts',           tagline: 'Taste as output.',                                 icon: 'color-palette' },
+  'education-human-development':      { title: 'Education & Human Development',    tagline: 'The classroom craft.',                             icon: 'school' },
+  'social-sciences-nonprofit':        { title: 'Social Sciences & Nonprofit',      tagline: 'Mission-driven work.',                             icon: 'heart-circle' },
 };
 
 interface Video {
@@ -88,11 +100,14 @@ function publishedAgo(iso?: string | null): string {
   return `${Math.floor(diffDays / 365)}y ago`;
 }
 
+const SCREEN_W = Dimensions.get('window').width;
+const STARTHERE_CARD_W = SCREEN_W * 0.72;
+
 export default function CohortScreen() {
   const theme = useResolvedTheme();
   const insets = useSafeAreaInsets();
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const title = SLUG_TO_TITLE[slug as string] || 'Cohort';
+  const meta = (slug && COHORTS[slug as string]) || { title: 'Cohort', tagline: '', icon: 'ellipse' as keyof typeof Ionicons.glyphMap };
 
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,8 +119,8 @@ export default function CohortScreen() {
     if (!slug) return;
     try {
       const params = new URLSearchParams({ cohort: String(slug), sort, limit: '60' });
-      if (lengthFilter === 'short')   params.set('max_duration_min', '15');
-      if (lengthFilter === 'medium')  params.set('max_duration_min', '45');
+      if (lengthFilter === 'short')  params.set('max_duration_min', '15');
+      if (lengthFilter === 'medium') params.set('max_duration_min', '45');
       const res = await dilly.get(`/skill-lab/videos?${params.toString()}`).catch(() => null);
       setVideos(Array.isArray(res?.videos) ? res.videos : []);
     } finally {
@@ -115,12 +130,11 @@ export default function CohortScreen() {
   }, [slug, sort, lengthFilter]);
 
   useEffect(() => { setLoading(true); load(); }, [load]);
-
   const onRefresh = useCallback(() => { setRefreshing(true); load(); }, [load]);
 
-  // Top 5 of best-sorted as "Start here" — only when we aren't applying
-  // filters (those change the intended ordering).
   const startHere = useMemo(() => {
+    // Only show the curated path on the default view so changing
+    // filters doesn't yank the ordering out from under the user.
     if (sort !== 'best' || lengthFilter !== 'any') return [];
     return videos.slice(0, 5);
   }, [videos, sort, lengthFilter]);
@@ -130,14 +144,15 @@ export default function CohortScreen() {
     return videos.slice(5);
   }, [videos, startHere]);
 
+  const uniqueChannels = useMemo(() => {
+    const set = new Set(videos.map(v => v.channel_id || v.channel_title).filter(Boolean));
+    return set.size;
+  }, [videos]);
+
   const openVideo = useCallback((v: Video) => {
     router.push({ pathname: `/skills/video/${v.id}`, params: { cohort: String(slug) } });
   }, [slug]);
 
-  // First load shows the full-screen Dilly loading state so Skills
-  // reads the same as every other page. Refreshes (pull-to-refresh,
-  // sort/filter changes) keep the list and show an inline spinner
-  // instead so the user keeps their scroll position.
   if (loading && videos.length === 0) {
     return (
       <DillyLoadingState
@@ -145,7 +160,7 @@ export default function CohortScreen() {
         mood="writing"
         accessory="pencil"
         messages={[
-          `Opening ${title}…`,
+          `Opening ${meta.title}…`,
           'Pulling the curated list…',
           'Almost ready…',
         ]}
@@ -156,72 +171,195 @@ export default function CohortScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 80 }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={[styles.eyebrow, { color: theme.accent }]}>COHORT</Text>
-          <Text style={[styles.title, { color: theme.surface.t1 }]} numberOfLines={2}>{title}</Text>
-          <Text style={[styles.meta, { color: theme.surface.t3 }]}>
-            {videos.length} {videos.length === 1 ? 'video' : 'videos'}
-          </Text>
+      {/* Hero — tinted backdrop the full width of the screen. The
+          accent is muted (accentSoft) so the cohort feels like a
+          destination but doesn't shout. Icon, title, tagline,
+          counts — nothing else competes. */}
+      <View style={[styles.hero, { backgroundColor: theme.accentSoft, paddingTop: insets.top + 8 }]}>
+        <View style={styles.heroTopRow}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+            <Ionicons name="chevron-back" size={26} color={theme.surface.t1} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+        </View>
+
+        <View style={styles.heroIconRow}>
+          <View style={[styles.heroIconBg, { backgroundColor: theme.accent }]}>
+            <Ionicons name={meta.icon} size={24} color="#FFF" />
+          </View>
+          <Text style={[styles.heroEyebrow, { color: theme.accent }]}>COHORT</Text>
+        </View>
+
+        <Text style={[styles.heroTitle, { color: theme.surface.t1 }]} numberOfLines={2}>
+          {meta.title}
+        </Text>
+        {meta.tagline ? (
+          <Text style={[styles.heroTagline, { color: theme.surface.t2 }]}>{meta.tagline}</Text>
+        ) : null}
+
+        <View style={styles.heroStatsRow}>
+          <View style={styles.heroStat}>
+            <Text style={[styles.heroStatNum, { color: theme.surface.t1 }]}>{videos.length}</Text>
+            <Text style={[styles.heroStatLabel, { color: theme.surface.t3 }]}>videos</Text>
+          </View>
+          <View style={[styles.heroStatDivider, { backgroundColor: theme.accentBorder }]} />
+          <View style={styles.heroStat}>
+            <Text style={[styles.heroStatNum, { color: theme.surface.t1 }]}>{uniqueChannels}</Text>
+            <Text style={[styles.heroStatLabel, { color: theme.surface.t3 }]}>channels</Text>
+          </View>
+          <View style={[styles.heroStatDivider, { backgroundColor: theme.accentBorder }]} />
+          <View style={styles.heroStat}>
+            <Text style={[styles.heroStatNum, { color: theme.surface.t1 }]}>100%</Text>
+            <Text style={[styles.heroStatLabel, { color: theme.surface.t3 }]}>curated</Text>
+          </View>
         </View>
       </View>
 
-      {loading ? (
-        <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={theme.accent} />
-        </View>
-      ) : (
+      {/* Start here — horizontal carousel */}
+      {startHere.length > 0 ? (
         <>
-          {/* Start here (curated path) */}
-          {startHere.length > 0 ? (
-            <>
-              <Text style={[styles.sectionTitle, { color: theme.surface.t3 }]}>START HERE</Text>
-              {startHere.map((v, i) => (
-                <VideoRow
-                  key={v.id}
-                  video={v}
-                  step={i + 1}
-                  theme={theme}
-                  onPress={() => openVideo(v)}
-                />
-              ))}
-            </>
-          ) : null}
-
-          {/* Filters */}
-          <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 24 }]}>
-            THE REST OF THE LIBRARY
-          </Text>
-          <View style={styles.filterRow}>
-            <FilterPill label="Best"   active={sort === 'best'}   onPress={() => setSort('best')}   theme={theme} />
-            <FilterPill label="Newest" active={sort === 'newest'} onPress={() => setSort('newest')} theme={theme} />
-            <View style={{ width: 10 }} />
-            <FilterPill label="≤15m" active={lengthFilter === 'short'}  onPress={() => setLengthFilter(lengthFilter === 'short' ? 'any' : 'short')}   theme={theme} />
-            <FilterPill label="≤45m" active={lengthFilter === 'medium'} onPress={() => setLengthFilter(lengthFilter === 'medium' ? 'any' : 'medium')} theme={theme} />
-            <FilterPill label="Any"  active={lengthFilter === 'any'}    onPress={() => setLengthFilter('any')}    theme={theme} />
-          </View>
-
-          {rest.length === 0 ? (
-            <Text style={[styles.empty, { color: theme.surface.t3 }]}>
-              No videos match these filters. Try widening the length.
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.accent }]}>START HERE</Text>
+            <Text style={[styles.sectionSub, { color: theme.surface.t2 }]}>
+              A curated path for someone starting out.
             </Text>
-          ) : (
-            rest.map(v => (
-              <VideoRow key={v.id} video={v} theme={theme} onPress={() => openVideo(v)} />
-            ))
-          )}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+          >
+            {startHere.map((v, i) => (
+              <StartHereCard
+                key={v.id}
+                video={v}
+                step={i + 1}
+                theme={theme}
+                onPress={() => openVideo(v)}
+              />
+            ))}
+          </ScrollView>
         </>
+      ) : null}
+
+      {/* The library */}
+      <View style={[styles.sectionHeader, { marginTop: startHere.length > 0 ? 24 : 20 }]}>
+        <Text style={[styles.sectionTitle, { color: theme.accent }]}>THE LIBRARY</Text>
+        <Text style={[styles.sectionSub, { color: theme.surface.t2 }]}>
+          Every video in this cohort, sortable and filterable.
+        </Text>
+      </View>
+
+      {/* Sticky-looking filter chip scroller */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 2 }}
+      >
+        <FilterPill label="Best"   active={sort === 'best'}   onPress={() => setSort('best')}   theme={theme} />
+        <FilterPill label="Newest" active={sort === 'newest'} onPress={() => setSort('newest')} theme={theme} />
+        <View style={{ width: 8 }} />
+        <FilterPill label="≤15m" active={lengthFilter === 'short'}  onPress={() => setLengthFilter(lengthFilter === 'short' ? 'any' : 'short')}   theme={theme} />
+        <FilterPill label="≤45m" active={lengthFilter === 'medium'} onPress={() => setLengthFilter(lengthFilter === 'medium' ? 'any' : 'medium')} theme={theme} />
+        <FilterPill label="Any"  active={lengthFilter === 'any'}    onPress={() => setLengthFilter('any')}    theme={theme} />
+      </ScrollView>
+
+      {rest.length === 0 ? (
+        <Text style={[styles.empty, { color: theme.surface.t3 }]}>
+          No videos match these filters. Try widening the length.
+        </Text>
+      ) : (
+        <View style={{ marginTop: 14 }}>
+          {rest.map(v => (
+            <LibraryRow key={v.id} video={v} theme={theme} onPress={() => openVideo(v)} />
+          ))}
+        </View>
       )}
+
+      <FirstVisitCoach
+        id="skills_cohort_v1"
+        iconName="layers"
+        headline="One cohort, one curated list"
+        subline="Start here is the warm-up path. Below it, every video in this cohort — filter by length or sort by newest."
+      />
     </ScrollView>
   );
 }
+
+// -- Start Here carousel card -------------------------------------------------
+
+function StartHereCard({ video, step, theme, onPress }: {
+  video: Video; step: number; theme: ReturnType<typeof useResolvedTheme>; onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={onPress}
+      style={[
+        styles.shCard,
+        {
+          width: STARTHERE_CARD_W,
+          backgroundColor: theme.surface.s1,
+          borderColor: theme.surface.border,
+        },
+      ]}
+    >
+      <View style={{ position: 'relative' }}>
+        <Image source={{ uri: video.thumbnail_url }} style={styles.shThumb} resizeMode="cover" />
+        <View style={[styles.shStep, { backgroundColor: theme.accent }]}>
+          <Text style={styles.shStepText}>{step}</Text>
+        </View>
+        {video.duration_sec ? (
+          <View style={styles.durTag}>
+            <Text style={styles.durTagText}>{formatDuration(video.duration_sec)}</Text>
+          </View>
+        ) : null}
+      </View>
+      <View style={{ padding: 12 }}>
+        <Text style={[styles.shTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{video.title}</Text>
+        <Text style={[styles.shMeta, { color: theme.surface.t3 }]} numberOfLines={1}>{video.channel_title}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// -- Library row (used below Start Here) --------------------------------------
+
+function LibraryRow({ video, theme, onPress }: {
+  video: Video; theme: ReturnType<typeof useResolvedTheme>; onPress: () => void;
+}) {
+  const ago = publishedAgo(video.published_at);
+  const dur = formatDuration(video.duration_sec);
+  return (
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={styles.libRow}>
+      <View style={styles.libThumbWrap}>
+        <Image source={{ uri: video.thumbnail_url }} style={styles.libThumb} resizeMode="cover" />
+        {dur ? (
+          <View style={styles.durTag}>
+            <Text style={styles.durTagText}>{dur}</Text>
+          </View>
+        ) : null}
+      </View>
+      <View style={{ flex: 1, marginLeft: 12 }}>
+        <Text style={[styles.libTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{video.title}</Text>
+        <Text style={[styles.libMeta, { color: theme.surface.t3 }]} numberOfLines={1}>
+          {video.channel_title}{ago ? ` · ${ago}` : ''}
+        </Text>
+        {video.quality_score && video.quality_score >= 0.8 ? (
+          <View style={[styles.signal, { borderColor: theme.accentBorder }]}>
+            <Ionicons name="sparkles" size={9} color={theme.accent} />
+            <Text style={[styles.signalText, { color: theme.accent }]}>high signal</Text>
+          </View>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// -- Filter pill --------------------------------------------------------------
 
 function FilterPill({ label, active, onPress, theme }: {
   label: string; active: boolean; onPress: () => void; theme: ReturnType<typeof useResolvedTheme>;
@@ -244,124 +382,95 @@ function FilterPill({ label, active, onPress, theme }: {
   );
 }
 
-function VideoRow({ video, step, theme, onPress }: {
-  video: Video; step?: number; theme: ReturnType<typeof useResolvedTheme>; onPress: () => void;
-}) {
-  const durLabel = formatDuration(video.duration_sec);
-  const ago = publishedAgo(video.published_at);
-  return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={onPress}
-      style={[styles.videoCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}
-    >
-      <View style={{ position: 'relative' }}>
-        <Image
-          source={{ uri: video.thumbnail_url }}
-          style={styles.thumb}
-          resizeMode="cover"
-        />
-        {durLabel ? (
-          <View style={styles.durTag}>
-            <Text style={styles.durTagText}>{durLabel}</Text>
-          </View>
-        ) : null}
-        {step ? (
-          <View style={[styles.stepTag, { backgroundColor: theme.accent }]}>
-            <Text style={styles.stepTagText}>{step}</Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={{ padding: 12 }}>
-        <Text style={[styles.vTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{video.title}</Text>
-        <Text style={[styles.vMeta, { color: theme.surface.t3 }]} numberOfLines={1}>
-          {video.channel_title}{ago ? ` · ${ago}` : ''}
-        </Text>
-        {video.quality_score && video.quality_score >= 0.8 ? (
-          <View style={[styles.signalBadge, { borderColor: theme.accentBorder }]}>
-            <Ionicons name="sparkles" size={10} color={theme.accent} />
-            <Text style={[styles.signalBadgeText, { color: theme.accent }]}>high signal</Text>
-          </View>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-}
+// -- Styles -------------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  header: {
+  // Hero
+  hero: {
+    paddingHorizontal: 20,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  heroIconRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  heroIconBg: {
+    width: 40, height: 40, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  heroTitle:   { fontSize: 28, fontWeight: '800', letterSpacing: -0.5, lineHeight: 34 },
+  heroTagline: { fontSize: 14, fontWeight: '600', marginTop: 6, lineHeight: 19 },
+  heroStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingBottom: 12,
+    marginTop: 18,
+    gap: 0,
   },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
-  title:   { fontSize: 22, fontWeight: '800', letterSpacing: -0.3, marginTop: 2 },
-  meta:    { fontSize: 11, fontWeight: '600', marginTop: 3 },
+  heroStat: { alignItems: 'flex-start', flex: 1 },
+  heroStatNum:   { fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
+  heroStatLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, marginTop: 2, textTransform: 'uppercase' },
+  heroStatDivider: { width: 1, height: 30, marginHorizontal: 14 },
 
-  sectionTitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.6,
-    paddingHorizontal: 20,
-    marginTop: 6,
-    marginBottom: 10,
-  },
+  // Sections
+  sectionHeader: { paddingHorizontal: 20, marginTop: 22, marginBottom: 12 },
+  sectionTitle:  { fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
+  sectionSub:    { fontSize: 12, fontWeight: '600', marginTop: 3, lineHeight: 17 },
 
-  filterRow: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    flexWrap: 'wrap',
-  },
-  filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  filterPillText: { fontSize: 12, fontWeight: '700' },
-
-  videoCard: {
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderRadius: 13,
+  // Start here cards
+  shCard: {
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },
-  thumb: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#222' },
+  shThumb: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#222' },
+  shStep: {
+    position: 'absolute', top: 10, left: 10,
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4,
+  },
+  shStepText: { color: '#FFF', fontSize: 12, fontWeight: '800' },
+  shTitle:    { fontSize: 14, fontWeight: '800', lineHeight: 19 },
+  shMeta:     { fontSize: 11, fontWeight: '600', marginTop: 4 },
+
+  // Duration tag (shared)
   durTag: {
-    position: 'absolute',
-    right: 8, bottom: 8,
+    position: 'absolute', right: 8, bottom: 8,
     paddingHorizontal: 6, paddingVertical: 2,
     backgroundColor: 'rgba(0,0,0,0.75)',
     borderRadius: 4,
   },
   durTagText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
-  stepTag: {
-    position: 'absolute',
-    left: 8, top: 8,
-    width: 24, height: 24,
-    borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepTagText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
 
-  vTitle: { fontSize: 14, fontWeight: '800', lineHeight: 19 },
-  vMeta:  { fontSize: 11, fontWeight: '600', marginTop: 4 },
-  signalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+  // Filter chips
+  filterPill: {
+    paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    marginTop: 8,
   },
-  signalBadgeText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  filterPillText: { fontSize: 12, fontWeight: '700' },
+
+  // Library rows (clean horizontal layout, not full-bleed cards so
+  // the list scrolls faster and feels editorial rather than feed-y).
+  libRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  libThumbWrap: { width: 148, aspectRatio: 16 / 9, borderRadius: 8, overflow: 'hidden', backgroundColor: '#222' },
+  libThumb: { width: '100%', height: '100%' },
+  libTitle: { fontSize: 14, fontWeight: '800', lineHeight: 19 },
+  libMeta:  { fontSize: 11, fontWeight: '600', marginTop: 4 },
+  signal: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 999, borderWidth: 1,
+    marginTop: 6,
+  },
+  signalText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
 
   empty: {
     fontSize: 12,
