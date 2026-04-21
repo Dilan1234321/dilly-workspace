@@ -1744,6 +1744,52 @@ export default function JobsScreen() {
     setExpandedId(id);
   }, []);
 
+  // Confidence-band flat list. Seekers/students see the rest-of-feed
+  // split into three confidence zones with decreasing visual weight.
+  // Instead of nested maps (which crashed build 344 — likely because
+  // of a render reconciliation issue with 3 sibling maps inside a
+  // ScrollView under certain listing shapes), we build a SINGLE
+  // flat array of typed rows and render it with one .map.
+  //
+  // Row shape: either a 'header' with a label + sub, or a 'card' with
+  // the listing + band opacity. The render branches off row.kind.
+  //
+  // Holders keep a single "ALSO HIRING IN YOUR FIELD" header and the
+  // feed underneath it — they're benchmarking, not applying.
+  type FeedRow =
+    | { kind: 'header'; id: string; label: string; sub: string | null }
+    | { kind: 'card'; id: string; listing: Listing; opacity: number };
+
+  const restFeedRows: FeedRow[] = useMemo(() => {
+    const rows: FeedRow[] = [];
+    const n = restMatches.length;
+    if (n === 0) return rows;
+
+    if (isHolder) {
+      rows.push({ kind: 'header', id: 'h-holder', label: 'ALSO HIRING IN YOUR FIELD', sub: null });
+      for (const l of restMatches) {
+        rows.push({ kind: 'card', id: `card-${l.id}`, listing: l, opacity: 1 });
+      }
+      return rows;
+    }
+
+    const strongEnd = Math.max(1, Math.floor(n / 3));
+    const stretchEnd = Math.max(strongEnd + 1, Math.floor((n * 2) / 3));
+    const bands: Array<{ label: string; sub: string; items: Listing[]; opacity: number }> = [
+      { label: 'STRONG MATCHES',  sub: 'Dilly sees you here.',                                 items: restMatches.slice(0, strongEnd),     opacity: 1 },
+      { label: 'STRETCH ROLES',   sub: 'Reach — but the path is visible.',                    items: restMatches.slice(strongEnd, stretchEnd), opacity: 0.92 },
+      { label: 'WORTH KNOWING',   sub: 'Background awareness. Not today, maybe next week.',    items: restMatches.slice(stretchEnd),        opacity: 0.82 },
+    ];
+    for (const band of bands) {
+      if (band.items.length === 0) continue;
+      rows.push({ kind: 'header', id: `h-${band.label}`, label: band.label, sub: band.sub });
+      for (const l of band.items) {
+        rows.push({ kind: 'card', id: `card-${l.id}`, listing: l, opacity: band.opacity });
+      }
+    }
+    return rows;
+  }, [restMatches, isHolder]);
+
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* First-visit coach — paid users only. Their version of this
@@ -2102,22 +2148,37 @@ export default function JobsScreen() {
           </View>
         )}
 
-        {/* "Up next for you" rail separator. signals the hierarchy */}
-        {restMatches.length > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>
-              {isHolder ? 'ALSO HIRING IN YOUR FIELD' : 'UP NEXT FOR YOU'}
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-          </View>
-        )}
-
-        {restMatches.map((listing, i) => (
-          <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
+        {/* Flat band-tagged list. One .map, no nesting. Each row is
+            either a band header (holder sees one, seekers see three)
+            or a card with its band's opacity. This shape is what
+            replaced the nested bands.map() structure that crashed
+            builds 337 + 344. */}
+        {restFeedRows.map(row => {
+          if (row.kind === 'header') {
+            return (
+              <View
+                key={row.id}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: row.sub ? 4 : 8, marginTop: 12 }}
+              >
+                <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+                <Text style={{
+                  fontSize: 10,
+                  fontWeight: '800',
+                  color: isHolder ? theme.surface.t3 : theme.accent,
+                  letterSpacing: 1.2,
+                }}>
+                  {row.label}
+                </Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+              </View>
+            );
+          }
+          // row.kind === 'card'
+          const listing = row.listing;
+          const cardEl = (
             <JobCard
               listing={listing}
-              index={i}
+              index={0}
               userCities={userCities}
               userPath={userPath}
               isHolder={isHolder}
@@ -2137,8 +2198,16 @@ export default function JobsScreen() {
               onBookmark={(l) => setShowCollectionPicker(l)}
               isSaved={savedJobIds.has(listing.id)}
             />
-          </FadeInView>
-        ))}
+          );
+          if (row.opacity < 1) {
+            return (
+              <View key={row.id} style={{ opacity: row.opacity }}>
+                {cardEl}
+              </View>
+            );
+          }
+          return <View key={row.id}>{cardEl}</View>;
+        })}
         <DillyFooter />
       </ScrollView>
 
