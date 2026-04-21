@@ -61,6 +61,16 @@ const CATEGORY_ORDER = [
   'mentioned_but_not_done', 'person_to_follow_up',
 ];
 
+// ── Skill Lab types ──────────────────────────────────────────────────────────
+
+interface SkillLabReceipts {
+  total_seconds: number;
+  videos_engaged: number;
+  cohorts_touched: number;
+  articulations: number;
+  by_cohort: { cohort: string; seconds: number; videos: number }[];
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DillyProfilePage() {
@@ -73,6 +83,7 @@ export default function DillyProfilePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
   const [editValue, setEditValue] = useState('');
+  const [skills, setSkills] = useState<SkillLabReceipts | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -83,7 +94,17 @@ export default function DillyProfilePage() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Dilly Skills data is separate from the memory surface. Fetch it in
+  // parallel so the main profile view still renders if Skill Lab is slow
+  // or unavailable. Silent failure: the card just shows empty-state copy.
+  const fetchSkills = useCallback(async () => {
+    try {
+      const json = await dilly.get('/skill-lab/receipts/me');
+      setSkills(json);
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchData(); fetchSkills(); }, [fetchData, fetchSkills]);
 
   function startEdit(fact: FactItem) {
     setEditingId(fact.id);
@@ -230,6 +251,12 @@ export default function DillyProfilePage() {
             </p>
           )}
         </div>
+
+        {/* ── Dilly Skills card ─────────────────────────────────────────
+            Same identity, different surface. Shows the user's learning
+            trail from Dilly Skills with an outbound link to the full
+            learning profile. Silent if the endpoint fails. */}
+        <SkillLabCard skills={skills} />
 
         {/* Completeness */}
         {totalFacts > 0 && completeness < 100 && (
@@ -554,6 +581,96 @@ export default function DillyProfilePage() {
             </p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Skill Lab card ───────────────────────────────────────────────────────────
+
+function SkillLabCard({ skills }: { skills: SkillLabReceipts | null }) {
+  const hasActivity =
+    skills !== null &&
+    (skills.videos_engaged > 0 || skills.articulations > 0);
+  const hours = skills ? Math.floor(skills.total_seconds / 3600) : 0;
+  const minutes = skills ? Math.floor((skills.total_seconds % 3600) / 60) : 0;
+  const hoursLabel = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  const topCohort = skills?.by_cohort?.[0]?.cohort ?? null;
+
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{ background: 'var(--surface-1)', border: '1px solid rgba(43,58,142,0.20)' }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span style={{ color: '#2B3A8E', fontSize: 13 }}>◎</span>
+        <span
+          className="text-[10px] font-bold tracking-widest uppercase"
+          style={{ fontFamily: "'Cinzel', serif", color: '#2B3A8E' }}
+        >
+          Dilly Skills
+        </span>
+        <a
+          href="https://skills.hellodilly.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto text-[10px]"
+          style={{ color: 'var(--text-3)', textDecoration: 'none' }}
+        >
+          Open →
+        </a>
+      </div>
+
+      {hasActivity && skills ? (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+            <Stat value={String(skills.videos_engaged)} label={`video${skills.videos_engaged === 1 ? '' : 's'}`} />
+            <Stat value={hoursLabel} label="invested" />
+            <Stat value={String(skills.cohorts_touched)} label={`field${skills.cohorts_touched === 1 ? '' : 's'}`} />
+            <Stat value={String(skills.articulations)} label={`receipt${skills.articulations === 1 ? '' : 's'}`} />
+          </div>
+          {topCohort && (
+            <p className="text-xs" style={{ color: 'var(--text-2)', lineHeight: 1.5 }}>
+              Most time in <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{topCohort}</span>.
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-xs" style={{ color: 'var(--text-3)', lineHeight: 1.5 }}>
+          Your learning, on the record. Watch one video on Dilly Skills and it
+          shows up here.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div
+      style={{
+        background: 'var(--surface-0)',
+        borderRadius: 8,
+        padding: '8px 10px',
+        border: '1px solid var(--border-main)',
+      }}
+    >
+      <div
+        style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1, fontFamily: "'Cinzel', serif" }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          fontSize: 9,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+          color: 'var(--text-3)',
+          marginTop: 4,
+        }}
+      >
+        {label}
       </div>
     </div>
   );
