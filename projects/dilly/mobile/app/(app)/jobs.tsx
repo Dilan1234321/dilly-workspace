@@ -2142,138 +2142,47 @@ export default function JobsScreen() {
           </View>
         )}
 
-        {/* Confidence bands — replaces the single "UP NEXT FOR YOU"
-            separator. The idea: the user feels Dilly *sorting the world*
-            for them. Three bands, each with decreasing visual weight.
-            The feed backend already ranks listings; we cut the sorted
-            list into three zones so the user perceives hierarchy
-            instead of one flat stream.
-              - STRONG MATCHES  (top 1/3 of restMatches)
-              - STRETCH ROLES   (middle 1/3) — reach, but Dilly sees the path
-              - WORTH KNOWING   (bottom 1/3) — background awareness
-            Holders see a single band since they're benchmarking, not
-            applying. */}
-        {restMatches.length > 0 && (() => {
-          // Partition restMatches into three bands by list position.
-          // Minimum band size is 1 when we have < 6 items; empty
-          // bands don't render.
-          const n = restMatches.length;
-          if (isHolder) {
-            return (
-              <>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: theme.surface.t3, letterSpacing: 1.2 }}>
-                    ALSO HIRING IN YOUR FIELD
-                  </Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-                </View>
-                {restMatches.map((listing, i) => (
-                  <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
-                    <JobCard
-                      listing={listing}
-                      index={i}
-                      userCities={userCities}
-                      userPath={userPath}
-                      isHolder={isHolder}
-                      expanded={expandedId === listing.id}
-                      narrativeCache={narrativeCache[listing.id] || null}
-                      onNarrativeLoaded={handleNarrativeLoaded}
-                      tailoredResumeId={
-                        tailoredResumes.find(r =>
-                          r.company?.toLowerCase() === listing.company?.toLowerCase()
-                          && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
-                        )?.id || null
-                      }
-                      onToggle={() => {
-                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                        setExpandedId(expandedId === listing.id ? null : listing.id);
-                      }}
-                      onBookmark={(l) => setShowCollectionPicker(l)}
-                      isSaved={savedJobIds.has(listing.id)}
-                    />
-                  </FadeInView>
-                ))}
-              </>
-            );
-          }
-          // Non-holders: split into three bands.
-          const strongEnd = Math.max(1, Math.floor(n / 3));
-          const stretchEnd = Math.max(strongEnd + 1, Math.floor((n * 2) / 3));
-          const bands: Array<{ label: string; sub: string; items: Listing[]; opacity: number }> = [
-            {
-              label: 'STRONG MATCHES',
-              sub: 'Dilly sees you here.',
-              items: restMatches.slice(0, strongEnd),
-              opacity: 1,
-            },
-            {
-              label: 'STRETCH ROLES',
-              sub: 'Reach — but the path is visible.',
-              items: restMatches.slice(strongEnd, stretchEnd),
-              opacity: 0.92,
-            },
-            {
-              label: 'WORTH KNOWING',
-              sub: 'Background awareness. Not today, maybe next week.',
-              items: restMatches.slice(stretchEnd),
-              opacity: 0.82,
-            },
-          ];
-          let runningIdx = 0;
-          return (
-            <>
-              {bands.map((band, bandIdx) => {
-                if (band.items.length === 0) return null;
-                return (
-                  <View key={band.label} style={{ marginTop: bandIdx === 0 ? 4 : 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: theme.accent, letterSpacing: 1.2 }}>
-                        {band.label}
-                      </Text>
-                      <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-                    </View>
-                    <Text style={{ fontSize: 11, color: theme.surface.t3, textAlign: 'center', marginBottom: 10, fontStyle: 'italic' }}>
-                      {band.sub}
-                    </Text>
-                    <View style={{ opacity: band.opacity }}>
-                      {band.items.map((listing) => {
-                        const localIdx = runningIdx++;
-                        return (
-                          <FadeInView key={listing.id || localIdx} delay={Math.min(localIdx * 40, 200)}>
-                            <JobCard
-                              listing={listing}
-                              index={localIdx}
-                              userCities={userCities}
-                              userPath={userPath}
-                              isHolder={isHolder}
-                              expanded={expandedId === listing.id}
-                              narrativeCache={narrativeCache[listing.id] || null}
-                              onNarrativeLoaded={handleNarrativeLoaded}
-                              tailoredResumeId={
-                                tailoredResumes.find(r =>
-                                  r.company?.toLowerCase() === listing.company?.toLowerCase()
-                                  && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
-                                )?.id || null
-                              }
-                              onToggle={() => {
-                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                setExpandedId(expandedId === listing.id ? null : listing.id);
-                              }}
-                              onBookmark={(l) => setShowCollectionPicker(l)}
-                              isSaved={savedJobIds.has(listing.id)}
-                            />
-                          </FadeInView>
-                        );
-                      })}
-                    </View>
-                  </View>
-                );
-              })}
-            </>
-          );
-        })()}
+        {/* "Up next for you" rail separator. signals the hierarchy.
+            Confidence bands (Strong/Stretch/Worth Knowing) were tried
+            in build 337 but caused a render issue on some users'
+            devices — reverted to the simpler single-band layout until
+            we diagnose. TODO: re-enable bands with guarded IIFE. */}
+        {restMatches.length > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+            <Text style={{ fontSize: 10, fontWeight: '800', color: theme.surface.t3, letterSpacing: 1.2 }}>
+              {isHolder ? 'ALSO HIRING IN YOUR FIELD' : 'UP NEXT FOR YOU'}
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+          </View>
+        )}
+
+        {restMatches.map((listing, i) => (
+          <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
+            <JobCard
+              listing={listing}
+              index={i}
+              userCities={userCities}
+              userPath={userPath}
+              isHolder={isHolder}
+              expanded={expandedId === listing.id}
+              narrativeCache={narrativeCache[listing.id] || null}
+              onNarrativeLoaded={handleNarrativeLoaded}
+              tailoredResumeId={
+                tailoredResumes.find(r =>
+                  r.company?.toLowerCase() === listing.company?.toLowerCase()
+                  && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
+                )?.id || null
+              }
+              onToggle={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setExpandedId(expandedId === listing.id ? null : listing.id);
+              }}
+              onBookmark={(l) => setShowCollectionPicker(l)}
+              isSaved={savedJobIds.has(listing.id)}
+            />
+          </FadeInView>
+        ))}
         <DillyFooter />
       </ScrollView>
 

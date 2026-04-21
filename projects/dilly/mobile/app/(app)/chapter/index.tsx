@@ -73,20 +73,21 @@ const SLOT_LABELS: Record<string, string> = {
 // and the perceived smoothness comes from continuous motion rather
 // than "3 chars at a time, 18 times a second".
 //
-// Base rate 72 c/s (human is ~40; typing 'at her' is ~60; this sits
-// between "she's typing live" and "she's reading aloud"). Pauses at
-// punctuation match natural breathing when someone reads a thought
-// out loud.
-const TYPE_CHARS_PER_SEC = 72;
+// Base rate 38 c/s matches an average human typing (~40 c/s for
+// fluent English writers). Previous build ran at 72 c/s which read
+// as fast/machine. Pauses at punctuation give Dilly the rhythm of
+// someone thinking before they write the next clause — longer pauses
+// at sentence breaks, shorter at commas.
+const TYPE_CHARS_PER_SEC = 38;
 const PUNCT_PAUSE_MS: Record<string, number> = {
-  '.': 200,
-  '!': 220,
-  '?': 220,
-  ',': 90,
-  ';': 130,
-  ':': 130,
-  '—': 160,
-  '\n': 240,
+  '.': 260,
+  '!': 300,
+  '?': 300,
+  ',': 120,
+  ';': 160,
+  ':': 160,
+  '—': 200,
+  '\n': 320,
 };
 
 export default function ChapterSessionScreen() {

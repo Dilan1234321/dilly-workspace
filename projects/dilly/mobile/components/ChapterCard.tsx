@@ -139,6 +139,23 @@ export default function ChapterCard({ state, theme }: Props) {
           <Ionicons name="chatbubbles" size={13} color={theme.accent} />
           <Text style={[s.ghostBtnText, { color: theme.accent }]}>Build your profile with Dilly</Text>
         </AnimatedPressable>
+
+        {/* Note input — works even before the first Chapter unlocks.
+            Users who are still building their profile can still queue
+            thoughts to be read when their first Chapter arrives, which
+            makes this screen feel less like a hard gate. */}
+        <View style={{ marginTop: 14, marginBottom: 2 }}>
+          <Text style={{
+            fontSize: 10, fontWeight: '900', letterSpacing: 1.4,
+            color: theme.surface.t3, marginBottom: 4,
+          }}>
+            PREP FOR YOUR FIRST CHAPTER
+          </Text>
+          <Text style={{ fontSize: 12, color: theme.surface.t2, lineHeight: 17 }}>
+            Anything you want Dilly to think through in your first session? Jot it down — she'll read it before she writes.
+          </Text>
+        </View>
+        <InlineNoteAdd theme={theme} />
       </View>
     );
   }
@@ -216,12 +233,22 @@ export default function ChapterCard({ state, theme }: Props) {
           ? `Last: ${state.latest?.title || 'your Chapter'}. Next one lands every ${dayLabel}.`
           : `Your Chapter opens ${dayLabel} at ${hourLabel}. Drop notes for Dilly before then.`}
       </Text>
-      {/* Inline quick-add for chapter notes. Instead of sending the
-          user to a separate screen to jot down what they want to
-          bring up, the input lives right on the card — one tap to
-          focus, submit queues it for the next Chapter. The full
-          notes screen is still one tap away for users who want to
-          see / remove queued notes. */}
+      {/* Inline quick-add for chapter notes. A small labeled heading
+          above the input so users clearly understand this is where
+          they queue things they want Dilly to bring up — not a search
+          bar, not a chat. Prior version had just the input with a
+          placeholder, which was easy to miss. */}
+      <View style={{ marginTop: 14, marginBottom: 2 }}>
+        <Text style={{
+          fontSize: 10, fontWeight: '900', letterSpacing: 1.4,
+          color: theme.surface.t3, marginBottom: 4,
+        }}>
+          PREP FOR YOUR CHAPTER
+        </Text>
+        <Text style={{ fontSize: 12, color: theme.surface.t2, lineHeight: 17 }}>
+          Jot anything you want Dilly to think through before she writes your next session.
+        </Text>
+      </View>
       <InlineNoteAdd theme={theme} />
 
       <View style={s.ctaRow}>
