@@ -224,12 +224,12 @@ function AppLayoutInner() {
         // Labels are hidden everywhere. Icons + active-pill
         // communicate which tab you're on.
         tabBarShowLabel: false,
-        // Disable the slide transition between tabs. The animation
-        // was what made the navbar background appear to "lag" when
-        // switching between a light-surface page and AI Arena (the
-        // old color stayed painted during the slide). Swapping to
-        // no animation makes the color change instant.
-        animation: 'none',
+        // Smooth cross-fade between tabs. Fade avoids the slide-lag
+        // that the previous 'shift' animation had (old surface color
+        // dragged across into AI Arena), while still giving the user
+        // a feeling of continuity between screens. Every tab change
+        // is a clean opacity swap.
+        animation: 'fade',
       }}
     >
       {/* Tab 1: Home / Career Center. Filled home for the

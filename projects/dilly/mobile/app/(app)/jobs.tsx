@@ -46,6 +46,7 @@ import { router } from 'expo-router';
 import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
+import DillyLoadingState from '../../components/DillyLoadingState';
 
 // -- Types --------------------------------------------------------------------
 
@@ -323,12 +324,17 @@ export default function JobsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.surface.bg }]}>
-        <ActivityIndicator color={theme.accent} />
-        <Text style={[styles.loadingText, { color: theme.surface.t2 }]}>
-          Dilly is pulling fresh matches
-        </Text>
-      </View>
+      <DillyLoadingState
+        insetTop={insets.top}
+        mood="writing"
+        accessory="pencil"
+        messages={[
+          'Dilly is pulling fresh matches…',
+          'Reading new postings…',
+          'Checking your profile against today\'s roles…',
+          'Almost ready…',
+        ]}
+      />
     );
   }
 
@@ -662,14 +668,43 @@ function ExpandedDetails({ job, theme, narrative, onApply, onAsk, onTailor }: Ca
   );
 }
 
+/** Split a backend-returned narrative string into bullet-sized
+ *  points. Priority:
+ *    1. Explicit newlines (backend sometimes returns multi-line).
+ *    2. Sentences (split on .  !  ? followed by space/end).
+ *    3. Fall back to the whole string as a single bullet.
+ *  Strips leading bullet characters the backend may have added so we
+ *  do not render double bullets. */
+function toBullets(body: string): string[] {
+  const s = (body || '').trim();
+  if (!s) return [];
+  // Prefer explicit line breaks.
+  let parts = s.split(/\r?\n+/).map(p => p.trim()).filter(Boolean);
+  if (parts.length < 2) {
+    // Split on sentence boundaries. Keeps the punctuation on each bullet
+    // so it reads like a real sentence.
+    parts = s
+      .split(/(?<=[.!?])\s+/)
+      .map(p => p.trim())
+      .filter(Boolean);
+  }
+  return parts.map(p => p.replace(/^[\-\*•·◦▪▫]+\s*/, '').trim()).filter(Boolean);
+}
+
 function NarrativeRow({ label, body, color, theme }: { label: string; body: string; color: string; theme: ReturnType<typeof useResolvedTheme> }) {
+  const bullets = toBullets(body);
   return (
     <View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
         <Text style={[styles.narrativeLabel, { color }]}>{label.toUpperCase()}</Text>
       </View>
-      <Text style={[styles.narrativeBody, { color: theme.surface.t1 }]}>{body}</Text>
+      {bullets.map((b, i) => (
+        <View key={i} style={styles.bulletRow}>
+          <Text style={[styles.bulletDot, { color }]}>•</Text>
+          <Text style={[styles.narrativeBody, { color: theme.surface.t1 }]}>{b}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -719,7 +754,9 @@ const styles = StyleSheet.create({
   skelLine:         { height: 10, borderRadius: 4 },
   narrativeErr:     { fontSize: 12, lineHeight: 18 },
   narrativeLabel:   { fontSize: 9,  fontWeight: '900', letterSpacing: 1.2 },
-  narrativeBody:    { fontSize: 13, lineHeight: 19 },
+  narrativeBody:    { fontSize: 13, lineHeight: 19, flex: 1 },
+  bulletRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 3 },
+  bulletDot:        { fontSize: 14, lineHeight: 19, fontWeight: '900' },
 
   actionPrimary: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

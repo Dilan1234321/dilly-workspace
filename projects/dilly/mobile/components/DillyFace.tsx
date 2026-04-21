@@ -172,14 +172,18 @@ export function DillyFace({ size, mood = 'idle', accessory = 'none', accessoryCo
   }, [mood])
 
   // Writing scribble — a dash-offset loop on the pencil tip stroke.
+  // Linear easing so motion reads as continuous ink (no slow-fast-slow
+  // wobble, no visible reverse). Animated.loop of a single 0→1 timing
+  // restarts at 0 each cycle, so the scribble always moves in one
+  // direction — it never reverses.
   useEffect(() => {
     scribbleAnim.setValue(0)
     if (mood !== 'writing') return
     const loop = Animated.loop(
       Animated.timing(scribbleAnim, {
         toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.ease),
+        duration: 1100,
+        easing: Easing.linear,
         useNativeDriver: false,
       }),
     )

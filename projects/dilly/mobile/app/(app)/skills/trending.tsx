@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
+import DillyLoadingState from '../../../components/DillyLoadingState';
 
 interface Video {
   id: string;
@@ -68,8 +69,8 @@ export default function TrendingScreen() {
       </View>
 
       {loading ? (
-        <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={theme.accent} />
+        <View style={{ paddingVertical: 40 }}>
+          <DillyLoadingState messages={['Pulling trending picks…']} />
         </View>
       ) : videos.length === 0 ? (
         <Text style={[styles.empty, { color: theme.surface.t2 }]}>

@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
+import DillyLoadingState from '../../../components/DillyLoadingState';
 
 interface SavedVideo {
   id: string;
@@ -77,8 +78,8 @@ export default function LibraryScreen() {
       </View>
 
       {loading ? (
-        <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-          <ActivityIndicator color={theme.accent} />
+        <View style={{ paddingVertical: 40 }}>
+          <DillyLoadingState messages={['Opening your library…']} />
         </View>
       ) : error === 'sign-in' ? (
         <EmptyState

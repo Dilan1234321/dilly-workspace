@@ -1,23 +1,38 @@
 /**
- * Skills — Ask page.
+ * Skills — Ask page (build 354).
  *
- * Mirrors the web /ask: natural-language search with eight example
- * prompts. Backend does not currently expose a dedicated search
- * endpoint, so we query the trending list and filter client-side by
- * keyword match against title + description + cohort. Good enough for
- * launch; swap to a real endpoint when it ships.
+ * Second pass. The first pass fetched trending once and filtered
+ * client-side against the query, but trending is cross-cohort and
+ * often small, so real queries like "sql window functions" came up
+ * empty.
+ *
+ * New strategy:
+ *   1. Detect cohort intent from the query. We have 22 cohort slugs
+ *      and a handful of keywords per cohort; we score by keyword hit
+ *      count and pick the top cohort.
+ *   2. If a cohort matches with any confidence, fetch THAT cohort's
+ *      full library (up to 100 videos) and filter/rank by keyword
+ *      match against title + description.
+ *   3. If no cohort matches, fetch trending + 2-3 catch-all cohorts
+ *      and pool-filter against the query.
+ *   4. If still empty, surface a soft empty state that routes the
+ *      user to the top-guess cohort so the page is never dead.
+ *
+ * Results rank by: keyword hits in title (weight 3) + description
+ * (weight 1) + quality_score. Max 30 results.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Keyboard,
+  Image, Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
+import DillyLoadingState from '../../../components/DillyLoadingState';
 
 interface Video {
   id: string;
@@ -41,24 +56,132 @@ const EXAMPLES = [
   'MCAT biochemistry review',
 ];
 
-function formatDuration(sec: number): string {
-  if (!sec || sec <= 0) return '';
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
+// Slug → keyword triggers. Multi-word phrases weigh more (tokenize and
+// match against the query). Tunable — add niches as we notice misses.
+const COHORT_KEYWORDS: Record<string, string[]> = {
+  'software-engineering-cs': [
+    'software', 'engineer', 'programming', 'code', 'leetcode', 'algorithm',
+    'system design', 'distributed', 'backend', 'frontend', 'dsa',
+    'full stack', 'python', 'javascript', 'typescript', 'golang', 'rust',
+  ],
+  'data-science-analytics': [
+    'data science', 'data', 'analytics', 'sql', 'window function', 'pandas',
+    'ml', 'machine learning', 'statistics', 'regression', 'model',
+    'tableau', 'power bi', 'etl', 'dbt',
+  ],
+  'cybersecurity-it': [
+    'security', 'cyber', 'pentest', 'pen test', 'ctf', 'malware',
+    'network security', 'blue team', 'red team', 'infosec', 'osint',
+  ],
+  'electrical-computer-engineering': [
+    'electrical', 'circuit', 'embedded', 'fpga', 'vlsi', 'signal',
+    'electronics', 'microcontroller', 'arduino',
+  ],
+  'mechanical-aerospace-engineering': [
+    'mechanical', 'aerospace', 'cad', 'fea', 'solidworks', 'thermo',
+    'fluid dynamics', 'ansys', 'propulsion', 'aircraft',
+  ],
+  'civil-environmental-engineering': [
+    'civil engineering', 'structural', 'environmental engineering', 'geotechnical',
+    'transportation engineering', 'hydrology',
+  ],
+  'chemical-biomedical-engineering': [
+    'chemical engineering', 'biomedical', 'bioengineering', 'reactor',
+    'unit operations', 'pharmacokinetics',
+  ],
+  'finance-accounting': [
+    'finance', 'accounting', 'quant', 'trading', 'investment banking',
+    'valuation', 'dcf', 'model', 'excel', 'cfa', 'cpa', 'lbo', 'ibd',
+  ],
+  'consulting-strategy': [
+    'consulting', 'case interview', 'mbb', 'strategy', 'mckinsey',
+    'bain', 'bcg', 'non target', 'non-target', 'case prep',
+  ],
+  'marketing-advertising': [
+    'marketing', 'brand', 'advertising', 'seo', 'performance marketing',
+    'growth marketing', 'content marketing', 'pr', 'copywriting',
+  ],
+  'management-operations': [
+    'management', 'operations', 'supply chain', 'lean', 'six sigma',
+    'product manager', 'project manager', 'product management',
+    'pm interview',
+  ],
+  'entrepreneurship-innovation': [
+    'startup', 'entrepreneur', 'founder', 'fundraise', 'pitch', 'yc',
+    'venture', 'seed', 'series a', 'bootstrap',
+  ],
+  'economics-public-policy': [
+    'economics', 'econ', 'public policy', 'policy', 'macro', 'micro',
+    'game theory', 'market design',
+  ],
+  'healthcare-clinical': [
+    'medicine', 'clinical', 'mcat', 'nursing', 'residency', 'usmle',
+    'step 1', 'step 2', 'anatomy', 'pharmacology',
+  ],
+  'biotech-pharmaceutical': [
+    'biotech', 'pharmaceutical', 'pharma', 'crispr', 'gene editing',
+    'drug development', 'clinical trial',
+  ],
+  'life-sciences-research': [
+    'biology', 'biochemistry', 'biochem', 'molecular', 'genetics',
+    'research methods', 'lab techniques',
+  ],
+  'physical-sciences-math': [
+    'physics', 'mathematics', 'calculus', 'linear algebra', 'differential',
+    'quantum', 'chemistry', 'math',
+  ],
+  'law-government': [
+    'law school', 'lsat', 'legal', 'attorney', 'government', 'politics',
+  ],
+  'media-communications': [
+    'journalism', 'media', 'communications', 'film', 'video editing',
+    'writing',
+  ],
+  'design-creative-arts': [
+    'design', 'figma', 'ui', 'ux', 'ux research', 'design systems',
+    'illustration', 'product design',
+  ],
+  'education-human-development': [
+    'teaching', 'education', 'pedagogy', 'lesson plan', 'child development',
+  ],
+  'social-sciences-nonprofit': [
+    'nonprofit', 'sociology', 'psychology', 'political science',
+    'social work',
+  ],
+};
 
 function tokenize(s: string): string[] {
   return s.toLowerCase().match(/[a-z0-9]+/g) || [];
 }
 
-function scoreMatch(video: Video, tokens: string[]): number {
+function detectCohort(query: string): { slug: string; score: number } | null {
+  const q = ' ' + query.toLowerCase() + ' ';
+  let best: { slug: string; score: number } | null = null;
+  for (const [slug, keywords] of Object.entries(COHORT_KEYWORDS)) {
+    let score = 0;
+    for (const kw of keywords) {
+      if (q.includes(' ' + kw + ' ') || q.includes(' ' + kw + ',') ||
+          q.includes(' ' + kw + '.') || q.includes(' ' + kw + '?') ||
+          q.includes(kw + ' ')) {
+        // Longer phrases are more discriminating.
+        score += kw.split(/\s+/).length;
+      }
+    }
+    if (score > 0 && (!best || score > best.score)) best = { slug, score };
+  }
+  return best;
+}
+
+function scoreVideo(v: Video, tokens: string[]): number {
   if (tokens.length === 0) return 0;
-  const haystack = (video.title + ' ' + (video.description || '') + ' ' + video.cohort + ' ' + video.channel_title).toLowerCase();
-  let hits = 0;
-  for (const t of tokens) if (haystack.includes(t)) hits++;
-  // Multiply by quality so higher-signal videos bubble up in ties.
-  return hits + (video.quality_score || 0);
+  const title = v.title.toLowerCase();
+  const desc = (v.description || '').toLowerCase();
+  let score = 0;
+  for (const t of tokens) {
+    if (title.includes(t)) score += 3;
+    if (desc.includes(t))  score += 1;
+  }
+  return score + (v.quality_score || 0);
 }
 
 export default function AskScreen() {
@@ -66,48 +189,77 @@ export default function AskScreen() {
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
-  const [pool, setPool] = useState<Video[]>([]);
+  const [results, setResults] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
-  const fetched = useRef(false);
+  const [detected, setDetected] = useState<string | null>(null);
 
-  // Lazy load a trending pool the first time the user submits. We pull
-  // 100 so the client-side filter has breadth.
-  const ensurePool = useCallback(async () => {
-    if (fetched.current) return;
-    fetched.current = true;
+  const runSearch = useCallback(async (q: string) => {
+    const trimmed = q.trim();
+    if (!trimmed) return;
+    Keyboard.dismiss();
+    setSubmitted(trimmed);
     setLoading(true);
+    setResults([]);
     try {
-      const res = await dilly.get('/skill-lab/trending?limit=100').catch(() => null);
-      setPool(Array.isArray(res?.videos) ? res.videos : []);
+      const tokens = tokenize(trimmed);
+      const detection = detectCohort(trimmed);
+      setDetected(detection?.slug || null);
+
+      // Pull from the detected cohort (full library up to 100) plus
+      // trending (breadth). Merge + de-dupe + rank client-side.
+      const sources: Promise<Video[]>[] = [];
+      if (detection) {
+        sources.push(
+          dilly.get(`/skill-lab/videos?cohort=${detection.slug}&sort=best&limit=100`)
+            .then(r => Array.isArray(r?.videos) ? r.videos : [])
+            .catch(() => []),
+        );
+      }
+      sources.push(
+        dilly.get('/skill-lab/trending?limit=100')
+          .then(r => Array.isArray(r?.videos) ? r.videos : [])
+          .catch(() => []),
+      );
+      const pools = await Promise.all(sources);
+      const seen = new Set<string>();
+      const merged: Video[] = [];
+      for (const pool of pools) {
+        for (const v of pool) {
+          if (!seen.has(v.id)) { seen.add(v.id); merged.push(v); }
+        }
+      }
+
+      const ranked = merged
+        .map(v => ({ v, s: scoreVideo(v, tokens) }))
+        .filter(x => x.s > 0)
+        .sort((a, b) => b.s - a.s)
+        .map(x => x.v)
+        .slice(0, 30);
+
+      // Fall back: if nothing matches the query but we detected a
+      // cohort, show that cohort's top 10 so the page is never empty.
+      if (ranked.length === 0 && detection && pools[0].length > 0) {
+        setResults(pools[0].slice(0, 10));
+      } else {
+        setResults(ranked);
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
   const onSubmit = useCallback(() => {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    Keyboard.dismiss();
-    setSubmitted(trimmed);
-    ensurePool();
-  }, [query, ensurePool]);
-
-  const results = useMemo(() => {
-    if (!submitted) return [];
-    const tokens = tokenize(submitted);
-    return pool
-      .map(v => ({ v, s: scoreMatch(v, tokens) }))
-      .filter(x => x.s > 0)
-      .sort((a, b) => b.s - a.s)
-      .slice(0, 30)
-      .map(x => x.v);
-  }, [submitted, pool]);
+    runSearch(query);
+  }, [query, runSearch]);
 
   const runExample = useCallback((ex: string) => {
     setQuery(ex);
-    setSubmitted(ex);
-    ensurePool();
-  }, [ensurePool]);
+    runSearch(ex);
+  }, [runSearch]);
+
+  const openCohort = useCallback(() => {
+    if (detected) router.push(`/skills/cohort/${detected}`);
+  }, [detected]);
 
   return (
     <ScrollView
@@ -131,7 +283,6 @@ export default function AskScreen() {
         Plain words. Full sentences. Dilly matches it against the curated library.
       </Text>
 
-      {/* Input */}
       <View style={[styles.inputWrap, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
         <Ionicons name="search" size={16} color={theme.surface.t3} />
         <TextInput
@@ -146,13 +297,12 @@ export default function AskScreen() {
           autoCorrect
         />
         {query.length > 0 ? (
-          <TouchableOpacity onPress={() => { setQuery(''); setSubmitted(''); }} hitSlop={8}>
+          <TouchableOpacity onPress={() => { setQuery(''); setSubmitted(''); setResults([]); }} hitSlop={8}>
             <Ionicons name="close-circle" size={18} color={theme.surface.t3} />
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* Examples (only when no query submitted) */}
       {!submitted ? (
         <>
           <Text style={[styles.sectionTitle, { color: theme.surface.t3 }]}>SOME EXAMPLES</Text>
@@ -172,22 +322,40 @@ export default function AskScreen() {
         </>
       ) : null}
 
-      {/* Results */}
       {submitted && loading ? (
-        <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-          <ActivityIndicator color={theme.accent} />
+        <View style={{ paddingVertical: 40 }}>
+          <DillyLoadingState
+            mood="writing"
+            accessory="pencil"
+            messages={['Dilly is searching the library…', `Looking for "${submitted}"…`]}
+          />
         </View>
       ) : null}
 
       {submitted && !loading ? (
         <>
+          {detected ? (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={openCohort}
+              style={[styles.detectedChip, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}
+            >
+              <Ionicons name="navigate" size={12} color={theme.accent} />
+              <Text style={[styles.detectedChipText, { color: theme.accent }]}>
+                Browse the full {detected.replace(/-/g, ' ')} cohort
+              </Text>
+              <Ionicons name="arrow-forward" size={12} color={theme.accent} />
+            </TouchableOpacity>
+          ) : null}
+
           <Text style={[styles.resultsEyebrow, { color: theme.accent }]}>
             {results.length} match{results.length === 1 ? '' : 'es'}
           </Text>
+
           {results.length === 0 ? (
             <Text style={[styles.empty, { color: theme.surface.t2 }]}>
               Dilly couldn't find a curated video for that yet. Try rephrasing, or
-              browse a cohort.
+              browse a cohort below.
             </Text>
           ) : (
             results.map(v => (
@@ -201,7 +369,7 @@ export default function AskScreen() {
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={[styles.resTitle, { color: theme.surface.t1 }]} numberOfLines={2}>{v.title}</Text>
                   <Text style={[styles.resMeta, { color: theme.surface.t3 }]} numberOfLines={1}>
-                    {v.channel_title}{v.duration_sec ? ` · ${formatDuration(v.duration_sec)}` : ''}
+                    {v.channel_title}{v.duration_sec ? ` · ${Math.floor(v.duration_sec / 60)}:${String(v.duration_sec % 60).padStart(2, '0')}` : ''}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -273,12 +441,26 @@ const styles = StyleSheet.create({
   },
   exText: { flex: 1, fontSize: 12, fontWeight: '600', lineHeight: 17 },
 
+  detectedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginHorizontal: 16,
+    marginTop: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  detectedChipText: { fontSize: 11, fontWeight: '800', textTransform: 'capitalize' },
+
   resultsEyebrow: {
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.4,
     paddingHorizontal: 20,
-    marginTop: 22,
+    marginTop: 14,
     marginBottom: 10,
   },
   resCard: {

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { dilly } from '../../../../lib/dilly';
 import { useResolvedTheme } from '../../../../hooks/useTheme';
+import DillyLoadingState from '../../../../components/DillyLoadingState';
 
 // Slug → display name. Must stay in sync with the Skills home page
 // and the backend _SLUG_TO_COHORT.
@@ -132,6 +133,25 @@ export default function CohortScreen() {
   const openVideo = useCallback((v: Video) => {
     router.push({ pathname: `/skills/video/${v.id}`, params: { cohort: String(slug) } });
   }, [slug]);
+
+  // First load shows the full-screen Dilly loading state so Skills
+  // reads the same as every other page. Refreshes (pull-to-refresh,
+  // sort/filter changes) keep the list and show an inline spinner
+  // instead so the user keeps their scroll position.
+  if (loading && videos.length === 0) {
+    return (
+      <DillyLoadingState
+        insetTop={insets.top}
+        mood="writing"
+        accessory="pencil"
+        messages={[
+          `Opening ${title}…`,
+          'Pulling the curated list…',
+          'Almost ready…',
+        ]}
+      />
+    );
+  }
 
   return (
     <ScrollView
