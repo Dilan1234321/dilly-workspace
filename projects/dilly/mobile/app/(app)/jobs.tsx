@@ -531,71 +531,9 @@ function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; 
 // useful has come back yet (narrative still loading), show a stable
 // placeholder that doesn't promise anything Dilly hasn't earned.
 
-// Compose an earned one-line sentence from signals we already have
-// (city, remote, freshness, tag). Replaces the pre-narrative chrome
-// placeholder so every card feels picked-for-you even before the
-// fit-narrative endpoint fires. Cheap — pure function, no network.
-// Every branch is defensive; an outer try/catch falls back to the
-// original placeholder if anything unexpected throws.
-function _earnedSentenceFromSignals(
-  listing: Listing,
-  userCities: string[],
-  userPath: string,
-): string {
-  try {
-    const company = listing?.company || 'this company';
-    const title = listing?.title || 'this role';
-    const tagsRaw = (listing as any)?.tags;
-    const tags: string[] = Array.isArray(tagsRaw) ? tagsRaw.filter(t => typeof t === 'string') : [];
-
-    const jobCity = String(listing?.location_city || '').trim();
-    const jobState = String(listing?.location_state || '').trim();
-    if (jobCity && Array.isArray(userCities) && userCities.length > 0) {
-      const jc = jobCity.toLowerCase();
-      const js = jobState.toLowerCase();
-      const overlap = userCities.find(c => {
-        const cs = String(c || '').toLowerCase();
-        return cs === jc || cs === `${jc}, ${js}`;
-      });
-      if (overlap) return `${company} hiring in ${overlap} — one of your cities.`;
-    }
-
-    const isRemote = !!listing?.remote || (
-      typeof listing?.work_mode === 'string' && listing.work_mode.toLowerCase() === 'remote'
-    );
-    if (isRemote) {
-      if (userPath === 'rural_remote_only') {
-        return `${company} is hiring this one remote. Matches your preference.`;
-      }
-      return `${company} has this one open to remote work.`;
-    }
-
-    let postedDays: number | null = null;
-    if (listing?.posted_date) {
-      try {
-        const diff = Date.now() - new Date(listing.posted_date).getTime();
-        if (!Number.isNaN(diff)) postedDays = Math.floor(diff / 86400000);
-      } catch {}
-    }
-    if (postedDays !== null && postedDays <= 2) {
-      return `Just posted at ${company}. Tap to see if ${title} matches your profile.`;
-    }
-
-    if (tags.length > 0) return `${tags[0]} role at ${company}. Tap for Dilly's read.`;
-    return `Open at ${company}. Tap for Dilly's read.`;
-  } catch {
-    return `Tap to see why ${listing?.company || 'this role'} could work for you.`;
-  }
-}
-
-function _oneLineRead(
-  narrative: FitNarrativeData | null | undefined,
-  listing: Listing,
-  userCities: string[] = [],
-  userPath: string = '',
-): string {
+function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: Listing): string {
   if (!narrative) {
-    return _earnedSentenceFromSignals(listing, userCities, userPath);
+    return `Tap to see why ${listing.company || 'this role'} could work for you.`;
   }
   // Prefer what_you_have. the sharpest "you have X" sentence is the
   // most powerful for the user to see first. Fall back to what_to_do.
@@ -614,14 +552,7 @@ function _oneLineRead(
   return `Worth a look at ${listing.company || 'this role'}.`;
 }
 
-function DillyVoiceBubble({
-  narrative, listing, userCities, userPath,
-}: {
-  narrative: FitNarrativeData | null | undefined;
-  listing: Listing;
-  userCities?: string[];
-  userPath?: string;
-}) {
+function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
   const theme = useResolvedTheme();
   return (
     <View style={bub.wrap}>
@@ -629,9 +560,7 @@ function DillyVoiceBubble({
         <Ionicons name="sparkles" size={10} color="#fff" />
       </View>
       <View style={[bub.bubble, { backgroundColor: VIOLET + '14', borderColor: VIOLET + '33' }]}>
-        <Text style={[bub.text, { color: theme.surface.t1 }]}>
-          {_oneLineRead(narrative, listing, userCities || [], userPath || '')}
-        </Text>
+        <Text style={[bub.text, { color: theme.surface.t1 }]}>{_oneLineRead(narrative, listing)}</Text>
       </View>
     </View>
   );
@@ -884,12 +813,7 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
         {!isHolder && (
           <>
             <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
-            <DillyVoiceBubble
-              narrative={narrativeCache}
-              listing={listing}
-              userCities={userCities}
-              userPath={userPath}
-            />
+            <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
           </>
         )}
 
@@ -1744,52 +1668,6 @@ export default function JobsScreen() {
     setExpandedId(id);
   }, []);
 
-  // Confidence-band flat list. Seekers/students see the rest-of-feed
-  // split into three confidence zones with decreasing visual weight.
-  // Instead of nested maps (which crashed build 344 — likely because
-  // of a render reconciliation issue with 3 sibling maps inside a
-  // ScrollView under certain listing shapes), we build a SINGLE
-  // flat array of typed rows and render it with one .map.
-  //
-  // Row shape: either a 'header' with a label + sub, or a 'card' with
-  // the listing + band opacity. The render branches off row.kind.
-  //
-  // Holders keep a single "ALSO HIRING IN YOUR FIELD" header and the
-  // feed underneath it — they're benchmarking, not applying.
-  type FeedRow =
-    | { kind: 'header'; id: string; label: string; sub: string | null }
-    | { kind: 'card'; id: string; listing: Listing; opacity: number };
-
-  const restFeedRows: FeedRow[] = useMemo(() => {
-    const rows: FeedRow[] = [];
-    const n = restMatches.length;
-    if (n === 0) return rows;
-
-    if (isHolder) {
-      rows.push({ kind: 'header', id: 'h-holder', label: 'ALSO HIRING IN YOUR FIELD', sub: null });
-      for (const l of restMatches) {
-        rows.push({ kind: 'card', id: `card-${l.id}`, listing: l, opacity: 1 });
-      }
-      return rows;
-    }
-
-    const strongEnd = Math.max(1, Math.floor(n / 3));
-    const stretchEnd = Math.max(strongEnd + 1, Math.floor((n * 2) / 3));
-    const bands: Array<{ label: string; sub: string; items: Listing[]; opacity: number }> = [
-      { label: 'STRONG MATCHES',  sub: 'Dilly sees you here.',                                 items: restMatches.slice(0, strongEnd),     opacity: 1 },
-      { label: 'STRETCH ROLES',   sub: 'Reach — but the path is visible.',                    items: restMatches.slice(strongEnd, stretchEnd), opacity: 0.92 },
-      { label: 'WORTH KNOWING',   sub: 'Background awareness. Not today, maybe next week.',    items: restMatches.slice(stretchEnd),        opacity: 0.82 },
-    ];
-    for (const band of bands) {
-      if (band.items.length === 0) continue;
-      rows.push({ kind: 'header', id: `h-${band.label}`, label: band.label, sub: band.sub });
-      for (const l of band.items) {
-        rows.push({ kind: 'card', id: `card-${l.id}`, listing: l, opacity: band.opacity });
-      }
-    }
-    return rows;
-  }, [restMatches, isHolder]);
-
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
       {/* First-visit coach — paid users only. Their version of this
@@ -2148,37 +2026,22 @@ export default function JobsScreen() {
           </View>
         )}
 
-        {/* Flat band-tagged list. One .map, no nesting. Each row is
-            either a band header (holder sees one, seekers see three)
-            or a card with its band's opacity. This shape is what
-            replaced the nested bands.map() structure that crashed
-            builds 337 + 344. */}
-        {restFeedRows.map(row => {
-          if (row.kind === 'header') {
-            return (
-              <View
-                key={row.id}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: row.sub ? 4 : 8, marginTop: 12 }}
-              >
-                <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-                <Text style={{
-                  fontSize: 10,
-                  fontWeight: '800',
-                  color: isHolder ? theme.surface.t3 : theme.accent,
-                  letterSpacing: 1.2,
-                }}>
-                  {row.label}
-                </Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
-              </View>
-            );
-          }
-          // row.kind === 'card'
-          const listing = row.listing;
-          const cardEl = (
+        {/* "Up next for you" rail separator. signals the hierarchy */}
+        {restMatches.length > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>
+              {isHolder ? 'ALSO HIRING IN YOUR FIELD' : 'UP NEXT FOR YOU'}
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
+          </View>
+        )}
+
+        {restMatches.map((listing, i) => (
+          <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
             <JobCard
               listing={listing}
-              index={0}
+              index={i}
               userCities={userCities}
               userPath={userPath}
               isHolder={isHolder}
@@ -2198,16 +2061,8 @@ export default function JobsScreen() {
               onBookmark={(l) => setShowCollectionPicker(l)}
               isSaved={savedJobIds.has(listing.id)}
             />
-          );
-          if (row.opacity < 1) {
-            return (
-              <View key={row.id} style={{ opacity: row.opacity }}>
-                {cardEl}
-              </View>
-            );
-          }
-          return <View key={row.id}>{cardEl}</View>;
-        })}
+          </FadeInView>
+        ))}
         <DillyFooter />
       </ScrollView>
 

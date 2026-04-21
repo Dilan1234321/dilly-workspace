@@ -72,11 +72,13 @@ export default function RememberedCard() {
         <Ionicons name={iconName as any} size={14} color={theme.accent} />
         <Text style={[s.eyebrow, { color: theme.accent }]}>DILLY REMEMBERED</Text>
       </View>
-      <Text style={[s.headline, { color: theme.surface.t2 }]} numberOfLines={2}>
+      {/* Removed numberOfLines clamps — truncation cut the user off
+          mid-thought and made the card feel chrome. Let it grow. */}
+      <Text style={[s.headline, { color: theme.surface.t2 }]}>
         {data.headline}
       </Text>
       {data.context ? (
-        <Text style={[s.context, { color: theme.surface.t1 }]} numberOfLines={3}>
+        <Text style={[s.context, { color: theme.surface.t1 }]}>
           "{data.context}"
         </Text>
       ) : null}
