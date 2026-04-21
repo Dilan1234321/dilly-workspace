@@ -178,6 +178,36 @@ def get_video(video_id: str):
     return {"video": _serialize(row)}
 
 
+@router.get("/cohorts/populated")
+def populated_cohorts():
+    """Returns which cohort display-names have >=1 video. Used by the UI
+    to hide empty cohorts from browse/index grids."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT cohort, COUNT(*) AS n
+                  FROM skill_lab_videos
+                 GROUP BY cohort
+                HAVING COUNT(*) > 0
+                """
+            )
+            rows = cur.fetchall()
+    # Reverse-map display name → slug
+    name_to_slug = {v: k for k, v in _SLUG_TO_COHORT.items()}
+    return {
+        "cohorts": [
+            {
+                "slug": name_to_slug.get(cohort, ""),
+                "name": cohort,
+                "count": int(n),
+            }
+            for cohort, n in rows
+            if name_to_slug.get(cohort)
+        ],
+    }
+
+
 @router.get("/ask")
 def ask(
     q: str = Query(..., min_length=2, max_length=500),
@@ -192,17 +222,20 @@ def ask(
     """
     phrase = q.strip()
     # websearch_to_tsquery handles natural-language input — quotes, negatives,
-    # OR — without raising on weird punctuation
+    # OR — without raising on weird punctuation. We build the tsquery once and
+    # pass it in twice, then order by a real expression (no alias) to avoid
+    # planner ambiguity across Postgres versions.
     with get_db() as conn:
         with conn.cursor() as cur:
-            # Video matches
             cur.execute(
                 f"""
-                SELECT {SELECT_COLS},
-                       ts_rank_cd(search_doc, websearch_to_tsquery('english', %s)) AS trank
+                SELECT {SELECT_COLS}
                   FROM skill_lab_videos
                  WHERE search_doc @@ websearch_to_tsquery('english', %s)
-                 ORDER BY (trank * 0.6 + (quality_score / 100.0) * 0.4) DESC
+                 ORDER BY (
+                    ts_rank_cd(search_doc, websearch_to_tsquery('english', %s)) * 0.6
+                  + (quality_score / 100.0) * 0.4
+                 ) DESC
                  LIMIT %s
                 """,
                 (phrase, phrase, limit),
@@ -222,7 +255,7 @@ def ask(
     # Rank cohorts by score, keep top 3
     top_cohorts = sorted(cohort_scores.items(), key=lambda x: -x[1])[:3]
 
-    videos = [_serialize(r[:14]) for r in video_rows]
+    videos = [_serialize(r) for r in video_rows]
     return {
         "videos": videos,
         "cohorts": [
