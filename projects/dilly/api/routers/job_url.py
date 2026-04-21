@@ -50,29 +50,58 @@ def _clean_html(html: str) -> str:
 
 
 def _extract_greenhouse(html: str) -> dict:
-    """Extract JD from a Greenhouse job page."""
+    """Extract JD from a Greenhouse job page. Greenhouse redesigned
+    their template; current markup (2026-04) uses class='job__title'
+    for the title wrapper and class='job__description body' for the
+    JD block. Old class='app-title' + id='content' stopped working."""
     result = {"job_description": "", "job_title": "", "company": "", "source": "greenhouse"}
 
-    # Title: <h1 class="app-title">...</h1> or <title>...</title>
-    title_match = re.search(r'<h1[^>]*class="app-title"[^>]*>(.*?)</h1>', html, re.DOTALL | re.IGNORECASE)
+    # Title: new markup nests the h1 inside div.job__title; older pages
+    # still render app-title. Try both.
+    title_match = (
+        re.search(r'class="[^"]*job__title[^"]*"[^>]*>\s*<h1[^>]*>(.*?)</h1>', html, re.DOTALL | re.IGNORECASE)
+        or re.search(r'<h1[^>]*class="[^"]*app-title[^"]*"[^>]*>(.*?)</h1>', html, re.DOTALL | re.IGNORECASE)
+        or re.search(r'<h1[^>]*class="[^"]*section-header[^"]*"[^>]*>(.*?)</h1>', html, re.DOTALL | re.IGNORECASE)
+    )
     if title_match:
-        result["job_title"] = _clean_html(title_match.group(1)).strip()
+        result["job_title"] = _clean_html(title_match.group(1)).strip()[:140]
 
-    # Company: <span class="company-name">...</span>
-    company_match = re.search(r'<span[^>]*class="company-name"[^>]*>(.*?)</span>', html, re.DOTALL | re.IGNORECASE)
-    if company_match:
-        result["company"] = _clean_html(company_match.group(1)).strip()
+    # Page title fallback often reads "Job Application for <role> at <company>"
+    page_title = re.search(r'<title>(.*?)</title>', html, re.DOTALL | re.IGNORECASE)
+    if page_title:
+        raw = _clean_html(page_title.group(1))
+        at = re.search(r'^Job Application for\s+(.+?)\s+at\s+(.+)$', raw, re.IGNORECASE)
+        if at:
+            if not result["job_title"]:
+                result["job_title"] = at.group(1).strip()[:140]
+            result["company"] = at.group(2).strip()[:80]
 
-    # JD content: <div id="content">...</div>
-    content_match = re.search(r'<div[^>]*id="content"[^>]*>(.*?)</div>\s*(?:<div|$)', html, re.DOTALL | re.IGNORECASE)
+    # Company: old markup used class="company-name"
+    if not result["company"]:
+        company_match = re.search(r'<span[^>]*class="company-name"[^>]*>(.*?)</span>', html, re.DOTALL | re.IGNORECASE)
+        if company_match:
+            result["company"] = _clean_html(company_match.group(1)).strip()[:80]
+
+    # JD content: new markup uses class="job__description body"; the
+    # block stays open until the </main> near the bottom.
+    content_match = re.search(
+        r'<div[^>]*class="[^"]*job__description[^"]*"[^>]*>(.*?)</div>\s*</div>\s*</main>',
+        html, re.DOTALL | re.IGNORECASE,
+    )
     if content_match:
-        result["job_description"] = _clean_html(content_match.group(1)).strip()
+        result["job_description"] = _clean_html(content_match.group(1)).strip()[:8000]
+
+    # Older layouts used id="content"
+    if not result["job_description"]:
+        content_match = re.search(r'<div[^>]*id="content"[^>]*>(.*?)</div>\s*(?:<div|$)', html, re.DOTALL | re.IGNORECASE)
+        if content_match:
+            result["job_description"] = _clean_html(content_match.group(1)).strip()[:8000]
 
     if not result["job_description"]:
-        # Fallback: grab everything inside the main job content area
+        # Last-resort: grab everything inside the main job content area
         main_match = re.search(r'class="[^"]*job[^"]*content[^"]*"[^>]*>(.*?)</div>', html, re.DOTALL | re.IGNORECASE)
         if main_match:
-            result["job_description"] = _clean_html(main_match.group(1)).strip()
+            result["job_description"] = _clean_html(main_match.group(1)).strip()[:8000]
 
     return result
 
@@ -100,6 +129,149 @@ def _extract_lever(html: str) -> dict:
     return result
 
 
+def _extract_ashby(html: str, url: str) -> dict:
+    """Extract JD from an Ashby job page (jobs.ashbyhq.com/{company}/...).
+    Ashby pages embed the full posting in a JSON blob inside a <script>
+    tag. When present we use it; otherwise fall back to HTML parsing."""
+    result = {"job_description": "", "job_title": "", "company": "", "source": "ashby"}
+
+    # Company name lives in the URL: jobs.ashbyhq.com/COMPANY/...
+    m = re.search(r'ashbyhq\.com/([^/?#]+)', url, re.IGNORECASE)
+    if m:
+        result["company"] = m.group(1).replace('-', ' ').title()
+
+    # Ashby inlines __NEXT_DATA__ with the posting body.
+    data_match = re.search(
+        r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+        html, re.DOTALL | re.IGNORECASE,
+    )
+    if data_match:
+        try:
+            import json as _json
+            data = _json.loads(data_match.group(1))
+            # Walk a few known paths. The Ashby schema has shifted a few
+            # times; we try multiple.
+            job = (
+                (data.get("props") or {}).get("pageProps", {}).get("posting")
+                or (data.get("props") or {}).get("pageProps", {}).get("job")
+                or {}
+            )
+            if isinstance(job, dict):
+                if job.get("title"):
+                    result["job_title"] = str(job["title"]).strip()[:140]
+                desc = job.get("descriptionPlain") or job.get("descriptionHtml") or ""
+                if desc:
+                    result["job_description"] = _clean_html(str(desc))[:8000]
+        except Exception:
+            pass
+
+    # Fallbacks if NEXT_DATA didn't give us what we need
+    if not result["job_title"]:
+        tmatch = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.DOTALL | re.IGNORECASE)
+        if tmatch:
+            result["job_title"] = _clean_html(tmatch.group(1))[:140]
+    if not result["job_description"]:
+        # Ashby wraps the description in a container with a data attr
+        dmatch = re.search(
+            r'<div[^>]*class="[^"]*_descriptionText[^"]*"[^>]*>(.*?)</div>\s*</div>',
+            html, re.DOTALL | re.IGNORECASE,
+        )
+        if dmatch:
+            result["job_description"] = _clean_html(dmatch.group(1)).strip()[:8000]
+
+    return result
+
+
+def _extract_workday(html: str, url: str) -> dict:
+    """Extract JD from a Workday jobs page. Workday pages are SPA shells
+    but include an OpenGraph description and a structured JSON in some
+    tenants."""
+    result = {"job_description": "", "job_title": "", "company": "", "source": "workday"}
+
+    # Company: subdomain (e.g. mayo.wd5.myworkdayjobs.com → mayo)
+    m = re.search(r'https?://([^.]+)\.[^/]*workday[^/]*', url, re.IGNORECASE)
+    if m:
+        result["company"] = m.group(1).replace('-', ' ').title()
+
+    # Title: og:title or <title>
+    og_title = re.search(r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"', html, re.IGNORECASE)
+    if og_title:
+        result["job_title"] = og_title.group(1).strip()[:140]
+    elif not result["job_title"]:
+        t = re.search(r'<title>(.*?)</title>', html, re.DOTALL | re.IGNORECASE)
+        if t:
+            raw = _clean_html(t.group(1))
+            parts = re.split(r'\s*[|]\s*|\s+-\s+', raw)
+            if parts:
+                result["job_title"] = parts[0].strip()[:140]
+
+    # Description: og:description (truncated) then structured JD
+    og_desc = re.search(r'<meta[^>]+property="og:description"[^>]+content="([^"]+)"', html, re.IGNORECASE)
+    if og_desc:
+        result["job_description"] = og_desc.group(1).strip()
+
+    # Workday embeds the full JD in data-automation-id="jobPostingDescription"
+    jd_match = re.search(
+        r'data-automation-id="jobPostingDescription"[^>]*>(.*?)</div>\s*(?:<div|<footer|$)',
+        html, re.DOTALL | re.IGNORECASE,
+    )
+    if jd_match:
+        text = _clean_html(jd_match.group(1)).strip()
+        if len(text) > len(result["job_description"]):
+            result["job_description"] = text[:8000]
+
+    return result
+
+
+def _extract_smartrecruiters(html: str, url: str) -> dict:
+    """Extract JD from a SmartRecruiters posting (jobs.smartrecruiters.com)."""
+    result = {"job_description": "", "job_title": "", "company": "", "source": "smartrecruiters"}
+
+    m = re.search(r'smartrecruiters\.com/([^/?#]+)', url, re.IGNORECASE)
+    if m:
+        result["company"] = m.group(1).replace('-', ' ').title()
+
+    og_title = re.search(r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"', html, re.IGNORECASE)
+    if og_title:
+        result["job_title"] = og_title.group(1).strip()[:140]
+
+    # SmartRecruiters wraps the job description in itemprop="description"
+    jd_match = re.search(
+        r'itemprop="description"[^>]*>(.*?)</(?:div|section)>\s*(?:<div|<section|<footer|$)',
+        html, re.DOTALL | re.IGNORECASE,
+    )
+    if jd_match:
+        result["job_description"] = _clean_html(jd_match.group(1)).strip()[:8000]
+    return result
+
+
+def _extract_workable(html: str, url: str) -> dict:
+    """Workable: apply.workable.com/{company}/j/.../"""
+    result = {"job_description": "", "job_title": "", "company": "", "source": "workable"}
+
+    m = re.search(r'workable\.com/([^/?#]+)', url, re.IGNORECASE)
+    if m:
+        result["company"] = m.group(1).replace('-', ' ').title()
+
+    og_title = re.search(r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"', html, re.IGNORECASE)
+    if og_title:
+        result["job_title"] = og_title.group(1).strip()[:140]
+    og_desc = re.search(r'<meta[^>]+name="description"[^>]+content="([^"]+)"', html, re.IGNORECASE)
+    if og_desc:
+        result["job_description"] = og_desc.group(1).strip()
+
+    # Workable uses data-ui="job-description" containers
+    jd_match = re.search(
+        r'data-ui="job-description"[^>]*>(.*?)</(?:div|section)>\s*(?:<div|<footer|$)',
+        html, re.DOTALL | re.IGNORECASE,
+    )
+    if jd_match:
+        text = _clean_html(jd_match.group(1)).strip()
+        if len(text) > len(result["job_description"]):
+            result["job_description"] = text[:8000]
+    return result
+
+
 def _extract_generic(html: str, url: str) -> dict:
     """Best-effort extraction from any career page."""
     result = {"job_description": "", "job_title": "", "company": "", "source": "generic"}
@@ -115,21 +287,54 @@ def _extract_generic(html: str, url: str) -> dict:
         if len(parts) >= 2:
             result["company"] = parts[-1].strip()[:80]
 
+    # Prefer JSON-LD structured data when present — many career pages
+    # expose a JobPosting with title/description/company. This gives
+    # dramatically better extraction than regex over divs.
+    ld_matches = re.findall(
+        r'<script[^>]+type="application/ld\+json"[^>]*>(.*?)</script>',
+        html, re.DOTALL | re.IGNORECASE,
+    )
+    for ld_raw in ld_matches[:4]:  # usually 1-2 blocks, cap for safety
+        try:
+            import json as _json
+            data = _json.loads(ld_raw)
+            blocks = data if isinstance(data, list) else [data]
+            for b in blocks:
+                if not isinstance(b, dict):
+                    continue
+                t = b.get("@type")
+                if t == "JobPosting" or (isinstance(t, list) and "JobPosting" in t):
+                    if b.get("title"):
+                        result["job_title"] = str(b["title"]).strip()[:140]
+                    if isinstance(b.get("hiringOrganization"), dict):
+                        nm = b["hiringOrganization"].get("name")
+                        if nm:
+                            result["company"] = str(nm).strip()[:80]
+                    desc = b.get("description") or ""
+                    if desc:
+                        result["job_description"] = _clean_html(str(desc))[:8000]
+                    break
+            if result.get("job_description"):
+                break
+        except Exception:
+            continue
+
     # Try to find the largest text block that looks like a JD
     # Look for common JD containers
-    for pattern in [
-        r'class="[^"]*job[-_]?description[^"]*"[^>]*>(.*?)</div>',
-        r'class="[^"]*description[-_]?content[^"]*"[^>]*>(.*?)</div>',
-        r'class="[^"]*posting[-_]?description[^"]*"[^>]*>(.*?)</div>',
-        r'<article[^>]*>(.*?)</article>',
-        r'class="[^"]*content[-_]?body[^"]*"[^>]*>(.*?)</div>',
-    ]:
-        match = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
-        if match:
-            text = _clean_html(match.group(1)).strip()
-            if len(text) > 200:
-                result["job_description"] = text[:8000]
-                break
+    if not result["job_description"]:
+        for pattern in [
+            r'class="[^"]*job[-_]?description[^"]*"[^>]*>(.*?)</div>',
+            r'class="[^"]*description[-_]?content[^"]*"[^>]*>(.*?)</div>',
+            r'class="[^"]*posting[-_]?description[^"]*"[^>]*>(.*?)</div>',
+            r'<article[^>]*>(.*?)</article>',
+            r'class="[^"]*content[-_]?body[^"]*"[^>]*>(.*?)</div>',
+        ]:
+            match = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
+            if match:
+                text = _clean_html(match.group(1)).strip()
+                if len(text) > 200:
+                    result["job_description"] = text[:8000]
+                    break
 
     # Fallback: just clean the whole body
     if not result["job_description"]:
@@ -183,14 +388,33 @@ async def fetch_job_description(request: Request, body: FetchJDRequest):
     if len(html) < 200:
         raise errors.internal("The page returned very little content. Try pasting the JD directly.")
 
-    # Route to the right extractor
+    # Route to the right extractor. Order matters — more specific
+    # matches before the generic fallback.
     url_lower = url.lower()
     if "greenhouse.io" in url_lower or "boards.greenhouse" in url_lower:
         result = _extract_greenhouse(html)
     elif "lever.co" in url_lower or "jobs.lever" in url_lower:
         result = _extract_lever(html)
+    elif "ashbyhq.com" in url_lower:
+        result = _extract_ashby(html, url)
+    elif "smartrecruiters.com" in url_lower:
+        result = _extract_smartrecruiters(html, url)
+    elif "workable.com" in url_lower or "apply.workable.com" in url_lower:
+        result = _extract_workable(html, url)
+    elif "workday" in url_lower or "myworkdayjobs" in url_lower:
+        result = _extract_workday(html, url)
     else:
         result = _extract_generic(html, url)
+
+    # LinkedIn/Indeed specifically throttle bots. If the generic fallback
+    # returns almost nothing from those hosts, give the user a clear
+    # message rather than a cryptic error.
+    if ("linkedin.com" in url_lower or "indeed.com" in url_lower) and \
+       (not result.get("job_description") or len(result["job_description"]) < 200):
+        raise errors.validation_error(
+            "LinkedIn/Indeed block automated fetching of their job pages. "
+            "Open the posting, copy the full job description, and paste it in."
+        )
 
     if not result.get("job_description") or len(result["job_description"]) < 50:
         raise errors.validation_error(
