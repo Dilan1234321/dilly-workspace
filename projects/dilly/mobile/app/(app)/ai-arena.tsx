@@ -205,12 +205,13 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
         Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
-    // Subtle breathe: 1.0 → 1.04 → 1.0. Matches the breathing rhythm
-    // DillyAIOverlay uses during thinking state so the feeling is
-    // consistent across the app.
+    // Breathe: 1.0 → 1.08 → 1.0. Was 1.04 but too subtle — user
+    // reported "face doesn't move." 1.08 is perceptibly bigger
+    // without feeling cartoonish; paired with the pulsing halo ring
+    // the whole screen reads as alive.
     Animated.loop(
       Animated.sequence([
-        Animated.timing(faceScale, { toValue: 1.04, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(faceScale, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         Animated.timing(faceScale, { toValue: 1.0, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     ).start();
@@ -220,12 +221,30 @@ function ArenaLoadingState({ texts }: { texts: string[] }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.surface.bg, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-      {/* Wrapped in Animated.View so the face breathes while loading.
-          Matches DillyAIOverlay thinking rhythm — Dilly feels alive
-          even when she's working in the background. */}
-      <Animated.View style={{ transform: [{ scale: faceScale }] }}>
-        <DillyFace size={120} mood="thinking" />
-      </Animated.View>
+      {/* Three visible motion layers so the screen feels alive even
+          when the user's accent is a pale color (where the ring would
+          otherwise be invisible against the white bg):
+            1. Outer halo ring — pulsing opacity, independent of accent
+            2. DillyFace itself — breathing scale (1.0 → 1.06)
+            3. Pulsing status text beneath
+          The halo ring is drawn with theme.surface.t3 (always visible
+          gray) so it reads on every palette. */}
+      <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            width: 150, height: 150, borderRadius: 75,
+            borderWidth: 2,
+            borderColor: theme.surface.t3,
+            opacity: pulseAnim,
+            transform: [{ scale: pulseAnim.interpolate({ inputRange: [0.4, 1], outputRange: [0.9, 1.1] }) }],
+          }}
+        />
+        <Animated.View style={{ transform: [{ scale: faceScale }] }}>
+          <DillyFace size={120} mood="thinking" />
+        </Animated.View>
+      </View>
       <Animated.Text style={{ fontSize: 16, fontWeight: '600', color: theme.surface.t1, marginTop: 24, opacity: pulseAnim }}>
         {texts[textIdx]}
       </Animated.Text>
