@@ -178,6 +178,90 @@ def get_video(video_id: str):
     return {"video": _serialize(row)}
 
 
+@router.get("/public/{slug}")
+def public_skills_profile(slug: str):
+    """
+    Unauthenticated, shareable read-only view of a user's Skill Lab
+    footprint. Looked up by their Dilly readable_slug (same slug used on
+    hellodilly.com/s/{slug} and /p/{slug}).
+
+    Returns *only* what's safe to share: first name, total hours invested,
+    cohort breakdown, and counts. No email, no full profile, no session.
+    """
+    from projects.dilly.api.profile_store import get_profile_by_readable_slug
+
+    # The slug lookup honours both s/ (student) and p/ (general) by not
+    # passing a prefix — the profile_store matches on the raw slug.
+    profile = get_profile_by_readable_slug(slug)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    email = (profile.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    # Assemble just the public-safe subset
+    name = (
+        profile.get("full_name")
+        or profile.get("name")
+        or profile.get("first_name")
+        or "Someone on Dilly"
+    )
+    first_name = (profile.get("first_name") or "").strip() or str(name).split()[0]
+    school = profile.get("school") or profile.get("school_id")
+    majors = profile.get("majors")
+    if not isinstance(majors, list):
+        majors = []
+    if profile.get("major") and profile.get("major") not in majors:
+        majors = [profile["major"], *majors]
+
+    tagline = profile.get("profile_tagline")
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    COALESCE(SUM(seconds_engaged), 0)::BIGINT,
+                    COUNT(*)::INTEGER,
+                    COUNT(DISTINCT cohort)::INTEGER,
+                    COUNT(articulation) FILTER (WHERE articulation IS NOT NULL)::INTEGER
+                  FROM skill_lab_learning_receipts
+                 WHERE user_email = %s
+                """,
+                (email,),
+            )
+            totals = cur.fetchone() or (0, 0, 0, 0)
+            cur.execute(
+                """
+                SELECT cohort, SUM(seconds_engaged)::BIGINT, COUNT(*)::INTEGER
+                  FROM skill_lab_learning_receipts
+                 WHERE user_email = %s
+                 GROUP BY cohort
+                 ORDER BY 2 DESC
+                """,
+                (email,),
+            )
+            by_cohort = [
+                {"cohort": c, "seconds": int(s or 0), "videos": int(v or 0)}
+                for (c, s, v) in cur.fetchall()
+            ]
+
+    return {
+        "name": name,
+        "first_name": first_name,
+        "slug": slug,
+        "school": school,
+        "majors": majors,
+        "tagline": tagline,
+        "total_seconds": int(totals[0] or 0),
+        "videos_engaged": int(totals[1] or 0),
+        "cohorts_touched": int(totals[2] or 0),
+        "articulations": int(totals[3] or 0),
+        "by_cohort": by_cohort,
+    }
+
+
 @router.get("/cohorts/populated")
 def populated_cohorts():
     """Returns which cohort display-names have >=1 video. Used by the UI
