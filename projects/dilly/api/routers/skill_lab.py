@@ -179,7 +179,10 @@ def get_video(video_id: str):
 
 
 @router.get("/public/{slug}")
-def public_skills_profile(slug: str):
+def public_skills_profile(
+    slug: str,
+    context: str | None = Query(None, description="'dilly' when called from the Dilly career profile"),
+):
     """
     Unauthenticated, shareable read-only view of a user's Skill Lab
     footprint. Looked up by their Dilly readable_slug (same slug used on
@@ -187,6 +190,12 @@ def public_skills_profile(slug: str):
 
     Returns *only* what's safe to share: first name, total hours invested,
     cohort breakdown, and counts. No email, no full profile, no session.
+
+    The optional `context=dilly` param is set by Dilly's PublicProfile
+    component. We use it to honour the user's skills_show_learning
+    opt-out: when false, we zero the aggregates so the Dilly card hides.
+    The user's own Skill Lab /u/{slug} page (no context) still renders
+    fully.
     """
     from projects.dilly.api.profile_store import get_profile_by_readable_slug
 
@@ -216,6 +225,51 @@ def public_skills_profile(slug: str):
         majors = [profile["major"], *majors]
 
     tagline = profile.get("profile_tagline")
+
+    # ── Career cross-link data ────────────────────────────────────────────
+    # Determine which canonical Dilly profile URL this user has. Students
+    # live at hellodilly.com/s/{slug}, everyone else at /p/{slug}. This
+    # matches projects/dilly/website/src/app/[sp]/[slug]/page.tsx.
+    user_type = (profile.get("user_type") or "").strip().lower()
+    dilly_profile_url = (
+        f"https://hellodilly.com/{'s' if user_type == 'student' else 'p'}/{slug}"
+    )
+
+    # Privacy flags — both default ON so the ecosystem feels connected
+    # out of the box. User can turn either off on their Skill Lab profile.
+    #   skills_show_career    : whether the Skill Lab public profile shows
+    #                           Dilly career info (goal + target + goals).
+    #   skills_show_learning  : whether the Dilly career profile is allowed
+    #                           to render the learning card.
+    web_settings = profile.get("web_profile_settings") or {}
+    if not isinstance(web_settings, dict):
+        web_settings = {}
+    career_visible = web_settings.get("skills_show_career", True)
+    learning_visible = web_settings.get("skills_show_learning", True)
+
+    # Career fields — distilled, not a full profile dump
+    career_goal = profile.get("career_goal")
+    application_target = (
+        profile.get("application_target_label")
+        or profile.get("application_target")
+    )
+    industry_target = profile.get("industry_target")
+    goals = profile.get("goals")
+    if not isinstance(goals, list):
+        goals = []
+    goals = [g for g in goals if isinstance(g, str) and g.strip()][:3]
+
+    career_block = (
+        {
+            "url": dilly_profile_url,
+            "career_goal": career_goal,
+            "application_target": application_target,
+            "industry_target": industry_target,
+            "goals": goals,
+        }
+        if career_visible
+        else None
+    )
 
     with get_db() as conn:
         with conn.cursor() as cur:
@@ -247,6 +301,23 @@ def public_skills_profile(slug: str):
                 for (c, s, v) in cur.fetchall()
             ]
 
+    # If the caller is the Dilly career profile AND the user has opted
+    # out of showing learning there, zero the aggregates so the card
+    # hides via its 'silent when empty' branch. The user's own /u/{slug}
+    # Skill Lab page (no context=dilly) is unaffected.
+    suppress_for_dilly = (context == "dilly") and not learning_visible
+    if suppress_for_dilly:
+        total_seconds = 0
+        videos_engaged = 0
+        cohorts_touched = 0
+        articulations = 0
+        by_cohort = []
+    else:
+        total_seconds = int(totals[0] or 0)
+        videos_engaged = int(totals[1] or 0)
+        cohorts_touched = int(totals[2] or 0)
+        articulations = int(totals[3] or 0)
+
     return {
         "name": name,
         "first_name": first_name,
@@ -254,11 +325,13 @@ def public_skills_profile(slug: str):
         "school": school,
         "majors": majors,
         "tagline": tagline,
-        "total_seconds": int(totals[0] or 0),
-        "videos_engaged": int(totals[1] or 0),
-        "cohorts_touched": int(totals[2] or 0),
-        "articulations": int(totals[3] or 0),
+        "total_seconds": total_seconds,
+        "videos_engaged": videos_engaged,
+        "cohorts_touched": cohorts_touched,
+        "articulations": articulations,
         "by_cohort": by_cohort,
+        "career": career_block,  # null if user opted out of career-on-Skills
+        "learning_visible": learning_visible,
     }
 
 
