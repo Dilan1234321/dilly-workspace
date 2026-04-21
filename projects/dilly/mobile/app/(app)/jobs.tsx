@@ -531,9 +531,79 @@ function WhyMatchedChips({ listing, userCities, userPath }: { listing: Listing; 
 // useful has come back yet (narrative still loading), show a stable
 // placeholder that doesn't promise anything Dilly hasn't earned.
 
-function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: Listing): string {
+// Build a single "earned" sentence that proves Dilly read BOTH the user
+// and the job. When the fit narrative is loaded we prefer its sharpest
+// sentence (same as before). When it's NOT loaded yet, we compose a
+// structural sentence from the data we DO have: the user's onboarding
+// path, city overlap, job type, posting freshness. This replaces the
+// old "Tap to see why X could work for you" chrome — that was an
+// affordance hint, not a line that felt curated.
+function _earnedSentenceFromSignals(
+  listing: Listing,
+  userCities: string[],
+  userPath: string,
+): string {
+  const company = listing.company || 'this company';
+  const title = listing.title || 'this role';
+  const tags: string[] = Array.isArray((listing as any).tags) ? (listing as any).tags : [];
+
+  // City overlap is the strongest positive signal we have without a
+  // narrative. If the job is in one of the user's preferred cities,
+  // call that out first.
+  const jobCity = String(listing.location_city || '').trim();
+  const jobState = String(listing.location_state || '').trim();
+  if (jobCity && userCities.length > 0) {
+    const overlap = userCities.find(
+      c => c.toLowerCase() === jobCity.toLowerCase() ||
+           c.toLowerCase() === `${jobCity.toLowerCase()}, ${jobState.toLowerCase()}`
+    );
+    if (overlap) {
+      return `${company} hiring in ${overlap} — one of your cities.`;
+    }
+  }
+
+  // Remote + the user's path is rural_remote_only or anyone who'd
+  // benefit from a remote confirmation.
+  if (listing.remote || (listing.work_mode && String(listing.work_mode).toLowerCase() === 'remote')) {
+    if (userPath === 'rural_remote_only') {
+      return `${company} is hiring this one remote. Matches your preference.`;
+    }
+    return `${company} has this one open to remote work.`;
+  }
+
+  // Freshly posted job (last 3 days) — surfaces as "just listed."
+  const posted = (() => {
+    if (!listing.posted_date) return null;
+    try {
+      const diff = Date.now() - new Date(listing.posted_date).getTime();
+      return Math.floor(diff / 86400000);
+    } catch { return null; }
+  })();
+  if (posted !== null && posted <= 2) {
+    return `Just posted at ${company}. Tap to see if ${title} matches your profile.`;
+  }
+
+  // Tag signal — reference the most specific tag we can find.
+  if (tags.length > 0) {
+    return `${tags[0]} role at ${company}. Tap for Dilly's read.`;
+  }
+
+  // Absolute floor — still better than a blank placeholder.
+  return `Open at ${company}. Tap for Dilly's read.`;
+}
+
+function _oneLineRead(
+  narrative: FitNarrativeData | null | undefined,
+  listing: Listing,
+  userCities: string[] = [],
+  userPath: string = '',
+): string {
   if (!narrative) {
-    return `Tap to see why ${listing.company || 'this role'} could work for you.`;
+    // Compose an earned sentence from the signals we already have
+    // rather than shipping a chrome placeholder. User doesn't know
+    // (or care) that the narrative hasn't generated yet; they just
+    // want to feel that this card was picked for them.
+    return _earnedSentenceFromSignals(listing, userCities, userPath);
   }
   // Prefer what_you_have. the sharpest "you have X" sentence is the
   // most powerful for the user to see first. Fall back to what_to_do.
@@ -552,7 +622,14 @@ function _oneLineRead(narrative: FitNarrativeData | null | undefined, listing: L
   return `Worth a look at ${listing.company || 'this role'}.`;
 }
 
-function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData | null | undefined; listing: Listing }) {
+function DillyVoiceBubble({
+  narrative, listing, userCities, userPath,
+}: {
+  narrative: FitNarrativeData | null | undefined;
+  listing: Listing;
+  userCities?: string[];
+  userPath?: string;
+}) {
   const theme = useResolvedTheme();
   return (
     <View style={bub.wrap}>
@@ -560,7 +637,9 @@ function DillyVoiceBubble({ narrative, listing }: { narrative: FitNarrativeData 
         <Ionicons name="sparkles" size={10} color="#fff" />
       </View>
       <View style={[bub.bubble, { backgroundColor: VIOLET + '14', borderColor: VIOLET + '33' }]}>
-        <Text style={[bub.text, { color: theme.surface.t1 }]}>{_oneLineRead(narrative, listing)}</Text>
+        <Text style={[bub.text, { color: theme.surface.t1 }]}>
+          {_oneLineRead(narrative, listing, userCities || [], userPath || '')}
+        </Text>
       </View>
     </View>
   );
@@ -813,7 +892,12 @@ function JobCard({ listing, expanded, onToggle, tailoredResumeId, narrativeCache
         {!isHolder && (
           <>
             <WhyMatchedChips listing={listing} userCities={userCities} userPath={userPath} />
-            <DillyVoiceBubble narrative={narrativeCache} listing={listing} />
+            <DillyVoiceBubble
+              narrative={narrativeCache}
+              listing={listing}
+              userCities={userCities}
+              userPath={userPath}
+            />
           </>
         )}
 
@@ -1081,6 +1165,211 @@ const mr = StyleSheet.create({
 });
 
 
+// ── Dilly Noticed — intelligence strip ────────────────────────────────────
+//
+// A thin rotating panel at the top of the Jobs page that makes the
+// user feel like Dilly has been reading the feed overnight for them.
+// Zero-cost: every observation comes from data we already have
+// (listings, savedJobIds, userTargetCompanies, trackedRoles).
+//
+// Observation shapes (in priority order — we pick the first 2 that
+// are available):
+//   1. "{company} just posted {role}" — company is in target list
+//   2. "{N} new role{s} at companies you said you'd love"
+//   3. "{company} just posted a {role}. Your saved {prior_role} at
+//      {prior_company} is a lens into how they hire."
+//   4. "{N} {cohort_display} roles opened in the last 48 hours"
+//   5. "Last week you saved a {role} role at {company}. {N} similar
+//      positions just opened."
+//
+// Each observation includes an optional onPress to jump the user to
+// the relevant job. Failing silently is fine — the strip just shrinks.
+
+type NoticedObservation = {
+  kind: 'target_hit' | 'target_sum' | 'prior_lens' | 'fresh_cohort' | 'similar_saved';
+  icon: keyof typeof Ionicons.glyphMap;
+  // One-line observation text, written AS DILLY. Keep under ~120 chars
+  // — this is meant to read like someone glancing up from their desk
+  // to say "hey, I saw this."
+  text: string;
+  // Job id to scroll/jump to when the strip is tapped. Optional.
+  jumpToId?: string;
+};
+
+function daysSince(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    if (Number.isNaN(diff)) return null;
+    return Math.floor(diff / 86400000);
+  } catch { return null; }
+}
+
+function buildNoticedObservations(
+  listings: Listing[],
+  targetCompanies: string[],
+  trackedRoles: Array<{ company: string; role: string }>,
+  savedJobIds: Set<string>,
+): NoticedObservation[] {
+  const out: NoticedObservation[] = [];
+  if (!Array.isArray(listings) || listings.length === 0) return out;
+
+  // Helper: is a listing "fresh" (posted within the last 3 days)?
+  const isFresh = (l: Listing): boolean => {
+    const d = daysSince(l.posted_date);
+    return d !== null && d <= 3;
+  };
+
+  // 1. Target-company hit. Walk the listings for any company in the
+  //    user's target list that posted within the last 3 days.
+  if (targetCompanies.length > 0) {
+    const targetSet = new Set(targetCompanies);
+    const hits = listings.filter(l => {
+      const co = String(l.company || '').toLowerCase().trim();
+      return co && targetSet.has(co) && isFresh(l);
+    });
+    if (hits.length === 1) {
+      out.push({
+        kind: 'target_hit',
+        icon: 'star',
+        text: `${hits[0].company} just posted ${hits[0].title}. You said you'd love to work here.`,
+        jumpToId: hits[0].id,
+      });
+    } else if (hits.length > 1) {
+      out.push({
+        kind: 'target_sum',
+        icon: 'star',
+        text: `${hits.length} new roles at companies you said you'd love.`,
+        jumpToId: hits[0].id,
+      });
+    }
+  }
+
+  // 2. Tracked-role similarity. If the user saved/tracked a prior
+  //    role (e.g. "SOC Analyst at Deloitte"), surface fresh listings
+  //    whose title contains 2+ of the same tokens. Cheap heuristic —
+  //    it's "glance up and say" level, doesn't need to be precise.
+  for (const prior of trackedRoles.slice(0, 4)) {
+    const priorTokens = new Set(
+      prior.role.toLowerCase().split(/\s+/).filter(t => t.length >= 4),
+    );
+    if (priorTokens.size < 1) continue;
+    const similar = listings.filter(l => {
+      if (savedJobIds.has(l.id)) return false;
+      if (!isFresh(l)) return false;
+      const tokens = l.title.toLowerCase().split(/\s+/);
+      let hits = 0;
+      for (const t of tokens) if (priorTokens.has(t)) hits++;
+      return hits >= 2;
+    });
+    if (similar.length >= 2) {
+      out.push({
+        kind: 'similar_saved',
+        icon: 'git-branch',
+        text: `Last week you tracked ${prior.role} at ${prior.company}. ${similar.length} similar roles just opened.`,
+        jumpToId: similar[0].id,
+      });
+      break;
+    }
+  }
+
+  // 3. Fresh cohort volume. Count every listing posted in the last
+  //    48 hours. Only shown when volume is meaningful (>=5).
+  const fresh48 = listings.filter(l => {
+    const d = daysSince(l.posted_date);
+    return d !== null && d <= 2;
+  });
+  if (fresh48.length >= 5) {
+    out.push({
+      kind: 'fresh_cohort',
+      icon: 'flame',
+      text: `${fresh48.length} roles in your feed posted in the last 48 hours. Dilly surfaced the strongest first.`,
+      jumpToId: fresh48[0].id,
+    });
+  }
+
+  return out.slice(0, 3);
+}
+
+function DillyNoticed({
+  observations,
+  onJumpTo,
+}: {
+  observations: NoticedObservation[];
+  onJumpTo?: (id: string) => void;
+}) {
+  const theme = useResolvedTheme();
+  const [idx, setIdx] = useState(0);
+
+  // Rotate through observations every 6 seconds. Purely decorative —
+  // the user can still tap any one to act on it. Only rotates if
+  // there's more than one observation.
+  useEffect(() => {
+    if (observations.length <= 1) return;
+    const h = setInterval(() => {
+      setIdx(i => (i + 1) % observations.length);
+    }, 6000);
+    return () => clearInterval(h);
+  }, [observations.length]);
+
+  if (observations.length === 0) return null;
+  const ob = observations[Math.min(idx, observations.length - 1)];
+  if (!ob) return null;
+
+  return (
+    <AnimatedPressable
+      onPress={() => { if (ob.jumpToId && onJumpTo) onJumpTo(ob.jumpToId); }}
+      scaleDown={0.99}
+      style={{
+        marginHorizontal: spacing.lg,
+        marginTop: 8,
+        marginBottom: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        backgroundColor: theme.accentSoft,
+        borderWidth: 1,
+        borderColor: theme.accentBorder,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <View style={{
+        width: 28, height: 28, borderRadius: 14,
+        backgroundColor: theme.accent,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name={ob.icon} size={14} color="#fff" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{
+          fontSize: 10, fontWeight: '800', letterSpacing: 1.1,
+          color: theme.accent, marginBottom: 2,
+        }}>
+          DILLY NOTICED
+        </Text>
+        <Text style={{ fontSize: 13, color: theme.surface.t1, lineHeight: 18, fontWeight: '500' }}>
+          {ob.text}
+        </Text>
+      </View>
+      {observations.length > 1 && (
+        <View style={{ flexDirection: 'row', gap: 3 }}>
+          {observations.map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: 5, height: 5, borderRadius: 2.5,
+                backgroundColor: i === idx ? theme.accent : theme.accentBorder,
+              }}
+            />
+          ))}
+        </View>
+      )}
+    </AnimatedPressable>
+  );
+}
+
 // -- Main Screen ------------------------------------------------------------
 
 export default function JobsScreen() {
@@ -1128,6 +1417,15 @@ export default function JobsScreen() {
   // User's chosen onboarding path. drives which extra filters show
   // (e.g. 'No degree required' appears only for dropouts).
   const [userPath, setUserPath] = useState<string>('');
+  // Companies the user told Dilly they'd love to work at — used by the
+  // "Dilly noticed..." intelligence strip to surface when one of those
+  // companies just posted a new role. Comma-separated in the profile,
+  // normalized to lowercase here.
+  const [userTargetCompanies, setUserTargetCompanies] = useState<string[]>([]);
+  // Names of applications the user is tracking — used for lines like
+  // "Last week you saved a SOC Analyst role at Deloitte; 2 similar
+  // positions just opened."
+  const [trackedRoles, setTrackedRoles] = useState<Array<{ company: string; role: string }>>([]);
   // Student flag — drives the jobs-page filter constraint. Students
   // see ONLY internships + entry-level roles (product rule:
   // don't show them jobs they can't realistically land yet). Derived
@@ -1182,7 +1480,7 @@ export default function JobsScreen() {
       const h1bParam = h1bFilter ? '&h1b_sponsor=true' : '';
       const fcParam = fairChanceFilter ? '&fair_chance=true' : '';
       const remoteParam = remoteOnlyFilter ? '&remote_only=true' : '';
-      const [profileRes, feedRes, resumesRes, collectionsRes, usageRes] = await Promise.all([
+      const [profileRes, feedRes, resumesRes, collectionsRes, usageRes, appsRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
         // When multiple types are selected, fetch all and filter client-side.
         // When only one non-'all' type is selected, pass it to the server for efficiency.
@@ -1193,6 +1491,11 @@ export default function JobsScreen() {
         dilly.get('/generated-resumes').catch(() => null),
         dilly.get('/collections').catch(() => null),
         dilly.get('/jobs/fit-narrative/usage').catch(() => null),
+        // Pulled for the "Dilly noticed..." strip. The endpoint returns
+        // saved + applied jobs; we only need company+role to light up
+        // "similar roles just posted" observations. Failure is silent —
+        // the strip just loses one of its observation sources.
+        dilly.get('/applications').catch(() => null),
       ]);
       setTailoredResumes(Array.isArray(resumesRes) ? resumesRes : resumesRes?.resumes || []);
       setCollections(collectionsRes?.collections || []);
@@ -1218,6 +1521,31 @@ export default function JobsScreen() {
       // path-specific filters (like "No degree required" for dropouts).
       const pathRaw = ((profileRes as any)?.user_path || '').toString().toLowerCase();
       setUserPath(pathRaw);
+
+      // Target-companies + tracked-role intelligence for the
+      // "Dilly noticed..." strip at the top of the feed. target_companies
+      // is comma-separated on the profile; split + normalize. Applications
+      // endpoint returns { applications: [{company, role, status, ...}] }.
+      const rawTargets = (profileRes as any)?.target_companies;
+      const targets: string[] = Array.isArray(rawTargets)
+        ? rawTargets.map((s: any) => String(s || '').trim().toLowerCase()).filter(Boolean)
+        : typeof rawTargets === 'string'
+          ? rawTargets.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
+          : [];
+      setUserTargetCompanies(targets);
+
+      const rawApps = (appsRes as any)?.applications;
+      if (Array.isArray(rawApps)) {
+        setTrackedRoles(
+          rawApps
+            .map((a: any) => ({
+              company: String(a?.company || '').trim(),
+              role: String(a?.role || '').trim(),
+            }))
+            .filter((a: { company: string; role: string }) => !!a.company && !!a.role)
+            .slice(0, 12),
+        );
+      }
       // Student lock: if profile says student, force the filters
       // to internship+entry-level only. The user can still pick
       // between them but can't see full-time or part-time roles —
@@ -1441,6 +1769,22 @@ export default function JobsScreen() {
   // Top match and the rest. hero card + stacked cards pattern.
   const topMatch = filtered[0];
   const restMatches = filtered.slice(1);
+
+  // "Dilly noticed..." observations — recomputed whenever listings,
+  // targets, tracked roles, or saves change. Intentionally cheap: pure
+  // functional computation over already-loaded data, no network.
+  const noticedObservations = useMemo(
+    () => buildNoticedObservations(filtered, userTargetCompanies, trackedRoles, savedJobIds),
+    [filtered, userTargetCompanies, trackedRoles, savedJobIds],
+  );
+
+  // Jumping to a specific job from the Dilly-noticed strip: expand the
+  // card inline (same UX as tapping it). The user sees the observation
+  // land on the exact role it was talking about.
+  const handleNoticedJump = useCallback((id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedId(id);
+  }, []);
 
   return (
     <View style={[s.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]}>
@@ -1741,6 +2085,18 @@ export default function JobsScreen() {
             returns null above). */}
         {isHolder && marketRadar && <MarketRadarCard radar={marketRadar} />}
 
+        {/* "Dilly noticed..." intelligence strip. Only renders when we
+            have at least one observation. Zero-cost (pure function over
+            already-loaded data). Hidden for holders — their top-of-page
+            is the Market Radar, a different "Dilly has been watching"
+            affordance specific to comp benchmarking. */}
+        {!isHolder && noticedObservations.length > 0 && (
+          <DillyNoticed
+            observations={noticedObservations}
+            onJumpTo={handleNoticedJump}
+          />
+        )}
+
         {/* Hero spotlight. the #1 match gets cinematic treatment. This
             is the first thing the user sees after the header: a poster,
             not a list item. */}
@@ -1786,43 +2142,138 @@ export default function JobsScreen() {
           </View>
         )}
 
-        {/* "Up next for you" rail separator. signals the hierarchy */}
-        {restMatches.length > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-            <Text style={{ fontSize: 10, fontWeight: '800', color: colors.t3, letterSpacing: 1.2 }}>
-              {isHolder ? 'ALSO HIRING IN YOUR FIELD' : 'UP NEXT FOR YOU'}
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.b1 }} />
-          </View>
-        )}
-
-        {restMatches.map((listing, i) => (
-          <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
-            <JobCard
-              listing={listing}
-              index={i}
-              userCities={userCities}
-              userPath={userPath}
-              isHolder={isHolder}
-              expanded={expandedId === listing.id}
-              narrativeCache={narrativeCache[listing.id] || null}
-              onNarrativeLoaded={handleNarrativeLoaded}
-              tailoredResumeId={
-                tailoredResumes.find(r =>
-                  r.company?.toLowerCase() === listing.company?.toLowerCase()
-                  && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
-                )?.id || null
-              }
-              onToggle={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setExpandedId(expandedId === listing.id ? null : listing.id);
-              }}
-              onBookmark={(l) => setShowCollectionPicker(l)}
-              isSaved={savedJobIds.has(listing.id)}
-            />
-          </FadeInView>
-        ))}
+        {/* Confidence bands — replaces the single "UP NEXT FOR YOU"
+            separator. The idea: the user feels Dilly *sorting the world*
+            for them. Three bands, each with decreasing visual weight.
+            The feed backend already ranks listings; we cut the sorted
+            list into three zones so the user perceives hierarchy
+            instead of one flat stream.
+              - STRONG MATCHES  (top 1/3 of restMatches)
+              - STRETCH ROLES   (middle 1/3) — reach, but Dilly sees the path
+              - WORTH KNOWING   (bottom 1/3) — background awareness
+            Holders see a single band since they're benchmarking, not
+            applying. */}
+        {restMatches.length > 0 && (() => {
+          // Partition restMatches into three bands by list position.
+          // Minimum band size is 1 when we have < 6 items; empty
+          // bands don't render.
+          const n = restMatches.length;
+          if (isHolder) {
+            return (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, marginTop: 4 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: theme.surface.t3, letterSpacing: 1.2 }}>
+                    ALSO HIRING IN YOUR FIELD
+                  </Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+                </View>
+                {restMatches.map((listing, i) => (
+                  <FadeInView key={listing.id || i} delay={Math.min(i * 40, 200)}>
+                    <JobCard
+                      listing={listing}
+                      index={i}
+                      userCities={userCities}
+                      userPath={userPath}
+                      isHolder={isHolder}
+                      expanded={expandedId === listing.id}
+                      narrativeCache={narrativeCache[listing.id] || null}
+                      onNarrativeLoaded={handleNarrativeLoaded}
+                      tailoredResumeId={
+                        tailoredResumes.find(r =>
+                          r.company?.toLowerCase() === listing.company?.toLowerCase()
+                          && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
+                        )?.id || null
+                      }
+                      onToggle={() => {
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        setExpandedId(expandedId === listing.id ? null : listing.id);
+                      }}
+                      onBookmark={(l) => setShowCollectionPicker(l)}
+                      isSaved={savedJobIds.has(listing.id)}
+                    />
+                  </FadeInView>
+                ))}
+              </>
+            );
+          }
+          // Non-holders: split into three bands.
+          const strongEnd = Math.max(1, Math.floor(n / 3));
+          const stretchEnd = Math.max(strongEnd + 1, Math.floor((n * 2) / 3));
+          const bands: Array<{ label: string; sub: string; items: Listing[]; opacity: number }> = [
+            {
+              label: 'STRONG MATCHES',
+              sub: 'Dilly sees you here.',
+              items: restMatches.slice(0, strongEnd),
+              opacity: 1,
+            },
+            {
+              label: 'STRETCH ROLES',
+              sub: 'Reach — but the path is visible.',
+              items: restMatches.slice(strongEnd, stretchEnd),
+              opacity: 0.92,
+            },
+            {
+              label: 'WORTH KNOWING',
+              sub: 'Background awareness. Not today, maybe next week.',
+              items: restMatches.slice(stretchEnd),
+              opacity: 0.82,
+            },
+          ];
+          let runningIdx = 0;
+          return (
+            <>
+              {bands.map((band, bandIdx) => {
+                if (band.items.length === 0) return null;
+                return (
+                  <View key={band.label} style={{ marginTop: bandIdx === 0 ? 4 : 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: theme.accent, letterSpacing: 1.2 }}>
+                        {band.label}
+                      </Text>
+                      <View style={{ flex: 1, height: 1, backgroundColor: theme.surface.border }} />
+                    </View>
+                    <Text style={{ fontSize: 11, color: theme.surface.t3, textAlign: 'center', marginBottom: 10, fontStyle: 'italic' }}>
+                      {band.sub}
+                    </Text>
+                    <View style={{ opacity: band.opacity }}>
+                      {band.items.map((listing) => {
+                        const localIdx = runningIdx++;
+                        return (
+                          <FadeInView key={listing.id || localIdx} delay={Math.min(localIdx * 40, 200)}>
+                            <JobCard
+                              listing={listing}
+                              index={localIdx}
+                              userCities={userCities}
+                              userPath={userPath}
+                              isHolder={isHolder}
+                              expanded={expandedId === listing.id}
+                              narrativeCache={narrativeCache[listing.id] || null}
+                              onNarrativeLoaded={handleNarrativeLoaded}
+                              tailoredResumeId={
+                                tailoredResumes.find(r =>
+                                  r.company?.toLowerCase() === listing.company?.toLowerCase()
+                                  && r.job_title?.toLowerCase() === listing.title?.toLowerCase()
+                                )?.id || null
+                              }
+                              onToggle={() => {
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                setExpandedId(expandedId === listing.id ? null : listing.id);
+                              }}
+                              onBookmark={(l) => setShowCollectionPicker(l)}
+                              isSaved={savedJobIds.has(listing.id)}
+                            />
+                          </FadeInView>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
+            </>
+          );
+        })()}
         <DillyFooter />
       </ScrollView>
 
