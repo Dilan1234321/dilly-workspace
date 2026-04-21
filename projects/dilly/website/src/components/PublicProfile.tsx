@@ -244,6 +244,124 @@ function SkillPanel({
   );
 }
 
+// ── Skill Lab cross-link: distilled learning receipts ───────────
+//
+// Pulls aggregate engagement data from /skill-lab/public/{slug} so the
+// career profile can show "verified learning" — minutes invested,
+// videos engaged, top cohort tiers. Links out to the full Skill Lab
+// learning profile. Zero LLM: the Skill Lab endpoint serves cached
+// aggregates straight from Postgres.
+
+interface SkillLabCohortData {
+  cohort: string;
+  seconds: number;
+  videos: number;
+}
+
+interface SkillLabData {
+  first_name: string;
+  total_seconds: number;
+  videos_engaged: number;
+  cohorts_touched: number;
+  articulations: number;
+  by_cohort: SkillLabCohortData[];
+}
+
+const SKILLS_SITE = "https://dilly-skill-lab.vercel.app";
+
+function skillsTier(minutes: number): string {
+  if (minutes >= 600) return "Fluent";
+  if (minutes >= 240) return "Developing";
+  if (minutes >= 60) return "Building";
+  return "Exploring";
+}
+
+function SkillLabLearning({ slug }: { slug: string }) {
+  const [data, setData] = useState<SkillLabData | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    // context=dilly signals the Skill Lab backend to honour the user's
+    // skills_show_learning opt-out for this specific surface.
+    fetch(`${API}/skill-lab/public/${encodeURIComponent(slug)}?context=dilly`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (cancelled) return;
+        setData(json);
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  // Silent while loading, and silent when the user has no receipts —
+  // the career profile shouldn't ship an empty learning block.
+  if (!loaded || !data || data.total_seconds <= 0) return null;
+
+  const minutes = Math.round(data.total_seconds / 60);
+  const hoursLabel =
+    minutes < 60
+      ? `${minutes}m`
+      : minutes % 60
+      ? `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+      : `${Math.floor(minutes / 60)}h`;
+
+  const topThree = data.by_cohort.slice(0, 3);
+
+  return (
+    <a
+      href={`${SKILLS_SITE}/u/${encodeURIComponent(slug)}`}
+      target="_blank"
+      rel="noopener"
+      className="mt-6 block rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-indigo-400 hover:bg-indigo-50/40 lg:p-5"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-[10px] font-bold tracking-widest text-indigo-600">
+          VERIFIED LEARNING · SKILL LAB
+        </div>
+        <span className="text-[10px] uppercase tracking-wider text-slate-400">
+          Open ↗
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-baseline gap-3">
+        <div className="text-2xl font-black tracking-tight text-slate-900">
+          {hoursLabel}
+        </div>
+        <div className="text-sm text-slate-500">
+          invested · {data.videos_engaged} video
+          {data.videos_engaged === 1 ? "" : "s"} · {data.cohorts_touched} field
+          {data.cohorts_touched === 1 ? "" : "s"}
+        </div>
+      </div>
+
+      {topThree.length > 0 && (
+        <ul className="mt-3 space-y-1.5">
+          {topThree.map((c) => {
+            const m = Math.round(c.seconds / 60);
+            return (
+              <li
+                key={c.cohort}
+                className="flex items-center justify-between gap-3 text-sm"
+              >
+                <span className="truncate text-slate-700">{c.cohort}</span>
+                <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                  {skillsTier(m)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </a>
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────
 
 export default function PublicProfile({ slug, prefix }: { slug: string; prefix: "s" | "p" }) {
@@ -406,6 +524,9 @@ export default function PublicProfile({ slug, prefix }: { slug: string; prefix: 
                 </div>
               )}
             </div>
+
+            {/* Skill Lab: verified learning receipts */}
+            <SkillLabLearning slug={p.slug} />
 
             {/* Dilly's take */}
             <div className="mt-auto pt-6 lg:pt-8">
