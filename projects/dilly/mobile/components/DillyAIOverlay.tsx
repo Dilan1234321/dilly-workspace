@@ -615,20 +615,44 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       contentOpacity.setValue(0);
       glowLoopRef.current?.stop();
 
-      // Fetch rich context and proactive message
+      // Fetch rich context, the recent-signal callback, and the
+      // proactive greeting in parallel. The "Dilly Remembered" card
+      // used to live on Home; per product direction, that callback
+      // is now the AI opener — presence in the moment the user
+      // engages, not a block competing on Home.
       (async () => {
         try {
-          const res = await dilly.fetch('/ai/context');
-          if (res.ok) {
-            const data = await res.json();
-            setRichContext(data.context);
+          const [ctxRes, rememberRes] = await Promise.all([
+            dilly.fetch('/ai/context').catch(() => null),
+            dilly.get('/remember/today').catch(() => null),
+          ]);
+          let ctxData: any = null;
+          if (ctxRes && ctxRes.ok) {
+            try { ctxData = await ctxRes.json(); } catch { ctxData = null; }
+            if (ctxData) setRichContext(ctxData.context);
+          }
 
-            // If no initialMessage, show proactive greeting
-            if (!pendingInitialMessage.current && data.proactive_message) {
+          // If no initialMessage, show the best opening message we
+          // have. Preference: remember-callback (personalised, proves
+          // Dilly is tracking) → proactive_message (from /ai/context).
+          if (!pendingInitialMessage.current) {
+            const remember = rememberRes as {
+              ok?: boolean; none?: boolean; headline?: string;
+              context?: string; seed_prompt?: string;
+            } | null;
+            const rememberLine = (remember && !remember.none && remember.headline)
+              ? [
+                  remember.headline,
+                  remember.context ? `"${remember.context}"` : '',
+                  remember.seed_prompt || 'Want to pick that thread back up?',
+                ].filter(Boolean).join('\n\n')
+              : null;
+            const opener = rememberLine || (ctxData && ctxData.proactive_message) || null;
+            if (opener) {
               timeoutsRef.current.push(setTimeout(() => {
                 setMessages(prev => {
                   if (prev.length === 0) {
-                    return [{ id: ++_msgId, role: 'assistant', content: data.proactive_message }];
+                    return [{ id: ++_msgId, role: 'assistant', content: opener }];
                   }
                   return prev;
                 });

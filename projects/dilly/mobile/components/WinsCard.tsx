@@ -157,7 +157,10 @@ export default function WinsCard() {
   );
 }
 
-function LogWinSheet({
+/** Exported so surfaces outside the full WinsCard (Home's compact
+ *  "Log a win" pill, etc.) can mount just the sheet and re-use the
+ *  same logging UX + celebration triggers. */
+export function LogWinSheet({
   visible,
   onClose,
   onLogged,

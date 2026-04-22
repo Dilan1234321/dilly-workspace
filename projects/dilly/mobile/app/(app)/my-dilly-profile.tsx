@@ -40,6 +40,7 @@ import { useExtractionState } from '../../hooks/useExtractionPending';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { FirstVisitCoach } from '../../components/FirstVisitCoach';
 import FadeInView from '../../components/FadeInView';
+import WinsCard from '../../components/WinsCard';
 import DillyFooter from '../../components/DillyFooter';
 import DillyCardEditor, { type CardData } from '../../components/DillyCard';
 import { DillyFace } from '../../components/DillyFace';
@@ -1781,6 +1782,16 @@ function SeekerProfileScreen() {
               </View>
             )}
           </FadeInView>
+
+        {/* ── Recent Wins ───────────────────────────────────────
+            Moved from Home per tester feedback. My Dilly is where
+            the public profile lives, so wins visibly compounding
+            here makes more sense than a permanent card on Home.
+            "Log a win" from Home still opens the same sheet. */}
+        <FadeInView delay={240}>
+          <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>RECENT WINS</Text>
+          <WinsCard />
+        </FadeInView>
 
         {/* ── 4. Skills Cloud ──────────────────────────────────── */}
         {allSkills.length > 0 && (

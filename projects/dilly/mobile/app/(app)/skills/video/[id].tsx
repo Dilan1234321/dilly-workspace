@@ -61,27 +61,47 @@ function publishedAgo(iso?: string | null): string {
   return `${Math.floor(diff / 365)}y ago`;
 }
 
-/** Build the YouTube embed URL. We point the WebView directly at
- *  this URL (instead of wrapping the iframe API inside a local HTML
- *  string) for one crucial reason: a `source={{ html }}` WebView has
- *  NO real origin, and YouTube's iframe API refuses to play video in
- *  a nullorigin context — it emits error code 5 for every request,
- *  which is exactly the "this video can't play inline" error the user
- *  was seeing on every video.
+/** HTML shell that hosts the YouTube iframe. We load this via
+ *  `source={{ html, baseUrl }}` with baseUrl set to
+ *  https://www.youtube.com so the WebView has a real YouTube
+ *  origin — which is required for the iframe to play video.
  *
- *  Loading the embed URL directly gives the WebView a real origin
- *  (www.youtube.com), so playback works. If a specific video cannot
- *  be embedded, YouTube's own player surfaces an inline "video
- *  unavailable" state — clearer than any custom fallback we can
- *  fabricate, and the right source of truth.
+ *  Why not point the WebView directly at youtube.com/embed/?
+ *  On iOS, loading youtube.com/embed in a WebView often triggers
+ *  YouTube's "video player configuration error" because the embed
+ *  path expects to be iframed, not loaded as a top-level document.
+ *  The shell tricks YouTube into seeing a real iframe embed and
+ *  playback works reliably.
  *
  *  - playsinline=1: honors our allowsInlineMediaPlayback WebView flag
  *  - rel=0: no related videos at end (keeps user in Dilly's own
  *    suggestion flow)
- *  - modestbranding=1: minimizes the YouTube chrome
- */
-function embedUrl(videoId: string): string {
-  return `https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1`;
+ *  - modestbranding=1: minimizes YouTube chrome
+ *  - enablejsapi=1: lets JS in this page talk to the iframe later
+ *    if we want to add pause/play/track-progress telemetry
+ *  - origin=https://www.youtube.com: matches the baseUrl so the
+ *    same-origin check inside the iframe passes */
+function playerHtml(videoId: string): string {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+      html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
+      .wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+      iframe { width: 100%; height: 100%; border: 0; display: block; background: #000; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <iframe
+        src="https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1&enablejsapi=1&origin=https%3A%2F%2Fwww.youtube.com"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+        allowfullscreen></iframe>
+    </div>
+  </body>
+</html>`;
 }
 
 export default function VideoScreen() {
@@ -197,15 +217,14 @@ export default function VideoScreen() {
           poster-to-player flip. */}
       <View style={styles.playerWrap}>
         {playing ? (
-          // Load the YouTube embed URL directly — not wrapped in a
-          // local HTML shell. Inline HTML has a null origin which
-          // trips YouTube's iframe API into emitting error code 5
-          // for every video. Pointing the WebView at www.youtube.com
-          // gives it a real origin and playback works. If a specific
-          // video has embedding disabled, YouTube's own player shows
-          // a clear "video unavailable" state inline.
+          // Load a tiny HTML shell that iframes youtube.com/embed,
+          // using baseUrl='https://www.youtube.com' so the WebView
+          // reports a real YouTube origin. Loading the embed URL as
+          // a top-level document trips a "video player configuration
+          // error" on iOS because YouTube expects the embed path to
+          // be inside an iframe. This shell is the reliable shape.
           <WebView
-            source={{ uri: embedUrl(video.id) }}
+            source={{ html: playerHtml(video.id), baseUrl: 'https://www.youtube.com' }}
             style={styles.player}
             allowsInlineMediaPlayback
             mediaPlaybackRequiresUserAction={false}

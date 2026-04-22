@@ -16,9 +16,12 @@ import { useRecentUpgrade } from '../../hooks/useRecentUpgrade';
 import { YourPlanCard } from '../../components/YourPlanCard';
 import { useYourPlan } from '../../hooks/useYourPlan';
 import ChapterCard, { type ChapterCardState } from '../../components/ChapterCard';
-import DailyPulseCard from '../../components/DailyPulseCard';
-import RememberedCard from '../../components/RememberedCard';
-import WinsCard from '../../components/WinsCard';
+import { LogWinSheet } from '../../components/WinsCard';
+// DailyPulseCard / RememberedCard / WinsCard imports removed — all
+// three were cut from Home per tester feedback. Wins timeline now
+// lives on My Dilly; the Remembered callback became the Dilly AI
+// opener; Daily Pulse was retired. LogWinSheet stays so the compact
+// "Log a win" pill on Home can still open the same modal.
 import { scheduleChapterNotifications } from '../../hooks/useChapterNotifications';
 import { useExtractionState } from '../../hooks/useExtractionPending';
 import { colors, spacing, API_BASE } from '../../lib/tokens';
@@ -1007,6 +1010,10 @@ function SeekerHome() {
   // Counts toward the "Save your first job" onboarding step so the
   // checkmark flips after saving, not after applying.
   const [savedJobCount, setSavedJobCount] = useState(0);
+  // Home "Log a win" shortcut — the full Wins timeline moved to
+  // My Dilly, but we keep an entry point here so logging a win in
+  // the moment stays frictionless.
+  const [logWinOpen, setLogWinOpen] = useState(false);
   // Chapter (weekly scheduled session) state. Fed to ChapterCard.
   // Null until the first fetch lands; the card renders a quiet
   // skeleton in that window.
@@ -1339,78 +1346,56 @@ function SeekerHome() {
           <ChapterCard state={chapterState} theme={theme} />
         </FadeInView>
 
-        {/* Daily Pulse — the between-Chapter heartbeat.
-            Weekly Chapter is the deep ritual; this is the daily
-            habit that brings users back in between. 30-60 second
-            reflection, streak counter, breaking the streak is the
-            cost that drives return. */}
+        {/* Home v2 — radically simpler per tester feedback.
+            Removed: Daily Pulse, Dilly Skills promo, Dilly Remembered
+            card, Wins timeline. The callback intelligence from
+            Remembered now lives as the Dilly AI opening message
+            instead — presence in the moment the user engages rather
+            than another block competing for attention on Home.
+            The Wins TIMELINE moved to My Dilly (public profile
+            surface) so logged wins compound visibly in the profile;
+            a "Log a win" shortcut now lives on Home instead of the
+            full feed. */}
+
+        {/* Log a win — compact pill. Opens the same LogWinSheet the
+            My Dilly timeline uses, so logging stays frictionless
+            from Home even though the timeline moved. */}
         <FadeInView delay={18}>
-          <DailyPulseCard />
-        </FadeInView>
-
-        {/* Dilly Remembered You — proof the AI is actually tracking.
-            Surfaces a specific callback to a recent pulse / Chapter
-            commitment / upcoming deadline. Tapping opens the chat
-            seeded with a follow-up so the reminder becomes a
-            conversation. Hides itself entirely when there's no
-            meaningful signal yet. */}
-        <FadeInView delay={22}>
-          <RememberedCard />
-        </FadeInView>
-
-        {/* Wins timeline — positive-reinforcement loop. Users open
-            the app to log good news, which builds an association
-            that THIS is where progress lives. Recent wins visible
-            on every return visit; "Log a win" triggers celebration. */}
-        <FadeInView delay={26}>
-          <WinsCard />
-        </FadeInView>
-
-        {/* Dilly Skills — entry point to the curated learning library
-            at skills.hellodilly.com, surfaced inside the app so
-            Chapter and Jobs prescriptions can route to it. Keeps
-            Dilly and Skills feeling like one product. */}
-        <FadeInView delay={30}>
           <AnimatedPressable
-            onPress={() => router.push('/skills')}
+            onPress={() => setLogWinOpen(true)}
             scaleDown={0.97}
             style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
               marginHorizontal: 16,
               marginTop: 14,
-              padding: 16,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
               borderRadius: 14,
               borderWidth: 1,
               backgroundColor: theme.surface.s1,
               borderColor: theme.accentBorder,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
             }}
           >
             <View
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
+                width: 34, height: 34, borderRadius: 10,
+                alignItems: 'center', justifyContent: 'center',
                 backgroundColor: theme.accentSoft,
-                alignItems: 'center',
-                justifyContent: 'center',
               }}
             >
-              <Ionicons name="sparkles" size={22} color={theme.accent} />
+              <Ionicons name="trophy" size={17} color={theme.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }}>
-                DILLY SKILLS
+              <Text style={{ fontSize: 13, fontWeight: '800', color: theme.surface.t1 }}>
+                Log a win
               </Text>
-              <Text style={{ color: theme.surface.t1, fontSize: 14, fontWeight: '800', marginTop: 2 }}>
-                Learn something today
-              </Text>
-              <Text style={{ color: theme.surface.t3, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
-                Curated 15-min videos · free · no signup
+              <Text style={{ fontSize: 11, fontWeight: '600', color: theme.surface.t3, marginTop: 1 }}>
+                Applied, interview, offer, milestone
               </Text>
             </View>
-            <Ionicons name="arrow-forward" size={18} color={theme.surface.t3} />
+            <Ionicons name="add" size={20} color={theme.accent} />
           </AnimatedPressable>
         </FadeInView>
 
@@ -1927,6 +1912,17 @@ function SeekerHome() {
         )}
 
       </ScrollView>
+
+      {/* Global-ish Log Win sheet. Lives at the root of the Home
+          tree so the sticky pill can open it without passing props
+          through the render forest. onLogged triggers the celebration
+          and closes the sheet; the Wins timeline in My Dilly refreshes
+          next time that tab is focused. */}
+      <LogWinSheet
+        visible={logWinOpen}
+        onClose={() => setLogWinOpen(false)}
+        onLogged={() => setLogWinOpen(false)}
+      />
     </View>
   );
 }
