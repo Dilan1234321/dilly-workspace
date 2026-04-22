@@ -394,23 +394,26 @@ def extract_memory_items(
     use_llm: bool = False,
     skip_gate: bool = False,
 ) -> list[dict[str, Any]]:
-    # Cost gate: skip trivial exchanges entirely for the chat path
-    # (filters out one-word replies, greetings, acks).
+    # Regex extraction runs unconditionally — zero LLM cost, no reason
+    # to gate it. The word-count gate below applies ONLY to the LLM
+    # path where each call costs money.
     #
-    # Pulse callers should pass skip_gate=True: a pulse entry is
-    # already a deliberate user reflection passing quality through
-    # intent, not length. A user writing 'Stuck with Anthropic app'
-    # (a 22-char pulse) should still extract a target_company fact —
-    # the word-count pre-gate would reject it and we'd silently lose
-    # the signal.
-    if not skip_gate and not _messages_worth_extracting(messages):
-        return []
+    # Previous code applied the gate before both paths, which meant a
+    # user saying "I know Python" (13 chars — fails length check) got
+    # zero extraction even though the regex pattern would have caught it
+    # for free. This was the cause of "talked to Dilly but my profile
+    # didn't update" — short literal fact statements were silently dropped
+    # before the regex even ran.
+    #
+    # Pulse callers pass skip_gate=True so the gate never fires for them
+    # regardless of message length.
+    regex_items = _regex_extract_from_user_turns(messages)
 
     # Two extraction paths:
     #   use_llm=False (default, called per-turn from /ai/chat) — regex
     #     only. Zero LLM cost. Catches obvious literal facts ("I work
     #     at X", "my goal is Y") and nothing else.
-    #   use_llm=True (on chat close via /ai/chat/flush) — Haiku
+    #   use_llm=True (on chat close via /ai/chat/flush) — LLM
     #     extraction. One call per qualifying conversation. Catches
     #     inferential facts regex can't: emotional context, implied
     #     goals, mentioned-but-not-done, personality tells, rejections,
@@ -432,12 +435,17 @@ def extract_memory_items(
     # (category, label) below. This is what makes "messages 0..5 all
     # get added once the user hits the 5-message mark" actually hold
     # in the presence of transient LLM failures.
-    regex_items = _regex_extract_from_user_turns(messages)
     if use_llm:
-        try:
-            llm_items = _extract_memory_items_llm(uid, conv_id, messages, existing_items)
-        except Exception:
-            llm_items = []
+        # Cost gate: skip the LLM call when the conversation is trivial
+        # (greetings, acks, one-word replies). Regex already ran above
+        # so literal facts are still captured. Only inferential/LLM facts
+        # are skipped on trivial conversations, which is correct.
+        llm_items: list[dict[str, Any]] = []
+        if skip_gate or _messages_worth_extracting(messages):
+            try:
+                llm_items = _extract_memory_items_llm(uid, conv_id, messages, existing_items)
+            except Exception:
+                llm_items = []
         # Union: dedupe by (category, label) so we do not double-count.
         seen_keys: set[tuple[str, str]] = set()
         new_items: list[dict[str, Any]] = []
