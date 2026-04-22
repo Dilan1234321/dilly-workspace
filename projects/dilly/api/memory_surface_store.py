@@ -46,6 +46,18 @@ _MEMORY_CATEGORIES = {
     "skill_unlisted",
     "company_culture_pref",
     "availability",
+    # Categories the regex extractor (memory_extraction._FACT_PATTERNS)
+    # emits. Previously these were not whitelisted so 66% of regex
+    # captures silently failed at the normalizer — that was the root of
+    # the "talking to Dilly does not add to my profile" complaint.
+    # Adding them here lets the regex path's output reach the database.
+    "experience",
+    "education",
+    "skill",
+    "project",
+    "career_interest",
+    "location_pref",
+    "interest",
 }
 
 _MEMORY_ACTIONS = {

@@ -117,72 +117,212 @@ _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     # editor lets users delete anything wrong.
     (
         "experience",
-        re.compile(r"\b(?:i (?:work|worked|am working|just started|am|used to work) (?:at|for|with)|i'?m (?:at|with|on a team at)|working (?:at|for)) ([A-Za-z][A-Za-z0-9&'.,\- ]{1,50}?)(?=\s+(?:as|in|on|doing|where|right now|currently|\.|,|;|$))", re.IGNORECASE),
+        re.compile(
+            r"\b(?:i (?:work|worked|am working|just started|am|used to work) (?:at|for|with)|"
+            r"i'?m (?:at|with|on a team at)|working (?:at|for)) "
+            r"([A-Za-z][A-Za-z0-9&'.,\- ]{1,50}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:as|in|on|doing|where|right now|currently|$))",
+            re.IGNORECASE,
+        ),
         "Works at {v}",
     ),
     (
         "education",
-        re.compile(r"\b(?:i'?m (?:studying|majoring in|minoring in|doing a degree in|getting a degree in)|i study|studying) ([A-Za-z &/\-]{3,60}?)(?=\s+(?:at|in|right now|currently|and|\.|,|;|$))", re.IGNORECASE),
+        re.compile(
+            r"\b(?:i'?m (?:studying|majoring in|minoring in|doing a degree in|getting a degree in)|"
+            r"i study|studying) "
+            r"([A-Za-z &/\-]{3,60}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:at|in|right now|currently|and|$))",
+            re.IGNORECASE,
+        ),
         "Studies {v}",
     ),
     (
         "education",
-        re.compile(r"\bmy (?:major|minor|concentration) (?:is|was) ([A-Za-z &/\-]{3,60}?)(?=\s+(?:and|\.|,|;|$))", re.IGNORECASE),
+        re.compile(
+            r"\bmy (?:major|minor|concentration) (?:is|was) "
+            r"([A-Za-z &/\-]{3,60}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:and|$))",
+            re.IGNORECASE,
+        ),
         "Major: {v}",
     ),
     (
         "education",
-        re.compile(r"\b(?:i go to|i attend|i'?m at|i study at|student at) ([A-Z][A-Za-z.'\- ]{2,60}?)(?=\s+(?:studying|majoring|as|where|right now|currently|\.|,|;|$))", re.IGNORECASE),
+        re.compile(
+            # Allow 2-char short names ("UT", "BU"), plus a lookahead that
+            # accepts "," / ";" with no preceding whitespace ("UT, studying").
+            r"\b(?:i go to|i attend|i'?m at|i study at|student at) "
+            r"([A-Z][A-Za-z.'\- ]{1,60}?)"
+            r"(?=\s*(?:,|;)|\s+(?:studying|majoring|as|where|right now|currently|\.|$))",
+            re.IGNORECASE,
+        ),
         "Attends {v}",
     ),
     (
         "project",
-        re.compile(r"\bi (?:built|shipped|made|created|launched|started|founded|am building|worked on|wrote) ([A-Za-z0-9 .'\-,]{3,80}?)(?=\s+(?:that|which|with|for|using|\.|,|;|$))", re.IGNORECASE),
+        # Allow an optional adverb ("also", "just", "recently", "once")
+        # between the subject and the verb — real conversational phrasing
+        # routinely includes these ("I also built ...", "I just shipped...").
+        re.compile(
+            r"\bi (?:also |just |recently |once |already )?"
+            r"(?:built|shipped|made|created|launched|started|founded|am building|worked on|wrote) "
+            r"([A-Za-z0-9 '\-]{3,80}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:that|which|with|for|using|$))",
+            re.IGNORECASE,
+        ),
         "Built {v}",
     ),
     (
         "skill",
-        re.compile(r"\bi (?:know|use|work with|am good at|have experience with|am proficient in|taught myself|self.taught in|am learning|picked up) ([A-Za-z0-9 +#./\-]{2,40}?)(?=\s+(?:and|for|because|at|to|\.|,|;|$))", re.IGNORECASE),
+        # Lookahead now accepts "," / ";" with no preceding whitespace so
+        # lists like "I know Python, SQL, and React" capture the first item.
+        # Note: we only capture ONE skill per pattern match; the outer
+        # finditer loop re-runs for additional phrasings, but list commas
+        # are not split inside a single capture. Planned follow-up: post-
+        # process captured values to split on comma if the value contains
+        # one, then emit one fact per token.
+        re.compile(
+            r"\bi (?:know|use|work with|am good at|have experience with|"
+            r"am proficient in|taught myself|self.taught in|am learning|picked up) "
+            r"([A-Za-z0-9 +#./\-]{2,40}?)"
+            r"(?=\s*(?:,|;)|\s+(?:and|for|because|at|to|\.|$))",
+            re.IGNORECASE,
+        ),
         "Skill: {v}",
     ),
     (
         "target_company",
-        re.compile(r"\b(?:i (?:want to work (?:at|for)|applied to|am applying to|'?m targeting|'?m gunning for|'?d love to work at|dream job (?:is )?at)|my (?:target|dream) (?:company )?is|targeting|aiming for) ([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)(?=\s+(?:as|in|on|where|right now|currently|\.|,|;|$))", re.IGNORECASE),
+        # Lookahead accepts "," / ";" / "." with or without preceding
+        # whitespace — "Jane Street." captures as "Jane Street".
+        re.compile(
+            r"\b(?:i (?:want to work (?:at|for)|applied to|am applying to|"
+            r"'?m targeting|'?m gunning for|'?d love to work at|dream job (?:is )?at)|"
+            r"my (?:target|dream) (?:company )?is|targeting|aiming for) "
+            r"([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:as|in|on|where|right now|currently|$))",
+            re.IGNORECASE,
+        ),
         "Target: {v}",
     ),
     (
         "career_interest",
-        re.compile(r"\b(?:i'?m (?:interested in|curious about|thinking about|drawn to|leaning toward|trying to break into|trying to get into|passionate about|fascinated by)|i (?:like|love) the idea of|want to (?:get|break) into) ([A-Za-z ,&/\-]{3,60}?)(?=\s+(?:because|for|and|at|right now|currently|\.|,|;|$))", re.IGNORECASE),
+        re.compile(
+            r"\b(?:i'?m (?:interested in|curious about|thinking about|drawn to|"
+            r"leaning toward|trying to break into|trying to get into|passionate about|"
+            r"fascinated by)|i (?:like|love) the idea of|want to (?:get|break) into) "
+            r"([A-Za-z ,&/\-]{3,60}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:because|for|and|at|right now|currently|$))",
+            re.IGNORECASE,
+        ),
         "Interested in {v}",
     ),
     (
         "goal",
-        re.compile(r"\b(?:my goal|i want|i'?d like|my plan|i'?m trying|i hope|i'?m hoping) (?:is to|to) ([A-Za-z0-9 ,&'.\-]{5,80}?)(?=\s+(?:before|by|so|because|and|\.|,|;|$))", re.IGNORECASE),
+        re.compile(
+            r"\b(?:my goal|i want|i'?d like|my plan|i'?m trying|i hope|i'?m hoping) "
+            r"(?:is to|to) ([A-Za-z0-9 ,&'.\-]{5,80}?)"
+            r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|\.|$))",
+            re.IGNORECASE,
+        ),
         "Goal: {v}",
     ),
     (
         "goal",
-        re.compile(r"\bi'?m trying to (?:land|get|find|break into|transition to|pivot to) ([A-Za-z0-9 ,&'.\-]{3,70}?)(?=\s+(?:before|by|so|because|and|at|right now|currently|\.|,|;|$))", re.IGNORECASE),
+        re.compile(
+            r"\bi'?m trying to (?:land|get|find|break into|transition to|pivot to) "
+            r"([A-Za-z0-9 ,&'.\-]{3,70}?)"
+            r"(?=\s*(?:,|;)|\s+(?:before|by|so|because|and|at|right now|currently|\.|$))",
+            re.IGNORECASE,
+        ),
         "Trying to {v}",
     ),
     (
         "location_pref",
-        re.compile(r"\bi (?:want to (?:live|move|be)|'?m (?:moving|relocating)) (?:in|to) ([A-Z][A-Za-z.,'\- ]{2,40}?)(?=\s+(?:because|for|and|after|\.|,|;|$))", re.IGNORECASE),
+        # Covers: "I want to move to X", "I'm moving to X", "I'd have to /
+        # love to / need to move to X", "I'll move to X". The period
+        # lookahead now sits in the comma/semi group with \. so
+        # "to New York." captures "New York".
+        re.compile(
+            r"\b(?:i want to (?:live|move|be) (?:in|to)|"
+            r"i'?d (?:love to|have to|need to|)\s*move to|"
+            r"i'?ll move to|"
+            r"i'?m (?:moving|relocating) (?:in|to)) "
+            r"([A-Z][A-Za-z.,'\- ]{2,40}?)"
+            r"(?=\s*(?:,|;|\.)|\s+(?:because|for|and|after|$))",
+            re.IGNORECASE,
+        ),
         "Wants to live in {v}",
     ),
     (
         "challenge",
-        re.compile(r"\b(?:i'?m (?:stuck|struggling|nervous|anxious|worried) (?:with|about|on)|i can'?t figure out|i don'?t know how to|i'?m not sure (?:how|what) to) ([A-Za-z0-9 ,&'.\-]{5,80}?)(?=\s+(?:because|for|and|\.|,|;|$))", re.IGNORECASE),
+        # Capture class excludes `.` so a mid-sentence period cleanly
+        # terminates the challenge phrase. Previously "stuck with X. I
+        # know Python" would eat across the period.
+        re.compile(
+            r"\b(?:i'?m (?:stuck|struggling|nervous|anxious|worried) (?:with|about|on)|"
+            r"i can'?t figure out|i don'?t know how to|i'?m not sure (?:how|what) to) "
+            r"([A-Za-z0-9 ,&'\-]{5,80}?)"
+            r"(?=\s*(?:\.|,|;)|\s+(?:because|for|and|$))",
+            re.IGNORECASE,
+        ),
         "Working on: {v}",
     ),
 ]
 
 
+# Pronoun blocklist — only used when the WHOLE capture is one of these
+# (e.g. "Target: them") or when the FIRST TOKEN is a pronoun making the
+# capture clearly a back-reference ("Target: them or Citadel").
+# Articles like "a" / "the" are NOT in this list — "a startup",
+# "a React Native app" are legitimate captures.
+_PRONOUNS = frozenset([
+    "me", "you", "it", "them", "us", "this", "that",
+    "he", "she", "we", "they", "my", "your", "his", "her", "their",
+    "our",
+])
+
+
 def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Pull facts from user turns using the _FACT_PATTERNS table. Zero-cost."""
+    """Pull facts from user turns using the _FACT_PATTERNS table. Zero-cost.
+
+    Post-pass: sentences like "I know Python, SQL, and React" only capture
+    the first item ("Python") because the comma-lookahead terminates the
+    skill group. We expand list captures by finding the original phrase
+    in the source text and splitting on comma/`and` so each item lands as
+    its own skill fact. Limited to the 'skill' category because list-
+    shaped input is almost exclusive to skills.
+    """
     now = _now_iso()
     out: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
+    def _emit(category: str, label: str, val: str) -> bool:
+        key = (category, label.lower())
+        if key in seen:
+            return False
+        seen.add(key)
+        out.append({
+            "id":         str(uuid.uuid4()),
+            "category":   category,
+            "label":      label,
+            "value":      val[:120],
+            "confidence": "medium",
+            "source":     "regex",
+            "created_at": now,
+            "shown_to_user": True,
+        })
+        return True
+
+    # Pattern used by the skill post-pass to locate the full list after
+    # the skill verb (know / use / work with / ...). Captures the span
+    # from the verb until the first period or end-of-string.
+    skill_list_rx = re.compile(
+        r"\bi (?:know|use|work with|am good at|have experience with|"
+        r"am proficient in|taught myself|self.taught in|am learning|picked up) "
+        r"([A-Za-z0-9 +#./\-,]{2,120}?)(?:\.|$)",
+        re.IGNORECASE,
+    )
+
     for m in messages:
         if m.get("role") != "user":
             continue
@@ -192,26 +332,43 @@ def _regex_extract_from_user_turns(messages: list[dict[str, Any]]) -> list[dict[
         for category, pattern, label_tmpl in _FACT_PATTERNS:
             for match in pattern.finditer(text):
                 val = (match.group(1) or "").strip().strip(",.").strip()
-                # Filter out pronouns and too-short captures.
-                if len(val) < 2 or val.lower() in ("me", "you", "it", "them", "us", "this", "that", "a", "an", "the"):
+                # Filter out pronouns and too-short captures. Checks
+                # both the whole capture AND the first token so phrases
+                # like "them or Citadel" (pronoun head) get rejected.
+                low = val.lower()
+                first_tok = low.split()[0] if low else ""
+                if len(val) < 2 or low in _PRONOUNS or first_tok in _PRONOUNS:
                     continue
                 label = label_tmpl.format(v=val[:60])
-                key = (category, label.lower())
-                if key in seen:
-                    continue
-                seen.add(key)
-                out.append({
-                    "id":         uuid.uuid4().hex[:12],
-                    "category":   category,
-                    "label":      label,
-                    "value":      val[:120],
-                    "confidence": "medium",
-                    "source":     "regex",
-                    "created_at": now,
-                    "shown_to_user": True,
-                })
-                if len(out) >= 8:  # cap per-batch so no single chat adds 40 facts
+                # Cap lifted from 8 → 15. At 8 a real 5-message chat
+                # hit the ceiling before the last couple of categories
+                # (education, career_interest, goal) had a chance to
+                # emit. 15 is still safe — a single chat cannot produce
+                # more than ~15 distinct (category,label) facts.
+                if _emit(category, label, val) and len(out) >= 15:
                     return out
+
+        # Skill list post-pass: pull the whole list chunk and split on
+        # comma / "and" so "Python, SQL, and React" lands as three
+        # separate facts.
+        for slm in skill_list_rx.finditer(text):
+            chunk = slm.group(1)
+            if "," not in chunk and " and " not in chunk.lower():
+                continue
+            tokens = [
+                t.strip().strip(",.").strip()
+                for t in re.split(r",| and ", chunk, flags=re.IGNORECASE)
+            ]
+            for t in tokens:
+                # Drop filler tokens that slipped in ("the side", etc.).
+                if len(t) < 2 or len(t.split()) > 4:
+                    continue
+                if t.lower() in _PRONOUNS:
+                    continue
+                label = "Skill: {v}".format(v=t[:60])
+                if _emit("skill", label, t) and len(out) >= 15:
+                    return out
+
     return out
 
 
@@ -266,10 +423,34 @@ def extract_memory_items(
     #   - daily cap per user (cost bar)
     #   - no re-flush within 5 min for the same conv_id (dedup)
     # so we can't run away with cost even if a user hammers the overlay.
+    # On the flush path (use_llm=True), ALWAYS run regex as a safety
+    # net in addition to the LLM. Previously we ran only one or the
+    # other — which meant if Haiku rate-limited, errored, or returned
+    # an empty list, a user who hit the 5-msg bar would lose every
+    # durable fact from the session. The regex pass is zero cost so
+    # there is no reason to skip it. We dedupe union of both lists by
+    # (category, label) below. This is what makes "messages 0..5 all
+    # get added once the user hits the 5-message mark" actually hold
+    # in the presence of transient LLM failures.
+    regex_items = _regex_extract_from_user_turns(messages)
     if use_llm:
-        new_items = _extract_memory_items_llm(uid, conv_id, messages, existing_items)
+        try:
+            llm_items = _extract_memory_items_llm(uid, conv_id, messages, existing_items)
+        except Exception:
+            llm_items = []
+        # Union: dedupe by (category, label) so we do not double-count.
+        seen_keys: set[tuple[str, str]] = set()
+        new_items: list[dict[str, Any]] = []
+        for it in [*llm_items, *regex_items]:
+            k = (
+                str(it.get("category") or "").lower(),
+                str(it.get("label") or "").strip().lower(),
+            )
+            if k[0] and k[1] and k not in seen_keys:
+                seen_keys.add(k)
+                new_items.append(it)
     else:
-        new_items = _regex_extract_from_user_turns(messages)
+        new_items = regex_items
 
     # Dedup against existing memory (same category+label).
     existing_keys = {
