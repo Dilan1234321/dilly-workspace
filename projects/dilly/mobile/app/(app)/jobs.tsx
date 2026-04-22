@@ -396,17 +396,47 @@ export default function JobsScreen() {
   // computed from full `jobs` (not filteredJobs) so toggling a city
   // doesn't collapse the city list itself.
   const cityOptions = useMemo(() => {
-    const count = new Map<string, { label: string; n: number }>();
-    for (const j of jobs) {
-      const c = (j.location_city || '').trim();
-      if (!c) continue;
-      const key = c.toLowerCase();
-      const existing = count.get(key);
-      if (existing) existing.n += 1;
-      else count.set(key, { label: c, n: 1 });
+    // Restrict the city picker to the cities the user has actually
+    // named on their profile (profile.job_locations). This keeps the
+    // filter aligned with Dilly's "we search where you want to be"
+    // promise — picking a random city the feed happens to surface
+    // is noise, not signal. Profile cities with zero current matches
+    // are still shown (with n=0) so the user can see the full list
+    // of places they told Dilly about.
+    const profileCities = (profile?.job_locations || [])
+      .map(c => (c || '').trim())
+      .filter(Boolean);
+    if (profileCities.length === 0) {
+      // Fall back to the old "infer from feed" path so users who
+      // haven't set job_locations yet still get a working filter.
+      const count = new Map<string, { label: string; n: number }>();
+      for (const j of jobs) {
+        const c = (j.location_city || '').trim();
+        if (!c) continue;
+        const key = c.toLowerCase();
+        const existing = count.get(key);
+        if (existing) existing.n += 1;
+        else count.set(key, { label: c, n: 1 });
+      }
+      return [...count.values()].sort((a, b) => b.n - a.n).slice(0, 15);
     }
-    return [...count.values()].sort((a, b) => b.n - a.n).slice(0, 15);
-  }, [jobs]);
+    // Count how many feed rows fall in each profile city.
+    const countByKey = new Map<string, number>();
+    for (const j of jobs) {
+      const key = (j.location_city || '').trim().toLowerCase();
+      if (!key) continue;
+      countByKey.set(key, (countByKey.get(key) || 0) + 1);
+    }
+    const seen = new Set<string>();
+    const out: Array<{ label: string; n: number }> = [];
+    for (const c of profileCities) {
+      const key = c.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ label: c, n: countByKey.get(key) || 0 });
+    }
+    return out.sort((a, b) => b.n - a.n);
+  }, [jobs, profile?.job_locations]);
 
   // City + type + remote filter. Applied client-side to the full
   // feed. Per-chip counts shown so users know what will happen

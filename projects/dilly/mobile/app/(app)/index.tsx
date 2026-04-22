@@ -44,6 +44,54 @@ const INDIGO = '#1B3FA0';
 
 // -- Skeleton -----------------------------------------------------------------
 
+/** Header avatar — renders the uploaded profile photo when
+ *  available, falls back to an accent-ringed initial circle when the
+ *  photo is missing or the remote image fails to load. Taps open My
+ *  Dilly. The broken-image state is memoized per-instance so one
+ *  bad URL doesn't flicker forever. */
+function ProfileAvatarButton({
+  photoUrl, firstName, accent, surfaceS1, surfaceT1,
+}: {
+  photoUrl?: string | null;
+  firstName: string;
+  accent: string;
+  surfaceS1: string;
+  surfaceT1: string;
+}) {
+  const [broken, setBroken] = useState(false);
+  const showPhoto = !!photoUrl && !broken;
+  return (
+    <AnimatedPressable
+      onPress={() => router.push('/(app)/my-dilly-profile')}
+      scaleDown={0.9}
+      hitSlop={10}
+      style={{
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        borderWidth: 1.5,
+        borderColor: accent,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: surfaceS1,
+        overflow: 'hidden',
+      }}
+    >
+      {showPhoto ? (
+        <Image
+          source={{ uri: photoUrl as string }}
+          style={{ width: 30, height: 30, borderRadius: 15 }}
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <Text style={{ fontSize: 12, fontWeight: '800', color: surfaceT1 }}>
+          {(firstName || '?').charAt(0).toUpperCase()}
+        </Text>
+      )}
+    </AnimatedPressable>
+  );
+}
+
 function Skeleton({ width, height = 14, style }: { width: number | string; height?: number; style?: any }) {
   const opacity = useRef(new Animated.Value(0.3)).current;
   useEffect(() => {
@@ -1334,30 +1382,19 @@ function SeekerHome() {
               >
                 <Ionicons name="qr-code" size={20} color={accent} />
               </AnimatedPressable>
-              {/* Profile pill — the navbar went from 5 tabs to 3
-                  (Home, AI Arena, Skills). My Dilly is reached here,
-                  Instagram-style: tap the face in the header. Shows
-                  as an accent-ringed circle with the user's initial
-                  so it reads like an avatar, not just an icon. */}
-              <AnimatedPressable
-                onPress={() => router.push('/(app)/my-dilly-profile')}
-                scaleDown={0.9}
-                hitSlop={10}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 15,
-                  borderWidth: 1.5,
-                  borderColor: accent,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: theme.surface.s1,
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: '800', color: theme.surface.t1 }}>
-                  {(firstName || '?').charAt(0).toUpperCase()}
-                </Text>
-              </AnimatedPressable>
+              {/* Profile pill — Instagram-style avatar in the header.
+                  Renders the user's uploaded profile photo when
+                  available (photo_url or profile_photo_url), and
+                  falls back to their initial in an accent circle
+                  when the photo isn't uploaded yet or has failed to
+                  load. */}
+              <ProfileAvatarButton
+                photoUrl={profile?.photo_url || profile?.profile_photo_url}
+                firstName={firstName}
+                accent={accent}
+                surfaceS1={theme.surface.s1}
+                surfaceT1={theme.surface.t1}
+              />
               <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
                 <Ionicons name="settings-outline" size={20} color={theme.surface.t3} />
               </AnimatedPressable>
