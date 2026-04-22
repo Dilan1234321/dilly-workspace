@@ -112,7 +112,7 @@ export default function PublicProfileSettingsScreen() {
       try {
         const [prof, surface] = await Promise.all([
           dilly.get('/profile').catch(() => null),
-          dilly.get('/memory/surface').catch(() => null),
+          dilly.get('/memory').catch(() => null),
         ]);
         if (cancelled) return;
         const p: any = prof || {};

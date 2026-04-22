@@ -87,7 +87,7 @@ export default function AIArenaScreen() {
     try {
       const [prof, surface, feedRes, appsRes] = await Promise.all([
         dilly.get('/profile').catch(() => null),
-        dilly.get('/memory/surface').catch(() => null),
+        dilly.get('/memory').catch(() => null),
         dilly.get('/v2/internships/feed?readiness=ready&limit=60').catch(() => null),
         dilly.get('/applications').catch(() => null),
       ])

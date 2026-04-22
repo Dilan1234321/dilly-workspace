@@ -54,7 +54,7 @@ export default function ConvictionBuilder() {
     try {
       const [prof, surface] = await Promise.all([
         dilly.get('/profile').catch(() => null),
-        dilly.get('/memory/surface').catch(() => null),
+        dilly.get('/memory').catch(() => null),
       ])
       const p = (prof || {}) as Profile
       setProfile(p)

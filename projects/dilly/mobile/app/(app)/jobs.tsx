@@ -321,7 +321,7 @@ export default function JobsScreen() {
   // Skills integration inputs. Both are best-effort and lazy — if
   // either fails to load, the jobs feed still works; we just don't
   // surface a skill-gap video under the fit narrative.
-  //   facts: user's profile facts (from /memory/surface). We only
+  //   facts: user's profile facts (from /memory). We only
   //          use the skill-category ones to know what the user has.
   //   skillsPool: curated trending videos. Ranked against the gap
   //               keyword to pick the best learn-this-next match.
@@ -356,7 +356,7 @@ export default function JobsScreen() {
       const [feedRes, profileRes, factsRes, poolRes] = await Promise.all([
         dilly.get('/v2/internships/feed?tab=all&limit=60&sort=rank').catch(() => null),
         dilly.get('/profile').catch(() => null),
-        dilly.get('/memory/surface').catch(() => null),
+        dilly.get('/memory').catch(() => null),
         dilly.get('/skill-lab/trending').catch(() => null),
       ]);
       const listings: Listing[] = Array.isArray(feedRes?.listings)
@@ -365,7 +365,7 @@ export default function JobsScreen() {
       setJobs(listings);
       setProfile(profileRes && typeof profileRes === 'object' ? (profileRes as Profile) : null);
 
-      // /memory/surface returns either a { items: [...] } wrapper or
+      // /memory returns either a { items: [...] } wrapper or
       // a raw array depending on build; handle both. We only need
       // category/label/value — everything else is discarded.
       const factArr = Array.isArray(factsRes?.items)

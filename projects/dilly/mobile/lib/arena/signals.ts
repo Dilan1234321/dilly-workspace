@@ -2,7 +2,7 @@
  * Arena/signals — derived signals across the three arena surfaces.
  *
  * Cheap stats we compute once from the user's profile + /applications
- * + /v2/internships/feed + /memory/surface so every arena tile stops
+ * + /v2/internships/feed + /memory so every arena tile stops
  * re-deriving the same thing.
  *
  * No LLM, no new network calls. This is a thin "lens" layer over

@@ -28,7 +28,7 @@ export default function HonestMirror() {
     (async () => {
       const [prof, surface] = await Promise.all([
         dilly.get('/profile').catch(() => null),
-        dilly.get('/memory/surface').catch(() => null),
+        dilly.get('/memory').catch(() => null),
       ])
       setProfile(prof || {})
       setFacts(Array.isArray((surface as any)?.items) ? (surface as any).items : [])
