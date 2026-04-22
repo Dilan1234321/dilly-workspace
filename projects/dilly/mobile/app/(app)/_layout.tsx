@@ -267,27 +267,23 @@ function AppLayoutInner() {
         }}
       />
 
-      {/* Demoted to hidden — navbar is now 3 pillars (Home, AI Arena,
-          Skills). My Dilly is reached via the avatar in the Home header
-          (the "this is you" pattern from Instagram / Twitter), and the
-          Jobs feed is reached via a prominent card on Home that shows
-          live match counts. Tabs are for "things you do" at every
-          session; My Dilly is identity, and Jobs is application mode —
-          both better served as destinations you deep-link to, not
-          permanent navbar slots. */}
-      <Tabs.Screen
-        name="my-dilly-profile"
-        options={{
-          title: isHolder ? 'My Career' : 'My Dilly',
-          href: null,
-          animation: 'fade',
-        }}
-      />
+      {/* Jobs — application mode. Briefcase for seekers/students,
+          trending-up for holders (The Market). */}
       <Tabs.Screen
         name="jobs"
         options={{
           title: isHolder ? 'The Market' : 'Jobs',
-          href: null,
+          tabBarIcon: tabIcons.jobs,
+          animation: 'fade',
+        }}
+      />
+      {/* My Dilly — identity / profile. Person-circle for seekers,
+          analytics for holders (My Career). */}
+      <Tabs.Screen
+        name="my-dilly-profile"
+        options={{
+          title: isHolder ? 'My Career' : 'My Dilly',
+          tabBarIcon: tabIcons.profile,
           animation: 'fade',
         }}
       />

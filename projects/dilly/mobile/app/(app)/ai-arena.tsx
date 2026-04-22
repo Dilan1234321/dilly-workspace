@@ -145,7 +145,8 @@ export default function AIArenaScreen() {
     return (
       <DillyLoadingState
         insetTop={insets.top}
-        mood="thinking"
+        mood="writing"
+        accessory="pencil"
         messages={[
           'Opening the command deck…',
           'Reading your market…',
