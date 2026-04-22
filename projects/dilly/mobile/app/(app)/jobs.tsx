@@ -48,6 +48,8 @@ import { dilly } from '../../lib/dilly';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { openDillyOverlay } from '../../hooks/useDillyOverlay';
 import DillyLoadingState from '../../components/DillyLoadingState';
+import SkillsVideoCard from '../../components/SkillsVideoCard';
+import { resolvePlaybook } from '../../lib/arena/cohort-playbook';
 
 // -- Types --------------------------------------------------------------------
 
@@ -101,6 +103,14 @@ interface FitNarrative {
 }
 
 type Band = 'strong' | 'stretch' | 'known';
+
+/** Minimal shape of a curated Skills video returned by
+ *  /skill-lab/trending. Only the fields the gap matcher touches. */
+interface SkillVid {
+  id: string
+  title?: string
+  description?: string
+}
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -200,6 +210,102 @@ function buildNoticedLines(jobs: Listing[], profile: Profile | null): string[] {
   return lines;
 }
 
+// -- Inline Skills: gap detection ---------------------------------------------
+//
+// "Salt in water" goal: every expanded job card surfaces ONE curated
+// Skills video tied to a real gap between what the job asks for and
+// what the user has proven. No gap → no video (so we never patronize
+// strong candidates). Zero LLM — the whole thing runs off a keyword
+// table per cohort plus a simple score.
+//
+// Pipeline:
+//   1. normalize the user's skill facts into a lowercase token set
+//   2. look at the job title + first ~400 chars of description
+//   3. for each cohort skill-keyword (from the playbook), check if
+//      the job mentions it AND the user does NOT have it
+//   4. rank candidate gaps — prefer title hits over description hits,
+//      and longer phrases over short ones
+//   5. pick the top gap, rank the trending-video pool against its
+//      tokens, return the best match
+//
+// Returns `null` when the user already has the skills the job is
+// asking for.
+
+const _SKILL_CATS = new Set([
+  'skill', 'skill_unlisted', 'technical_skill', 'soft_skill',
+])
+
+function _tokensOfUserSkills(facts: Array<{ category?: string; label?: string; value?: string }>): Set<string> {
+  const out = new Set<string>()
+  for (const f of facts) {
+    const cat = (f.category || '').toLowerCase()
+    if (!_SKILL_CATS.has(cat)) continue
+    const bag = ((f.label || '') + ' ' + (f.value || '')).toLowerCase()
+    for (const tok of bag.match(/[a-z0-9+#./-]+/g) || []) {
+      if (tok.length < 2) continue
+      out.add(tok)
+    }
+  }
+  return out
+}
+
+/** Detect a single skill-gap keyword for this job given the user's
+ *  profile + cohort. Returns null when no gap exists. */
+function detectGapForJob(
+  job: Listing,
+  userSkillTokens: Set<string>,
+  cohortKeywords: string[],
+): { keyword: string; tokens: string[] } | null {
+  const title = (job.title || '').toLowerCase()
+  // Cap description scan so one absurd listing can't blow up the
+  // loop. 400 chars is enough to catch the "requirements:" preamble
+  // that most postings lead with.
+  const desc = (job.description || job.description_preview || '').slice(0, 400).toLowerCase()
+
+  const candidates: Array<{ kw: string; score: number }> = []
+  for (const kw of cohortKeywords) {
+    const lower = kw.toLowerCase()
+    const inTitle = title.includes(lower)
+    const inDesc = desc.includes(lower)
+    if (!inTitle && !inDesc) continue
+    // User has it → not a gap.
+    const kwTokens = lower.match(/[a-z0-9+#./-]+/g) || []
+    const userHas = kwTokens.some(t => userSkillTokens.has(t))
+    if (userHas) continue
+    // Score: title hit > desc hit; multi-word phrases > single words.
+    const score = (inTitle ? 5 : 0) + (inDesc ? 1 : 0) + (kwTokens.length - 1)
+    candidates.push({ kw: lower, score })
+  }
+  if (candidates.length === 0) return null
+  candidates.sort((a, b) => b.score - a.score)
+  const pick = candidates[0]
+  return {
+    keyword: pick.kw,
+    tokens: pick.kw.match(/[a-z0-9+#./-]+/g) || [],
+  }
+}
+
+/** Rank a video pool against a list of skill-keyword tokens, return
+ *  the single best match's id. The scoring mirrors the Conviction
+ *  Builder gap-video lookup so the whole app reads consistently. */
+function pickVideoForGap(videos: SkillVid[], tokens: string[]): string | null {
+  if (!videos.length || !tokens.length) return null
+  let best: { id: string; score: number } | null = null
+  for (const v of videos) {
+    const title = (v.title || '').toLowerCase()
+    const desc = (v.description || '').toLowerCase()
+    let score = 0
+    for (const t of tokens) {
+      if (title.includes(t)) score += 3
+      if (desc.includes(t)) score += 1
+    }
+    if (score > 0 && (!best || score > best.score)) {
+      best = { id: v.id, score }
+    }
+  }
+  return best?.id ?? null
+}
+
 // -- Screen -------------------------------------------------------------------
 
 export default function JobsScreen() {
@@ -211,6 +317,16 @@ export default function JobsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noticeIndex, setNoticeIndex] = useState(0);
+
+  // Skills integration inputs. Both are best-effort and lazy — if
+  // either fails to load, the jobs feed still works; we just don't
+  // surface a skill-gap video under the fit narrative.
+  //   facts: user's profile facts (from /memory/surface). We only
+  //          use the skill-category ones to know what the user has.
+  //   skillsPool: curated trending videos. Ranked against the gap
+  //               keyword to pick the best learn-this-next match.
+  const [facts, setFacts] = useState<Array<{ category?: string; label?: string; value?: string }>>([]);
+  const [skillsPool, setSkillsPool] = useState<SkillVid[]>([]);
 
   // Filters. Client-side only — the server already returns up to 60
   // ranked jobs, filtering here is instant, and gives us the room to
@@ -233,15 +349,36 @@ export default function JobsScreen() {
   const loadData = useCallback(async () => {
     setError(null);
     try {
-      const [feedRes, profileRes] = await Promise.all([
+      // Fetch everything in parallel. Feed + profile are the critical
+      // path (failure blocks the screen). Facts + skill pool are
+      // additive — we catch their errors and default to empty, so a
+      // slow memory endpoint or trending cache miss never blocks jobs.
+      const [feedRes, profileRes, factsRes, poolRes] = await Promise.all([
         dilly.get('/v2/internships/feed?tab=all&limit=60&sort=rank').catch(() => null),
         dilly.get('/profile').catch(() => null),
+        dilly.get('/memory/surface').catch(() => null),
+        dilly.get('/skill-lab/trending').catch(() => null),
       ]);
       const listings: Listing[] = Array.isArray(feedRes?.listings)
         ? feedRes.listings
         : Array.isArray(feedRes) ? feedRes : [];
       setJobs(listings);
       setProfile(profileRes && typeof profileRes === 'object' ? (profileRes as Profile) : null);
+
+      // /memory/surface returns either a { items: [...] } wrapper or
+      // a raw array depending on build; handle both. We only need
+      // category/label/value — everything else is discarded.
+      const factArr = Array.isArray(factsRes?.items)
+        ? factsRes.items
+        : Array.isArray(factsRes) ? factsRes : [];
+      setFacts(factArr);
+
+      // /skill-lab/trending returns { videos: [...] } on the current
+      // backend; tolerate a plain array too.
+      const vids = Array.isArray(poolRes?.videos)
+        ? poolRes.videos
+        : Array.isArray(poolRes) ? poolRes : [];
+      setSkillsPool(vids);
     } catch (e: any) {
       setError(e?.message || 'Could not load jobs.');
     } finally {
@@ -291,6 +428,26 @@ export default function JobsScreen() {
       return true;
     });
   }, [jobs, cityFilter, typeFilter, remoteFilter]);
+
+  // Skill-gap -> video map, keyed by job id. Computed once per data
+  // change. The heavy lifting is O(jobs * cohortKeywords) which is
+  // tiny (60 jobs * ~15 keywords = 900 ops) and pure, so a single
+  // memo covers us — no per-card re-computation.
+  const gapVideoByJob = useMemo(() => {
+    const out: Record<string, string> = {}
+    if (!jobs.length || !skillsPool.length) return out
+    const playbook = resolvePlaybook(profile?.cohorts)
+    const keywords = playbook?.skillQueries || playbook?.coreSkills || []
+    if (!keywords.length) return out
+    const userTokens = _tokensOfUserSkills(facts)
+    for (const j of jobs) {
+      const gap = detectGapForJob(j, userTokens, keywords)
+      if (!gap) continue
+      const vid = pickVideoForGap(skillsPool, gap.tokens)
+      if (vid) out[j.id] = vid
+    }
+    return out
+  }, [jobs, facts, skillsPool, profile?.cohorts])
 
   const { strong, stretch, known, hero } = useMemo(() => {
     const strong: Listing[] = [];
@@ -662,6 +819,7 @@ export default function JobsScreen() {
           theme={theme}
           expanded={expandedId === hero.id}
           narrative={narratives[hero.id]}
+          gapVideoId={gapVideoByJob[hero.id]}
           {...cardActions}
         />
       ) : null}
@@ -669,21 +827,24 @@ export default function JobsScreen() {
       {strong.length > 1 ? (
         <BandSection label="STRONG MATCHES" subtitle="Your profile lines up well. Apply with confidence."
           jobs={strong.slice(1)} opacity={1}
-          profile={profile} theme={theme} expandedId={expandedId} narratives={narratives} actions={cardActions}
+          profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
+          gapVideoByJob={gapVideoByJob} actions={cardActions}
         />
       ) : null}
 
       {stretch.length > 0 ? (
         <BandSection label="STRETCH ROLES" subtitle="Good fit if you frame it right. Dilly can help."
           jobs={stretch} opacity={0.88}
-          profile={profile} theme={theme} expandedId={expandedId} narratives={narratives} actions={cardActions}
+          profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
+          gapVideoByJob={gapVideoByJob} actions={cardActions}
         />
       ) : null}
 
       {known.length > 0 ? (
         <BandSection label="WORTH KNOWING" subtitle="Not a direct match, but worth tracking."
           jobs={known.slice(0, 12)} opacity={0.72}
-          profile={profile} theme={theme} expandedId={expandedId} narratives={narratives} actions={cardActions}
+          profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
+          gapVideoByJob={gapVideoByJob} actions={cardActions}
         />
       ) : null}
 
@@ -746,6 +907,11 @@ interface CardCommonProps {
   theme: ReturnType<typeof useResolvedTheme>;
   expanded: boolean;
   narrative: FitNarrative | { __loading: true } | { __error: string } | undefined;
+  /** YouTube video id for the closest cohort-skill gap. undefined when
+   *  the user already has every skill the job is asking for, or when
+   *  the trending pool didn't have a good match. Rendered inline
+   *  inside the expanded card. */
+  gapVideoId?: string;
   onExpand: (j: Listing) => void;
   onApply:  (j: Listing) => void;
   onAsk:    (j: Listing) => void;
@@ -790,7 +956,7 @@ function HeroCard(props: CardCommonProps) {
 
 // -- Band ---------------------------------------------------------------------
 
-function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedId, narratives, actions }: {
+function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedId, narratives, gapVideoByJob, actions }: {
   label: string;
   subtitle: string;
   jobs: Listing[];
@@ -799,6 +965,7 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
   theme: ReturnType<typeof useResolvedTheme>;
   expandedId: string | null;
   narratives: Record<string, FitNarrative | { __loading: true } | { __error: string }>;
+  gapVideoByJob: Record<string, string>;
   actions: CardActions;
 }) {
   return (
@@ -815,6 +982,7 @@ function BandSection({ label, subtitle, jobs, opacity, profile, theme, expandedI
           theme={theme}
           expanded={expandedId === j.id}
           narrative={narratives[j.id]}
+          gapVideoId={gapVideoByJob[j.id]}
           {...actions}
         />
       ))}
@@ -855,7 +1023,7 @@ function JobCard(props: CardCommonProps) {
 
 // -- Expanded Details (fit narrative + actions) -------------------------------
 
-function ExpandedDetails({ job, theme, narrative, onApply, onAsk, onTailor }: CardCommonProps) {
+function ExpandedDetails({ job, theme, narrative, gapVideoId, onApply, onAsk, onTailor }: CardCommonProps) {
   const loading = narrative && (narrative as any).__loading;
   const errored = narrative && (narrative as any).__error;
   const data: FitNarrative | null = (narrative && !loading && !errored) ? (narrative as FitNarrative) : null;
@@ -927,6 +1095,19 @@ function ExpandedDetails({ job, theme, narrative, onApply, onAsk, onTailor }: Ca
               </TouchableOpacity>
             )
           ) : null}
+        </View>
+      ) : null}
+
+      {/* Inline Skills — only renders when we detected a real gap
+          between this job's ask and the user's profile AND we found a
+          curated video for it. When the user already has the cohort
+          skills this job cares about, we skip the card entirely. */}
+      {gapVideoId ? (
+        <View style={{ marginTop: 4 }}>
+          <Text style={[styles.narrativeEyebrow, { color: theme.accent, marginBottom: 6 }]}>
+            CLOSE THE GAP
+          </Text>
+          <SkillsVideoCard videoId={gapVideoId} />
         </View>
       ) : null}
 
