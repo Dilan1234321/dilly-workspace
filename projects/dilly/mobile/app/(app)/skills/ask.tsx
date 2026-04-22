@@ -22,14 +22,14 @@
  * (weight 1) + quality_score. Max 30 results.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, ScrollView, StyleSheet, TouchableOpacity,
   Image, Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { dilly } from '../../../lib/dilly';
 import { useResolvedTheme } from '../../../hooks/useTheme';
 import DillyLoadingState from '../../../components/DillyLoadingState';
@@ -188,7 +188,11 @@ function scoreVideo(v: Video, tokens: string[]): number {
 export default function AskScreen() {
   const theme = useResolvedTheme();
   const insets = useSafeAreaInsets();
-  const [query, setQuery] = useState('');
+  // `q` param lets other screens (e.g. My Dilly "Sharpen") deep-link
+  // straight into a pre-run search. Example: /skills/ask?q=python.
+  const { q: seedQueryRaw } = useLocalSearchParams<{ q?: string }>();
+  const seedQuery = typeof seedQueryRaw === 'string' ? seedQueryRaw : '';
+  const [query, setQuery] = useState(seedQuery);
   const [submitted, setSubmitted] = useState('');
   const [results, setResults] = useState<Video[]>([]);
   const [loading, setLoading] = useState(false);
@@ -252,6 +256,17 @@ export default function AskScreen() {
   const onSubmit = useCallback(() => {
     runSearch(query);
   }, [query, runSearch]);
+
+  // Auto-run search when we arrive with a `q` param (e.g. from the My
+  // Dilly "Sharpen" action on a skill fact). Ref-gated so the user's
+  // subsequent typing never re-triggers the seed search.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (seededRef.current) return;
+    if (!seedQuery || !seedQuery.trim()) return;
+    seededRef.current = true;
+    runSearch(seedQuery);
+  }, [seedQuery, runSearch]);
 
   const runExample = useCallback((ex: string) => {
     setQuery(ex);

@@ -152,6 +152,14 @@ function StrengthRing({ pct, size = 56 }: { pct: number; size?: number }) {
   );
 }
 
+// Fact categories that should show a "Sharpen" action in the row
+// popup. Must stay in sync with the skill category whitelist in
+// jobs.tsx (_SKILL_CATS) — both gate on the same signal: "is this a
+// thing the user can practice / learn more about?"
+const _SKILL_CATS_PROFILE = new Set([
+  'skill', 'skill_unlisted', 'technical_skill', 'soft_skill',
+]);
+
 // ── Fact Row (measures own position for inline popup) ────────────────────────
 
 /**
@@ -1942,6 +1950,23 @@ function SeekerProfileScreen() {
         title={popup.fact?.label}
         message={popup.fact?.value}
         actions={[
+          // "Sharpen" only appears for skill-category facts — that's
+          // where a Dilly Skills lookup actually makes sense. Routes
+          // to /skills/ask with the skill label pre-populated so the
+          // screen runs the search immediately. This is the second
+          // "salt in water" touchpoint: every skill fact becomes a
+          // one-tap shortcut into the learning library.
+          ...(popup.fact && _SKILL_CATS_PROFILE.has((popup.fact.category || '').toLowerCase())
+            ? [{
+                label: 'Sharpen',
+                onPress: () => {
+                  if (!popup.fact) return;
+                  const q = (popup.fact.label || popup.fact.value || '').trim();
+                  if (!q) return;
+                  router.push({ pathname: '/skills/ask', params: { q } });
+                },
+              }]
+            : []),
           {
             label: 'Edit',
             onPress: () => {
