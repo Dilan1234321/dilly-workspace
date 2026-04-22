@@ -10,7 +10,9 @@ import { colors, API_BASE } from '../lib/tokens';
 import { mediumHaptic } from '../lib/haptics';
 import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
-import RichText from './RichText';
+import RichText, { extractAllYouTubeIds } from './RichText';
+import SkillsVideoCard from './SkillsVideoCard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DillyVisual, VisualPayload } from './DillyVisuals';
 import { DillyFace } from './DillyFace';
 import { useSubscription } from '../hooks/useSubscription';
@@ -204,11 +206,32 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
    *  signal so My Dilly can show the writing-down overlay if mounted.
    *  Non-blocking — the overlay closes immediately, flush runs in the
    *  background. */
+  // AsyncStorage keys for persisting the active chat across close/
+  // reopen. When the user taps a Skills video card inside a chat
+  // message, the overlay closes while the Skills route opens; when
+  // they come back, we want them in the same conversation they were
+  // having — not a fresh session. Only the LIVE chat is persisted;
+  // once the user explicitly starts a new chat ("+"), the live blob
+  // is cleared.
+  const LIVE_CHAT_KEY = 'dilly_ai_live_chat_v1';
+
   const onClose = useCallback(() => {
     const convId = convIdRef.current;
     const msgs = messagesRef.current;
     const userMsgCount = msgs.filter(m => m.role === 'user').length;
-    convIdRef.current = null;
+    // Persist so reopening the overlay continues the same conversation.
+    // We DO NOT clear convIdRef here any more — it is cleared only
+    // when the user taps the explicit "New chat" button.
+    if (convId && msgs.length > 0) {
+      AsyncStorage.setItem(LIVE_CHAT_KEY, JSON.stringify({
+        conv_id: convId,
+        messages: msgs
+          .filter(m => (m.content || '').trim().length > 0)
+          .slice(-60)
+          .map(m => ({ id: m.id, role: m.role, content: m.content })),
+        saved_at: Date.now(),
+      })).catch(() => {});
+    }
     rawOnClose();
     if (!convId || userMsgCount < 1) return;
     markExtractionPending();
@@ -516,6 +539,8 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   useEffect(() => {
     if (visible) {
       mediumHaptic();
+      // Reset all state first (synchronously) so the incoming render
+      // is clean, then try to hydrate the persisted live chat.
       setMessages([]);
       setRichContext(null);
       inputRef.current = '';
@@ -526,11 +551,61 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       pendingInitialMessage.current = studentContext?.initialMessage || null;
       setSuggestions([]);
       suggestionsOpacity.setValue(0);
-      timeoutsRef.current.push(setTimeout(() => {
-        const chips = getInitialSuggestions(studentContext, mode);
-        setSuggestions(chips);
-        Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-      }, 1600));
+
+      // Hydrate an in-progress chat if one is saved and no new
+      // initialMessage seed is coming in. Incoming seed means the
+      // caller is explicitly starting a new thread (e.g. Jobs card
+      // -> Ask Dilly).
+      const seedIncoming = !!studentContext?.initialMessage;
+      if (!seedIncoming) {
+        (async () => {
+          try {
+            const raw = await AsyncStorage.getItem(LIVE_CHAT_KEY);
+            if (!raw) {
+              // No saved chat — show the normal opening suggestions.
+              timeoutsRef.current.push(setTimeout(() => {
+                const chips = getInitialSuggestions(studentContext, 'coaching');
+                setSuggestions(chips);
+                Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+              }, 1600));
+              return;
+            }
+            const parsed = JSON.parse(raw) as { conv_id?: string; messages?: Message[]; saved_at?: number };
+            const FRESH_MS = 24 * 60 * 60 * 1000; // 24h then expire
+            if (!parsed.conv_id || !Array.isArray(parsed.messages) || parsed.messages.length === 0
+                || (parsed.saved_at && Date.now() - parsed.saved_at > FRESH_MS)) {
+              AsyncStorage.removeItem(LIVE_CHAT_KEY).catch(() => {});
+              timeoutsRef.current.push(setTimeout(() => {
+                const chips = getInitialSuggestions(studentContext, 'coaching');
+                setSuggestions(chips);
+                Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+              }, 1600));
+              return;
+            }
+            // Resume the same conversation.
+            convIdRef.current = parsed.conv_id;
+            setMessages(parsed.messages);
+            initialMessageSent.current = true;
+          } catch {
+            // Corrupt blob; show opening suggestions anyway.
+            timeoutsRef.current.push(setTimeout(() => {
+              const chips = getInitialSuggestions(studentContext, 'coaching');
+              setSuggestions(chips);
+              Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+            }, 1600));
+          }
+        })();
+      } else {
+        // Start fresh. Clear any stale live chat and show the normal
+        // opening state before the seed auto-sends.
+        AsyncStorage.removeItem(LIVE_CHAT_KEY).catch(() => {});
+        convIdRef.current = null;
+        timeoutsRef.current.push(setTimeout(() => {
+          const chips = getInitialSuggestions(studentContext, mode);
+          setSuggestions(chips);
+          Animated.timing(suggestionsOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+        }, 1600));
+      }
 
       strokeOffset.setValue(HALF_PATH_LEN);
       glowOpacity.setValue(1);
@@ -678,75 +753,97 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          {/* Header */}
+          {/* Header — cleaned up. One row, three zones:
+              left: close / back,
+              center: Dilly logo wordmark (tinted accent),
+              right: compact actions (new chat + history).
+              Mode pills (Coach / Practice) move to a second tier below
+              so the top bar doesn't look like a cluttered toolbar. */}
           <View style={[s.header, { paddingTop: insets.top + 10, borderBottomColor: theme.surface.border }]}>
-            <View style={s.wordmark}>
-              {/* Removed the "AI" wordmark next to the logo — the
-                  surface is already clearly the chat overlay (input,
-                  mode pills, past conversations icon). The extra
-                  "AI" was noise. Just the accent-tinted logo now. */}
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={{ width: 40 }}
+            >
+              <Ionicons name="chevron-down" size={26} color={theme.surface.t2} />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center' }}>
               <Image
                 source={require('../assets/logo.png')}
                 style={[s.wordmarkLogo, { tintColor: theme.accent }]}
                 resizeMode="contain"
               />
             </View>
-            <View style={s.modePills}>
-              {(['coaching', 'practice'] as ChatMode[]).map(m => (
-                <TouchableOpacity
-                  key={m}
-                  style={[
-                    s.modePill,
-                    mode === m && { backgroundColor: theme.accent },
-                  ]}
-                  onPress={() => {
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, width: 80, justifyContent: 'flex-end' }}>
+              {/* New chat — clears the live conversation and starts a
+                  fresh thread. Use when the user wants to switch
+                  topics without losing history (still saved on the
+                  backend via /ai/chat-history and accessible via the
+                  history icon next to it). */}
+              <TouchableOpacity
+                onPress={() => {
+                  setMessages([]);
+                  setRichContext(null);
+                  convIdRef.current = null;
+                  initialMessageSent.current = false;
+                  pendingInitialMessage.current = null;
+                  AsyncStorage.removeItem(LIVE_CHAT_KEY).catch(() => {});
+                  setSuggestions(getInitialSuggestions(studentContext, mode));
+                  suggestionsOpacity.setValue(1);
+                }}
+                hitSlop={12}
+              >
+                <Ionicons name="create-outline" size={22} color={theme.accent} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    // /ai/chat-history returns threads recorded by the
+                    // chat endpoint itself. Cap at 10 now — we give the
+                    // user a full tabbed drawer, so more is useful.
+                    const res = await dilly.fetch('/ai/chat-history?limit=10');
+                    if (res.ok) {
+                      const data = await res.json();
+                      setHistory(data?.items || []);
+                    }
+                  } catch {}
+                  setShowHistory(true);
+                }}
+                hitSlop={12}
+              >
+                <Ionicons name="time-outline" size={22} color={theme.accent} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Mode pills moved to their own slim row, centered. Reads
+              like tabs underneath the header instead of fighting for
+              space in it. */}
+          <View style={[s.modePillsRow, { borderBottomColor: theme.surface.border }]}>
+            {(['coaching', 'practice'] as ChatMode[]).map(m => (
+              <TouchableOpacity
+                key={m}
+                style={[
+                  s.modePill,
+                  mode === m && { backgroundColor: theme.accent },
+                ]}
+                onPress={() => {
                   if (mode === m) return;
                   setMode(m);
                   setMessages([]);
                   setRichContext(null);
                   setSuggestions(getInitialSuggestions(studentContext, m));
                   suggestionsOpacity.setValue(1);
-                }}>
-                  <Text style={[
-                    s.modePillText,
-                    { color: mode === m ? '#FFFFFF' : theme.surface.t3 },
-                  ]}>
-                    {m === 'coaching' ? 'COACH' : 'PRACTICE'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              onPress={async () => {
-                // /ai/chat-history returns threads recorded by the
-                // chat endpoint itself. Previously we hit
-                // /voice/history which only covered Voice-feature
-                // outputs, so chat users saw "No past conversations"
-                // even after dozens of chats. See
-                // api/chat_thread_store.py for the storage format.
-                try {
-                  // Cap at the 5 most recent. Pro users might have
-                  // hundreds of past threads and the list becomes
-                  // overwhelming; 5 covers "my last chat or two" which
-                  // is the common need.
-                  const res = await dilly.fetch('/ai/chat-history?limit=5');
-                  if (res.ok) {
-                    const data = await res.json();
-                    setHistory(data?.items || []);
-                  }
-                } catch {}
-                setShowHistory(true);
-              }}
-              hitSlop={12}
-              style={{ marginRight: 8 }}
-            >
-              <Ionicons name="time-outline" size={20} color={theme.accent} />
-            </TouchableOpacity>
-            <TouchableOpacity style={s.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <View style={[s.closeBtnCircle, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}>
-                <Ionicons name="close" size={18} color={theme.surface.t1} />
-              </View>
-            </TouchableOpacity>
+                }}
+              >
+                <Text style={[
+                  s.modePillText,
+                  { color: mode === m ? '#FFFFFF' : theme.surface.t3 },
+                ]}>
+                  {m === 'coaching' ? 'COACH' : 'PRACTICE'}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {/* Messages */}
@@ -798,6 +895,14 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                       <View style={[s.assistantDot, { backgroundColor: theme.accent }]} />
                       <View style={[s.assistantBubble, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
                         <RichText text={msg.content} baseStyle={[s.msgText, { color: theme.surface.t1 }]} />
+                        {/* Any YouTube URL in the AI response becomes
+                            a tappable "Watch in Dilly Skills" card that
+                            routes to /skills/video/<id>. Dilly AI never
+                            sends the user out to YouTube — the whole
+                            learning experience stays in the app. */}
+                        {extractAllYouTubeIds(msg.content).map(videoId => (
+                          <SkillsVideoCard key={videoId} videoId={videoId} />
+                        ))}
                       </View>
                     </View>
                     {msg.visual && (
@@ -1091,7 +1196,14 @@ const s = StyleSheet.create({
   wordmarkLogo: { height: 24, width: 68 },
   wordmarkAI: { fontFamily: 'Cinzel_900Black', fontSize: 22, color: GOLD, letterSpacing: 1, lineHeight: 24, marginBottom: -1 },
   modePills: { flexDirection: 'row', gap: 4, marginRight: 10 },
-  modePill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+  modePillsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  modePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
   modePillActive: { backgroundColor: GOLD },
   modePillText: { fontFamily: 'Cinzel_700Bold', fontSize: 8, letterSpacing: 1, color: colors.t3 },
   modePillTextActive: { color: '#FFFFFF' },

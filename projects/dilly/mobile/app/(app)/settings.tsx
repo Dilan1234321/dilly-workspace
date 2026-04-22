@@ -247,6 +247,12 @@ export default function SettingsScreen() {
   const [webProfileOn, setWebProfileOn] = useState(true);
   const [webSlug, setWebSlug] = useState('');
   const [webPrefix, setWebPrefix] = useState('s');
+  // Public learning profile — the /s/<slug> surface on
+  // skills.hellodilly.com. Stored inside web_profile_settings as
+  // learning_profile_visible (default true when the main profile is
+  // visible). Separate toggle so the user can keep their career
+  // profile public while hiding the learning receipt if they want.
+  const [learningProfileOn, setLearningProfileOn] = useState(true);
   const [webTagline, setWebTagline] = useState('');
   const [taglineSaving, setTaglineSaving] = useState(false);
   // Career Mode. reshapes the whole app. See lib/appMode.ts.
@@ -279,6 +285,11 @@ export default function SettingsScreen() {
         setPushEnabled(prefs.enabled !== false);
         setDeadlineReminders(prefs.deadline_reminders !== false);
         setWebProfileOn(p.public_profile_visible !== false);
+        // Learning profile default: visible whenever main profile is
+        // visible, unless the user explicitly opted out in
+        // web_profile_settings.
+        const ws = p.web_profile_settings || {};
+        setLearningProfileOn(ws.learning_profile_visible !== false);
         setWebTagline(p.profile_tagline || '');
         // Read slug and prefix from profile data
         const ut = p.user_type || 'student';
@@ -1093,6 +1104,58 @@ export default function SettingsScreen() {
                       ) : null}
                     </>
                   )}
+
+                  {/* Public LEARNING profile — the skills.hellodilly.com
+                      /s/<slug> surface. Separate toggle so the user
+                      can keep their career profile public while hiding
+                      the learning receipt (or vice versa). Visibility
+                      is driven by web_profile_settings.learning_profile_visible;
+                      we patch the whole blob because the backend
+                      doesn't have an atomic toggle endpoint for it. */}
+                  {webProfileOn && slug ? (
+                    <>
+                      <Divider />
+                      <ToggleRow
+                        label="Public learning profile"
+                        hint={learningProfileOn
+                          ? `skills.hellodilly.com/s/${slug}`
+                          : 'Your learning receipt is hidden'}
+                        value={learningProfileOn}
+                        onToggle={async (v: boolean) => {
+                          setLearningProfileOn(v);
+                          // Read-modify-write the settings blob so we
+                          // do not clobber other user-chosen keys
+                          // (hidden_fact_ids, section toggles, etc).
+                          try {
+                            const p: any = await dilly.get('/profile').catch(() => null);
+                            const ws = (p && p.web_profile_settings) || {};
+                            savePref('web_profile_settings', {
+                              ...ws,
+                              learning_profile_visible: v,
+                            });
+                          } catch {
+                            savePref('web_profile_settings', {
+                              learning_profile_visible: v,
+                            });
+                          }
+                        }}
+                      />
+                      {learningProfileOn ? (
+                        <>
+                          <Divider />
+                          <Row
+                            label="View learning profile"
+                            onPress={() => Linking.openURL(`https://skills.hellodilly.com/s/${slug}`)}
+                          />
+                          <Divider />
+                          <Row
+                            label="Manage what's public"
+                            onPress={() => router.push('/skills/profile-settings')}
+                          />
+                        </>
+                      ) : null}
+                    </>
+                  ) : null}
                 </>
               );
             })()}

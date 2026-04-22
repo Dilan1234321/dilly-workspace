@@ -116,6 +116,19 @@ export default function SkillsHomeScreen() {
           <Text style={[styles.subPillText, { color: theme.surface.t1 }]}>Trending</Text>
         </TouchableOpacity>
       </View>
+      {/* Public learning profile entry point. Same tier as the
+          career public profile — the user can control visibility of
+          their learning receipt directly from Skills. */}
+      <View style={[styles.pillsRow, { marginTop: 10 }]}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push('/skills/profile-settings')}
+          style={[styles.subPill, { borderColor: theme.accentBorder, flex: 1 }]}
+        >
+          <Ionicons name="person-circle" size={15} color={theme.accent} />
+          <Text style={[styles.subPillText, { color: theme.surface.t1 }]}>Public learning profile</Text>
+        </TouchableOpacity>
+      </View>
 
       <Text style={[styles.sectionTitle, { color: theme.surface.t3, marginTop: 28 }]}>BY COHORT</Text>
       <View style={styles.grid}>

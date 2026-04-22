@@ -18,7 +18,44 @@
 
 import React from 'react';
 import { Text, TextStyle, Linking } from 'react-native';
+import { router } from 'expo-router';
 import { useResolvedTheme } from '../hooks/useTheme';
+
+/** Extract the 11-char YouTube video id from the common URL shapes.
+ *  Returns null for anything that is not a YouTube link.
+ *  Supported:
+ *    https://www.youtube.com/watch?v=<id>
+ *    https://youtu.be/<id>
+ *    https://www.youtube.com/embed/<id>
+ *    https://m.youtube.com/watch?v=<id>
+ *    https://youtube.com/shorts/<id>
+ *  The id is 11 characters; we accept 10-12 to be tolerant of small
+ *  shape drift but still reject obvious non-YouTube links. */
+function extractYouTubeId(url: string): string | null {
+  if (!url) return null;
+  try {
+    const m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{10,12})/);
+    return m && m[1] ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Extract every unique YouTube video id from a block of text. Used
+ *  by DillyAIOverlay to render "Watch in Dilly Skills" cards below
+ *  each AI message that mentions a video. Unique + in-order. */
+export function extractAllYouTubeIds(text: string): string[] {
+  if (!text) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const rx = /(?:youtube\.com\/(?:watch\?(?:[^\s]*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{10,12})/g;
+  let m: RegExpExecArray | null;
+  while ((m = rx.exec(text)) !== null) {
+    const id = m[1];
+    if (id && !seen.has(id)) { seen.add(id); out.push(id); }
+  }
+  return out;
+}
 
 // Matches http(s) URLs. Used to auto-linkify resource suggestions
 // Dilly makes (YouTube videos, docs, blog posts). The URL can include
@@ -186,24 +223,30 @@ export default function RichText({ text, baseStyle }: RichTextProps) {
           style.fontWeight = '700';
         }
 
-        // Auto-linkify any URLs inside the token text. Every match
-        // becomes a tappable Text that opens in the system browser.
+        // Auto-linkify any URLs inside the token text. YouTube links
+        // route to the in-app Skills video player instead of the
+        // system browser — Dilly recommendations should never kick
+        // the user out of the app. Non-YouTube URLs open externally
+        // as before.
         const parts = splitWithUrls(token.text);
         return (
           <Text key={idx} style={style}>
-            {parts.map((part, pi) =>
-              part.url ? (
+            {parts.map((part, pi) => {
+              if (!part.url) return <Text key={pi}>{part.text}</Text>;
+              const yt = extractYouTubeId(part.url);
+              const onPress = yt
+                ? () => { router.push(`/skills/video/${yt}`); }
+                : () => { Linking.openURL(part.url!).catch(() => {}); };
+              return (
                 <Text
                   key={pi}
                   style={{ color: linkColor, textDecorationLine: 'underline', fontWeight: '600' }}
-                  onPress={() => { Linking.openURL(part.url!).catch(() => {}); }}
+                  onPress={onPress}
                 >
-                  {part.text}
+                  {yt ? 'Watch in Dilly Skills ↗' : part.text}
                 </Text>
-              ) : (
-                <Text key={pi}>{part.text}</Text>
-              ),
-            )}
+              );
+            })}
           </Text>
         );
       })}

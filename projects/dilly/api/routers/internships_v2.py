@@ -219,42 +219,29 @@ def _readiness(student_smart, student_grit, student_build,
 def _rank_score(student_smart, student_grit, student_build,
                 req_smart, req_grit, req_build, quality_score,
                 profile_boost: float = 0.0, has_audit: bool = True) -> float:
-    """Compute a per-job rank score for a student/user.
+    """Compute a per-job rank score for a user.
 
-    Three signals, combined:
-      1. profile_boost (0-100): how well the job matches the user's
+    The Smart/Grit/Build audit has been removed from the product.
+    Ranking is now a pure function of two signals:
+
+      1. profile_boost (0-100): how well the posting matches the user's
          EXPRESSED preferences — target companies, goals, skills,
-         preferred locations. Derived from profile facts. Most
-         important signal because it's what the user actually told
-         us they want.
-      2. margin (0-100): how far the user's Smart/Grit/Build scores
-         exceed the job's requirements. Worthless when the user has
-         never completed an audit (all scores = 0).
-      3. quality_score (0-100): per-job quality signal set at ingest
+         preferred locations. Derived from profile facts.
+      2. quality_score (0-100): per-job quality signal set at ingest
          time (company reputation, role recency, etc.).
 
-    Weighting:
-      - Audited user:    profile 0.5 + margin 0.3 + quality 0.2
-      - No audit yet:    profile 0.7 + quality 0.3 (margin zeroed
-        because it's random noise without real scores).
+    Weights: profile 0.7 + quality 0.3. (Previously there was a
+    margin term computed from S/G/B vs job requirements, but with
+    scores gone the margin was always zero, so we drop it.)
 
-    Before this change, ranking was 0.6*margin + 0.4*quality — which
-    ignored the user's profile entirely and gave every non-audited
-    user near-random ordering. That's the "top match" the coach
-    mark previously couldn't honestly claim.
+    The Smart/Grit/Build args are kept in the signature to avoid
+    touching every call site; they're ignored. Same for req_smart/
+    req_grit/req_build and the has_audit flag.
     """
-    s = float(student_smart or 0)
-    g = float(student_grit  or 0)
-    b = float(student_build or 0)
-    rs = float(req_smart or 0)
-    rg = float(req_grit  or 0)
-    rb = float(req_build or 0)
-    margin = (max(s - rs, 0) + max(g - rg, 0) + max(b - rb, 0)) / 3
+    del student_smart, student_grit, student_build
+    del req_smart, req_grit, req_build, has_audit
     pb = float(profile_boost or 0)
     q  = float(quality_score or 0)
-    if has_audit:
-        return round(pb * 0.5 + margin * 0.3 + q * 0.2, 4)
-    # No audit — margin is noise. Lean on profile + quality only.
     return round(pb * 0.7 + q * 0.3, 4)
 
 
