@@ -27,7 +27,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Animated, Easing, TextInput, KeyboardAvoidingView,
-  Platform, ScrollView, Alert, Share,
+  Platform, ScrollView, Alert, Share, Image, TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -115,6 +115,140 @@ const PUNCT_PAUSE_MS: Record<string, number> = {
   '—': 200,
   '\n': 320,
 };
+
+// -- Push-on Skills playlist --------------------------------------------------
+//
+// On the "What I'd push on" screen, Dilly names a growth edge. The
+// third "salt in water" touchpoint hangs off that: once typing
+// finishes, we surface up to 3 Skills videos whose titles / descriptions
+// match tokens from the body text. No LLM, no new endpoints — just
+// /skill-lab/trending filtered client-side against the body tokens.
+//
+// Scoring is identical to jobs.tsx pickVideoForGap() so the whole
+// "skills" system reads consistently: title hits weight 3, desc hits
+// weight 1, tokens < 3 chars ignored so "a", "is", "to" don't poison
+// the ranker.
+
+interface _PushOnVid {
+  id: string;
+  title?: string;
+  description?: string;
+  thumbnail_url?: string;
+  channel_title?: string;
+  duration_sec?: number;
+}
+
+const _PUSHON_STOP = new Set([
+  'the', 'and', 'for', 'but', 'that', 'with', 'your', 'you', 'are',
+  'this', 'into', 'more', 'have', 'from', 'what', 'when', 'will',
+  'push', 'build', 'work', 'keep', 'just', 'also', 'need', 'like',
+  'some', 'make', 'them', 'their',
+]);
+
+function _tokenizePushOn(body: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const tok of (body || '').toLowerCase().match(/[a-z0-9+#./-]+/g) || []) {
+    if (tok.length < 3) continue;
+    if (_PUSHON_STOP.has(tok)) continue;
+    if (seen.has(tok)) continue;
+    seen.add(tok);
+    out.push(tok);
+  }
+  return out;
+}
+
+function PushOnPlaylist({ body, theme }: { body: string; theme: ReturnType<typeof useResolvedTheme> }) {
+  const [videos, setVideos] = useState<_PushOnVid[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch once per body (i.e. once per push_on screen). If a retry
+  // is needed the user can leave/re-enter the screen.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dilly.get('/skill-lab/trending?limit=60').catch(() => null);
+        const pool: _PushOnVid[] = Array.isArray(res?.videos)
+          ? res.videos
+          : Array.isArray(res) ? res : [];
+        const tokens = _tokenizePushOn(body);
+        const scored = pool
+          .map(v => {
+            const title = (v.title || '').toLowerCase();
+            const desc = (v.description || '').toLowerCase();
+            let s = 0;
+            for (const t of tokens) {
+              if (title.includes(t)) s += 3;
+              if (desc.includes(t)) s += 1;
+            }
+            return { v, s };
+          })
+          .filter(x => x.s > 0)
+          .sort((a, b) => b.s - a.s)
+          .slice(0, 3)
+          .map(x => x.v);
+        if (!cancelled) {
+          setVideos(scored);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [body]);
+
+  // Hide the whole block if nothing matched — never surface generic
+  // trending on a specific coaching note.
+  if (loading) return null;
+  if (!videos.length) return null;
+
+  return (
+    <View style={{ marginTop: 24, gap: 10 }}>
+      <Text style={[s.label, { color: theme.accent }]}>WATCH + PRACTICE</Text>
+      <Text style={{ color: theme.surface.t2, fontSize: 13, lineHeight: 18 }}>
+        Three short videos Dilly picked for exactly this edge.
+      </Text>
+      <View style={{ gap: 8, marginTop: 4 }}>
+        {videos.map(v => (
+          <TouchableOpacity
+            key={v.id}
+            activeOpacity={0.85}
+            onPress={() => router.push(`/skills/video/${v.id}`)}
+            style={{
+              flexDirection: 'row',
+              gap: 10,
+              padding: 8,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: theme.surface.border,
+              backgroundColor: theme.surface.s1,
+            }}
+          >
+            <Image
+              source={{ uri: v.thumbnail_url || `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg` }}
+              style={{ width: 96, height: 54, borderRadius: 6, backgroundColor: theme.surface.s2 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{ color: theme.surface.t1, fontSize: 13, fontWeight: '700', lineHeight: 17 }}
+                numberOfLines={2}
+              >
+                {v.title || 'Untitled'}
+              </Text>
+              {v.channel_title ? (
+                <Text style={{ color: theme.surface.t3, fontSize: 11, marginTop: 3 }} numberOfLines={1}>
+                  {v.channel_title}
+                </Text>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
 
 export default function ChapterSessionScreen() {
   const insets = useSafeAreaInsets();
@@ -795,6 +929,15 @@ export default function ChapterSessionScreen() {
               <Text style={[s.chatBlocked, { color: theme.surface.t3 }]}>{chatBlocked}</Text>
             ) : null}
           </View>
+        )}
+
+        {/* Push-on screen extras: 3 Skills videos ranked against the
+            body text. Hidden until typing finishes so the playlist
+            lands after Dilly has named the edge — feels like a coach
+            saying "here, try these" at the end of the thought. Block
+            is self-hiding when nothing matches (see PushOnPlaylist). */}
+        {currentScreen.slot === 'push_on' && !isTyping && !isQuestion && (
+          <PushOnPlaylist body={currentScreen.body || ''} theme={theme} />
         )}
 
         {/* End-of-Chapter extras: one-move calendar commit (shown on
