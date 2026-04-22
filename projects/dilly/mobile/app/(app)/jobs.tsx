@@ -33,6 +33,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -70,7 +71,20 @@ interface Listing {
   company_logo?: string | null;
   company_website?: string | null;
   source?: string;
+  job_type?: string;  // "internship" | "entry_level" | "full_time" | "part_time" | "other"
 }
+
+/** City + type filter options (user-facing). City list is computed
+ *  from the loaded jobs so we never show a city with zero matches. */
+type TypeFilter = 'all' | 'internship' | 'entry_level' | 'full_time' | 'part_time';
+type RemoteFilter = 'any' | 'remote' | 'in_person';
+const TYPE_LABEL: Record<TypeFilter, string> = {
+  all: 'All',
+  internship: 'Internship',
+  entry_level: 'Entry level',
+  full_time: 'Full time',
+  part_time: 'Part time',
+};
 
 interface Profile {
   first_name?: string;
@@ -198,6 +212,17 @@ export default function JobsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [noticeIndex, setNoticeIndex] = useState(0);
 
+  // Filters. Client-side only — the server already returns up to 60
+  // ranked jobs, filtering here is instant, and gives us the room to
+  // show a per-filter match count on each chip.
+  //   cityFilter: null = every city, or a lowercased city string
+  //   typeFilter: 'all' | 'internship' | 'entry_level' | 'full_time' | 'part_time'
+  //   remoteFilter: 'any' | 'remote' | 'in_person'
+  const [cityFilter, setCityFilter] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [remoteFilter, setRemoteFilter] = useState<RemoteFilter>('any');
+  const [showCityPicker, setShowCityPicker] = useState(false);
+
   // Per-job expand state. Exactly one expanded at a time keeps the
   // feed scannable; tapping a second job collapses the first.
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -229,21 +254,70 @@ export default function JobsScreen() {
 
   const onRefresh = useCallback(() => { setRefreshing(true); loadData(); }, [loadData]);
 
+  // Unique cities from the loaded jobs, sorted by how many postings
+  // each city has. Cap at 15 so the picker stays scannable. Always
+  // computed from full `jobs` (not filteredJobs) so toggling a city
+  // doesn't collapse the city list itself.
+  const cityOptions = useMemo(() => {
+    const count = new Map<string, { label: string; n: number }>();
+    for (const j of jobs) {
+      const c = (j.location_city || '').trim();
+      if (!c) continue;
+      const key = c.toLowerCase();
+      const existing = count.get(key);
+      if (existing) existing.n += 1;
+      else count.set(key, { label: c, n: 1 });
+    }
+    return [...count.values()].sort((a, b) => b.n - a.n).slice(0, 15);
+  }, [jobs]);
+
+  // City + type + remote filter. Applied client-side to the full
+  // feed. Per-chip counts shown so users know what will happen
+  // before they tap.
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(j => {
+      if (cityFilter && (j.location_city || '').toLowerCase() !== cityFilter) return false;
+      if (typeFilter !== 'all') {
+        const t = (j.job_type || '').toLowerCase();
+        if (t !== typeFilter) return false;
+      }
+      if (remoteFilter === 'remote') {
+        const remote = !!j.remote || (j.work_mode || '').toLowerCase().includes('remote');
+        if (!remote) return false;
+      } else if (remoteFilter === 'in_person') {
+        const remote = !!j.remote || (j.work_mode || '').toLowerCase().includes('remote');
+        if (remote) return false;
+      }
+      return true;
+    });
+  }, [jobs, cityFilter, typeFilter, remoteFilter]);
+
   const { strong, stretch, known, hero } = useMemo(() => {
     const strong: Listing[] = [];
     const stretch: Listing[] = [];
     const known: Listing[] = [];
-    jobs.forEach(j => {
+    filteredJobs.forEach(j => {
       const score = Number(j.rank_score ?? 50);
       const b = bandFor(score);
       if (b === 'strong') strong.push(j);
       else if (b === 'stretch') stretch.push(j);
       else known.push(j);
     });
-    return { strong, stretch, known, hero: strong[0] || jobs[0] || null };
-  }, [jobs]);
+    return { strong, stretch, known, hero: strong[0] || filteredJobs[0] || null };
+  }, [filteredJobs]);
 
-  const noticed = useMemo(() => buildNoticedLines(jobs, profile), [jobs, profile]);
+  const activeFilterCount =
+    (cityFilter ? 1 : 0) + (typeFilter !== 'all' ? 1 : 0) + (remoteFilter !== 'any' ? 1 : 0);
+  const resetFilters = useCallback(() => {
+    setCityFilter(null);
+    setTypeFilter('all');
+    setRemoteFilter('any');
+  }, []);
+
+  // Notice strip reads off filteredJobs so observations reflect what
+  // the user is actually looking at. "3 roles posted today" means
+  // 3 in the current view, not 3 buried behind filters.
+  const noticed = useMemo(() => buildNoticedLines(filteredJobs, profile), [filteredJobs, profile]);
   useEffect(() => {
     if (noticed.length <= 1) return;
     const id = setInterval(() => setNoticeIndex(i => (i + 1) % noticed.length), 6000);
@@ -403,7 +477,8 @@ export default function JobsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.pageTitle, { color: theme.surface.t1 }]}>Jobs</Text>
             <Text style={[styles.pageSub, { color: theme.surface.t3 }]}>
-              {jobs.length} {jobs.length === 1 ? 'match' : 'matches'} today
+              {filteredJobs.length} {filteredJobs.length === 1 ? 'match' : 'matches'}
+              {activeFilterCount > 0 ? ` of ${jobs.length}` : ' today'}
             </Text>
           </View>
           <TouchableOpacity
@@ -416,6 +491,159 @@ export default function JobsScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Filter chip row: horizontally scrollable, city + type +
+          remote + clear. Opens a modal picker for city (so we can
+          surface up to 15 options without eating vertical space).
+          Type + remote cycle inline through their enum values.
+          Each chip shows a count where it's meaningful. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
+        {/* City chip */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => setShowCityPicker(true)}
+          style={[
+            styles.filterChip,
+            cityFilter
+              ? { backgroundColor: theme.accent, borderColor: theme.accent }
+              : { borderColor: theme.accentBorder },
+          ]}
+        >
+          <Ionicons
+            name="location-sharp"
+            size={12}
+            color={cityFilter ? '#FFF' : theme.accent}
+          />
+          <Text style={[styles.filterChipText, { color: cityFilter ? '#FFF' : theme.surface.t1 }]}>
+            {cityFilter
+              ? (cityOptions.find(o => o.label.toLowerCase() === cityFilter)?.label || cityFilter)
+              : 'City'}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={11}
+            color={cityFilter ? '#FFF' : theme.surface.t3}
+          />
+        </TouchableOpacity>
+
+        {/* Type chips — each type is its own button so the user can
+            one-tap the one they want. "All" clears the type filter. */}
+        {(['all', 'internship', 'entry_level', 'full_time', 'part_time'] as TypeFilter[]).map(t => {
+          const active = typeFilter === t;
+          return (
+            <TouchableOpacity
+              key={t}
+              activeOpacity={0.85}
+              onPress={() => setTypeFilter(t)}
+              style={[
+                styles.filterChip,
+                active
+                  ? { backgroundColor: theme.accent, borderColor: theme.accent }
+                  : { borderColor: theme.accentBorder },
+              ]}
+            >
+              <Text style={[styles.filterChipText, { color: active ? '#FFF' : theme.surface.t1 }]}>
+                {TYPE_LABEL[t]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Remote mode chip cycles any → remote → in_person → any */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => setRemoteFilter(
+            remoteFilter === 'any' ? 'remote' : remoteFilter === 'remote' ? 'in_person' : 'any',
+          )}
+          style={[
+            styles.filterChip,
+            remoteFilter !== 'any'
+              ? { backgroundColor: theme.accent, borderColor: theme.accent }
+              : { borderColor: theme.accentBorder },
+          ]}
+        >
+          <Ionicons
+            name={remoteFilter === 'in_person' ? 'business' : 'globe'}
+            size={12}
+            color={remoteFilter !== 'any' ? '#FFF' : theme.accent}
+          />
+          <Text style={[styles.filterChipText, { color: remoteFilter !== 'any' ? '#FFF' : theme.surface.t1 }]}>
+            {remoteFilter === 'remote' ? 'Remote' : remoteFilter === 'in_person' ? 'In person' : 'Any location'}
+          </Text>
+        </TouchableOpacity>
+
+        {activeFilterCount > 0 ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={resetFilters}
+            style={[styles.filterChip, { borderColor: theme.surface.border }]}
+          >
+            <Ionicons name="close-circle" size={12} color={theme.surface.t2} />
+            <Text style={[styles.filterChipText, { color: theme.surface.t2 }]}>Clear</Text>
+          </TouchableOpacity>
+        ) : null}
+      </ScrollView>
+
+      {/* City picker modal — opened by the City chip. Lists every
+          city present in the current feed with a match count per
+          row, plus an "All cities" reset row at the top. */}
+      <Modal
+        visible={showCityPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCityPicker(false)}
+      >
+        <View style={styles.cityBackdrop}>
+          <View style={[styles.citySheet, { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 14 }]}>
+            <View style={styles.citySheetHandle} />
+            <Text style={[styles.citySheetTitle, { color: theme.surface.t1 }]}>Filter by city</Text>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => { setCityFilter(null); setShowCityPicker(false); }}
+              style={[
+                styles.cityRow,
+                !cityFilter ? { backgroundColor: theme.accentSoft } : null,
+              ]}
+            >
+              <Text style={[styles.cityRowLabel, { color: theme.surface.t1 }]}>All cities</Text>
+              <Text style={[styles.cityRowCount, { color: theme.surface.t3 }]}>{jobs.length}</Text>
+            </TouchableOpacity>
+
+            <ScrollView>
+              {cityOptions.map(opt => {
+                const active = cityFilter === opt.label.toLowerCase();
+                return (
+                  <TouchableOpacity
+                    key={opt.label}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setCityFilter(opt.label.toLowerCase());
+                      setShowCityPicker(false);
+                    }}
+                    style={[
+                      styles.cityRow,
+                      active ? { backgroundColor: theme.accentSoft } : null,
+                    ]}
+                  >
+                    <Text style={[styles.cityRowLabel, { color: theme.surface.t1 }]}>{opt.label}</Text>
+                    <Text style={[styles.cityRowCount, { color: theme.surface.t3 }]}>{opt.n}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {cityOptions.length === 0 ? (
+                <Text style={[styles.cityEmpty, { color: theme.surface.t3 }]}>
+                  No cities in the current feed.
+                </Text>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {noticedLine ? (
         <View style={[styles.noticedStrip, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
@@ -787,6 +1015,66 @@ const styles = StyleSheet.create({
   pageSub:   { fontSize: 12, marginTop: 2 },
   brushBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
   brushBtnText: { fontSize: 11, fontWeight: '800' },
+
+  // Filter chip row under the header.
+  filterRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  filterChipText: { fontSize: 11, fontWeight: '800' },
+
+  // City picker bottom sheet.
+  cityBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  citySheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 10,
+    paddingHorizontal: 16,
+    maxHeight: '72%',
+  },
+  citySheetHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(128,128,128,0.4)',
+    marginBottom: 12,
+  },
+  citySheetTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  cityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  cityRowLabel: { fontSize: 14, fontWeight: '700' },
+  cityRowCount: { fontSize: 12, fontWeight: '700' },
+  cityEmpty: {
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
 
   noticedStrip: { marginHorizontal: 16, borderRadius: 13, borderWidth: 1, padding: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   noticedEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
