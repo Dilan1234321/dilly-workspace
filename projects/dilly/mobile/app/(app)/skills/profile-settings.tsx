@@ -69,7 +69,6 @@ export default function LearningProfileSettingsScreen() {
   const [slug, setSlug] = useState<string>('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const rawSettingsRef = useRef<WebSettings>({});
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load profile + library
   useEffect(() => {
@@ -101,24 +100,25 @@ export default function LearningProfileSettingsScreen() {
     return () => { cancelled = true; };
   }, []);
 
-  // Debounced save. Merges back into the ORIGINAL web_profile_settings
-  // blob so we never clobber hidden_fact_ids, section toggles, etc.
-  const persist = useCallback((next: WebSettings) => {
+  // Immediate save. Every toggle hits PATCH /profile right away so
+  // the public learning profile updates the moment the user flips a
+  // switch. Merges back into the ORIGINAL web_profile_settings blob
+  // so we never clobber hidden_fact_ids, section toggles, etc.
+  // Rapid-fire taps on the same switch are safe because each request
+  // posts the latest merged state — last-write-wins on the server.
+  const persist = useCallback(async (next: WebSettings) => {
     setSaveState('saving');
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      const merged = { ...rawSettingsRef.current, ...next };
-      rawSettingsRef.current = merged;
-      try {
-        await dilly.fetch('/profile', {
-          method: 'PATCH',
-          body: JSON.stringify({ web_profile_settings: merged }),
-        });
-        setSaveState('saved');
-      } catch {
-        setSaveState('idle');
-      }
-    }, 500);
+    const merged = { ...rawSettingsRef.current, ...next };
+    rawSettingsRef.current = merged;
+    try {
+      await dilly.fetch('/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({ web_profile_settings: merged }),
+      });
+      setSaveState('saved');
+    } catch {
+      setSaveState('idle');
+    }
   }, []);
 
   const setFlag = useCallback(<K extends keyof WebSettings>(key: K, value: WebSettings[K]) => {
