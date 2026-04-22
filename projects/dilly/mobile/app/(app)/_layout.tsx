@@ -267,23 +267,28 @@ function AppLayoutInner() {
         }}
       />
 
-      {/* Tab 4: Profile. Person for seekers/students (identity
-          focus), analytics chart for holders (trajectory focus). */}
+      {/* Demoted to hidden — navbar is now 3 pillars (Home, AI Arena,
+          Skills). My Dilly is reached via the avatar in the Home header
+          (the "this is you" pattern from Instagram / Twitter), and the
+          Jobs feed is reached via a prominent card on Home that shows
+          live match counts. Tabs are for "things you do" at every
+          session; My Dilly is identity, and Jobs is application mode —
+          both better served as destinations you deep-link to, not
+          permanent navbar slots. */}
       <Tabs.Screen
         name="my-dilly-profile"
         options={{
           title: isHolder ? 'My Career' : 'My Dilly',
-          tabBarIcon: tabIcons.profile,
+          href: null,
+          animation: 'fade',
         }}
       />
-
-      {/* Tab 5: Jobs / Market. Briefcase for apply-mode seekers;
-          trending-up for holders benchmarking their field. */}
       <Tabs.Screen
         name="jobs"
         options={{
           title: isHolder ? 'The Market' : 'Jobs',
-          tabBarIcon: tabIcons.jobs,
+          href: null,
+          animation: 'fade',
         }}
       />
 
@@ -295,6 +300,15 @@ function AppLayoutInner() {
       />
       <Tabs.Screen
         name="settings"
+        options={{ href: null, animation: 'fade' }}
+      />
+      {/* Public profile manager — mirrors /skills/profile-settings.
+          Reached from Settings > Web Profile > Public profile row.
+          Tabs.Screen animation is Tabs-level (fade/none/shift) — the
+          slide-in feel comes from expo-router's default push behavior
+          when we router.push(). */}
+      <Tabs.Screen
+        name="public-profile-settings"
         options={{ href: null, animation: 'fade' }}
       />
       <Tabs.Screen
@@ -330,6 +344,17 @@ function AppLayoutInner() {
           and schedule reachable from within that flow. */}
       <Tabs.Screen
         name="chapter"
+        options={{ href: null, animation: 'fade' }}
+      />
+      {/* Arena sub-pages (value, conviction, future, threat, ghost,
+          reputation, next-role, hook, offer, rejections, clock,
+          mirror, postmortem, coldemail, recruiter-radar). The
+          top-level /ai-arena tab owns the command-deck; these pages
+          are pushed from there. Declared as one hidden Tabs.Screen
+          so expo-router groups them inside the arena folder and
+          does not surface a ghost tab per page. */}
+      <Tabs.Screen
+        name="arena"
         options={{ href: null, animation: 'fade' }}
       />
       {/* Collection detail page. Reached by tapping a collection in

@@ -1,1854 +1,484 @@
 /**
- * AI Arena -- Three-Act AI Readiness Narrative + Tools.
+ * AI Arena — 3 different experiences, one tab.
  *
- * A flowing story you scroll through, not a feature menu.
- * Dark navy background, off-white accents, green for good, amber for warning.
+ * Ground-up rewrite. Old arena is parked at
+ * _parked/ai-arena.old.tsx.txt for reference.
+ *
+ * Design:
+ *   - useAppMode() → holder | seeker | student
+ *   - Each mode gets a dedicated "command deck": a hero centerpiece +
+ *     four tiles below.
+ *   - Every tool draws from the user's real profile + feed + apps
+ *     + cohort playbook. No LLM calls anywhere on this path.
+ *   - Profile with <10 facts sees a gate that seeds Dilly chat with
+ *     three mode-specific prompts. Feeding profile IS the onboarding.
+ *
+ * Centerpieces:
+ *   Holder   → Market Value Live
+ *   Seeker   → Conviction Builder
+ *   Student  → Future Pulse
+ *
+ * All three are real screens; their full pages live under /arena/*.
  */
 
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import {
-  View, Text, ScrollView, TextInput, StyleSheet, ActivityIndicator,
-  Animated, Easing, Alert, LayoutAnimation, Dimensions,
-  KeyboardAvoidingView, Platform, RefreshControl,
-} from 'react-native';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
-import { dilly } from '../../lib/dilly';
-import { colors, spacing, radius } from '../../lib/tokens';
-import { mediumHaptic } from '../../lib/haptics';
-import { framingForPath } from '../../lib/arenaFraming';
-import { getCached } from '../../lib/sessionCache';
-import AnimatedPressable from '../../components/AnimatedPressable';
-import FadeInView from '../../components/FadeInView';
-import DillyFooter from '../../components/DillyFooter';
-import { openDillyOverlay } from '../../hooks/useDillyOverlay';
-import { DillyFace } from '../../components/DillyFace';
-import FieldPulseCard from '../../components/FieldPulseCard';
-import { useAppMode } from '../../hooks/useAppMode';
-import { FirstVisitCoach } from '../../components/FirstVisitCoach';
-import { useResolvedTheme } from '../../hooks/useTheme';
+  View, Text, ScrollView, StyleSheet, RefreshControl, TouchableOpacity,
+} from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
+import { dilly } from '../../lib/dilly'
+import { useAppMode } from '../../hooks/useAppMode'
+import { useResolvedTheme } from '../../hooks/useTheme'
+import DillyLoadingState from '../../components/DillyLoadingState'
+import ArenaGate from '../../components/arena/ArenaGate'
+import ArenaHero from '../../components/arena/ArenaHero'
+import ArenaTile from '../../components/arena/ArenaTile'
+import ValueSparkline from '../../components/arena/ValueSparkline'
+import {
+  resolvePlaybook,
+  type CohortPlaybook,
+} from '../../lib/arena/cohort-playbook'
+import {
+  recordValueSnapshot,
+  readHistory,
+  computeValue,
+  compactUsd,
+  fmtRange,
+  type ValueReading,
+} from '../../lib/arena/value'
+import {
+  deriveSignals,
+  rejectionPattern,
+  type Signals,
+  type Listing,
+  type Application,
+} from '../../lib/arena/signals'
 
-const W = Dimensions.get('window').width;
+const MIN_FACTS = 10
 
-// Design tokens
-const BG = '#111827';
-const CARD = '#1F2937';
-const BORDER = '#374151';
-const ACCENT = '#F0F0F0';
-const GREEN = '#34C759';
-const AMBER = '#FF9F0A';
-const TEXT = '#F9FAFB';
-const SUB = '#9CA3AF';
-const DIM = '#6B7280';
-
-type ActiveFeature = null | 'scan' | 'replace' | 'simulate' | 'firewall' | 'vault' | 'index';
-
-// ── Shield Ring ──────────────────────────────────────────────────────────────
-
-function ShieldRing({ score, size = 160 }: { score: number; size?: number }) {
-  const sw = 8;
-  const r = (size - sw) / 2;
-  const circ = 2 * Math.PI * r;
-  const fillPct = Math.max(0, Math.min(100, score)) / 100;
-  const dash = circ * (1 - fillPct);
-  const CYAN = '#00E5FF';
-
-  // Animate the ring filling in
-  const fillAnim = useRef(new Animated.Value(circ)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    // Fill animation
-    Animated.timing(fillAnim, {
-      toValue: dash,
-      duration: 1200,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-
-    // Pulse glow animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-    ).start();
-  }, [score]);
-
-  return (
-    <View style={{ width: size + 20, height: size + 20, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Glow effect behind the ring */}
-      <Animated.View style={{
-        position: 'absolute', width: size, height: size, borderRadius: size / 2,
-        shadowColor: CYAN, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 20,
-        backgroundColor: 'transparent', transform: [{ scale: pulseAnim }],
-      }} />
-      <Svg width={size} height={size}>
-        {/* Background ring */}
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={BORDER} strokeWidth={sw} fill="transparent" />
-        {/* Filled ring */}
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={CYAN} strokeWidth={sw} fill="transparent"
-          strokeDasharray={`${circ} ${circ}`} strokeDashoffset={dash} strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`} />
-      </Svg>
-      <View style={{ position: 'absolute', alignItems: 'center' }}>
-        <Text style={{ fontSize: 48, fontWeight: '900', color: TEXT }}>{Math.round(score)}</Text>
-        <Text style={{ fontSize: 16, color: SUB, marginTop: -4 }}>/100</Text>
-      </View>
-    </View>
-  );
+type Profile = {
+  first_name?: string
+  cohorts?: string[]
+  years_experience?: number
+  target_companies?: string[]
+  job_locations?: string[]
+  application_target?: string
+  user_path?: string
+  current_role?: string
+  [k: string]: unknown
 }
-
-// ── Signal Card ──────────────────────────────────────────────────────────────
-
-function SignalCard({ signal, accentColor }: { signal: string; accentColor: string }) {
-  return (
-    <View style={[a.signalCard, { borderLeftColor: accentColor }]}>
-      <Text style={a.signalText}>{signal}</Text>
-    </View>
-  );
-}
-
-// ── HolderImpactCard ────────────────────────────────────────────────────
-// Replacement for SignalCard on the holder-mode Arena. The seeker card
-// is a quiet left-rule + text line. Holders asked for a mind-blown
-// version: dark panel, accent-tinted icon disc, uppercase label tag,
-// larger body. Same one-line signal text; the wrapper carries the
-// visual weight.
-function HolderImpactCard({
-  icon, accent, tint, label, text,
-}: {
-  icon: string;
-  accent: string;     // stroke / text colour for the label + icon
-  tint: string;       // dark background tint for the card body
-  label: string;      // eg 'AT RISK' or 'YOUR MOAT'
-  text: string;       // the one-line signal
-}) {
-  return (
-    <View style={[h.impactCard, { borderColor: accent + '40', backgroundColor: tint }]}>
-      <View style={[h.impactIconWrap, { backgroundColor: accent + '22', borderColor: accent + '55' }]}>
-        <Ionicons name={icon as any} size={20} color={accent} />
-      </View>
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={[h.impactLabel, { color: accent }]}>{label}</Text>
-        <Text style={h.impactText}>{text}</Text>
-      </View>
-    </View>
-  );
-}
-
-// ── Tool Row ─────────────────────────────────────────────────────────────────
-
-function ToolRow({ icon, title, sub, color, onPress, active }: {
-  icon: string; title: string; sub: string; color: string;
-  onPress: () => void; active: boolean;
-}) {
-  // Reads theme so the row is legible in light mode. Static styles
-  // froze colors against the dark AI Arena bg and read as invisible
-  // text-on-white the moment the page flipped to a light surface.
-  const theme = useResolvedTheme();
-  return (
-    <AnimatedPressable
-      style={[
-        a.toolRow,
-        { backgroundColor: theme.surface.s1, borderColor: theme.surface.border },
-        active && { borderLeftColor: color, borderLeftWidth: 4, backgroundColor: color + '10' },
-      ]}
-      onPress={onPress}
-      scaleDown={0.98}
-    >
-      <View style={[a.toolIcon, { backgroundColor: color + '15' }]}>
-        <Ionicons name={icon as any} size={18} color={color} />
-      </View>
-      <View style={a.toolTextWrap}>
-        <Text style={[a.toolTitle, { color: theme.surface.t1 }]}>{title}</Text>
-        <Text style={[a.toolSub, { color: theme.surface.t2 }]} numberOfLines={1}>{sub}</Text>
-      </View>
-      <Ionicons name={active ? 'chevron-down' : 'chevron-forward'} size={16} color={active ? color : theme.surface.t3} />
-    </AnimatedPressable>
-  );
-}
-
-// ── Act Divider ──────────────────────────────────────────────────────────────
-
-function ActDivider({ number, title }: { number: string; title: string }) {
-  return (
-    <View style={a.actDivider}>
-      <View style={a.actLine} />
-      <View style={a.actLabelWrap}>
-        <Text style={a.actNumber}>{number}</Text>
-        <Text style={a.actTitle}>{title}</Text>
-      </View>
-      <View style={a.actLine} />
-    </View>
-  );
-}
-
-// ── Loading State ────────────────────────────────────────────────────────────
-
-function ArenaLoadingState({ texts }: { texts: string[] }) {
-  // Copy-paste of MyDillyLoadingState from my-dilly-profile.tsx so
-  // this screen looks identical to every other loading screen in
-  // the app. Static DillyFace, pulsing text — that's the pattern.
-  // Prior builds tried to add face scale animation, halo rings,
-  // etc; user asked explicitly to match the others.
-  const pulseAnim = useRef(new Animated.Value(0.4)).current;
-  const [textIdx, setTextIdx] = useState(0);
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ]),
-    ).start();
-    const interval = setInterval(() => setTextIdx(i => (i + 1) % texts.length), 2500);
-    return () => clearInterval(interval);
-  }, [pulseAnim]);
-
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 80 }}>
-      <DillyFace size={120} />
-      <Animated.Text
-        style={{
-          fontSize: 16,
-          fontWeight: '600',
-          color: colors.t2,
-          marginTop: 24,
-          opacity: pulseAnim,
-          textAlign: 'center',
-          paddingHorizontal: 24,
-        }}
-      >
-        {texts[textIdx]}
-      </Animated.Text>
-    </View>
-  );
-}
-
-// ── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function AIArenaScreen() {
-  const insets = useSafeAreaInsets();
-  // AI Arena now follows the user's Customize Dilly theme. Everything
-  // that was hardcoded dark navy (BG/CARD/BORDER/TEXT/SUB/DIM) gets
-  // an inline override from the resolved theme at each render site.
-  // The file-level constants stay for StyleSheet fallbacks (proxy
-  // freeze) but the JSX overrides them where it matters.
-  const theme = useResolvedTheme();
-  // Contrast-aware text color for CTAs whose background is the user's
-  // chosen accent. Hardcoded '#0B1426' worked only when the accent
-  // was pale (pre-customize-dilly default #F0F0F0). With Midnight or
-  // dark-indigo accents the navy text disappeared into the button.
-  // Simple luminance test — dark accent -> white text, light accent
-  // -> navy text. Good enough for the 10 presets in ACCENT_PRESETS.
-  const onAccentText = (() => {
-    const hex = (theme.accent || '').replace('#', '');
-    if (hex.length !== 6) return '#0B1426';
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.6 ? '#0B1426' : '#FFFFFF';
-  })();
-  // Holders get a calmer, coach-style tone. "field intelligence" and
-  // "this quarter's play" instead of "threat" and "replace". Seekers/
-  // students keep the existing arena/anxiety framing that powers
-  // onboarding engagement.
-  const appMode = useAppMode();
-  const isHolder = appMode === 'holder';
-  const [shield, setShield] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [activeFeature, setActiveFeature] = useState<ActiveFeature>(null);
+  const theme = useResolvedTheme()
+  const insets = useSafeAreaInsets()
+  const mode = useAppMode()
 
-  // Feature-specific state
-  const [scanResults, setScanResults] = useState<any>(null);
-  const [scanLoading, setScanLoading] = useState(false);
-  const replaceInputRef = useRef('');
-  const replaceFieldRef = useRef<any>(null);
-  const [replaceResult, setReplaceResult] = useState<any>(null);
-  const [replaceLoading, setReplaceLoading] = useState(false);
-  const simJobRef = useRef('');
-  const simFieldRef = useRef<any>(null);
-  const [simResult, setSimResult] = useState<any>(null);
-  const [simLoading, setSimLoading] = useState(false);
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [facts, setFacts] = useState<any[]>([])
+  const [feed, setFeed] = useState<Listing[]>([])
+  const [apps, setApps] = useState<Application[]>([])
+  const [reading, setReading] = useState<ValueReading | null>(null)
 
-  // Threat report. role-based, zero-LLM. Speaks to everyone, not just
-  // students with a resume. Loads in parallel with the shield score.
-  const [threatReport, setThreatReport] = useState<any>(null);
-  const [threatRoleInput, setThreatRoleInput] = useState<string>('');
-  const [threatSaving, setThreatSaving] = useState(false);
-  // Weekly signal. hand-curated content block describing this
-  // week's biggest move in the user's field. Zero-LLM.
-  const [weeklySignal, setWeeklySignal] = useState<any>(null);
-
-  // Rebuilt page state. The old three-Act structure + ShieldRing
-  // ring + tools-drawer felt like a feature menu. New design leads
-  // with ONE next move (cycleable) and hides all tools besides
-  // Threat Scanner behind a "More tools" drawer.
-  const [moveIndex, setMoveIndex] = useState(0);
-  const [showMoreTools, setShowMoreTools] = useState(false);
-
-  const fetchShield = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
-      const ctrl = new AbortController();
-      setTimeout(() => ctrl.abort(), 30_000);
-      const res = await dilly.fetch('/ai-arena/shield', { signal: ctrl.signal });
-      if (res.ok) setShield(await res.json());
-    } catch {}
-  }, []);
+      const [prof, surface, feedRes, appsRes] = await Promise.all([
+        dilly.get('/profile').catch(() => null),
+        dilly.get('/memory/surface').catch(() => null),
+        dilly.get('/v2/internships/feed?readiness=ready&limit=60').catch(() => null),
+        dilly.get('/applications').catch(() => null),
+      ])
+      const p = (prof || {}) as Profile
+      setProfile(p)
+      const items = Array.isArray((surface as any)?.items) ? (surface as any).items : []
+      setFacts(items)
+      const listings: Listing[] = Array.isArray((feedRes as any)?.listings) ? (feedRes as any).listings : []
+      setFeed(listings)
+      const apps: Application[] = Array.isArray(appsRes)
+        ? (appsRes as Application[])
+        : Array.isArray((appsRes as any)?.applications)
+          ? (appsRes as any).applications
+          : []
+      setApps(apps)
 
-  const fetchWeeklySignal = useCallback(async () => {
-    try {
-      const ctrl = new AbortController();
-      setTimeout(() => ctrl.abort(), 8_000);
-      const res = await dilly.fetch('/ai-arena/weekly-signal', { signal: ctrl.signal });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.signal) setWeeklySignal(data.signal);
+      // Compute today's playbook + signals + value reading and
+      // snapshot it into AsyncStorage so the sparkline has data
+      // tomorrow. This is how the arena stays "alive" without server
+      // history.
+      const playbook = resolvePlaybook(p.cohorts || [])
+      let tier1Hits = 0
+      let strong = 0
+      let stretch = 0
+      for (const j of listings) {
+        const lc = (j.company || '').toLowerCase()
+        if (playbook.anchorCompanies.tier1.some(a => lc.includes(a.toLowerCase()))) tier1Hits++
+        const sc = Number(j.rank_score ?? 50)
+        if (sc >= 72) strong++
+        else if (sc >= 45) stretch++
       }
-    } catch {}
-  }, []);
-
-  const fetchThreatReport = useCallback(async () => {
-    try {
-      const ctrl = new AbortController();
-      setTimeout(() => ctrl.abort(), 10_000);
-      const res = await dilly.fetch('/ai-arena/threat-report/infer', { signal: ctrl.signal });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.report) setThreatReport(data.report);
-      }
-    } catch {}
-  }, []);
-
-  const saveRoleAndFetchReport = useCallback(async (role: string) => {
-    const trimmed = role.trim();
-    if (!trimmed) return;
-    setThreatSaving(true);
-    try {
-      // Save role to profile so next visit the infer endpoint resolves it.
-      await dilly.fetch('/profile', {
-        method: 'PATCH',
-        body: JSON.stringify({ current_role: trimmed }),
-      }).catch(() => {});
-      // Direct lookup so the UI updates instantly even if the profile
-      // write lagged.
-      const res = await dilly.fetch(`/ai-arena/threat-report?role=${encodeURIComponent(trimmed)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.report) setThreatReport(data.report);
-      }
-    } catch {}
-    finally {
-      setThreatSaving(false);
+      await recordValueSnapshot({ strong, stretch, total: listings.length, tier1Hits })
+      const history = await readHistory()
+      const r = computeValue(playbook, Number(p.years_experience || 0), history)
+      setReading(r)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
-  }, []);
+  }, [])
 
-  useEffect(() => {
-    (async () => {
-      // Fetch in parallel: threat report is free, so it shouldn't block
-      // the shield score even if the shield LLM path takes a few seconds.
-      await Promise.all([fetchShield(), fetchThreatReport(), fetchWeeklySignal()]);
-      setLoading(false);
-    })();
-  }, []);
+  useEffect(() => { load() }, [load])
+  const onRefresh = useCallback(() => { setRefreshing(true); load() }, [load])
 
-  const handleRefresh = useCallback(async () => {
-    mediumHaptic();
-    setRefreshing(true);
-    await Promise.all([fetchShield(), fetchThreatReport(), fetchWeeklySignal()]);
-    setRefreshing(false);
-  }, [fetchShield, fetchThreatReport, fetchWeeklySignal]);
-
-  function toggleFeature(f: ActiveFeature) {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setActiveFeature(activeFeature === f ? null : f);
-  }
-
-  // Scan
-  const runScan = useCallback(async () => {
-    setScanLoading(true);
-    try {
-      const res = await dilly.fetch('/ai-arena/scan', { method: 'POST', body: JSON.stringify({}) });
-      if (res.ok) { const d = await res.json(); setScanResults(d); }
-    } catch {} finally { setScanLoading(false); }
-  }, []);
-
-  // Replace
-  const runReplace = useCallback(async () => {
-    const text = replaceInputRef.current.trim();
-    if (text.length < 10) return;
-    setReplaceLoading(true);
-    try {
-      const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 30_000);
-      const res = await dilly.fetch('/ai-arena/replace-test', { method: 'POST', body: JSON.stringify({ bullet: text }), signal: ctrl.signal });
-      if (res.ok) { const d = await res.json(); setReplaceResult(d); }
-    } catch {} finally { setReplaceLoading(false); }
-  }, []);
-
-  // Simulate
-  const runSim = useCallback(async () => {
-    const text = simJobRef.current.trim();
-    if (!text) return;
-    setSimLoading(true);
-    try {
-      const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 60_000);
-      const res = await dilly.fetch('/ai-arena/simulate', { method: 'POST', body: JSON.stringify({ job_title: text }), signal: ctrl.signal });
-      if (res.ok) { const d = await res.json(); setSimResult(d); }
-    } catch {} finally { setSimLoading(false); }
-  }, []);
-
-  const disruptionPct = shield?.disruption_pct ?? 0;
-  const cohort = shield?.cohort ?? 'your field';
-  const vulnerableSignals = shield?.vulnerable_signals ?? [];
-  const recommendation = shield?.recommendation ?? '';
-
-  /* Next-move deck.
-     One high-signal "do this next" action, derived from whatever Dilly
-     already knows about the user. Order matters: what_to_learn is the
-     sharpest (already scoped to the role and ranked), then the old
-     recommendation field as fallback, then a moat-building move built
-     from the top vulnerable task. Users cycle through with "Show me
-     another move" rather than seeing all of them stacked. */
-  const moves = useMemo(() => {
-    const out: { verb: string; why: string; msg: string }[] = [];
-    const roleName = threatReport?.display || cohort;
-
-    (threatReport?.what_to_learn || []).slice(0, 3).forEach((t: string) => {
-      out.push({
-        verb: t,
-        why: `${roleName} is seeing ${threatReport?.threat_pct ?? disruptionPct}% AI shift. This is the top play Dilly has for your field right now.`,
-        msg: `The top play for my field right now is "${t}". Help me actually start doing this this week. Begin by asking what I've already tried.`,
-      });
-    });
-
-    if (recommendation) {
-      out.push({
-        verb: recommendation,
-        why: `Based on everything Dilly knows about you in ${cohort}.`,
-        msg: `Dilly suggested: "${recommendation}". Walk me through the very first step. Ask me one question at a time.`,
-      });
-    }
-
-    const firstVuln = threatReport?.vulnerable_tasks?.[0] || (typeof vulnerableSignals?.[0] === 'string' ? vulnerableSignals[0] : vulnerableSignals?.[0]?.signal);
-    if (firstVuln) {
-      out.push({
-        verb: "Rewrite your profile around work AI can't do",
-        why: `"${firstVuln}" is what AI is eating in your field. Lead with the part it can't touch.`,
-        msg: `In my field AI is eating "${firstVuln}". Help me rewrite my Dilly Profile so the first thing a recruiter sees is the part AI can't do.`,
-      });
-    }
-
-    if (out.length === 0) {
-      out.push({
-        verb: 'Tell Dilly what you actually do',
-        why: 'Without a clear role, there is no threat report and no plan. 30 seconds, one sentence.',
-        msg: "Help me nail down my current role in one sentence so you can give me a real AI-readiness plan.",
-      });
-    }
-
-    return out;
-  }, [threatReport, recommendation, cohort, disruptionPct, vulnerableSignals]);
-
-  const currentMove = moves[moveIndex % moves.length];
-  const cycleMove = () => setMoveIndex((i) => (i + 1) % moves.length);
+  const playbook = useMemo<CohortPlaybook>(
+    () => resolvePlaybook(profile?.cohorts || []),
+    [profile],
+  )
+  const signals = useMemo<Signals>(
+    () => deriveSignals(feed, apps, playbook),
+    [feed, apps, playbook],
+  )
 
   if (loading) {
-    const ARENA_LOADING = [
-      'Scanning your AI readiness...',
-      'Analyzing your field...',
-      'Checking what AI can replace...',
-      'Finding your edge...',
-      'Building your playbook...',
-    ];
-    return <ArenaLoadingState texts={ARENA_LOADING} />;
+    return (
+      <DillyLoadingState
+        insetTop={insets.top}
+        mood="thinking"
+        messages={[
+          'Opening the command deck…',
+          'Reading your market…',
+          'Pulling threats + signals…',
+        ]}
+      />
+    )
+  }
+
+  // Gate: not enough facts. Show a single-screen prompt surface.
+  const factCount = facts.length
+  if (factCount < MIN_FACTS) {
+    return (
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.surface.bg }}
+        contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 60 }}
+      >
+        <View style={{ paddingHorizontal: 20, marginBottom: 4 }}>
+          <Text style={[styles.modeEyebrow, { color: theme.accent }]}>{modeLabel(mode).toUpperCase()}</Text>
+          <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>AI Arena</Text>
+        </View>
+        <ArenaGate
+          factCount={factCount}
+          threshold={MIN_FACTS}
+          prompts={gatePrompts(mode, playbook, profile)}
+        />
+      </ScrollView>
+    )
   }
 
   return (
-    <KeyboardAvoidingView style={[a.container, { paddingTop: insets.top, backgroundColor: theme.surface.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* First-visit coach mark. Dismisses on any tap, never
-          returns. ID is versioned: bumping to v2 re-shows it. */}
-      <FirstVisitCoach
-        id={isHolder ? 'arena-holder-v1' : 'arena-seeker-v1'}
-        iconName="shield-checkmark"
-        headline={isHolder
-          ? 'What AI is about to change about your field.'
-          : 'The real threats to your next job, and how to answer them.'}
-        subline={isHolder
-          ? "Dilly reads your role and shows what's shifting this quarter."
-          : 'Dilly scans the market and names what to build next so you stay ahead.'}
-      />
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.surface.bg }}
+      contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 60 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
+    >
+      {/* Header — mode label + wordmark. No chrome. */}
+      <View style={styles.header}>
+        <Text style={[styles.modeEyebrow, { color: theme.accent }]}>{modeLabel(mode).toUpperCase()}</Text>
+        <Text style={[styles.wordmark, { color: theme.surface.t1 }]}>AI Arena</Text>
+        <Text style={[styles.tagline, { color: theme.surface.t2 }]}>{modeTagline(mode)}</Text>
+      </View>
 
-      <ScrollView keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[a.scroll, { paddingBottom: insets.bottom + 40 }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.accent} progressBackgroundColor={theme.surface.bg} />}
+      {/* Centerpiece by mode. */}
+      {mode === 'holder' ? (
+        <HolderHero reading={reading} signals={signals} playbook={playbook} />
+      ) : mode === 'seeker' ? (
+        <SeekerHero signals={signals} playbook={playbook} profile={profile} />
+      ) : (
+        <StudentHero playbook={playbook} profile={profile} />
+      )}
+
+      {/* Mode-specific tiles. */}
+      <Text style={[styles.sectionTitle, { color: theme.surface.t3 }]}>TOOLS</Text>
+      <View style={styles.grid}>
+        {modeTiles(mode, signals).map(t => (
+          <ArenaTile
+            key={t.title}
+            icon={t.icon}
+            title={t.title}
+            subtitle={t.subtitle}
+            signal={t.signal}
+            onPress={() => router.push(t.route as any)}
+          />
+        ))}
+      </View>
+
+      {/* Mode-agnostic closer: every arena surface reminds the user
+          that feeding Dilly directly improves every tool above. */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => router.push('/(app)/my-dilly-profile')}
+        style={[styles.feederRow, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}
       >
-
-        {/* Header. command-center framing. Works for students AND people
-            who already have a job: it's the same question either way. */}
-        <FadeInView delay={0}>
-          <View style={{ paddingTop: 8, paddingBottom: 18 }}>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: theme.surface.t1, lineHeight: 32, letterSpacing: -0.6 }}>
-              {isHolder
-                ? 'Where your field is going.'
-                : 'Your career intelligence, updated live.'}
-            </Text>
-            <Text style={{ fontSize: 13, color: theme.surface.t2, marginTop: 6, lineHeight: 19 }}>
-              {isHolder
-                ? "What's shifting, what to invest in this quarter, and where your moat is."
-                : "What AI is doing to your role, what it isn't, and exactly what to do this month."}
-            </Text>
-          </View>
-        </FadeInView>
-
-        {/* Per-user_path narrator block. Same Arena data below either
-            way — threat %, signals, tools — but the MEANING of that
-            data isn't the same for a dropout as it is for a veteran
-            as it is for a senior_reset. This card sets the frame
-            before the numbers arrive. Zero LLM cost. Hides itself if
-            the cached profile hasn't loaded yet. */}
-        {(() => {
-          const cachedProfile = getCached<any>('profile:full');
-          const userPath = cachedProfile?.user_path;
-          if (!userPath) return null;
-          const framing = framingForPath(userPath);
-          return (
-            <FadeInView delay={5}>
-              <View style={{
-                marginBottom: 14,
-                padding: 14,
-                borderRadius: 12,
-                borderWidth: 1,
-                backgroundColor: theme.accentSoft,
-                borderColor: theme.accentBorder,
-              }}>
-                <Text style={{
-                  fontSize: 10,
-                  fontWeight: '900',
-                  letterSpacing: 1.4,
-                  color: theme.accent,
-                  marginBottom: 5,
-                }}>
-                  {framing.eyebrow}
-                </Text>
-                <Text style={{
-                  fontSize: 13,
-                  lineHeight: 19,
-                  fontWeight: '600',
-                  color: theme.surface.t1,
-                }}>
-                  {framing.line}
-                </Text>
-              </View>
-            </FadeInView>
-          );
-        })()}
-
-        {/* ════════════════════════════════════════════════════════
-            THREAT REPORT. the painkiller card for EVERYONE.
-            Zero LLM cost. Works whether or not user has a resume.
-            Shows role-based AI threat data with actionable next moves.
-            ════════════════════════════════════════════════════════ */}
-
-        {threatReport ? (
-          <FadeInView delay={20}>
-            <View style={[threatCard.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              {/* Top: role + threat level */}
-              <View style={threatCard.topRow}>
-                <View>
-                  <Text style={[threatCard.eyebrow, { color: theme.accent }]}>{isHolder ? 'FIELD REPORT' : 'AI THREAT REPORT'}</Text>
-                  <Text style={[threatCard.role, { color: theme.surface.t1 }]}>{threatReport.display}</Text>
-                </View>
-                <View style={[threatCard.levelBadge, {
-                  backgroundColor: (
-                    threatReport.threat_level === 'severe' ? '#DC2626' + '22' :
-                    threatReport.threat_level === 'high' ? '#EA580C' + '22' :
-                    threatReport.threat_level === 'moderate' ? '#D97706' + '22' :
-                    '#16A34A' + '22'
-                  ),
-                  borderColor: (
-                    threatReport.threat_level === 'severe' ? '#DC2626' :
-                    threatReport.threat_level === 'high' ? '#EA580C' :
-                    threatReport.threat_level === 'moderate' ? '#D97706' :
-                    '#16A34A'
-                  ),
-                }]}>
-                  <Text style={[threatCard.levelText, {
-                    color: (
-                      threatReport.threat_level === 'severe' ? '#FCA5A5' :
-                      threatReport.threat_level === 'high' ? '#FDBA74' :
-                      threatReport.threat_level === 'moderate' ? '#FCD34D' :
-                      '#86EFAC'
-                    ),
-                  }]}>
-                    {threatReport.threat_level.toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Big number + headline */}
-              <View style={threatCard.bigRow}>
-                <Text style={[threatCard.bigPct, { color: theme.surface.t1 }]}>{threatReport.threat_pct}%</Text>
-                <Text style={[threatCard.headline, { color: theme.surface.t2 }]}>{threatReport.headline}</Text>
-              </View>
-
-              {/* Recent signal. the scary news point */}
-              <View style={[threatCard.signalBox, { backgroundColor: theme.surface.s2, borderLeftColor: theme.accent }]}>
-                <Ionicons name="newspaper-outline" size={12} color={theme.accent} />
-                <Text style={[threatCard.signalText, { color: theme.surface.t1 }]}>{threatReport.recent_signal}</Text>
-              </View>
-
-              {/* Vulnerable tasks */}
-              <Text style={[threatCard.sectionLabel, { color: theme.surface.t3 }]}>{isHolder ? "WHAT'S SHIFTING" : 'MOST AT RISK'}</Text>
-              {(threatReport.vulnerable_tasks || []).slice(0, 4).map((t: string, i: number) => (
-                <View key={`v${i}`} style={threatCard.bulletRow}>
-                  <View style={[threatCard.bulletDot, { backgroundColor: '#EA580C' }]} />
-                  <Text style={[threatCard.bulletText, { color: theme.surface.t2 }]}>{t}</Text>
-                </View>
-              ))}
-
-              {/* Safe tasks */}
-              <Text style={[threatCard.sectionLabel, { marginTop: 12, color: theme.surface.t3 }]}>{isHolder ? 'YOUR MOAT' : "WHERE YOU'RE SAFE"}</Text>
-              {(threatReport.safe_tasks || []).slice(0, 4).map((t: string, i: number) => (
-                <View key={`s${i}`} style={threatCard.bulletRow}>
-                  <View style={[threatCard.bulletDot, { backgroundColor: '#16A34A' }]} />
-                  <Text style={[threatCard.bulletText, { color: theme.surface.t2 }]}>{t}</Text>
-                </View>
-              ))}
-
-              {/* What to learn */}
-              <Text style={[threatCard.sectionLabel, { marginTop: 12, color: theme.surface.t3 }]}>{isHolder ? "THIS QUARTER'S PLAYS" : 'WHAT TO LEARN NEXT'}</Text>
-              {(threatReport.what_to_learn || []).slice(0, 3).map((t: string, i: number) => (
-                <View key={`l${i}`} style={threatCard.bulletRow}>
-                  <View style={[threatCard.bulletDot, { backgroundColor: theme.accent }]} />
-                  <Text style={[threatCard.bulletText, { color: theme.surface.t2 }]}>{t}</Text>
-                </View>
-              ))}
-
-              {/* 2-year forecast */}
-              <View style={[threatCard.forecastBox, { backgroundColor: theme.surface.s2 }]}>
-                <Text style={[threatCard.forecastLabel, { color: theme.accent }]}>2-YEAR FORECAST</Text>
-                <Text style={[threatCard.forecastText, { color: theme.surface.t1 }]}>{threatReport.forecast_2yr}</Text>
-              </View>
-
-              {/* Dilly's take CTA */}
-              <View style={[threatCard.dillyTake, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-                <Ionicons name="sparkles" size={14} color={theme.accent} />
-                <Text style={[threatCard.dillyTakeText, { color: theme.surface.t1 }]}>{threatReport.dilly_take}</Text>
-              </View>
-
-              <AnimatedPressable
-                style={[threatCard.ctaBtn, { backgroundColor: theme.accent }]}
-                onPress={() => openDillyOverlay({
-                  isPaid: false,
-                  initialMessage: isHolder
-                    ? `I'm a ${threatReport.display}. My field's AI shift is ${threatReport.threat_level} (${threatReport.threat_pct}%). Given where I am in my career, what's the smartest move for me this quarter?`
-                    : `My AI threat level is ${threatReport.threat_level} (${threatReport.threat_pct}%). I'm a ${threatReport.display}. What specific moves should I make this month to become harder to replace?`,
-                })}
-                scaleDown={0.97}
-              >
-                <Ionicons name="chatbubbles" size={14} color={onAccentText} />
-                <Text style={[threatCard.ctaBtnText, { color: onAccentText }]}>
-                  {isHolder ? "Talk to Dilly about this quarter" : 'Ask Dilly what to do about this'}
-                </Text>
-              </AnimatedPressable>
-            </View>
-          </FadeInView>
-        ) : (
-          /* No role resolved. show a prompt to tell us what you do */
-          <FadeInView delay={20}>
-            <View style={[threatCard.promptCard, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
-              <Text style={[threatCard.promptEyebrow, { color: theme.accent }]}>GET YOUR AI THREAT REPORT</Text>
-              <Text style={[threatCard.promptTitle, { color: theme.surface.t1 }]}>What do you do right now?</Text>
-              <Text style={[threatCard.promptSub, { color: theme.surface.t2 }]}>
-                Tell Dilly your role (or the one you're aiming for). You'll get a personalized
-                read on how AI is reshaping it. what's at risk, what's safe, what to learn.
-              </Text>
-              <TextInput
-                style={[threatCard.promptInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }]}
-                placeholder="e.g. software engineer, accountant, teacher"
-                placeholderTextColor={theme.surface.t3}
-                value={threatRoleInput}
-                onChangeText={setThreatRoleInput}
-                autoCapitalize="none"
-                returnKeyType="done"
-                onSubmitEditing={() => saveRoleAndFetchReport(threatRoleInput)}
-              />
-              <AnimatedPressable
-                style={threatCard.promptBtn}
-                onPress={() => saveRoleAndFetchReport(threatRoleInput)}
-                disabled={threatSaving || !threatRoleInput.trim()}
-                scaleDown={0.97}
-              >
-                {threatSaving
-                  ? <ActivityIndicator size="small" color="#0B1426" />
-                  : <Text style={threatCard.promptBtnText}>See my AI threat report</Text>
-                }
-              </AnimatedPressable>
-            </View>
-          </FadeInView>
-        )}
-
-        {/* ════════════════════════════════════════════════════════
-            THIS WEEK IN YOUR FIELD. hand-curated signal. Zero LLM.
-            Gives people a reason to open the Arena every week, even
-            when they're stable and their threat report hasn't changed.
-            ════════════════════════════════════════════════════════ */}
-
-        {/* Field Pulse — the weekly-return anchor.
-            Replaces the old inline Weekly Signal card. Adds a NEW
-            badge when the iso_week is newer than user's last_seen,
-            a personalized hook from their recent Pulse / wins, and
-            an explicit "Next refresh: in N days" footer so users
-            have a concrete reason to come back weekly. The old
-            weeklySignal state is still fetched for backwards-compat
-            but the UI now routes through FieldPulseCard. */}
-        <FadeInView delay={30}>
-          <FieldPulseCard />
-        </FadeInView>
-
-        {/* ════════════════════════════════════════════════════════
-            YOUR NEXT MOVE. replaces the old three-Act structure
-            (THREAT / EDGE / PLAYBOOK) and the Shield Score ring.
-            Single focused card, one sentence, one button. Users
-            cycle through alternatives with "Show me another move"
-            instead of seeing 6 stacked cards.
-            ════════════════════════════════════════════════════════ */}
-
-        <FadeInView delay={40}>
-          <View style={[nm.card, { backgroundColor: theme.surface.s1, borderColor: theme.accentBorder }]}>
-            <View style={nm.eyebrowRow}>
-              <View style={[nm.eyebrowDot, { backgroundColor: theme.accent, shadowColor: theme.accent }]} />
-              <Text style={[nm.eyebrow, { color: theme.accent }]}>YOUR NEXT MOVE</Text>
-              {moves.length > 1 ? (
-                <Text style={[nm.indexText, { color: theme.surface.t3 }]}>{(moveIndex % moves.length) + 1} / {moves.length}</Text>
-              ) : null}
-            </View>
-
-            <Text style={[nm.verb, { color: theme.surface.t1 }]}>{currentMove.verb}</Text>
-            <Text style={[nm.why, { color: theme.surface.t2 }]}>{currentMove.why}</Text>
-
-            <AnimatedPressable
-              style={[nm.primaryBtn, { backgroundColor: theme.accent }]}
-              onPress={() => openDillyOverlay({
-                isPaid: false,
-                initialMessage: currentMove.msg,
-              })}
-              scaleDown={0.97}
-            >
-              <Ionicons name="chatbubbles" size={15} color="#0B1426" />
-              <Text style={nm.primaryBtnText}>Do this with Dilly</Text>
-            </AnimatedPressable>
-
-            {moves.length > 1 ? (
-              <AnimatedPressable
-                style={nm.ghostBtn}
-                onPress={cycleMove}
-                scaleDown={0.97}
-                hitSlop={8}
-              >
-                <Ionicons name="refresh" size={13} color={theme.surface.t2} />
-                <Text style={[nm.ghostBtnText, { color: theme.surface.t2 }]}>Show me another move</Text>
-              </AnimatedPressable>
-            ) : null}
-          </View>
-        </FadeInView>
-
-        {/* ════════════════════════════════════════════════════════
-            PROVE IT. Seeker/student only. Threat Scanner is the
-            single tool surfaced by default; every other tool lives
-            behind "More AI tools" below.
-
-            Holders end here. Their field report above already covers
-            what's shifting / moat / plays; no resume scanning needed.
-            ════════════════════════════════════════════════════════ */}
-
-        {!isHolder && shield && shield.tools_unlocked === false ? (
-          /* Free tier gate for LLM TOOLS ONLY. Skill Vault + Disruption
-             Index render below for everyone — they are profile-derived
-             and lookup-based, no LLM call. This card is about the tools
-             that DO call Haiku (Threat Scanner, Replace Me, Career Sim,
-             Firewall) which stay paid. */
-          <FadeInView delay={80}>
-            <View style={[nm.lockedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="lock-closed" size={14} color={theme.accent} />
-                <Text style={[nm.lockedTitle, { color: theme.surface.t1 }]}>LIVE AI TOOLS LOCKED</Text>
-              </View>
-              <Text style={[nm.lockedBody, { color: theme.surface.t2 }]}>
-                Threat Scanner, Replace Me, Career Sim, and Firewall run live on your profile with Dilly. Your Skill Vault and Disruption Index below are always free.
-              </Text>
-              <AnimatedPressable
-                style={[nm.lockedBtn, { backgroundColor: theme.accent }]}
-                onPress={() => router.push('/(app)/settings')}
-                scaleDown={0.97}
-              >
-                <Ionicons name="sparkles" size={13} color="#0B1426" />
-                <Text style={nm.lockedBtnText}>Unlock the live tools</Text>
-              </AnimatedPressable>
-            </View>
-          </FadeInView>
-        ) : null}
-
-        {!isHolder && shield && shield.tools_unlocked === true ? (
-          <>
-            <FadeInView delay={80}>
-              <View style={nm.proveRow}>
-                <Text style={[nm.sectionEyebrow, { color: theme.surface.t3 }]}>PROVE IT</Text>
-                {shield.next_refresh ? (
-                  <Text style={[nm.refreshText, { color: theme.surface.t3 }]}>{shield.next_refresh}</Text>
-                ) : null}
-              </View>
-            </FadeInView>
-
-            {/* Threat Scanner. kept surfaced because it's the tool that
-                makes the "next move" concrete by naming bullets that
-                are at risk right now. */}
-            <FadeInView delay={100}>
-              <ToolRow
-                icon="scan"
-                title="Threat Scanner"
-                sub="See which bullets AI can replace"
-                color={theme.accent}
-                onPress={() => toggleFeature('scan')}
-                active={activeFeature === 'scan'}
-              />
-            </FadeInView>
-
-            {activeFeature === 'scan' && (
-              <FadeInView delay={0}>
-                <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                  <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Threat Scanner</Text>
-                  <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>Every skill and experience in your Dilly Profile, analyzed for AI vulnerability.</Text>
-                  {!scanResults && !scanLoading && (
-                    <AnimatedPressable
-                      style={[a.actionBtn, { backgroundColor: theme.accent }]}
-                      onPress={runScan}
-                      scaleDown={0.97}
-                    >
-                      <Ionicons name="flash" size={16} color={onAccentText} />
-                      <Text style={[a.actionBtnText, { color: onAccentText }]}>Scan My Profile</Text>
-                    </AnimatedPressable>
-                  )}
-                  {scanLoading && <ActivityIndicator size="small" color={ACCENT} style={{ paddingVertical: 20 }} />}
-                  {scanResults && (
-                    <>
-                      <View style={a.scanSummary}>
-                        <View style={[a.scanStat, { backgroundColor: GREEN + '15' }]}>
-                          <Text style={[a.scanStatNum, { color: GREEN }]}>{scanResults.summary?.safe ?? 0}</Text>
-                          <Text style={a.scanStatLabel}>Safe</Text>
-                        </View>
-                        <View style={[a.scanStat, { backgroundColor: AMBER + '15' }]}>
-                          <Text style={[a.scanStatNum, { color: AMBER }]}>{scanResults.summary?.at_risk ?? 0}</Text>
-                          <Text style={a.scanStatLabel}>At Risk</Text>
-                        </View>
-                        <View style={[a.scanStat, { backgroundColor: ACCENT + '15' }]}>
-                          <Text style={[a.scanStatNum, { color: ACCENT }]}>{scanResults.summary?.neutral ?? 0}</Text>
-                          <Text style={a.scanStatLabel}>Neutral</Text>
-                        </View>
-                      </View>
-                      {(scanResults.bullets || []).slice(0, 10).map((b: any, i: number) => {
-                        const c = b.status === 'safe' ? GREEN : b.status === 'at_risk' ? AMBER : ACCENT;
-                        return (
-                          <View key={i} style={[a.bulletRow, { borderLeftColor: c }]}>
-                            <Ionicons name={b.status === 'safe' ? 'shield-checkmark' : b.status === 'at_risk' ? 'warning' : 'help-circle'} size={14} color={c} />
-                            <View style={{ flex: 1 }}>
-                              <Text style={a.bulletText} numberOfLines={2}>{b.text}</Text>
-                              <Text style={a.bulletReason}>{b.reason}</Text>
-                            </View>
-                            {b.status === 'at_risk' && (
-                              <AnimatedPressable
-                                style={a.fixBtn}
-                                onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `This bullet is AI-vulnerable: "${b.text}". Rewrite it to emphasize human skills.` })}
-                                scaleDown={0.95}
-                              >
-                                <Text style={a.fixBtnText}>Fix</Text>
-                              </AnimatedPressable>
-                            )}
-                          </View>
-                        );
-                      })}
-                    </>
-                  )}
-                </View>
-              </FadeInView>
-            )}
-
-            {/* Collapsed drawer. Everything that used to live in the
-                "AI TOOLS" section sits here now, one tap away. */}
-            <FadeInView delay={120}>
-              <AnimatedPressable
-                style={nm.drawerHeader}
-                onPress={() => { LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut); setShowMoreTools(v => !v); }}
-                scaleDown={0.98}
-              >
-                <Text style={nm.drawerText}>More AI tools</Text>
-                <Ionicons name={showMoreTools ? 'chevron-up' : 'chevron-down'} size={16} color={SUB} />
-              </AnimatedPressable>
-            </FadeInView>
-          </>
-        ) : null}
-
-        {/* More-tools drawer. Everything below is conditionally
-            rendered based on showMoreTools state from the drawer
-            header above. Paid-only; free users see the locked card
-            at the top of the PROVE IT section instead. */}
-        {!isHolder && shield?.tools_unlocked === true && showMoreTools && (<>
-
-        {/* 2. Replace Me */}
-        <FadeInView delay={0}>
-          <ToolRow
-            icon="swap-horizontal"
-            title="Replace Me"
-            sub="Can AI do what you do?"
-            color={AMBER}
-            onPress={() => toggleFeature('replace')}
-            active={activeFeature === 'replace'}
-          />
-        </FadeInView>
-
-        {activeFeature === 'replace' && (
-          <FadeInView delay={0}>
-            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Can AI Replace You?</Text>
-              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>Paste a bullet. AI will try to write it. See if it can.</Text>
-              <TextInput
-                style={[a.input, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }]}
-                defaultValue="" onChangeText={t => { replaceInputRef.current = t; }}
-                placeholder="Paste a bullet from your profile..." placeholderTextColor={theme.surface.t3} multiline ref={replaceFieldRef} />
-              <AnimatedPressable
-                style={[a.actionBtn, { backgroundColor: AMBER }]}
-                onPress={runReplace} disabled={replaceLoading} scaleDown={0.97}
-              >
-                {replaceLoading ? <ActivityIndicator size="small" color="#000" /> : (
-                  <><Ionicons name="flash" size={16} color="#000" /><Text style={[a.actionBtnText, { color: '#000' }]}>Test It</Text></>
-                )}
-              </AnimatedPressable>
-              {replaceResult && (
-                <View style={[a.resultCard, { borderColor: replaceResult.verdict === 'human-only' ? GREEN + '40' : replaceResult.verdict === 'replaceable' ? AMBER + '40' : ACCENT + '40' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons
-                      name={replaceResult.verdict === 'human-only' ? 'shield-checkmark' : replaceResult.verdict === 'replaceable' ? 'warning' : 'help-circle'}
-                      size={18} color={replaceResult.verdict === 'human-only' ? GREEN : replaceResult.verdict === 'replaceable' ? AMBER : ACCENT} />
-                    <Text style={[a.resultVerdict, { color: replaceResult.verdict === 'human-only' ? GREEN : replaceResult.verdict === 'replaceable' ? AMBER : ACCENT }]}>
-                      {replaceResult.verdict === 'human-only' ? 'AI Cannot Replace This' : replaceResult.verdict === 'replaceable' ? 'AI Can Replace This' : 'Borderline'}
-                    </Text>
-                    <Text style={a.resultScore}>{replaceResult.replaceability}/10</Text>
-                  </View>
-                  <Text style={a.resultWhy}>{replaceResult.why}</Text>
-                  {replaceResult.ai_version && (
-                    <View style={a.aiAttempt}>
-                      <Text style={a.aiAttemptLabel}>AI'S ATTEMPT</Text>
-                      <Text style={a.aiAttemptText}>{replaceResult.ai_version}</Text>
-                    </View>
-                  )}
-                  {replaceResult.verdict !== 'human-only' && (
-                    <AnimatedPressable style={a.fixInline}
-                      onPress={() => openDillyOverlay({ isPaid: true, initialMessage: `AI rated my bullet ${replaceResult.replaceability}/10 replaceable: "${replaceResult.original || replaceInputRef.current}". Rewrite it so AI CAN'T replicate it.` })}
-                      scaleDown={0.97}>
-                      <Ionicons name="sparkles" size={12} color={ACCENT} /><Text style={{ fontSize: 12, fontWeight: '600', color: ACCENT }}>Make it AI-proof</Text>
-                    </AnimatedPressable>
-                  )}
-                </View>
-              )}
-            </View>
-          </FadeInView>
-        )}
-
-        {/* 3. Career Sim */}
-        <FadeInView delay={500}>
-          <ToolRow
-            icon="rocket"
-            title="Career Sim"
-            sub={shield?.tools_unlocked === false ? "Locked. Upgrade to simulate" : "See how AI reshapes your career over 5 years"}
-            color={AMBER}
-            onPress={() => { if (shield?.tools_unlocked === false) { router.push('/(app)/settings'); return; } toggleFeature('simulate'); }}
-            active={activeFeature === 'simulate'}
-          />
-        </FadeInView>
-
-        {activeFeature === 'simulate' && (
-          <FadeInView delay={0}>
-            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Career Simulator</Text>
-              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>See how AI transforms your dream role over 5 years.</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TextInput
-                  style={[a.input, { flex: 1, backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }]}
-                  defaultValue="" onChangeText={t => { simJobRef.current = t; }}
-                  placeholder="Job title (e.g. Data Scientist)" placeholderTextColor={theme.surface.t3} ref={simFieldRef} />
-                <AnimatedPressable
-                  style={[a.actionBtn, { paddingHorizontal: 16, backgroundColor: AMBER }]}
-                  onPress={runSim} disabled={simLoading} scaleDown={0.97}>
-                  {simLoading ? <ActivityIndicator size="small" color="#000" /> : <Ionicons name="rocket" size={16} color="#000" />}
-                </AnimatedPressable>
-              </View>
-              {simResult && (
-                <>
-                  <Text style={a.simVerdict}>{simResult.verdict}</Text>
-                  {(simResult.years || []).map((y: any, i: number) => {
-                    const yc = y.risk_level === 'high' ? AMBER : y.risk_level === 'medium' ? AMBER : GREEN;
-                    return (
-                      <View key={y.year} style={a.yearRow}>
-                        <View style={[a.yearDot, { backgroundColor: yc }]} />
-                        <View style={a.yearContent}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Text style={a.yearLabel}>Year {y.year}</Text>
-                            <View style={[a.yearBadge, { backgroundColor: yc + '20' }]}>
-                              <Text style={[a.yearBadgeText, { color: yc }]}>{y.ai_overlap_pct}% AI</Text>
-                            </View>
-                          </View>
-                          <Text style={a.yearTitle}>{y.title}</Text>
-                          <Text style={a.yearDesc}>{y.description}</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                  {simResult.survival_strategy && (
-                    <View style={a.strategyBox}>
-                      <Ionicons name="bulb" size={14} color={AMBER} />
-                      <Text style={a.strategyText}>{simResult.survival_strategy}</Text>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-          </FadeInView>
-        )}
-
-        {/* 5. Firewall */}
-        <FadeInView delay={540}>
-          <ToolRow icon="shield-half" title="Firewall" sub="How would an AI recruiter judge you?" color={AMBER} onPress={() => toggleFeature('firewall')} active={activeFeature === 'firewall'} />
-        </FadeInView>
-
-        {activeFeature === 'firewall' && (
-          <FadeInView delay={0}>
-            <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-              <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Profile Firewall</Text>
-              <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>How would an AI recruiter evaluate your profile? Find vulnerabilities before you apply.</Text>
-              <AnimatedPressable style={[a.actionBtn, { backgroundColor: AMBER }]}
-                onPress={() => openDillyOverlay({
-                  isPaid: true,
-                  initialMessage: `Analyze my Dilly Profile as if you were an AI screening tool at a top company. Based on everything you know about me, what vulnerabilities would you flag? What would get me auto-rejected? Be specific and harsh.`,
-                })} scaleDown={0.97}>
-                <Ionicons name="scan" size={16} color="#000" /><Text style={[a.actionBtnText, { color: '#000' }]}>Run Firewall Check</Text>
-              </AnimatedPressable>
-            </View>
-          </FadeInView>
-        )}
-
-        </>)}
-        {/* /isHolder + tools_unlocked + showMoreTools gate on the drawer */}
-
-        {/* ════════════════════════════════════════════════════════
-            FREE TOOLS — render for EVERYONE (free + paid), non-holder.
-            Skill Vault + Disruption Index are profile-derived and
-            role-lookup-based respectively. Neither calls an LLM, so
-            there's no cost reason to gate them. Previously sat inside
-            the paid-only drawer; free users saw nothing. User asked
-            for this split: non-LLM tools are free, LLM tools stay paid.
-            ════════════════════════════════════════════════════════ */}
-
-        {!isHolder && shield ? (
-          <>
-            {/* Section header — only shown to free users. Paid users
-                see these tools alongside their paid ones as part of
-                the whole Arena, so 'FREE FOR YOU' reads as awkward
-                marketing to them. On free tier it signals 'here's
-                what's yours without paying' which is the point. */}
-            {shield.tools_unlocked === false ? (
-              <FadeInView delay={600}>
-                <View style={nm.proveRow}>
-                  <Text style={[nm.sectionEyebrow, { color: theme.surface.t3 }]}>FREE FOR YOU</Text>
-                </View>
-              </FadeInView>
-            ) : null}
-
-            {/* Skill Vault. Pure profile render. The locked-skill pill
-                used to openDillyOverlay({isPaid:true}) which would
-                trigger the paywall for free users — on free tier we
-                route to My Dilly Profile where the user can manually
-                add a fact for that skill. Paid users keep the chat
-                route so they can riff with Dilly about developing it. */}
-            <FadeInView delay={620}>
-              <ToolRow
-                icon="lock-closed"
-                title="Skill Vault"
-                sub="Your AI-proof skills vs the ones you need"
-                color={GREEN}
-                onPress={() => toggleFeature('vault')}
-                active={activeFeature === 'vault'}
-              />
-            </FadeInView>
-
-            {activeFeature === 'vault' && (
-              <FadeInView delay={0}>
-                <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                  <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Skill Vault</Text>
-                  <Text style={[a.expandedSub, { color: theme.surface.t2 }]}>AI-proof skills for your field. Unlocked = in your profile. Locked = develop next.</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                    {(shield.resistant_signals || []).slice(0, 5).map((s: string, i: number) => (
-                      <View key={`u-${i}`} style={[a.skillUnlocked, { backgroundColor: GREEN + '12', borderColor: GREEN + '40' }]}>
-                        <Ionicons name="lock-open" size={11} color={GREEN} />
-                        <Text style={[a.skillUnlockedText, { color: GREEN }]} numberOfLines={1}>{s.slice(0, 40)}</Text>
-                      </View>
-                    ))}
-                    {(shield.ai_resistant_skills || []).slice(0, 5).map((s: string, i: number) => {
-                      const isPaid = shield.tools_unlocked === true;
-                      return (
-                        <AnimatedPressable
-                          key={`l-${i}`}
-                          style={[a.skillLocked, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border }]}
-                          onPress={() => {
-                            if (isPaid) {
-                              openDillyOverlay({
-                                isPaid: true,
-                                initialMessage: `I need to develop "${s}" as an AI-proof skill. How do I build this and add it to my Dilly Profile?`,
-                              });
-                            } else {
-                              // Free tier: no paid chat. Route to My Dilly
-                              // where they can manually add a fact for it.
-                              router.push('/(app)/my-dilly-profile' as any);
-                            }
-                          }}
-                          scaleDown={0.95}>
-                          <Ionicons name="lock-closed" size={11} color={theme.surface.t3} />
-                          <Text style={[a.skillLockedText, { color: theme.surface.t2 }]} numberOfLines={1}>{s}</Text>
-                          <Ionicons
-                            name={isPaid ? 'sparkles' : 'add-circle-outline'}
-                            size={9}
-                            color={theme.accent}
-                            style={{ opacity: 0.6 }}
-                          />
-                        </AnimatedPressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              </FadeInView>
-            )}
-
-            {/* Disruption Index. Pure data render from shield payload —
-                role-lookup on the backend, no LLM. Free for everyone. */}
-            <FadeInView delay={660}>
-              <ToolRow
-                icon="bar-chart"
-                title="Disruption Index"
-                sub="How much AI is disrupting your field"
-                color={AMBER}
-                onPress={() => toggleFeature('index')}
-                active={activeFeature === 'index'}
-              />
-            </FadeInView>
-
-            {activeFeature === 'index' && (
-              <FadeInView delay={0}>
-                <View style={[a.expandedCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
-                  <Text style={[a.expandedTitle, { color: theme.surface.t1 }]}>Displacement Index</Text>
-                  <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-                    <Text style={[a.bigNum, { color: disruptionPct >= 40 ? AMBER : disruptionPct >= 25 ? AMBER : GREEN }]}>{disruptionPct}%</Text>
-                    <Text style={{ fontSize: 12, color: SUB }}>of entry-level {(shield.cohort || '').split(' ')[0]} roles disrupted</Text>
-                  </View>
-                  {shield.disruption_headline && (
-                    <View style={a.quoteBox}><Text style={a.quoteText}>{shield.disruption_headline}</Text></View>
-                  )}
-                  {(shield.ai_resistant_skills?.length > 0 || shield.ai_vulnerable_skills?.length > 0) && (
-                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                      <View style={[a.compCol, { backgroundColor: GREEN + '08', borderColor: GREEN + '20' }]}>
-                        <Text style={[a.compLabel, { color: GREEN }]}>AI-PROOF</Text>
-                        {(shield.ai_resistant_skills || []).slice(0, 4).map((s: string, i: number) => (
-                          <Text key={i} style={a.compItem}>{s}</Text>
-                        ))}
-                      </View>
-                      <View style={[a.compCol, { backgroundColor: AMBER + '08', borderColor: AMBER + '20' }]}>
-                        <Text style={[a.compLabel, { color: AMBER }]}>AT RISK</Text>
-                        {(shield.ai_vulnerable_skills || []).slice(0, 4).map((s: string, i: number) => (
-                          <Text key={i} style={a.compItem}>{s}</Text>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </FadeInView>
-            )}
-          </>
-        ) : null}
-
-        {/* ── Footer ──────────────────────────────────────────── */}
-        <DillyFooter />
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+        <Ionicons name="sparkles" size={14} color={theme.accent} />
+        <Text style={[styles.feederText, { color: theme.surface.t1 }]}>
+          {factCount} facts feeding the arena. More facts → sharper reads.
+        </Text>
+        <Ionicons name="arrow-forward" size={14} color={theme.surface.t3} />
+      </TouchableOpacity>
+    </ScrollView>
+  )
 }
 
-// ── HolderImpactCard styles. scoped to avoid collisions with `a`.
-const h = StyleSheet.create({
-  impactCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    padding: 16, borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  impactIconWrap: {
-    width: 40, height: 40, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1,
-  },
-  impactLabel: {
-    fontSize: 10, fontWeight: '800', letterSpacing: 1.8,
-  },
-  impactText: {
-    fontSize: 14, fontWeight: '600',
-    color: '#F0F6FC', lineHeight: 20,
-  },
-});
+// ── Holder hero — Market Value Live mini ────────────────────────────────────
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+function HolderHero({
+  reading,
+  signals,
+  playbook,
+}: {
+  reading: ValueReading | null
+  signals: Signals
+  playbook: CohortPlaybook
+}) {
+  const theme = useResolvedTheme()
+  if (!reading) return null
+  return (
+    <ArenaHero
+      eyebrow="MARKET VALUE · LIVE"
+      title={fmtRange(reading.valueLow, reading.valueHigh)}
+      subtitle={reading.readout}
+      ctaLabel="Open the full read"
+      onPress={() => router.push('/(app)/arena/value')}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <ValueSparkline
+          values={reading.sparkline}
+          width={130}
+          height={54}
+          stroke={theme.accent}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={[heroMini.label, { color: theme.surface.t3 }]}>30-day trend</Text>
+          <Text style={[heroMini.big, { color: theme.surface.t1 }]}>
+            {reading.trendLabel === 'rising' ? '↑ ' : reading.trendLabel === 'falling' ? '↓ ' : '→ '}
+            {compactUsd(Math.abs(reading.trendDelta))}
+          </Text>
+          <Text style={[heroMini.smol, { color: theme.surface.t3 }]}>
+            {reading.band} · ~P{reading.peerPercentile} in {playbook.shortName}
+          </Text>
+        </View>
+      </View>
+      {signals.strongAtAnchors > 0 ? (
+        <Text style={[heroMini.pressure, { color: theme.accent }]}>
+          {signals.strongAtAnchors} anchor {signals.strongAtAnchors === 1 ? 'role' : 'roles'} in your feed pressuring comp up.
+        </Text>
+      ) : null}
+    </ArenaHero>
+  )
+}
 
-const a = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
-  scroll: { paddingHorizontal: 20, gap: 16 },
+// ── Seeker hero — Conviction Builder mini ───────────────────────────────────
 
-  // Act dividers
-  actDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 28,
-    marginBottom: 4,
-  },
-  actLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: BORDER,
-  },
-  actLabelWrap: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  actNumber: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: DIM,
-    letterSpacing: 2,
-  },
-  actTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: ACCENT,
-    letterSpacing: 2,
-  },
+function SeekerHero({
+  signals,
+  playbook,
+  profile,
+}: {
+  signals: Signals
+  playbook: CohortPlaybook
+  profile: Profile | null
+}) {
+  const theme = useResolvedTheme()
+  const target = (profile?.target_companies || [])[0]
+    || profile?.application_target
+    || playbook.anchorCompanies.tier1[0]
+  return (
+    <ArenaHero
+      eyebrow="CONVICTION · BUILDER"
+      title={`Prep for ${target}`}
+      subtitle="Your strongest assets, the gaps that will get probed, and a scripted story for the hardest question."
+      ctaLabel="Build your conviction"
+      onPress={() => router.push('/(app)/arena/conviction')}
+    >
+      <View style={{ flexDirection: 'row', gap: 14 }}>
+        <Stat theme={theme} big={String(signals.appsLast14)} label="applied · 14d" />
+        <Stat theme={theme} big={String(signals.interviewsCount)} label="interviews · 30d" />
+        <Stat theme={theme} big={String(signals.strongCount)} label="strong matches" />
+      </View>
+    </ArenaHero>
+  )
+}
 
-  // Ring section (Act 1 hero)
-  ringSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    gap: 6,
-  },
-  ringScore: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: TEXT,
-    marginTop: 8,
-  },
-  ringLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: SUB,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-  },
+// ── Student hero — Future Pulse mini ────────────────────────────────────────
 
-  // Disruption statement
-  disruptionStatement: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: SUB,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 12,
-  },
+function StudentHero({
+  playbook,
+  profile,
+}: {
+  playbook: CohortPlaybook
+  profile: Profile | null
+}) {
+  const theme = useResolvedTheme()
+  const fname = profile?.first_name || 'you'
+  return (
+    <ArenaHero
+      eyebrow="FUTURE · PULSE"
+      title={`${fname}'s Tuesday in 2029.`}
+      subtitle={`A lived-in look at your career in ${playbook.shortName}, told in four scenes.`}
+      ctaLabel="See your future day"
+      onPress={() => router.push('/(app)/arena/future')}
+    >
+      <Text style={[heroMini.vignette, { color: theme.surface.t1 }]}>
+        "{playbook.vignette.morning.slice(0, 120)}…"
+      </Text>
+      <Text style={[heroMini.vignetteMeta, { color: theme.surface.t3 }]}>
+        — 8:15 AM. Tap to read the rest.
+      </Text>
+    </ArenaHero>
+  )
+}
 
-  // Act section headers
-  actSectionHeader: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: DIM,
-    letterSpacing: 2,
-    marginTop: 12,
-    marginBottom: 2,
-  },
+// ── Tile definitions by mode ────────────────────────────────────────────────
 
-  // Signal cards
-  signalCard: {
-    backgroundColor: CARD,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderLeftWidth: 4,
-  },
-  signalText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: TEXT,
-    lineHeight: 20,
-  },
+function modeTiles(mode: string, signals: Signals): Array<{
+  icon: string
+  title: string
+  subtitle: string
+  signal?: string | null
+  route: string
+}> {
+  if (mode === 'holder') {
+    return [
+      { icon: 'warning', title: 'Threat Radar', subtitle: 'What is pressuring your role right now.', signal: '3 live', route: '/(app)/arena/threat' },
+      { icon: 'swap-horizontal', title: 'Ghost Move', subtitle: 'A stealth-side check on what you are worth, without tipping your employer.', signal: null, route: '/(app)/arena/ghost' },
+      { icon: 'analytics', title: 'Reputation Drift', subtitle: 'How Dilly sees your public surface vs peers.', signal: null, route: '/(app)/arena/reputation' },
+      { icon: 'layers', title: 'Next Role Lab', subtitle: 'Three plausible next roles, stress-tested for fit.', signal: null, route: '/(app)/arena/next-role' },
+    ]
+  }
+  if (mode === 'seeker') {
+    const rp = rejectionPattern(signals)
+    return [
+      { icon: 'megaphone', title: 'The Hook', subtitle: 'A first-line for each target — tuned to their stack and your story.', signal: null, route: '/(app)/arena/hook' },
+      { icon: 'cash', title: 'Offer Stand-In', subtitle: 'A negotiation coach that rehearses the scripts most people freeze on.', signal: null, route: '/(app)/arena/offer' },
+      { icon: 'trail-sign', title: 'Rejection Pattern Map', subtitle: 'What your recent rejections are actually telling you.', signal: rp ? rp.label : null, route: '/(app)/arena/rejections' },
+      { icon: 'time', title: '90-Day Clock', subtitle: 'The search becomes a plan with specific numbers to hit.', signal: null, route: '/(app)/arena/clock' },
+    ]
+  }
+  // Student
+  return [
+    { icon: 'eye', title: 'Honest Mirror', subtitle: 'How the rubric you will actually be graded against reads against your profile.', signal: null, route: '/(app)/arena/mirror' },
+    { icon: 'flame', title: 'Rejection Post-Mortem', subtitle: 'A safe post-mortem on the last time you got told no. Walk out better.', signal: null, route: '/(app)/arena/postmortem' },
+    { icon: 'mail', title: 'Cold Email Studio', subtitle: 'Drafting a real cold email with the person\'s name, your story, and the ask.', signal: null, route: '/(app)/arena/coldemail' },
+    { icon: 'eye-outline', title: 'Recruiter Radar', subtitle: 'What a recruiter would see in your profile in 15 seconds.', signal: null, route: '/(app)/arena/recruiter-radar' },
+  ]
+}
 
-  // Empty state
-  emptyCard: {
-    backgroundColor: CARD,
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: BORDER,
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: SUB,
-    textAlign: 'center',
-    lineHeight: 19,
-  },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: ACCENT + '12',
-    borderWidth: 1,
-    borderColor: ACCENT + '20',
-  },
-  emptyBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: ACCENT,
-  },
-  addMoreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-  },
-  addMoreText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: ACCENT,
-  },
+// ── Gate prompts by mode ────────────────────────────────────────────────────
 
-  // Recommendation card (Act 3)
-  recommendationCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: CARD,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: ACCENT + '20',
-    gap: 12,
-  },
-  recommendationText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: TEXT,
-    lineHeight: 21,
-  },
+function gatePrompts(mode: string, playbook: CohortPlaybook, profile: Profile | null): string[] {
+  if (mode === 'holder') {
+    return [
+      'What is my current role, and one thing about it that is genuinely hard?',
+      'What would my ideal next role look like in two years?',
+      `What is the most frustrating part of working in ${playbook.shortName} right now?`,
+    ]
+  }
+  if (mode === 'seeker') {
+    return [
+      `Which three companies am I most serious about, and why each?`,
+      'Walk me through my last interview and what I would do differently.',
+      'What is the work I want to be doing a year from now — specifically.',
+    ]
+  }
+  return [
+    `Which specific roles in ${playbook.shortName} am I trying to land after graduation?`,
+    'Tell me about a project or achievement I am most proud of.',
+    'What is the hardest class, job, or challenge I have worked through? How?',
+  ]
+}
 
-  // Skill pills
-  skillPillWrap: {
+function modeLabel(m: string): string {
+  if (m === 'holder') return 'Holder Arena'
+  if (m === 'seeker') return 'Seeker Arena'
+  return 'Student Arena'
+}
+
+function modeTagline(m: string): string {
+  if (m === 'holder') return 'Know where you stand. See what is coming.'
+  if (m === 'seeker') return 'Finish the search with conviction.'
+  return 'Your career, made visible.'
+}
+
+// ── Small stat component used by seeker hero ────────────────────────────────
+
+function Stat({ theme, big, label }: { theme: ReturnType<typeof useResolvedTheme>; big: string; label: string }) {
+  return (
+    <View style={{ alignItems: 'flex-start' }}>
+      <Text style={[heroMini.statBig, { color: theme.surface.t1 }]}>{big}</Text>
+      <Text style={[heroMini.statLabel, { color: theme.surface.t3 }]}>{label}</Text>
+    </View>
+  )
+}
+
+// ── Styles ──────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  header: { paddingHorizontal: 20, paddingBottom: 6 },
+  modeEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.6 },
+  wordmark: { fontSize: 34, fontWeight: '800', letterSpacing: -0.8, marginTop: 2 },
+  tagline: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+
+  sectionTitle: {
+    fontSize: 10, fontWeight: '900', letterSpacing: 1.6,
+    paddingHorizontal: 20, marginTop: 22, marginBottom: 10,
+  },
+  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    paddingHorizontal: 14,
     gap: 8,
   },
-  skillPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: GREEN + '15',
-    borderWidth: 1,
-    borderColor: GREEN + '30',
-  },
-  skillPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: GREEN,
-  },
 
-  // Improve button
-  improveBtn: {
+  feederRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: ACCENT,
-    marginTop: 4,
-  },
-  improveBtnText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: BG,
-  },
-
-  // Tools section header
-  toolsSectionHeader: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: DIM,
-    letterSpacing: 2,
-    marginTop: 28,
-    marginBottom: 4,
-  },
-
-  // Tool rows
-  toolRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: CARD,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderLeftWidth: 1,
-    borderLeftColor: BORDER,
-    gap: 12,
-  },
-  toolIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  toolTextWrap: {
-    flex: 1,
-    gap: 1,
-  },
-  toolTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: TEXT,
-  },
-  toolSub: {
-    fontSize: 11,
-    color: DIM,
-    lineHeight: 15,
-  },
-
-  // Expanded card
-  expandedCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: BORDER,
     gap: 10,
-  },
-  expandedTitle: { fontSize: 18, fontWeight: '800', color: TEXT },
-  expandedSub: { fontSize: 12, color: SUB, lineHeight: 17 },
-
-  // Action button
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: ACCENT,
-  },
-  // Dark text because ACCENT is near-white (#F0F0F0). White-on-white
-  // made "Scan My Profile" disappear. Navy picks up enough contrast
-  // against both the near-white ACCENT and the AMBER variant that
-  // some action buttons override to.
-  actionBtnText: { fontSize: 14, fontWeight: '700', color: '#0B1426' },
-
-  // Input
-  input: {
-    backgroundColor: BG,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
+    marginHorizontal: 16,
+    marginTop: 22,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 13,
-    color: TEXT,
-    minHeight: 44,
-  },
-
-  // Scan
-  scanSummary: { flexDirection: 'row', gap: 8 },
-  scanStat: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 10 },
-  scanStatNum: { fontSize: 22, fontWeight: '800' },
-  scanStatLabel: { fontSize: 9, color: SUB, fontWeight: '600', letterSpacing: 0.5, marginTop: 2 },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: BG,
-    borderLeftWidth: 3,
-    marginTop: 4,
-  },
-  bulletText: { fontSize: 12, color: TEXT, lineHeight: 17 },
-  bulletReason: { fontSize: 10, color: DIM, marginTop: 2 },
-  fixBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: ACCENT + '15' },
-  fixBtnText: { fontSize: 10, fontWeight: '600', color: ACCENT },
-
-  // Replace result
-  resultCard: { backgroundColor: BG, borderRadius: 12, borderWidth: 1, padding: 14, gap: 8 },
-  resultVerdict: { fontSize: 14, fontWeight: '700', flex: 1 },
-  resultScore: { fontSize: 18, fontWeight: '800', color: TEXT },
-  resultWhy: { fontSize: 12, color: SUB, lineHeight: 17 },
-  aiAttempt: { backgroundColor: CARD, borderRadius: 8, padding: 10, marginTop: 4 },
-  aiAttemptLabel: { fontSize: 8, fontWeight: '700', color: DIM, letterSpacing: 1, marginBottom: 4 },
-  aiAttemptText: { fontSize: 12, color: SUB, lineHeight: 17, fontStyle: 'italic' },
-  fixInline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: ACCENT + '12',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: ACCENT + '20',
   },
-
-  // Simulation
-  simVerdict: { fontSize: 13, fontWeight: '600', color: AMBER, lineHeight: 18 },
-  yearRow: { flexDirection: 'row', gap: 10 },
-  yearDot: { width: 10, height: 10, borderRadius: 5, marginTop: 6 },
-  yearContent: { flex: 1, backgroundColor: BG, borderRadius: 10, padding: 12, marginBottom: 6 },
-  yearLabel: { fontSize: 10, fontWeight: '700', color: DIM, letterSpacing: 1 },
-  yearTitle: { fontSize: 13, fontWeight: '700', color: TEXT, marginTop: 4 },
-  yearDesc: { fontSize: 11, color: SUB, lineHeight: 16, marginTop: 3 },
-  yearBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  yearBadgeText: { fontSize: 10, fontWeight: '700' },
-  strategyBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: AMBER + '10',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: AMBER + '20',
-  },
-  strategyText: { flex: 1, fontSize: 12, color: AMBER, lineHeight: 17, fontWeight: '600' },
-
-  // Skill vault
-  skillUnlocked: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: GREEN + '12',
-    borderWidth: 1,
-    borderColor: GREEN + '25',
-  },
-  skillUnlockedText: { fontSize: 11, fontWeight: '600', color: GREEN },
-  skillLocked: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: BORDER,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  skillLockedText: { fontSize: 11, fontWeight: '600', color: DIM },
-
-  // Displacement
-  bigNum: { fontSize: 56, fontWeight: '900' },
-  quoteBox: { backgroundColor: BG, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: BORDER },
-  quoteText: { fontSize: 13, color: TEXT, lineHeight: 19 },
-  compCol: { flex: 1, borderRadius: 10, padding: 10, borderWidth: 1 },
-  compLabel: { fontSize: 9, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
-  compItem: { fontSize: 11, color: SUB, lineHeight: 16 },
-});
-
-// ── Next Move + drawer styles ────────────────────────────────────────
-// Lives below the Threat Report + Weekly Signal. Replaces the old Acts +
-// Shield ring. Dense dark card that feels premium next to the threat
-// card above it — bright CTA, restrained eyebrow, quiet cycle link.
-const nm = StyleSheet.create({
-  card: {
-    borderRadius: 16,
-    backgroundColor: '#0F1524',
-    borderWidth: 1,
-    borderColor: ACCENT + '22',
-    padding: 18,
-    gap: 10,
-    marginTop: 4,
-  },
-  eyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  eyebrowDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: ACCENT,
-    shadowColor: ACCENT, shadowOpacity: 0.8, shadowRadius: 4, shadowOffset: { width: 0, height: 0 },
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 2,
-    color: ACCENT,
+  feederText: {
     flex: 1,
-  },
-  indexText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: DIM,
-    letterSpacing: 1,
-  },
-  verb: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: TEXT,
-    letterSpacing: -0.3,
-    lineHeight: 25,
-  },
-  why: {
-    fontSize: 13,
-    color: SUB,
-    lineHeight: 19,
-  },
-  primaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 13,
-    borderRadius: 11,
-    backgroundColor: ACCENT,
-    marginTop: 4,
-  },
-  primaryBtnText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0B1426',
-    letterSpacing: -0.1,
-  },
-  ghostBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 8,
-  },
-  ghostBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: SUB,
   },
+})
 
-  // Locked card for free tier. Sits just below the next-move card.
-  lockedCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: CARD,
-    padding: 16,
-    gap: 10,
-    marginTop: 4,
-  },
-  lockedTitle: {
+const heroMini = StyleSheet.create({
+  label: { fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
+  big: { fontSize: 20, fontWeight: '800', marginTop: 4 },
+  smol: { fontSize: 11, fontWeight: '600', marginTop: 4 },
+  pressure: {
     fontSize: 11,
-    fontWeight: '900',
-    color: TEXT,
-    letterSpacing: 1.5,
-  },
-  lockedBody: {
-    fontSize: 12,
-    color: SUB,
-    lineHeight: 18,
-  },
-  lockedBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
-    borderRadius: 10,
-    backgroundColor: ACCENT,
-    marginTop: 2,
-  },
-  lockedBtnText: {
-    fontSize: 13,
     fontWeight: '800',
-    color: '#0B1426',
+    letterSpacing: 0.6,
+    marginTop: 14,
   },
-
-  // PROVE IT section eyebrow row
-  proveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    marginBottom: 2,
-  },
-  sectionEyebrow: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: DIM,
-    letterSpacing: 2,
-  },
-  refreshText: {
-    fontSize: 10,
+  vignette: {
+    fontSize: 14,
+    fontStyle: 'italic',
     fontWeight: '600',
-    color: DIM,
-    letterSpacing: 0.5,
+    lineHeight: 20,
   },
-
-  // More-tools drawer header
-  drawerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-    marginTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-  },
-  drawerText: {
-    fontSize: 13,
+  vignetteMeta: {
+    fontSize: 11,
     fontWeight: '700',
-    color: SUB,
-    letterSpacing: 0.2,
+    marginTop: 4,
   },
-});
-
-// ── AI Threat Report styles ───────────────────────────────────────────
-// Dark-background dashboard card that lives at the top of the Arena tab
-// and works for everyone regardless of resume state.
-const threatCard = StyleSheet.create({
-  card: {
-    backgroundColor: '#0F172A',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    padding: 18,
-    marginBottom: 20,
-    gap: 12,
-  },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  eyebrow: { fontSize: 10, fontWeight: '900', color: '#7C8FA7', letterSpacing: 1.8 },
-  role: { fontSize: 20, fontWeight: '900', color: '#F8FAFC', marginTop: 4, letterSpacing: -0.4 },
-  levelBadge: {
-    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1,
-  },
-  levelText: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  bigRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  bigPct: { fontSize: 44, fontWeight: '900', color: '#F8FAFC', letterSpacing: -1.5, lineHeight: 48 },
-  headline: { flex: 1, fontSize: 14, fontWeight: '700', color: '#CBD5E1', lineHeight: 19 },
-  signalBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#1E293B', borderRadius: 10, padding: 10,
-    borderLeftWidth: 2, borderLeftColor: '#22D3EE',
-  },
-  signalText: { flex: 1, fontSize: 11, color: '#E2E8F0', lineHeight: 16, fontStyle: 'italic' },
-  sectionLabel: { fontSize: 10, fontWeight: '900', color: '#64748B', letterSpacing: 1.2, marginTop: 4, marginBottom: 2 },
-  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 2 },
-  bulletDot: { width: 5, height: 5, borderRadius: 2.5, marginTop: 7 },
-  bulletText: { flex: 1, fontSize: 12, color: '#CBD5E1', lineHeight: 17 },
-  forecastBox: {
-    backgroundColor: '#1E293B', borderRadius: 10, padding: 10, marginTop: 6,
-  },
-  forecastLabel: { fontSize: 9, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.2, marginBottom: 4 },
-  forecastText: { fontSize: 12, color: '#E2E8F0', lineHeight: 17, fontWeight: '500' },
-  dillyTake: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#22D3EE' + '14', borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: '#22D3EE' + '30',
-  },
-  dillyTakeText: { flex: 1, fontSize: 12, color: '#E2E8F0', lineHeight: 17, fontWeight: '600' },
-  ctaBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#22D3EE', paddingVertical: 12, borderRadius: 12, marginTop: 4,
-  },
-  ctaBtnText: { fontSize: 13, fontWeight: '800', color: '#0B1426', letterSpacing: 0.1 },
-
-  // Prompt card (when no role resolved yet)
-  promptCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 16, borderWidth: 1, borderColor: '#22D3EE' + '50',
-    padding: 18, marginBottom: 20, gap: 10,
-  },
-  promptEyebrow: { fontSize: 10, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.8 },
-  promptTitle: { fontSize: 20, fontWeight: '900', color: '#F8FAFC', letterSpacing: -0.4 },
-  promptSub: { fontSize: 13, color: '#94A3B8', lineHeight: 19 },
-  promptInput: {
-    backgroundColor: '#1E293B',
-    borderRadius: 10, borderWidth: 1, borderColor: '#334155',
-    paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#F8FAFC',
-    marginTop: 6,
-  },
-  promptBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#22D3EE', paddingVertical: 14, borderRadius: 12, marginTop: 4,
-  },
-  promptBtnText: { fontSize: 14, fontWeight: '800', color: '#0B1426' },
-});
-
-// ── This Week in Your Field styles ──────────────────────────────────
-// Dark news-brief card that reads like a real-time Bloomberg ticker
-// for the user's career. Lives right above the Act I shield ring.
-const weekly = StyleSheet.create({
-  card: {
-    backgroundColor: '#0B1426',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    padding: 16,
-    marginBottom: 16,
-    gap: 10,
-  },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  eyebrowPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: 'rgba(34,211,238,0.12)',
-    borderWidth: 1, borderColor: 'rgba(34,211,238,0.35)',
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
-  },
-  livePulse: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#22D3EE' },
-  eyebrowText: { fontSize: 9, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.2 },
-  weekLabel: { fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.6 },
-  headline: { fontSize: 15, fontWeight: '800', color: '#F8FAFC', lineHeight: 21, letterSpacing: -0.2 },
-  source: { fontSize: 11, color: '#94A3B8', fontStyle: 'italic' },
-  dataBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#111827', borderRadius: 8, padding: 10,
-    borderLeftWidth: 2, borderLeftColor: '#22D3EE',
-  },
-  dataText: { flex: 1, fontSize: 12, color: '#E2E8F0', fontWeight: '600' },
-  moveBox: {
-    backgroundColor: '#1F2937', borderRadius: 8, padding: 10,
-    borderTopWidth: 1, borderTopColor: '#22D3EE',
-  },
-  moveLabel: { fontSize: 9, fontWeight: '900', color: '#22D3EE', letterSpacing: 1.2, marginBottom: 4 },
-  moveText: { fontSize: 13, color: '#F8FAFC', fontWeight: '600', lineHeight: 18 },
-});
+  statBig: { fontSize: 22, fontWeight: '800', letterSpacing: -0.3 },
+  statLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginTop: 2, textTransform: 'uppercase' },
+})

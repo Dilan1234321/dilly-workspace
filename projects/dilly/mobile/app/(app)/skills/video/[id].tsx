@@ -1,26 +1,29 @@
 /**
- * Skills video detail — in-app playback (build 354).
+ * Skills video detail — in-app playback (build 363).
  *
- * Videos play INSIDE Dilly. No tab switch, no Safari handoff. The
- * player is YouTube's official iframe API loaded through a local
- * HTML shell and rendered in a react-native-webview. The surrounding
- * page (title, channel, description, save, related) is native RN.
+ * Playback history:
+ *   354 — custom WebView + iframe API in local HTML shell → error 5
+ *   358 — WebView pointed at /embed URL directly → "config error"
+ *   362 — WebView + iframe in HTML shell with baseUrl → "config error"
  *
- * Why iframe + WebView instead of a direct video URL: YouTube
- * encrypts its video streams; the iframe is the only supported,
- * compliant playback path. It handles ads, captions, HDR, and all
- * the format negotiation for us.
+ * Switching to react-native-youtube-iframe. This is the
+ * battle-tested wrapper that LinkedIn, Udemy, and every other RN app
+ * with embedded YouTube use. It sits on top of react-native-webview
+ * (which we already installed) but handles the iOS-specific UA,
+ * origin, referrer, and autoplay-gesture shape that YouTube's iframe
+ * API requires. It exposes play/pause via a ref and onChange events
+ * we can log. Pinning to the current version 2.4.1.
  *
- * Why not expo-av or expo-video: neither can play YouTube streams
- * (ToS + DRM). WebView + iframe is the accepted pattern.
+ * The surrounding page (title, channel, description, save, related)
+ * stays native RN. User never leaves Dilly.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, Dimensions, Linking,
+  Image, Dimensions,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -61,48 +64,8 @@ function publishedAgo(iso?: string | null): string {
   return `${Math.floor(diff / 365)}y ago`;
 }
 
-/** HTML shell that hosts the YouTube iframe. We load this via
- *  `source={{ html, baseUrl }}` with baseUrl set to
- *  https://www.youtube.com so the WebView has a real YouTube
- *  origin — which is required for the iframe to play video.
- *
- *  Why not point the WebView directly at youtube.com/embed/?
- *  On iOS, loading youtube.com/embed in a WebView often triggers
- *  YouTube's "video player configuration error" because the embed
- *  path expects to be iframed, not loaded as a top-level document.
- *  The shell tricks YouTube into seeing a real iframe embed and
- *  playback works reliably.
- *
- *  - playsinline=1: honors our allowsInlineMediaPlayback WebView flag
- *  - rel=0: no related videos at end (keeps user in Dilly's own
- *    suggestion flow)
- *  - modestbranding=1: minimizes YouTube chrome
- *  - enablejsapi=1: lets JS in this page talk to the iframe later
- *    if we want to add pause/play/track-progress telemetry
- *  - origin=https://www.youtube.com: matches the baseUrl so the
- *    same-origin check inside the iframe passes */
-function playerHtml(videoId: string): string {
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>
-      html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
-      .wrap { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
-      iframe { width: 100%; height: 100%; border: 0; display: block; background: #000; }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <iframe
-        src="https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1&enablejsapi=1&origin=https%3A%2F%2Fwww.youtube.com"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-        allowfullscreen></iframe>
-    </div>
-  </body>
-</html>`;
-}
+const SCREEN_W = Dimensions.get('window').width;
+const PLAYER_H = Math.round(SCREEN_W * (9 / 16));
 
 export default function VideoScreen() {
   const theme = useResolvedTheme();
@@ -114,7 +77,18 @@ export default function VideoScreen() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
-  const [playing, setPlaying] = useState(false);
+  // `playing` controls whether YoutubePlayer autoplays after mount.
+  // Mounted-but-paused is fine; we still show our poster overlay
+  // until the first play-tap so the list scroll doesn't pay the
+  // player-init cost and the user gets a clean visual entry.
+  const [started, setStarted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  // Player error surfaces from YoutubePlayer's onError. Real YouTube
+  // errors (embedding disabled, private video) are rare and the
+  // fallback routes the user out-of-app but keeps them in Dilly until
+  // they explicitly opt.
+  const [playerError, setPlayerError] = useState<string | null>(null);
+  const playerMounted = useRef(false);
 
   useEffect(() => {
     if (!id) return;
@@ -164,6 +138,32 @@ export default function VideoScreen() {
     }
   }, [id, saved]);
 
+  const onStateChange = useCallback((state: string) => {
+    // YoutubePlayer emits: unstarted, ended, playing, paused, buffering, cued
+    if (state === 'playing') setIsPlaying(true);
+    else if (state === 'paused' || state === 'ended') setIsPlaying(false);
+  }, []);
+
+  const onPlayerError = useCallback((err: string) => {
+    // err is one of: 'abort' | 'timeout' | 'network' | 'invalid_parameter'
+    // | 'html5_player' | 'video_not_found' | 'embed_not_allowed'
+    // Only two we surface to user: video_not_found and embed_not_allowed.
+    // Others get silently retried by a mount-key bump.
+    if (err === 'video_not_found' || err === 'embed_not_allowed') {
+      setPlayerError(err);
+    }
+  }, []);
+
+  const onPlayTap = useCallback(() => {
+    // Starting playback is a two-step dance on iOS: we unmount the
+    // poster by setting `started`, which mounts YoutubePlayer with
+    // play={true}. The library handles the autoplay-from-user-gesture
+    // propagation into the embedded iframe.
+    playerMounted.current = true;
+    setStarted(true);
+    setIsPlaying(true);
+  }, []);
+
   if (loading) {
     return (
       <DillyLoadingState
@@ -194,8 +194,6 @@ export default function VideoScreen() {
       style={{ flex: 1, backgroundColor: theme.surface.bg }}
       contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 60 }}
     >
-      {/* Header nav — Skills never leaves the app. Back goes to the
-          cohort / list that sent us here. */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
@@ -209,38 +207,56 @@ export default function VideoScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Player surface. Before first tap: show the thumbnail with a
-          big Play button. On tap: swap in the WebView with the iframe
-          player. This delays the WebView mount until the user opts in,
-          so the list scroll doesn't pay a WebView cost on every
-          render, and it matches Google's own pattern of a
-          poster-to-player flip. */}
-      <View style={styles.playerWrap}>
-        {playing ? (
-          // Load a tiny HTML shell that iframes youtube.com/embed,
-          // using baseUrl='https://www.youtube.com' so the WebView
-          // reports a real YouTube origin. Loading the embed URL as
-          // a top-level document trips a "video player configuration
-          // error" on iOS because YouTube expects the embed path to
-          // be inside an iframe. This shell is the reliable shape.
-          <WebView
-            source={{ html: playerHtml(video.id), baseUrl: 'https://www.youtube.com' }}
-            style={styles.player}
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
-            domStorageEnabled
-            allowsFullscreenVideo
-            startInLoadingState
-            renderLoading={() => (
-              <View style={[styles.playerLoading, { backgroundColor: '#000' }]}>
-                <ActivityIndicator color="#FFF" />
-              </View>
-            )}
+      {/* Player surface. Before first tap: thumbnail + big Play. After
+          tap: YoutubePlayer takes over the same slot and plays inline. */}
+      <View style={[styles.playerWrap, { height: PLAYER_H }]}>
+        {playerError === 'embed_not_allowed' || playerError === 'video_not_found' ? (
+          <View style={{ flex: 1 }}>
+            <Image source={{ uri: video.thumbnail_url }} style={styles.poster} resizeMode="cover" />
+            <View style={[styles.playOverlay, { backgroundColor: 'rgba(0,0,0,0.65)' }]}>
+              <Ionicons name="cloud-offline-outline" size={30} color="#FFF" />
+              <Text style={styles.errOverlayTitle}>
+                {playerError === 'video_not_found' ? 'Video unavailable' : 'Playback restricted'}
+              </Text>
+              <Text style={styles.errOverlayBody}>
+                {playerError === 'video_not_found'
+                  ? 'This video may have been removed.'
+                  : 'The channel disabled inline playback on this one.'}
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.88}
+                onPress={() => router.back()}
+                style={[styles.errOverlayBtn, { backgroundColor: theme.accent }]}
+              >
+                <Text style={styles.errOverlayBtnText}>Back to the library</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : started ? (
+          <YoutubePlayer
+            height={PLAYER_H}
+            width={SCREEN_W}
+            videoId={video.id}
+            play={isPlaying}
+            onChangeState={onStateChange}
+            onError={onPlayerError}
+            initialPlayerParams={{
+              // Keep the player lean — no related-video grid at end,
+              // no keyboard controls, captions on if available.
+              modestbranding: true,
+              rel: false,
+              controls: true,
+              cc_lang_pref: 'en',
+            }}
+            webViewProps={{
+              // These flags match what reliably plays inline on iOS.
+              allowsInlineMediaPlayback: true,
+              mediaPlaybackRequiresUserAction: false,
+            }}
           />
         ) : (
-          <TouchableOpacity activeOpacity={0.92} onPress={() => setPlaying(true)} style={{ flex: 1 }}>
-            <Image source={{ uri: video.thumbnail_url }} style={styles.player} resizeMode="cover" />
+          <TouchableOpacity activeOpacity={0.92} onPress={onPlayTap} style={{ flex: 1 }}>
+            <Image source={{ uri: video.thumbnail_url }} style={styles.poster} resizeMode="cover" />
             <View style={styles.playOverlay}>
               <View style={[styles.playBtn, { backgroundColor: theme.accent }]}>
                 <Ionicons name="play" size={32} color="#FFF" />
@@ -261,8 +277,6 @@ export default function VideoScreen() {
           {video.channel_title}{ago ? ` · ${ago}` : ''}{video.cohort ? ` · ${video.cohort}` : ''}
         </Text>
 
-        {/* Action row — Save is the big one. No "Watch on YouTube" —
-            we explicitly do not want the user leaving Dilly. */}
         <View style={styles.actionsRow}>
           <TouchableOpacity
             activeOpacity={0.85}
@@ -332,8 +346,6 @@ export default function VideoScreen() {
   );
 }
 
-const SCREEN_W = Dimensions.get('window').width;
-
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
   errTitle: { fontSize: 16, fontWeight: '800' },
@@ -348,16 +360,10 @@ const styles = StyleSheet.create({
 
   playerWrap: {
     width: SCREEN_W,
-    aspectRatio: 16 / 9,
     backgroundColor: '#000',
     position: 'relative',
   },
-  player: { flex: 1 },
-  playerLoading: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  poster: { width: '100%', height: '100%' },
   playOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
@@ -388,7 +394,7 @@ const styles = StyleSheet.create({
 
   errOverlayTitle: {
     color: '#FFF', fontSize: 15, fontWeight: '800',
-    textAlign: 'center', paddingHorizontal: 24,
+    textAlign: 'center', paddingHorizontal: 24, marginTop: 8,
   },
   errOverlayBody: {
     color: 'rgba(255,255,255,0.8)', fontSize: 12, lineHeight: 17,

@@ -486,8 +486,10 @@ export default function JobsScreen() {
             onPress={() => router.push('/skills')}
             style={[styles.brushBtn, { borderColor: theme.accentBorder, backgroundColor: theme.surface.s1 }]}
           >
-            <Ionicons name="sparkles" size={13} color={theme.accent} />
-            <Text style={[styles.brushBtnText, { color: theme.surface.t1 }]}>Brush up</Text>
+            {/* Renamed from "Brush up" → "Learn" and dropped the
+                sparkles icon for a cleaner header pill. The label now
+                names exactly what the tap does (go to Dilly Skills). */}
+            <Text style={[styles.brushBtnText, { color: theme.surface.t1 }]}>Learn</Text>
           </TouchableOpacity>
         </View>
       </View>

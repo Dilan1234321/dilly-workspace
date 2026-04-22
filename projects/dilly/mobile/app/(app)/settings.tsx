@@ -1077,33 +1077,34 @@ export default function SettingsScreen() {
               const profileUrl = `https://hellodilly.com/${webPrefix}/${slug}`;
               return (
                 <>
-                  <ToggleRow
+                  {/* Public profile is now managed on its own page —
+                      same pattern as the public learning profile. The
+                      row pushes to /public-profile-settings where the
+                      master toggle, section toggles, and per-fact
+                      visibility all live. The hint here still previews
+                      the slug / hidden state so users can see state at
+                      a glance without opening the page. */}
+                  <Row
                     label="Public profile"
-                    hint={webProfileOn ? (slug ? `hellodilly.com/${webPrefix}/${slug}` : 'Setting up...') : 'Your profile is hidden'}
-                    value={webProfileOn}
-                    onToggle={v => {
-                      setWebProfileOn(v);
-                      savePref('public_profile_visible', v);
-                    }}
+                    value={webProfileOn
+                      ? (slug ? `hellodilly.com/${webPrefix}/${slug}` : 'Setting up...')
+                      : 'Hidden'}
+                    onPress={() => router.push('/public-profile-settings')}
                   />
-                  {webProfileOn && (
+                  {webProfileOn && slug ? (
                     <>
-                      {slug ? (
-                        <>
-                          <Divider />
-                          <Row
-                            label="View profile"
-                            onPress={() => Linking.openURL(profileUrl)}
-                          />
-                          <Divider />
-                          <Row
-                            label="Share link"
-                            onPress={() => Share.share({ message: profileUrl })}
-                          />
-                        </>
-                      ) : null}
+                      <Divider />
+                      <Row
+                        label="View profile"
+                        onPress={() => Linking.openURL(profileUrl)}
+                      />
+                      <Divider />
+                      <Row
+                        label="Share link"
+                        onPress={() => Share.share({ message: profileUrl })}
+                      />
                     </>
-                  )}
+                  ) : null}
 
                   {/* Public LEARNING profile — the skills.hellodilly.com
                       /s/<slug> surface. Separate toggle so the user

@@ -1003,6 +1003,11 @@ function SeekerHome() {
   const [refreshing, setRefreshing] = useState(false);
   const [dillyTake, setDillyTake] = useState<string | null>(null);
   const [topJobs, setTopJobs] = useState<any[]>([]);
+  // Live match counts for the Home Jobs card. Jobs went from a top-
+  // level tab to a card on Home — the card earns its slot by showing
+  // how many strong / stretch matches landed today, so users can tell
+  // at a glance whether to dig in.
+  const [jobCounts, setJobCounts] = useState<{ strong: number; stretch: number; total: number } | null>(null);
   const [factCount, setFactCount] = useState(0);
   const [topFacts, setTopFacts] = useState<Array<{ category: string; label: string; value: string }>>([]);
   const [appCount, setAppCount] = useState(0);
@@ -1155,9 +1160,19 @@ function SeekerHome() {
           }
         }).catch(() => {});
 
-        // Top jobs
-        dilly.get('/v2/internships/feed?readiness=ready&limit=3').then(data => {
-          setTopJobs((data?.listings || []).slice(0, 3));
+        // Top jobs + band counts. Pull a wider window (40) so the
+        // Home Jobs card can show live "N strong / N stretch" counts.
+        // Same band thresholds used on the Jobs tab.
+        dilly.get('/v2/internships/feed?readiness=ready&limit=40').then(data => {
+          const listings: any[] = data?.listings || [];
+          setTopJobs(listings.slice(0, 3));
+          let strong = 0, stretch = 0;
+          for (const j of listings) {
+            const score = Number(j.rank_score ?? 50);
+            if (score >= 72) strong++;
+            else if (score >= 45) stretch++;
+          }
+          setJobCounts({ strong, stretch, total: listings.length });
         }).catch(() => {});
 
         // Weekly brief. server-cached per ISO week so this is ~free.
@@ -1319,6 +1334,30 @@ function SeekerHome() {
               >
                 <Ionicons name="qr-code" size={20} color={accent} />
               </AnimatedPressable>
+              {/* Profile pill — the navbar went from 5 tabs to 3
+                  (Home, AI Arena, Skills). My Dilly is reached here,
+                  Instagram-style: tap the face in the header. Shows
+                  as an accent-ringed circle with the user's initial
+                  so it reads like an avatar, not just an icon. */}
+              <AnimatedPressable
+                onPress={() => router.push('/(app)/my-dilly-profile')}
+                scaleDown={0.9}
+                hitSlop={10}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  borderWidth: 1.5,
+                  borderColor: accent,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: theme.surface.s1,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '800', color: theme.surface.t1 }}>
+                  {(firstName || '?').charAt(0).toUpperCase()}
+                </Text>
+              </AnimatedPressable>
               <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
                 <Ionicons name="settings-outline" size={20} color={theme.surface.t3} />
               </AnimatedPressable>
@@ -1335,6 +1374,110 @@ function SeekerHome() {
           <YourPlanCard plan={plan} firstName={firstName} />
         </FadeInView>
 
+        {/* DillyFace + pull-quote + talk CTA.
+            Moved here per product direction: above Chapter but below
+            Your Plan. Reads as "Dilly speaks to you" before the
+            weekly ritual card — a warm invitation, not competing with
+            the plan anchor. Full block cut from its previous slot
+            below Jobs so there is exactly one rendering on Home. */}
+        <FadeInView delay={12}>
+          <View style={{ alignItems: 'center', marginVertical: 16 }}>
+            <DillyFace size={showJourney ? 100 : 80} />
+          </View>
+          <AnimatedPressable
+            onPress={() => openDillyOverlay({
+              name: firstName,
+              isPaid: false,
+              initialMessage: dillyTake || situationCopy.empty_chat_seed,
+            })}
+            scaleDown={0.99}
+          >
+            <View style={{ paddingHorizontal: 28, alignItems: 'center', marginTop: 4 }}>
+              {/* Ornamental opening quote. Big, accent-colored, sits
+                  above the line so the quote reads as ambient art. */}
+              <Text
+                style={{
+                  fontSize: 46,
+                  lineHeight: 36,
+                  color: theme.accent,
+                  fontFamily: theme.type.display,
+                  fontWeight: '900',
+                  opacity: 0.85,
+                  marginBottom: -4,
+                }}
+              >
+                {'\u201C'}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 19,
+                  lineHeight: 28,
+                  color: theme.surface.t1,
+                  fontFamily: theme.type.display,
+                  fontWeight: '600',
+                  fontStyle: 'italic',
+                  letterSpacing: -0.2,
+                  textAlign: 'center',
+                }}
+              >
+                {(() => {
+                  const rawTake = (dillyTake || '').trim()
+                  const weakTake = !rawTake
+                    || rawTake.length < 18
+                    || /^take a look/i.test(rawTake)
+                    || /^check (it|this) out/i.test(rawTake)
+
+                  if (showJourney) {
+                    return firstName ? (
+                      <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>. Let me get to know you so I can help you land your next opportunity.</>
+                    ) : (
+                      <>Let me get to know you so I can help you land your next opportunity.</>
+                    )
+                  }
+
+                  if (weakTake) {
+                    return firstName ? (
+                      <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>. I've been reading through your profile. Let's pick up where you left off.</>
+                    ) : (
+                      <>I've been reading through your profile. Let's pick up where you left off.</>
+                    )
+                  }
+
+                  const takeBody = `${rawTake.charAt(0).toLowerCase()}${rawTake.slice(1)}`
+                  return firstName ? (
+                    <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>, {takeBody}</>
+                  ) : (
+                    <>{rawTake}</>
+                  )
+                })()}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 2,
+                  color: theme.surface.t3,
+                  marginTop: 10,
+                }}
+              >
+                {'\u2014 '}DILLY
+              </Text>
+            </View>
+          </AnimatedPressable>
+          <AnimatedPressable
+            style={[s.talkBtn, { backgroundColor: theme.accent }]}
+            onPress={() => openDillyOverlay({
+              name: firstName,
+              isPaid: false,
+              initialMessage: situationCopy.empty_chat_seed,
+            })}
+            scaleDown={0.97}
+          >
+            <Ionicons name="chatbubble" size={16} color="#fff" />
+            <Text style={s.talkBtnText}>{situationCopy.talk_cta}</Text>
+          </AnimatedPressable>
+        </FadeInView>
+
         {/* Chapter card. The weekly scheduled session with Dilly.
             Renders one of seven evolving states depending on plan
             tier, profile depth, schedule, and whether a new Chapter
@@ -1345,6 +1488,63 @@ function SeekerHome() {
         <FadeInView delay={15}>
           <ChapterCard state={chapterState} theme={theme} />
         </FadeInView>
+
+        {/* Jobs card. Jobs left the navbar (3-tab design: Home / AI
+            Arena / Skills) so this card earns its slot by showing
+            how many strong + stretch matches landed today. Live
+            count pulled from the same /v2/internships/feed window.
+            Tap deep-links to /jobs. Renders only when the user has
+            at least one match to surface — otherwise Home would
+            show a card saying "0 matches" which reads as broken. */}
+        {jobCounts && jobCounts.total > 0 ? (
+          <FadeInView delay={17}>
+            <AnimatedPressable
+              onPress={() => router.push('/(app)/jobs')}
+              scaleDown={0.98}
+              style={{
+                marginHorizontal: 16,
+                marginTop: 14,
+                padding: 16,
+                borderRadius: 14,
+                borderWidth: 1,
+                backgroundColor: theme.surface.s1,
+                borderColor: theme.accentBorder,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+              }}
+            >
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: theme.accentSoft,
+                }}
+              >
+                <Ionicons name="briefcase" size={22} color={theme.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }}>
+                  TODAY'S JOBS
+                </Text>
+                <Text style={{ color: theme.surface.t1, fontSize: 14, fontWeight: '800', marginTop: 2 }}>
+                  {jobCounts.strong > 0
+                    ? `${jobCounts.strong} strong ${jobCounts.strong === 1 ? 'match' : 'matches'} for you`
+                    : `${jobCounts.total} new ${jobCounts.total === 1 ? 'role' : 'roles'} to look at`}
+                </Text>
+                <Text style={{ color: theme.surface.t3, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
+                  {jobCounts.stretch > 0
+                    ? `${jobCounts.stretch} stretch · ${jobCounts.total} total in your feed`
+                    : `${jobCounts.total} total in your feed`}
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={18} color={theme.surface.t3} />
+            </AnimatedPressable>
+          </FadeInView>
+        ) : null}
 
         {/* Home v2 — radically simpler per tester feedback.
             Removed: Daily Pulse, Dilly Skills promo, Dilly Remembered
@@ -1494,127 +1694,9 @@ function SeekerHome() {
           </FadeInView>
         )}
 
-        {/* DillyFace + message.
-            Message is rendered as a pull-quote, not body copy. Big
-            serif display type, italic, ornamental opening accent
-            quote mark. Reads as something Dilly said, not status
-            text. Kept tap-to-open-chat so the whole block is still
-            an interactive surface. */}
-        <FadeInView delay={60}>
-          <View style={{ alignItems: 'center', marginVertical: 16 }}>
-            <DillyFace size={showJourney ? 100 : 80} />
-          </View>
-          <AnimatedPressable
-            onPress={() => openDillyOverlay({
-              name: firstName,
-              isPaid: false,
-              initialMessage: dillyTake || situationCopy.empty_chat_seed,
-            })}
-            scaleDown={0.99}
-          >
-            <View style={{ paddingHorizontal: 28, alignItems: 'center', marginTop: 4 }}>
-              {/* Ornamental opening quote. Big, accent-colored, sits
-                  above the line so the quote reads as ambient art. */}
-              <Text
-                style={{
-                  fontSize: 46,
-                  lineHeight: 36,
-                  color: theme.accent,
-                  fontFamily: theme.type.display,
-                  fontWeight: '900',
-                  opacity: 0.85,
-                  marginBottom: -4,
-                }}
-              >
-                {'\u201C'}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 19,
-                  lineHeight: 28,
-                  color: theme.surface.t1,
-                  fontFamily: theme.type.display,
-                  fontWeight: '600',
-                  fontStyle: 'italic',
-                  letterSpacing: -0.2,
-                  textAlign: 'center',
-                }}
-              >
-                {(() => {
-                  // Copy logic lives inline because the combinations
-                  // are narrow: (have a firstName? have a dillyTake?).
-                  // Product rule: NEVER fall back to "Hey there," — it
-                  // reads cold. If we don't know the name, we just
-                  // skip the greeting and lead with the thought.
-                  //
-                  // "Take a look" was the old generic filler that the
-                  // LLM sometimes returned for dilly_take. We filter
-                  // those weak takes and replace them with a warmer
-                  // first-Chapter-style opener so the quote under
-                  // DillyFace never reads like "there, take a look".
-                  const rawTake = (dillyTake || '').trim()
-                  const weakTake = !rawTake
-                    || rawTake.length < 18
-                    || /^take a look/i.test(rawTake)
-                    || /^check (it|this) out/i.test(rawTake)
-
-                  if (showJourney) {
-                    return firstName ? (
-                      <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>. Let me get to know you so I can help you land your next opportunity.</>
-                    ) : (
-                      <>Let me get to know you so I can help you land your next opportunity.</>
-                    )
-                  }
-
-                  if (weakTake) {
-                    // No real audit take yet. Lead with a warm,
-                    // specific statement that doesn't pretend we know
-                    // more than we do. Reads as a mentor noticing you
-                    // rather than a placeholder.
-                    return firstName ? (
-                      <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>. I've been reading through your profile. Let's pick up where you left off.</>
-                    ) : (
-                      <>I've been reading through your profile. Let's pick up where you left off.</>
-                    )
-                  }
-
-                  const takeBody = `${rawTake.charAt(0).toLowerCase()}${rawTake.slice(1)}`
-                  return firstName ? (
-                    <>Hey <Text style={{ color: theme.accent, fontStyle: 'normal', fontWeight: '800' }}>{firstName}</Text>, {takeBody}</>
-                  ) : (
-                    <>{rawTake}</>
-                  )
-                })()}
-              </Text>
-              {/* Tiny byline underneath. Names who said it — it's a
-                  quote from Dilly, so the attribution earns the
-                  ornament. */}
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: '800',
-                  letterSpacing: 2,
-                  color: theme.surface.t3,
-                  marginTop: 10,
-                }}
-              >
-                {'\u2014 '}DILLY
-              </Text>
-            </View>
-          </AnimatedPressable>
-          <AnimatedPressable
-            style={[s.talkBtn, { backgroundColor: theme.accent }]}
-            onPress={() => openDillyOverlay({
-              name: firstName,
-              isPaid: false,
-              initialMessage: situationCopy.empty_chat_seed,
-            })}
-            scaleDown={0.97}
-          >
-            <Ionicons name="chatbubble" size={16} color="#fff" />
-            <Text style={s.talkBtnText}>{situationCopy.talk_cta}</Text>
-          </AnimatedPressable>
-        </FadeInView>
+        {/* DillyFace + pull-quote + talk CTA moved up to sit between
+            Your Plan and Chapter. See the FadeInView delay={12} block
+            above the ChapterCard render for the relocated block. */}
 
         {/* "Dilly sees" card. shown when the profile is still thin (≤12
             facts). Makes the empty state feel like progress. Lists the

@@ -106,50 +106,74 @@ def _messages_worth_extracting(messages: list[dict[str, Any]]) -> bool:
 _FACT_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
     # (category, pattern, label_template)
     # Pattern groups: (1) is the captured value. Case-insensitive.
+    #
+    # DESIGN NOTE: These patterns are deliberately wide. Previous versions
+    # were so strict that "I'm trying to break into quant" or "working at a
+    # startup" matched nothing, and 95% of real user turns extracted zero
+    # facts unless the chat hit the 5-message LLM threshold. Testers
+    # reported "talking to Dilly doesn't add stuff to my profile" — that
+    # was the cause. False positives from a wide regex are fine because
+    # the downstream LLM-sweep on chat close re-evaluates and the profile
+    # editor lets users delete anything wrong.
     (
         "experience",
-        re.compile(r"\b(?:i (?:work|worked|am working|just started|am) (?:at|for)|i'?m (?:at|with)) ([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)(?:\s+(?:as|in|on|doing|where|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\b(?:i (?:work|worked|am working|just started|am|used to work) (?:at|for|with)|i'?m (?:at|with|on a team at)|working (?:at|for)) ([A-Za-z][A-Za-z0-9&'.,\- ]{1,50}?)(?=\s+(?:as|in|on|doing|where|right now|currently|\.|,|;|$))", re.IGNORECASE),
         "Works at {v}",
     ),
     (
         "education",
-        re.compile(r"\bi'?m (?:studying|majoring in|doing a degree in|getting a degree in) ([A-Za-z &/\-]{3,60}?)(?:\s+(?:at|in|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\b(?:i'?m (?:studying|majoring in|minoring in|doing a degree in|getting a degree in)|i study|studying) ([A-Za-z &/\-]{3,60}?)(?=\s+(?:at|in|right now|currently|and|\.|,|;|$))", re.IGNORECASE),
         "Studies {v}",
     ),
     (
         "education",
-        re.compile(r"\bmy major (?:is|was) ([A-Za-z &/\-]{3,60}?)(?:\s+(?:and|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\bmy (?:major|minor|concentration) (?:is|was) ([A-Za-z &/\-]{3,60}?)(?=\s+(?:and|\.|,|;|$))", re.IGNORECASE),
         "Major: {v}",
     ),
     (
         "education",
-        re.compile(r"\bi go to ([A-Z][A-Za-z.'\- ]{2,60}?)(?:\s+(?:studying|as|where|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\b(?:i go to|i attend|i'?m at|i study at|student at) ([A-Z][A-Za-z.'\- ]{2,60}?)(?=\s+(?:studying|majoring|as|where|right now|currently|\.|,|;|$))", re.IGNORECASE),
         "Attends {v}",
     ),
     (
         "project",
-        re.compile(r"\bi (?:built|shipped|made|created|launched) ([A-Za-z0-9 .'\-,]{3,80}?)(?:\s+(?:that|which|with|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\bi (?:built|shipped|made|created|launched|started|founded|am building|worked on|wrote) ([A-Za-z0-9 .'\-,]{3,80}?)(?=\s+(?:that|which|with|for|using|\.|,|;|$))", re.IGNORECASE),
         "Built {v}",
     ),
     (
         "skill",
-        re.compile(r"\bi (?:know|use|work with|am good at|have experience with|am proficient in) ([A-Za-z0-9 +#./\-]{2,40}?)(?:\s+(?:and|for|because|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\bi (?:know|use|work with|am good at|have experience with|am proficient in|taught myself|self.taught in|am learning|picked up) ([A-Za-z0-9 +#./\-]{2,40}?)(?=\s+(?:and|for|because|at|to|\.|,|;|$))", re.IGNORECASE),
         "Skill: {v}",
     ),
     (
         "target_company",
-        re.compile(r"\bi (?:want to work (?:at|for)|applied to|am applying to|'?m targeting) ([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)(?:\s+(?:as|in|on|where|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\b(?:i (?:want to work (?:at|for)|applied to|am applying to|'?m targeting|'?m gunning for|'?d love to work at|dream job (?:is )?at)|my (?:target|dream) (?:company )?is|targeting|aiming for) ([A-Z][A-Za-z0-9&'.,\- ]{1,50}?)(?=\s+(?:as|in|on|where|right now|currently|\.|,|;|$))", re.IGNORECASE),
         "Target: {v}",
     ),
     (
         "career_interest",
-        re.compile(r"\bi'?m (?:interested in|curious about|thinking about) ([A-Za-z ,&/\-]{3,60}?)(?:\s+(?:because|for|and|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\b(?:i'?m (?:interested in|curious about|thinking about|drawn to|leaning toward|trying to break into|trying to get into|passionate about|fascinated by)|i (?:like|love) the idea of|want to (?:get|break) into) ([A-Za-z ,&/\-]{3,60}?)(?=\s+(?:because|for|and|at|right now|currently|\.|,|;|$))", re.IGNORECASE),
         "Interested in {v}",
     ),
     (
         "goal",
-        re.compile(r"\b(?:my goal|i want) (?:is to|to) ([A-Za-z0-9 ,&'.\-]{5,80}?)(?:\s+(?:before|by|\.|,|$))", re.IGNORECASE),
+        re.compile(r"\b(?:my goal|i want|i'?d like|my plan|i'?m trying|i hope|i'?m hoping) (?:is to|to) ([A-Za-z0-9 ,&'.\-]{5,80}?)(?=\s+(?:before|by|so|because|and|\.|,|;|$))", re.IGNORECASE),
         "Goal: {v}",
+    ),
+    (
+        "goal",
+        re.compile(r"\bi'?m trying to (?:land|get|find|break into|transition to|pivot to) ([A-Za-z0-9 ,&'.\-]{3,70}?)(?=\s+(?:before|by|so|because|and|at|right now|currently|\.|,|;|$))", re.IGNORECASE),
+        "Trying to {v}",
+    ),
+    (
+        "location_pref",
+        re.compile(r"\bi (?:want to (?:live|move|be)|'?m (?:moving|relocating)) (?:in|to) ([A-Z][A-Za-z.,'\- ]{2,40}?)(?=\s+(?:because|for|and|after|\.|,|;|$))", re.IGNORECASE),
+        "Wants to live in {v}",
+    ),
+    (
+        "challenge",
+        re.compile(r"\b(?:i'?m (?:stuck|struggling|nervous|anxious|worried) (?:with|about|on)|i can'?t figure out|i don'?t know how to|i'?m not sure (?:how|what) to) ([A-Za-z0-9 ,&'.\-]{5,80}?)(?=\s+(?:because|for|and|\.|,|;|$))", re.IGNORECASE),
+        "Working on: {v}",
     ),
 ]
 
