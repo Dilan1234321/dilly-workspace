@@ -419,16 +419,19 @@ export default function ChapterSessionScreen() {
       // New session model: when a Chapter session completes, mark
       // this chapter id as completed so the next tap on the Chapter
       // tab routes to the recap surface instead of replaying the
-      // typed session. Then route to the journey map for a visual
-      // wrap-up. Replace (not push) so back nav does not bounce the
-      // user into a finished session.
+      // typed session. Route directly to /chapter/recap — the recap
+      // surface IS the breakdown of what was discussed (every slot
+      // as a tap-to-continue card) plus the notes-for-next-Chapter
+      // pad. Previously we routed to /chapter/journey as a visual
+      // intermission, but testers reported a "No journey yet" empty
+      // state there and recap is the screen the user actually wants.
       markChapterCompleted(chapter?.id).catch(() => {});
-      router.replace('/chapter/journey');
+      router.replace('/chapter/recap');
     }
   }
 
   // End-session escape hatch. The user decides when a session is done —
-  // not a clock. Tapping this jumps straight to the journey map for
+  // not a clock. Tapping this jumps straight to the recap for
   // the current chapter (skipping remaining slots). Only surfaces after
   // the first screen so the intro breath is not interrupted. Marks the
   // chapter completed on the way out, so the next tab tap lands on
@@ -436,7 +439,7 @@ export default function ChapterSessionScreen() {
   const endSession = useCallback(() => {
     if (typeRef.current) { typeRef.current(); typeRef.current = null; }
     markChapterCompleted(chapter?.id).catch(() => {});
-    router.replace('/chapter/journey');
+    router.replace('/chapter/recap');
   }, [chapter?.id]);
 
   function goBack() {
