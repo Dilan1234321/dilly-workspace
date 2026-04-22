@@ -132,6 +132,20 @@ def _normalize(s: str) -> str:
     return s
 
 
+# Words that signal a job-title / role phrase rather than a skill.
+# "Senior Backend Engineer" and "Product Manager" should not count as
+# demand keywords because the candidate's own title is rarely going to
+# match verbatim — and flagging them as "missing" pollutes the UX.
+_JOB_TITLE_WORDS = {
+    "engineer", "engineers", "developer", "developers", "manager",
+    "managers", "analyst", "analysts", "designer", "designers",
+    "scientist", "scientists", "consultant", "consultants",
+    "intern", "interns", "associate", "associates", "lead",
+    "director", "vp", "head", "specialist", "architect",
+    "coordinator", "administrator", "technician", "officer",
+}
+
+
 def _extract_jd_keywords(jd: str, max_terms: int = 40) -> list[str]:
     """Extract the most likely 'demand' keywords from the job description."""
     if not jd:
@@ -140,32 +154,47 @@ def _extract_jd_keywords(jd: str, max_terms: int = 40) -> list[str]:
 
     hits: set[str] = set()
 
-    # Known skill terms: direct membership
+    # Known skill terms: direct membership on the full text.
     for term in _KNOWN_SKILL_TERMS:
         if re.search(r"\b" + re.escape(term) + r"\b", text):
             hits.add(term)
 
-    # Capitalized 2–4 word phrases from the JD (often proper tool / product
-    # names the whitelist doesn't cover).
-    for m in re.finditer(
-        r"\b([A-Z][a-zA-Z0-9+.#-]*(?:\s+[A-Z][a-zA-Z0-9+.#-]*){0,3})\b",
-        jd,
-    ):
-        phrase = m.group(1).strip()
-        # Skip obvious non-skill phrases
-        lower = phrase.lower()
-        if lower in {"we", "you", "they", "our", "your", "their"}:
-            continue
-        if len(lower) < 3:
-            continue
-        # Skip sentence starters (single capitalized first word of a sentence)
-        if " " not in phrase and not any(
-            c in phrase for c in ".+#-"
+    # Capitalized 2–4 word phrases from the JD (often proper tool /
+    # product names the whitelist doesn't cover). We split the JD into
+    # sentences FIRST so a phrase can never straddle a period — this
+    # fixes the "Kubernetes, and AWS. Experience with microservices"
+    # bug where the extractor produced garbage like "aws. experience".
+    # Splitter is intentionally simple (. ! ? + newline + bullet glyph):
+    # JDs are rarely literary, and a false sentence split just means we
+    # miss a multi-word tool name, which is recoverable — a false
+    # non-split produces uncorrectable noise in the "missing" list.
+    sentences = re.split(r"[.!?\n\r\u2022\u2023\u25cf]+", jd)
+    for sent in sentences:
+        for m in re.finditer(
+            r"\b([A-Z][a-zA-Z0-9+#-]*(?:\.[a-zA-Z0-9+#-]+)?"
+            r"(?:\s+[A-Z][a-zA-Z0-9+#-]*(?:\.[a-zA-Z0-9+#-]+)?){0,3})\b",
+            sent,
         ):
-            # Single capitalized word — only keep if it's a known skill.
-            if lower not in _KNOWN_SKILL_TERMS:
+            phrase = m.group(1).strip()
+            lower = phrase.lower()
+            # Basic guards.
+            if lower in {"we", "you", "they", "our", "your", "their"}:
                 continue
-        hits.add(lower)
+            if len(lower) < 3:
+                continue
+            # Job titles: if any word in the phrase is a title word, it
+            # is not a skill. "Senior Backend Engineer" out, "Backend"
+            # on its own stays (and wouldn't match _KNOWN_SKILL_TERMS
+            # anyway, so it'll be filtered below).
+            tokens = lower.split()
+            if any(t in _JOB_TITLE_WORDS for t in tokens):
+                continue
+            # Single capitalized word — only keep if it's a known skill.
+            # Otherwise we grab every sentence-starter and proper noun.
+            if " " not in phrase and not any(c in phrase for c in "+#-.") :
+                if lower not in _KNOWN_SKILL_TERMS:
+                    continue
+            hits.add(lower)
 
     # Rank hits by frequency in the JD and return the top N
     ranked = sorted(
