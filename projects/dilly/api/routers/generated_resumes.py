@@ -150,22 +150,30 @@ async def list_generated_resumes(request: Request):
     conn = _get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # De-dup by (job_title, company): each time a user
+            # regenerates a resume for the same role, a new row gets
+            # written. Surfacing every regeneration makes My Resumes
+            # look like "5 copies of the same resume". Keep only the
+            # newest per job/company pair. DISTINCT ON + matching
+            # ORDER BY gives us that in a single query.
             cur.execute(
-                """SELECT id, job_title, company, cohort, created_at
+                """SELECT DISTINCT ON (lower(job_title), lower(company))
+                          id, job_title, company, cohort, created_at
                    FROM generated_resumes
                    WHERE student_id = %s
-                   ORDER BY created_at DESC
-                   LIMIT 50""",
+                   ORDER BY lower(job_title), lower(company), created_at DESC""",
                 (student_id,)
             )
             rows = cur.fetchall()
+            # Re-sort by recency across the de-duped set.
+            rows.sort(key=lambda r: r["created_at"], reverse=True)
             return {"resumes": [{
                 "id": str(r["id"]),
                 "job_title": r["job_title"],
                 "company": r["company"],
                 "cohort": r["cohort"],
                 "created_at": r["created_at"].isoformat(),
-            } for r in rows]}
+            } for r in rows[:50]]}
     finally:
         conn.close()
 
