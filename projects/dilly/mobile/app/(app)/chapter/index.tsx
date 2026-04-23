@@ -560,7 +560,7 @@ export default function ChapterSessionScreen() {
       // intermission, but testers reported a "No journey yet" empty
       // state there and recap is the screen the user actually wants.
       markChapterCompleted(chapter?.id).catch(() => {});
-      router.replace('/chapter/recap');
+      router.replace('/(app)/chapter/recap' as any);
     }
   }
 
@@ -573,7 +573,7 @@ export default function ChapterSessionScreen() {
   const endSession = useCallback(() => {
     if (typeRef.current) { typeRef.current(); typeRef.current = null; }
     markChapterCompleted(chapter?.id).catch(() => {});
-    router.replace('/chapter/recap');
+    router.replace('/(app)/chapter/recap' as any);
   }, [chapter?.id]);
 
   function goBack() {

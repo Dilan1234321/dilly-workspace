@@ -1968,18 +1968,10 @@ function SeekerHome() {
           </ScrollView>
         </FadeInView>
 
-        {/* Pipeline tiles */}
-        {appCount > 0 && (
-          <FadeInView delay={showJourney ? 400 : 180}>
-            <Text style={[s.sectionLabel, { marginTop: 24, color: theme.surface.t3 }]}>YOUR PIPELINE</Text>
-            <View style={s.pipeGrid}>
-              <PipelineTile icon="bookmark" count={appCount} label="Saved" color={colors.blue} onPress={() => router.push('/(app)/internship-tracker')} />
-              <PipelineTile icon="send" count={0} label="Applied" color={colors.indigo} onPress={() => router.push('/(app)/internship-tracker')} />
-              <PipelineTile icon="people" count={0} label="Interview" color="#AF52DE" onPress={() => router.push('/(app)/internship-tracker')} />
-              <PipelineTile icon="trophy" count={0} label="Offers" color={colors.green} onPress={() => router.push('/(app)/internship-tracker')} />
-            </View>
-          </FadeInView>
-        )}
+        {/* Pipeline tiles removed — felt like a status dashboard,
+            not a next-move surface. Users who want to see their
+            tracker reach it via the Jobs tab. Kept PipelineTile for
+            any future reuse. */}
 
         {/* Activity feed */}
         {activities.length > 0 && (
