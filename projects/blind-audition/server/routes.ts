@@ -220,6 +220,29 @@ const PRESET_ROLES = [
   },
 ];
 
+// ── Ensure recruiter_interests table exists ───────────────────────────────
+async function ensureSchema() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS recruiter_interests (
+        id SERIAL PRIMARY KEY,
+        recruiter_name TEXT NOT NULL,
+        recruiter_company TEXT NOT NULL,
+        recruiter_email TEXT,
+        candidate_email TEXT NOT NULL,
+        candidate_display_name TEXT NOT NULL,
+        role_label TEXT NOT NULL,
+        role_description TEXT,
+        unlocked_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+  } finally {
+    client.release();
+  }
+}
+ensureSchema().catch(console.error);
+
 // ── Routes ────────────────────────────────────────────────────────────────
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 
@@ -266,5 +289,106 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // POST /api/blind-audition/interest — recruiter expresses interest, unlocks contact
+  app.post("/api/blind-audition/interest", async (req, res) => {
+    const { recruiter_name, recruiter_company, recruiter_email, candidate_email, candidate_display_name, role_label, role_description } = req.body || {};
+    if (!recruiter_name || !recruiter_company || !candidate_email) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    // Verify candidate is in our list
+    const validCandidate = CANDIDATE_EMAILS.find(e => e.toLowerCase() === candidate_email.toLowerCase());
+    if (!validCandidate) return res.status(404).json({ error: "Candidate not found" });
+
+    const client = await pool.connect();
+    try {
+      // Record interest
+      await client.query(
+        `INSERT INTO recruiter_interests
+         (recruiter_name, recruiter_company, recruiter_email, candidate_email, candidate_display_name, role_label, role_description)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [recruiter_name, recruiter_company, recruiter_email || null, validCandidate,
+         candidate_display_name || "", role_label || "", role_description || ""]
+      );
+
+      // Fetch candidate contact info
+      const profile = await getLiveProfile(validCandidate);
+
+      // Build Dilly intro message
+      const intro = buildIntroMessage({
+        recruiterName: recruiter_name,
+        recruiterCompany: recruiter_company,
+        candidateName: profile.name,
+        roleLabel: role_label,
+        narrative: profile.dilly_narrative || profile.narrative || "",
+      });
+
+      res.json({
+        ok: true,
+        candidate: {
+          name: profile.name,
+          email: validCandidate,
+          major: profile.major,
+          track: profile.track,
+        },
+        intro_message: intro,
+      });
+    } catch (e: any) {
+      console.error("interest error:", e);
+      res.status(500).json({ error: e.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  // GET /api/blind-audition/interests — recruiter's saved interests (by email)
+  app.get("/api/blind-audition/interests", async (req, res) => {
+    const { recruiter_email } = req.query as any;
+    if (!recruiter_email) return res.json({ interests: [] });
+    const client = await pool.connect();
+    try {
+      const r = await client.query(
+        `SELECT * FROM recruiter_interests WHERE recruiter_email = $1 ORDER BY unlocked_at DESC LIMIT 50`,
+        [recruiter_email]
+      );
+      res.json({ interests: r.rows });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    } finally {
+      client.release();
+    }
+  });
+
   return httpServer;
+}
+
+// ── Build recruiter intro message ────────────────────────────────────────────────────
+function buildIntroMessage({
+  recruiterName,
+  recruiterCompany,
+  candidateName,
+  roleLabel,
+  narrative,
+}: {
+  recruiterName: string;
+  recruiterCompany: string;
+  candidateName: string;
+  roleLabel: string;
+  narrative: string;
+}): string {
+  const firstName = candidateName.split(" ")[0];
+  const shortNarrative = narrative.length > 200 ? narrative.slice(0, 197) + "..." : narrative;
+  return `Hi ${firstName},
+
+My name is ${recruiterName}, and I work at ${recruiterCompany}.
+
+I came across your profile through Dilly. I was looking for candidates for a ${roleLabel} role, and your profile stood out. Here is what Dilly surfaced about you:
+
+"${shortNarrative}"
+
+I would love to set up a quick conversation to learn more about you and what you are working on.
+
+Let me know if you are open to it.
+
+${recruiterName}
+${recruiterCompany}`;
 }
