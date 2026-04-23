@@ -364,11 +364,28 @@ export default function ResumeGenerateScreen() {
   const progressAnim = useSharedValue(0);
   const progressStyle = useAnimatedStyle(() => ({ width: `${progressAnim.value * 100}%` }));
 
+  // Refetch whenever viewId changes. resume-generate is registered as
+  // a hidden tab route which means it does NOT unmount between
+  // navigations. Before this fix the useEffect had [] deps so the
+  // first viewId the user ever opened stayed cached forever — every
+  // subsequent tap on a different resume in My Dilly rendered the
+  // same content. Tying the effect to viewId (plus a small in-flight
+  // guard to avoid double-fetches during the initial mount race)
+  // makes each tap actually load the requested resume.
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         if (viewId) {
+          // Reset visible state before the fetch so the user doesn't
+          // briefly see the prior resume's content while the new one
+          // is in flight.
+          setSections([]);
+          setVariantId(null);
+          setSaved(false);
+          setStage('generating');
           const resume = await dilly.get(`/generated-resumes/${viewId}`);
+          if (cancelled) return;
           if (resume) {
             setJobTitle(resume.job_title || '');
             setCompany(resume.company || '');
@@ -377,8 +394,19 @@ export default function ResumeGenerateScreen() {
             setSaved(true);
             setVariantId(viewId);
             setStage('done');
+          } else {
+            setStage('idle');
           }
         }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [viewId]);
+
+  // One-shot profile + timer cleanup on mount (independent of viewId).
+  useEffect(() => {
+    (async () => {
+      try {
         const profileRes = await dilly.get('/profile');
         setProfile(profileRes || {});
       } catch {}
@@ -388,7 +416,6 @@ export default function ResumeGenerateScreen() {
       if (stageTimer.current) clearInterval(stageTimer.current);
       if (keywordTimer.current) clearInterval(keywordTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleGenerate() {
