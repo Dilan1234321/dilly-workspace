@@ -1,4 +1,4 @@
-import { safeBack } from '../../../lib/navigation';
+import { safeBack } from '../../../../lib/navigation';
 /**
  * Skills video detail — in-app playback (build 363).
  *
