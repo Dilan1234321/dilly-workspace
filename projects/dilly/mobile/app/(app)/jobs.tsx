@@ -122,6 +122,26 @@ interface SkillVid {
 
 // -- Helpers ------------------------------------------------------------------
 
+/** Title-case a cohort name for display. Inputs can be slug-style
+ *  ("data-science-analytics"), already-cased labels ("Data Science &
+ *  Analytics"), or fully lowercase ("data science & analytics"). We
+ *  normalize: dashes become spaces, short connector words (of, and,
+ *  &) stay lowercase unless they're the first word, everything else
+ *  gets Title Case. Acronyms (CS, ML, PM) are preserved when they
+ *  appear in the original. */
+const _COHORT_SMALL_WORDS = new Set(['of', 'and', 'or', '&', 'the', 'a', 'an', 'for', 'to', 'in', 'on']);
+const _COHORT_ACRONYMS = new Set(['cs', 'ml', 'ai', 'pm', 'ux', 'ui', 'qa', 'it', 'hr', 'vp']);
+function titleCaseCohort(raw: string): string {
+  if (!raw) return raw;
+  const parts = raw.replace(/[-_]+/g, ' ').split(/\s+/).filter(Boolean);
+  return parts.map((w, i) => {
+    const lower = w.toLowerCase();
+    if (_COHORT_ACRONYMS.has(lower)) return lower.toUpperCase();
+    if (i > 0 && _COHORT_SMALL_WORDS.has(lower)) return lower;
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }).join(' ');
+}
+
 function daysAgo(dateStr?: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -185,10 +205,18 @@ function buildFitStory(job: Listing, profile: Profile | null): string {
     const n = Number(fresh.replace('d ago', ''));
     if (!Number.isNaN(n) && n <= 7) parts.push('posted this week');
   }
-  const userCohorts = new Set((profile?.cohorts || []).map(c => c.toLowerCase()));
-  const jobCohorts = (job.cohort_requirements || []).map(c => c.cohort?.toLowerCase()).filter(Boolean);
-  const overlap = jobCohorts.filter(c => userCohorts.has(c));
-  if (overlap.length > 0) parts.push(`matches your ${overlap[0]} track`);
+  // Comparison is case-insensitive but we preserve the original casing
+  // of the user's cohort for display, so the fit story reads
+  // "matches your Data Science & Analytics track" instead of the
+  // lowercased slug.
+  const userCohortsOriginal = (profile?.cohorts || []).filter(Boolean) as string[];
+  const userCohortsLower = new Set(userCohortsOriginal.map(c => c.toLowerCase()));
+  const jobCohortsLower = (job.cohort_requirements || []).map(c => (c.cohort || '').toLowerCase()).filter(Boolean);
+  const overlap = jobCohortsLower.filter(c => userCohortsLower.has(c));
+  if (overlap.length > 0) {
+    const original = userCohortsOriginal.find(c => c.toLowerCase() === overlap[0]) || overlap[0];
+    parts.push(`matches your ${titleCaseCohort(original)} track`);
+  }
   if (parts.length === 0) return '';
   const first = parts[0][0].toUpperCase() + parts[0].slice(1);
   return [first, ...parts.slice(1)].join(', ') + '.';
@@ -465,26 +493,52 @@ export default function JobsScreen() {
     return 'all'
   }, [typeFilter, profile?.user_type])
 
+  // Helpers for stricter filter matching. The feed sometimes carries
+  // a null job_type or an imprecise work_mode string, which let jobs
+  // slip past the chip filters. Now we fall back to title/description
+  // heuristics so a posting called "Summer 2026 Software Engineering
+  // Intern" matches the Internship chip even if its job_type column
+  // was never populated.
+  const jobMatchesType = useCallback((j: Listing, type: TypeFilter): boolean => {
+    if (type === 'all') return true;
+    const t = (j.job_type || '').toLowerCase();
+    if (t === type) return true;
+    const title = (j.title || '').toLowerCase();
+    const desc = ((j.description || j.description_preview || '') + '').toLowerCase().slice(0, 500);
+    const intern = /\b(intern|internship|co-?op)\b/.test(title) || /\b(intern|internship|co-?op)\b/.test(desc);
+    const entry = /\b(new\s*grad|entry\s*level|junior|associate|graduate\s+engineer)\b/.test(title);
+    const senior = /\b(senior|staff|principal|lead|head\s+of|director)\b/.test(title);
+    if (type === 'internship') return intern;
+    if (type === 'entry_level') return entry || (!intern && !senior);
+    if (type === 'full_time') return !intern;
+    if (type === 'part_time') return /\bpart\s*time\b/.test(title + ' ' + desc);
+    return false;
+  }, []);
+
+  const jobMatchesRemote = useCallback((j: Listing, r: RemoteFilter): boolean => {
+    if (r === 'any') return true;
+    const mode = (j.work_mode || '').toLowerCase();
+    // Strict remote: the listing explicitly says remote OR the boolean
+    // flag is true. Hybrid does NOT count as remote — users who want
+    // remote want remote, not hybrid.
+    const isRemote = !!j.remote || /\bremote\b/.test(mode);
+    const isHybrid = /\bhybrid\b/.test(mode);
+    if (r === 'remote') return isRemote && !isHybrid;
+    // In-person: anything that is neither remote nor hybrid.
+    return !isRemote && !isHybrid;
+  }, []);
+
   // City + type + remote filter. Applied client-side to the full
   // feed. Per-chip counts shown so users know what will happen
   // before they tap.
   const filteredJobs = useMemo(() => {
     return jobs.filter(j => {
       if (cityFilter && (j.location_city || '').toLowerCase() !== cityFilter) return false;
-      if (effectiveTypeFilter !== 'all') {
-        const t = (j.job_type || '').toLowerCase();
-        if (t !== effectiveTypeFilter) return false;
-      }
-      if (remoteFilter === 'remote') {
-        const remote = !!j.remote || (j.work_mode || '').toLowerCase().includes('remote');
-        if (!remote) return false;
-      } else if (remoteFilter === 'in_person') {
-        const remote = !!j.remote || (j.work_mode || '').toLowerCase().includes('remote');
-        if (remote) return false;
-      }
+      if (!jobMatchesType(j, effectiveTypeFilter)) return false;
+      if (!jobMatchesRemote(j, remoteFilter)) return false;
       return true;
     });
-  }, [jobs, cityFilter, effectiveTypeFilter, remoteFilter]);
+  }, [jobs, cityFilter, effectiveTypeFilter, remoteFilter, jobMatchesType, jobMatchesRemote]);
 
   // Skill-gap -> video map, keyed by job id. Computed once per data
   // change. The heavy lifting is O(jobs * cohortKeywords) which is

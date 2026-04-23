@@ -410,7 +410,7 @@ export default function EditProfileModal({ visible, onClose, profile, photoUri, 
               <Switch
                 value={leaderboardOptIn}
                 onValueChange={setLeaderboardOptIn}
-                trackColor={{ false: theme.surface.border, true: theme.accentSoft }}
+                trackColor={{ false: (t ?? theme).surface.t3 + '55', true: theme.accentSoft }}
                 thumbColor={leaderboardOptIn ? theme.accent : theme.surface.t3}
               />
             </View>

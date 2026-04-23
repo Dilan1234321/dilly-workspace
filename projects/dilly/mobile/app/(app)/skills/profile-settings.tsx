@@ -348,7 +348,7 @@ function RowToggle({ label, hint, value, onToggle, theme }: {
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: theme.surface.s2, true: theme.accent }}
+        trackColor={{ false: theme.surface.t3 + '55', true: theme.accent }}
       />
     </View>
   );

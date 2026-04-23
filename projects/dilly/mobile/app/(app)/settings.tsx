@@ -60,8 +60,8 @@ function ToggleRow({ label, hint, value, onToggle }: { label: string; hint?: str
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: t.surface.s3, true: t.accent + '40' }}
-        thumbColor={value ? t.accent : '#f4f3f4'}
+        trackColor={{ false: (t ?? theme).surface.t3 + '55', true: t.accent + '40' }}
+        thumbColor={value ? t.accent : '#9CA3AF'}
       />
     </View>
   );
