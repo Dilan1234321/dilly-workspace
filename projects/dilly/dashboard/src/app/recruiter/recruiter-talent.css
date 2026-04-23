@@ -3197,3 +3197,502 @@
   flex-shrink: 0;
   animation: dr-live-pulse 2s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE BLIND AUDITION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Top banner ── */
+
+.recruiter-v2 .dr-blind-top-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--dr-text-muted);
+  background: var(--dr-surface);
+  border: 1px solid var(--dr-border);
+  border-radius: var(--dr-radius-lg);
+  padding: 0.55rem 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.recruiter-v2 .dr-blind-top-banner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dr-indigo);
+  flex-shrink: 0;
+  animation: dr-live-pulse 2s ease-in-out infinite;
+}
+
+/* ── Intro screen ── */
+
+.recruiter-v2 .dr-blind-intro {
+  max-width: 640px;
+  margin: 2rem auto 0;
+  text-align: center;
+}
+
+.recruiter-v2 .dr-blind-intro-eyebrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dr-indigo);
+  background: rgba(43,58,142,0.08);
+  border: 1px solid rgba(43,58,142,0.18);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.recruiter-v2 .dr-blind-intro-headline {
+  font-family: "Montserrat", "Inter", sans-serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--dr-text);
+  margin: 0 0 1rem;
+}
+
+.recruiter-v2 .dr-blind-intro-sub {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--dr-text-muted);
+  margin: 0 0 2rem;
+}
+
+.recruiter-v2 .dr-blind-role-box {
+  background: var(--dr-surface);
+  border: 1px solid var(--dr-border);
+  border-radius: var(--dr-radius-lg);
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  margin-bottom: 2rem;
+}
+
+.recruiter-v2 .dr-blind-role-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dr-indigo);
+  margin-bottom: 0.6rem;
+}
+
+.recruiter-v2 .dr-blind-role-text {
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--dr-text);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.recruiter-v2 .dr-blind-search-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--dr-indigo);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0.9rem 2.5rem;
+  border-radius: var(--dr-radius-lg);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  font-family: inherit;
+  margin-bottom: 0.75rem;
+}
+
+.recruiter-v2 .dr-blind-search-btn:hover:not(:disabled) {
+  background: #1f2d6e;
+  transform: translateY(-1px);
+}
+
+.recruiter-v2 .dr-blind-search-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.recruiter-v2 .dr-blind-searching {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.recruiter-v2 .dr-blind-searching-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.8);
+  animation: dr-live-pulse 1s ease-in-out infinite;
+}
+
+.recruiter-v2 .dr-blind-intro-hint {
+  font-size: 0.78rem;
+  color: var(--dr-text-muted);
+  margin: 0;
+}
+
+/* ── Ranking stage header ── */
+
+.recruiter-v2 .dr-blind-ranking-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+
+.recruiter-v2 .dr-blind-ranking-title {
+  font-family: "Montserrat", "Inter", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--dr-text);
+  margin: 0 0 0.3rem;
+  letter-spacing: -0.02em;
+}
+
+.recruiter-v2 .dr-blind-ranking-sub {
+  font-size: 0.85rem;
+  color: var(--dr-text-muted);
+  margin: 0;
+  line-height: 1.55;
+  max-width: 520px;
+}
+
+.recruiter-v2 .dr-blind-reset-btn {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dr-text-muted);
+  background: var(--dr-surface);
+  border: 1px solid var(--dr-border);
+  border-radius: var(--dr-radius-lg);
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.13s, border-color 0.13s;
+}
+
+.recruiter-v2 .dr-blind-reset-btn:hover {
+  color: var(--dr-text);
+  border-color: var(--dr-text-muted);
+}
+
+/* ── Candidate list ── */
+
+.recruiter-v2 .dr-blind-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Blind card ── */
+
+.recruiter-v2 .dr-blind-card {
+  background: #fff;
+  border: 1.5px solid var(--dr-border);
+  border-radius: var(--dr-radius-lg);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recruiter-v2 .dr-blind-card:hover {
+  border-color: rgba(43,58,142,0.3);
+  box-shadow: 0 2px 12px rgba(43,58,142,0.07);
+}
+
+.recruiter-v2 .dr-blind-card--revealed {
+  border-color: rgba(43,58,142,0.2);
+}
+
+.recruiter-v2 .dr-blind-card-header {
+  display: grid;
+  grid-template-columns: 36px 52px 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.recruiter-v2 .dr-blind-card-rank {
+  font-family: "Montserrat", "Inter", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: rgba(43,58,142,0.25);
+  text-align: center;
+  min-width: 28px;
+}
+
+.recruiter-v2 .dr-blind-rank-drag {
+  display: block;
+  color: var(--dr-text-muted);
+  font-size: 1.1rem;
+  letter-spacing: -2px;
+  cursor: grab;
+  text-align: center;
+  opacity: 0.5;
+}
+
+.recruiter-v2 .dr-blind-card-avatar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recruiter-v2 .dr-blind-card-identity {
+  min-width: 0;
+  flex: 1;
+}
+
+/* Hidden identity placeholder bars */
+.recruiter-v2 .dr-blind-hidden-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.recruiter-v2 .dr-blind-hidden-name {
+  height: 13px;
+  width: 140px;
+  background: #E5E7EB;
+  border-radius: 4px;
+  animation: dr-blind-shimmer 2s ease-in-out infinite;
+}
+
+.recruiter-v2 .dr-blind-hidden-school {
+  height: 11px;
+  width: 100px;
+  background: #F3F4F6;
+  border-radius: 4px;
+  animation: dr-blind-shimmer 2s ease-in-out infinite 0.3s;
+}
+
+@keyframes dr-blind-shimmer {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.recruiter-v2 .dr-blind-revealed-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dr-text);
+  line-height: 1.3;
+}
+
+.recruiter-v2 .dr-blind-revealed-school {
+  font-size: 0.8rem;
+  color: var(--dr-text-muted);
+  margin-top: 0.15rem;
+}
+
+.recruiter-v2 .dr-blind-card-fit {
+  flex-shrink: 0;
+}
+
+.recruiter-v2 .dr-blind-card-expand-btn {
+  flex-shrink: 0;
+  color: var(--dr-text-muted);
+  display: flex;
+  align-items: center;
+}
+
+/* ── Reveal line ── */
+
+.recruiter-v2 .dr-blind-reveal-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  padding: 0.65rem 1rem 0.65rem calc(36px + 52px + 1.5rem + 0.75rem);
+  overflow: hidden;
+}
+
+.recruiter-v2 .dr-blind-reveal-line--warning {
+  background: rgba(255, 59, 48, 0.05);
+  color: #c0392b;
+  border-top: 1px solid rgba(255, 59, 48, 0.12);
+}
+
+.recruiter-v2 .dr-blind-reveal-line--neutral {
+  background: var(--dr-surface);
+  color: var(--dr-text-muted);
+  border-top: 1px solid var(--dr-border);
+}
+
+/* ── Card expanded body ── */
+
+.recruiter-v2 .dr-blind-card-body {
+  padding: 0 1.25rem 1.25rem;
+  overflow: hidden;
+}
+
+/* ── Anonymous avatar ── */
+
+.recruiter-v2 .dr-blind-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Reveal bar ── */
+
+.recruiter-v2 .dr-blind-reveal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--dr-surface);
+  border: 1px solid var(--dr-border);
+  border-radius: var(--dr-radius-lg);
+  flex-wrap: wrap;
+}
+
+.recruiter-v2 .dr-blind-reveal-bar-hint {
+  font-size: 0.82rem;
+  color: var(--dr-text-muted);
+  margin: 0;
+}
+
+.recruiter-v2 .dr-blind-reveal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--dr-indigo);
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 0.7rem 1.75rem;
+  border-radius: var(--dr-radius-lg);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, transform 0.1s ease;
+  flex-shrink: 0;
+}
+
+.recruiter-v2 .dr-blind-reveal-btn:hover {
+  background: #1f2d6e;
+  transform: translateY(-1px);
+}
+
+/* ── Post-reveal summary ── */
+
+.recruiter-v2 .dr-blind-summary {
+  margin-top: 1.5rem;
+}
+
+.recruiter-v2 .dr-blind-summary-inner {
+  background: linear-gradient(135deg, #2B3A8E 0%, #1a2660 100%);
+  border-radius: 1.25rem;
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.recruiter-v2 .dr-blind-summary-headline {
+  font-family: "Montserrat", "Inter", sans-serif;
+  font-size: clamp(1.2rem, 3vw, 1.75rem);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.recruiter-v2 .dr-blind-summary-headline strong {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(255,255,255,0.4);
+  text-underline-offset: 3px;
+}
+
+.recruiter-v2 .dr-blind-summary-body {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.65;
+  max-width: 480px;
+  margin: 0 auto 1.75rem;
+}
+
+.recruiter-v2 .dr-blind-summary-ctas {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.recruiter-v2 .dr-blind-summary .dr-about-cta-primary {
+  background: #fff;
+  color: var(--dr-indigo);
+}
+
+.recruiter-v2 .dr-blind-summary .dr-about-cta-primary:hover {
+  background: #f0f2ff;
+}
+
+.recruiter-v2 .dr-blind-summary .dr-about-cta-secondary {
+  color: rgba(255,255,255,0.85);
+  border-color: rgba(255,255,255,0.3);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--dr-radius-lg);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.recruiter-v2 .dr-blind-summary .dr-about-cta-secondary:hover {
+  border-color: rgba(255,255,255,0.6);
+}
+
+/* ── Demo disabled ── */
+.recruiter-v2 .dr-demo-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .recruiter-v2 .dr-blind-card-header {
+    grid-template-columns: 28px 40px 1fr auto auto;
+    gap: 0.5rem;
+    padding: 0.75rem 0.75rem;
+  }
+  .recruiter-v2 .dr-blind-reveal-line {
+    padding-left: 0.75rem;
+  }
+  .recruiter-v2 .dr-blind-summary-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  .recruiter-v2 .dr-blind-reveal-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Featured nav link (Blind Audition) ── */
+.recruiter-v2 .dr-nav-link--featured {
+  color: var(--dr-indigo);
+  font-weight: 600;
+  background: rgba(43,58,142,0.07);
+  border: 1px solid rgba(43,58,142,0.15);
+}
+
+.recruiter-v2 .dr-nav-link--featured:hover {
+  background: rgba(43,58,142,0.13);
+  border-color: rgba(43,58,142,0.3);
+}

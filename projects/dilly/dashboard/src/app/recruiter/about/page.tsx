@@ -239,6 +239,34 @@ export default function RecruiterAboutPage() {
           </div>
         </motion.section>
 
+        {/* ── Blind Audition CTA ── */}
+        <motion.section
+          className="dr-about-section"
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          <motion.p className="dr-about-section-label" variants={fadeUp}>The competition experience</motion.p>
+          <motion.h2 className="dr-about-section-title" variants={fadeUp}>
+            Try the Blind Audition.
+          </motion.h2>
+          <motion.p className="dr-about-section-body" variants={fadeUp}>
+            Three candidates applied for the same role. Their names, schools, and locations are hidden.
+            Read what they built. Read what Dilly knows about them from real conversations.
+            Rank them. Then hit Reveal.
+          </motion.p>
+          <motion.p className="dr-about-section-body" variants={fadeUp}>
+            Your #1 ranked candidate went to Florida International University.
+            In a traditional ATS filtered to target schools, you never would have seen them.
+          </motion.p>
+          <motion.div variants={fadeUp}>
+            <Link href="/recruiter/blind" className="dr-about-cta-primary" style={{ marginTop: "0.75rem", display: "inline-flex" }}>
+              Start the Blind Audition
+            </Link>
+          </motion.div>
+        </motion.section>
+
         {/* ── Demo CTA ── */}
         <motion.section
           className="dr-about-cta-section"

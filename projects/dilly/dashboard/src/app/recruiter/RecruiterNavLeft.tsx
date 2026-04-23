@@ -25,6 +25,12 @@ export function RecruiterNavLeft() {
       </Link>
       <nav className="dr-nav-links">
         <Link
+          href="/recruiter/blind"
+          className={`dr-nav-link dr-nav-link--featured ${pathname === "/recruiter/blind" ? "dr-nav-link--active" : ""}`}
+        >
+          Blind Audition
+        </Link>
+        <Link
           href="/recruiter/demo"
           className={`dr-nav-link ${pathname === "/recruiter/demo" ? "dr-nav-link--active" : ""}`}
         >
