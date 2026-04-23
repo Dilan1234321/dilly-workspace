@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -1106,7 +1107,7 @@ export default function CalendarScreen() {
       {/* Nav bar */}
       <FadeInView delay={0}>
         <View style={cs.navBar}>
-          <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
+          <AnimatedPressable onPress={() => safeBack('/(app)')} scaleDown={0.9} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
           <Text style={[cs.navTitle, { color: theme.surface.t1 }]}>Calendar</Text>

@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -536,7 +537,7 @@ export default function InternshipTrackerScreen() {
       {/* Nav bar */}
       <FadeInView delay={0}>
         <View style={[ts.navBar, { borderBottomColor: theme.surface.border }]}>
-          <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
+          <AnimatedPressable onPress={() => safeBack('/(app)/jobs')} scaleDown={0.9} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
           </AnimatedPressable>
           <Text style={[ts.navTitle, { color: theme.surface.t1 }]}>Tracker</Text>

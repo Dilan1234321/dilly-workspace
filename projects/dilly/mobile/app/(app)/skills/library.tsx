@@ -1,3 +1,4 @@
+import { safeBack } from '../../../lib/navigation';
 /**
  * Skills library — the user's saved videos.
  *
@@ -69,7 +70,7 @@ export default function LibraryScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity onPress={() => safeBack('/(app)/skills')} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 10 }}>

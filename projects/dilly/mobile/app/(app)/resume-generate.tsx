@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * Generate Resume — "The Forge"
  *
@@ -565,7 +566,16 @@ export default function ResumeGenerateScreen() {
       <Header
         insetsTop={insets.top}
         usage={resumeUsage}
-        onBack={() => router.back()}
+        onBack={() => {
+          // Hidden-tab routes (resume-generate is Tabs.Screen with
+          // href:null) can drop stack history, so safeBack('/(app)/my-dilly-profile') sometimes
+          // lands users on the Home tab instead of the screen they came
+          // from. The almost-always-correct parent for resume-generate is
+          // My Dilly (that's where the viewId flow originates). Fall back
+          // to that when canGoBack() is false.
+          if (router.canGoBack()) safeBack('/(app)/my-dilly-profile');
+          else router.replace('/(app)/my-dilly-profile' as any);
+        }}
       />
 
       <ScrollView

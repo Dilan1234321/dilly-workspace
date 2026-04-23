@@ -1,3 +1,4 @@
+import { safeBack } from '../../../lib/navigation';
 /**
  * Collection detail — shows the saved jobs inside a single collection.
  *
@@ -127,7 +128,7 @@ export default function CollectionDetail() {
       {/* Top bar with back + rename. Intentionally spare so the
           collection name can carry the visual weight below. */}
       <View style={[s.topBar, { borderBottomColor: theme.surface.border }]}>
-        <AnimatedPressable onPress={() => router.back()} hitSlop={12} scaleDown={0.9}>
+        <AnimatedPressable onPress={() => safeBack('/(app)/jobs')} hitSlop={12} scaleDown={0.9}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t1} />
         </AnimatedPressable>
         <AnimatedPressable onPress={renameCollection} hitSlop={12} scaleDown={0.9} disabled={!collection}>

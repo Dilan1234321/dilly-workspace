@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * Customize Dilly — the theming studio.
  *
@@ -142,7 +143,7 @@ export default function CustomizeStudio() {
           about a second, then fades out. High-tech "we handled it"
           feel, zero clicks required. */}
       <View style={[s.topBar, { backgroundColor: theme.surface.bg, borderBottomColor: theme.surface.border }]}>
-        <AnimatedPressable onPress={() => router.back()} hitSlop={12} scaleDown={0.9}>
+        <AnimatedPressable onPress={() => safeBack('/(app)/settings')} hitSlop={12} scaleDown={0.9}>
           <Ionicons name="chevron-back" size={24} color={theme.surface.t1} />
         </AnimatedPressable>
         <Text style={[s.topTitle, { color: theme.surface.t1 }]}>Customize Dilly</Text>

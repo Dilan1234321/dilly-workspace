@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * New Audit - simplified. Scoring is gone.
  * Dilly evaluates fit per-job via narratives, not overall scores.
@@ -27,7 +28,7 @@ export default function NewAuditScreen() {
   return (
     <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
       <View style={[s.header, { borderBottomColor: theme.surface.border }]}>
-        <AnimatedPressable onPress={() => router.back()} style={[s.backBtn, { backgroundColor: theme.surface.s1 }]} scaleDown={0.9}>
+        <AnimatedPressable onPress={() => safeBack('/(app)/my-dilly-profile')} style={[s.backBtn, { backgroundColor: theme.surface.s1 }]} scaleDown={0.9}>
           <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
         </AnimatedPressable>
         <Text style={[s.headerTitle, { color: theme.surface.t1 }]}>Your Profile</Text>

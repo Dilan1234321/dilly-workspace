@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * Settings - clean, simple, every button works.
  */
@@ -600,7 +601,7 @@ export default function SettingsScreen() {
     >
       {/* Header */}
       <View style={[s.header, { borderBottomColor: theme.surface.border }]}>
-        <AnimatedPressable onPress={() => router.back()} scaleDown={0.9} hitSlop={12}>
+        <AnimatedPressable onPress={() => safeBack('/(app)/my-dilly-profile')} scaleDown={0.9} hitSlop={12}>
           <Ionicons name="chevron-back" size={22} color={theme.surface.t1} />
         </AnimatedPressable>
         <Text style={[s.headerTitle, {

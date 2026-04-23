@@ -1,3 +1,4 @@
+import { safeBack } from '../../../lib/navigation';
 /**
  * Notes for Dilly — things the user wants to bring up in the next Chapter.
  *
@@ -135,7 +136,7 @@ export default function ChapterNotesScreen() {
     <View style={[s.container, { backgroundColor: theme.surface.bg, paddingTop: insets.top }]}>
       {/* Top bar */}
       <View style={[s.topBar, { borderBottomColor: theme.surface.border }]}>
-        <AnimatedPressable onPress={() => router.back()} hitSlop={12} scaleDown={0.9}>
+        <AnimatedPressable onPress={() => safeBack('/(app)')} hitSlop={12} scaleDown={0.9}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t1} />
         </AnimatedPressable>
         <Text style={[s.title, { color: theme.surface.t1 }]}>Notes for Dilly</Text>

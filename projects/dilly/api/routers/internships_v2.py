@@ -770,7 +770,15 @@ def _fallback_feed(
         FROM internships i
         JOIN companies c ON i.company_id = c.id
         WHERE {where_sql}
-        ORDER BY i.quality_score DESC NULLS LAST
+        -- Secondary ORDER BY keys (posted_date, then id) so tied
+        -- quality_score rows always come back in the same order.
+        -- Without this, Postgres returns arbitrary order among ties,
+        -- and the downstream per-company cap keeps different jobs on
+        -- every refresh — which shows up as the total match count
+        -- drifting up and down.
+        ORDER BY i.quality_score DESC NULLS LAST,
+                 i.posted_date DESC NULLS LAST,
+                 i.id ASC
         LIMIT 2000
     """, params)
     rows = cur.fetchall()
@@ -1158,11 +1166,17 @@ async def get_internship_feed(
         )""")
 
     where_sql = " AND ".join(where)
-    order = "m.rank_score DESC"
+    # Stable ordering: every sort key ends with `i.id ASC` as a
+    # deterministic tiebreaker so the feed returns the same row set
+    # across refreshes when nothing has actually changed in the DB.
+    # Without this, tied scores come back in arbitrary order and the
+    # downstream per-company cap keeps different rows, making the
+    # total match count drift up and down between pulls.
+    order = "m.rank_score DESC, i.id ASC"
     if sort == "readiness":
-        order = "CASE m.readiness WHEN 'ready' THEN 0 WHEN 'almost' THEN 1 ELSE 2 END, m.rank_score DESC"
+        order = "CASE m.readiness WHEN 'ready' THEN 0 WHEN 'almost' THEN 1 ELSE 2 END, m.rank_score DESC, i.id ASC"
     elif sort == "newest":
-        order = "i.created_at DESC"
+        order = "i.created_at DESC, i.id ASC"
 
     cur.execute(f"""
         SELECT COUNT(*) as cnt FROM match_scores m

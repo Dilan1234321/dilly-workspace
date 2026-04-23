@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Animated,
@@ -315,7 +316,7 @@ export default function ScoreDetailScreen() {
   if (cohorts.length === 0 && !legacyAudit) {
     return (
       <View style={[s.container, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={[s.backBtn, { top: insets.top + 14 }]} onPress={() => router.back()}>
+        <TouchableOpacity style={[s.backBtn, { top: insets.top + 14 }]} onPress={() => safeBack('/(app)/my-dilly-profile')}>
           <Ionicons name="chevron-back" size={22} color={colors.t1} />
         </TouchableOpacity>
         <View style={s.center}>
@@ -333,7 +334,7 @@ export default function ScoreDetailScreen() {
     return (
       <View style={s.container}>
         <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-          <TouchableOpacity style={s.backBtnHeader} onPress={() => router.back()} hitSlop={12}>
+          <TouchableOpacity style={s.backBtnHeader} onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={12}>
             <Ionicons name="chevron-back" size={22} color={colors.t1} />
           </TouchableOpacity>
           <Text style={s.headerTitle}>MY SCORES</Text>
@@ -360,7 +361,7 @@ export default function ScoreDetailScreen() {
     <View style={s.container}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity style={s.backBtnHeader} onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity style={s.backBtnHeader} onPress={() => safeBack('/(app)/my-dilly-profile')} hitSlop={12}>
           <Ionicons name="chevron-back" size={22} color={colors.t1} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>MY SCORES</Text>

@@ -1,3 +1,4 @@
+import { safeBack } from '../../lib/navigation';
 /**
  * Interview Practice — "The Room"
  *
@@ -417,7 +418,7 @@ export default function InterviewPracticeScreen() {
         subline="She asks, you answer. Real-time feedback on structure, specificity, and pace."
       />
 
-      <NavBar dark={isDark} onBack={() => router.back()} phase={phase} currentIdx={currentIdx} total={questions.length} />
+      <NavBar dark={isDark} onBack={() => safeBack('/(app)/my-dilly-profile')} phase={phase} currentIdx={currentIdx} total={questions.length} />
 
       {phase === 'setup' && (
         <SetupPhase
@@ -464,7 +465,7 @@ export default function InterviewPracticeScreen() {
           expandedCards={expandedCards}
           onToggle={toggleCard}
           onRetry={resetToSetup}
-          onDone={() => router.back()}
+          onDone={() => safeBack('/(app)/my-dilly-profile')}
           insetsBottom={insets.bottom}
         />
       )}
