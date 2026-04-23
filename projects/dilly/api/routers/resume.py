@@ -509,9 +509,15 @@ async def sync_base_resume(request: Request):
 
         sections = []
 
-        # Contact section
+        # Contact section. Always prefer the AUTHED email (the one the
+        # user is currently signed in with) over profile.email. Users
+        # imported via onboarding sometimes end up with a stale
+        # profile.email (e.g. a placeholder set during seed) which
+        # then showed up on every generated resume — exactly the
+        # wrong email at the top of a sent application. Authed email
+        # is always current + deliverable.
         name = (profile.get("name") or "").strip()
-        p_email = (profile.get("email") or email).strip()
+        p_email = (email or profile.get("email") or "").strip()
         linkedin = (profile.get("linkedin_url") or "").strip()
         sections.append({
             "key": "contact",
@@ -524,7 +530,96 @@ async def sync_base_resume(request: Request):
         minor = (profile.get("minors") or [None])[0] or ""
         if minor and minor.upper() in ("N/A", "NA", "N", "A"):
             minor = ""
-        school = "University of Tampa" if profile.get("school_id") == "utampa" else ""
+        # School resolution, in priority order:
+        #   1. profile.school (canonical display name, e.g. "Stanford University")
+        #   2. profile.school_name (legacy alias)
+        #   3. profile.university
+        #   4. school_id mapping (we keep utampa and a small curated map
+        #      so we don't lose the display-name for users whose profile
+        #      only stored the id)
+        #   5. Email-domain inference (kochhardilly@ut.edu -> UT etc.)
+        # Previously the code hardcoded "University of Tampa" for
+        # school_id=='utampa' and returned empty for everyone else,
+        # which is why non-UT students saw a blank education block.
+        school = (
+            (profile.get("school") or "").strip()
+            or (profile.get("school_name") or "").strip()
+            or (profile.get("university") or "").strip()
+        )
+        if not school:
+            _SCHOOL_ID_MAP = {
+                "utampa": "University of Tampa",
+                "stanford": "Stanford University",
+                "mit": "Massachusetts Institute of Technology",
+                "harvard": "Harvard University",
+                "berkeley": "UC Berkeley",
+                "ucla": "UCLA",
+                "ut-austin": "University of Texas at Austin",
+                "umich": "University of Michigan",
+                "cmu": "Carnegie Mellon University",
+                "columbia": "Columbia University",
+                "nyu": "New York University",
+                "upenn": "University of Pennsylvania",
+                "cornell": "Cornell University",
+                "princeton": "Princeton University",
+                "yale": "Yale University",
+                "duke": "Duke University",
+                "northwestern": "Northwestern University",
+                "gatech": "Georgia Tech",
+                "illinois": "University of Illinois Urbana-Champaign",
+                "washington": "University of Washington",
+                "wisconsin": "University of Wisconsin-Madison",
+                "purdue": "Purdue University",
+                "virginia": "University of Virginia",
+                "usc": "University of Southern California",
+                "tufts": "Tufts University",
+            }
+            sid = (profile.get("school_id") or "").strip().lower()
+            school = _SCHOOL_ID_MAP.get(sid, "")
+        if not school:
+            # Email domain inference — the onboarding already does this
+            # for login, but not every profile has `school` populated
+            # yet, so we re-derive from the authed email.
+            try:
+                domain = (email.split("@", 1)[1] if "@" in email else "").lower()
+                _DOMAIN_MAP = {
+                    "ut.edu": "University of Tampa",
+                    "stanford.edu": "Stanford University",
+                    "mit.edu": "Massachusetts Institute of Technology",
+                    "harvard.edu": "Harvard University",
+                    "berkeley.edu": "UC Berkeley",
+                    "ucla.edu": "UCLA",
+                    "utexas.edu": "University of Texas at Austin",
+                    "umich.edu": "University of Michigan",
+                    "andrew.cmu.edu": "Carnegie Mellon University",
+                    "cmu.edu": "Carnegie Mellon University",
+                    "columbia.edu": "Columbia University",
+                    "nyu.edu": "New York University",
+                    "upenn.edu": "University of Pennsylvania",
+                    "cornell.edu": "Cornell University",
+                    "princeton.edu": "Princeton University",
+                    "yale.edu": "Yale University",
+                    "duke.edu": "Duke University",
+                    "northwestern.edu": "Northwestern University",
+                    "gatech.edu": "Georgia Tech",
+                    "illinois.edu": "University of Illinois Urbana-Champaign",
+                    "uw.edu": "University of Washington",
+                    "wisc.edu": "University of Wisconsin-Madison",
+                    "purdue.edu": "Purdue University",
+                    "virginia.edu": "University of Virginia",
+                    "usc.edu": "University of Southern California",
+                    "tufts.edu": "Tufts University",
+                }
+                if domain:
+                    school = _DOMAIN_MAP.get(domain, "")
+                    # Generic .edu catch-all — pull the 2nd-level domain
+                    # and make a guess that reads reasonably.
+                    if not school and domain.endswith(".edu"):
+                        base = domain.rsplit(".edu", 1)[0].split(".")[-1]
+                        if base and len(base) >= 3:
+                            school = base.replace("-", " ").title() + " University"
+            except Exception:
+                pass
         # Try to extract GPA from profile text
         gpa_match = re.search(r"GPA[:\s]*([\d.]+)", profile_txt, re.IGNORECASE)
         gpa = gpa_match.group(1) if gpa_match else ""
