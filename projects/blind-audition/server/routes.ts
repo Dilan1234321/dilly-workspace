@@ -3,6 +3,8 @@ import { createServer } from "node:http";
 import type { Server } from "node:http";
 import pkg from "pg";
 const { Pool } = pkg;
+import https from "node:https";
+import http from "node:http";
 
 // ── Live Postgres connection to production RDS ─────────────────────────────
 const DB_PASSWORD = process.env.DILLY_DB_PASSWORD || "TedsyBoy2025!!$())($))!!$("; // injected or fallback
@@ -220,6 +222,52 @@ const PRESET_ROLES = [
   },
 ];
 
+// ── Fire-and-forget: notify Dilly API of recruiter interest ──────────────────
+const DILLY_API_URL = process.env.DILLY_API_URL || "https://api.trydilly.com";
+const DILLY_INTERNAL_KEY = process.env.DILLY_INTERNAL_KEY || "";
+
+function notifyDillyOfInterest(payload: {
+  candidate_email: string;
+  candidate_name: string;
+  recruiter_name: string;
+  recruiter_company: string;
+  recruiter_email: string | null;
+  role_label: string;
+  intro_message: string;
+}): void {
+  if (!DILLY_INTERNAL_KEY) {
+    console.warn("[notify] DILLY_INTERNAL_KEY not set — skipping notification");
+    return;
+  }
+  const body = JSON.stringify(payload);
+  const url = new URL("/internal/recruiter-interest/notify", DILLY_API_URL);
+  const isHttps = url.protocol === "https:";
+  const lib = isHttps ? https : http;
+  const options = {
+    hostname: url.hostname,
+    port: url.port || (isHttps ? 443 : 80),
+    path: url.pathname,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(body),
+      "X-Internal-Key": DILLY_INTERNAL_KEY,
+    },
+  };
+  const req = lib.request(options, (res) => {
+    let data = "";
+    res.on("data", (chunk) => { data += chunk; });
+    res.on("end", () => {
+      console.log(`[notify] Dilly interest notification: ${res.statusCode} — ${data.slice(0, 120)}`);
+    });
+  });
+  req.on("error", (e) => {
+    console.warn(`[notify] Dilly interest notification failed: ${e.message}`);
+  });
+  req.write(body);
+  req.end();
+}
+
 // ── Ensure recruiter_interests table exists ───────────────────────────────
 async function ensureSchema() {
   const client = await pool.connect();
@@ -320,6 +368,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         candidateName: profile.name,
         roleLabel: role_label,
         narrative: profile.dilly_narrative || profile.narrative || "",
+      });
+
+      // Fire-and-forget: notify the Dilly ecosystem
+      notifyDillyOfInterest({
+        candidate_email: validCandidate,
+        candidate_name: profile.name,
+        recruiter_name: recruiter_name,
+        recruiter_company: recruiter_company,
+        recruiter_email: recruiter_email || null,
+        role_label: role_label || "",
+        intro_message: intro,
       });
 
       res.json({
