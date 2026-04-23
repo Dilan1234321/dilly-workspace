@@ -454,7 +454,7 @@ function PrepDeckModalMobile({ deck, onClose }: { deck: PrepDeck; onClose: () =>
   const probColor: Record<string, string> = { high: CORAL, medium: AMBER, low: GREEN };
 
   return (
-    <Modal visible animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={cs.modalOverlay}>
         <View style={[cs.prepDeckSheet, { paddingBottom: insets.bottom + 20 }]}>
           <View style={cs.modalHeader}>
@@ -664,7 +664,7 @@ function AddEventModal({ visible, onClose, onAdd, initialDate }: {
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={cs.modalOverlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={cs.modalKav}>
           {/* Cap the card height so it never fills the full screen

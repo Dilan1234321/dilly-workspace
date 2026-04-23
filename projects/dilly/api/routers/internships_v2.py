@@ -282,36 +282,67 @@ def _build_profile_signals(email: str) -> dict:
     target_keywords: set[str] = set()
     user_cities: set[str] = set()
     skill_keywords: set[str] = set()
+    major_keywords: set[str] = set()
+    cohort_keywords: set[str] = set()
+    # Mode drives what "good" looks like:
+    #   student  -> prefer internship, remote-friendly, junior titles
+    #   seeker   -> prefer entry-level / new-grad / full-time  entry
+    #   holder   -> prefer lateral / senior / staff / mgmt
+    # Derived from prof.user_type when set, else infer from fields.
+    user_type = (prof.get("user_type") or "").lower().strip()
+    if not user_type:
+        if prof.get("graduation_year"):
+            user_type = "student"
+        elif prof.get("current_role") or prof.get("current_company"):
+            user_type = "holder"
+        else:
+            user_type = "seeker"
+    mode = "student" if user_type == "student" else ("holder" if user_type in ("holder", "professional") else "seeker")
 
     # Target companies: both the `target_companies` profile field AND
     # any fact in category=target_company.
     for c in (prof.get("target_companies") or []):
         if c:
             target_companies.add(str(c).strip().lower())
+    # Current company is implicitly NOT a target — we'd never surface
+    # the user's own employer as a "job match". Track it so the boost
+    # can skip it.
+    current_company = (prof.get("current_company") or "").strip().lower() or None
+
     for f in facts:
         cat = (f.get("category") or "").lower()
         label = (f.get("label") or "").lower()
         value = (f.get("value") or "").lower()
+        bag = (label + " " + value).replace(",", " ")
         if cat == "target_company":
-            # Fact values/labels often have the "Target: " prefix. Strip.
             raw = (value or label).replace("target:", "").strip()
             if raw:
                 target_companies.add(raw)
         elif cat in ("goal", "career_interest"):
-            # Split into keyword tokens for partial-match boost.
-            tokens = (label + " " + value).replace(",", " ").split()
-            for tok in tokens:
+            for tok in bag.split():
                 tok = tok.strip(".,:;!?()[]").lower()
                 if len(tok) >= 4 and tok not in _STOPWORDS:
                     target_keywords.add(tok)
-        elif cat in ("skill", "skill_unlisted", "project_detail"):
-            tokens = (label + " " + value).replace(",", " ").split()
-            for tok in tokens:
+        elif cat in ("skill", "skill_unlisted", "technical_skill", "soft_skill", "project_detail"):
+            for tok in bag.split():
                 tok = tok.strip(".,:;!?()[]").lower()
                 if len(tok) >= 3 and tok not in _STOPWORDS:
                     skill_keywords.add(tok)
+        elif cat in ("major", "minor", "academic_major"):
+            for tok in bag.split():
+                tok = tok.strip(".,:;!?()[]").lower()
+                if len(tok) >= 4 and tok not in _STOPWORDS:
+                    major_keywords.add(tok)
+        elif cat in ("experience", "current_role", "past_role"):
+            # Past titles carry a ton of signal for holders/seekers —
+            # a user whose history mentions "product manager" should
+            # match PM roles even without a listed goal. Treat as
+            # keyword source with a slight boost.
+            for tok in bag.split():
+                tok = tok.strip(".,:;!?()[]").lower()
+                if len(tok) >= 4 and tok not in _STOPWORDS:
+                    target_keywords.add(tok)
 
-    # Career goal / industry target — same tokenization treatment.
     for field in ("career_goal", "industry_target"):
         val = (prof.get(field) or "").lower()
         for tok in val.replace(",", " ").split():
@@ -319,7 +350,26 @@ def _build_profile_signals(email: str) -> dict:
             if len(tok) >= 4 and tok not in _STOPWORDS:
                 target_keywords.add(tok)
 
-    # Location preference.
+    # Majors on the profile (students often list these directly).
+    for m in (prof.get("majors") or ([prof.get("major")] if prof.get("major") else [])):
+        if not m:
+            continue
+        for tok in str(m).replace(",", " ").split():
+            tok = tok.strip(".,:;!?()[]").lower()
+            if len(tok) >= 4 and tok not in _STOPWORDS:
+                major_keywords.add(tok)
+
+    # Cohorts (e.g. "Software Engineering", "Investment Banking") are
+    # strong signal — if the user is on that track, bias roles that
+    # mention the cohort keyword.
+    for cohort in (prof.get("cohorts") or []):
+        if not cohort:
+            continue
+        for tok in str(cohort).replace(",", " ").split():
+            tok = tok.strip(".,:;!?()[]").lower()
+            if len(tok) >= 4 and tok not in _STOPWORDS:
+                cohort_keywords.add(tok)
+
     for city in (prof.get("job_locations") or []):
         if city:
             user_cities.add(str(city).strip().lower())
@@ -329,6 +379,10 @@ def _build_profile_signals(email: str) -> dict:
         "target_keywords": target_keywords,
         "user_cities": user_cities,
         "skill_keywords": skill_keywords,
+        "major_keywords": major_keywords,
+        "cohort_keywords": cohort_keywords,
+        "current_company": current_company,
+        "mode": mode,
     }
 
 
@@ -344,53 +398,112 @@ _STOPWORDS = {
 }
 
 
+_INTERNSHIP_TITLE_HINTS = ("intern", "co-op", "coop")
+_ENTRY_TITLE_HINTS = ("new grad", "new-grad", "entry", "junior ", "associate ", "graduate ")
+_SENIOR_TITLE_HINTS = ("senior ", "staff ", "principal ", "lead ", "head of ", "director", "manager ")
+
+
 def _profile_boost(job_title: str, job_description: str, job_company: str,
                    job_city: str, job_state: str,
                    signals: dict) -> float:
-    """Score a single job against the user's profile signals.
-    Returns a 0-100 float. Each signal contributes independently,
-    capped so one strong match doesn't dominate.
+    """Mode-aware profile-to-job boost, 0-100.
 
-    Weights (additive, 0-100 scale, capped at 100):
-      - target company exact match: +60
-      - any skill keyword match in title/desc: +15 (cap 30)
-      - target keyword match in title: +20 (cap 30)
-      - target keyword match in description: +5 (cap 10)
-      - user-city match: +10
+    The scoring spreads weight across more signals than before so a
+    typical engaged user with 3-4 profile facts lands in the 50-75
+    range (real "Strong" territory) instead of the 20-40 range the
+    old formula produced without a target-company match. Zero LLM.
 
-    Max possible boost: 100 (company + skills + goal + city).
-    Typical engaged user with 2-3 matches: 35-60.
-    User with sparse profile: 0-15.
+    Per-signal weights (additive, capped at 100):
+      Level alignment (role type matches mode)     +18
+      Skill keyword hits in title                  +12 each, cap 36
+      Skill keyword hits in description            +4 each,  cap 12
+      Target company exact                         +40
+      (anti-target) User's own current company     -100 (kill)
+      Cohort keyword in title                      +15
+      Cohort keyword in description                +5  (cap 10)
+      Career-goal/past-title keyword in title      +12 each, cap 24
+      Career-goal/past-title keyword in desc       +3  each, cap 9
+      Major keyword in title or desc               +8
+      City or state match                          +10
+
+    Notes:
+      - Level alignment prevents "every full-time job for a student"
+        and "every internship for a holder" from ever ranking strong.
+      - Cohort keyword carries weight because cohorts are Dilly's
+        highest-signal field (user told us "I'm on the SWE track").
+      - Current-company anti-boost: a user never wants to see their
+        own employer ranked. Subtracting 100 buries it.
     """
     if not signals:
         return 0.0
     title = (job_title or "").lower()
-    desc = (job_description or "")[:4000].lower()  # cap description scan
+    desc = (job_description or "")[:4000].lower()
     company = (job_company or "").lower()
     city = (job_city or "").lower()
     state = (job_state or "").lower()
+    mode = signals.get("mode") or "seeker"
     score = 0.0
 
-    # 1. Target company — by far the strongest signal. If the user
-    # explicitly named this company as a target, they want it ranked
-    # high regardless of S/G/B fit.
+    # 0. Current-company anti-boost. If the job is at the user's own
+    # employer, bury it — this is almost never useful and clutters the
+    # feed with noise.
+    cur = signals.get("current_company")
+    if cur and cur in company:
+        return 0.0
+
+    # 1. Level alignment. Strong signal; keeps students seeing
+    # internships, seekers seeing entry, holders seeing lateral/senior.
+    is_internship = any(h in title for h in _INTERNSHIP_TITLE_HINTS)
+    is_entry = any(h in title for h in _ENTRY_TITLE_HINTS)
+    is_senior = any(h in title for h in _SENIOR_TITLE_HINTS)
+    if mode == "student":
+        if is_internship: score += 18
+        elif is_senior: score -= 10  # students don't want senior roles
+    elif mode == "seeker":
+        if is_entry: score += 18
+        elif is_internship: score += 10  # internships still fine for early seekers
+        elif is_senior: score -= 5
+    else:  # holder
+        if is_senior: score += 18
+        elif is_entry: score -= 5
+        elif is_internship: score -= 15  # holders really shouldn't see internships
+
+    # 2. Target company — very strong when it matches. Weight lowered
+    # from 60 to 40 so a target match no longer dominates to the point
+    # of ranking a bad-level role above everything else.
     for tc in signals["target_companies"]:
         if tc and tc in company:
-            score += 60
-            break  # only count once
+            score += 40
+            break
 
-    # 2. Skill keywords in title/description.
-    skill_hits = 0
+    # 3. Skill keywords. Weight boosted and separated into title-hit
+    # (high) vs desc-hit (low). Cap at 36 total title + 12 desc so a
+    # skill-heavy resume doesn't dominate a multi-axis match.
+    title_skill_hits = 0
+    desc_skill_hits = 0
     for sk in signals["skill_keywords"]:
-        if sk in title or sk in desc:
-            skill_hits += 1
-            if skill_hits >= 2:
-                break
-    score += min(skill_hits * 15, 30)
+        if sk in title:
+            title_skill_hits += 1
+        elif sk in desc:
+            desc_skill_hits += 1
+    score += min(title_skill_hits * 12, 36)
+    score += min(desc_skill_hits * 4, 12)
 
-    # 3. Career goal / industry target — title match weighs much
-    # more than description match because a keyword in the title
-    # means the job IS about that thing.
+    # 4. Cohort keywords — highest-signal field after company. If the
+    # user told us "I'm on the SWE track" and the job title says
+    # Software Engineer, that's a bullseye.
+    cohort_title_hit = False
+    cohort_desc_hits = 0
+    for kw in signals.get("cohort_keywords") or set():
+        if kw in title:
+            cohort_title_hit = True
+        elif kw in desc:
+            cohort_desc_hits += 1
+    if cohort_title_hit:
+        score += 15
+    score += min(cohort_desc_hits * 5, 10)
+
+    # 5. Career-goal / past-role keywords.
     title_goal_hits = 0
     desc_goal_hits = 0
     for kw in signals["target_keywords"]:
@@ -398,16 +511,23 @@ def _profile_boost(job_title: str, job_description: str, job_company: str,
             title_goal_hits += 1
         elif kw in desc:
             desc_goal_hits += 1
-    score += min(title_goal_hits * 20, 30)
-    score += min(desc_goal_hits * 5, 10)
+    score += min(title_goal_hits * 12, 24)
+    score += min(desc_goal_hits * 3, 9)
 
-    # 4. Location preference.
+    # 6. Major keyword — one-shot hit. "CS" / "Finance" in title
+    # should nudge the match even when nothing else lines up.
+    for mk in signals.get("major_keywords") or set():
+        if mk in title or mk in desc:
+            score += 8
+            break
+
+    # 7. Location.
     for uc in signals["user_cities"]:
         if uc and (uc in city or uc in state):
             score += 10
             break
 
-    return min(score, 100.0)
+    return max(0.0, min(score, 100.0))
 
 
 def _cohort_readiness(

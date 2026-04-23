@@ -1903,7 +1903,12 @@ function SeekerProfileScreen() {
           <PulseTimelineSection theme={theme} />
         </FadeInView>
 
-        {/* ── 7. My Resumes ──────────────────────────────────── */}
+        {/* ── 7. My Resumes ────────────────────────────────────
+            All styling overridden inline with theme.* values so this
+            section honors Customize Dilly. Previously it pulled from
+            the fixed `d.resumeCard` stylesheet (using static colors.*
+            tokens) and ignored Midnight / Cloud / Cream / Blush /
+            Slate. */}
         {resumes.length > 0 && (
           <FadeInView delay={400}>
             <Text style={[d.sectionLabel, { color: theme.surface.t3 }]}>MY RESUMES</Text>
@@ -1913,14 +1918,20 @@ function SeekerProfileScreen() {
               return (
                 <AnimatedPressable
                   key={r.id}
-                  style={d.resumeCard}
+                  style={[
+                    d.resumeCard,
+                    {
+                      backgroundColor: theme.surface.s1,
+                      borderColor: theme.surface.border,
+                    },
+                  ]}
                   onPress={() => router.push({ pathname: '/(app)/resume-generate', params: { viewId: r.id } })}
                   scaleDown={0.98}
                 >
-                  <Ionicons name="document-text-outline" size={18} color={COBALT} />
+                  <Ionicons name="document-text-outline" size={18} color={theme.accent} />
                   <View style={{ flex: 1 }}>
-                    <Text style={d.resumeTitle}>{r.job_title}</Text>
-                    <Text style={d.resumeSub}>{r.company} · {dateStr}</Text>
+                    <Text style={[d.resumeTitle, { color: theme.surface.t1 }]}>{r.job_title}</Text>
+                    <Text style={[d.resumeSub, { color: theme.surface.t3 }]}>{r.company} · {dateStr}</Text>
                   </View>
                   <TouchableOpacity
                     hitSlop={10}
@@ -1928,11 +1939,11 @@ function SeekerProfileScreen() {
                       e.stopPropagation?.();
                       handleShareResume(r);
                     }}
-                    style={d.resumeShareBtn}
+                    style={[d.resumeShareBtn, { backgroundColor: theme.accentSoft }]}
                   >
-                    <Ionicons name="share-outline" size={16} color={COBALT} />
+                    <Ionicons name="share-outline" size={16} color={theme.accent} />
                   </TouchableOpacity>
-                  <Ionicons name="chevron-forward" size={14} color={colors.t3} />
+                  <Ionicons name="chevron-forward" size={14} color={theme.surface.t3} />
                 </AnimatedPressable>
               );
             })}
@@ -2200,7 +2211,7 @@ function SeekerProfileScreen() {
 
       {/* QR Code Fullscreen. The QR itself stays dark-on-white for scan
           reliability — theme only chromes the surrounding screen. */}
-      <Modal visible={showQrFullscreen} animationType="slide" presentationStyle="fullScreen" transparent={false}>
+      <Modal visible={showQrFullscreen} animationType="none" presentationStyle="fullScreen" transparent={false}>
         <View style={{ flex: 1, backgroundColor: theme.surface.bg, alignItems: 'center', justifyContent: 'center' }}>
           <TouchableOpacity
             style={{ position: 'absolute', top: 60, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: theme.surface.s2, alignItems: 'center', justifyContent: 'center', zIndex: 10 }}

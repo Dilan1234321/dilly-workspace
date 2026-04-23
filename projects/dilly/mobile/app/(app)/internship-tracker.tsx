@@ -362,7 +362,7 @@ function AddAppModal({ visible, onClose, onAdd }: {
   const inputStyle = [ts.modalInput, { backgroundColor: theme.surface.s2, borderColor: theme.surface.border, color: theme.surface.t1 }];
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="none" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={ts.modalOverlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
           <View style={[ts.modalCard, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border, paddingBottom: insets.bottom + 20 }]}>

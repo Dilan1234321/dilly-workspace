@@ -59,7 +59,7 @@ export default function DillyGate({ visible, message, requiredPlan, onDismiss }:
   return (
     <Modal
       visible={visible}
-      animationType="fade"
+      animationType="none"
       transparent={false}
       statusBarTranslucent
       onRequestClose={onDismiss}

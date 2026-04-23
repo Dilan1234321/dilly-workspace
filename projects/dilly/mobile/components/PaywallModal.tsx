@@ -57,7 +57,7 @@ export default function PaywallModal() {
     <Modal
       visible={paywallVisible}
       transparent
-      animationType="slide"
+      animationType="none"
       statusBarTranslucent
       onRequestClose={dismissPaywall}
     >

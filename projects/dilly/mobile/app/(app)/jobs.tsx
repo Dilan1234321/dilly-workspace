@@ -816,11 +816,30 @@ export default function JobsScreen() {
       <Modal
         visible={showCityPicker}
         transparent
-        animationType="slide"
+        animationType="none"
         onRequestClose={() => setShowCityPicker(false)}
       >
-        <View style={styles.cityBackdrop}>
-          <View style={[styles.citySheet, { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 14 }]}>
+        {/* Tap anywhere on the (now fully transparent) backdrop to
+            dismiss. No black overlay — the sheet just appears over
+            the underlying content. */}
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowCityPicker(false)}
+          style={styles.cityBackdrop}
+        >
+          {/* Swipe-down-to-dismiss on the sheet itself. We use a
+              PanResponder via the onStartShouldSetResponder /
+              onResponderRelease chain so users can flick the sheet
+              down without needing a dedicated close button. */}
+          <View
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={(e) => Math.abs(e.nativeEvent.pageY) > 10}
+            onResponderRelease={(e) => {
+              // Any downward release of the handle area closes the sheet.
+              if ((e.nativeEvent as any).pageY > 200) setShowCityPicker(false);
+            }}
+            style={[styles.citySheet, { backgroundColor: theme.surface.bg, paddingBottom: insets.bottom + 14 }]}
+          >
             <View style={styles.citySheetHandle} />
             <Text style={[styles.citySheetTitle, { color: theme.surface.t1 }]}>Filter by city</Text>
 
@@ -864,7 +883,7 @@ export default function JobsScreen() {
               ) : null}
             </ScrollView>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
 
       {noticedLine ? (
@@ -888,7 +907,7 @@ export default function JobsScreen() {
       ) : null}
 
       {strong.length > 1 ? (
-        <BandSection label="STRONG MATCHES" subtitle="Your profile lines up well. Apply with confidence."
+        <BandSection label="WORTH APPLYING" subtitle="Your profile lines up well here. Apply with confidence."
           jobs={strong.slice(1)} opacity={1}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
@@ -896,7 +915,7 @@ export default function JobsScreen() {
       ) : null}
 
       {stretch.length > 0 ? (
-        <BandSection label="STRETCH ROLES" subtitle="Good fit if you frame it right. Dilly can help."
+        <BandSection label="WORTH A SHOT" subtitle="Partial fit. Frame it right and you're in the conversation."
           jobs={stretch} opacity={0.88}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
@@ -904,7 +923,7 @@ export default function JobsScreen() {
       ) : null}
 
       {known.length > 0 ? (
-        <BandSection label="WORTH KNOWING" subtitle="Not a direct match, but worth tracking."
+        <BandSection label="ON THE RADAR" subtitle="Not an obvious fit today, but worth tracking."
           jobs={known.slice(0, 12)} opacity={0.72}
           profile={profile} theme={theme} expandedId={expandedId} narratives={narratives}
           gapVideoByJob={gapVideoByJob} actions={cardActions}
@@ -1280,10 +1299,13 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 11, fontWeight: '800' },
 
-  // City picker bottom sheet.
+  // City picker bottom sheet. Fully transparent backdrop — the sheet
+  // should feel like it emerged from the content, not like the screen
+  // went dark. Dismiss on tap-away still works (the backdrop is a
+  // TouchableOpacity that fills the space around the sheet).
   cityBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   citySheet: {
