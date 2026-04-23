@@ -12,6 +12,7 @@ from typing import Any
 from dilly_core.llm_client import get_chat_completion
 from projects.dilly.api.audit_history import get_audits
 from projects.dilly.api.memory_surface_store import (
+    _SENTINEL,
     get_memory_surface,
     save_memory_surface,
     should_regenerate_narrative,
@@ -254,10 +255,13 @@ def run_extraction(uid: str, conv_id: str, messages: list[dict[str, Any]]) -> di
             narrative_updated_at = _now_iso()
             narrative_updated = True
 
+    # Only write new items to avoid re-upserting the entire profile on every turn.
+    # save_memory_surface with items=new_items will upsert only the newly extracted facts.
+    # If no new items, still update the narrative if it changed.
     save_memory_surface(
         uid,
-        items=items_all,
-        narrative=narrative,
+        items=new_items if new_items else None,
+        narrative=narrative if narrative_updated else _SENTINEL,
         narrative_updated_at=narrative_updated_at if narrative_updated else None,
     )
 
