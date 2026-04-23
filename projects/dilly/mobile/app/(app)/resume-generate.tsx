@@ -300,8 +300,20 @@ export default function ResumeGenerateScreen() {
         for (let i = 0; i < bytes.byteLength; i++) {
           binary += String.fromCharCode(bytes[i]);
         }
-        // @ts-ignore — RN global btoa
-        const base64 = (global as any).btoa ? (global as any).btoa(binary) : require('base-64').encode(binary);
+        // Inline base64 encoder — React Native doesn't ship btoa on
+        // every SDK, and we don't want to pull in a dependency for a
+        // fallback path. This is the standard base64 table + encode.
+        const b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let base64 = '';
+        for (let i = 0; i < binary.length; i += 3) {
+          const c1 = binary.charCodeAt(i);
+          const c2 = i + 1 < binary.length ? binary.charCodeAt(i + 1) : Number.NaN;
+          const c3 = i + 2 < binary.length ? binary.charCodeAt(i + 2) : Number.NaN;
+          base64 += b64chars[c1 >> 2];
+          base64 += b64chars[((c1 & 0x03) << 4) | (isNaN(c2) ? 0 : (c2 >> 4))];
+          base64 += isNaN(c2) ? '=' : b64chars[((c2 & 0x0f) << 2) | (isNaN(c3) ? 0 : (c3 >> 6))];
+          base64 += isNaN(c3) ? '=' : b64chars[c3 & 0x3f];
+        }
         await FileSystem.writeAsStringAsync(destPath, base64, { encoding: 'base64' });
         localUri = destPath;
       } else {
