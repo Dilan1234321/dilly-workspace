@@ -21,14 +21,14 @@ const pool = new Pool({
 const CANDIDATE_EMAILS = [
   "dilan.kochhar@spartans.ut.edu",
   "hamza.qureshi0420@gmail.com",
-  "gabriel.mfugale@spartans.ut.edu",
+  "gabrielvcruz06@gmail.com",
 ];
 
 // Displayed names and display aliases (blind mode)
 const CANDIDATE_META: Record<string, { displayName: string; revealName: string }> = {
-  "dilan.kochhar@spartans.ut.edu":   { displayName: "Candidate A", revealName: "Dilan Kochhar" },
-  "hamza.qureshi0420@gmail.com":     { displayName: "Candidate B", revealName: "Hamza Qureshi" },
-  "gabriel.mfugale@spartans.ut.edu": { displayName: "Candidate C", revealName: "Gabriel Mfugale" },
+  "dilan.kochhar@spartans.ut.edu": { displayName: "Candidate A", revealName: "Dilan Kochhar" },
+  "hamza.qureshi0420@gmail.com":   { displayName: "Candidate B", revealName: "Hamza Qureshi" },
+  "gabrielvcruz06@gmail.com":      { displayName: "Candidate C", revealName: "Gabriel Cruz" },
 };
 
 // ── Pull live data from DB ─────────────────────────────────────────────────
