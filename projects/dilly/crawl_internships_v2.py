@@ -1014,6 +1014,24 @@ def crawl_all():
     except Exception as e:
         print(f"[remote-feeds] load failed: {e}")
 
+    # ── Free public APIs (The Muse, Remotive, Arbeitnow, Jobicy, HN) ─
+    # Each is a no-auth JSON endpoint returning jobs across thousands
+    # of companies. Combined yield: +60-80k jobs per run at ceiling.
+    # Sources that error out silently return [] — one flaky API
+    # never poisons the rest.
+    try:
+        from dilly_core.job_source_free_apis import fetch_all_free_apis
+        for label, ats_label, jobs in fetch_all_free_apis():
+            print(f"\n[{label}] Ingesting {len(jobs)} jobs...")
+            try:
+                new = write_multi_company_feed(conn, jobs, ats_label)
+                print(f"  {len(jobs)} jobs ({new} new)")
+                total_found += len(jobs); total_new += new
+            except Exception as e:
+                print(f"  ERROR writing {label}: {e}")
+    except Exception as e:
+        print(f"[free-apis] load failed: {e}")
+
     # ── Workday (Fortune 500) ───────────────────────────────────────
     # Biggest single volume unlock. Each configured tenant returns up
     # to ~500 jobs. Tenants that 404/401 are skipped without affecting
