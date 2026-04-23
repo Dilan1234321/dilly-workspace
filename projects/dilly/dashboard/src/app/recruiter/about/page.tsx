@@ -260,9 +260,18 @@ export default function RecruiterAboutPage() {
             Your #1 ranked candidate went to Florida International University.
             In a traditional ATS filtered to target schools, you never would have seen them.
           </motion.p>
-          <motion.div variants={fadeUp}>
-            <Link href="/recruiter/blind" className="dr-about-cta-primary" style={{ marginTop: "0.75rem", display: "inline-flex" }}>
-              Start the Blind Audition
+          <motion.div variants={fadeUp} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+            <a
+              href="https://www.perplexity.ai/computer/a/dilly-the-blind-audition-409s74OWRIiAPhtTJEyHVw"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="dr-about-cta-primary"
+              style={{ display: "inline-flex" }}
+            >
+              Open standalone demo
+            </a>
+            <Link href="/recruiter/blind" className="dr-about-cta-secondary" style={{ display: "inline-flex" }}>
+              In-app version
             </Link>
           </motion.div>
         </motion.section>
