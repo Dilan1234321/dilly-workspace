@@ -256,26 +256,67 @@ export default function ResumeGenerateScreen() {
         Alert.alert('Saving resume…', 'Give it a second and tap Download again.');
         return;
       }
-      const fileSystemMod: any = require('expo-file-system');
-      const FileSystem = fileSystemMod?.default ?? fileSystemMod;
+      // expo-file-system v19 deprecated the top-level `downloadAsync` —
+      // the legacy entry point still exports the same function, so we
+      // import from there. We also try the new `File` API via the
+      // modern import if legacy isn't available; either produces a
+      // local URI we can hand to Sharing.
+      //
+      // Fallback if both fail: fetch the response, base64-encode
+      // manually, and use writeAsStringAsync(..., Base64). That covers
+      // any future SDK that drops legacy entirely.
+      let FileSystem: any = null;
+      try {
+        FileSystem = require('expo-file-system/legacy');
+      } catch {
+        try {
+          const mod: any = require('expo-file-system');
+          FileSystem = mod?.default ?? mod;
+        } catch {}
+      }
       const token = await dilly.tokenProvider.getToken();
       const name = (profile.name || 'Resume').replace(/[^a-zA-Z0-9 ]/g, '').trim();
       const safeCompany = company.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Company';
       const filename = `${name}_${safeCompany}_Resume.${format}`;
-      const destPath = (FileSystem?.cacheDirectory || FileSystem?.documentDirectory || '') + filename;
+      const cacheDir = FileSystem?.cacheDirectory || FileSystem?.documentDirectory || '';
+      const destPath = cacheDir + filename;
       const url = `${(require('../../lib/tokens') as any).API_BASE}/generated-resumes/${variantId}/file?format=${format}`;
-      const res = await FileSystem.downloadAsync(url, destPath, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res?.uri) throw new Error('Download failed');
+
+      let localUri: string | null = null;
+      if (FileSystem && typeof FileSystem.downloadAsync === 'function') {
+        const res = await FileSystem.downloadAsync(url, destPath, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        localUri = res?.uri || null;
+      } else if (FileSystem && typeof FileSystem.writeAsStringAsync === 'function') {
+        // Manual fallback: fetch, base64-encode, write.
+        const resp = await fetch(url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!resp.ok) throw new Error(`Download failed (${resp.status})`);
+        const arrayBuffer = await resp.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        // @ts-ignore — RN global btoa
+        const base64 = (global as any).btoa ? (global as any).btoa(binary) : require('base-64').encode(binary);
+        await FileSystem.writeAsStringAsync(destPath, base64, { encoding: 'base64' });
+        localUri = destPath;
+      } else {
+        throw new Error('File system not available on this device.');
+      }
+
+      if (!localUri) throw new Error('Download failed');
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(res.uri, {
+        await Sharing.shareAsync(localUri, {
           mimeType: format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           UTI: format === 'pdf' ? 'com.adobe.pdf' : 'org.openxmlformats.wordprocessingml.document',
           dialogTitle: filename,
         });
       } else {
-        Alert.alert('Saved', `Saved to ${res.uri}`);
+        Alert.alert('Saved', `Saved to ${localUri}`);
       }
     } catch (e: any) {
       Alert.alert('Download failed', e?.message || 'Could not download resume.');

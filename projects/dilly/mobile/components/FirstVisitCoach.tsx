@@ -127,11 +127,23 @@ export function FirstVisitCoach({
 
   if (!mounted) return null;
 
-  // Dark backdrop tuned by surface: darker on light themes,
-  // slightly lighter on dark themes so the text still pops.
-  const backdropColor = theme.surface.dark
-    ? 'rgba(0,0,0,0.72)'
-    : 'rgba(15,15,25,0.82)';
+  // Backdrop now adapts to the user's Customize Dilly surface. On
+  // dark themes (Midnight) we stay almost-black. On light themes
+  // (Cloud, Cream, Blush, Slate) we use a theme-matched tint with
+  // heavy alpha so the coach card feels like "your app, dimmed"
+  // instead of an unrelated dark intrusion. Text color flips with
+  // the surface so it's always readable against whichever backdrop
+  // lands under it.
+  const isDark = !!theme.surface.dark;
+  const backdropColor = isDark
+    ? 'rgba(0,0,0,0.78)'
+    // Light themes — use a darkened surface tint at high alpha. This
+    // keeps the overlay feeling like the app rather than a generic
+    // black scrim, and preserves enough contrast for white+accent text.
+    : 'rgba(18,22,38,0.86)';
+  const titleColor = '#ffffff';            // readable on both dims
+  const sublineColor = 'rgba(255,255,255,0.78)';
+  const hintColor = 'rgba(255,255,255,0.6)';
 
   // Wrap in a native Modal so the coach overlays EVERYTHING — the
   // tab bar, any floating FABs, etc. Without this, the tab bar sits
@@ -186,7 +198,7 @@ export function FirstVisitCoach({
                 fontSize: 24,
                 fontWeight: '900',
                 letterSpacing: -0.4,
-                color: '#ffffff',
+                color: titleColor,
                 textAlign: 'center',
                 lineHeight: 32,
                 paddingHorizontal: 32,
@@ -200,7 +212,7 @@ export function FirstVisitCoach({
                 style={{
                   fontSize: 14,
                   fontWeight: '500',
-                  color: 'rgba(255,255,255,0.7)',
+                  color: sublineColor,
                   textAlign: 'center',
                   lineHeight: 20,
                   paddingHorizontal: 40,
@@ -216,7 +228,7 @@ export function FirstVisitCoach({
                 fontSize: 11,
                 fontWeight: '700',
                 letterSpacing: 1.8,
-                color: 'rgba(255,255,255,0.5)',
+                color: hintColor,
                 marginTop: 36,
               }}
             >

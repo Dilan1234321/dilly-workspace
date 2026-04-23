@@ -1382,19 +1382,11 @@ function SeekerHome() {
               >
                 <Ionicons name="qr-code" size={20} color={accent} />
               </AnimatedPressable>
-              {/* Profile pill — Instagram-style avatar in the header.
-                  Renders the user's uploaded profile photo when
-                  available (photo_url or profile_photo_url), and
-                  falls back to their initial in an accent circle
-                  when the photo isn't uploaded yet or has failed to
-                  load. */}
-              <ProfileAvatarButton
-                photoUrl={profile?.photo_url || profile?.profile_photo_url}
-                firstName={firstName}
-                accent={accent}
-                surfaceS1={theme.surface.s1}
-                surfaceT1={theme.surface.t1}
-              />
+              {/* Profile avatar removed from the home header. My Dilly
+                  is one tab tap away in the navbar, and the duplicate
+                  entry point made the header feel cluttered. Route
+                  discovery happens through the navbar now, not a
+                  second button in the top-right. */}
               <AnimatedPressable onPress={() => router.push('/(app)/settings')} scaleDown={0.9} hitSlop={10}>
                 <Ionicons name="settings-outline" size={20} color={theme.surface.t3} />
               </AnimatedPressable>

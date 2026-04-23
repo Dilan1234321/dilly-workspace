@@ -177,6 +177,11 @@ class ChatRequest(BaseModel):
     system: Optional[str] = None
     student_context: Optional[StudentContext] = None
     rich_context: Optional[Dict[str, Any]] = None
+    # Pre-computed Arena state sent from the client so Dilly can answer
+    # questions about the user's current rubric coverage (Honest Mirror)
+    # without recomputing. Shape: { honest_mirror: { total, have, missing,
+    # have_items: [str], missing_items: [str], short_name } }
+    arena_state: Optional[Dict[str, Any]] = None
     conv_id: Optional[str] = None  # Conversation session ID for profile extraction
 
 class ChatResponse(BaseModel):
@@ -737,6 +742,30 @@ def _build_rich_system_prompt(r: dict) -> str:
     except Exception:
         pass
 
+    # Honest Mirror state block — attached to /ai/chat requests from
+    # mobile so Dilly can answer "what does my mirror say" with real
+    # data instead of hedging. Only materializes when the client sends
+    # arena_state.honest_mirror — no effect otherwise.
+    honest_mirror_block = ""
+    try:
+        _arena = r.get("arena_state") or {}
+        _hm = _arena.get("honest_mirror") if isinstance(_arena, dict) else None
+        if _hm and isinstance(_hm, dict):
+            _have = _hm.get("have_items") or []
+            _miss = _hm.get("missing_items") or []
+            _total = _hm.get("total") or (len(_have) + len(_miss))
+            _have_n = _hm.get("have") or len(_have)
+            _sn = _hm.get("short_name") or "their field"
+            honest_mirror_block = (
+                "HONEST MIRROR (your visibility into the user's rubric for "
+                f"{_sn}, {_have_n}/{_total} covered):\n"
+                + (f"  Proving: {', '.join(_have[:8])}\n" if _have else "  Proving: (nothing yet)\n")
+                + (f"  Still needs evidence: {', '.join(_miss[:8])}\n" if _miss else "  Still needs evidence: (none — all covered)\n")
+                + "When the user asks about their Honest Mirror, use these exact items. Never say you can't see it.\n"
+            )
+    except Exception:
+        pass
+
     # Build identity block with full majors / minors / interests / cohort scores
     _majors_list = r.get("majors_list") or ([major] if major else [])
     _minors_list = r.get("minors_list") or ([r.get("minor")] if r.get("minor") else [])
@@ -1104,6 +1133,7 @@ Name: {name}
 {beyond_block}
 {pref_block}
 {cohort_expertise_block}
+{honest_mirror_block}
 
 {_what_dilly_is_block}
 
@@ -1553,6 +1583,11 @@ async def ai_chat(request: Request, body: ChatRequest):
             if body.student_context:
                 if body.student_context.reference_company and not _server_rich.get("reference_company"):
                     _server_rich["reference_company"] = body.student_context.reference_company
+            # Attach the Arena state (pre-computed on the client) so
+            # Dilly can answer "what does my honest mirror say" with
+            # real data rather than bluffing that she has no visibility.
+            if body.arena_state and isinstance(body.arena_state, dict):
+                _server_rich["arena_state"] = body.arena_state
             system = _build_rich_system_prompt(_server_rich)
         except Exception:
             # Fallback to client context if server-side build fails

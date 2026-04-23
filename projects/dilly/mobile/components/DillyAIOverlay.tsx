@@ -10,6 +10,7 @@ import { colors, API_BASE } from '../lib/tokens';
 import { mediumHaptic } from '../lib/haptics';
 import { getToken } from '../lib/auth';
 import { dilly } from '../lib/dilly';
+import { computeMirrorState } from '../lib/arena/mirror-state';
 import RichText, { extractAllYouTubeIds } from './RichText';
 import SkillsVideoCard from './SkillsVideoCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -270,6 +271,51 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   // mode's stream so the new mode starts a fresh chat with no
   // stale-response leakage.
   const activeControllerRef = useRef<AbortController | null>(null);
+  // Arena state we send alongside every chat message so Dilly knows
+  // the user's current rubric coverage without the user having to
+  // recite the page. Populated on overlay open from /profile +
+  // /memory. Null until the fetch returns — the backend treats
+  // null as "no data available" and falls back to generic advice.
+  const [arenaState, setArenaState] = useState<null | {
+    honest_mirror: {
+      cohort: string
+      short_name: string
+      total: number
+      have: number
+      missing: number
+      have_items: string[]
+      missing_items: string[]
+    }
+  }>(null);
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [prof, surface] = await Promise.all([
+          dilly.get('/profile').catch(() => null),
+          dilly.get('/memory').catch(() => null),
+        ]);
+        if (cancelled) return;
+        const items = Array.isArray((surface as any)?.items)
+          ? (surface as any).items
+          : [];
+        const st = computeMirrorState(prof || null, items);
+        setArenaState({
+          honest_mirror: {
+            cohort: st.cohort,
+            short_name: st.shortName,
+            total: st.total,
+            have: st.have,
+            missing: st.missing,
+            have_items: st.rows.filter(r => r.have).map(r => r.text),
+            missing_items: st.rows.filter(r => !r.have).map(r => r.text),
+          },
+        });
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [visible]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyMounted, setHistoryMounted] = useState(false);
   const historySlide = useRef(new Animated.Value(0)).current; // 0 = offscreen right, 1 = visible
@@ -405,6 +451,10 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
           // Seed a stable conv_id on first send. Sticks for the whole
           // session, gets cleared on overlay close.
           conv_id: (convIdRef.current ||= _newConvId()),
+          // Arena state: the user's current Honest Mirror rubric
+          // coverage. Sent so Dilly can answer "what does my mirror
+          // say" without bluffing. Null until mount-time fetch resolves.
+          arena_state: arenaState,
           student_context: studentContext ? {
             name:              studentContext.name,
             cohort:            studentContext.cohort,
