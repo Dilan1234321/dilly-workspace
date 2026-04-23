@@ -26,7 +26,18 @@ export default function ArenaPage({ eyebrow, title, subtitle, children }: Props)
       contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 60 }}
     >
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity
+          onPress={() => {
+            // Arena sub-pages are inside a Stack that lives inside the
+            // /ai-arena tab. If the user deep-linked in (or the stack
+            // history was reset), router.back() becomes a no-op and
+            // the back button looks dead. Fall back to replacing with
+            // /ai-arena so the user always returns somewhere.
+            if (router.canGoBack()) router.back()
+            else router.replace('/(app)/ai-arena')
+          }}
+          hitSlop={12}
+        >
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 10 }}>

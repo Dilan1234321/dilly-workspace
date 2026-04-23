@@ -321,11 +321,13 @@ function StudentHero({
   profile: Profile | null
 }) {
   const theme = useResolvedTheme()
-  const fname = profile?.first_name || 'you'
+  // Avoid the "you's Tuesday" fallback — when we don't have a name,
+  // say "Your Tuesday" instead.
+  const possessive = profile?.first_name ? `${profile.first_name}'s` : 'Your'
   return (
     <ArenaHero
       eyebrow="FUTURE · PULSE"
-      title={`${fname}'s Tuesday in 2029.`}
+      title={`${possessive} Tuesday in 2029.`}
       subtitle={`A lived-in look at your career in ${playbook.shortName}, told in four scenes.`}
       ctaLabel="See your future day"
       onPress={() => router.push('/(app)/arena/future')}

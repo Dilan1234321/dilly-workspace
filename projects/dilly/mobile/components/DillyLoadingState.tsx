@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Animated, Easing, TouchableOpacity, Text } from 'react-native';
 import { DillyFace } from './DillyFace';
 import { useResolvedTheme } from '../hooks/useTheme';
 
@@ -30,6 +30,9 @@ interface Props {
   mood?: 'idle' | 'happy' | 'thinking' | 'writing' | 'curious' | 'proud';
   /** Accessory to render in Dilly's hand (e.g. 'pencil'). */
   accessory?: 'none' | 'pencil';
+  /** Optional retry handler. When provided, a "Retry" button appears
+   *  after 20s of loading — escape hatch for stuck screens. */
+  onRetry?: () => void;
 }
 
 const DEFAULT_MESSAGES = [
@@ -44,11 +47,17 @@ export default function DillyLoadingState({
   size = 120,
   mood = 'idle',
   accessory = 'none',
+  onRetry,
 }: Props) {
   const theme = useResolvedTheme();
   const lines = (messages && messages.length > 0) ? messages : DEFAULT_MESSAGES;
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   const [textIdx, setTextIdx] = useState(0);
+  // Retry escape hatch — surfaces after 20s of loading when the caller
+  // has passed onRetry. Stuck loading screens were the #1 "it looks
+  // broken" complaint; a visible retry button reframes the wait as
+  // recoverable.
+  const [showRetry, setShowRetry] = useState(false);
 
   useEffect(() => {
     Animated.loop(
@@ -65,6 +74,12 @@ export default function DillyLoadingState({
     return () => clearInterval(interval);
   }, [pulseAnim, lines.length]);
 
+  useEffect(() => {
+    if (!onRetry) return;
+    const id = setTimeout(() => setShowRetry(true), 20000);
+    return () => clearTimeout(id);
+  }, [onRetry]);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.surface.bg, paddingTop: insetTop }]}>
       <View style={styles.inner}>
@@ -77,6 +92,15 @@ export default function DillyLoadingState({
         >
           {lines[textIdx]}
         </Animated.Text>
+        {showRetry && onRetry ? (
+          <TouchableOpacity
+            onPress={() => { setShowRetry(false); onRetry(); }}
+            style={[styles.retryBtn, { borderColor: theme.accent, backgroundColor: theme.accentSoft }]}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.retryText, { color: theme.accent }]}>Retry</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
@@ -96,5 +120,17 @@ const styles = StyleSheet.create({
     marginTop: 24,
     textAlign: 'center',
     paddingHorizontal: 24,
+  },
+  retryBtn: {
+    marginTop: 22,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: 22,
+    borderWidth: 1,
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

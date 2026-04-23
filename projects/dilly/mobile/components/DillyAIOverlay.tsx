@@ -19,7 +19,10 @@ import { useSubscription } from '../hooks/useSubscription';
 import { useResolvedTheme } from '../hooks/useTheme';
 import { FirstVisitCoach } from './FirstVisitCoach';
 import {
-  markExtractionPending, resolveExtraction, abortExtraction,
+  markExtractionPending,
+  resolveExtraction,
+  abortExtraction,
+  type ExtractionAddedFact,
 } from '../hooks/useExtractionPending';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -257,6 +260,16 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
   }, [rawOnClose]);
   const [mode,     setMode]     = useState<ChatMode>('coaching');
   const [isTyping, setIsTyping] = useState(false);
+  // Per-mode message stashes — when the user switches from coaching
+  // to practice mid-response, we save coaching's thread (including
+  // any in-flight assistant stream) so they can switch back later
+  // and pick up exactly where they left. Previously, switching wiped
+  // the other thread and the user lost the reply.
+  const stashedMessages = useRef<Record<ChatMode, Message[]>>({ coaching: [], practice: [] });
+  // In-flight request controller. Switching modes aborts the old
+  // mode's stream so the new mode starts a fresh chat with no
+  // stale-response leakage.
+  const activeControllerRef = useRef<AbortController | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [historyMounted, setHistoryMounted] = useState(false);
   const historySlide = useRef(new Animated.Value(0)).current; // 0 = offscreen right, 1 = visible
@@ -380,6 +393,7 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
       const token = await getToken();
       if (!token) throw new Error('auth');
       const controller = new AbortController();
+      activeControllerRef.current = controller;
       const timeout = setTimeout(() => controller.abort(), 30000);
       const res = await fetch(`${API_BASE}/ai/chat`, {
         method: 'POST',
@@ -452,6 +466,29 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
         throw new Error(errMsg);
       }
       const data = await res.json();
+
+      // Synchronous memory extraction on the server: new facts are persisted
+      // before this JSON returns. Broadcast so My Dilly + ProfileGrowthToast
+      // update without waiting for overlay close /flush.
+      const memAdded = data?.memory?.added;
+      if (Array.isArray(memAdded) && memAdded.length > 0) {
+        const facts: ExtractionAddedFact[] = memAdded
+          .filter(
+            (row: unknown) =>
+              row &&
+              typeof row === 'object' &&
+              typeof (row as { id?: string }).id === 'string',
+          )
+          .map((row: { id: string; category?: string; label?: string; value?: string }) => ({
+            id: row.id,
+            category: String(row.category ?? ''),
+            label: String(row.label ?? ''),
+            value: String(row.value ?? ''),
+          }));
+        if (facts.length > 0) {
+          resolveExtraction(facts);
+        }
+      }
 
       const visual: VisualPayload | undefined = data.visual || undefined;
       const fullText = data.content as string;
@@ -853,11 +890,41 @@ export default function DillyAIOverlay({ visible, onClose: rawOnClose, studentCo
                 ]}
                 onPress={() => {
                   if (mode === m) return;
+                  // Stash the current mode's thread BEFORE we swap in
+                  // the target mode's stash. If Dilly was mid-response,
+                  // we intentionally keep the partial assistant message
+                  // in the stash so switching back shows the full
+                  // (final) reply once it lands. Streaming updates
+                  // flow through a setMessages(prev => ...) closure so
+                  // they keep writing into the SAME array reference
+                  // that the stash now holds — when the user switches
+                  // back, they'll see the completed response.
+                  stashedMessages.current[mode] = messages;
+                  // Abort the in-flight stream so the new-mode chat
+                  // doesn't inherit a half-written reply from the old
+                  // mode. (setIsTyping stays true until the stream
+                  // actually settles on its own — if the user switches
+                  // back before then, they'll see the typing indicator
+                  // resume on the correct thread.)
+                  if (activeControllerRef.current) {
+                    try { activeControllerRef.current.abort(); } catch {}
+                    activeControllerRef.current = null;
+                  }
+                  setIsTyping(false);
+                  const restored = stashedMessages.current[m] || [];
                   setMode(m);
-                  setMessages([]);
+                  setMessages(restored);
                   setRichContext(null);
-                  setSuggestions(getInitialSuggestions(studentContext, m));
-                  suggestionsOpacity.setValue(1);
+                  // Only show starter suggestions when the restored
+                  // thread is empty — otherwise the user is resuming
+                  // a conversation and doesn't need intro chips.
+                  if (restored.length === 0) {
+                    setSuggestions(getInitialSuggestions(studentContext, m));
+                    suggestionsOpacity.setValue(1);
+                  } else {
+                    setSuggestions([]);
+                    suggestionsOpacity.setValue(0);
+                  }
                 }}
               >
                 <Text style={[

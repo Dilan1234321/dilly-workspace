@@ -28,6 +28,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setColorsDarkMode } from '../lib/tokens';
 
 const STORAGE_KEY = 'dilly_theme_v2';
+// When the current user's theme was written, we stamp the email they
+// were signed in as. On next cold-boot we read both — if the email
+// matches the currently authed user, we apply locally IMMEDIATELY
+// (no flash to default). If it's a different user or unknown, we wait
+// for the /profile sync. This is what "remember my customize immediately
+// on sign-in" needs: a stored theme tagged to the account it belongs to.
+const STORAGE_USER_KEY = 'dilly_theme_v2_user';
 
 /* ─────────────────────────────────────────────────────────────── */
 /* Axis enums                                                       */
@@ -341,10 +348,24 @@ let _hydrated = false;
 async function _hydrate() {
   if (_hydrated) return;
   _hydrated = true;
-  // 1. Local cache first — fast, ensures no flicker on cold start.
+  // 1. Local cache first — but only if it's tagged to the currently
+  // authed user. Previously we applied the last stored theme blindly,
+  // which meant user A's theme would flash to user B on sign-in. Now
+  // we compare the stored email tag against the token's email.
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (raw) {
+    const [raw, storedUser] = await Promise.all([
+      AsyncStorage.getItem(STORAGE_KEY),
+      AsyncStorage.getItem(STORAGE_USER_KEY),
+    ]);
+    let currentEmail: string | null = null;
+    try {
+      const { getCurrentUserEmail } = await import('../lib/auth');
+      currentEmail = await getCurrentUserEmail();
+    } catch {}
+    const canUseLocal = !!raw && (
+      !storedUser || !currentEmail || storedUser.toLowerCase() === currentEmail
+    );
+    if (canUseLocal && raw) {
       const parsed = JSON.parse(raw);
       _config = { ...DEFAULT_CONFIG, ...parsed };
       _listeners.forEach(l => l(_config));
@@ -364,7 +385,11 @@ async function _hydrate() {
       if (JSON.stringify(merged) !== JSON.stringify(_config)) {
         _config = merged;
         _listeners.forEach(l => l(_config));
-        try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_config)); } catch {}
+        try {
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_config));
+          const em = (profile?.email || '').toLowerCase();
+          if (em) await AsyncStorage.setItem(STORAGE_USER_KEY, em);
+        } catch {}
       }
     }
   } catch {}
@@ -387,19 +412,35 @@ async function _persistToBackend(config: ThemeConfig) {
 export async function patchTheme(patch: Partial<ThemeConfig>) {
   _config = { ..._config, ...patch };
   _listeners.forEach(l => l(_config));
-  try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_config)); } catch {}
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(_config));
+    // Tag the stored theme with the current user's email so next
+    // sign-in can match-or-discard without flashing default first.
+    try {
+      const { getCurrentUserEmail } = await import('../lib/auth');
+      const em = await getCurrentUserEmail();
+      if (em) await AsyncStorage.setItem(STORAGE_USER_KEY, em);
+    } catch {}
+  } catch {}
   // Don't await — let the UI update instantly, PATCH happens in the
   // background. The server copy is eventual; AsyncStorage is the hot path.
   _persistToBackend(_config);
 }
 
 /** Clear cached theme — call on sign-out so the next account on this
- * device hydrates from their own profile, not the previous user's. */
+ * device hydrates from their own profile, not the previous user's.
+ *
+ * Important: we KEEP the AsyncStorage copy. The stored theme is tagged
+ * to the user email that wrote it (STORAGE_USER_KEY). Next sign-in
+ * checks that tag — if it matches, the theme restores instantly; if
+ * it doesn't, _hydrate waits for server and overwrites. This is what
+ * lets a returning user see their customized theme immediately on
+ * sign-in without flashing the default first. */
 export async function clearThemeCache() {
   _hydrated = false;
   _config = { ...DEFAULT_CONFIG };
   _listeners.forEach(l => l(_config));
-  try { await AsyncStorage.removeItem(STORAGE_KEY); } catch {}
+  // Intentionally do NOT remove STORAGE_KEY / STORAGE_USER_KEY here.
 }
 
 /** Legacy shim — kept so the simple swatch picker in Settings still works. */

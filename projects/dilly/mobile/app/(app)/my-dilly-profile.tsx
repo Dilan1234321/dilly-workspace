@@ -875,7 +875,7 @@ function SeekerProfileScreen() {
                   // A user can have a photo via any of these — don't
                   // prompt "Add a photo" if ANY is set.
                   const slug = p.profile_slug;
-                  const bust = Math.floor(Date.now() / 60000);
+                  const bust = Math.floor(Date.now() / 86400000);
                   const hasPhoto = !!(slug || p.photo_url || p.profile_photo_url);
                   if (!hasPhoto) {
                     return (
@@ -1362,11 +1362,17 @@ function SeekerProfileScreen() {
           />
         </FadeInView>
 
-        {/* ── 1b. Your Public Profile ──────────────────────────── */}
+        {/* ── 1b. Your Public Profile ──────────────────────────────
+            Tapping this row opens the dedicated
+            /(app)/public-profile-settings page (full surface with
+            tagline, sections, fact visibility, toggles, QR). We used
+            to inline-expand all of that inside My Dilly, which made
+            the profile page feel like a settings screen and pushed
+            the interesting content down the fold. */}
         <FadeInView delay={40}>
           <AnimatedPressable
             style={{ backgroundColor: theme.accentSoft, borderRadius: 14, borderWidth: 1, borderColor: theme.accentBorder, padding: 16, marginBottom: 4 }}
-            onPress={() => setShowWebProfile(!showWebProfile)}
+            onPress={() => router.push('/(app)/public-profile-settings' as any)}
             scaleDown={0.98}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1374,7 +1380,7 @@ function SeekerProfileScreen() {
                 <Ionicons name="globe-outline" size={18} color={theme.accent} />
                 <Text style={{ fontSize: 15, fontWeight: '700', color: theme.surface.t1 }}>Your Public Profile</Text>
               </View>
-              <Ionicons name={showWebProfile ? 'chevron-up' : 'chevron-down'} size={16} color={theme.surface.t3} />
+              <Ionicons name="chevron-forward" size={16} color={theme.surface.t3} />
             </View>
             {readableSlug ? (
               <Text style={{ fontSize: 11, color: theme.surface.t3, marginTop: 4, marginLeft: 28 }}>
@@ -2372,7 +2378,7 @@ function HolderCareer() {
   //   3. p.photo_url (full profile response)
   // Cache-bust with a minute-resolution timestamp so stale 404s on
   // the CDN clear within ~60s of a new upload.
-  const _bust = Math.floor(Date.now() / 60000);
+  const _bust = Math.floor(Date.now() / 86400000);
   const photoFull =
     p.profile_slug
       ? `${API_BASE}/profile/public/${p.profile_slug}/photo?_t=${_bust}`
@@ -2480,7 +2486,7 @@ function HolderCareer() {
               // Result: card showed the initial instead of the
               // actual photo even though the profile had one.
               photoUri: (() => {
-                const bust = Math.floor(Date.now() / 60000);
+                const bust = Math.floor(Date.now() / 86400000);
                 if (identity.photo_url) {
                   return String(identity.photo_url).startsWith('http')
                     ? `${identity.photo_url}?_t=${bust}`

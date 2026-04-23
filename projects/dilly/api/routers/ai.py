@@ -8,6 +8,7 @@ Endpoints:
   GET  /ai/context    — rich student snapshot for the overlay
 """
 
+import asyncio
 import json
 import os
 import re
@@ -180,6 +181,12 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     content: str
+    visual: Optional[Dict[str, Any]] = None
+    """Inline visual card for the mobile overlay (mock interview, checklists, etc.)."""
+
+    memory: Optional[Dict[str, Any]] = None
+    """When non-null, contains `added` / `count` — new memory-surface facts persisted this turn.
+    Populated synchronously so the client can refresh My Dilly without waiting for /flush."""
 
 
 def _build_rich_context(email: str) -> dict:
@@ -1043,7 +1050,24 @@ def _build_rich_system_prompt(r: dict) -> str:
         _what_dilly_is_block = (
             "DILLY: career coach. "
             "Writes fit narratives on jobs. Tailors resumes per ATS. "
-            "Surfaces: Career Center, Jobs, AI Arena, My Dilly, What We Think. "
+            "Surfaces: Career Center, Jobs, AI Arena, My Dilly, Skills, What We Think.\n\n"
+            "AI ARENA TOOLS (you know what each one is, can suggest them by name):\n"
+            " • Market Value Live — live comp band + anchor-company pressure for holders.\n"
+            " • Conviction Builder — seekers' 'why you, why this' story engine.\n"
+            " • Future Pulse — a lived-in day-in-the-life in the student's target field.\n"
+            " • Threat Radar — ranked AI/automation risks to the user's role.\n"
+            " • Ghost Report — which applications have gone dark and what to do.\n"
+            " • Reputation Builder — public-profile and referral growth moves.\n"
+            " • Next Role — ladder above the user's current title with comp deltas.\n"
+            " • Hook — one-sentence openers that match the job they're targeting.\n"
+            " • Offer Coach — negotiation scripts, counter floors, comp anchors.\n"
+            " • Rejections — pattern-reads a user's rejection history for signal.\n"
+            " • Clock — time-to-offer pressure read given pipeline + stage.\n"
+            " • Honest Mirror — blunt reflection of strengths, blind spots, growth edges based on the user's own profile.\n"
+            " • Postmortem — dissect a specific failed interview / application.\n"
+            " • Cold Email — drafts + sharpening for recruiter/hiring-manager outreach.\n"
+            " • Recruiter Radar — which companies' recruiters are watching the user's public profile.\n\n"
+            "When a user asks something that an Arena tool answers, NAME the tool and suggest they open it. Do not invent tools that are not listed above.\n"
             "NEVER: Smart/Grit/Build scores, audits, resume editor, leaderboard."
         )
         _app_features_block = ""
@@ -1090,6 +1114,22 @@ examples in the persona block above — warm, direct, respond before
 asking. One follow-up question, never two. React to what they said
 first, then ask.
 
+CONVERSATION WRAP-UP: Great coaches know when to stop. Don't keep
+pulling on a thread forever. Read the energy of the conversation:
+ • If the user has answered the core question and picked a direction,
+   affirm it, point at ONE concrete next step (open a specific Arena
+   tool, tailor a resume for a specific job, add a fact to their
+   profile), and STOP asking follow-ups.
+ • If the user has said "thanks" / "that helps" / "I'll think about
+   it" / "ok" / "sounds good" — do NOT fire another question. Close
+   warmly (one sentence), tell them what you'll be watching for next
+   time, and leave them the last word.
+ • After 6+ user messages on the same topic, start winding down
+   naturally. Summarize what you heard, name the one move to take,
+   and stop. The user can always come back.
+Never end mid-thought with a question that forces another reply.
+Feeling "done" with Dilly is part of the product.
+
 RESOURCES: When the user needs to LEARN a tool or concept, offer ONE
 real https:// URL you're confident exists. Describe the resource if
 unsure — never invent URLs.""".strip()
@@ -1132,7 +1172,8 @@ def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: 
         "- Instead, when users look at jobs, Dilly writes a personal fit narrative: what they have, what is missing, what to do.\n"
         "- Dilly generates tailored resumes from the user's profile, formatted for the specific ATS the company uses.\n"
         "- The user's Dilly Profile grows every time they talk to you. Ask them about their experiences, skills, goals, and projects.\n"
-        "- The app has: Career Center (home), Jobs (with fit narratives), AI Arena (AI readiness), My Dilly (profile), What We Think (insights letter).\n"
+        "- The app has: Career Center (home), Jobs (with fit narratives), AI Arena (AI readiness), My Dilly (profile), Skills (curated learning), What We Think (insights letter).\n"
+        "- AI Arena holds 15 tools: Market Value Live, Conviction Builder, Future Pulse, Threat Radar, Ghost Report, Reputation Builder, Next Role, Hook, Offer Coach, Rejections, Clock, Honest Mirror, Postmortem, Cold Email, Recruiter Radar. When a user asks something one of these answers, suggest that tool by name.\n"
         "- There is NO resume editor, NO score page, NO audit page. Do not reference these.\n\n"
         "YOUR JOB:\n"
         "- Help them with their career: job search, interview prep, skill development, profile building.\n"
@@ -1150,7 +1191,8 @@ def _build_system_prompt(mode: str, ctx: Optional[StudentContext] = None, rich: 
         "- Sound like a friend who happens to be an expert, not a corporate advisor.\n"
         "- Never mention scores, Smart/Grit/Build, audits, or resume scanning. These do not exist in Dilly.\n"
         "- If the user tells you they deleted something from their profile, immediately stop referencing it. Do not bring it up again.\n"
-        "- Only reference facts that are currently in the user's profile. If something was discussed earlier in the conversation but the user removed it, treat it as if it never existed."
+        "- Only reference facts that are currently in the user's profile. If something was discussed earlier in the conversation but the user removed it, treat it as if it never existed.\n\n"
+        "WRAP-UP: Conversations have a shape. When the user has picked a direction, said 'thanks' / 'ok' / 'sounds good', or the thread has been 6+ user messages on the same topic, STOP asking follow-ups. Affirm what they said, point at ONE concrete next step (a specific Arena tool by name, a resume to tailor, a fact to add), and leave them the last word. Never end mid-thought with a forced question. Feeling 'done' with Dilly is the goal."
     )
 
 
@@ -1473,41 +1515,6 @@ def _append_calendar_deadline(email: str, payload: dict) -> None:
         "createdBy": "dilly-ai-chat",
     })
     save_profile(email, {"deadlines": existing})
-
-
-def _run_profile_extraction_background(email: str, conv_id: str, messages: list[dict]) -> None:
-    """Fire-and-forget: extract profile facts from conversation and store them.
-    Runs in a background thread so it never blocks the chat response.
-
-    Extraction failures must never surface to the user, but they MUST be logged
-    so we can actually debug when memory silently stops working. Previously
-    this was `except Exception: pass` which silently swallowed every failure —
-    meaning if the extraction LLM call crashed, the DB write failed, or the
-    prompt format drifted, we would never know until a real student noticed
-    the coach forgetting things. Now we log to stderr with enough context
-    (email prefix, conv_id, exception type) that the failure is findable in
-    server logs, and we still never raise to the caller.
-    """
-    import traceback
-    import sys
-    import time as _time
-    try:
-        from projects.dilly.api.memory_extraction import run_extraction
-        run_extraction(email, conv_id, messages)
-    except Exception as exc:
-        # Redact email to a short prefix for privacy in logs
-        _email_hint = (email.split("@")[0][:6] + "***") if email and "@" in email else "unknown"
-        sys.stderr.write(
-            f"[memory_extraction_failed] ts={_time.time():.0f} "
-            f"email={_email_hint} conv_id={conv_id[:12] if conv_id else 'none'} "
-            f"exc_type={type(exc).__name__} msg={str(exc)[:200]}\n"
-        )
-        # Include traceback so we can find the exact line that broke
-        try:
-            traceback.print_exc(file=sys.stderr)
-        except Exception:
-            pass
-        # Deliberately do not re-raise — extraction must never surface to the user
 
 
 @router.post("/ai/chat", response_model=ChatResponse)
@@ -1852,67 +1859,71 @@ async def ai_chat(request: Request, body: ChatRequest):
         except Exception:
             pass
 
-        # ── Background profile extraction (batched) ──────────────────
-        # Fire-and-forget: extract everything Dilly learned about the user
-        # from this conversation and store it in their Dilly Profile.
-        # Cost optimization: only extract every 3rd assistant turn instead
-        # of every turn. The conversation buffer (last 12 messages) still
-        # captures everything that was said since the previous extraction,
-        # so we don't lose any facts — we just batch them into fewer
-        # extractor calls. Cuts extraction cost ~67%.
-        if email and len(messages) >= 2:
-            assistant_turns = sum(1 for m in raw_messages if m["role"] == "assistant") + 1  # +1 for the reply we just produced
-            # Per-turn extraction runs REGEX only (use_llm defaults to
-            # False in run_extraction). Regex is effectively free — no
-            # LLM call, just pattern matching on the user's turns plus
-            # a dedup + memory_surface write. Previously gated at
-            # every 15 turns + turn 1 as a "safety net" for sessions
-            # that never flush cleanly. That gating was too sparse:
-            # typical chats are 3-10 messages, so NOTHING extracted
-            # mid-chat unless the user hit exactly turn 15. Users
-            # reported "talking to Dilly doesn't add facts" because of
-            # this — the flush on overlay close was the only path that
-            # ran, and any chat that bypassed the overlay (Chapter
-            # inline chat, force-quit, background-killed session)
-            # silently dropped every fact.
-            # Now: turn 1 (one-shot intros), and every 3rd turn after.
-            # LLM extraction still gates on /ai/chat/flush + 5-user-msg
-            # bar; this is purely the cheap regex path.
-            should_extract = (assistant_turns == 1) or (assistant_turns % 3 == 0)
-            # Conv id used by BOTH the memory extraction below and the
-            # chat-thread store. Stable across turns of the same chat so
-            # thread upserts hit the same row.
+        # ── Profile / memory extraction (synchronous) ─────────────────
+        # Previously this ran in a daemon thread so the HTTP response
+        # returned before Postgres/file writes finished. Users (and the
+        # mobile client) would navigate to My Dilly and see stale data;
+        # nothing called resolveExtraction until /ai/chat/flush. We now
+        # await extraction, return new rows in `memory.added`, and the app
+        # refreshes immediately (same shape as flush).
+        memory_payload: Optional[Dict[str, Any]] = None
+        if email and len(messages) >= 1:
             import hashlib
-            conv_id = body.conv_id or hashlib.sha256(
+
+            from projects.dilly.api.memory_surface_store import get_memory_surface
+
+            conv_id_resolved = (body.conv_id or "").strip() or hashlib.sha256(
                 f"{email}:{raw_messages[0].get('content', '')[:100]}".encode()
             ).hexdigest()[:16]
-            if should_extract:
-                import threading
-                # Use the FULL untruncated history for extraction so we
-                # don't lose facts that were dropped from the LLM context.
-                full_messages = raw_messages + [{"role": "assistant", "content": content.strip()}]
-                thread = threading.Thread(
-                    target=_run_profile_extraction_background,
-                    args=(email, conv_id, full_messages[-12:]),
-                    daemon=True,
-                )
-                thread.start()
+            full_messages = raw_messages + [{"role": "assistant", "content": content.strip()}]
+            before_ids: set[str] = set()
+            try:
+                before = get_memory_surface(email) or {}
+                before_ids = {str(it.get("id")) for it in (before.get("items") or [])}
+            except Exception:
+                pass
+            try:
+                from projects.dilly.api.memory_extraction import run_extraction
 
-            # Chat thread store: upsert every turn, zero-LLM, so the
-            # AI overlay's "past conversations" panel actually has
-            # something to show. Fire-and-forget; failures never block
-            # the reply. Previously the history button hit /voice/history
-            # which only returned Voice-feature outputs, so chat users
-            # saw "No past conversations" even after many chats.
+                # skip_llm_trivial_gate=True: always attempt Haiku for this turn
+                # (model may still return []). Otherwise short user replies never
+                # reached the LLM because _messages_worth_extracting blocked twice.
+                result = await asyncio.to_thread(
+                    run_extraction,
+                    email,
+                    conv_id_resolved,
+                    full_messages[-12:],
+                    True,
+                    True,
+                )
+                new_ids = set(result.get("item_ids") or [])
+                after = get_memory_surface(email) or {}
+                added_rows: list[dict[str, Any]] = []
+                for it in (after.get("items") or []):
+                    if str(it.get("id")) in new_ids and str(it.get("id")) not in before_ids:
+                        added_rows.append(
+                            {
+                                "id": str(it.get("id")),
+                                "category": it.get("category") or "",
+                                "label": it.get("label") or "",
+                                "value": it.get("value") or "",
+                            }
+                        )
+                if added_rows:
+                    memory_payload = {"added": added_rows, "count": len(added_rows)}
+            except Exception as exc:
+                sys.stderr.write(f"[ai_chat_memory_sync_failed] err={exc}\n")
+
             try:
                 from projects.dilly.api.chat_thread_store import record_turn as _record_turn  # type: ignore
+
                 last_user = next(
                     (m.get("content") or "" for m in reversed(raw_messages) if m.get("role") == "user"),
                     "",
                 )
                 _record_turn(
                     email=email,
-                    conv_id=conv_id,
+                    conv_id=conv_id_resolved,
                     user_message=last_user,
                     assistant_message=content.strip(),
                     mode=body.mode or "coaching",
@@ -1923,7 +1934,11 @@ async def ai_chat(request: Request, body: ChatRequest):
         # ── Auto-attach visual cards based on response content ─────────
         visual = _detect_visual(content, body.student_context, body.mode, email)
 
-        return ChatResponse(content=content.strip(), visual=visual)
+        return ChatResponse(
+            content=content.strip(),
+            visual=visual,
+            memory=memory_payload,
+        )
     except Exception as e:
         import traceback
         traceback.print_exc()

@@ -21,6 +21,48 @@ import psycopg2.extras
 
 from projects.dilly.api.profile_store import get_profile, save_profile
 
+def _canonical_memory_category(raw: str) -> str:
+    """Lowercase, normalize separators, map common LLM/typo variants to whitelist."""
+    c = str(raw or "").strip().lower().replace(" ", "_").replace("-", "_")
+    c = c.strip("_")
+    aliases = {
+        "goals": "goal",
+        "career_goal": "goal",
+        "target_companies": "target_company",
+        "dream_company": "target_company",
+        "companies": "target_company",
+        "technical_skill": "skill_unlisted",
+        "technical_skills": "skill_unlisted",
+        "skills": "skill_unlisted",
+        "hard_skill": "skill_unlisted",
+        "tools": "skill_unlisted",
+        "anxiety": "concern",
+        "anxieties": "concern",
+        "fear": "concern",
+        "fears": "concern",
+        "worry": "concern",
+        "worries": "concern",
+        "work_experience": "experience",
+        "internship": "experience",
+        "internships": "experience",
+        "projects": "project_detail",
+        "people": "person_to_follow_up",
+        "contact": "person_to_follow_up",
+        "contacts": "person_to_follow_up",
+        "culture": "company_culture_pref",
+        "work_style": "personality",
+        "soft_skills": "soft_skill",
+        "interest": "hobby",
+        "interests": "hobby",
+        "improvement": "weakness",
+        "improvements": "weakness",
+        "growth_area": "weakness",
+        "area_for_improvement": "weakness",
+        "pain_point": "challenge",
+    }
+    return aliases.get(c, c)
+
+
 _MEMORY_CATEGORIES = {
     # Career-specific
     "target_company",
@@ -94,7 +136,7 @@ def _get_db():
 # ── Normalization (shared by both backends) ──────────────────────────────────
 
 def _normalize_memory_item(email: str, raw: dict[str, Any]) -> dict[str, Any] | None:
-    category = str(raw.get("category") or "").strip()
+    category = _canonical_memory_category(str(raw.get("category") or ""))
     label = str(raw.get("label") or "").strip()
     value = str(raw.get("value") or "").strip()
     if category not in _MEMORY_CATEGORIES or not label or not value:

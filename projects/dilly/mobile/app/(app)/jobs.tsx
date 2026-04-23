@@ -93,6 +93,14 @@ interface Profile {
   job_locations?: string[];
   cohorts?: string[];
   interests?: string[];
+  // user_type drives the default job-type filter. Students should see
+  // internships by default (that's what they're looking for); everyone
+  // else sees 'all'. This is the fix for "every job says I'm not a
+  // good fit" — we were showing full-time roles to students who had
+  // told Dilly they want internships.
+  user_type?: string;
+  graduation_year?: number | string;
+  career_stage?: string;
 }
 
 interface FitNarrative {
@@ -335,7 +343,12 @@ export default function JobsScreen() {
   //   typeFilter: 'all' | 'internship' | 'entry_level' | 'full_time' | 'part_time'
   //   remoteFilter: 'any' | 'remote' | 'in_person'
   const [cityFilter, setCityFilter] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  // Start with null so we know whether the user has explicitly picked
+  // a type yet. Once profile loads we pick a sensible default — students
+  // get 'internship', everyone else gets 'all'. A user who actively
+  // taps a chip wins over the auto-default.
+  const [typeFilter, setTypeFilter] = useState<TypeFilter | null>(null);
+  const [typeFilterTouched, setTypeFilterTouched] = useState(false);
   const [remoteFilter, setRemoteFilter] = useState<RemoteFilter>('any');
   const [showCityPicker, setShowCityPicker] = useState(false);
 
@@ -438,15 +451,29 @@ export default function JobsScreen() {
     return out.sort((a, b) => b.n - a.n);
   }, [jobs, profile?.job_locations]);
 
+  // Effective type filter: if the user has tapped a chip, honor it.
+  // Otherwise, default based on user_type:
+  //   - student → 'internship' (they told us they want internships)
+  //   - everyone else → 'all'
+  // This fixes the "every job says not a good fit" demo blocker —
+  // the feed was showing full-time roles to students, and the fit
+  // narrative correctly flagged them as stretches/not-a-fit.
+  const effectiveTypeFilter: TypeFilter = useMemo(() => {
+    if (typeFilter) return typeFilter
+    const ut = (profile?.user_type || '').toLowerCase()
+    if (ut === 'student') return 'internship'
+    return 'all'
+  }, [typeFilter, profile?.user_type])
+
   // City + type + remote filter. Applied client-side to the full
   // feed. Per-chip counts shown so users know what will happen
   // before they tap.
   const filteredJobs = useMemo(() => {
     return jobs.filter(j => {
       if (cityFilter && (j.location_city || '').toLowerCase() !== cityFilter) return false;
-      if (typeFilter !== 'all') {
+      if (effectiveTypeFilter !== 'all') {
         const t = (j.job_type || '').toLowerCase();
-        if (t !== typeFilter) return false;
+        if (t !== effectiveTypeFilter) return false;
       }
       if (remoteFilter === 'remote') {
         const remote = !!j.remote || (j.work_mode || '').toLowerCase().includes('remote');
@@ -457,7 +484,7 @@ export default function JobsScreen() {
       }
       return true;
     });
-  }, [jobs, cityFilter, typeFilter, remoteFilter]);
+  }, [jobs, cityFilter, effectiveTypeFilter, remoteFilter]);
 
   // Skill-gap -> video map, keyed by job id. Computed once per data
   // change. The heavy lifting is O(jobs * cohortKeywords) which is
@@ -493,11 +520,17 @@ export default function JobsScreen() {
     return { strong, stretch, known, hero: strong[0] || filteredJobs[0] || null };
   }, [filteredJobs]);
 
+  // Count a filter as "active" only when the user has explicitly
+  // narrowed from the default. The student-internship default is not
+  // counted — it's the baseline, not a filter the user applied.
   const activeFilterCount =
-    (cityFilter ? 1 : 0) + (typeFilter !== 'all' ? 1 : 0) + (remoteFilter !== 'any' ? 1 : 0);
+    (cityFilter ? 1 : 0) +
+    (typeFilterTouched && effectiveTypeFilter !== 'all' ? 1 : 0) +
+    (remoteFilter !== 'any' ? 1 : 0);
   const resetFilters = useCallback(() => {
     setCityFilter(null);
     setTypeFilter('all');
+    setTypeFilterTouched(true);
     setRemoteFilter('any');
   }, []);
 
@@ -722,12 +755,12 @@ export default function JobsScreen() {
         {/* Type chips — each type is its own button so the user can
             one-tap the one they want. "All" clears the type filter. */}
         {(['all', 'internship', 'entry_level', 'full_time', 'part_time'] as TypeFilter[]).map(t => {
-          const active = typeFilter === t;
+          const active = effectiveTypeFilter === t;
           return (
             <TouchableOpacity
               key={t}
               activeOpacity={0.85}
-              onPress={() => setTypeFilter(t)}
+              onPress={() => { setTypeFilter(t); setTypeFilterTouched(true); }}
               style={[
                 styles.filterChip,
                 active

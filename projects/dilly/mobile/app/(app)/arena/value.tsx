@@ -156,7 +156,7 @@ export default function MarketValueLive() {
     >
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity onPress={() => { if (router.canGoBack()) router.back(); else router.replace("/(app)/ai-arena" as any); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 10 }}>

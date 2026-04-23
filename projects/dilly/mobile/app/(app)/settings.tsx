@@ -16,6 +16,7 @@ import { colors, spacing, radius } from '../../lib/tokens';
 import { getAppMode, modeLabel, modeDescription, ALL_MODES, type AppMode } from '../../lib/appMode';
 import { primeAppMode, clearAppModeCache } from '../../hooks/useAppMode';
 import { clearThemeCache } from '../../hooks/useTheme';
+import { isCalendarSubscribed, unsubscribeFromDillyCalendar } from '../../lib/calendar';
 import { triggerCelebration } from '../../hooks/useCelebration';
 import { clearAll as clearSessionCache } from '../../lib/sessionCache';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -244,6 +245,12 @@ export default function SettingsScreen() {
   } | null>(null);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [deadlineReminders, setDeadlineReminders] = useState(true);
+  // Whether the user has subscribed to the Dilly Calendar in iOS.
+  // When true, we surface an "Unsubscribe" row so they can get out.
+  const [calSubscribed, setCalSubscribed] = useState(false);
+  useEffect(() => {
+    (async () => setCalSubscribed(await isCalendarSubscribed()))();
+  }, []);
   const [webProfileOn, setWebProfileOn] = useState(true);
   const [webSlug, setWebSlug] = useState('');
   const [webPrefix, setWebPrefix] = useState('s');
@@ -1162,6 +1169,26 @@ export default function SettingsScreen() {
             })()}
           </View>
         </FadeInView>
+
+        {/* Dilly Calendar — only shows once the user has subscribed
+            to the feed. Gives them a way to remove it without digging
+            through iOS Settings blind. The unsubscribe flow opens
+            iOS Settings with app-settings: and clears the local flag
+            so the Subscribe button comes back on the Calendar page. */}
+        {calSubscribed && (
+          <FadeInView delay={155}>
+            <SectionLabel text="DILLY CALENDAR" />
+            <View style={[s.card, { backgroundColor: theme.surface.s1, borderColor: theme.surface.border }]}>
+              <Row
+                label="Remove Dilly Calendar from my phone"
+                onPress={async () => {
+                  await unsubscribeFromDillyCalendar();
+                  setCalSubscribed(await isCalendarSubscribed());
+                }}
+              />
+            </View>
+          </FadeInView>
+        )}
 
         {/* About */}
         <FadeInView delay={160}>

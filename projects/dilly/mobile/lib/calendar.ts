@@ -22,8 +22,35 @@
  */
 
 import { Alert, Linking } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dilly } from './dilly';
 import { API_BASE } from './tokens';
+
+// AsyncStorage flag: "user has tapped Subscribe to Dilly Calendar at
+// least once on this device". When true, the Subscribe button on the
+// Calendar page hides itself (user is already subscribed in iOS) and
+// an Unsubscribe row surfaces in Settings. Clearing the flag brings
+// the Subscribe button back. iOS owns the actual subscription — this
+// flag is just a UX hint so we don't show a "Subscribe" CTA to a
+// user who already subscribed.
+const CAL_SUBSCRIBED_KEY = 'dilly_cal_subscribed_v1';
+
+export async function isCalendarSubscribed(): Promise<boolean> {
+  try {
+    const v = await AsyncStorage.getItem(CAL_SUBSCRIBED_KEY);
+    return v === '1';
+  } catch {
+    return false;
+  }
+}
+
+export async function markCalendarSubscribed(): Promise<void> {
+  try { await AsyncStorage.setItem(CAL_SUBSCRIBED_KEY, '1'); } catch {}
+}
+
+export async function clearCalendarSubscribed(): Promise<void> {
+  try { await AsyncStorage.removeItem(CAL_SUBSCRIBED_KEY); } catch {}
+}
 
 export interface CalendarEventInput {
   title: string;
@@ -114,10 +141,46 @@ export async function openSubscribeToDillyCalendar(): Promise<void> {
     if (!canOpen) {
       // Fall back to the https URL if webcal:// is unhandled for some reason
       await Linking.openURL(httpsUrl);
+      await markCalendarSubscribed();
       return;
     }
     await Linking.openURL(webcalUrl);
+    await markCalendarSubscribed();
   } catch (e: any) {
     Alert.alert('Calendar', e?.message || 'Could not subscribe.');
   }
+}
+
+/** Show the user how to unsubscribe from the Dilly Calendar feed in
+ *  iOS Settings. iOS doesn't expose a programmatic "remove a subscribed
+ *  calendar" API, so the correct path is: iOS Settings → Calendar →
+ *  Accounts → Subscribed Calendars → Dilly → Delete Account.
+ *
+ *  Clears our local "subscribed" flag on confirm, which makes the
+ *  Subscribe button reappear on the Calendar page (in case the user
+ *  wants to re-subscribe later). */
+export async function unsubscribeFromDillyCalendar(): Promise<void> {
+  Alert.alert(
+    'Unsubscribe from Dilly Calendar',
+    "To remove the Dilly Calendar from your phone:\n\n" +
+      "1. Open Settings on your phone\n" +
+      "2. Tap Apps → Calendar → Accounts\n" +
+      "3. Tap Subscribed Calendars\n" +
+      "4. Select Dilly, then Delete Account\n\n" +
+      "Tap \"Open Settings\" to jump there now.",
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Open Settings',
+        onPress: async () => {
+          try { await Linking.openURL('app-settings:'); } catch {}
+          await clearCalendarSubscribed();
+        },
+      },
+      {
+        text: "I've unsubscribed",
+        onPress: async () => { await clearCalendarSubscribed(); },
+      },
+    ],
+  );
 }

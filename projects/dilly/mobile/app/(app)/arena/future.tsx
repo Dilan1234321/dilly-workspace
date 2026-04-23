@@ -72,7 +72,13 @@ export default function FuturePulse() {
     return <DillyLoadingState insetTop={insets.top} mood="thinking" messages={['Imagining your Tuesday…', `Putting you in your ${playbook?.shortName || 'field'} seat…`]} />
   }
 
-  const fname = profile?.first_name || 'you'
+  // When we have a name, use it in both greeting form ("Hey Dilan") and
+  // possessive ("Dilan's Tuesday"). Without a name we must NOT fall
+  // back to 'you' — that produces "you's Tuesday". Use "there" for
+  // greetings ("Hey there") and "Your" for titles.
+  const hasName = !!profile?.first_name
+  const fname = hasName ? (profile!.first_name as string) : 'there'
+  const possessive = hasName ? `${profile!.first_name}'s` : 'Your'
 
   return (
     <ScrollView
@@ -80,12 +86,12 @@ export default function FuturePulse() {
       contentContainerStyle={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 80 }}
     >
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+        <TouchableOpacity onPress={() => { if (router.canGoBack()) router.back(); else router.replace("/(app)/ai-arena" as any); }} hitSlop={12}>
           <Ionicons name="chevron-back" size={26} color={theme.surface.t2} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={[s.eyebrow, { color: theme.accent }]}>FUTURE · PULSE</Text>
-          <Text style={[s.title, { color: theme.surface.t1 }]}>{fname}'s Tuesday in {futureYear}.</Text>
+          <Text style={[s.title, { color: theme.surface.t1 }]}>{possessive} Tuesday in {futureYear}.</Text>
           <Text style={[s.sub, { color: theme.surface.t2 }]}>
             If you land in {playbook.shortName}, here is the shape of your day.
           </Text>

@@ -361,7 +361,7 @@ export default function ChapterSessionScreen() {
             catch { return []; }
           })();
           if (cur.latest.id && completed.includes(cur.latest.id)) {
-            router.replace('/chapter/recap');
+            router.replace('/(app)/chapter/recap' as any);
             return;
           }
           // Not yet completed — play the session.

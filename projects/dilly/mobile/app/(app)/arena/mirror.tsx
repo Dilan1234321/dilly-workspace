@@ -61,14 +61,19 @@ export default function HonestMirror() {
 
   return (
     <ArenaPage
-      eyebrow="HONEST · MIRROR"
-      title={`The ${playbook.shortName} rubric, scored.`}
-      subtitle="Five things hiring managers actually grade against. This is what your surface reads as today."
+      eyebrow="HONEST MIRROR"
+      title={`What ${playbook.shortName} hiring managers look for.`}
+      subtitle={`These are the ${items.length} things recruiters in ${playbook.shortName} actually judge candidates on. A green check means your profile already shows it. A red dot means Dilly hasn't seen evidence yet — talk to her to add it.`}
     >
       <View style={[s.scoreCard, { backgroundColor: theme.accentSoft, borderColor: theme.accentBorder }]}>
-        <Text style={[s.scoreLabel, { color: theme.accent }]}>YOU ARE PROVING</Text>
+        <Text style={[s.scoreLabel, { color: theme.accent }]}>YOUR PROFILE COVERS</Text>
         <Text style={[s.scoreBig, { color: theme.surface.t1 }]}>
           {score} <Text style={{ fontSize: 20, color: theme.surface.t3 }}>of {items.length}</Text>
+        </Text>
+        <Text style={{ fontSize: 12, color: theme.surface.t2, marginTop: 6, lineHeight: 17 }}>
+          {score === items.length
+            ? 'Every box checked. Keep the evidence fresh as you apply.'
+            : `${items.length - score} still need evidence in your profile. Tap any unchecked row to tell Dilly about it.`}
         </Text>
       </View>
 
