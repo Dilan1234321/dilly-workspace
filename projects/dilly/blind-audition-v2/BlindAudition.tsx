@@ -1,1096 +1,705 @@
-import { useState, useRef, useCallback, forwardRef, useEffect } from "react";
-import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FitLevel = "Standout" | "Strong fit" | "Moderate fit";
-type EvidenceStatus = "green" | "yellow" | "red";
-
-type RichProfile = {
-  headline: string;
-  profileSummary: string;
-  fitNarrative: string;
-  topGap: string;
-  evidenceMap: { dimension: string; dimensionFitColor: string; dimensionSummary: string; evidence: { label: string; source: string; confidence: string; relevanceNote: string }[] }[];
-  gaps: { description: string; severity: string; riskNote: string; addressable: boolean }[];
-  readinessLevel: string;
-  readinessLabel: string;
-  readinessExplanation: string;
-  profileCompleteness: string;
-  profileDepthNote: string;
-  profileFactCount: number;
-  skills: string[];
-  targetRoles: string[];
-  graduationYear: string;
-  fitColor: string;
-  fitLabel: string;
-};
-
-type Candidate = {
-  id: string;
-  name: string;
-  school: string;
-  location: string;
-  firstGen: boolean;
-  filteredOut: boolean;
-  revealLine: string;
-  fitLevel: FitLevel;
-  dillyTake: string;
-  whyFit: string[];
-  profileFacts: string[];
-  jdEvidence: { req: string; status: EvidenceStatus; evidence: string }[];
-  experience: { company: string; role: string; date: string; bullets: string[] }[];
-  askAI: Record<string, string>;
-  _rich: RichProfile;
-};
-
-type Role = {
+type RolePreset = {
   id: string;
   label: string;
   description: string;
 };
 
-type Stage = "intro" | "searching" | "ranking" | "revealing" | "revealed";
+type FactItem = {
+  label: string;
+  value: string;
+};
 
-// ─── Pill ─────────────────────────────────────────────────────────────────────
+type Candidate = {
+  id: string;
+  displayName: string;
+  revealName: string;
+  track: string;
+  major: string;
+  university: string;
+  factCount: number;
+  dillyNarrative: string;
+  fitLabel: string;
+  score: number;
+  depthNote: string;
+  signalBullets: string[];
+  whatDillyKnows: string[];
+  achievements: FactItem[];
+  projects: FactItem[];
+  skills: string[];
+  personalitySignals: FactItem[];
+  goals: string[];
+  lifeContext: string[];
+  allFacts: { category: string; label: string; value: string }[];
+};
 
-function Pill({ children, color = "gray" }: { children: React.ReactNode; color?: "gray" | "green" | "yellow" | "red" | "indigo" | "blue" }) {
-  const colors = {
-    gray: "bg-gray-100 text-gray-600",
-    green: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    yellow: "bg-amber-50 text-amber-700 border border-amber-200",
-    red: "bg-red-50 text-red-700 border border-red-200",
-    indigo: "bg-indigo-50 text-indigo-700 border border-indigo-200",
-    blue: "bg-blue-50 text-blue-700 border border-blue-200",
+type Stage = "intro" | "role-select" | "ranking" | "reveal";
+
+// ─── Utils ───────────────────────────────────────────────────────────────────
+
+const DEPTH_COLORS = {
+  "Strong fit": "text-emerald-600",
+  "Solid signal": "text-blue-600",
+  "Early profile": "text-amber-600",
+};
+
+const DEPTH_BG = {
+  "Strong fit": "bg-emerald-50 border-emerald-200 text-emerald-700",
+  "Solid signal": "bg-blue-50 border-blue-200 text-blue-700",
+  "Early profile": "bg-amber-50 border-amber-200 text-amber-700",
+};
+
+function categoryLabel(cat: string): string {
+  const map: Record<string, string> = {
+    achievement: "Achievement",
+    project_detail: "Project",
+    skill_unlisted: "Skill",
+    personality: "Personality",
+    strength: "Strength",
+    soft_skill: "Soft skill",
+    motivation: "Motivation",
+    goal: "Goal",
+    life_context: "Background",
+    challenge: "Challenge",
+    hobby: "Hobby",
   };
-  return <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full ${colors[color]}`}>{children}</span>;
+  return map[cat] || cat;
 }
 
-// ─── Evidence dot ─────────────────────────────────────────────────────────────
+// ─── Dilly Logo ───────────────────────────────────────────────────────────────
 
-function EvidenceDot({ status }: { status: EvidenceStatus }) {
+function DillyLogo() {
   return (
-    <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 mt-1 ${
-      status === "green" ? "bg-emerald-500" : status === "yellow" ? "bg-amber-400" : "bg-red-400"
-    }`} />
+    <svg
+      viewBox="0 0 48 48"
+      fill="none"
+      aria-label="Dilly"
+      className="w-8 h-8"
+    >
+      <rect width="48" height="48" rx="12" fill="#18181B" />
+      <circle cx="24" cy="20" r="7" fill="white" />
+      <rect x="12" y="32" width="24" height="3" rx="1.5" fill="white" opacity="0.4" />
+      <rect x="16" y="37" width="16" height="3" rx="1.5" fill="white" opacity="0.25" />
+    </svg>
   );
 }
 
-// ─── Living Profile Modal ─────────────────────────────────────────────────────
+// ─── Intro Screen ─────────────────────────────────────────────────────────────
 
-function LivingProfileModal({ candidate, onClose }: { candidate: Candidate; onClose: () => void }) {
-  const rich = candidate._rich;
-  const [activeTab, setActiveTab] = useState<"fit" | "evidence" | "gaps" | "dilly">("fit");
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
-
-  const tabClass = (tab: typeof activeTab) =>
-    `px-4 py-2.5 text-sm font-semibold rounded-xl transition-all ${
-      activeTab === tab
-        ? "bg-indigo-700 text-white shadow-sm"
-        : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-    }`;
-
-  const fitColorBadge = rich.fitColor === "green"
-    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-    : rich.fitColor === "yellow"
-    ? "bg-amber-50 text-amber-700 border border-amber-200"
-    : "bg-red-50 text-red-700 border border-red-200";
-
+function IntroScreen({ onStart }: { onStart: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      onClick={onClose}
+      className="flex flex-col items-center justify-center min-h-screen px-6 text-center"
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
     >
-      <motion.div
-        initial={{ y: "100%", opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: "100%", opacity: 0 }}
-        transition={{ type: "spring", damping: 28, stiffness: 300 }}
-        className="bg-white w-full sm:max-w-2xl sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl flex flex-col"
-        style={{ maxHeight: "92vh" }}
-        onClick={e => e.stopPropagation()}
+      <div className="mb-8">
+        <DillyLogo />
+      </div>
+
+      <h1 className="text-3xl font-bold text-zinc-900 tracking-tight mb-4 max-w-lg">
+        The Blind Audition
+      </h1>
+
+      <p className="text-base text-zinc-500 max-w-md leading-relaxed mb-4">
+        Three real candidates. Actual students who used Dilly.
+        Their profiles were built by talking to an AI, not uploading a resume.
+      </p>
+
+      <p className="text-sm text-zinc-400 max-w-sm leading-relaxed mb-10">
+        You see what the conversations revealed. Names hidden until you decide.
+        Then Dilly shows you what it learned that no resume would ever show.
+      </p>
+
+      <button
+        onClick={onStart}
+        className="bg-zinc-900 text-white text-sm font-semibold px-7 py-3.5 rounded-xl hover:bg-zinc-700 transition-colors"
+        data-testid="button-start"
       >
-        {/* Header */}
-        <div className="p-6 pb-4 border-b border-gray-100 flex-shrink-0">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${fitColorBadge}`}>
-                  {rich.fitLabel}
-                </span>
-                <span className="text-xs text-gray-400 font-medium">{rich.readinessLabel}</span>
-              </div>
-              <h2 className="font-display font-black text-gray-900 text-xl tracking-tight">{candidate.name}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{candidate.school} · {candidate.location}</p>
-            </div>
-            <button
-              onClick={onClose}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
+        See the candidates
+      </button>
 
-          {/* Tabs */}
-          <div className="flex gap-1.5 flex-wrap">
-            <button className={tabClass("fit")} onClick={() => setActiveTab("fit")}>Fit narrative</button>
-            <button className={tabClass("evidence")} onClick={() => setActiveTab("evidence")}>Evidence map</button>
-            <button className={tabClass("gaps")} onClick={() => setActiveTab("gaps")}>Gaps</button>
-            <button className={tabClass("dilly")} onClick={() => setActiveTab("dilly")}>Dilly take</button>
-          </div>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 p-6">
-
-          {/* FIT TAB */}
-          {activeTab === "fit" && (
-            <div className="space-y-5">
-              <div>
-                <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Profile</div>
-                <p className="text-sm text-gray-700 leading-relaxed">{rich.headline}</p>
-              </div>
-              <div>
-                <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Why they fit</div>
-                <p className="text-sm text-gray-700 leading-relaxed">{rich.fitNarrative}</p>
-              </div>
-              <div>
-                <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Skills</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {rich.skills.map(s => (
-                    <span key={s} className="text-xs font-semibold bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg">{s}</span>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Profile depth</div>
-                <p className="text-xs text-gray-600 leading-relaxed">{rich.profileDepthNote}</p>
-                <p className="text-xs text-indigo-600 font-semibold mt-1">{rich.profileFactCount} facts on file</p>
-              </div>
-            </div>
-          )}
-
-          {/* EVIDENCE TAB */}
-          {activeTab === "evidence" && (
-            <div className="space-y-4">
-              {rich.evidenceMap.map((dim, i) => (
-                <div key={i} className="border border-gray-200 rounded-2xl overflow-hidden">
-                  <div className={`px-4 py-3 flex items-center justify-between ${
-                    dim.dimensionFitColor === 'green' ? 'bg-emerald-50' :
-                    dim.dimensionFitColor === 'yellow' ? 'bg-amber-50' : 'bg-red-50'
-                  }`}>
-                    <span className="text-sm font-bold text-gray-800">{dim.dimension}</span>
-                    <span className={`text-xs font-bold uppercase tracking-wide ${
-                      dim.dimensionFitColor === 'green' ? 'text-emerald-600' :
-                      dim.dimensionFitColor === 'yellow' ? 'text-amber-600' : 'text-red-500'
-                    }`}>
-                      {dim.dimensionFitColor === 'green' ? 'Strong' : dim.dimensionFitColor === 'yellow' ? 'Partial' : 'Gap'}
-                    </span>
-                  </div>
-                  <div className="px-4 py-3">
-                    <p className="text-xs text-gray-500 mb-3 leading-relaxed">{dim.dimensionSummary}</p>
-                    <div className="space-y-2">
-                      {dim.evidence.slice(0, 3).map((e, j) => (
-                        <div key={j} className="flex items-start gap-2">
-                          <span className={`flex-shrink-0 inline-block w-1.5 h-1.5 rounded-full mt-1.5 ${
-                            e.confidence === 'high' ? 'bg-emerald-500' :
-                            e.confidence === 'medium' ? 'bg-amber-400' : 'bg-gray-300'
-                          }`} />
-                          <div>
-                            <p className="text-xs font-semibold text-gray-700">{e.label}</p>
-                            <p className="text-xs text-gray-400 leading-relaxed">{e.relevanceNote}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* GAPS TAB */}
-          {activeTab === "gaps" && (
-            <div className="space-y-4">
-              {rich.gaps.length === 0 ? (
-                <p className="text-sm text-gray-500">No significant gaps identified.</p>
-              ) : (
-                rich.gaps.map((gap, i) => (
-                  <div key={i} className={`border rounded-2xl p-4 ${
-                    gap.severity === 'notable' ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'
-                  }`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-gray-800">{gap.description}</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold uppercase tracking-wide ${
-                          gap.severity === 'notable' ? 'text-amber-600' : 'text-gray-400'
-                        }`}>{gap.severity}</span>
-                        {gap.addressable && (
-                          <span className="text-xs bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">Addressable</span>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-600 leading-relaxed">{gap.riskNote}</p>
-                  </div>
-                ))
-              )}
-              <div className="border border-indigo-100 bg-indigo-50 rounded-2xl p-4">
-                <div className="text-xs font-bold tracking-widest uppercase text-indigo-400 mb-2">Readiness assessment</div>
-                <p className="text-sm font-semibold text-indigo-800 mb-1">{rich.readinessLabel}</p>
-                <p className="text-xs text-indigo-600 leading-relaxed">{rich.readinessExplanation}</p>
-              </div>
-            </div>
-          )}
-
-          {/* DILLY TAKE TAB */}
-          {activeTab === "dilly" && (
-            <div className="space-y-5">
-              <div className="bg-indigo-900 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="font-display font-black text-white text-sm">Dilly</span>
-                  <span className="text-white/40 text-xs">·</span>
-                  <span className="text-white/60 text-xs font-medium">AI recruiter assessment</span>
-                </div>
-                <p className="text-white/90 text-sm leading-relaxed">{candidate.dillyTake}</p>
-              </div>
-              <div>
-                <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-3">Ask Dilly</div>
-                <div className="space-y-3">
-                  {Object.entries(candidate.askAI).map(([q, a]) => (
-                    <div key={q} className="border border-gray-200 rounded-xl overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-3">
-                        <p className="text-xs font-bold text-gray-700">{q}</p>
-                      </div>
-                      <div className="px-4 py-3">
-                        <p className="text-xs text-gray-600 leading-relaxed">{a}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex-shrink-0 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
-          <p className="text-xs text-gray-400">Living profile · {rich.profileFactCount} facts from real conversations</p>
-          <button
-            onClick={onClose}
-            className="text-sm font-semibold text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </motion.div>
+      <p className="mt-5 text-xs text-zinc-400">
+        No AI scoring. No match percentages. Just signal.
+      </p>
     </motion.div>
   );
 }
 
-// ─── Profile Content (blind card body) ────────────────────────────────────────
+// ─── Role Select Screen ───────────────────────────────────────────────────────
 
-function ProfileContent({ candidate, blind }: { candidate: Candidate; blind: boolean }) {
-  const [askOpen, setAskOpen] = useState<string | null>(null);
+function RoleSelectScreen({
+  roles,
+  onSelectRole,
+}: {
+  roles: RolePreset[];
+  onSelectRole: (role: RolePreset) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [customJD, setCustomJD] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
 
-  if (blind) {
-    return (
-      <div className="pt-4 space-y-5">
-        {/* Dilly take */}
-        <div>
-          <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Dilly's read</div>
-          <p className="text-sm text-gray-700 leading-relaxed">{candidate.dillyTake}</p>
+  const handleContinue = () => {
+    if (showCustom && customJD.trim()) {
+      onSelectRole({
+        id: "custom",
+        label: "Custom Role",
+        description: customJD.trim(),
+      });
+    } else if (selectedId) {
+      const role = roles.find((r) => r.id === selectedId);
+      if (role) onSelectRole(role);
+    }
+  };
+
+  const canContinue = (showCustom && customJD.trim().length > 20) || (!showCustom && selectedId);
+
+  return (
+    <motion.div
+      className="min-h-screen px-6 py-14"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-2">
+          <DillyLogo />
         </div>
+        <h2 className="text-xl font-bold text-zinc-900 mt-4 mb-1">
+          What role are you hiring for?
+        </h2>
+        <p className="text-sm text-zinc-500 mb-8">
+          Pick one to see how these three candidates rank. Or paste your own job description.
+        </p>
 
-        {/* Why fit */}
-        <div>
-          <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Why they fit this role</div>
-          <ul className="space-y-2">
-            {candidate.whyFit.map((item, i) => (
-              <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
-                <span className="flex-shrink-0 w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5">
-                  <svg width="8" height="8" viewBox="0 0 12 12" fill="none">
-                    <path d="M2.5 6L5 8.5L9.5 3.5" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </span>
-                {item}
-              </li>
+        {!showCustom && (
+          <div className="space-y-3 mb-6">
+            {roles.map((role) => (
+              <button
+                key={role.id}
+                onClick={() => setSelectedId(role.id)}
+                data-testid={`button-role-${role.id}`}
+                className={`w-full text-left px-4 py-4 rounded-xl border text-sm font-medium transition-all ${
+                  selectedId === role.id
+                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                }`}
+              >
+                {role.label}
+              </button>
             ))}
-          </ul>
-        </div>
-
-        {/* JD evidence */}
-        {candidate.jdEvidence.length > 0 && (
-          <div>
-            <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Role requirements</div>
-            <div className="space-y-2">
-              {candidate.jdEvidence.map((ev, i) => (
-                <div key={i} className="flex items-start gap-2.5 text-sm">
-                  <EvidenceDot status={ev.status} />
-                  <div>
-                    <span className="font-semibold text-gray-800">{ev.req}:</span>{" "}
-                    <span className="text-gray-600">{ev.evidence}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
-        {/* Ask AI */}
-        <div>
-          <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Ask Dilly</div>
-          <div className="space-y-2">
-            {Object.entries(candidate.askAI).map(([q, a]) => (
-              <div key={q}>
-                <button
-                  onClick={() => setAskOpen(prev => prev === q ? null : q)}
-                  className="w-full text-left flex items-center justify-between gap-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-3.5 py-2.5 rounded-xl transition-colors"
-                >
-                  <span>{q}</span>
-                  <svg
-                    width="12" height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    className={`flex-shrink-0 transition-transform ${askOpen === q ? "rotate-180" : ""}`}
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </button>
-                <AnimatePresence>
-                  {askOpen === q && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-3.5 py-3 text-xs text-gray-600 leading-relaxed bg-gray-50 border border-gray-200 border-t-0 rounded-b-xl">
-                        {a}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+        {showCustom && (
+          <textarea
+            className="w-full border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 resize-none mb-6"
+            rows={8}
+            placeholder="Paste a job description here..."
+            value={customJD}
+            onChange={(e) => setCustomJD(e.target.value)}
+            data-testid="input-custom-jd"
+            autoFocus
+          />
+        )}
 
-  // Revealed state
-  return (
-    <div className="pt-4 space-y-4">
-      <div className="bg-gray-900 rounded-xl p-4">
-        <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-2">Dilly's take</div>
-        <p className="text-sm text-gray-200 leading-relaxed">{candidate.dillyTake}</p>
-      </div>
-      {candidate.profileFacts.slice(0, 3).map((fact, i) => (
-        <div key={i} className="text-sm text-gray-600 leading-relaxed pl-3 border-l-2 border-gray-200">
-          {fact}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleContinue}
+            disabled={!canContinue}
+            data-testid="button-continue-role"
+            className={`px-6 py-3 rounded-xl text-sm font-semibold transition-colors ${
+              canContinue
+                ? "bg-zinc-900 text-white hover:bg-zinc-700"
+                : "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+            }`}
+          >
+            See candidates
+          </button>
+          <button
+            onClick={() => {
+              setShowCustom(!showCustom);
+              setSelectedId(null);
+            }}
+            className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+            data-testid="button-toggle-custom"
+          >
+            {showCustom ? "Use a preset role" : "Paste my own JD"}
+          </button>
         </div>
-      ))}
-    </div>
+      </div>
+    </motion.div>
   );
 }
 
-// ─── Blind Card ───────────────────────────────────────────────────────────────
-
-const LABEL_COLORS = [
-  { bg: "bg-indigo-700", text: "text-white", label: "Candidate A" },
-  { bg: "bg-violet-700", text: "text-white", label: "Candidate B" },
-  { bg: "bg-slate-700", text: "text-white", label: "Candidate C" },
-];
+// ─── Candidate Card (blind) ───────────────────────────────────────────────────
 
 function BlindCard({
   candidate,
   rank,
+  onReveal,
   revealed,
-  expanded,
-  onToggle,
-  candidateIndex,
-  onOpenProfile,
 }: {
   candidate: Candidate;
   rank: number;
+  onReveal: () => void;
   revealed: boolean;
-  expanded: boolean;
-  onToggle: () => void;
-  candidateIndex: number;
-  onOpenProfile: (c: Candidate) => void;
 }) {
-  const colorSet = LABEL_COLORS[candidateIndex % LABEL_COLORS.length];
+  const [expanded, setExpanded] = useState(false);
+
+  const depthColor = DEPTH_COLORS[candidate.fitLabel as keyof typeof DEPTH_COLORS] || "text-zinc-600";
+  const depthBg = DEPTH_BG[candidate.fitLabel as keyof typeof DEPTH_BG] || "bg-zinc-50 border-zinc-200 text-zinc-600";
 
   return (
-    <div
-      className={`border rounded-2xl bg-white transition-all ${
-        expanded ? "border-indigo-200 shadow-md" : "border-gray-200 hover:border-gray-300"
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: rank * 0.12, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className={`bg-white border rounded-2xl overflow-hidden transition-shadow ${
+        rank === 0 ? "border-zinc-900 shadow-sm" : "border-zinc-200"
       }`}
     >
-      {/* Card header */}
-      <div
-        className="flex items-center gap-3 px-4 py-3.5 cursor-pointer select-none"
-        onClick={onToggle}
-      >
-        {/* Rank */}
-        <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-xs font-black text-gray-400">
-          #{rank}
-        </span>
-
-        {/* Label pill */}
-        <span className={`flex-shrink-0 ${colorSet.bg} ${colorSet.text} text-xs font-bold px-3 py-1 rounded-full`}>
-          {colorSet.label}
-        </span>
-
-        {/* Fit level */}
-        <span className={`flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${
-          candidate.fitLevel === "Standout"
-            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-            : candidate.fitLevel === "Strong fit"
-            ? "bg-blue-50 text-blue-700 border-blue-200"
-            : "bg-gray-50 text-gray-500 border-gray-200"
-        }`}>
-          {candidate.fitLevel}
-        </span>
-
-        <div className="flex-1 min-w-0" />
-
-        {/* Grip icon (drag handle hint) */}
-        <div className="flex-shrink-0 flex flex-col gap-0.5 opacity-30">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="flex gap-0.5">
-              <div className="w-1 h-1 rounded-full bg-gray-600" />
-              <div className="w-1 h-1 rounded-full bg-gray-600" />
+      {/* Header */}
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+              rank === 0 ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600"
+            }`}>
+              {rank + 1}
             </div>
-          ))}
+            <div>
+              <p className="text-base font-semibold text-zinc-900">
+                {candidate.displayName}
+              </p>
+              <p className="text-xs text-zinc-500">{candidate.track}</p>
+            </div>
+          </div>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${depthBg}`}>
+            {candidate.fitLabel}
+          </span>
         </div>
 
-        {/* Expand chevron */}
-        <svg
-          width="16" height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          className={`flex-shrink-0 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        {/* Depth indicator */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const threshold = Math.ceil((candidate.factCount / 20) * 5);
+              return (
+                <div
+                  key={i}
+                  className={`h-1.5 w-5 rounded-full ${
+                    i < threshold ? "bg-zinc-900" : "bg-zinc-200"
+                  }`}
+                />
+              );
+            })}
+          </div>
+          <span className="text-xs text-zinc-500">{candidate.depthNote}</span>
+        </div>
+
+        {/* Dilly narrative — the core */}
+        <p className="text-sm text-zinc-700 leading-relaxed">
+          {candidate.dillyNarrative}
+        </p>
       </div>
 
-      {/* Reveal banner */}
-      <AnimatePresence>
-        {revealed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            transition={{ duration: 0.4 }}
-            className={`overflow-hidden border-t ${
-              candidate.filteredOut
-                ? "border-amber-200 bg-amber-50"
-                : "border-gray-100 bg-gray-50"
-            }`}
-          >
-            <div className="px-4 py-3 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                {candidate.filteredOut && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0 text-amber-500 mt-0.5">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                )}
-                <p className={`text-xs leading-relaxed ${candidate.filteredOut ? "text-amber-800 font-medium" : "text-gray-600"}`}>
-                  {candidate.revealLine}
-                </p>
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); onOpenProfile(candidate); }}
-                className="flex-shrink-0 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl transition-colors whitespace-nowrap"
-              >
-                Full profile
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Expanded body */}
+      {/* Expandable facts */}
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="overflow-hidden border-t border-gray-100"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="border-t border-zinc-100"
           >
-            <div className="px-4 pb-5">
-              <ProfileContent candidate={candidate} blind={!revealed} />
+            <div className="px-5 py-4 space-y-4">
+              {/* What Dilly extracted */}
+              <div>
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+                  What Dilly learned from conversations
+                </p>
+                <div className="space-y-2">
+                  {candidate.allFacts.slice(0, 8).map((fact, i) => (
+                    <div key={i} className="flex gap-2.5">
+                      <span className="text-xs font-medium text-zinc-400 pt-0.5 flex-shrink-0 w-20">
+                        {categoryLabel(fact.category)}
+                      </span>
+                      <p className="text-xs text-zinc-700 leading-relaxed">
+                        <span className="font-medium text-zinc-800">{fact.label}:</span>{" "}
+                        {fact.value}
+                      </p>
+                    </div>
+                  ))}
+                  {candidate.factCount === 0 && (
+                    <p className="text-xs text-zinc-400 italic">
+                      No conversations with Dilly yet. Ask them to use the app.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {candidate.skills.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+                    Skills mentioned in conversation
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {candidate.skills.map((s, i) => (
+                      <span
+                        key={i}
+                        className="text-xs px-2.5 py-0.5 bg-zinc-100 text-zinc-600 rounded-full font-medium"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* Footer actions */}
+      <div className="px-5 pb-5 flex items-center gap-3">
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          data-testid={`button-expand-${candidate.id}`}
+        >
+          {expanded ? "Show less" : `See all ${candidate.factCount} facts`}
+        </button>
+
+        {!revealed && (
+          <button
+            onClick={onReveal}
+            className="ml-auto text-xs font-semibold text-white bg-zinc-900 px-4 py-2 rounded-lg hover:bg-zinc-700 transition-colors"
+            data-testid={`button-reveal-${candidate.id}`}
+          >
+            Reveal identity
+          </button>
+        )}
+
+        {revealed && (
+          <div className="ml-auto flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            <span className="text-xs font-semibold text-emerald-600">Revealed</span>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
-// ─── Summary Card ─────────────────────────────────────────────────────────────
+// ─── Reveal Card ─────────────────────────────────────────────────────────────
 
-const SummaryCard = forwardRef<HTMLDivElement, { ordered: Candidate[]; onReset: () => void; onOpenProfile: (c: Candidate) => void }>(
-  function SummaryCard({ ordered, onReset, onOpenProfile }, ref) {
-    const [copied, setCopied] = useState(false);
-    const top = ordered[0];
-    const shareText = top
-      ? `I just ran the Blind Audition on Dilly Recruiter. I ranked candidates only on their work. My #1 pick went to ${top.school}${top.filteredOut ? " — a school most ATS systems would have filtered out." : "."} Try it: hellodilly.com`
-      : "";
-
-    const handleCopy = async () => {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      } catch {}
-    };
-
-    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-    const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://hellodilly.com")}&summary=${encodeURIComponent(shareText)}`;
-
-    return (
-      <motion.div
-        ref={ref}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="mt-6 space-y-3"
-      >
-        {/* Main reveal card */}
-        <div
-          className="rounded-3xl overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #2B3A8E 0%, #1a2660 100%)" }}
-        >
-          <div className="p-8 text-center">
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-white/60 bg-white/10 border border-white/20 rounded-full px-3 py-1 mb-5">
-              The Reveal
-            </div>
-            <h3
-              className="font-display font-black text-white mb-3 leading-tight"
-              style={{ fontSize: "clamp(1.25rem, 4vw, 2rem)", letterSpacing: "-0.02em" }}
-            >
-              Your #1 ranked candidate went to{" "}
-              <span className="underline decoration-white/40 underline-offset-4">
-                {top?.school}
-              </span>.
-            </h3>
-            {top?.filteredOut && (
-              <p className="text-white/70 text-base leading-relaxed max-w-md mx-auto mb-7">
-                In a traditional ATS filtered to target schools, you never would have seen them.
-                Dilly made sure you did.
-              </p>
-            )}
-
-            {/* Ranking recap */}
-            <div className="flex items-center justify-center gap-2 flex-wrap mb-7">
-              {ordered.map((c, i) => (
-                <button
-                  key={c.id}
-                  onClick={() => onOpenProfile(c)}
-                  className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 rounded-full px-3 py-1 transition-colors"
-                >
-                  <span className="text-white/50 text-xs font-bold">#{i + 1}</span>
-                  <span className="text-white text-xs font-semibold">{c.name}</span>
-                  {c.filteredOut && (
-                    <span className="text-amber-300 text-xs">(ATS filtered)</span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              <a
-                href="https://hellodilly.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white text-indigo-800 font-bold text-sm px-6 py-3 rounded-xl hover:bg-indigo-50 transition-colors"
-              >
-                Open Dilly Recruiter
-              </a>
-              <button
-                onClick={onReset}
-                className="text-white/80 hover:text-white font-semibold text-sm px-6 py-3 rounded-xl border border-white/25 hover:border-white/50 transition-colors"
-              >
-                Try another role
-              </button>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 px-8 py-5">
-            <p className="text-center text-xs text-white/50 leading-relaxed">
-              Dilly builds living profiles from real conversations. Recruiters see who can do the job, not where they went to school.
-            </p>
-          </div>
-        </div>
-
-        {/* Share card */}
-        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-            <span className="text-xs font-bold tracking-wider uppercase text-gray-500">Share your result</span>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-3 mb-3">
-            <p className="text-xs text-gray-600 leading-relaxed">{shareText}</p>
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={handleCopy}
-              data-testid="button-copy-share"
-              className={`flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl border transition-all ${
-                copied
-                  ? "bg-green-50 border-green-300 text-green-700"
-                  : "bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:text-indigo-700"
-              }`}
-            >
-              {copied ? (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                </svg>
-              )}
-              {copied ? "Copied" : "Copy text"}
-            </button>
-
-            <a
-              href={tweetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-share-twitter"
-              className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:text-indigo-700 transition-colors"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.731-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-              </svg>
-              Post on X
-            </a>
-
-            <a
-              href={linkedinUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-share-linkedin"
-              className="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:text-indigo-700 transition-colors"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-blue-600">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-              </svg>
-              Share on LinkedIn
-            </a>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-);
-
-// ─── Role Selector ────────────────────────────────────────────────────────────
-
-function RoleSelector({
-  roles,
-  selectedId,
-  onSelect,
-  customRole,
-  onCustomChange,
-}: {
-  roles: Role[];
-  selectedId: string | null;
-  onSelect: (role: Role) => void;
-  customRole: string;
-  onCustomChange: (v: string) => void;
-}) {
-  const [showCustom, setShowCustom] = useState(false);
-
+function RevealCard({ candidate, rank }: { candidate: Candidate; rank: number }) {
   return (
-    <div className="space-y-3">
-      <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-1">Choose a role</div>
-      <div className="grid grid-cols-1 gap-2">
-        {roles.map(role => (
-          <button
-            key={role.id}
-            onClick={() => { setShowCustom(false); onSelect(role); }}
-            className={`text-left px-4 py-3 rounded-xl border transition-all ${
-              selectedId === role.id && !showCustom
-                ? "border-indigo-300 bg-indigo-50 text-indigo-900"
-                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-            }`}
-          >
-            <p className="text-sm font-semibold">{role.label}</p>
-          </button>
-        ))}
-        <button
-          onClick={() => setShowCustom(true)}
-          className={`text-left px-4 py-3 rounded-xl border transition-all ${
-            showCustom
-              ? "border-indigo-300 bg-indigo-50 text-indigo-900"
-              : "border-dashed border-gray-300 bg-white text-gray-500 hover:border-gray-400 hover:text-gray-700"
-          }`}
-        >
-          <p className="text-sm font-semibold">Paste your own job description</p>
-        </button>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: rank * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="bg-zinc-900 text-white rounded-2xl overflow-hidden"
+    >
+      <div className="px-5 pt-5 pb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+            {rank + 1}
+          </div>
+          <p className="text-base font-bold text-white">{candidate.revealName}</p>
+        </div>
+        <p className="text-sm text-zinc-400 mb-3">{candidate.major} — {candidate.university}</p>
+
+        <div className="bg-white/5 rounded-xl px-4 py-3 mb-4">
+          <p className="text-xs font-semibold text-zinc-500 mb-1.5 uppercase tracking-widest">
+            Dilly's read
+          </p>
+          <p className="text-sm text-zinc-300 leading-relaxed">
+            {candidate.dillyNarrative}
+          </p>
+        </div>
+
+        <div className="border-t border-white/10 pt-4">
+          <p className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-widest">
+            {candidate.factCount} facts from {candidate.factCount === 0 ? "0" : "real"} conversations
+          </p>
+          {candidate.factCount === 0 ? (
+            <p className="text-sm text-zinc-500 italic">
+              No profile yet. They have not used Dilly enough to build signal.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {candidate.allFacts.slice(0, 5).map((f, i) => (
+                <div key={i} className="flex gap-2">
+                  <span className="text-xs text-zinc-600 pt-0.5 flex-shrink-0 w-16">{categoryLabel(f.category)}</span>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    <span className="text-zinc-300 font-medium">{f.label}:</span> {f.value}
+                  </p>
+                </div>
+              ))}
+              {candidate.allFacts.length > 5 && (
+                <p className="text-xs text-zinc-600 pt-1">
+                  + {candidate.allFacts.length - 5} more facts in their profile
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      <AnimatePresence>
-        {showCustom && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-          >
-            <textarea
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-indigo-300 resize-none"
-              rows={6}
-              placeholder="Paste a job description or describe the role you're hiring for..."
-              value={customRole}
-              onChange={e => onCustomChange(e.target.value)}
-              autoFocus
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      <div className="px-5 pb-5">
+        <div className="bg-zinc-800 rounded-xl px-4 py-3 border border-white/10">
+          <p className="text-xs font-semibold text-zinc-500 mb-1">The point</p>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Dilly learned this from a conversation. Not a resume. Not a transcript. Not a GPA.
+            A recruiter who only sees the resume sees nothing.
+          </p>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Ranking Screen ───────────────────────────────────────────────────────────
+
+function RankingScreen({
+  candidates,
+  roleLabel,
+  onRevealAll,
+}: {
+  candidates: Candidate[];
+  roleLabel: string;
+  onRevealAll: () => void;
+}) {
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
+
+  const reveal = (id: string) => {
+    setRevealedIds((prev) => new Set([...prev, id]));
+  };
+
+  const allRevealed = revealedIds.size >= candidates.length;
+
+  return (
+    <motion.div
+      className="min-h-screen px-5 py-12"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-2">
+          <DillyLogo />
+        </div>
+        <h2 className="text-xl font-bold text-zinc-900 mt-4 mb-1">
+          Dilly ranked these three
+        </h2>
+        <p className="text-sm text-zinc-500 mb-1">
+          Role: <span className="font-medium text-zinc-700">{roleLabel}</span>
+        </p>
+        <p className="text-xs text-zinc-400 mb-8">
+          Names hidden. Profiles built from real conversations. Reveal when you are ready.
+        </p>
+
+        <div className="space-y-4 mb-8">
+          {candidates.map((candidate, i) => (
+            <BlindCard
+              key={candidate.id}
+              candidate={candidate}
+              rank={i}
+              onReveal={() => reveal(candidate.id)}
+              revealed={revealedIds.has(candidate.id)}
+            />
+          ))}
+        </div>
+
+        {!allRevealed && (
+          <button
+            onClick={onRevealAll}
+            className="w-full py-3.5 border border-zinc-200 rounded-xl text-sm font-semibold text-zinc-700 hover:border-zinc-900 hover:text-zinc-900 transition-colors"
+            data-testid="button-reveal-all"
+          >
+            Reveal all at once
+          </button>
+        )}
+
+        {allRevealed && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-zinc-50 border border-zinc-200 rounded-2xl px-5 py-5"
+          >
+            <p className="text-sm font-semibold text-zinc-900 mb-1">
+              All three revealed.
+            </p>
+            <p className="text-sm text-zinc-500 leading-relaxed">
+              Dilly built these profiles from conversations, not documents.
+              The ranking above is based on what people actually said to an AI, not what they put on a resume.
+              This is what hiring looks like when prestige is removed from the equation.
+            </p>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Full Reveal Screen ───────────────────────────────────────────────────────
+
+function RevealScreen({
+  candidates,
+  roleLabel,
+  onReset,
+}: {
+  candidates: Candidate[];
+  roleLabel: string;
+  onReset: () => void;
+}) {
+  return (
+    <motion.div
+      className="min-h-screen px-5 py-12"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-2">
+          <DillyLogo />
+        </div>
+        <h2 className="text-xl font-bold text-zinc-900 mt-4 mb-1">The full picture</h2>
+        <p className="text-sm text-zinc-500 mb-8">
+          Here is what Dilly knows about each candidate, built entirely from conversations.
+        </p>
+
+        <div className="space-y-4 mb-8">
+          {candidates.map((candidate, i) => (
+            <RevealCard key={candidate.id} candidate={candidate} rank={i} />
+          ))}
+        </div>
+
+        <div className="bg-zinc-900 text-white rounded-2xl px-5 py-5 mb-6">
+          <p className="text-sm font-semibold mb-2">What this means for recruiting</p>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            Every ATS ever built filters on the resume. School. GPA. Keywords.
+            The candidates who get through are not the best candidates.
+            They are the best documenters of themselves on paper.
+          </p>
+          <p className="text-sm text-zinc-400 leading-relaxed mt-3">
+            Dilly learns from how people think and what they have actually built.
+            The depth you see here is what a conversation reveals.
+            A resume would have shown you none of this.
+          </p>
+        </div>
+
+        <button
+          onClick={onReset}
+          className="w-full py-3 border border-zinc-200 rounded-xl text-sm font-medium text-zinc-600 hover:border-zinc-900 hover:text-zinc-900 transition-colors"
+          data-testid="button-reset"
+        >
+          Start over with a different role
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function BlindAudition() {
   const [stage, setStage] = useState<Stage>("intro");
-  const [order, setOrder] = useState<string[]>([]);
-  const [revealed, setRevealed] = useState<Set<string>>(new Set());
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<RolePreset | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [customRole, setCustomRole] = useState("");
-  const [profileModal, setProfileModal] = useState<Candidate | null>(null);
-  const timeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const summaryRef = useRef<HTMLDivElement>(null);
+  const [showFullReveal, setShowFullReveal] = useState(false);
 
-  // Load preset roles from API
-  const rolesQuery = useQuery<{ roles: Role[] }>({
+  const { data: rolesData } = useQuery<{ roles: RolePreset[] }>({
     queryKey: ["/api/blind-audition/roles"],
   });
 
-  // Search mutation
   const searchMutation = useMutation({
-    mutationFn: async (roleDescription: string) => {
-      const res = await apiRequest("POST", "/api/blind-audition/search", {
+    mutationFn: (roleDescription: string) =>
+      apiRequest("POST", "/api/blind-audition/search", {
         role_description: roleDescription,
-      });
-      return res.json() as Promise<{ candidates: Candidate[]; role_description: string }>;
-    },
+      }).then((r) => r.json()),
     onSuccess: (data) => {
-      setCandidates(data.candidates);
-      setOrder(data.candidates.map(c => c.id));
+      setCandidates(data.candidates || []);
       setStage("ranking");
     },
-    onError: () => {
-      setStage("intro");
-    }
   });
 
-  const roles = rolesQuery.data?.roles || [];
-  const activeRoleDescription = customRole.trim() || selectedRole?.description || "";
-
-  const ordered = order.map(id => candidates.find(c => c.id === id)!).filter(Boolean);
-
-  const handleStart = () => {
-    if (!activeRoleDescription && roles.length > 0) {
-      // Auto-select first role if none chosen
-      const firstRole = roles[0];
-      setSelectedRole(firstRole);
-      setStage("searching");
-      searchMutation.mutate(firstRole.description);
-    } else {
-      setStage("searching");
-      searchMutation.mutate(activeRoleDescription);
-    }
+  const handleRoleSelect = (role: RolePreset) => {
+    setSelectedRole(role);
+    searchMutation.mutate(role.description);
   };
 
-  const handleReveal = () => {
-    setStage("revealing");
-    ordered.forEach((c, i) => {
-      const t = setTimeout(() => {
-        setRevealed(prev => new Set([...prev, c.id]));
-        setExpanded(c.id);
-        if (i === ordered.length - 1) {
-          setTimeout(() => {
-            setStage("revealed");
-            setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
-          }, 800);
-        }
-      }, i * 2400);
-      timeouts.current.push(t);
-    });
+  const handleRevealAll = () => {
+    setShowFullReveal(true);
+    setStage("reveal");
   };
 
-  const handleReset = useCallback(() => {
-    timeouts.current.forEach(clearTimeout);
-    timeouts.current = [];
-    setStage("intro");
-    setOrder([]);
-    setCandidates([]);
-    setRevealed(new Set());
-    setExpanded(null);
+  const handleReset = () => {
+    setStage("role-select");
     setSelectedRole(null);
-    setCustomRole("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
-  const toggleExpanded = (id: string) => setExpanded(prev => prev === id ? null : id);
-
-  const canStart = stage === "intro" && (selectedRole !== null || customRole.trim().length > 10 || roles.length > 0);
+    setCandidates([]);
+    setShowFullReveal(false);
+  };
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Top nav */}
-      <nav className="border-b border-gray-100 bg-white/90 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-display font-black text-indigo-900 text-base tracking-tight">Dilly</span>
-            <span className="text-gray-300 text-sm">/</span>
-            <span className="text-sm font-semibold text-gray-600">The Blind Audition</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {(stage === "ranking" || stage === "revealing" || stage === "revealed") && (
-              <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-700 font-semibold transition-colors">
-                Change role
-              </button>
+    <div className="min-h-screen bg-white font-sans">
+      <AnimatePresence mode="wait">
+        {stage === "intro" && (
+          <motion.div key="intro" exit={{ opacity: 0 }}>
+            <IntroScreen onStart={() => setStage("role-select")} />
+          </motion.div>
+        )}
+
+        {stage === "role-select" && (
+          <motion.div key="role-select" exit={{ opacity: 0 }}>
+            <RoleSelectScreen
+              roles={rolesData?.roles || []}
+              onSelectRole={handleRoleSelect}
+            />
+          </motion.div>
+        )}
+
+        {stage === "ranking" && (
+          <motion.div key="ranking" exit={{ opacity: 0 }}>
+            {searchMutation.isPending ? (
+              <div className="flex items-center justify-center min-h-screen">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-8 h-8 border-2 border-zinc-900 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-zinc-500">Dilly is reading the profiles...</p>
+                </div>
+              </div>
+            ) : (
+              <RankingScreen
+                candidates={candidates}
+                roleLabel={selectedRole?.label || ""}
+                onRevealAll={handleRevealAll}
+              />
             )}
-            <a href="https://hellodilly.com" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-indigo-600 transition-colors">
-              hellodilly.com
-            </a>
-          </div>
-        </div>
-      </nav>
+          </motion.div>
+        )}
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <AnimatePresence mode="wait">
-
-          {/* ── Intro ── */}
-          {(stage === "intro" || stage === "searching") && (
-            <motion.div
-              key="intro"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.35 }}
-              className="max-w-2xl mx-auto"
-            >
-              {/* Hero */}
-              <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-4 py-1.5 mb-8">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 live-pulse" />
-                  Dilly Recruiter — Week 2
-                </div>
-
-                <h1 className="font-display font-black text-gray-900 mb-4 leading-none" style={{ fontSize: "clamp(2.25rem, 6vw, 3.5rem)", letterSpacing: "-0.03em" }}>
-                  Read the work.<br />
-                  <span className="text-indigo-700">Not the resume.</span>
-                </h1>
-
-                <p className="text-gray-500 text-lg leading-relaxed max-w-lg mx-auto">
-                  Choose a role. Read real Dilly profiles. Rank candidates blind.
-                  Then see who you actually chose — and who an ATS would have eliminated.
-                </p>
-              </div>
-
-              {/* Role selector */}
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 mb-6">
-                {rolesQuery.isLoading ? (
-                  <div className="space-y-2">
-                    {[1,2,3,4].map(i => (
-                      <div key={i} className="h-12 bg-gray-200 rounded-xl animate-pulse" />
-                    ))}
-                  </div>
-                ) : (
-                  <RoleSelector
-                    roles={roles}
-                    selectedId={selectedRole?.id || null}
-                    onSelect={setSelectedRole}
-                    customRole={customRole}
-                    onCustomChange={setCustomRole}
-                  />
-                )}
-              </div>
-
-              {/* Selected role preview */}
-              <AnimatePresence>
-                {(selectedRole && !customRole) && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden mb-6"
-                  >
-                    <div className="bg-white border border-gray-200 rounded-2xl p-5">
-                      <div className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-3">The role</div>
-                      <pre className="font-sans text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedRole.description}</pre>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div className="text-center">
-                <button
-                  onClick={handleStart}
-                  disabled={stage === "searching" || (!selectedRole && customRole.trim().length < 10 && roles.length === 0)}
-                  className="inline-flex items-center gap-3 bg-indigo-700 hover:bg-indigo-800 disabled:opacity-60 text-white font-bold text-base px-8 py-4 rounded-2xl transition-all hover:-translate-y-0.5 active:translate-y-0 shadow-lg shadow-indigo-900/20 mb-4"
-                >
-                  {stage === "searching" ? (
-                    <>
-                      <span className="w-2 h-2 rounded-full bg-white/80 live-pulse" />
-                      Dilly is matching profiles...
-                    </>
-                  ) : (
-                    <>
-                      Start the Blind Audition
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </>
-                  )}
-                </button>
-
-                <p className="text-xs text-gray-400">No names. No schools. No locations. Just the work.</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── Ranking / Revealing / Revealed ── */}
-          {(stage === "ranking" || stage === "revealing" || stage === "revealed") && (
-            <motion.div
-              key="ranking"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* Role label */}
-              {selectedRole && (
-                <div className="flex items-center gap-2 mb-5">
-                  <span className="text-xs text-gray-400 font-medium">Role:</span>
-                  <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-full">{selectedRole.label}</span>
-                </div>
-              )}
-
-              {/* Stage header */}
-              <div className="flex items-start justify-between mb-6 gap-4">
-                <div>
-                  <h2 className="font-display font-black text-gray-900 text-xl tracking-tight mb-1">
-                    {stage === "ranking" ? "Rank the candidates" : stage === "revealing" ? "Revealing..." : "The Reveal"}
-                  </h2>
-                  <p className="text-sm text-gray-500 leading-relaxed max-w-lg">
-                    {stage === "ranking"
-                      ? "Expand each candidate to read their full Dilly profile. Drag to reorder. When you have a ranking, hit Reveal."
-                      : stage === "revealing"
-                      ? "Seeing who you actually chose."
-                      : "This is who was behind the profiles you ranked. Tap any name to see their full living profile."}
-                  </p>
-                </div>
-                {stage === "revealed" && (
-                  <button onClick={handleReset} className="flex-shrink-0 text-sm font-semibold text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-xl transition-colors">
-                    Try another role
-                  </button>
-                )}
-              </div>
-
-              {/* Cards */}
-              {stage === "ranking" ? (
-                <Reorder.Group axis="y" values={order} onReorder={setOrder} as="div" className="space-y-3 mb-6">
-                  {ordered.map((c, i) => (
-                    <Reorder.Item key={c.id} value={c.id} as="div" whileDrag={{ scale: 1.02, boxShadow: "0 20px 40px rgba(0,0,0,0.12)" }}>
-                      <BlindCard
-                        candidate={c}
-                        rank={i + 1}
-                        revealed={false}
-                        expanded={expanded === c.id}
-                        onToggle={() => toggleExpanded(c.id)}
-                        candidateIndex={candidates.findIndex(x => x.id === c.id)}
-                        onOpenProfile={setProfileModal}
-                      />
-                    </Reorder.Item>
-                  ))}
-                </Reorder.Group>
-              ) : (
-                <div className="space-y-3 mb-6">
-                  {ordered.map((c, i) => (
-                    <BlindCard
-                      key={c.id}
-                      candidate={c}
-                      rank={i + 1}
-                      revealed={revealed.has(c.id)}
-                      expanded={expanded === c.id}
-                      onToggle={() => toggleExpanded(c.id)}
-                      candidateIndex={candidates.findIndex(x => x.id === c.id)}
-                      onOpenProfile={setProfileModal}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Reveal button */}
-              {stage === "ranking" && (
-                <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-2xl p-4">
-                  <p className="text-sm text-gray-500">Read each profile. When you have a ranking, reveal.</p>
-                  <button
-                    onClick={handleReveal}
-                    className="flex-shrink-0 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-sm px-6 py-3 rounded-xl transition-all hover:-translate-y-0.5 shadow-md shadow-indigo-900/20"
-                  >
-                    Reveal candidates
-                  </button>
-                </div>
-              )}
-
-              {/* Summary + Share */}
-              {stage === "revealed" && (
-                <SummaryCard
-                  ref={summaryRef}
-                  ordered={ordered}
-                  onReset={handleReset}
-                  onOpenProfile={setProfileModal}
-                />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Living Profile Modal */}
-      <AnimatePresence>
-        {profileModal && (
-          <LivingProfileModal
-            candidate={profileModal}
-            onClose={() => setProfileModal(null)}
-          />
+        {stage === "reveal" && (
+          <motion.div key="reveal" exit={{ opacity: 0 }}>
+            <RevealScreen
+              candidates={candidates}
+              roleLabel={selectedRole?.label || ""}
+              onReset={handleReset}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
